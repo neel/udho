@@ -7,3 +7,6 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
 ADD_EXECUTABLE(udho-example-simple simple.cpp)
 TARGET_LINK_LIBRARIES(udho-example-simple udho)
+
+ADD_EXECUTABLE(udho-example-functor functor.cpp)
+TARGET_LINK_LIBRARIES(udho-example-functor udho)
