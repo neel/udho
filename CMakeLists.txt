@@ -19,6 +19,7 @@ SET(UDHO_HEADERS
     includes/udho/router.h 
     includes/udho/util.h 
     includes/udho/page.h
+#     includes/udho/application.h
 )
 SET(UDHO_SOURCES 
     session.cpp 
@@ -26,6 +27,7 @@ SET(UDHO_SOURCES
     router.cpp 
     util.cpp 
     page.cpp
+#     application.cpp
 )
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
