@@ -6,8 +6,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
-namespace bya{
-namespace ka{
+namespace udho{
 
 template <typename RouterT>
 class listener : public std::enable_shared_from_this<listener<RouterT>>{
@@ -59,7 +58,6 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
     }
 };
 
-}
 }
 
 #endif // HTTP_LISTENER_H

@@ -8,28 +8,41 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
  # Dependencies:
 * Boost.Filesystem
 * Boost.Regex
+* ICU::uc
 * Threads
   
 # Example
 
-```c++
-std::string doc_root(WWW_PATH); // path to static content
+```cpp
+#include <string>
+#include <udho/router.h>
+#include <boost/asio.hpp>
 
-int threads = 2;
-boost::asio::io_service io{threads};
-
-auto router = udho::router()
-    | (udho::post(&input).json()           = "^/input$")
-    | (udho::get(&students_list).json()    = "^/students/highlights$")
-    | (udho::get(&student, conn).html()    = "^/student/(\\w+)$"); // conn might be a database connection handle injected to the function as the first parameter
-router.listen(io, 9198, doc_root);
-
-std::vector<std::thread> v;
-v.reserve(threads - 1);
-for(auto i = threads - 1; i > 0; --i){
-    v.emplace_back([&io]{
-        io.run();
-    });
+std::string hello(udho::request_type req){
+    return "Hello World";
 }
-io.run();
+
+std::string data(udho::request_type req){
+    return "{id: 2, name: 'udho'}";
+}
+
+int add(udho::request_type req, int a, int b){
+    return a + b;
+}
+
+int main(){
+    std::string doc_root("/home/neel/Projects/udho"); // path to static content
+    boost::asio::io_service io;
+
+    auto router = udho::router()
+        | (udho::get(&hello).plain() = "^/hello$")
+        | (udho::get(&data).json()   = "^/data$")
+        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
+    router.listen(io, 9198, doc_root);
+        
+    io.run();
+    
+    return 0;
+}
+
 ```

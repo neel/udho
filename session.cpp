@@ -1,6 +1,6 @@
 #include "udho/session.h"
 
-boost::beast::string_view bya::ka::internal::mime_type(boost::beast::string_view path){
+boost::beast::string_view udho::internal::mime_type(boost::beast::string_view path){
     using boost::beast::iequals;
     auto const ext = [&path]{
         auto const pos = path.rfind(".");
@@ -34,7 +34,7 @@ boost::beast::string_view bya::ka::internal::mime_type(boost::beast::string_view
 
 // Append an HTTP rel-path to a local filesystem path.
 // The returned path is normalized for the platform.
-std::string bya::ka::internal::path_cat(boost::beast::string_view base, boost::beast::string_view path){
+std::string udho::internal::path_cat(boost::beast::string_view base, boost::beast::string_view path){
     if(base.empty())
         return path.to_string();
     std::string result = base.to_string();

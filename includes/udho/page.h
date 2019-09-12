@@ -6,8 +6,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
-namespace bya{
-namespace ka{
+namespace udho{
     
 namespace exceptions{
     struct http_error: public std::exception{
@@ -37,7 +36,6 @@ struct page{
     static boost::beast::http::response<boost::beast::http::string_body> internal_error(const boost::beast::http::request<boost::beast::http::string_body>& request, const std::string& message);
 };
 
-}
 }
 
 #endif // PAGE_H

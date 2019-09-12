@@ -21,8 +21,7 @@
 #include "session.h"
 #include "util.h"
 
-namespace bya{
-namespace ka{
+namespace udho{
     
 typedef boost::beast::http::request<boost::beast::http::string_body>    request_type;
 typedef boost::beast::http::response<boost::beast::http::string_body>   response_type;
@@ -163,7 +162,7 @@ struct module_overload{
         if(_pattern.empty()){
             return false;
         }
-        std::string subject_decoded = bya::ka::util::urldecode(subject);
+        std::string subject_decoded = udho::util::urldecode(subject);
         // std::cout << "_pattern" << _pattern << " " << " subject " << subject_decoded << std::endl;
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
@@ -193,7 +192,7 @@ struct module_overload{
         std::vector<std::string> args;
         boost::smatch caps;
         try{
-            std::string subject_decoded = bya::ka::util::urldecode(subject);
+            std::string subject_decoded = udho::util::urldecode(subject);
             // std::cout << "subject_decoded: " << subject_decoded << " _pattern: " << _pattern << std::endl;
             if(boost::u32regex_search(subject_decoded, caps, boost::make_u32regex(_pattern))){
                 std::copy(caps.begin()+1, caps.end(), std::back_inserter(args));
@@ -358,7 +357,7 @@ struct overload_group{
             try{
                 res = _overload(req, subject);
                 send(std::move(res));
-            }catch(const bya::ka::exceptions::http_error& error){
+            }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(req)));
                 return error.result();
             }catch(const std::exception& ex){
@@ -370,7 +369,7 @@ struct overload_group{
         }
     }
     self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
-        typedef bya::ka::listener<self_type> listener_type;
+        typedef udho::listener<self_type> listener_type;
         std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
@@ -392,7 +391,7 @@ struct overload_group<U, void>{
             try{
                 res = _overload(req, subject);
                 send(std::move(res));
-            }catch(const bya::ka::exceptions::http_error& error){
+            }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(req)));
                 return error.result();
             }catch(const std::exception& ex){
@@ -404,10 +403,10 @@ struct overload_group<U, void>{
     }
 };
 
-bya::ka::response_type failure_callback(bya::ka::request_type req);
+udho::response_type failure_callback(udho::request_type req);
 
-struct router: public overload_group<module_overload<bya::ka::response_type (*)(bya::ka::request_type)>, void>{
-    router(): overload_group<module_overload<bya::ka::response_type (*)(bya::ka::request_type)>, void>(bya::ka::overload(boost::beast::http::verb::unknown, &failure_callback)){}
+struct router: public overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>{
+    router(): overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>(udho::overload(boost::beast::http::verb::unknown, &failure_callback)){}
 };
 
 template <typename U, typename V, typename F>
@@ -416,7 +415,6 @@ overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& gr
 }
 
 
-}
 }
 
 #endif // ROUTER_H

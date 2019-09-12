@@ -1,11 +1,11 @@
 #include "udho/util.h"
 #include <sstream>
 
-unsigned char bya::ka::util::to_hex(unsigned char x){
+unsigned char udho::util::to_hex(unsigned char x){
     return x + (x > 9 ? ('A'-10) : '0');
 }
 
-std::string bya::ka::util::urlencode(const std::string& s){
+std::string udho::util::urlencode(const std::string& s){
     std::ostringstream os;
 
     for(std::string::const_iterator ci = s.begin(); ci != s.end(); ++ci){
@@ -20,7 +20,7 @@ std::string bya::ka::util::urlencode(const std::string& s){
     return os.str();
 }
 
-unsigned char bya::ka::util::from_hex(unsigned char ch){
+unsigned char udho::util::from_hex(unsigned char ch){
     if (ch <= '9' && ch >= '0')
         ch -= '0';
     else if (ch <= 'f' && ch >= 'a')
@@ -32,7 +32,7 @@ unsigned char bya::ka::util::from_hex(unsigned char ch){
     return ch;
 }
 
-std::string bya::ka::util::urldecode(const std::string& str){
+std::string udho::util::urldecode(const std::string& str){
     std::string result;
     std::string::size_type i;
     for (i = 0; i < str.size(); ++i){

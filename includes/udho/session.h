@@ -20,8 +20,7 @@
 #include <boost/config.hpp>
 #include "page.h"
 
-namespace bya{
-namespace ka{
+namespace udho{
 
 namespace internal{
     boost::beast::string_view mime_type(boost::beast::string_view path);
@@ -88,12 +87,12 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
             http::file_body::value_type body;
             body.open(local_path.c_str(), boost::beast::file_mode::scan, ec);
             if(ec == boost::system::errc::no_such_file_or_directory){
-                auto res = bya::ka::page::not_found(_req, "Not Found");
+                auto res = udho::page::not_found(_req, "Not Found");
                 _lambda(std::move(res));
                 return;
             }
             if(ec){
-                auto res = bya::ka::page::internal_error(_req, "Unknown Error Occured");
+                auto res = udho::page::internal_error(_req, "Unknown Error Occured");
                 _lambda(std::move(res));
                 return;
             }
@@ -130,7 +129,6 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
     }
 };
 
-}
 }
 
 

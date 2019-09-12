@@ -1,6 +1,6 @@
 #include "udho/router.h"
 
-bya::ka::response_type bya::ka::failure_callback(bya::ka::request_type req){
+udho::response_type udho::failure_callback(udho::request_type req){
     // do nothing
     std::cout << "nothing" << std::endl;
     http::response<http::string_body> res{http::status::unknown, req.version()};
