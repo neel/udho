@@ -17,46 +17,153 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "util.h"
 #include <string>
 #include <functional>
+#include <boost/regex.hpp>
+#include <boost/regex/icu.hpp>
 #include <boost/function.hpp>
 
 namespace udho{
 
 namespace internal{
-    // https://stackoverflow.com/questions/26107041/how-can-i-determine-the-return-type-of-a-c11-member-function
-    template <typename T>
-    struct return_type;
-    template <typename R, typename C, typename... Args>
-    struct return_type<R(C::*)(Args...)> { using type = R; };
     
-    template <typename T>
-    struct signature;
-    template <typename T, typename R, typename... Args>
-    struct signature<R (T::*)(Args...)>{
-        using obj  = T;
-        using type = boost::function<R (Args...)>;
+    template <typename R, typename First, typename... Rest>
+    struct reducer{
+        typedef First object_type;
+        typedef boost::function<R (Rest...)> function_type;
+        typedef boost::function<R (First, Rest...)> actual_function_type;
+        
+        object_type _that;
+        actual_function_type _actual;
+        
+        reducer(object_type that, actual_function_type actual): _that(that), _actual(actual){}
+        R operator()(Rest... rest){
+            return _actual(_that, rest...);
+        }
     };
-    
-    
-}
-    
-template <typename F>
-void expose(F f, typename internal::signature<F>::obj* that){
-//     using function_type = typename internal::signature<F>::type;
-    std::bind1st(std::mem_fn(f), that);
-}
 
+    template <typename T>
+    struct bind_first;
+
+    template <typename R, typename... Args>
+    struct bind_first<boost::function<R (Args...)>>{
+        typedef reducer<R, Args...> reducer_type;
+        typedef boost::function<R (Args...)> base_function_type;
+        typedef typename reducer_type::object_type object_type;
+        typedef typename reducer_type::function_type reduced_function_type;
+        
+        object_type _that;
+        reducer_type _reducer;
+        
+        bind_first(object_type that, base_function_type base): _reducer(that, base){}
+        reduced_function_type reduced(){
+            reduced_function_type reduced_function = _reducer;
+            return reduced_function;
+        }
+    };
+
+    template <typename T>
+    struct reduced_;
+
+    template <typename R, typename C, typename... Args>
+    struct reduced_<R (C::* ) (Args...)>{
+        typedef R (C::* actual_function_type) (Args...);
+        typedef boost::function<R (C*, Args...)> base_function_type;
+        typedef bind_first<base_function_type> binder_type;
+        typedef typename binder_type::object_type object_type;
+        typedef typename binder_type::reduced_function_type reduced_function_type;
+        
+        base_function_type _function;
+        
+        reduced_(actual_function_type function): _function(function){}
+        reduced_function_type reduced(C* that){
+            binder_type binder(that, _function);
+            return binder.reduced();
+        }
+    };
+
+    template <typename T>
+    typename reduced_<T>::reduced_function_type reduced(T function, typename reduced_<T>::object_type that){
+        reduced_<T> reduced_function(function);
+        return reduced_function.reduced(that);
+    }
+}
+    
 /**
  * @todo write docs
  */
+template <typename DerivedT>
 class application{
   std::string _name;
   public:
-    application(const std::string& name);
+    application(const std::string& name): _name(name){}
   public:
-    std::string name() const;
+    std::string name() const{return _name;}
+  public:
+    template <typename F>
+    auto get(F f){
+        return udho::get(internal::reduced(f, static_cast<DerivedT*>(this)));
+    }
+    template <typename F>
+    auto post(F f){
+        return udho::post(internal::reduced(f, static_cast<DerivedT*>(this)));
+    }
+};
 
+template <typename AppT>
+struct app_{
+    typedef app_<AppT> self_type;
+    
+    std::string _path;
+    AppT        _app;
+    
+    self_type& operator=(const std::string& path){
+        _path = path;
+        return *this;
+    }
+};
+
+template <typename U, typename V>
+struct overload_group<U, app_<V>>{
+    typedef overload_group<U> self_type;
+    typedef void              parent_type;
+    typedef U                 overload_type;
+    
+    overload_type _overload;
+    
+    overload_group(const overload_type& overload): _overload(overload){}
+    template <typename ReqT, typename Lambda>
+    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        std::string subject_decoded = udho::util::urldecode(subject);
+        boost::smatch match;
+        bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(_overload._path));
+        if(result){
+            std::string rest = result ? subject.substr(match.length()) : subject;
+            return _overload.serve(req, request_method, subject, send);
+        }        
+        return http::status::unknown;
+    }
+};
+
+template <typename AppT>
+app_<AppT> app(){
+    return app_<AppT>();
+}
+
+struct my_app: public application<my_app>{
+    typedef application<my_app> base;
+    
+    my_app();
+    int add(int a, int b);
+    int mul(int a, int b);
+    
+    template <typename RouterT>
+    auto route(RouterT& router){
+        router | (get(&my_app::add).plain() = "^/add$")
+               | (get(&my_app::mul).plain() = "^/mul$");
+        return router;
+    }
 };
 
 }

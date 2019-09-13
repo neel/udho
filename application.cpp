@@ -16,3 +16,10 @@
 
 #include "udho/application.h"
 
+udho::my_app::my_app(): base("my_app"){}
+int udho::my_app::add(int a, int b){
+    return a + b;
+}
+int udho::my_app::mul(int a, int b){
+    return a * b;
+}
