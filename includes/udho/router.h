@@ -109,6 +109,9 @@ namespace compositors{
         response_type operator()(const ReqT& /*req*/, const OutputT& out){
             return out;
         }
+        std::string name() const{
+            return "UNSPECIFIED";
+        }
     };
 
     template <typename OutputT>
@@ -129,12 +132,14 @@ namespace compositors{
             res.prepare_payload();
             return res;
         }
+        std::string name() const{
+            return (boost::format("MIMED %1%") % _mime).str();
+        }
     };
 }
 
-
 template <typename Function, template <typename> class CompositorT=compositors::transparent>
-struct module_overload{
+struct module_overload{    
     typedef Function                                                           function_type;
     typedef module_overload<Function, CompositorT>                             self_type;
     typedef typename internal::function_signature<Function>::return_type       return_type;
@@ -203,6 +208,14 @@ struct module_overload{
             std::cout << "ex: " << ex.what() << std::endl;
         }
         return operator()(value, args);
+    }
+    module_info info() const{
+        module_info inf;
+        inf._pattern = _pattern;
+        inf._method = _request_method;
+        inf._compositor = _compositor.name();
+        inf._fptr = &_function;
+        return inf;
     }
 };
 
@@ -369,6 +382,10 @@ struct overload_group{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
     }
+    void summary(std::vector<module_info>& stack){
+        stack.push_back(_overload.info());
+        _parent.summary(stack);
+    }
     self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
         typedef udho::listener<self_type> listener_type;
         std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
@@ -402,6 +419,9 @@ struct overload_group<U, void>{
             return res.result();
         }
         return http::status::unknown;
+    }
+    void summary(std::vector<module_info>& stack){
+        stack.push_back(_overload.info());
     }
 };
 

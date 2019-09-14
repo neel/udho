@@ -1,5 +1,7 @@
 #include "udho/util.h"
 #include <sstream>
+#include <iostream>
+#include <boost/format.hpp>
 
 unsigned char udho::util::to_hex(unsigned char x){
     return x + (x > 9 ? ('A'-10) : '0');
@@ -50,3 +52,27 @@ std::string udho::util::urldecode(const std::string& str){
     }
     return result;
 }
+
+
+void udho::util::dump_module_info(const std::vector<udho::module_info>& infos){
+    static int indent = 0;
+    for(auto i = infos.rbegin(); i != infos.rend(); ++i){
+        auto info = *i;
+        std::string method_str;
+        
+        if(info._compositor == "UNSPECIFIED"){
+            continue;
+        }
+        
+        for(int j = 0; j < indent; ++j){
+            std::cout << "\t";
+        }
+        std::cout << boost::format("%1% %2% -> %3% (%4%)") % info._method % info._pattern % info._fptr % info._compositor << std::endl;
+        if(info._children.size() > 0){
+            ++indent;
+            dump_module_info(info._children);
+            --indent;
+        }
+    }
+}
+

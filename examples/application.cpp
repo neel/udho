@@ -48,7 +48,9 @@ int main(){
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::app<my_app>()       = "^/my_app");
     router.listen(io, 9198, doc_root);
-          
+                  
+    udho::util::print_summary(router);
+    
     io.run();
     
     return 0;

@@ -29,6 +29,8 @@ int main(){
         | (udho::get(hello).plain() = "^/hello$");
     router.listen(io, 9198, doc_root);
           
+    udho::util::print_summary(router);
+    
     io.run();
     
     return 0;

@@ -23,6 +23,8 @@ int main(){
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
     router.listen(io, 9198, doc_root);
+    
+    udho::util::print_summary(router);
         
     io.run();
     

@@ -129,6 +129,16 @@ struct app_{
         std::cout << "app serve " << subject << std::endl;
         return _app.route(router).serve(req, request_method, subject, send);
     }
+    void summary(std::vector<module_info>& stack){
+        auto router = udho::router();
+        module_info info;
+        info._pattern = _path;
+        info._fptr = &_app;
+        info._compositor = "APPLICATION";
+        info._method = boost::beast::http::verb::unknown;
+        _app.route(router).summary(info._children);
+        stack.push_back(info);
+    }
 };
 
 template <typename U, typename V>
@@ -153,6 +163,11 @@ struct overload_group<U, app_<V>>{
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
+    }
+    
+    void summary(std::vector<module_info>& stack){
+        _overload.summary(stack);
+        _parent.summary(stack);
     }
     self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
         typedef udho::listener<self_type> listener_type;
