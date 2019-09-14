@@ -2,13 +2,7 @@
 #include <functional>
 #include <udho/router.h>
 #include <boost/asio.hpp>
-#include <boost/function.hpp>
 #include <udho/application.h>
-
-// #include <iostream>
-// #include "udho/util.h"
-// #include <boost/regex.hpp>
-// #include <boost/regex/icu.hpp>
 
 std::string hello(udho::request_type req){
     return "Hello World";
@@ -22,6 +16,28 @@ int add(udho::request_type req, int a, int b){
     return a + b;
 }
 
+struct my_app: public udho::application<my_app>{
+    typedef udho::application<my_app> base;
+    
+    my_app();
+    int add(udho::request_type req, int a, int b);
+    int mul(udho::request_type req, int a, int b);
+    
+    template <typename RouterT>
+    auto route(RouterT& router){
+        return router | (get(&my_app::add).plain() = "^/add/(\\d+)/(\\d+)$")
+                      | (get(&my_app::mul).plain() = "^/mul/(\\d+)/(\\d+)$");
+    }
+};
+
+my_app::my_app(): base("my_app"){}
+int my_app::add(udho::request_type req, int a, int b){
+    return a + b;
+}
+int my_app::mul(udho::request_type req, int a, int b){
+    return a * b;
+}
+
 int main(){
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     boost::asio::io_service io;
@@ -30,19 +46,10 @@ int main(){
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$")
-        | (udho::app<udho::my_app>() = "^/my_app");
+        | (udho::app<my_app>()       = "^/my_app");
     router.listen(io, 9198, doc_root);
           
     io.run();
-    
-//     std::string subject = "/apps/উধো/বুধো";
-//     std::string pattern = "^/apps";
-//     std::string subject_decoded = udho::util::urldecode(subject);
-//     boost::smatch match;
-//     bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(pattern));
-//     std::cout << result << std::endl;
-//     std::cout << match.length() << std::endl;
-//     std::cout << subject.substr(match.length()) << std::endl;
     
     return 0;
 }

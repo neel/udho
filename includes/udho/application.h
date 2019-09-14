@@ -166,20 +166,6 @@ app_<AppT> app(){
     return app_<AppT>();
 }
 
-struct my_app: public application<my_app>{
-    typedef application<my_app> base;
-    
-    my_app();
-    int add(udho::request_type req, int a, int b);
-    int mul(udho::request_type req, int a, int b);
-    
-    template <typename RouterT>
-    auto route(RouterT& router){
-        return router | (get(&my_app::add).plain() = "^/add/(\\d+)/(\\d+)$")
-                      | (get(&my_app::mul).plain() = "^/mul/(\\d+)/(\\d+)$");
-    }
-};
-
 }
 
 #endif // APPLICATION_H
