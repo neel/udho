@@ -17,9 +17,9 @@
 #include "udho/application.h"
 
 udho::my_app::my_app(): base("my_app"){}
-int udho::my_app::add(int a, int b){
+int udho::my_app::add(udho::request_type req, int a, int b){
     return a + b;
 }
-int udho::my_app::mul(int a, int b){
+int udho::my_app::mul(udho::request_type req, int a, int b){
     return a * b;
 }

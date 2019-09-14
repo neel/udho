@@ -163,7 +163,7 @@ struct module_overload{
             return false;
         }
         std::string subject_decoded = udho::util::urldecode(subject);
-        // std::cout << "_pattern" << _pattern << " " << " subject " << subject_decoded << std::endl;
+        std::cout << "_pattern" << _pattern << " " << " subject " << subject_decoded << std::endl;
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
     template <typename T>
@@ -352,6 +352,7 @@ struct overload_group{
     overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
     template <typename ReqT, typename Lambda>
     http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        std::cout << "serve: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;
             try{
@@ -386,6 +387,7 @@ struct overload_group<U, void>{
     overload_group(const overload_type& overload): _overload(overload){}
     template <typename ReqT, typename Lambda>
     http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        std::cout << "serve <void>: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;
             try{

@@ -23,6 +23,7 @@
 #include <boost/regex.hpp>
 #include <boost/regex/icu.hpp>
 #include <boost/function.hpp>
+#include <udho/router.h>
 
 namespace udho{
 
@@ -122,27 +123,41 @@ struct app_{
         _path = path;
         return *this;
     }
+    template <typename ReqT, typename Lambda>
+    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        auto router = udho::router();
+        std::cout << "app serve " << subject << std::endl;
+        return _app.route(router).serve(req, request_method, subject, send);
+    }
 };
 
 template <typename U, typename V>
 struct overload_group<U, app_<V>>{
-    typedef overload_group<U> self_type;
-    typedef void              parent_type;
-    typedef U                 overload_type;
+    typedef overload_group<U, app_<V>>  self_type;
+    typedef U                           parent_type;
+    typedef app_<V>                     overload_type;
     
+    parent_type   _parent;
     overload_type _overload;
     
-    overload_group(const overload_type& overload): _overload(overload){}
+    overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
     template <typename ReqT, typename Lambda>
     http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
         bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(_overload._path));
+        std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
-            return _overload.serve(req, request_method, subject, send);
-        }        
-        return http::status::unknown;
+            return _overload.serve(req, request_method, rest, send);
+        }else{
+            return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
+        }
+    }
+    self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
+        typedef udho::listener<self_type> listener_type;
+        std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
+        return *this;
     }
 };
 
@@ -155,14 +170,13 @@ struct my_app: public application<my_app>{
     typedef application<my_app> base;
     
     my_app();
-    int add(int a, int b);
-    int mul(int a, int b);
+    int add(udho::request_type req, int a, int b);
+    int mul(udho::request_type req, int a, int b);
     
     template <typename RouterT>
     auto route(RouterT& router){
-        router | (get(&my_app::add).plain() = "^/add$")
-               | (get(&my_app::mul).plain() = "^/mul$");
-        return router;
+        return router | (get(&my_app::add).plain() = "^/add/(\\d+)/(\\d+)$")
+                      | (get(&my_app::mul).plain() = "^/mul/(\\d+)/(\\d+)$");
     }
 };
 
