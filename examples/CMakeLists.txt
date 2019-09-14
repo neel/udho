@@ -10,3 +10,6 @@ TARGET_LINK_LIBRARIES(udho-example-simple udho)
 
 ADD_EXECUTABLE(udho-example-functor functor.cpp)
 TARGET_LINK_LIBRARIES(udho-example-functor udho)
+
+ADD_EXECUTABLE(udho-example-application application.cpp)
+TARGET_LINK_LIBRARIES(udho-example-application udho)
