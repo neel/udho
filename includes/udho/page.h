@@ -1,12 +1,29 @@
 #ifndef PAGE_H
 #define PAGE_H
 
+#include "util.h"
 #include <stdexcept>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
+#include <iostream>
+
 namespace udho{
+    
+namespace internal{
+    void html_dump_module_info(const std::vector<udho::module_info>& infos, std::string& buffer);
+    template <typename RouterT>
+    std::string html_summary(RouterT& router){
+        std::vector<udho::module_info> summary;
+        std::string buffer;
+        buffer += "<div class='overloads'>";
+        router.summary(summary);
+        html_dump_module_info(summary, buffer);
+        buffer += "</div>";
+        return buffer;
+    }
+}
     
 namespace exceptions{
     struct http_error: public std::exception{
@@ -24,18 +41,27 @@ namespace exceptions{
             res.prepare_payload();
             return res;
         }
-        virtual std::string page() const;
+        template <typename T, typename RouterT>
+        boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request, RouterT& router) const{
+            boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::not_found, request.version()};
+            res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(boost::beast::http::field::content_type, "text/html");
+            res.keep_alive(request.keep_alive());
+            res.body() = page(router);
+            res.prepare_payload();
+            return res;
+        }
+        virtual std::string page(std::string content="") const;
+        template <typename RouterT>
+        std::string page(RouterT& router) const{
+            std::string buffer = internal::html_summary(router);
+            return page(buffer);
+        }
         virtual const char* what() const noexcept;
         boost::beast::http::status result() const;
     };
 }
     
-struct page{
-    static boost::beast::http::response<boost::beast::http::string_body> not_found(const boost::beast::http::request<boost::beast::http::string_body>& request, const std::string& message);
-    static boost::beast::http::response<boost::beast::http::string_body> bad_request(const boost::beast::http::request<boost::beast::http::string_body>& request, const std::string& message);
-    static boost::beast::http::response<boost::beast::http::string_body> internal_error(const boost::beast::http::request<boost::beast::http::string_body>& request, const std::string& message);
-};
-
 }
 
 #endif // PAGE_H

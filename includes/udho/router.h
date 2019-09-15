@@ -168,7 +168,7 @@ struct module_overload{
             return false;
         }
         std::string subject_decoded = udho::util::urldecode(subject);
-        std::cout << "_pattern" << _pattern << " " << " subject " << subject_decoded << std::endl;
+        std::cout << "_pattern " << _pattern << " " << " subject " << subject_decoded << std::endl;
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
     template <typename T>
