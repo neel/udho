@@ -8,6 +8,9 @@
 
 namespace udho{
 
+/**
+ * listener runs accept loop for HTTP sockets
+ */
 template <typename RouterT>
 class listener : public std::enable_shared_from_this<listener<RouterT>>{
     typedef listener<RouterT> self_type;
@@ -18,11 +21,13 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
     boost::asio::signal_set _signals;
     RouterT& _router;
   public:
+    /**
+     * @param router HTTP url mapping router
+     * @param service I/O service
+     * @param endpoint HTTP server endpoint to listen on
+     * @param docroot HTTP document rot to serve static contents
+     */
     listener(RouterT& router, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _router(router), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM){
-        
-//         boost::asio::socket_base::linger option(true, 0);
-//         _acceptor.set_option(option);
-        
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
@@ -33,6 +38,9 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
         
         _signals.async_wait(boost::bind(&self_type::stop, this));
     }
+    /**
+     * stops accepting incomming connections
+     */
     void stop(){
         _acceptor.close();
         _service.stop();
@@ -40,11 +48,17 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
     ~listener(){
         stop();
     }
+    /**
+     * starts the async accept loop
+     */
     void run(){
         if(! _acceptor.is_open())
             return;
         accept();
     }
+    /**
+     * accept an incomming connection
+     */
     void accept(){
         _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<listener<RouterT>>::shared_from_this(), std::placeholders::_1));
     }

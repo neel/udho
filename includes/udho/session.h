@@ -30,6 +30,9 @@ namespace internal{
 using tcp = boost::asio::ip::tcp; 
 namespace http = boost::beast::http;
 
+/**
+ * Stateful HTTP Session
+ */
 template <typename RouterT>
 class session : public std::enable_shared_from_this<session<RouterT>>{
     RouterT& _router;
@@ -56,7 +59,16 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
     std::shared_ptr<void> res_;
     send_lambda _lambda;
   public:
+    /**
+     * session constructor
+     * @param router router
+     * @param socket TCP socket
+     * @param doc_root document root to serve static contents
+     */
     explicit session(RouterT& router, tcp::socket socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    /**
+     * start the read loop
+     */
     void run(){
         do_read();
     }

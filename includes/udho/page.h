@@ -26,6 +26,12 @@ namespace internal{
 }
     
 namespace exceptions{
+    /**
+     * throw HTTP error exception in order to send a HTTP response other than 200 OK. Uncaught exceptions are presented as html page with routing sumary 
+     * @code
+     * http_error(boost::beast::http::status::notfound)
+     * @endcode
+     */
     struct http_error: public std::exception{
         std::string _resource;
         boost::beast::http::status _status;
