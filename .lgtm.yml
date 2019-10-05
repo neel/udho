@@ -1,0 +1,22 @@
+path_classifiers:
+    test:
+        - tests
+    examples:
+        - examples
+extraction:
+    cpp:
+        prepare:
+            packages:
+                - build-essential
+                - libicu-dev
+                - cmake
+                - libboost-dev
+        configure:
+            command:
+                - mkdir build
+                - cd build
+                - cmake ..
+        index:
+            build_command:
+                - cd build
+                - make

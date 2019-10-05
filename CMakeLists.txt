@@ -7,7 +7,7 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
 FIND_PACKAGE(Threads REQUIRED)
 find_package(ICU COMPONENTS uc REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex REQUIRED) 
+FIND_PACKAGE(Boost COMPONENTS filesystem regex system REQUIRED) 
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
