@@ -39,15 +39,6 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
 
         explicit send_lambda(self_type& self): self_(self){}
 
-//         void operator()(const nlohmann::json& json) const{
-//             std::string results_str = json.dump();
-//             boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok};
-//             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-//             res.set(http::field::content_type,   "application/json");
-//             res.set(http::field::content_length, results_str.size());
-//             res.body() = results_str;
-//             res.prepare_payload();
-//         }
         template<bool isRequest, class Body, class Fields>
         void operator()(http::message<isRequest, Body, Fields>&& msg) const {
             auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(std::move(msg));

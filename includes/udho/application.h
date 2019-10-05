@@ -92,7 +92,23 @@ namespace internal{
 }
     
 /**
- * @todo write docs
+ * @brief all applications derive from this class
+ * @details
+ * applications are a class having a set of methods bound with urls
+ * @code
+ * struct my_app: public udho::application<my_app>{
+ *      my_app();
+ *      int add(udho::request_type req, int a, int b);
+ *      int mul(udho::request_type req, int a, int b);
+ *      template <typename RouterT>
+ *      auto route(RouterT& router){
+ *          return router | (get(&my_app::add).plain() = "^/add/(\\d+)/(\\d+)$")
+ *                        | (get(&my_app::mul).plain() = "^/mul/(\\d+)/(\\d+)$");
+ *      }
+ * };
+ * @endcode
+ * @example examples/application.cpp
+ * @tparam DerivedT The derived application class
  */
 template <typename DerivedT>
 class application{
@@ -102,13 +118,50 @@ class application{
   public:
     std::string name() const{return _name;}
   public:
+    /**
+     * add a get method 
+     * @tparam F callback type 
+     * @param f callback
+     */
     template <typename F>
     auto get(F f){
         return udho::get(internal::reduced(f, static_cast<DerivedT*>(this)));
     }
+    /**
+     * add a post method 
+     * @tparam F callback type 
+     * @param f callback
+     */
     template <typename F>
     auto post(F f){
         return udho::post(internal::reduced(f, static_cast<DerivedT*>(this)));
+    }
+    /**
+     * add a head method 
+     * @tparam F callback type 
+     * @param f callback
+     */
+    template <typename F>
+    auto head(F f){
+        return udho::head(internal::reduced(f, static_cast<DerivedT*>(this)));
+    }
+    /**
+     * add a put method 
+     * @tparam F callback type 
+     * @param f callback
+     */
+    template <typename F>
+    auto put(F f){
+        return udho::put(internal::reduced(f, static_cast<DerivedT*>(this)));
+    }
+    /**
+     * add a delete method 
+     * @tparam F callback type 
+     * @param f callback
+     */
+    template <typename F>
+    auto del(F f){
+        return udho::del(internal::reduced(f, static_cast<DerivedT*>(this)));
     }
 };
 

@@ -39,7 +39,7 @@ int my_app::mul(udho::request_type req, int a, int b){
 }
 
 int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
+    std::string doc_root("/tmp/www"); // path to static content
     boost::asio::io_service io;
 
     auto router = udho::router()

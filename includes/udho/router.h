@@ -255,6 +255,15 @@ auto overload(boost::beast::http::verb request_method, F ftor, A1& a1, Composito
     return overload<function_type>(request_method, function, compositor);
 }
 
+/**
+ * @brief mapping of an url with a http request defined by http method and the url pattern
+ * @details
+ * A content wrapper is defined by a HTTP verb, a callback and a url pattern. 
+ * A content wrapper uses a compositor that prepares a HTTP response based on the callbacks return
+ * @note binds a variable by reference with the mapping, which might be a database connection or some persistent stateful object
+ * @tparam F callback type
+ * @tparam A1 type of the passed value which will be passed by reference
+ */
 template <typename F, typename A1>
 struct content_wrapper1{
     typedef content_wrapper1<F, A1> self_type;
@@ -270,28 +279,54 @@ struct content_wrapper1{
         
         return overload<F, A1, CompositorT>(_method, _ftor, _a1, compositor);
     }
+    /**
+     * raw content delivery using transparent compositor
+     */
     auto raw(){
         return unwrap();
     }
+    /**
+     * attach an url pattern
+     */
     auto operator=(const std::string& pattern){
         auto overloaded = raw();
         overloaded = pattern;
         return overloaded;
     }
+    /**
+     * applies a mimed compositor on the return
+     * @param mime returned mime type
+     */
     auto mimed(std::string mime){
         return unwrap(compositors::mimed<typename internal::function_signature<F>::return_type>(mime));
     }
+    /**
+     * shorthand for html mime type
+     */
     auto html(){
         return mimed("text/html");
     }
+    /**
+     * shorthand for plain text mime type
+     */
     auto plain(){
         return mimed("text/plain");
     }
+    /**
+     * shorthand for json mime type
+     */
     auto json(){
         return mimed("application/json");
     }
 };
 
+/**
+ * @brief mapping of an url with a http request defined by http method and the url pattern
+ * @details
+ * A content wrapper is defined by a HTTP verb, a callback and a url pattern. 
+ * A content wrapper uses a compositor that prepares a HTTP response based on the callbacks return
+ * @tparam F callback type
+ */
 template <typename F>
 struct content_wrapper0{
     typedef content_wrapper0<F> self_type;
@@ -306,53 +341,142 @@ struct content_wrapper0{
         
         return overload<F, CompositorT>(_method, _ftor, compositor);
     }
+    /**
+     * raw content delivery using transparent compositor
+     */
     auto raw(){
         return unwrap();
     }
+    /**
+     * attach an url pattern
+     */
     auto operator=(const std::string& pattern){
         auto overloaded = raw();
         overloaded = pattern;
         return overloaded;
     }
+    /**
+     * applies a mimed compositor on the return
+     * @param mime returned mime type
+     */
     auto mimed(std::string mime){
         return unwrap(compositors::mimed<typename internal::function_signature<F>::return_type>(mime));
     }
+    /**
+     * shorthand for html mime type
+     */
     auto html(){
         return mimed("text/html");
     }
+    /**
+     * shorthand for plain text mime type
+     */
     auto plain(){
         return mimed("text/plain");
     }
+    /**
+     * shorthand for json mime type
+     */
     auto json(){
         return mimed("application/json");
     }
 };
 
+/**
+ * creates a get mapping
+ * @see content_wrapper0
+ */
 template <typename F>
 auto get(F ftor){
     return content_wrapper0<F>(boost::beast::http::verb::get, ftor);
 }
 
+/**
+ * creates a get mapping
+ * @see content_wrapper1
+ */
 template <typename F, typename A1>
 auto get(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::get, ftor, a1);
 }
 
+/**
+ * creates a post mapping
+ * @see content_wrapper0
+ */
+template <typename F>
+auto post(F ftor){
+    return content_wrapper0<F>(boost::beast::http::verb::post, ftor);
+}
+
+/**
+ * creates a post mapping
+ * @see content_wrapper1
+ */
 template <typename F, typename A1>
 auto post(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::post, ftor, a1);
 }
 
-// template <typename F, typename A1>
-// auto get(F ftor, A1& a1){
-//     return overload<F, A1>(boost::beast::http::verb::get, ftor, a1);
-// }
-// 
-// template <typename F, typename A1>
-// auto post(F ftor, A1& a1){
-//     return overload<F, A1>(boost::beast::http::verb::post, ftor, a1);
-// }
+/**
+ * creates a put mapping
+ * @see content_wrapper0
+ */
+template <typename F>
+auto put(F ftor){
+    return content_wrapper0<F>(boost::beast::http::verb::put, ftor);
+}
 
+/**
+ * creates a put mapping
+ * @see content_wrapper1
+ */
+template <typename F, typename A1>
+auto put(F ftor, A1& a1){
+    return content_wrapper1<F, A1>(boost::beast::http::verb::put, ftor, a1);
+}
+
+/**
+ * creates a head mapping
+ * @see content_wrapper0
+ */
+template <typename F>
+auto head(F ftor){
+    return content_wrapper0<F>(boost::beast::http::verb::head, ftor);
+}
+
+/**
+ * creates a head mapping
+ * @see content_wrapper1
+ */
+template <typename F, typename A1>
+auto head(F ftor, A1& a1){
+    return content_wrapper1<F, A1>(boost::beast::http::verb::head, ftor, a1);
+}
+
+/**
+ * creates a delete mapping
+ * @see content_wrapper0
+ */
+template <typename F>
+auto del(F ftor){
+    return content_wrapper0<F>(boost::beast::http::verb::delete_, ftor);
+}
+
+/**
+ * creates a delete mapping
+ * @see content_wrapper1
+ */
+template <typename F, typename A1>
+auto del(F ftor, A1& a1){
+    return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
+}
+
+/**
+ * compile time chain of url mappings 
+ * @see content_wrapper0
+ * @see content_wrapper1
+ */
 template <typename U, typename V = void>
 struct overload_group{
     typedef overload_group<U, V> self_type;
@@ -393,6 +517,11 @@ struct overload_group{
     }
 };
 
+/**
+ * terminal node of the compile time chain of url mappings 
+ * @see content_wrapper0
+ * @see content_wrapper1
+ */
 template <typename U>
 struct overload_group<U, void>{
     typedef overload_group<U> self_type;
@@ -427,10 +556,24 @@ struct overload_group<U, void>{
 
 udho::response_type failure_callback(udho::request_type req);
 
+/**
+ * router maps HTTP requests with the callbacks
+ * @code
+ * auto router = udho::router()
+ *      | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
+ *      | (udho::get(hello).plain() = "^/hello$");
+ * @endcode
+ * @example example/simple.cpp
+ */
 struct router: public overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>{
     router(): overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>(udho::overload(boost::beast::http::verb::unknown, &failure_callback)){}
 };
 
+/**
+ * adds a callback url mapping to the router
+ * @param group the overload group (which is actually the router or router attached with some url mappings)
+ * @param method url mapping
+ */
 template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
