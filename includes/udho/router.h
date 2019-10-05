@@ -172,7 +172,7 @@ struct module_overload{
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
     template <typename T>
-    return_type call(T value, const std::vector<std::string>& args){
+    return_type call(const T& value, const std::vector<std::string>& args){
         std::deque<std::string> argsq;
         std::copy(args.begin(), args.end(), std::back_inserter(argsq));
         tuple_type tuple;
@@ -188,12 +188,12 @@ struct module_overload{
         return boost::fusion::invoke(_function, arguments);
     }
     template <typename T>
-    response_type operator()(T value, const std::vector<std::string>& args){
+    response_type operator()(const T& value, const std::vector<std::string>& args){
         return_type ret = call(value, args);
         return _compositor(value, ret);
     }
     template <typename T>
-    response_type operator()(T value, const std::string& subject){
+    response_type operator()(const T& value, const std::string& subject){
         std::vector<std::string> args;
         boost::smatch caps;
         try{
@@ -217,6 +217,14 @@ struct module_overload{
         inf._fptr = &_function;
         return inf;
     }
+    private:
+        self_type& operator=(const self_type& other){
+            _request_method = other._request_method;
+            _function = other._function;
+            _pattern = other._pattern;
+            _compositor = other._compositor;
+            return *this;
+        }
 };
 
 namespace internal{
@@ -488,7 +496,7 @@ struct overload_group{
     
     overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
     template <typename ReqT, typename Lambda>
-    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;
@@ -532,7 +540,7 @@ struct overload_group<U, void>{
     
     overload_group(const overload_type& overload): _overload(overload){}
     template <typename ReqT, typename Lambda>
-    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve <void>: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;

@@ -87,13 +87,13 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
             auto response = _router.serve(_req, _req.method(), path, _lambda);
             if(response == http::status::unknown){
                 std::string local_path = internal::path_cat(*_doc_root, path);
-                boost::beast::error_code ec;
+                boost::beast::error_code err;
                 http::file_body::value_type body;
-                body.open(local_path.c_str(), boost::beast::file_mode::scan, ec);
-                if(ec == boost::system::errc::no_such_file_or_directory){
+                body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
+                if(err == boost::system::errc::no_such_file_or_directory){
                     throw exceptions::http_error(boost::beast::http::status::not_found, path);
                 }
-                if(ec){
+                if(err){
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
                 }
                 auto const size = body.size();

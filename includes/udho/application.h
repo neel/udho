@@ -39,7 +39,7 @@ namespace internal{
         actual_function_type _actual;
         
         reducer(object_type that, actual_function_type actual): _that(that), _actual(actual){}
-        R operator()(Rest... rest){
+        R operator()(const Rest&... rest){
             return _actual(_that, rest...);
         }
     };
@@ -177,7 +177,7 @@ struct app_{
         return *this;
     }
     template <typename ReqT, typename Lambda>
-    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         auto router = udho::router();
         std::cout << "app serve " << subject << std::endl;
         return _app.route(router).serve(req, request_method, subject, send);
@@ -205,7 +205,7 @@ struct overload_group<U, app_<V>>{
     
     overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
     template <typename ReqT, typename Lambda>
-    http::status serve(ReqT req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
         bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(_overload._path));
