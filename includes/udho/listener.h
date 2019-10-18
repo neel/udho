@@ -13,10 +13,12 @@ namespace udho{
  */
 template <typename RouterT>
 class listener : public std::enable_shared_from_this<listener<RouterT>>{
+    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
+    
     typedef listener<RouterT> self_type;
     boost::asio::io_service& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
-    boost::asio::ip::tcp::socket _socket;
+    socket_type _socket;
     std::shared_ptr<std::string const> _docroot;
     boost::asio::signal_set _signals;
     RouterT& _router;
