@@ -107,7 +107,6 @@ namespace internal{
  *      }
  * };
  * @endcode
- * @example examples/application.cpp
  * @tparam DerivedT The derived application class
  */
 template <typename DerivedT>
