@@ -564,9 +564,6 @@ struct overload_group{
         std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
-
-    template <typename U, typename V, typename F>
-    friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
 };
 
 /**
@@ -616,9 +613,6 @@ struct overload_group<U, void>{
     void summary(std::vector<module_info>& stack){
         stack.push_back(_overload.info());
     }
-
-    template <typename U, typename V, typename F>
-    friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
 };
 
 udho::response_type failure_callback(udho::request_type req);
