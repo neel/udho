@@ -2,3 +2,4 @@ build
 *.kdev*
 .vs*
 dox
+docs/_build
