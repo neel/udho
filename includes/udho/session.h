@@ -35,6 +35,12 @@ namespace http = boost::beast::http;
  */
 template <typename RouterT>
 class session : public std::enable_shared_from_this<session<RouterT>>{
+#if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
+    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
+#else
+    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> socket_type;
+#endif
+    
     RouterT& _router;
     typedef session<RouterT> self_type;
     struct send_lambda{
@@ -51,7 +57,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
         }
     };
 
-    tcp::socket _socket;
+    socket_type _socket;
     boost::asio::strand<boost::asio::io_context::executor_type> _strand;
     boost::beast::flat_buffer _buffer;
     std::shared_ptr<std::string const> _doc_root;
@@ -65,7 +71,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit session(RouterT& router, tcp::socket socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    explicit session(RouterT& router, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
     /**
      * start the read loop
      */
