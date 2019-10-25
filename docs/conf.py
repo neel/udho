@@ -22,7 +22,13 @@ configureDoxyfile(input_dir, output_dir)
 subprocess.call('doxygen', shell=True)
 breathe_projects['udho'] = output_dir + '/xml'
 
+breathe_projects_source = {
+    "udho" : ( "../includes/udho", ["router.h", "application.h"] )
+}
+
 if not read_the_docs_build:
     import sphinx_rtd_theme
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+print("EXECUTING conf.py")

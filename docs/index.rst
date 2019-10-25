@@ -1,8 +1,11 @@
 Docs
 ====
- 
-.. doxygenstruct:: udho::router
-   :members:
+
+.. toctree::
+    :caption: Table of Contents
+    :maxdepth: 2
+
+   routing
    
-.. doxygenstruct:: udho::operator|
-   :members:
+   content
+   
