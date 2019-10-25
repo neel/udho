@@ -1,5 +1,5 @@
 Docs
 ====
  
-.. doxygenstruct:: router
+.. doxygenstruct:: udho::router
    :members:
