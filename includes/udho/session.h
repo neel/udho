@@ -35,7 +35,11 @@ namespace http = boost::beast::http;
  */
 template <typename RouterT>
 class session : public std::enable_shared_from_this<session<RouterT>>{
+#if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
+#else
+    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> socket_type;
+#endif
     
     RouterT& _router;
     typedef session<RouterT> self_type;
