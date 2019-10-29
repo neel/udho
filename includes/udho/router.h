@@ -38,15 +38,15 @@ namespace internal{
     template <typename R, typename... Args>
     struct function_signature<R (*)(Args...)>{
         typedef R                               return_type;
-        typedef boost::tuple<Args...>           tuple_type;
-        typedef boost::fusion::tuple<Args...>   arguments_type;
+        typedef boost::tuple<std::decay_t<Args>...>           tuple_type;
+        typedef boost::fusion::tuple<std::decay_t<Args>...>   arguments_type;
     };
     
     template <typename R, typename... Args>
     struct function_signature<boost::function<R (Args...)> >{
         typedef R                               return_type;
-        typedef boost::tuple<Args...>           tuple_type;
-        typedef boost::fusion::tuple<Args...>   arguments_type;
+        typedef boost::tuple<std::decay_t<Args>...>           tuple_type;
+        typedef boost::fusion::tuple<std::decay_t<Args>...>   arguments_type;
     };
 
     // convert boost::tuple to boost::fusion::tuple
@@ -615,7 +615,7 @@ struct overload_group<U, void>{
     }
 };
 
-udho::response_type failure_callback(udho::request_type req);
+udho::response_type failure_callback(const udho::request_type& req);
 
 /**
  * router maps HTTP requests with the callbacks
@@ -626,11 +626,11 @@ udho::response_type failure_callback(udho::request_type req);
  * @endcode
  * @ingroup routing
  */
-struct router: public overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>{
+struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, void>{
     /**
      * cnstructs a router
      */
-    router(): overload_group<module_overload<udho::response_type (*)(udho::request_type)>, void>(udho::overload(boost::beast::http::verb::unknown, &failure_callback)){}
+    router(): overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, void>(udho::overload(boost::beast::http::verb::unknown, &failure_callback)){}
 
     template <typename U, typename V, typename F>
     friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
