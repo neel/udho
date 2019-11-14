@@ -154,7 +154,7 @@ struct module_overload{
     compositor_type          _compositor;
     
     module_overload(boost::beast::http::verb request_method, function_type f, compositor_type compositor=compositor_type()): _request_method(request_method), _function(f), _compositor(compositor){}
-    module_overload(const self_type& other): _request_method(other._request_method), _function(other._function), _pattern(other._pattern), _compositor(other._compositor){}
+    module_overload(const self_type& other): _request_method(other._request_method), _pattern(other._pattern), _function(other._function), _compositor(other._compositor){}
 
     self_type& operator=(const std::string& pattern){
         _pattern = pattern;
@@ -295,7 +295,7 @@ struct content_wrapper1{
     content_wrapper1(boost::beast::http::verb method, F ftor, A1& a1): _method(method), _ftor(ftor), _a1(a1){}    
     template <template <typename> class CompositorT=compositors::transparent>
     auto unwrap(CompositorT<typename internal::function_signature<F>::return_type> compositor = CompositorT<typename internal::function_signature<F>::return_type>()){
-        typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
+        // typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
         
         return overload<F, A1, CompositorT>(_method, _ftor, _a1, compositor);
     }
@@ -358,7 +358,7 @@ struct content_wrapper0{
     content_wrapper0(boost::beast::http::verb method, F ftor): _method(method), _ftor(ftor){}    
     template <template <typename> class CompositorT=compositors::transparent>
     auto unwrap(CompositorT<typename internal::function_signature<F>::return_type> compositor = CompositorT<typename internal::function_signature<F>::return_type>()){
-        typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
+        // typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
         
         return overload<F, CompositorT>(_method, _ftor, compositor);
     }
