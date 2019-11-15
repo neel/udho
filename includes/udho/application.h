@@ -212,6 +212,7 @@ struct app_{
     void eval(const F& fnc){
         auto router = udho::router();
         auto routed = _app.route(router);
+        fnc(_app);
         routed.eval(fnc);
     }
 };
