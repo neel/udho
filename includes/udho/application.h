@@ -184,6 +184,7 @@ class application{
 template <typename AppT>
 struct app_{
     typedef app_<AppT> self_type;
+    typedef self_type application_type;
     
     std::string _path;
     AppT        _app;
