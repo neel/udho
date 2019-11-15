@@ -208,6 +208,12 @@ struct app_{
         const_cast<AppT&>(_app).route(router).summary(info._children);
         stack.push_back(info);
     }
+    template <typename F>
+    void eval(const F& fnc){
+        auto router = udho::router();
+        auto routed = _app.route(router);
+        routed.eval(fnc);
+    }
 };
 
 template <typename U, typename V>
@@ -242,6 +248,12 @@ struct overload_group<U, app_<V>>{
         typedef udho::listener<self_type> listener_type;
         std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
+    }
+    template <typename F>
+    void eval(const F& fnc){
+        _parent.eval(fnc);
+        fnc(_overload);
+        _overload.eval(fnc);
     }
 };
 

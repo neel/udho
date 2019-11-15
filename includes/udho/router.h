@@ -564,6 +564,11 @@ struct overload_group{
         std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
+    template <typename F>
+    void eval(const F& fnc){
+        fnc(_overload);
+        _parent.eval(fnc);
+    }
 };
 
 /**
@@ -575,12 +580,12 @@ struct overload_group{
 template <typename U>
 struct overload_group<U, void>{
     typedef overload_group<U> self_type;        ///< type of this overload
-    typedef void              parent_type;      ///< type of parent in the overoad meta-chain
-    typedef U                 overload_type;    ///< type of the next child in the overload chain
+    typedef void              overload_type;      ///< type of parent in the overoad meta-chain
+    typedef U                 parent_type;    ///< type of the next child in the overload chain
     
-    overload_type _overload;
+    parent_type _overload;
     
-    overload_group(const overload_type& overload): _overload(overload){}
+    overload_group(const parent_type& overload): _overload(overload){}
 
     /**
      * serves the content if the http request matches with the content's request method and path.
@@ -596,7 +601,7 @@ struct overload_group<U, void>{
     http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve <void>: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
-            typename overload_type::response_type res;
+            typename parent_type::response_type res;
             try{
                 res = _overload(req, subject);
                 send(std::move(res));
@@ -612,6 +617,10 @@ struct overload_group<U, void>{
     }
     void summary(std::vector<module_info>& stack) const{
         stack.push_back(_overload.info());
+    }
+    template <typename F>
+    void eval(const F& fnc){
+        fnc(_overload);
     }
 };
 
