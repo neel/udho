@@ -33,7 +33,7 @@ namespace internal{
      * extract the function signature
      */
     template <typename T>
-    struct function_signature{};
+    struct function_signature;
     
     template <typename R, typename... Args>
     struct function_signature<R (*)(Args...)>{
@@ -555,7 +555,7 @@ struct overload_group{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
     }
-    void summary(std::vector<module_info>& stack){
+    void summary(std::vector<module_info>& stack) const{
         stack.push_back(_overload.info());
         _parent.summary(stack);
     }
@@ -610,7 +610,7 @@ struct overload_group<U, void>{
         }
         return http::status::unknown;
     }
-    void summary(std::vector<module_info>& stack){
+    void summary(std::vector<module_info>& stack) const{
         stack.push_back(_overload.info());
     }
 };
@@ -650,6 +650,37 @@ struct router: public overload_group<module_overload<udho::response_type (*)(con
 template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
+}
+
+template <typename StreamT, typename U, typename V>
+StreamT& operator<<(StreamT& stream, const overload_group<U, V>& router){
+    std::vector<udho::module_info> summary;
+    router.summary(summary);
+    int indent = 0;
+    
+    std::function<void (const std::vector<udho::module_info>&)> printer;
+    printer = [&stream, &indent, &printer](const std::vector<udho::module_info>& infos){
+        for(auto i = infos.rbegin(); i != infos.rend(); ++i){
+            auto info = *i;
+            std::string method_str;
+            
+            if(info._compositor == "UNSPECIFIED"){
+                continue;
+            }
+            
+            for(int j = 0; j < indent; ++j){
+                std::cout << "\t";
+            }
+            stream << boost::format("%1% %2% -> %3% (%4%)") % info._method % info._pattern % info._fptr % info._compositor << std::endl;
+            if(info._children.size() > 0){
+                ++indent;
+                printer(info._children);
+                --indent;
+            }
+        }
+    };
+    printer(summary);
+    return stream;
 }
 
 

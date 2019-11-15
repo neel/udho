@@ -83,6 +83,23 @@ namespace internal{
             return binder.reduced();
         }
     };
+    
+    template <typename R, typename C, typename... Args>
+    struct reduced_<R (C::* ) (Args...) const>{
+        typedef R (C::* actual_function_type) (Args...) const;
+        typedef boost::function<R (const C*, Args...)> base_function_type;
+        typedef bind_first<base_function_type> binder_type;
+        typedef const typename binder_type::object_type object_type;
+        typedef typename binder_type::reduced_function_type reduced_function_type;
+        
+        base_function_type _function;
+        
+        reduced_(actual_function_type function): _function(function){}
+        reduced_function_type reduced(const C* that){
+            binder_type binder(that, _function);
+            return binder.reduced();
+        }
+    };
 
     template <typename T>
     typename reduced_<T>::reduced_function_type reduced(T function, typename reduced_<T>::object_type that){
@@ -181,14 +198,14 @@ struct app_{
         std::cout << "app serve " << subject << std::endl;
         return _app.route(router).serve(req, request_method, subject, send);
     }
-    void summary(std::vector<module_info>& stack){
+    void summary(std::vector<module_info>& stack) const{
         auto router = udho::router();
         module_info info;
         info._pattern = _path;
         info._fptr = &_app;
         info._compositor = "APPLICATION";
         info._method = boost::beast::http::verb::unknown;
-        _app.route(router).summary(info._children);
+        const_cast<AppT&>(_app).route(router).summary(info._children);
         stack.push_back(info);
     }
 };
@@ -217,7 +234,7 @@ struct overload_group<U, app_<V>>{
         }
     }
     
-    void summary(std::vector<module_info>& stack){
+    void summary(std::vector<module_info>& stack) const{
         _overload.summary(stack);
         _parent.summary(stack);
     }
