@@ -355,7 +355,7 @@ struct content_wrapper0{
     F  _ftor;
     boost::beast::http::verb _method;
     
-    content_wrapper0(boost::beast::http::verb method, F ftor): _method(method), _ftor(ftor){}    
+    content_wrapper0(boost::beast::http::verb method, F ftor): _ftor(ftor), _method(method){}    
     template <template <typename> class CompositorT=compositors::transparent>
     auto unwrap(CompositorT<typename internal::function_signature<F>::return_type> compositor = CompositorT<typename internal::function_signature<F>::return_type>()){
         // typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
