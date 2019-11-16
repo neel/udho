@@ -33,7 +33,7 @@ namespace internal{
      * extract the function signature
      */
     template <typename T>
-    struct function_signature;
+    struct function_signature: function_signature<typename T::function_type>{};
     
     template <typename R, typename... Args>
     struct function_signature<R (*)(Args...)>{
