@@ -125,7 +125,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
             return _lambda(std::move(res));
         }
     }
-    void on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close){
+    void on_write(boost::system::error_code /*ec*/, std::size_t bytes_transferred, bool close){
         boost::ignore_unused(bytes_transferred);
         if(close){
             return do_close();

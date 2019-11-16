@@ -89,7 +89,7 @@ namespace internal{
     
     template <typename TupleT>
     struct arg_to_tuple<TupleT, 0>{
-        static void convert(TupleT& tuple, const std::vector<std::string>& args){
+        static void convert(TupleT& /*tuple*/, const std::vector<std::string>& /*args*/){
             // boost::get<0>(tuple) = cast_optionally<typename boost::tuples::element<0, TupleT>::type, 0>::cast(args);
         }
     };

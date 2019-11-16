@@ -34,7 +34,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
      * @param endpoint HTTP server endpoint to listen on
      * @param docroot HTTP document rot to serve static contents
      */
-    listener(RouterT& router, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _router(router), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM){
+    listener(RouterT& router, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router){
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
