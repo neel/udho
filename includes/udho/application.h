@@ -233,7 +233,7 @@ struct overload_group<U, app_<V>>{
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
         bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(_overload._path));
-        std::cout << "app match " << result << std::endl;
+        // std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
             return _overload.serve(req, request_method, rest, send);
