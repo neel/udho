@@ -106,8 +106,8 @@ namespace compositors{
         typedef OutputT response_type;
         
         template <typename ReqT>
-        response_type operator()(const ReqT& /*req*/, const OutputT& out){
-            return out;
+        response_type&& operator()(const ReqT& /*req*/, OutputT&& out){
+            return std::move(out);
         }
         std::string name() const{
             return "UNSPECIFIED";
@@ -190,7 +190,7 @@ struct module_overload{
     template <typename T>
     response_type operator()(const T& value, const std::vector<std::string>& args){
         return_type ret = call(value, args);
-        return _compositor(value, ret);
+        return _compositor(value, std::move(ret));
     }
     template <typename T>
     response_type operator()(const T& value, const std::string& subject){
