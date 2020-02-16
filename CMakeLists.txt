@@ -5,6 +5,9 @@ SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
+option(UDHO_BUILD_TESTS "Build the unit tests" ON)
+option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
+
 if(UNIX AND APPLE)
     SET(ICU_ROOT "/usr/local/opt/icu4c")
 endif()
@@ -34,11 +37,15 @@ SET(UDHO_SOURCES
     application.cpp
 )
 
-ADD_SUBDIRECTORY(examples)
+if(UDHO_BUILD_EXAMPLES)
+    ADD_SUBDIRECTORY(examples)
+endif()
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
 TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ICU::uc ${CMAKE_THREAD_LIBS_INIT}) 
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
-enable_testing()
-add_subdirectory(tests/)
+if(UDHO_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests/)
+endif()
