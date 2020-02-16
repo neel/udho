@@ -565,7 +565,7 @@ struct overload_group{
         return *this;
     }
     template <typename F>
-    void eval(const F& fnc){
+    void eval(F& fnc){
         fnc(_overload);
         _parent.eval(fnc);
     }
@@ -619,7 +619,7 @@ struct overload_group<U, void>{
         stack.push_back(_overload.info());
     }
     template <typename F>
-    void eval(const F& fnc){
+    void eval(F& fnc){
         fnc(_overload);
     }
 };
@@ -647,7 +647,7 @@ struct router: public overload_group<module_overload<udho::response_type (*)(con
 
 /**
  * adds a callback url mapping to the router by conjugating an overload in the overload meta-chain.
- * The url mapping is provided by content wrappers like \ref content_wrapper0 \ref content_wrapper0 
+ * The url mapping is provided by content wrappers like \ref content_wrapper0 \ref content_wrapper1 
  * which attaches feasibility criteria like http resource path, http verb with a callback function. 
  * The url mapping can be built using \ref get \ref post \ref put \ref head etc.. See \ref router for
  * an example

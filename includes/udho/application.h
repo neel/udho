@@ -210,11 +210,12 @@ struct app_{
         stack.push_back(info);
     }
     template <typename F>
-    void eval(const F& fnc){
+    void eval(F& fnc){
         auto router = udho::router();
         auto routed = _app.route(router);
         fnc(_app);
         routed.eval(fnc);
+        fnc();
     }
 };
 
@@ -252,7 +253,7 @@ struct overload_group<U, app_<V>>{
         return *this;
     }
     template <typename F>
-    void eval(const F& fnc){
+    void eval(F& fnc){
         _parent.eval(fnc);
         fnc(_overload);
         _overload.eval(fnc);
