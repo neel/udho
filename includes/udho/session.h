@@ -85,15 +85,14 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
         http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<session<RouterT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
     }
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred){
+        boost::ignore_unused(bytes_transferred);
+        if(ec == http::error::end_of_stream)
+            return do_close();
+        std::string path;
+        std::stringstream path_stream(_req.target().to_string());
+        std::getline(path_stream, path, '?');
+        auto start = std::chrono::high_resolution_clock::now();
         try{
-            boost::ignore_unused(bytes_transferred);
-            if(ec == http::error::end_of_stream)
-                return do_close();
-            std::string path;
-            std::stringstream path_stream(_req.target().to_string());
-            std::getline(path_stream, path, '?');
-
-            auto start = std::chrono::high_resolution_clock::now();
             auto response = _router.serve(_req, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
@@ -105,11 +104,11 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
                 http::file_body::value_type body;
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
-                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
+                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::not_found, path);
                 }
                 if(err){
-                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
+                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
                 }
                 auto const size = body.size();
@@ -119,6 +118,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
                     res.set(http::field::content_type, internal::mime_type(local_path));
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
+                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count()).str());
                     _lambda(std::move(res));
                     return;
                 }
@@ -130,10 +130,15 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));
             }else{
-                _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
+                _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
+            auto response = _router.serve(_req, _req.method(), path, _lambda);
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> delta = end - start;
+            std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
+            _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % res.result_int() % res.result() % _req.method() % path % ms.count()).str());
             return _lambda(std::move(res));
         }
     }

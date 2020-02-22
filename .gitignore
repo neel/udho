@@ -3,3 +3,5 @@ build
 .vs*
 dox
 docs/_build
+cmake-build-*
+.idea
