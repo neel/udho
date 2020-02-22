@@ -47,6 +47,9 @@ struct plain{
         
         std::string status_str = "unknown";
         switch(status){
+            case udho::logging::status::unknown:
+                status_str = "unknown";
+                break;
             case udho::logging::status::error:
                 status_str = "error";
                 break;
