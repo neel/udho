@@ -105,11 +105,11 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
                 http::file_body::value_type body;
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
-                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % 404 % boost::beast::http::status::not_found % path % ms.count()).str());
+                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::not_found, path);
                 }
                 if(err){
-                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % 500 % boost::beast::http::status::internal_server_error % path % ms.count()).str());
+                    _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
                 }
                 auto const size = body.size();
@@ -130,7 +130,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));
             }else{
-                _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % (int) response % response % path % ms.count()).str());
+                _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5%μs") % 404 % boost::beast::http::status::not_found % _req.method() % path % ms.count()).str());
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
