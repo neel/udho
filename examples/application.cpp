@@ -42,7 +42,7 @@ int main(){
     std::string doc_root("/tmp/www"); // path to static content
     boost::asio::io_service io;
 
-    auto router = udho::router()
+    auto router = udho::router<>()
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$")

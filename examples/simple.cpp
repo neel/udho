@@ -1,6 +1,8 @@
 #include <string>
 #include <udho/router.h>
 #include <boost/asio.hpp>
+#include <udho/logging.h>
+#include <iostream>
 
 std::string hello(udho::request_type req){
     return "Hello World";
@@ -32,7 +34,7 @@ int main(){
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     boost::asio::io_service io;
 
-    auto router = udho::router()
+    auto router = udho::router<udho::loggers::plain>()
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")

@@ -24,7 +24,7 @@ int main(){
     boost::function<int (udho::request_type, int, int)> add(s);
     boost::function<std::string (udho::request_type)> hello(s);
 
-    auto router = udho::router()
+    auto router = udho::router<>()
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::get(hello).plain() = "^/hello$");
     router.listen(io, 9198, doc_root);

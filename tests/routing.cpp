@@ -70,7 +70,7 @@ udho::response_type page(udho::request_type req){
 BOOST_AUTO_TEST_SUITE(router)
 
 BOOST_AUTO_TEST_CASE(mapping){
-    auto router = udho::router()
+    auto router = udho::router<>()
         | (udho::get(&page).raw() = "^/page")
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")

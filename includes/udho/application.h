@@ -196,14 +196,13 @@ struct app_{
         _path = path;
         return *this;
     }
-    template <typename ReqT, typename Lambda>
-    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        auto router = udho::router();
-        std::cout << "app serve " << subject << std::endl;
+    template <typename LoggerT, typename ReqT, typename Lambda>
+    http::status serve(const LoggerT& logger, const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        auto router = udho::router<LoggerT>(logger);
         return _app.route(router).serve(req, request_method, subject, send);
     }
     void summary(std::vector<module_info>& stack) const{
-        auto router = udho::router();
+        auto router = udho::router<>();
         module_info info;
         info._pattern = _path;
         info._fptr = &_app;
@@ -214,7 +213,7 @@ struct app_{
     }
     template <typename F>
     void eval(F& fnc){
-        auto router = udho::router();
+        auto router = udho::router<>();
         auto routed = _app.route(router);
         fnc(_app);
         routed.eval(fnc);
@@ -227,6 +226,8 @@ struct overload_group<U, app_<V>>{
     typedef overload_group<U, app_<V>>  self_type;
     typedef U                           parent_type;
     typedef app_<V>                     overload_type;
+    typedef typename parent_type::terminal_type terminal_type;
+    typedef typename terminal_type::logger_type logger_type;
     
     parent_type   _parent;
     overload_type _overload;
@@ -240,7 +241,7 @@ struct overload_group<U, app_<V>>{
         // std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
-            return _overload.serve(req, request_method, rest, send);
+            return _overload.template serve<logger_type>(terminal().logger(), req, request_method, rest, send);
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
@@ -260,6 +261,13 @@ struct overload_group<U, app_<V>>{
         _parent.eval(fnc);
         fnc(_overload);
         _overload.eval(fnc);
+    }
+    template <typename... Args>
+    void log(Args... args){
+        _parent.log(args...);
+    }
+    const terminal_type& terminal() const{
+        return _parent.terminal();
     }
 };
 

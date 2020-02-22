@@ -17,6 +17,7 @@
 #include <boost/regex.hpp>
 #include <boost/regex/icu.hpp>
 #include <boost/locale.hpp>
+#include <iomanip>
 #include "listener.h"
 #include "session.h"
 #include "util.h"
@@ -509,17 +510,71 @@ auto del(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
 }
 
+namespace logging{
+    
+enum class segment{
+    unknown,
+    router,
+    server
+};
+
+enum class status{
+    error,
+    warning,
+    info,
+    debug
+};
+
+}
+
+struct null_logger{};
+
+template <typename LoggerT = null_logger>
+struct overload_terminal{
+    typedef LoggerT logger_type;
+    
+    logger_type _logger;
+    
+    template <typename... Args>
+    overload_terminal(Args... args): _logger(args...){}
+    template <typename... Args>
+    void log(Args... args){
+        _logger(args...);
+    }
+    const logger_type& logger() const{
+        return _logger;
+    }
+};
+
+template <>
+struct overload_terminal<null_logger>{
+    typedef null_logger logger_type;
+    
+    null_logger _logger;
+    
+    template <typename... Args>
+    overload_terminal(Args... args): _logger(args...){}
+    template <typename... Args>
+    void log(Args... args){
+        std::cout << "No logging" << std::endl;
+    }
+    const logger_type& logger() const{
+        return _logger;
+    }
+};
+
 /**
  * compile time chain of url mappings 
  * @see content_wrapper0
  * @see content_wrapper1
  * @ingroup routing
  */
-template <typename U, typename V = void>
+template <typename U, typename V>
 struct overload_group{
     typedef overload_group<U, V> self_type; ///< type of this overload
     typedef U            parent_type;       ///< type of the parient in the meta-chain of overloads
     typedef V            overload_type;     ///< type of the next child in the overload chain
+    typedef typename parent_type::terminal_type terminal_type;
     
     parent_type   _parent;
     overload_type _overload;
@@ -540,6 +595,7 @@ struct overload_group{
     http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
+            auto start = std::chrono::high_resolution_clock::now();
             typename overload_type::response_type res;
             try{
                 res = _overload(req, subject);
@@ -550,6 +606,10 @@ struct overload_group{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> delta = end - start;
+            std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
+            log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % res.result_int() % res.result() % subject % ms.count()).str());
             return res.result();
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
@@ -569,6 +629,13 @@ struct overload_group{
         fnc(_overload);
         _parent.eval(fnc);
     }
+    template <typename... Args>
+    void log(Args... args){
+        _parent.log(args...);
+    }
+    const terminal_type& terminal() const{
+        return _parent.terminal();
+    }
 };
 
 /**
@@ -577,15 +644,18 @@ struct overload_group{
  * @see content_wrapper1
  * @ingroup routing
  */
-template <typename U>
-struct overload_group<U, void>{
-    typedef overload_group<U> self_type;        ///< type of this overload
+template <typename U, typename V>
+struct overload_group<U, overload_terminal<V>>{
+    typedef overload_group<U, overload_terminal<V>> self_type;        ///< type of this overload
     typedef void              overload_type;      ///< type of parent in the overoad meta-chain
     typedef U                 parent_type;    ///< type of the next child in the overload chain
+    typedef overload_terminal<V> terminal_type;
     
+    terminal_type _terminal;
     parent_type _overload;
     
-    overload_group(const parent_type& overload): _overload(overload){}
+    template <typename... Args>
+    overload_group(const parent_type& overload, Args... args): _overload(overload), _terminal(args...){}
 
     /**
      * serves the content if the http request matches with the content's request method and path.
@@ -601,6 +671,7 @@ struct overload_group<U, void>{
     http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve <void>: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
+            auto start = std::chrono::high_resolution_clock::now();
             typename parent_type::response_type res;
             try{
                 res = _overload(req, subject);
@@ -611,6 +682,10 @@ struct overload_group<U, void>{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> delta = end - start;
+            std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
+            log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % res.result_int() % res.result() % subject % ms.count()).str());
             return res.result();
         }
         return http::status::unknown;
@@ -621,6 +696,13 @@ struct overload_group<U, void>{
     template <typename F>
     void eval(F& fnc){
         fnc(_overload);
+    }
+    template <typename... Args>
+    void log(Args... args){
+        _terminal.log(args...);
+    }
+    const terminal_type& terminal() const{
+        return _terminal;
     }
 };
 
@@ -635,12 +717,15 @@ udho::response_type failure_callback(const udho::request_type& req);
  * @endcode
  * @ingroup routing
  */
-struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, void>{
+template <typename LoggerT=null_logger>
+struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<LoggerT>>{
+    typedef overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<LoggerT>> base_type;
     /**
      * cnstructs a router
      */
-    router(): overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, void>(udho::overload(boost::beast::http::verb::unknown, &failure_callback)){}
-
+    template <typename... Args>
+    router(Args... args): base_type(udho::overload(boost::beast::http::verb::unknown, &failure_callback), args...){}
+    
     template <typename U, typename V, typename F>
     friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
 };
