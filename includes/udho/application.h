@@ -189,6 +189,9 @@ struct app_{
     std::string _path;
     AppT        _app;
     
+    app_(){
+        _path = "^/"+_app.name();
+    }
     self_type& operator=(const std::string& path){
         _path = path;
         return *this;
