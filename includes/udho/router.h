@@ -651,8 +651,8 @@ struct overload_group<U, overload_terminal<V>>{
     typedef U                 parent_type;    ///< type of the next child in the overload chain
     typedef overload_terminal<V> terminal_type;
     
-    terminal_type _terminal;
     parent_type _overload;
+    terminal_type _terminal;
     
     template <typename... Args>
     overload_group(const parent_type& overload, Args... args): _overload(overload), _terminal(args...){}
