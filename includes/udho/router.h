@@ -510,23 +510,6 @@ auto del(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
 }
 
-namespace logging{
-    
-enum class segment{
-    unknown,
-    router,
-    server
-};
-
-enum class status{
-    error,
-    warning,
-    info,
-    debug
-};
-
-}
-
 struct null_logger{};
 
 template <typename LoggerT = null_logger>
@@ -595,7 +578,6 @@ struct overload_group{
     http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
-            auto start = std::chrono::high_resolution_clock::now();
             typename overload_type::response_type res;
             try{
                 res = _overload(req, subject);
@@ -606,10 +588,6 @@ struct overload_group{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> delta = end - start;
-            std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % res.result_int() % res.result() % subject % ms.count()).str());
             return res.result();
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
@@ -671,7 +649,6 @@ struct overload_group<U, overload_terminal<V>>{
     http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         // std::cout << "serve <void>: " << subject << std::endl;
         if(_overload.feasible(request_method, subject)){
-            auto start = std::chrono::high_resolution_clock::now();
             typename parent_type::response_type res;
             try{
                 res = _overload(req, subject);
@@ -682,10 +659,6 @@ struct overload_group<U, overload_terminal<V>>{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> delta = end - start;
-            std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4%μs") % res.result_int() % res.result() % subject % ms.count()).str());
             return res.result();
         }
         return http::status::unknown;

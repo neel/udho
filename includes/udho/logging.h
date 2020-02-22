@@ -31,10 +31,27 @@
 #include <ostream>
 #include <chrono>
 #include <iomanip>
-#include <udho/router.h>
 #include <boost/format.hpp>
 
 namespace udho{
+    
+namespace logging{
+    
+enum class segment{
+    unknown,
+    router,
+    server
+};
+
+enum class status{
+    error,
+    warning,
+    info,
+    debug
+};
+
+}
+    
 namespace loggers{
  
 struct plain{
