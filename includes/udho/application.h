@@ -69,6 +69,7 @@ namespace internal{
 
     template <typename R, typename C, typename... Args>
     struct reduced_<R (C::* ) (Args...)>{
+        typedef C that_type;
         typedef R (C::* actual_function_type) (Args...);
         typedef boost::function<R (C*, Args...)> base_function_type;
         typedef bind_first<base_function_type> binder_type;
@@ -86,6 +87,7 @@ namespace internal{
     
     template <typename R, typename C, typename... Args>
     struct reduced_<R (C::* ) (Args...) const>{
+        typedef C that_type;
         typedef R (C::* actual_function_type) (Args...) const;
         typedef boost::function<R (const C*, Args...)> base_function_type;
         typedef bind_first<base_function_type> binder_type;
