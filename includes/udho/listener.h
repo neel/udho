@@ -11,8 +11,8 @@ namespace udho{
 /**
  * listener runs accept loop for HTTP sockets
  */
-template <typename RouterT>
-class listener : public std::enable_shared_from_this<listener<RouterT>>{
+template <typename RouterT, typename AttachmentT>
+class listener : public std::enable_shared_from_this<listener<RouterT, AttachmentT>>{
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -20,13 +20,15 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
 #endif 
 
     
-    typedef listener<RouterT> self_type;
+    typedef listener<RouterT, AttachmentT> self_type;
+    typedef AttachmentT attachment_type;
     boost::asio::io_service& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
     socket_type _socket;
     std::shared_ptr<std::string const> _docroot;
     boost::asio::signal_set _signals;
     RouterT& _router;
+    attachment_type& _attachment;
   public:
     /**
      * @param router HTTP url mapping router
@@ -34,7 +36,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
      * @param endpoint HTTP server endpoint to listen on
      * @param docroot HTTP document rot to serve static contents
      */
-    listener(RouterT& router, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router){
+    listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
@@ -67,13 +69,13 @@ class listener : public std::enable_shared_from_this<listener<RouterT>>{
      * accept an incomming connection
      */
     void accept(){
-        _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<listener<RouterT>>::shared_from_this(), std::placeholders::_1));
+        _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<listener<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
     }
     void on_accept(boost::system::error_code ec){
         if(ec){
             // TODO failed to accept
         }else{
-            std::make_shared<session<RouterT>>(_router, std::move(_socket), _docroot)->run();
+            std::make_shared<session<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot)->run();
         }
         accept();
     }

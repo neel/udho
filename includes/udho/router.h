@@ -176,7 +176,7 @@ struct module_overload{
     return_type call(const T& value, const std::vector<std::string>& args){
         std::deque<std::string> argsq;
         std::copy(args.begin(), args.end(), std::back_inserter(argsq));
-        tuple_type tuple;
+        tuple_type tuple(value);
         if(::boost::tuples::length<tuple_type>::value > args.size()){
             argsq.push_front("");
         }
@@ -597,9 +597,10 @@ struct overload_group{
         stack.push_back(_overload.info());
         _parent.summary(stack);
     }
-    self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
-        typedef udho::listener<self_type> listener_type;
-        std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
+    template <typename AttachmentT>
+    self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
+        typedef udho::listener<self_type, AttachmentT> listener_type;
+        std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
     template <typename F>

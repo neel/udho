@@ -19,6 +19,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
+#include <udho/req.h>
 #include "logging.h"
 #include "page.h"
 
@@ -35,8 +36,8 @@ namespace http = boost::beast::http;
 /**
  * Stateful HTTP Session
  */
-template <typename RouterT>
-class session : public std::enable_shared_from_this<session<RouterT>>{
+template <typename RouterT, typename AttachmentT>
+class session : public std::enable_shared_from_this<session<RouterT, AttachmentT>>{    
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -44,7 +45,11 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
 #endif
     
     RouterT& _router;
-    typedef session<RouterT> self_type;
+    AttachmentT& _attachment;
+    typedef session<RouterT, AttachmentT> self_type;
+    typedef AttachmentT attachment_type;
+    typedef udho::req<http::request<http::string_body>, AttachmentT> req_type;
+    
     struct send_lambda{
         self_type& self_;
 
@@ -73,7 +78,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit session(RouterT& router, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    explicit session(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
     /**
      * start the read loop
      */
@@ -82,7 +87,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
     }
     void do_read(){
         _req = {};
-        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<session<RouterT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
+        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<session<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
     }
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred){
         boost::ignore_unused(bytes_transferred);
@@ -93,7 +98,7 @@ class session : public std::enable_shared_from_this<session<RouterT>>{
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            auto response = _router.serve(_req, _req.method(), path, _lambda);
+            auto response = _router.serve(req_type(_req, _attachment), _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
