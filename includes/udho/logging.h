@@ -54,11 +54,12 @@ enum class status{
     
 namespace loggers{
  
+template <typename StreamT>
 struct plain{
-    std::ostream& _stream;
+    StreamT& _stream;
     
-    plain(std::ostream& stream=std::cout): _stream(stream){}
-    void operator()(udho::logging::status status, udho::logging::segment segment, const std::string& message){
+    plain(StreamT& stream): _stream(stream){}
+    void log(udho::logging::status status, udho::logging::segment segment, const std::string& message){
         std::time_t time = std::time(nullptr);
         std::tm tm = *std::localtime(&time);
         
@@ -94,6 +95,8 @@ struct plain{
         _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment_str % message << std::endl;
     }    
 };
+
+typedef plain<std::ostream> ostream;
     
 }
 }

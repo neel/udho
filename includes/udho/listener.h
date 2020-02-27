@@ -74,7 +74,9 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     void on_accept(boost::system::error_code ec){
         if(ec){
             // TODO failed to accept
+            _attachment.log(udho::logging::status::error, udho::logging::segment::server, (boost::format("failed to accept new connection from %1%") % _socket.remote_endpoint().address()).str());
         }else{
+            _attachment.log(udho::logging::status::info, udho::logging::segment::server, (boost::format("accepting new connection from %1%") % _socket.remote_endpoint().address()).str());
             std::make_shared<session<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot)->run();
         }
         accept();

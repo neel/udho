@@ -6,23 +6,19 @@
 #include <udho/req.h>
 #include <iostream>
 
-typedef udho::attachment<udho::loggers::plain> attachment_type;
-typedef udho::req<boost::beast::http::request<boost::beast::http::string_body>, attachment_type> request_type;
-typedef udho::server<attachment_type> server_type;
-
-std::string hello(request_type req){
+std::string hello(udho::servers::logged::request_type req){
     return "Hello World";
 }
 
-std::string data(request_type req){
+std::string data(udho::servers::logged::request_type req){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(request_type req, int a, int b){
+int add(udho::servers::logged::request_type req, int a, int b){
     return a + b;
 }
 
-boost::beast::http::response<boost::beast::http::file_body> file(request_type req){
+boost::beast::http::response<boost::beast::http::file_body> file(udho::servers::logged::request_type req){
     std::string path("/etc/passwd");
     boost::beast::error_code err;
     boost::beast::http::file_body::value_type body;
@@ -40,21 +36,18 @@ int main(){
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
     boost::asio::io_service io;
-    udho::loggers::plain logger(std::cout);
-    attachment_type attachment(logger);
     
-    server_type server(io, attachment);
+    udho::servers::logged server(io, std::cout);
 
-    auto router = udho::router<udho::loggers::plain>()
+    auto router = udho::router<>()
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
-//     router.listen<udho::req>(io, 9198, doc_root);
+        
+    udho::util::print_summary(router);
         
     server.serve(router, 9198, doc_root);
-    
-    udho::util::print_summary(router);
         
     io.run();
     

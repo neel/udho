@@ -510,39 +510,18 @@ auto del(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
 }
 
-struct null_logger{};
+struct dummy_aux{};
 
-template <typename LoggerT = null_logger>
+template <typename AuxT = dummy_aux>
 struct overload_terminal{
-    typedef LoggerT logger_type;
+    typedef AuxT aux_type;
     
-    logger_type _logger;
-    
-    template <typename... Args>
-    overload_terminal(Args... args): _logger(args...){}
-    template <typename... Args>
-    void log(Args... args){
-        _logger(args...);
-    }
-    const logger_type& logger() const{
-        return _logger;
-    }
-};
-
-template <>
-struct overload_terminal<null_logger>{
-    typedef null_logger logger_type;
-    
-    null_logger _logger;
+    aux_type _aux;
     
     template <typename... Args>
-    overload_terminal(Args... args): _logger(args...){}
-    template <typename... Args>
-    void log(Args... args){
-        std::cout << "No logging" << std::endl;
-    }
-    const logger_type& logger() const{
-        return _logger;
+    overload_terminal(Args... args): _aux(args...){}
+    const aux_type& aux() const{
+        return _aux;
     }
 };
 
@@ -608,10 +587,6 @@ struct overload_group{
         fnc(_overload);
         _parent.eval(fnc);
     }
-    template <typename... Args>
-    void log(Args... args){
-        _parent.log(args...);
-    }
     const terminal_type& terminal() const{
         return _parent.terminal();
     }
@@ -671,10 +646,6 @@ struct overload_group<U, overload_terminal<V>>{
     void eval(F& fnc){
         fnc(_overload);
     }
-    template <typename... Args>
-    void log(Args... args){
-        _terminal.log(args...);
-    }
     const terminal_type& terminal() const{
         return _terminal;
     }
@@ -691,9 +662,9 @@ udho::response_type failure_callback(const udho::request_type& req);
  * @endcode
  * @ingroup routing
  */
-template <typename LoggerT=null_logger>
-struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<LoggerT>>{
-    typedef overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<LoggerT>> base_type;
+template <typename AuxT=dummy_aux>
+struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<AuxT>>{
+    typedef overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<AuxT>> base_type;
     /**
      * cnstructs a router
      */

@@ -32,6 +32,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
+#include <udho/logging.h>
 
 namespace udho{
 
@@ -42,7 +43,6 @@ namespace http = boost::beast::http;
  */
 template <typename AttachmentT>
 struct server{
-    using tcp = boost::asio::ip::tcp;
     template <typename RequestT>
     using req_type = udho::req<RequestT, AttachmentT>;
 
@@ -57,9 +57,65 @@ struct server{
     server(boost::asio::io_service& io, attachment_type& attachment): _io(io), _attachment(attachment){}
     template <typename RouterT>
     void serve(RouterT& router, int port=9198, std::string doc_root=""){
+        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
+
+template <typename LoggerT>
+struct server<udho::attachment<LoggerT>>{
+    template <typename RequestT>
+    using req_type = udho::req<RequestT, udho::attachment<LoggerT>>;
+
+    typedef udho::attachment<LoggerT> attachment_type;
+    typedef server<attachment_type> self_type;
+    typedef http::request<http::string_body> http_request_type;
+    typedef req_type<http_request_type> request_type;
+    
+    boost::asio::io_service& _io;
+    attachment_type _attachment;
+    
+    server(boost::asio::io_service& io, LoggerT& logger): _io(io), _attachment(logger){}
+    template <typename RouterT>
+    void serve(RouterT& router, int port=9198, std::string doc_root=""){
+        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+    }
+};
+
+namespace servers{
+template <typename LoggerT=udho::loggers::ostream>
+struct logging: server<udho::attachment<LoggerT>>{
+    typedef server<udho::attachment<LoggerT>> base_type;
+    
+    using base_type::base_type;
+};
+
+template <>
+struct logging<udho::loggers::ostream>{
+    template <typename RequestT>
+    using req_type = udho::req<RequestT, udho::attachment<udho::loggers::ostream>>;
+
+    typedef udho::attachment<udho::loggers::ostream> attachment_type;
+    typedef server<attachment_type> self_type;
+    typedef http::request<http::string_body> http_request_type;
+    typedef req_type<http_request_type> request_type;
+    
+    boost::asio::io_service& _io;
+    udho::loggers::ostream _logger;
+    attachment_type _attachment;
+    
+    logging(boost::asio::io_service& io, std::ostream& stream): _io(io), _logger(stream), _attachment(_logger){}
+    template <typename RouterT>
+    void serve(RouterT& router, int port=9198, std::string doc_root=""){
+        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+    }
+};
+
+typedef logging<> logged;
+    
+}
 
 }
 
