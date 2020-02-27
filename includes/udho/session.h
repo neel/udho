@@ -139,11 +139,10 @@ class session : public std::enable_shared_from_this<session<RouterT, AttachmentT
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
-            auto response = _router.serve(_req, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
+            _router.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count()).str());
             return _lambda(std::move(res));
         }
     }
