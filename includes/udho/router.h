@@ -554,12 +554,14 @@ struct overload_group{
      * @param send the write callback
      */
     template <typename ReqT, typename Lambda>
-    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        // std::cout << "serve: " << subject << std::endl;
+    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        http::status status = http::status::unknown;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;
             try{
                 res = _overload(req, subject);
+                status = res.result();
+                req.patch(res);
                 send(std::move(res));
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(req)));
@@ -567,7 +569,7 @@ struct overload_group{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
-            return res.result();
+            return status;
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
@@ -622,12 +624,14 @@ struct overload_group<U, overload_terminal<V>>{
      * @param send the write callback
      */
     template <typename ReqT, typename Lambda>
-    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        // std::cout << "serve <void>: " << subject << std::endl;
+    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        http::status status = http::status::unknown;
         if(_overload.feasible(request_method, subject)){
             typename parent_type::response_type res;
             try{
                 res = _overload(req, subject);
+                req.patch(res);
+                status = res.result();
                 send(std::move(res));
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(req)));
@@ -635,7 +639,7 @@ struct overload_group<U, overload_terminal<V>>{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
-            return res.result();
+            return status;
         }
         return http::status::unknown;
     }

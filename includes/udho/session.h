@@ -98,7 +98,8 @@ class session : public std::enable_shared_from_this<session<RouterT, AttachmentT
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            auto response = _router.serve(req_type(_req, _attachment), _req.method(), path, _lambda);
+            req_type req(_req, _attachment);
+            auto response = _router.serve(req, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);

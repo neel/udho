@@ -87,6 +87,27 @@ struct server<udho::attachment<LoggerT>>{
     }
 };
 
+template <>
+struct server<void>{
+    template <typename RequestT>
+    using req_type = udho::req<RequestT, void>;
+
+    typedef void attachment_type;
+    typedef server<attachment_type> self_type;
+    typedef http::request<http::string_body> http_request_type;
+    typedef req_type<http_request_type> request_type;
+    
+    boost::asio::io_service& _io;
+    
+    server(boost::asio::io_service& io): _io(io){}
+    server(const self_type&) = delete;
+    server(self_type&& other) = default;
+    template <typename RouterT>
+    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        router.template listen<attachment_type>(_io, port, doc_root);
+    }
+};
+
 namespace servers{
 template <typename LoggerT=udho::loggers::ostream>
 struct logging: server<udho::attachment<LoggerT>>{
@@ -120,6 +141,7 @@ struct logging<udho::loggers::ostream>{
 };
 
 typedef logging<> logged;
+typedef server<void> nolog;
     
 }
 

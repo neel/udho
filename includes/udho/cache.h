@@ -28,6 +28,7 @@
 #ifndef UDHO_CACHE_H
 #define UDHO_CACHE_H
 
+#include <set>
 #include <map>
 #include <chrono>
 #include <cstdint>
@@ -36,58 +37,100 @@
 namespace udho{
 namespace cache{
     
-struct peer{
-    boost::asio::ip::address _address;
-    std::uint32_t _port;
-    std::uint32_t _latency;
-    
-    peer(const boost::asio::ip::address& address, std::uint32_t port);
+// struct peer{
+//     boost::asio::ip::address _address;
+//     std::uint32_t _port;
+//     std::uint32_t _latency;
+//     
+//     peer(const boost::asio::ip::address& address, std::uint32_t port);
+// };
+// 
+// template <typename T>
+// struct item{
+//     typedef std::chrono::time_point<std::chrono::system_clock> time_type;
+//     
+//     T _item;
+//     std::size_t _order;
+//     time_type _created;
+//     time_type _updated;
+//     
+//     item(const T& v): _item(v), _created(std::chrono::system_clock::now()), _updated(_created){}
+//     template <typename StreamT>
+//     void write(StreamT& stream){
+//         // TODO implement
+//     }
+//     template <typename StreamT>
+//     static item<T> read(const StreamT& stream){
+//         // TODO implement;
+//     }
+// };
+// 
+// template <typename T, typename KeyT=std::string>
+// struct store{
+//     typedef KeyT key_type;
+//     typedef T value_type;
+//     typedef item<value_type> item_type;
+//     typedef std::map<key_type, item_type> map_type;
+//     
+//     std::string _name;
+//     map_type _registry;
+//     
+//     store(const std::string& name): _name(name){}
+//     void add(const key_type& key, const value_type& value){
+//         item_type item(value);
+//         _registry.insert(std::make_pair(key, item));
+//     }
+//     bool exists(const key_type& key) const{
+//         return _registry.find(key) != _registry.end();
+//     }
+//     T& get(const key_type& key) const{
+//         auto it = _registry.find(key);
+//         if(it != _registry.end()){
+//             return it->second;
+//         }
+//         // TODO throw exception
+//     }
+// };
+
+template <typename KeyT>
+struct master{
+    typedef std::set<KeyT> set_type;
 };
 
-template <typename T>
-struct item{
-    typedef std::chrono::time_point<std::chrono::system_clock> time_type;
-    
-    T _item;
-    std::size_t _order;
-    time_type _created;
-    time_type _updated;
-    
-    item(const T& v): _item(v), _created(std::chrono::system_clock::now()), _updated(_created){}
-    template <typename StreamT>
-    void write(StreamT& stream){
-        // TODO implement
-    }
-    template <typename StreamT>
-    static item<T> read(const StreamT& stream){
-        // TODO implement;
-    }
-};
-
-template <typename T, typename KeyT=std::string>
-struct store{
+template <typename KeyT, typename T>
+struct registry{
     typedef KeyT key_type;
     typedef T value_type;
-    typedef item<value_type> item_type;
-    typedef std::map<key_type, item_type> map_type;
+    typedef std::map<KeyT, T> map_type;
     
-    std::string _name;
-    map_type _registry;
+    map_type _storage;
+    bool exists(const key_type& key) const;
+    const value_type& at(const key_type& key) const;
+    void insert(const key_type& key, const value_type& value);
+};
+
+template <typename KeyT, typename... T>
+struct cache: protected registry<KeyT, T>...{
+    typedef KeyT key_type;
+    master<KeyT> _master;
     
-    store(const std::string& name): _name(name){}
-    void add(const key_type& key, const value_type& value){
-        item_type item(value);
-        _registry.insert(std::make_pair(key, item));
+    bool has(const key_type& key) const{
+        return _master.find(key) != _master.cend();
     }
+    template <typename V>
     bool exists(const key_type& key) const{
-        return _registry.find(key) != _registry.end();
+        return has(key) && registry<KeyT, V>::exists(key);
     }
-    T& get(const key_type& key) const{
-        auto it = _registry.find(key);
-        if(it != _registry.end()){
-            return it->second;
+    template <typename V>
+    const V& at(const key_type& key) const{
+        return has(key) && registry<KeyT, V>::at(key);
+    }
+    template <typename V>
+    void insert(const key_type& key, const V& value){
+        registry<KeyT, V>::insert(key, value);
+        if(!has(key)){
+            _master.insert(key);
         }
-        // TODO throw exception
     }
 };
     
