@@ -56,9 +56,12 @@ namespace loggers{
  
 template <typename StreamT>
 struct plain{
+    typedef plain<StreamT> self_type;
+    
     StreamT& _stream;
     
     plain(StreamT& stream): _stream(stream){}
+    
     void log(udho::logging::status status, udho::logging::segment segment, const std::string& message){
         std::time_t time = std::time(nullptr);
         std::tm tm = *std::localtime(&time);

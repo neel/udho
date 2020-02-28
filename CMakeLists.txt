@@ -47,6 +47,6 @@ TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ICU::uc ${CMAKE_THREAD_LIBS_INIT})
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
 if(UDHO_BUILD_TESTS)
-#    enable_testing()
-#    add_subdirectory(tests/)
+   enable_testing()
+   add_subdirectory(tests/)
 endif()

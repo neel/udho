@@ -10,8 +10,8 @@ FIND_PACKAGE(Boost COMPONENTS filesystem system REQUIRED)
 ADD_EXECUTABLE(udho-example-simple simple.cpp)
 TARGET_LINK_LIBRARIES(udho-example-simple udho ${Boost__FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
 
-# ADD_EXECUTABLE(udho-example-functor functor.cpp)
-# TARGET_LINK_LIBRARIES(udho-example-functor udho ${Boost__FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-# 
-# ADD_EXECUTABLE(udho-example-application application.cpp)
-# TARGET_LINK_LIBRARIES(udho-example-application udho ${Boost__FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+ADD_EXECUTABLE(udho-example-functor functor.cpp)
+TARGET_LINK_LIBRARIES(udho-example-functor udho ${Boost__FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+
+ADD_EXECUTABLE(udho-example-application application.cpp)
+TARGET_LINK_LIBRARIES(udho-example-application udho ${Boost__FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})

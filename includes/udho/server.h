@@ -55,8 +55,10 @@ struct server{
     attachment_type& _attachment;
     
     server(boost::asio::io_service& io, attachment_type& attachment): _io(io), _attachment(attachment){}
+    server(const self_type&) = delete;
+    server(self_type&& other) = default;
     template <typename RouterT>
-    void serve(RouterT& router, int port=9198, std::string doc_root=""){
+    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
@@ -76,8 +78,10 @@ struct server<udho::attachment<LoggerT>>{
     attachment_type _attachment;
     
     server(boost::asio::io_service& io, LoggerT& logger): _io(io), _attachment(logger){}
+    server(const self_type&) = delete;
+    server(self_type&& other) = default;
     template <typename RouterT>
-    void serve(RouterT& router, int port=9198, std::string doc_root=""){
+    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
@@ -97,7 +101,7 @@ struct logging<udho::loggers::ostream>{
     using req_type = udho::req<RequestT, udho::attachment<udho::loggers::ostream>>;
 
     typedef udho::attachment<udho::loggers::ostream> attachment_type;
-    typedef server<attachment_type> self_type;
+    typedef logging<udho::loggers::ostream> self_type;
     typedef http::request<http::string_body> http_request_type;
     typedef req_type<http_request_type> request_type;
     
@@ -106,8 +110,10 @@ struct logging<udho::loggers::ostream>{
     attachment_type _attachment;
     
     logging(boost::asio::io_service& io, std::ostream& stream): _io(io), _logger(stream), _attachment(_logger){}
+    logging(const self_type&) = delete;
+    logging(self_type&& other) = default;
     template <typename RouterT>
-    void serve(RouterT& router, int port=9198, std::string doc_root=""){
+    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }

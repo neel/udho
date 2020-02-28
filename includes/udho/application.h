@@ -198,9 +198,9 @@ struct app_{
         _path = path;
         return *this;
     }
-    template <typename LoggerT, typename ReqT, typename Lambda>
-    http::status serve(const LoggerT& logger, const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        auto router = udho::router<LoggerT>(logger);
+    template <typename ReqT, typename Lambda>
+    http::status serve(const ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        auto router = udho::router<>();
         return _app.route(router).serve(req, request_method, subject, send);
     }
     void summary(std::vector<module_info>& stack) const{
@@ -229,7 +229,6 @@ struct overload_group<U, app_<V>>{
     typedef U                           parent_type;
     typedef app_<V>                     overload_type;
     typedef typename parent_type::terminal_type terminal_type;
-    typedef typename terminal_type::logger_type logger_type;
     
     parent_type   _parent;
     overload_type _overload;
@@ -243,7 +242,7 @@ struct overload_group<U, app_<V>>{
         // std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
-            return _overload.template serve<logger_type>(terminal().logger(), req, request_method, rest, send);
+            return _overload.serve(req, request_method, rest, send);
         }else{
             return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
         }
@@ -254,9 +253,9 @@ struct overload_group<U, app_<V>>{
         _parent.summary(stack);
     }
     template <typename AttachmentT>
-    self_type& listen(boost::asio::io_service& io, int port=9198, std::string doc_root=""){
+    self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
         typedef udho::listener<self_type, AttachmentT> listener_type;
-        std::make_shared<listener_type>(*this, io, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
+        std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
     template <typename F>
@@ -264,10 +263,6 @@ struct overload_group<U, app_<V>>{
         _parent.eval(fnc);
         fnc(_overload);
         _overload.eval(fnc);
-    }
-    template <typename... Args>
-    void log(Args... args){
-        _parent.log(args...);
     }
     const terminal_type& terminal() const{
         return _parent.terminal();

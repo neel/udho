@@ -1,6 +1,7 @@
 #include <string>
 #include <functional>
 #include <udho/router.h>
+#include <udho/server.h>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 
@@ -24,12 +25,15 @@ int main(){
     boost::function<int (udho::request_type, int, int)> add(s);
     boost::function<std::string (udho::request_type)> hello(s);
 
+    udho::servers::logged server(io, std::cout);
+    
     auto router = udho::router<>()
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::get(hello).plain() = "^/hello$");
-    router.listen(io, 9198, doc_root);
-          
+         
     udho::util::print_summary(router);
+    
+    server.serve(router, 9198, doc_root);
     
     io.run();
     
