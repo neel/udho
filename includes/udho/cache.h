@@ -33,6 +33,7 @@
 #include <chrono>
 #include <cstdint>
 #include <boost/asio/ip/address.hpp>
+#include <boost/tuple/tuple.hpp>
 
 namespace udho{
 namespace cache{
@@ -97,6 +98,14 @@ struct master{
     typedef std::set<KeyT> set_type;
 };
 
+template <typename KeyT, typename... U>
+struct master_{
+    template <typename T>
+    using pair = std::pair<T, bool>;
+    typedef boost::tuple<pair<U>...> tuple_type;
+    typedef std::map<KeyT, tuple_type> map_type;
+};
+
 template <typename KeyT, typename T>
 struct registry{
     typedef KeyT key_type;
@@ -112,7 +121,7 @@ struct registry{
 template <typename KeyT, typename... T>
 struct cache: protected registry<KeyT, T>...{
     typedef KeyT key_type;
-    master<KeyT> _master;
+    master_<KeyT, T...> _master;
     
     bool has(const key_type& key) const{
         return _master.find(key) != _master.cend();
