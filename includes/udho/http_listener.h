@@ -1,7 +1,7 @@
-#ifndef HTTP_LISTENER_H
-#define HTTP_LISTENER_H
+#ifndef UDHO_HTTP_LISTENER_H
+#define UDHO_HTTP_LISTENER_H
 
-#include "session.h"
+#include "http_session.h"
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -12,7 +12,7 @@ namespace udho{
  * listener runs accept loop for HTTP sockets
  */
 template <typename RouterT, typename AttachmentT>
-class listener : public std::enable_shared_from_this<listener<RouterT, AttachmentT>>{
+class http_listener : public std::enable_shared_from_this<http_listener<RouterT, AttachmentT>>{
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -20,7 +20,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
 #endif 
 
     
-    typedef listener<RouterT, AttachmentT> self_type;
+    typedef http_listener<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
     boost::asio::io_service& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
@@ -36,7 +36,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
      * @param endpoint HTTP server endpoint to listen on
      * @param docroot HTTP document rot to serve static contents
      */
-    listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
+    http_listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
@@ -54,7 +54,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
         _acceptor.close();
         _service.stop();
     }
-    ~listener(){
+    ~http_listener(){
         stop();
     }
     /**
@@ -69,7 +69,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
      * accept an incomming connection
      */
     void accept(){
-        _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<listener<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
+        _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<http_listener<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
     }
     void on_accept(boost::system::error_code ec){
         if(ec){
@@ -77,7 +77,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
             _attachment.log(udho::logging::status::error, udho::logging::segment::server, (boost::format("failed to accept new connection from %1%") % _socket.remote_endpoint().address()).str());
         }else{
             _attachment.log(udho::logging::status::info, udho::logging::segment::server, (boost::format("accepting new connection from %1%") % _socket.remote_endpoint().address()).str());
-            std::make_shared<session<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot)->run();
+            std::make_shared<http_session<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot)->run();
         }
         accept();
     }
@@ -85,4 +85,4 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
 
 }
 
-#endif // HTTP_LISTENER_H
+#endif // UDHO_HTTP_LISTENER_H

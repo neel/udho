@@ -18,8 +18,8 @@
 #include <boost/regex/icu.hpp>
 #include <boost/locale.hpp>
 #include <iomanip>
-#include "listener.h"
-#include "session.h"
+#include "http_listener.h"
+#include "http_session.h"
 #include "util.h"
 
 namespace udho{
@@ -580,7 +580,7 @@ struct overload_group{
     }
     template <typename AttachmentT>
     self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
-        typedef udho::listener<self_type, AttachmentT> listener_type;
+        typedef udho::http_listener<self_type, AttachmentT> listener_type;
         std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }

@@ -95,7 +95,17 @@ namespace cache{
 
 template <typename KeyT>
 struct master{
-    typedef std::set<KeyT> set_type;
+    typedef KeyT key_type;
+    typedef std::set<key_type> set_type;
+    
+    set_type _set;
+    
+    bool issued(const key_type& key) const{
+        return _set.find(key) != _set.cend();
+    }
+    void issue(const key_type& key){
+        _set.insert(key);
+    }
 };
 
 template <typename KeyT, typename... U>
@@ -119,31 +129,30 @@ struct registry{
 };
 
 template <typename KeyT, typename... T>
-struct cache: protected registry<KeyT, T>...{
+struct cache: protected master<KeyT>, protected registry<KeyT, T>...{
     typedef KeyT key_type;
-    master_<KeyT, T...> _master;
+    typedef master<KeyT> master_type;
     
-    bool has(const key_type& key) const{
-        return _master.find(key) != _master.cend();
-    }
+    using master_type::issued;
+    
     template <typename V>
     bool exists(const key_type& key) const{
-        return has(key) && registry<KeyT, V>::exists(key);
+        return master_type::issued(key) && registry<KeyT, V>::exists(key);
     }
     template <typename V>
     const V& at(const key_type& key) const{
-        return has(key) && registry<KeyT, V>::at(key);
+        return master_type::issued(key) && registry<KeyT, V>::at(key);
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
         registry<KeyT, V>::insert(key, value);
         if(!has(key)){
-            _master.insert(key);
+            master_type::issue(key);
         }
     }
 };
-    
-}    
+   
+}
 }
 
 #endif // UDHO_CACHE_H
