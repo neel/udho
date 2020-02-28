@@ -39,8 +39,8 @@ namespace udho{
  * @todo write docs
  */
 template <typename... T>
-class session{
-    
+class session: udho::cache::store<boost::uuids::uuid, T...>{
+    boost::uuids::random_generator _gen;
 };
 
 }

@@ -40,7 +40,7 @@ struct attachment: LoggerT, CacheT, T...{
     typedef LoggerT logger_type;
     typedef CacheT  cache_type;
     
-    attachment(LoggerT& logger, CacheT& cache): LoggerT(logger), CacheT(cache){}
+    attachment(LoggerT& logger): LoggerT(logger){}
 };
 
 template <typename LoggerT>
@@ -113,17 +113,18 @@ struct cookie{
  * @todo write docs
  */
 template <typename RequestT, typename AttachmentT>
-struct req: RequestT, AttachmentT{
+struct req: RequestT{
     typedef req<RequestT, AttachmentT> self_type;
     typedef boost::beast::http::header<true> headers_type;
     
     typedef RequestT request_type;
     typedef AttachmentT attachment_type;
     
+    attachment_type& _attachment;
     headers_type _response_headers;
         
-    req(attachment_type& attachment): request_type(), attachment_type(attachment){}
-    req(const RequestT& request, attachment_type& attachment): request_type(request), attachment_type(attachment){}
+    req(attachment_type& attachment): request_type(), _attachment(attachment){}
+    req(const RequestT& request, attachment_type& attachment): request_type(request), _attachment(attachment){}
     self_type& operator=(const self_type& other){
         request_type::operator=(other);
         return *this;

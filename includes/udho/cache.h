@@ -97,8 +97,13 @@ template <typename KeyT>
 struct master{
     typedef KeyT key_type;
     typedef std::set<key_type> set_type;
+    typedef master<KeyT> self_type;
     
     set_type _set;
+    
+    master() = default;
+    master(const self_type&) = delete;
+    master(self_type&&) = default;
     
     bool issued(const key_type& key) const{
         return _set.find(key) != _set.cend();
@@ -108,30 +113,41 @@ struct master{
     }
 };
 
-template <typename KeyT, typename... U>
-struct master_{
-    template <typename T>
-    using pair = std::pair<T, bool>;
-    typedef boost::tuple<pair<U>...> tuple_type;
-    typedef std::map<KeyT, tuple_type> map_type;
-};
+// template <typename KeyT, typename... U>
+// struct master_{
+//     template <typename T>
+//     using pair = std::pair<T, bool>;
+//     typedef boost::tuple<pair<U>...> tuple_type;
+//     typedef std::map<KeyT, tuple_type> map_type;
+// };
 
 template <typename KeyT, typename T>
 struct registry{
     typedef KeyT key_type;
     typedef T value_type;
     typedef std::map<KeyT, T> map_type;
+    typedef registry<KeyT, T> self_type;
     
     map_type _storage;
+    
+    registry() = default;
+    registry(const self_type&) = delete;
+    registry(self_type&&) = default;
+    
     bool exists(const key_type& key) const;
     const value_type& at(const key_type& key) const;
     void insert(const key_type& key, const value_type& value);
 };
 
 template <typename KeyT, typename... T>
-struct cache: protected master<KeyT>, protected registry<KeyT, T>...{
+struct store: protected master<KeyT>, protected registry<KeyT, T>...{
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
+    typedef store<KeyT, T...> self_type;
+    
+    store() = default;
+    store(const self_type&) = delete;
+    store(self_type&&) = default;
     
     using master_type::issued;
     

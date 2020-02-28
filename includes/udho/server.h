@@ -33,6 +33,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
 #include <udho/logging.h>
+#include <udho/session.h>
 
 namespace udho{
 
@@ -109,20 +110,20 @@ struct server<void>{
 };
 
 namespace servers{
-template <typename LoggerT=udho::loggers::ostream>
-struct logging: server<udho::attachment<LoggerT>>{
-    typedef server<udho::attachment<LoggerT>> base_type;
+template <typename LoggerT=udho::loggers::ostream, typename... T>
+struct logging: server<udho::attachment<LoggerT, udho::session<T...>>>{
+    typedef server<udho::attachment<LoggerT, udho::session<T...>>> base_type;
     
     using base_type::base_type;
 };
 
-template <>
-struct logging<udho::loggers::ostream>{
+template <typename... T>
+struct logging<udho::loggers::ostream, T...>{
     template <typename RequestT>
-    using req_type = udho::req<RequestT, udho::attachment<udho::loggers::ostream>>;
+    using req_type = udho::req<RequestT, udho::attachment<udho::loggers::ostream, udho::session<T...>>>;
 
-    typedef udho::attachment<udho::loggers::ostream> attachment_type;
-    typedef logging<udho::loggers::ostream> self_type;
+    typedef udho::attachment<udho::loggers::ostream, udho::session<T...>> attachment_type;
+    typedef logging<udho::loggers::ostream, T...> self_type;
     typedef http::request<http::string_body> http_request_type;
     typedef req_type<http_request_type> request_type;
     
