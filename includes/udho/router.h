@@ -18,6 +18,7 @@
 #include <boost/regex/icu.hpp>
 #include <boost/locale.hpp>
 #include <iomanip>
+#include <udho/context.h>
 #include "http_listener.h"
 #include "http_session.h"
 #include "util.h"
@@ -106,8 +107,8 @@ namespace compositors{
     struct transparent{
         typedef OutputT response_type;
         
-        template <typename ReqT>
-        response_type&& operator()(const ReqT& /*req*/, OutputT&& out){
+        template <typename ContextT>
+        response_type&& operator()(const ContextT& /*ctx*/, OutputT&& out){
             return std::move(out);
         }
         std::string name() const{
@@ -121,14 +122,14 @@ namespace compositors{
         std::string _mime;
         
         mimed(const std::string& mime): _mime(mime){}
-        template <typename ReqT>
-        response_type operator()(const ReqT& req, const OutputT& out){
+        template <typename ContextT>
+        response_type operator()(const ContextT& ctx, const OutputT& out){
             std::string content = boost::lexical_cast<std::string>(out);
-            response_type res{boost::beast::http::status::ok, req.version()};
+            response_type res{boost::beast::http::status::ok, ctx.request().version()};
             res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(boost::beast::http::field::content_type,   _mime);
             res.set(boost::beast::http::field::content_length, content.size());
-            res.keep_alive(req.keep_alive());
+            res.keep_alive(ctx.request().keep_alive());
             res.body() = content;
             res.prepare_payload();
             return res;
@@ -183,7 +184,7 @@ struct module_overload{
         std::vector<std::string> args_str;
         std::copy(argsq.begin(), argsq.end(), std::back_inserter(args_str));
         internal::arguments_to_tuple(tuple, args_str);
-        boost::get<0>(tuple) = value;
+//         boost::get<0>(tuple) = value;
         arguments_type arguments = internal::to_fusion(tuple);
         // https://www.boost.org/doc/libs/1_68_0/libs/fusion/doc/html/fusion/functional/invocation/functions/invoke.html
         return boost::fusion::invoke(_function, arguments);
@@ -553,25 +554,25 @@ struct overload_group{
      * @param subject http resource path 
      * @param send the write callback
      */
-    template <typename ReqT, typename Lambda>
-    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    template <typename ContextT, typename Lambda>
+    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         http::status status = http::status::unknown;
         if(_overload.feasible(request_method, subject)){
             typename overload_type::response_type res;
             try{
-                res = _overload(req, subject);
+                res = _overload(ctx, subject);
                 status = res.result();
-                req.patch(res);
+                ctx.patch(res);
                 send(std::move(res));
             }catch(const udho::exceptions::http_error& error){
-                send(std::move(error.response(req)));
+                send(std::move(error.response(ctx.request())));
                 return error.result();
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
             }
             return status;
         }else{
-            return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
+            return _parent.template serve<ContextT, Lambda>(ctx, request_method, subject, send);
         }
     }
     void summary(std::vector<module_info>& stack) const{
@@ -607,55 +608,21 @@ struct overload_group<U, overload_terminal<V>>{
     typedef U                 parent_type;    ///< type of the next child in the overload chain
     typedef overload_terminal<V> terminal_type;
     
-    parent_type _overload;
     terminal_type _terminal;
     
     template <typename... Args>
-    overload_group(const parent_type& overload, Args... args): _overload(overload), _terminal(args...){}
-
-    /**
-     * serves the content if the http request matches with the content's request method and path.
-     * Calls the callback in `_overload` if it is feasible for the current request. 
-     * Otherwise bubbles the request meta-recursively if some other overload group is feasible.
-     * 
-     * @param req the http request to serve
-     * @param request_method http vmethod get post put head etc ...
-     * @param subject http resource path 
-     * @param send the write callback
-     */
-    template <typename ReqT, typename Lambda>
-    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        http::status status = http::status::unknown;
-        if(_overload.feasible(request_method, subject)){
-            typename parent_type::response_type res;
-            try{
-                res = _overload(req, subject);
-                req.patch(res);
-                status = res.result();
-                send(std::move(res));
-            }catch(const udho::exceptions::http_error& error){
-                send(std::move(error.response(req)));
-                return error.result();
-            }catch(const std::exception& ex){
-                std::cout << ex.what() << std::endl;
-            }
-            return status;
-        }
-        return http::status::unknown;
+    overload_group(Args... args): _terminal(args...){}
+    template <typename ContextT, typename Lambda>
+    http::status serve(ContextT& /*ctx*/, boost::beast::http::verb /*request_method*/, const std::string& /*subject*/, Lambda /*send*/){
+        return http::status::not_found;
     }
-    void summary(std::vector<module_info>& stack) const{
-        stack.push_back(_overload.info());
-    }
+    void summary(std::vector<module_info>& /*stack*/) const{}
     template <typename F>
-    void eval(F& fnc){
-        fnc(_overload);
-    }
+    void eval(F& /*fnc*/){}
     const terminal_type& terminal() const{
         return _terminal;
     }
 };
-
-udho::response_type failure_callback(const udho::request_type& req);
 
 /**
  * router maps HTTP requests with the callbacks
@@ -667,13 +634,13 @@ udho::response_type failure_callback(const udho::request_type& req);
  * @ingroup routing
  */
 template <typename AuxT=dummy_aux>
-struct router: public overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<AuxT>>{
-    typedef overload_group<module_overload<udho::response_type (*)(const udho::request_type&)>, overload_terminal<AuxT>> base_type;
+struct router: public overload_group<void, overload_terminal<AuxT>>{
+    typedef overload_group<void, overload_terminal<AuxT>> base_type;
     /**
      * cnstructs a router
      */
     template <typename... Args>
-    router(Args... args): base_type(udho::overload(boost::beast::http::verb::unknown, &failure_callback), args...){}
+    router(Args... args): base_type(args...){}
     
     template <typename U, typename V, typename F>
     friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);

@@ -31,6 +31,7 @@
 #include <sstream>
 #include <boost/optional.hpp>
 #include <boost/beast/http/message.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace udho{
 
@@ -109,89 +110,106 @@ struct cookie{
     }
 };
 
+template <typename RequestT, typename AttachmentT>
+struct context_impl{
+    typedef RequestT request_type;
+    typedef AttachmentT attachment_type;
+    typedef context_impl<request_type, attachment_type> self_type;
+    typedef boost::beast::http::header<true> headers_type;
+    
+    request_type _request;
+    attachment_type& _attachment;
+    headers_type _headers;
+    
+    context_impl(attachment_type& attachment): _attachment(attachment){}
+    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment){}
+    const request_type& request() const{return _request;}
+    template<class Body, class Fields>
+    void patch(boost::beast::http::message<false, Body, Fields>& res) const{
+        for(const auto& header: _headers){
+            if(header.name() != boost::beast::http::field::set_cookie){
+                res.set(header.name(), header.value());
+            }
+        }
+        res.erase(boost::beast::http::field::set_cookie);
+        for(const auto& header: _headers){
+            if(header.name() == boost::beast::http::field::set_cookie){
+                res.insert(header.name(), header.value());
+            }
+        }
+    }
+    void add(const cookie& c){
+        _headers.set(boost::beast::http::field::set_cookie, c.to_string());
+    }
+};
+
 /**
  * @todo write docs
  */
 template <typename RequestT, typename AttachmentT>
-struct context: RequestT{
-    typedef context<RequestT, AttachmentT> self_type;
-    typedef boost::beast::http::header<true> headers_type;
-    
+struct context{
     typedef RequestT request_type;
     typedef AttachmentT attachment_type;
+    typedef context<request_type, attachment_type> self_type;
+    typedef context_impl<request_type, attachment_type> impl_type;
+    typedef boost::shared_ptr<impl_type> pimple_type;
     
-    attachment_type& _attachment;
-    headers_type _response_headers;
+    pimple_type _pimpl;
         
-    context(attachment_type& attachment): request_type(), _attachment(attachment){}
-    context(const RequestT& request, attachment_type& attachment): request_type(request), _attachment(attachment){}
-    self_type& operator=(const self_type& other){
-        request_type::operator=(other);
-        return *this;
-    }
-    self_type& operator=(const request_type& other){
-        request_type::operator=(other);
-        
-        return *this;
-    }
+    context(attachment_type& attachment): _pimpl(new impl_type(attachment)){}
+    context(const RequestT& request, attachment_type& attachment): _pimpl(new impl_type(request, attachment)){}
+    context(const self_type& other): _pimpl(other._pimpl){}
+    
+    const request_type& request() const{return _pimpl->request();}
+    
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-        for(const auto& header: _response_headers){
-            if(header.name() != boost::beast::http::field::set_cookie){
-                res.set(header.name(), header.value());
-            }
-        }
-        res.erase(boost::beast::http::field::set_cookie);
-        for(const auto& header: _response_headers){
-            if(header.name() == boost::beast::http::field::set_cookie){
-                res.insert(header.name(), header.value());
-            }
-        }
+        _pimpl->patch(res);
     }
     void add(const cookie& c){
-        _response_headers.set(boost::beast::http::field::set_cookie, c.to_string());
+        _pimpl->add(c);
     }
 };
 
-template <typename RequestT>
-struct context<RequestT, void>: RequestT{
-    typedef context<RequestT, void> self_type;
-    typedef boost::beast::http::header<true> headers_type;
-    
-    typedef RequestT request_type;
-    typedef void attachment_type;
-    
-    headers_type _response_headers;
-        
-    context(): request_type(){}
-    context(const RequestT& request): request_type(request){}
-    self_type& operator=(const self_type& other){
-        request_type::operator=(other);
-        return *this;
-    }
-    self_type& operator=(const request_type& other){
-        request_type::operator=(other);
-        
-        return *this;
-    }
-    template<class Body, class Fields>
-    void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-        for(const auto& header: _response_headers){
-            if(header.name() != boost::beast::http::field::set_cookie){
-                res.set(header.name(), header.value());
-            }
-        }
-        res.erase(boost::beast::http::field::set_cookie);
-        for(const auto& header: _response_headers){
-            if(header.name() == boost::beast::http::field::set_cookie){
-                res.insert(header.name(), header.value());
-            }
-        }
-    }
-    void add(const cookie& c){
-        _response_headers.set(boost::beast::http::field::set_cookie, c.to_string());
-    }
-};
+// template <typename RequestT>
+// struct context<RequestT, void>: RequestT{
+//     typedef context<RequestT, void> self_type;
+//     typedef boost::beast::http::header<true> headers_type;
+//     
+//     typedef RequestT request_type;
+//     typedef void attachment_type;
+//     
+//     headers_type _response_headers;
+//         
+//     context(): request_type(){}
+//     context(const RequestT& request): request_type(request){}
+//     self_type& operator=(const self_type& other){
+//         request_type::operator=(other);
+//         return *this;
+//     }
+//     self_type& operator=(const request_type& other){
+//         request_type::operator=(other);
+//         
+//         return *this;
+//     }
+//     template<class Body, class Fields>
+//     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
+//         for(const auto& header: _response_headers){
+//             if(header.name() != boost::beast::http::field::set_cookie){
+//                 res.set(header.name(), header.value());
+//             }
+//         }
+//         res.erase(boost::beast::http::field::set_cookie);
+//         for(const auto& header: _response_headers){
+//             if(header.name() == boost::beast::http::field::set_cookie){
+//                 res.insert(header.name(), header.value());
+//             }
+//         }
+//     }
+//     void add(const cookie& c){
+//         _response_headers.set(boost::beast::http::field::set_cookie, c.to_string());
+//     }
+// };
 
 }
 

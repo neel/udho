@@ -7,6 +7,9 @@
 #include <iostream>
 
 std::string hello(udho::servers::logged::context ctx){
+    udho::cookie color("color", "red");
+    ctx.add(color);
+    
     return "Hello World";
 }
 
@@ -24,11 +27,11 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::servers::
     boost::beast::http::file_body::value_type body;
     body.open(path.c_str(), boost::beast::file_mode::scan, err);
     auto const size = body.size();
-    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, ctx.version())};
+    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, ctx.request().version())};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");
     res.content_length(size);
-    res.keep_alive(ctx.keep_alive());
+    res.keep_alive(ctx.request().keep_alive());
     return res;
 }
 

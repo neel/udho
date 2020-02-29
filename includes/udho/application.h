@@ -198,10 +198,10 @@ struct app_{
         _path = path;
         return *this;
     }
-    template <typename ReqT, typename Lambda>
-    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        auto router = udho::router<>();
-        return _app.route(router).serve(req, request_method, subject, send);
+    template <typename ContextT, typename Lambda>
+    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        auto router = udho::router<ContextT>();
+        return _app.route(router).serve(ctx, request_method, subject, send);
     }
     void summary(std::vector<module_info>& stack) const{
         auto router = udho::router<>();

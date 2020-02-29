@@ -48,7 +48,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     AttachmentT& _attachment;
     typedef http_session<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
-    typedef udho::context<http::request<http::string_body>, AttachmentT> req_type;
+    typedef udho::context<http::request<http::string_body>, AttachmentT> context_type;
     
     struct send_lambda{
         self_type& self_;
@@ -98,8 +98,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            req_type req(_req, _attachment);
-            auto response = _router.serve(req, _req.method(), path, _lambda);
+            context_type ctx(_req, _attachment);
+            auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
