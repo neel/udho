@@ -6,15 +6,15 @@
 #include <boost/asio.hpp>
 #include <udho/application.h>
 
-std::string hello(udho::servers::logged::request_type req){
+std::string hello(udho::servers::logged::context ctx){
     return "Hello World";
 }
 
-std::string data(udho::servers::logged::request_type req){
+std::string data(udho::servers::logged::context ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(udho::servers::logged::request_type req, int a, int b){
+int add(udho::servers::logged::context ctx, int a, int b){
     return a + b;
 }
 
@@ -22,8 +22,8 @@ struct my_app: public udho::application<my_app>{
     typedef udho::application<my_app> base;
     
     my_app();
-    int add(udho::servers::logged::request_type req, int a, int b);
-    int mul(udho::servers::logged::request_type req, int a, int b);
+    int add(udho::servers::logged::context ctx, int a, int b);
+    int mul(udho::servers::logged::context ctx, int a, int b);
     
     template <typename RouterT>
     auto route(RouterT& router){
@@ -33,10 +33,10 @@ struct my_app: public udho::application<my_app>{
 };
 
 my_app::my_app(): base("my_app"){}
-int my_app::add(udho::servers::logged::request_type req, int a, int b){
+int my_app::add(udho::servers::logged::context ctx, int a, int b){
     return a + b;
 }
-int my_app::mul(udho::servers::logged::request_type req, int a, int b){
+int my_app::mul(udho::servers::logged::context ctx, int a, int b){
     return a * b;
 }
 

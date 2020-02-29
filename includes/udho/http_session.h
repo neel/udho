@@ -19,7 +19,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
-#include <udho/req.h>
+#include <udho/context.h>
 #include "logging.h"
 #include "page.h"
 
@@ -48,7 +48,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     AttachmentT& _attachment;
     typedef http_session<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
-    typedef udho::req<http::request<http::string_body>, AttachmentT> req_type;
+    typedef udho::context<http::request<http::string_body>, AttachmentT> req_type;
     
     struct send_lambda{
         self_type& self_;

@@ -28,7 +28,7 @@
 #ifndef UDHO_SERVER_H
 #define UDHO_SERVER_H
 
-#include <udho/req.h>
+#include <udho/context.h>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
@@ -45,12 +45,12 @@ namespace http = boost::beast::http;
 template <typename AttachmentT>
 struct server{
     template <typename RequestT>
-    using req_type = udho::req<RequestT, AttachmentT>;
+    using context_type = udho::context<RequestT, AttachmentT>;
 
     typedef AttachmentT attachment_type;
     typedef server<attachment_type> self_type;
     typedef http::request<http::string_body> http_request_type;
-    typedef req_type<http_request_type> request_type;
+    typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
     attachment_type& _attachment;
@@ -68,12 +68,12 @@ struct server{
 template <typename LoggerT>
 struct server<udho::attachment<LoggerT>>{
     template <typename RequestT>
-    using req_type = udho::req<RequestT, udho::attachment<LoggerT>>;
+    using context_type = udho::context<RequestT, udho::attachment<LoggerT>>;
 
     typedef udho::attachment<LoggerT> attachment_type;
     typedef server<attachment_type> self_type;
     typedef http::request<http::string_body> http_request_type;
-    typedef req_type<http_request_type> request_type;
+    typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
     attachment_type _attachment;
@@ -91,12 +91,12 @@ struct server<udho::attachment<LoggerT>>{
 template <>
 struct server<void>{
     template <typename RequestT>
-    using req_type = udho::req<RequestT, void>;
+    using context_type = udho::context<RequestT, void>;
 
     typedef void attachment_type;
     typedef server<attachment_type> self_type;
     typedef http::request<http::string_body> http_request_type;
-    typedef req_type<http_request_type> request_type;
+    typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
     
@@ -120,12 +120,12 @@ struct logging: server<udho::attachment<LoggerT, udho::session<T...>>>{
 template <typename... T>
 struct logging<udho::loggers::ostream, T...>{
     template <typename RequestT>
-    using req_type = udho::req<RequestT, udho::attachment<udho::loggers::ostream, udho::session<T...>>>;
+    using context_type = udho::context<RequestT, udho::attachment<udho::loggers::ostream, udho::session<T...>>>;
 
     typedef udho::attachment<udho::loggers::ostream, udho::session<T...>> attachment_type;
     typedef logging<udho::loggers::ostream, T...> self_type;
     typedef http::request<http::string_body> http_request_type;
-    typedef req_type<http_request_type> request_type;
+    typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
     udho::loggers::ostream _logger;

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_REQ_H
-#define UDHO_REQ_H
+#ifndef UDHO_CONTEXT_H
+#define UDHO_CONTEXT_H
 
 #include <sstream>
 #include <boost/optional.hpp>
@@ -113,8 +113,8 @@ struct cookie{
  * @todo write docs
  */
 template <typename RequestT, typename AttachmentT>
-struct req: RequestT{
-    typedef req<RequestT, AttachmentT> self_type;
+struct context: RequestT{
+    typedef context<RequestT, AttachmentT> self_type;
     typedef boost::beast::http::header<true> headers_type;
     
     typedef RequestT request_type;
@@ -123,8 +123,8 @@ struct req: RequestT{
     attachment_type& _attachment;
     headers_type _response_headers;
         
-    req(attachment_type& attachment): request_type(), _attachment(attachment){}
-    req(const RequestT& request, attachment_type& attachment): request_type(request), _attachment(attachment){}
+    context(attachment_type& attachment): request_type(), _attachment(attachment){}
+    context(const RequestT& request, attachment_type& attachment): request_type(request), _attachment(attachment){}
     self_type& operator=(const self_type& other){
         request_type::operator=(other);
         return *this;
@@ -154,8 +154,8 @@ struct req: RequestT{
 };
 
 template <typename RequestT>
-struct req<RequestT, void>: RequestT{
-    typedef req<RequestT, void> self_type;
+struct context<RequestT, void>: RequestT{
+    typedef context<RequestT, void> self_type;
     typedef boost::beast::http::header<true> headers_type;
     
     typedef RequestT request_type;
@@ -163,8 +163,8 @@ struct req<RequestT, void>: RequestT{
     
     headers_type _response_headers;
         
-    req(): request_type(){}
-    req(const RequestT& request): request_type(request){}
+    context(): request_type(){}
+    context(const RequestT& request): request_type(request){}
     self_type& operator=(const self_type& other){
         request_type::operator=(other);
         return *this;
@@ -195,4 +195,4 @@ struct req<RequestT, void>: RequestT{
 
 }
 
-#endif // UDHO_REQ_H
+#endif // UDHO_CONTEXT_H

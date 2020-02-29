@@ -12,7 +12,7 @@
 #include <udho/server.h>
 #include <iostream>
 
-typedef udho::servers::nolog::request_type request_type;
+typedef udho::servers::nolog::context context_type;
 
 template <typename F>
 struct checker{
@@ -35,38 +35,38 @@ checker<F> generate_checker(F f){
     return checker<F>(f);
 }
 
-std::string hello(request_type req){
+std::string hello(context_type ctx){
     return "Hello World";
 }
 
-std::string data(request_type req){
+std::string data(context_type ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(request_type req, int a, int b){
+int add(context_type ctx, int a, int b){
     return a + b;
 }
 
-boost::beast::http::response<boost::beast::http::file_body> file(request_type req){
+boost::beast::http::response<boost::beast::http::file_body> file(context_type ctx){
     std::string path("/etc/passwd");
     boost::beast::error_code err;
     boost::beast::http::file_body::value_type body;
     body.open(path.c_str(), boost::beast::file_mode::scan, err);
     auto const size = body.size();
-    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
+    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, ctx.version())};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");
     res.content_length(size);
-    res.keep_alive(req.keep_alive());
+    res.keep_alive(ctx.keep_alive());
     return res;
 }
 
-udho::response_type page(request_type req){
-    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, req.version()};
+udho::response_type page(context_type ctx){
+    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, ctx.version()};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");
     res.body() = std::string("nothing");
-    res.keep_alive(req.keep_alive());
+    res.keep_alive(ctx.keep_alive());
     return res;
 }
 
@@ -80,20 +80,20 @@ BOOST_AUTO_TEST_CASE(mapping){
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
-    request_type q;
-    router.serve(q, boost::beast::http::verb::get, "/hello", generate_checker([](const std::string& res){
+    context_type ctx;
+    router.serve(ctx, boost::beast::http::verb::get, "/hello", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "Hello World");
     }));
-    router.serve(q, boost::beast::http::verb::get, "/data", generate_checker([](const std::string& res){
+    router.serve(ctx, boost::beast::http::verb::get, "/data", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "{id: 2, name: 'udho'}");
     }));
-    router.serve(q, boost::beast::http::verb::get, "/add/2/3", generate_checker([](const std::string& res){
+    router.serve(ctx, boost::beast::http::verb::get, "/add/2/3", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "5");
     }));
-    router.serve(q, boost::beast::http::verb::get, "/page", generate_checker([](const std::string& res){
+    router.serve(ctx, boost::beast::http::verb::get, "/page", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "nothing");
     }));
-    router.serve(q, boost::beast::http::verb::get, "/file", generate_checker([](const std::string& size){
+    router.serve(ctx, boost::beast::http::verb::get, "/file", generate_checker([](const std::string& size){
         BOOST_CHECK(boost::lexical_cast<unsigned long>(size) > 0);
     }));
 }
