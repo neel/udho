@@ -137,8 +137,8 @@ struct cookies_{
             boost::split(cookies, cookies_str, boost::is_any_of(";"));
             for(const std::string& cookie: cookies){
                 auto pos = cookie.find("=");
-                auto key = cookie.substr(0, pos);
-                auto val = cookie.substr(pos+1);
+                std::string key = boost::algorithm::trim_copy(cookie.substr(0, pos));
+                std::string val = boost::algorithm::trim_copy(cookie.substr(pos+1));
                 _jar.insert(std::make_pair(key, val));
             }
         }
