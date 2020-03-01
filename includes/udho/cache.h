@@ -150,6 +150,7 @@ struct store: protected master<KeyT>, protected registry<KeyT, T>...{
     store(self_type&&) = default;
     
     using master_type::issued;
+    using master_type::issue;
     
     template <typename V>
     bool exists(const key_type& key) const{

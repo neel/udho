@@ -29,12 +29,17 @@
 #define UDHO_CONTEXT_H
 
 #include <sstream>
+#include <iostream>
 #include <boost/optional.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 namespace udho{
-
+    
 template <typename LoggerT=void, typename CacheT=void, typename... T>
 struct attachment: LoggerT, CacheT, T...{
     typedef attachment<LoggerT, CacheT, T...> self_type;
@@ -65,8 +70,8 @@ struct cookie{
     boost::optional<unsigned long> _age;
     boost::optional<bool>          _secure;
     
-    cookie(const std::string& name): _name(name){}
-    cookie(const std::string& name, const std::string& value): _name(name), _value(value){}
+    cookie(const std::string& name): _name(name), _removed(false){}
+    cookie(const std::string& name, const std::string& value): _name(name), _value(value), _removed(false){}
     
     void path(const std::string& p){
         _path = p;
@@ -110,19 +115,125 @@ struct cookie{
     }
 };
 
+namespace detail{
+
+template <typename RequestT>
+struct cookies_{
+    typedef RequestT request_type;
+    typedef boost::beast::http::header<true> headers_type;
+    typedef std::map<std::string, std::string> cookie_jar_type;
+    
+    const request_type& _request;
+    headers_type&       _headers;
+    cookie_jar_type     _jar;
+    
+    cookies_(const request_type& request, headers_type& headers): _request(request), _headers(headers){
+        collect();
+    }
+    void collect(){
+        if(_request.count(boost::beast::http::field::cookie)){
+            std::string cookies_str(_request[boost::beast::http::field::cookie]);
+            std::vector<std::string> cookies;
+            boost::split(cookies, cookies_str, boost::is_any_of(";"));
+            for(const std::string& cookie: cookies){
+                auto pos = cookie.find("=");
+                auto key = cookie.substr(0, pos);
+                auto val = cookie.substr(pos+1);
+                _jar.insert(std::make_pair(key, val));
+            }
+        }
+    }
+    void add(const cookie& c){
+        _headers.insert(boost::beast::http::field::set_cookie, c.to_string());
+    }
+    template <typename V>
+    void add(const std::string& key, const V& value){
+        std::string val = boost::lexical_cast<std::string>(value);
+        add(udho::cookie(key, val));
+    }
+    bool exists(const std::string& key) const{
+        return _jar.count("key");
+    }
+    template <typename V>
+    V get(const std::string& key) const{
+        if(exists(key)){
+            return boost::lexical_cast<V>(_jar.at(key));
+        }else{
+            return V();
+        }
+    }
+};
+    
+template <typename RequestT, typename AttachmentT>
+struct session_{
+    typedef RequestT request_type;
+    typedef AttachmentT attachment_type;
+    typedef boost::beast::http::header<true> headers_type;
+    typedef typename AttachmentT::key_type session_key;
+    typedef udho::detail::cookies_<RequestT> cookies_type;
+    typedef std::map<std::string, std::string> cookie_jar_type;
+    
+    const request_type& _request;
+    attachment_type&    _attachment;
+    cookies_type&       _cookies;
+    std::string         _sessid;
+    cookie_jar_type     _jar;
+    session_key         _id;
+    
+    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies, const std::string& sessid): _request(request), _attachment(attachment), _cookies(cookies), _sessid(sessid){
+        identify();
+    }
+    void identify(){
+        if(_cookies.exists(_sessid)){
+            session_key id = _cookies.template get<session_key>(_sessid);
+            if(!_attachment.issued(id)){
+                _id = attachment_type::generate();
+                _attachment.issue(_id);
+                _cookies.add(_sessid, _id);
+            }else{
+                _id = id;
+            }
+        }else{
+            _id = attachment_type::generate();
+            _attachment.issue(_id);
+            _cookies.add(_sessid, _id);
+        }
+    }
+    const session_key& id() const{
+        return _id;
+    }
+    template <typename V>
+    bool exists() const{
+        return _attachment.template exists<V>(_id);
+    }
+    template <typename V>
+    const V& get() const{
+        return _attachment.template at<V>(_id);
+    }
+    template <typename V>
+    void set(const V& value){
+        _attachment.template insert<V>(_id, value);
+    }
+};
+    
 template <typename RequestT, typename AttachmentT>
 struct context_impl{
     typedef RequestT request_type;
     typedef AttachmentT attachment_type;
     typedef context_impl<request_type, attachment_type> self_type;
     typedef boost::beast::http::header<true> headers_type;
+    typedef udho::detail::cookies_<RequestT> cookies_type;
+    typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
     
-    request_type _request;
+    request_type     _request;
     attachment_type& _attachment;
-    headers_type _headers;
+    headers_type     _headers;
+    cookies_type     _cookies;
+    sess_type        _sess;
     
-    context_impl(attachment_type& attachment): _attachment(attachment){}
-    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment){}
+    context_impl(attachment_type& attachment): _attachment(attachment), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
+    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
+    context_impl(const self_type&) = delete;
     const request_type& request() const{return _request;}
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
@@ -139,9 +250,11 @@ struct context_impl{
         }
     }
     void add(const cookie& c){
-        _headers.set(boost::beast::http::field::set_cookie, c.to_string());
+        _cookies.add(c);
     }
 };
+
+}
 
 /**
  * @todo write docs
@@ -151,8 +264,9 @@ struct context{
     typedef RequestT request_type;
     typedef AttachmentT attachment_type;
     typedef context<request_type, attachment_type> self_type;
-    typedef context_impl<request_type, attachment_type> impl_type;
+    typedef detail::context_impl<request_type, attachment_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
+    typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
     
     pimple_type _pimpl;
         
@@ -165,6 +279,9 @@ struct context{
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
         _pimpl->patch(res);
+    }
+    sess_type& session(){
+        return _pimpl->_sess;
     }
     void add(const cookie& c){
         _pimpl->add(c);

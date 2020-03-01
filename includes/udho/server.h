@@ -142,7 +142,7 @@ struct logging<udho::loggers::ostream, T...>{
 };
 
 typedef logging<> logged;
-typedef server<void> nolog;
+typedef server<void> quiet;
     
 }
 

@@ -12,7 +12,7 @@
 #include <udho/server.h>
 #include <iostream>
 
-typedef udho::servers::nolog::context context_type;
+typedef udho::servers::quiet::context context_type;
 
 template <typename F>
 struct checker{
