@@ -152,7 +152,7 @@ struct cookies_{
         add(udho::cookie(key, val));
     }
     bool exists(const std::string& key) const{
-        return _jar.count("key");
+        return _jar.count(key);
     }
     template <typename V>
     V get(const std::string& key) const{
