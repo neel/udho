@@ -38,6 +38,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/utility/string_view.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 #include <udho/util.h>
 
 namespace udho{
@@ -178,6 +179,25 @@ struct form_{
     fields_map_type::size_type count() const{
         return _fields.size();
     }
+};
+
+// https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_facade.html#tutorial-example
+// https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_adaptor.html#base-parameters
+template <typename RequestT>
+struct form_iterator: boost::iterator_facade<form_iterator<RequestT>, form_<RequestT>, boost::forward_traversal_tag>{
+    typedef form_<RequestT> form_type;
+    
+    form_type& _form;
+    
+    explicit form_iterator(form_type& form): _form(form){}
+    
+    private:
+//     friend class boost::iterator_core_access;
+//     void increment() { m_node = m_node->next(); }
+//     bool equal(node_iterator const& other) const{
+//         return this->m_node == other.m_node;
+//     }
+//     node_base& dereference() const { return *m_node; }
 };
     
 template <typename RequestT>
