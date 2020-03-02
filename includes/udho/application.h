@@ -200,7 +200,7 @@ struct app_{
     }
     template <typename ContextT, typename Lambda>
     http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        auto router = udho::router<ContextT>();
+        auto router = udho::router<>();
         return _app.route(router).serve(ctx, request_method, subject, send);
     }
     void summary(std::vector<module_info>& stack) const{

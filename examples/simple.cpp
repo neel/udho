@@ -14,7 +14,7 @@ struct appearence{
     std::string color;
 };
 
-typedef udho::servers::streamed::stateful<user, appearence> server_type;
+typedef udho::servers::ostreamed::stateful<user, appearence> server_type;
 
 std::string hello(server_type::context ctx){
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
@@ -36,6 +36,14 @@ std::string hello(server_type::context ctx){
 }
 
 std::string data(server_type::context ctx){
+    std::cout << "name submitted" << ctx.form().has("name") << std::endl;
+    std::cout << "age submitted" << ctx.form().has("age") << std::endl;
+    std::cout << "planet submitted" << ctx.form().has("planet") << std::endl;
+
+    if(ctx.form().has("age")){
+        int age = ctx.form().field<int>("age")-1;
+        std::cout << "age " << age << std::endl;
+    }
     return "{id: 2, name: 'udho'}";
 }
 
@@ -61,13 +69,12 @@ int main(){
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
     boost::asio::io_service io;
-    
     server_type server(io, std::cout);
 
     auto router = udho::router<>()
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::get(&data).json()   = "^/data$")
+        | (udho::post(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
     udho::util::print_summary(router);

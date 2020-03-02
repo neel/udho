@@ -56,6 +56,7 @@ namespace loggers{
  
 template <typename StreamT>
 struct plain{
+    typedef StreamT stream_type;
     typedef plain<StreamT> self_type;
     
     StreamT& _stream;

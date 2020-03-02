@@ -43,24 +43,55 @@
 
 namespace udho{
     
-template <typename LoggerT=void, typename CacheT=void, typename... T>
-struct attachment: LoggerT, CacheT, T...{
-    typedef attachment<LoggerT, CacheT, T...> self_type;
+/**
+ * logged stateful
+ */
+template <typename LoggerT=void, typename CacheT=void>
+struct attachment: LoggerT, CacheT{
+    typedef attachment<LoggerT, CacheT> self_type;
     typedef LoggerT logger_type;
     typedef CacheT  cache_type;
     
     attachment(LoggerT& logger): LoggerT(logger){}
 };
 
+/**
+ * logged stateless
+ */
 template <typename LoggerT>
 struct attachment<LoggerT, void>: LoggerT{
     typedef attachment<LoggerT, void> self_type;
     typedef LoggerT logger_type;
-    typedef void    cache_type;
     
     attachment(LoggerT& logger): LoggerT(logger){}
 };
+
+/**
+ * quiet stateful
+ */
+template <typename CacheT>
+struct attachment<void, CacheT>: CacheT{
+    typedef attachment<void, CacheT> self_type;
+    typedef CacheT  cache_type;
     
+    attachment(){}
+    template <typename... U>
+    void log(U...){}
+};
+
+/**
+ * quiet stateless
+ */
+template <>
+struct attachment<void, void>{
+    typedef attachment<void, void> self_type;
+    
+    attachment(){}
+    template <typename... U>
+    void log(U...){}
+};
+
+   
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.cpp
 template <typename ValueT>
@@ -156,7 +187,6 @@ struct form_{
         }
     }
     void parse_urlencoded(){
-        std::cout << _body << std::endl;
         std::vector<std::string> fields;
         boost::split(fields, _body, boost::is_any_of("&"));
         for(const std::string& field: fields){
@@ -270,7 +300,7 @@ struct session_{
     session_key         _id;
     bool                _returning;
     
-    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies, const std::string& sessid): _request(request), _attachment(attachment), _cookies(cookies), _sessid(sessid), _returning(false){
+    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies): _request(request), _attachment(attachment), _cookies(cookies), _sessid(_attachment._sessid), _returning(false){
         identify();
     }
     void identify(){
@@ -316,6 +346,12 @@ struct session_{
     }
 };
 
+template <typename RequestT, typename LoggerT>
+struct session_<RequestT, udho::attachment<LoggerT, void>>{
+    template <typename... U>
+    session_(U...){}
+};
+
 template <typename RequestT, typename AttachmentT, typename T>
 session_<RequestT, AttachmentT>& operator<<(session_<RequestT, AttachmentT>& session, const T& data){
     session.template set<T>(data);
@@ -345,8 +381,8 @@ struct context_impl{
     cookies_type     _cookies;
     sess_type        _sess;
     
-    context_impl(attachment_type& attachment): _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
-    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
+    context_impl(attachment_type& attachment): _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
+    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
     context_impl(const self_type&) = delete;
     const request_type& request() const{return _request;}
     template<class Body, class Fields>
@@ -403,46 +439,6 @@ struct context{
         return _pimpl->_cookies;
     }
 };
-
-// template <typename RequestT>
-// struct context<RequestT, void>: RequestT{
-//     typedef context<RequestT, void> self_type;
-//     typedef boost::beast::http::header<true> headers_type;
-//     
-//     typedef RequestT request_type;
-//     typedef void attachment_type;
-//     
-//     headers_type _response_headers;
-//         
-//     context(): request_type(){}
-//     context(const RequestT& request): request_type(request){}
-//     self_type& operator=(const self_type& other){
-//         request_type::operator=(other);
-//         return *this;
-//     }
-//     self_type& operator=(const request_type& other){
-//         request_type::operator=(other);
-//         
-//         return *this;
-//     }
-//     template<class Body, class Fields>
-//     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-//         for(const auto& header: _response_headers){
-//             if(header.name() != boost::beast::http::field::set_cookie){
-//                 res.set(header.name(), header.value());
-//             }
-//         }
-//         res.erase(boost::beast::http::field::set_cookie);
-//         for(const auto& header: _response_headers){
-//             if(header.name() == boost::beast::http::field::set_cookie){
-//                 res.insert(header.name(), header.value());
-//             }
-//         }
-//     }
-//     void add(const cookie& c){
-//         _response_headers.set(boost::beast::http::field::set_cookie, c.to_string());
-//     }
-// };
 
 }
 
