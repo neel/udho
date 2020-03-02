@@ -6,22 +6,44 @@
 #include <udho/context.h>
 #include <iostream>
 
-std::string hello(udho::servers::logged::context ctx){
-    udho::cookie color("color", "red");
-    ctx.add(color);
+struct user{
+    std::string name;
+};
+
+struct appearence{
+    std::string color;
+};
+
+typedef udho::servers::streamed::stateful<user, appearence> server_type;
+
+std::string hello(server_type::context ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+    
+    std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
+    if(ctx.session().exists<user>()){
+        user data;
+        ctx.session() >> data;
+        std::cout << data.name << std::endl;
+    }else{
+        user data;
+        data.name = "Neel Basu";
+        ctx.session() << data;
+        ctx.cookies() << udho::cookie("planet", 3);
+    }
     
     return "Hello World";
 }
 
-std::string data(udho::servers::logged::context ctx){
+std::string data(server_type::context ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(udho::servers::logged::context ctx, int a, int b){
+int add(server_type::context ctx, int a, int b){
     return a + b;
 }
 
-boost::beast::http::response<boost::beast::http::file_body> file(udho::servers::logged::context ctx){
+boost::beast::http::response<boost::beast::http::file_body> file(server_type::context ctx){
     std::string path("/etc/passwd");
     boost::beast::error_code err;
     boost::beast::http::file_body::value_type body;
@@ -40,7 +62,7 @@ int main(){
     
     boost::asio::io_service io;
     
-    udho::servers::logged server(io, std::cout);
+    server_type server(io, std::cout);
 
     auto router = udho::router<>()
         | (udho::get(&file).raw() = "^/file")

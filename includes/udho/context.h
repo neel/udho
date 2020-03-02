@@ -62,9 +62,12 @@ struct attachment<LoggerT, void>: LoggerT{
     
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.cpp
-struct cookie{
+template <typename ValueT>
+struct cookie_{
+    typedef cookie_<ValueT> self_type;
+    
     std::string _name;
-    std::string _value;
+    ValueT _value;
     bool _removed;
     boost::optional<std::string> _comment;
     boost::optional<std::string> _domain;
@@ -72,26 +75,36 @@ struct cookie{
     boost::optional<unsigned long> _age;
     boost::optional<bool>          _secure;
     
-    cookie(const std::string& name): _name(name), _removed(false){}
-    cookie(const std::string& name, const std::string& value): _name(name), _value(value), _removed(false){}
+    cookie_(const std::string& name): _name(name), _removed(false){}
+    cookie_(const std::string& name, const ValueT& value): _name(name), _value(value), _removed(false){}
     
-    void path(const std::string& p){
+    self_type& path(const std::string& p){
         _path = p;
+        return *this;
     }
     std::string path() const{
         return !!_path ? *_path : std::string();
     }
     
-    void domain(const std::string& d){
+    self_type& domain(const std::string& d){
         _domain = d;
+        return *this;
     }
     std::string domain() const{
         return !!_domain ? *_domain : std::string();
     }
     
+    self_type& age(unsigned long age){
+        _age = age;
+        return *this;
+    }
+    unsigned long age() const{
+        return !!_age ? *_age : 0;
+    }
+    
     template <typename StreamT>
     StreamT& render(StreamT& stream) const{
-        stream << _name << '=' << _value;
+        stream << _name << '=' << boost::lexical_cast<std::string>(_value);
         if(!!_comment && !(*_comment).empty())
             stream << "; Comment=" << *_comment;
         if(!!_domain && !(*_domain).empty())
@@ -116,6 +129,11 @@ struct cookie{
         return ss.str();
     }
 };
+
+template <typename ValueT>
+udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
+    return udho::cookie_<ValueT>(name, v);
+}
 
 namespace detail{
 
@@ -157,6 +175,9 @@ struct form_{
     V field(const std::string& name) const{
         return boost::lexical_cast<V>(_fields.at(name));
     }
+    fields_map_type::size_type count() const{
+        return _fields.size();
+    }
 };
     
 template <typename RequestT>
@@ -185,13 +206,13 @@ struct cookies_{
             }
         }
     }
-    void add(const cookie& c){
+    template <typename V>
+    void add(const cookie_<V>& c){
         _headers.insert(boost::beast::http::field::set_cookie, c.to_string());
     }
     template <typename V>
     void add(const std::string& key, const V& value){
-        std::string val = boost::lexical_cast<std::string>(value);
-        add(udho::cookie(key, val));
+        add(udho::cookie_<V>(key, value));
     }
     bool exists(const std::string& key) const{
         return _jar.count(key);
@@ -205,6 +226,12 @@ struct cookies_{
         }
     }
 };
+
+template <typename RequestT, typename V>
+cookies_<RequestT>& operator<<(cookies_<RequestT>& cookies, const udho::cookie_<V>& cookie){
+    cookies.add(cookie);
+    return cookies;
+}
     
 template <typename RequestT, typename AttachmentT>
 struct session_{
@@ -221,8 +248,9 @@ struct session_{
     std::string         _sessid;
     cookie_jar_type     _jar;
     session_key         _id;
+    bool                _returning;
     
-    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies, const std::string& sessid): _request(request), _attachment(attachment), _cookies(cookies), _sessid(sessid){
+    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies, const std::string& sessid): _request(request), _attachment(attachment), _cookies(cookies), _sessid(sessid), _returning(false){
         identify();
     }
     void identify(){
@@ -232,17 +260,23 @@ struct session_{
                 _id = attachment_type::generate();
                 _attachment.issue(_id);
                 _cookies.add(_sessid, _id);
+                _returning = false;
             }else{
                 _id = id;
+                _returning = true;
             }
         }else{
             _id = attachment_type::generate();
             _attachment.issue(_id);
             _cookies.add(_sessid, _id);
+            _returning = false;
         }
     }
     const session_key& id() const{
         return _id;
+    }
+    bool returning() const{
+        return _returning;
     }
     template <typename V>
     bool exists() const{
@@ -250,6 +284,10 @@ struct session_{
     }
     template <typename V>
     const V& get() const{
+        return _attachment.template get<V>(_id);
+    }
+    template <typename V>
+    V& at(){
         return _attachment.template at<V>(_id);
     }
     template <typename V>
@@ -257,6 +295,18 @@ struct session_{
         _attachment.template insert<V>(_id, value);
     }
 };
+
+template <typename RequestT, typename AttachmentT, typename T>
+session_<RequestT, AttachmentT>& operator<<(session_<RequestT, AttachmentT>& session, const T& data){
+    session.template set<T>(data);
+    return session;
+}
+
+template <typename RequestT, typename AttachmentT, typename T>
+const session_<RequestT, AttachmentT>& operator>>(const session_<RequestT, AttachmentT>& session, T& data){
+    data = session.template get<T>();
+    return session;
+}
     
 template <typename RequestT, typename AttachmentT>
 struct context_impl{
@@ -331,9 +381,6 @@ struct context{
     }
     cookies_type& cookies(){
         return _pimpl->_cookies;
-    }
-    void add(const cookie& c){
-        _pimpl->_cookies.add(c);
     }
 };
 

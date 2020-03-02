@@ -115,7 +115,9 @@ struct logging: server<udho::attachment<LoggerT, udho::session<T...>>>{
     typedef server<udho::attachment<LoggerT, udho::session<T...>>> base_type;
     
     using base_type::base_type;
+    using base_type::serve;
 };
+
 
 template <typename... T>
 struct logging<udho::loggers::ostream, T...>{
@@ -141,8 +143,53 @@ struct logging<udho::loggers::ostream, T...>{
     }
 };
 
-typedef logging<> logged;
-typedef server<void> quiet;
+template <>
+struct logging<udho::loggers::ostream, void>{
+    template <typename RequestT>
+    using context_type = udho::context<RequestT, udho::attachment<udho::loggers::ostream>>;
+
+    typedef udho::attachment<udho::loggers::ostream> attachment_type;
+    typedef logging<udho::loggers::ostream, void> self_type;
+    typedef http::request<http::string_body> http_request_type;
+    typedef context_type<http_request_type> context;
+    
+    boost::asio::io_service& _io;
+    udho::loggers::ostream _logger;
+    attachment_type _attachment;
+    
+    logging(boost::asio::io_service& io, std::ostream& stream): _io(io), _logger(stream), _attachment(_logger){}
+    logging(const self_type&) = delete;
+    logging(self_type&& other) = default;
+    template <typename RouterT>
+    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+    }
+};
+
+/**
+ * logged server with session using any logger type
+ */
+template <typename LoggerT, typename... T>
+using logged = logging<LoggerT, T...>;
+/**
+ * server specialized for std::ostream
+ */
+struct streamed{
+    template <typename...T>
+    using stateful  = logged<udho::loggers::ostream, T...>;
+    using stateless = logged<udho::loggers::ostream, void>;
+};
+
+/**
+ * no logging
+ */
+struct quiet{
+    typedef server<void> stateless;
+    typedef server<udho::attachment<void>> stateful;
+    
+};
+
     
 }
 
