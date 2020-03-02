@@ -37,6 +37,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/utility/string_view.hpp>
+#include <udho/util.h>
 
 namespace udho{
     
@@ -117,6 +119,46 @@ struct cookie{
 
 namespace detail{
 
+template <typename RequestT>
+struct form_{
+    typedef RequestT request_type;
+    typedef typename request_type::body_type::value_type body_type;
+    typedef std::map<std::string, std::string> fields_map_type;
+    
+    const request_type& _request;
+    body_type _body;
+    fields_map_type _fields;
+    
+    form_(const request_type& request): _request(request), _body(request.body()){
+        if(_request[boost::beast::http::field::content_type].find("application/x-www-form-urlencoded") != std::string::npos){
+            parse_urlencoded();
+        }else if(_request[boost::beast::http::field::content_type].find("multipart/form-data") != std::string::npos){
+            parse_multipart();
+        }
+    }
+    void parse_urlencoded(){
+        std::cout << _body << std::endl;
+        std::vector<std::string> fields;
+        boost::split(fields, _body, boost::is_any_of("&"));
+        for(const std::string& field: fields){
+            auto pos = field.find("=");
+            std::string key = boost::algorithm::trim_copy(field.substr(0, pos));
+            std::string val = boost::algorithm::trim_copy(field.substr(pos+1));
+            _fields.insert(std::make_pair(udho::util::urldecode(key), udho::util::urldecode(val)));
+        }
+    }
+    void parse_multipart(){
+        
+    }
+    bool has(const std::string& name) const{
+        return _fields.find(name) != _fields.end();
+    }
+    template <typename V>
+    V field(const std::string& name) const{
+        return boost::lexical_cast<V>(_fields.at(name));
+    }
+};
+    
 template <typename RequestT>
 struct cookies_{
     typedef RequestT request_type;
@@ -222,17 +264,19 @@ struct context_impl{
     typedef AttachmentT attachment_type;
     typedef context_impl<request_type, attachment_type> self_type;
     typedef boost::beast::http::header<true> headers_type;
+    typedef udho::detail::form_<RequestT> form_type;
     typedef udho::detail::cookies_<RequestT> cookies_type;
     typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
     
     request_type     _request;
     attachment_type& _attachment;
+    form_type        _form;
     headers_type     _headers;
     cookies_type     _cookies;
     sess_type        _sess;
     
-    context_impl(attachment_type& attachment): _attachment(attachment), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
-    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
+    context_impl(attachment_type& attachment): _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
+    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies, _attachment._sessid){}
     context_impl(const self_type&) = delete;
     const request_type& request() const{return _request;}
     template<class Body, class Fields>
@@ -249,9 +293,6 @@ struct context_impl{
             }
         }
     }
-    void add(const cookie& c){
-        _cookies.add(c);
-    }
 };
 
 }
@@ -266,6 +307,8 @@ struct context{
     typedef context<request_type, attachment_type> self_type;
     typedef detail::context_impl<request_type, attachment_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
+    typedef udho::detail::form_<RequestT> form_type;
+    typedef udho::detail::cookies_<RequestT> cookies_type;
     typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
     
     pimple_type _pimpl;
@@ -280,11 +323,17 @@ struct context{
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
         _pimpl->patch(res);
     }
+    form_type& form(){
+        return _pimpl->_form;
+    }
     sess_type& session(){
         return _pimpl->_sess;
     }
+    cookies_type& cookies(){
+        return _pimpl->_cookies;
+    }
     void add(const cookie& c){
-        _pimpl->add(c);
+        _pimpl->_cookies.add(c);
     }
 };
 
