@@ -32,6 +32,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace udho{
 
@@ -39,8 +40,19 @@ namespace udho{
  * @todo write docs
  */
 template <typename... T>
-class session: udho::cache::store<boost::uuids::uuid, T...>{
-    boost::uuids::random_generator _gen;
+struct session: udho::cache::store<boost::uuids::uuid, T...>{
+    typedef udho::cache::store<boost::uuids::uuid, T...> base_type;
+    typedef typename base_type::key_type session_key;
+    
+    constexpr static const char* _sessid = "UDHOSESSID";
+    
+    static session_key parse(const std::string& key){
+        return boost::lexical_cast<session_key>(key);
+    }
+    static session_key generate(){
+        return boost::uuids::random_generator()();
+    }
+
 };
 
 }

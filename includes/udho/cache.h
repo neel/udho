@@ -134,9 +134,15 @@ struct registry{
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
     
-    bool exists(const key_type& key) const;
-    const value_type& at(const key_type& key) const;
-    void insert(const key_type& key, const value_type& value);
+    bool exists(const key_type& key) const{
+        return _storage.count(key);
+    }
+    const value_type& at(const key_type& key) const{
+        return _storage.at(key);
+    }
+    void insert(const key_type& key, const value_type& value){
+        _storage[key] = value;
+    }
 };
 
 template <typename KeyT, typename... T>
@@ -150,19 +156,31 @@ struct store: protected master<KeyT>, protected registry<KeyT, T>...{
     store(self_type&&) = default;
     
     using master_type::issued;
+    using master_type::issue;
     
     template <typename V>
     bool exists(const key_type& key) const{
         return master_type::issued(key) && registry<KeyT, V>::exists(key);
     }
     template <typename V>
-    const V& at(const key_type& key) const{
-        return master_type::issued(key) && registry<KeyT, V>::at(key);
+    const V& get(const key_type& key, const V& def=V()) const{
+        if(master_type::issued(key)){
+            return registry<KeyT, V>::at(key);
+        }else{
+            return def;
+        }
+    }
+    template <typename V>
+    V& at(const key_type& key, const V& def=V()){
+        if(master_type::issued(key)){
+            return registry<KeyT, V>::at(key);
+        }
+        // TODO throw
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
         registry<KeyT, V>::insert(key, value);
-        if(!has(key)){
+        if(!master_type::issued(key)){
             master_type::issue(key);
         }
     }

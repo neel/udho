@@ -42,43 +42,22 @@ namespace http = boost::beast::http;
 /**
  * @todo write docs
  */
-template <typename AttachmentT>
+template <typename LoggerT=void, typename CacheT=void>
 struct server{
-    template <typename RequestT>
-    using context_type = udho::context<RequestT, AttachmentT>;
-
-    typedef AttachmentT attachment_type;
-    typedef server<attachment_type> self_type;
-    typedef http::request<http::string_body> http_request_type;
-    typedef context_type<http_request_type> context;
+    typedef LoggerT logger_type;
+    typedef CacheT cache_type;
+    typedef udho::attachment<logger_type, cache_type> attachment_type;
+    typedef server<logger_type, cache_type> self_type;
     
-    boost::asio::io_service& _io;
-    attachment_type& _attachment;
-    
-    server(boost::asio::io_service& io, attachment_type& attachment): _io(io), _attachment(attachment){}
-    server(const self_type&) = delete;
-    server(self_type&& other) = default;
-    template <typename RouterT>
-    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
-        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
-    }
-};
-
-template <typename LoggerT>
-struct server<udho::attachment<LoggerT>>{
     template <typename RequestT>
-    using context_type = udho::context<RequestT, udho::attachment<LoggerT>>;
-
-    typedef udho::attachment<LoggerT> attachment_type;
-    typedef server<attachment_type> self_type;
+    using context_type = udho::context<RequestT, attachment_type>;
     typedef http::request<http::string_body> http_request_type;
     typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
     attachment_type _attachment;
     
-    server(boost::asio::io_service& io, LoggerT& logger): _io(io), _attachment(logger){}
+    server(boost::asio::io_service& io, logger_type& logger): _io(io), _attachment(logger){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
@@ -88,61 +67,85 @@ struct server<udho::attachment<LoggerT>>{
     }
 };
 
-template <>
-struct server<void>{
+template <typename CacheT>
+struct server<void, CacheT>{
+    typedef CacheT cache_type;
+    typedef udho::attachment<void, cache_type> attachment_type;
+    typedef server<void, cache_type> self_type;
+    
     template <typename RequestT>
-    using context_type = udho::context<RequestT, void>;
-
-    typedef void attachment_type;
-    typedef server<attachment_type> self_type;
+    using context_type = udho::context<RequestT, attachment_type>;
     typedef http::request<http::string_body> http_request_type;
     typedef context_type<http_request_type> context;
     
     boost::asio::io_service& _io;
+    attachment_type _attachment;
     
     server(boost::asio::io_service& io): _io(io){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        router.template listen<attachment_type>(_io, port, doc_root);
-    }
-};
-
-namespace servers{
-template <typename LoggerT=udho::loggers::ostream, typename... T>
-struct logging: server<udho::attachment<LoggerT, udho::session<T...>>>{
-    typedef server<udho::attachment<LoggerT, udho::session<T...>>> base_type;
-    
-    using base_type::base_type;
-};
-
-template <typename... T>
-struct logging<udho::loggers::ostream, T...>{
-    template <typename RequestT>
-    using context_type = udho::context<RequestT, udho::attachment<udho::loggers::ostream, udho::session<T...>>>;
-
-    typedef udho::attachment<udho::loggers::ostream, udho::session<T...>> attachment_type;
-    typedef logging<udho::loggers::ostream, T...> self_type;
-    typedef http::request<http::string_body> http_request_type;
-    typedef context_type<http_request_type> context;
-    
-    boost::asio::io_service& _io;
-    udho::loggers::ostream _logger;
-    attachment_type _attachment;
-    
-    logging(boost::asio::io_service& io, std::ostream& stream): _io(io), _logger(stream), _attachment(_logger){}
-    logging(const self_type&) = delete;
-    logging(self_type&& other) = default;
-    template <typename RouterT>
-    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
 
-typedef logging<> logged;
-typedef server<void> nolog;
+namespace servers{
+
+namespace stateless{
+    template <typename LoggerT>
+    using logged = server<LoggerT, void>;
+    using quiet  = server<void, void>;
+}
+
+template <typename... T>
+struct stateful{
+    typedef udho::session<T...> cache_type;
+    
+    template <typename LoggerT>
+    using logged    = server<LoggerT, cache_type>;
+    using ostreamed = logged<udho::loggers::ostream>;
+    using quiet     = server<void, cache_type>;
+};
+
+namespace quiet{
+    template <typename... T>
+    using stateful  = server<void, udho::session<T...>>;
+    using stateless = server<void, void>;
+}
+
+template <typename T>
+struct logged{
+    typedef T logger_type;
+    
+    template <typename... U>
+    using stateful  = server<logger_type, udho::session<U...>>;
+    using stateless = server<logger_type, void>;
+};
+
+namespace ostreamed{
+    template <typename CacheT>
+    struct ostreamed_helper{
+        typedef server<udho::loggers::ostream, CacheT> server_type;
+        typedef typename server_type::logger_type logger_type;
+        typedef typename server_type::cache_type cache_type;
+        typedef typename server_type::attachment_type attachment_type;
+        typedef typename server_type::context context;
+        
+        udho::loggers::ostream _logger;
+        server_type _server;
+        
+        ostreamed_helper(boost::asio::io_service& io, udho::loggers::ostream::stream_type& stream): _logger(stream), _server(io, _logger){}
+        template <typename RouterT>
+        void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+            _server.template serve(router, port, doc_root);
+        }
+    };
+    
+    template <typename... U>
+    using stateful  = ostreamed_helper<udho::session<U...>>;
+    using satteless = ostreamed_helper<void>;
+};
     
 }
 

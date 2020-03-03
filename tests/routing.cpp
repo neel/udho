@@ -12,7 +12,8 @@
 #include <udho/server.h>
 #include <iostream>
 
-typedef udho::servers::nolog::context context_type;
+typedef udho::servers::quiet::stateless server_type;
+typedef server_type::context context_type;
 
 template <typename F>
 struct checker{
@@ -53,20 +54,20 @@ boost::beast::http::response<boost::beast::http::file_body> file(context_type ct
     boost::beast::http::file_body::value_type body;
     body.open(path.c_str(), boost::beast::file_mode::scan, err);
     auto const size = body.size();
-    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, ctx.version())};
+    boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, ctx.request().version())};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");
     res.content_length(size);
-    res.keep_alive(ctx.keep_alive());
+    res.keep_alive(ctx.request().keep_alive());
     return res;
 }
 
 udho::response_type page(context_type ctx){
-    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, ctx.version()};
+    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, ctx.request().version()};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");
     res.body() = std::string("nothing");
-    res.keep_alive(ctx.keep_alive());
+    res.keep_alive(ctx.request().keep_alive());
     return res;
 }
 
@@ -80,7 +81,9 @@ BOOST_AUTO_TEST_CASE(mapping){
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
-    context_type ctx;
+    context_type::request_type req;
+    server_type::attachment_type attachment;
+    context_type ctx(req, attachment);
     router.serve(ctx, boost::beast::http::verb::get, "/hello", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "Hello World");
     }));
