@@ -511,9 +511,7 @@ auto del(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
 }
 
-struct dummy_aux{};
-
-template <typename AuxT = dummy_aux>
+template <typename AuxT = void>
 struct overload_terminal{
     typedef AuxT aux_type;
     
@@ -524,6 +522,14 @@ struct overload_terminal{
     const aux_type& aux() const{
         return _aux;
     }
+};
+
+template <>
+struct overload_terminal<void>{
+    typedef void aux_type;
+    
+    template <typename... Args>
+    overload_terminal(Args...){}
 };
 
 /**
@@ -604,7 +610,7 @@ struct overload_group{
 template <typename U, typename V>
 struct overload_group<U, overload_terminal<V>>{
     typedef overload_group<U, overload_terminal<V>> self_type;        ///< type of this overload
-    typedef void              overload_type;      ///< type of parent in the overoad meta-chain
+    typedef V                 overload_type;      ///< type of parent in the overoad meta-chain
     typedef U                 parent_type;    ///< type of the next child in the overload chain
     typedef overload_terminal<V> terminal_type;
     
@@ -613,8 +619,48 @@ struct overload_group<U, overload_terminal<V>>{
     template <typename... Args>
     overload_group(Args... args): _terminal(args...){}
     template <typename ContextT, typename Lambda>
+    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        http::status status = http::status::unknown;
+        if(_terminal.feasible(request_method, subject)){
+            typename overload_type::response_type res;
+            try{
+                res = _terminal(ctx, subject);
+                status = res.result();
+                ctx.patch(res);
+                send(std::move(res));
+            }catch(const udho::exceptions::http_error& error){
+                send(std::move(error.response(ctx.request())));
+                return error.result();
+            }catch(const std::exception& ex){
+                std::cout << ex.what() << std::endl;
+            }
+            return status;
+        }else{
+            return http::status::unknown;
+        }
+    }
+    void summary(std::vector<module_info>& /*stack*/) const{}
+    template <typename F>
+    void eval(F& /*fnc*/){}
+    const terminal_type& terminal() const{
+        return _terminal;
+    }
+};
+
+template <typename U>
+struct overload_group<U, overload_terminal<void>>{
+    typedef overload_group<U, overload_terminal<void>> self_type;        ///< type of this overload
+    typedef void              overload_type;      ///< type of parent in the overoad meta-chain
+    typedef U                 parent_type;    ///< type of the next child in the overload chain
+    typedef overload_terminal<void> terminal_type;
+    
+    terminal_type _terminal;
+    
+    template <typename... Args>
+    overload_group(Args...){}
+    template <typename ContextT, typename Lambda>
     http::status serve(ContextT& /*ctx*/, boost::beast::http::verb /*request_method*/, const std::string& /*subject*/, Lambda /*send*/){
-        return http::status::not_found;
+        return http::status::unknown;
     }
     void summary(std::vector<module_info>& /*stack*/) const{}
     template <typename F>
@@ -633,7 +679,7 @@ struct overload_group<U, overload_terminal<V>>{
  * @endcode
  * @ingroup routing
  */
-template <typename AuxT=dummy_aux>
+template <typename AuxT=void>
 struct router: public overload_group<void, overload_terminal<AuxT>>{
     typedef overload_group<void, overload_terminal<AuxT>> base_type;
     /**

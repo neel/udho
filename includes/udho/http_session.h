@@ -113,6 +113,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
                 if(err == boost::system::errc::no_such_file_or_directory){
                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::not_found, path);
+                }else{
+                    _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path).str());
                 }
                 if(err){
                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
