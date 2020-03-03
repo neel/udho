@@ -512,16 +512,10 @@ auto del(F ftor, A1& a1){
 }
 
 template <typename AuxT = void>
-struct overload_terminal{
+struct overload_terminal: AuxT{
     typedef AuxT aux_type;
-    
-    aux_type _aux;
-    
-    template <typename... Args>
-    overload_terminal(Args... args): _aux(args...){}
-    const aux_type& aux() const{
-        return _aux;
-    }
+        
+    using aux_type::aux_type;
 };
 
 template <>
