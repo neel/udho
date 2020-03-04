@@ -47,7 +47,7 @@ std::string data(server_type::context ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(server_type::context ctx, int a, int b){
+int add(server_type::request_type ctx, int a, int b){
     return a + b;
 }
 
