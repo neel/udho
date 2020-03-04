@@ -145,7 +145,7 @@ namespace ostreamed{
     template <typename... U>
     using stateful  = ostreamed_helper<udho::session<U...>>;
     using satteless = ostreamed_helper<void>;
-};
+}
     
 }
 

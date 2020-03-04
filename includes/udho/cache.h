@@ -185,6 +185,63 @@ struct store: protected master<KeyT>, protected registry<KeyT, T>...{
         }
     }
 };
+
+template <typename StoreT, typename T>
+struct flake{
+    typedef StoreT store_type;
+    typedef typename store_type::key_type key_type;
+    typedef T target_type;
+    typedef flake<StoreT, T> flake_type;
+    typedef flake_type self_type;
+   
+    flake(store_type& store): _store(store){}
+    bool exists(const key_type& key) const{
+        return _store.template exists<T>(key);
+    }
+    const T& get(const key_type& key, const T& def=T()) const{
+        return _store.template get<T>(key, def);
+    }
+    const T& at(const key_type& key) const{
+        return _store.template at<T>(key);
+    }
+    void insert(const key_type& key, const T& value){
+        _store.template insert(key, value);
+    }
+private:
+    store_type& _store;
+};
+
+template <typename StoreT, typename... T>
+struct shadow: protected flake<StoreT, T>...{
+    typedef StoreT store_type;
+    typedef typename store_type::key_type key_type;
+    typedef store<key_type, T...> shadow_store_type;
+    typedef shadow<StoreT, T...> self_type;
+    typedef self_type shadow_type;
+    
+    store_type& _store;
+    
+    shadow(store_type& store): flake<StoreT, T>(store)..., _store(store){}
+    template <typename... X>
+    shadow(shadow<store_type, T..., X...>& other): flake<StoreT, T>(other._store)..., _store(other._store){}
+    
+    template <typename V>
+    bool exists(const key_type& key) const{
+        return flake<StoreT, V>::exists(key);
+    }
+    template <typename V>
+    const V& get(const key_type& key, const V& def=V()) const{
+        return flake<StoreT, V>::get(key, def);
+    }
+    template <typename V>
+    const V& at(const key_type& key) const{
+        return flake<StoreT, V>::at(key);
+    }
+    template <typename V>
+    void insert(const key_type& key, const V& value){
+        flake<StoreT, V>::insert(key, value);
+    }
+};
    
 }
 }

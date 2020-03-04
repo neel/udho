@@ -66,6 +66,19 @@ boost::beast::http::response<boost::beast::http::file_body> file(server_type::co
 }
 
 int main(){
+    
+    typedef udho::cache::store<std::string, user, appearence> store_type;
+    store_type store;
+    udho::cache::shadow<store_type, user, appearence> shadow_ua(store);
+    std::cout << shadow_ua.exists<user>("hallo") << std::endl;
+    std::cout << shadow_ua.exists<appearence>("hallo") << std::endl;
+    udho::cache::shadow<store_type, user> shadow_u(store);
+    std::cout << shadow_u.exists<user>("hello") << std::endl;
+//     std::cout << shadow_u.exists<appearence>("hello") << std::endl;
+    udho::cache::shadow<store_type, user> shadow_u2(shadow_u);
+    udho::cache::shadow<store_type, user> shadow_u3(shadow_ua);
+    udho::cache::shadow<store_type> shadow_u4(shadow_ua);
+    
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
     boost::asio::io_service io;
