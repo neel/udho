@@ -438,6 +438,10 @@ struct context{
     cookies_type& cookies(){
         return _pimpl->_cookies;
     }
+    
+    operator request_type() const{
+        return _pimpl->request();
+    }
 };
 
 }
