@@ -53,6 +53,7 @@ struct server{
     using context_type = udho::context<RequestT, attachment_type>;
     typedef http::request<http::string_body> http_request_type;
     typedef context_type<http_request_type> context;
+    typedef http_request_type request_type;
     
     boost::asio::io_service& _io;
     attachment_type _attachment;
@@ -77,6 +78,7 @@ struct server<void, CacheT>{
     using context_type = udho::context<RequestT, attachment_type>;
     typedef http::request<http::string_body> http_request_type;
     typedef context_type<http_request_type> context;
+    typedef http_request_type request_type;
     
     boost::asio::io_service& _io;
     attachment_type _attachment;
@@ -131,6 +133,7 @@ namespace ostreamed{
         typedef typename server_type::cache_type cache_type;
         typedef typename server_type::attachment_type attachment_type;
         typedef typename server_type::context context;
+        typedef typename server_type::http_request_type request_type;
         
         udho::loggers::ostream _logger;
         server_type _server;

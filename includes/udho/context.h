@@ -72,6 +72,7 @@ struct attachment<LoggerT, void>: LoggerT{
 template <typename CacheT>
 struct attachment<void, CacheT>: CacheT{
     typedef attachment<void, CacheT> self_type;
+    typedef void logger_type;
     typedef CacheT  cache_type;
     
     attachment(){}
@@ -85,6 +86,8 @@ struct attachment<void, CacheT>: CacheT{
 template <>
 struct attachment<void, void>{
     typedef attachment<void, void> self_type;
+    typedef void logger_type;
+    typedef void cache_type;
     
     attachment(){}
     template <typename... U>
@@ -416,6 +419,7 @@ struct context{
     typedef udho::detail::form_<RequestT> form_type;
     typedef udho::detail::cookies_<RequestT> cookies_type;
     typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
+    typedef typename attachment_type::logger_type logger_type;
     
     pimple_type _pimpl;
         
@@ -442,7 +446,23 @@ struct context{
     operator request_type() const{
         return _pimpl->request();
     }
+//     operator context<RequestT, udho::attachment<logger_type, void>>() const{
+//         typedef context<RequestT, udho::attachment<logger_type, void>> other_type;
+//         other_type other();
+//         return other;
+//     }
 };
+
+// template <typename RequestT>
+// struct context<RequestT, udho::attachment<void, void>>{
+//     typedef RequestT request_type;
+//     typedef udho::attachment<void, void> attachment_type;
+//     typedef context<request_type, attachment_type> self_type;
+//     typedef detail::context_impl<request_type, attachment_type> impl_type;
+//     typedef boost::shared_ptr<impl_type> pimple_type;
+//     typedef udho::detail::form_<RequestT> form_type;
+//     typedef udho::detail::cookies_<RequestT> cookies_type;
+// };
 
 }
 
