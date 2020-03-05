@@ -152,18 +152,11 @@ struct store: master<KeyT>, registry<KeyT, T>...{
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef store<KeyT, T...> self_type;
-    
-//     template <typename... X>
-//     static bool extended(const store<KeyT, T..., X...>&){
-//         return true;
-//     }
-    
+      
     store() = default;
     store(const self_type&) = delete;
     store(self_type&&) = default;
-    
-    // udho::cache::store<KeyT, X, Y, Z> => udho::cache::store<KeyT, X, Y>
-    
+        
 //     using master_type::issued;
 //     using master_type::issue;
     

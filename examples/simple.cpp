@@ -84,7 +84,7 @@ int main(){
     udho::cache::shadow<std::string, user> shadow_u(store);
     std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl;
     std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl;
-//     std::cout << shadow_u.exists<appearence>("hello") << std::endl;
+//     std::cout << shadow_u.exists<appearence>("x") << std::endl;
     udho::cache::shadow<std::string, user> shadow_u2(shadow_u);
     std::cout << shadow_u2.get<user>("x").name << std::endl;
     udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);

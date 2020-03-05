@@ -40,6 +40,8 @@
 #include <boost/utility/string_view.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <udho/util.h>
+#include <udho/cache.h>
+#include <boost/signals2/signal.hpp>
 
 namespace udho{
     
@@ -490,16 +492,39 @@ struct context{
 //     }
 };
 
-// template <typename RequestT>
-// struct context<RequestT, udho::attachment<void, void>>{
-//     typedef RequestT request_type;
-//     typedef udho::attachment<void, void> attachment_type;
-//     typedef context<request_type, attachment_type> self_type;
-//     typedef detail::context_impl<request_type, attachment_type> impl_type;
-//     typedef boost::shared_ptr<impl_type> pimple_type;
-//     typedef udho::detail::form_<RequestT> form_type;
-//     typedef udho::detail::cookies_<RequestT> cookies_type;
-// };
+template <typename RequestT, typename ShadowT>
+struct session_data{
+    typedef RequestT request_type;
+    typedef udho::detail::cookies_<request_type> cookies_type;
+    typedef ShadowT shadow_type;
+    typedef typename shadow_type::key_type key_type;
+    typedef session_data<request_type, shadow_type> self_type;
+    
+    cookies_type& _cookies;
+    shadow_type&  _shadow;
+    key_type      _id;
+    bool          _returning;
+};
+
+template <typename RequestT, typename KeyT, typename... T>
+struct context_data{
+    typedef RequestT request_type;
+    typedef KeyT key_type;
+    typedef udho::cache::shadow<key_type, T...> shadow_type;
+    typedef context<request_type, shadow_type> self_type;
+    typedef udho::detail::form_<request_type> form_type;
+    typedef udho::detail::cookies_<request_type> cookies_type;
+    typedef boost::beast::http::header<true> headers_type;
+    typedef session_data<request_type, shadow_type> session_type;
+    
+    const request_type& _request;
+    shadow_type _shadow;
+    headers_type _headers;
+    session_type _session;
+    
+    boost::signals2::signal<void (const std::string&)> logged;
+    
+};
 
 }
 
