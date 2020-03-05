@@ -69,32 +69,44 @@ int main(){
     
     typedef udho::cache::store<std::string, user, appearence> store_type;
     store_type store;
-    udho::cache::shadow<store_type, user, appearence> shadow_ua(store);
-    std::cout << shadow_ua.exists<user>("hallo") << std::endl;
-    std::cout << shadow_ua.exists<appearence>("hallo") << std::endl;
-    udho::cache::shadow<store_type, user> shadow_u(store);
-    std::cout << shadow_u.exists<user>("hello") << std::endl;
+    udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
+    user data;
+    data.name = "Neel";
+    shadow_ua.insert("x", data);
+    appearence appr;
+    appr.color = "red";
+    shadow_ua.insert("x", appr);
+    std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl;
+    std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl;
+    std::cout << shadow_ua.get<user>("x").name << std::endl;
+    std::cout << shadow_ua.get<appearence>("x").color << std::endl;
+    std::cout << shadow_ua.exists<appearence>("x") << std::endl;
+    udho::cache::shadow<std::string, user> shadow_u(store);
+    std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl;
+    std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl;
 //     std::cout << shadow_u.exists<appearence>("hello") << std::endl;
-    udho::cache::shadow<store_type, user> shadow_u2(shadow_u);
-    udho::cache::shadow<store_type, user> shadow_u3(shadow_ua);
-    udho::cache::shadow<store_type> shadow_u4(shadow_ua);
+    udho::cache::shadow<std::string, user> shadow_u2(shadow_u);
+    std::cout << shadow_u2.get<user>("x").name << std::endl;
+    udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);
+    std::cout << shadow_u3.get<user>("x").name << std::endl;
+    udho::cache::shadow<std::string> shadow_u4(shadow_ua);
     
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
-    
-    boost::asio::io_service io;
-    server_type server(io, std::cout);
-
-    auto router = udho::router<>()
-        | (udho::get(&file).raw() = "^/file")
-        | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::post(&data).json()   = "^/data$")
-        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
-        
-    udho::util::print_summary(router);
-        
-    server.serve(router, 9198, doc_root);
-        
-    io.run();
+//     std::string doc_root("/home/neel/Projects/udho"); // path to static content
+//     
+//     boost::asio::io_service io;
+//     server_type server(io, std::cout);
+// 
+//     auto router = udho::router<>()
+//         | (udho::get(&file).raw() = "^/file")
+//         | (udho::get(&hello).plain() = "^/hello$")
+//         | (udho::post(&data).json()   = "^/data$")
+//         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
+//         
+//     udho::util::print_summary(router);
+//         
+//     server.serve(router, 9198, doc_root);
+//         
+//     io.run();
     
     return 0;
 }

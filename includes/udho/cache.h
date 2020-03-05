@@ -98,9 +98,7 @@ struct master{
     typedef KeyT key_type;
     typedef std::set<key_type> set_type;
     typedef master<KeyT> self_type;
-    
-    set_type _set;
-    
+       
     master() = default;
     master(const self_type&) = delete;
     master(self_type&&) = default;
@@ -111,6 +109,9 @@ struct master{
     void issue(const key_type& key){
         _set.insert(key);
     }
+    
+protected:
+    set_type _set;
 };
 
 // template <typename KeyT, typename... U>
@@ -127,13 +128,11 @@ struct registry{
     typedef T value_type;
     typedef std::map<KeyT, T> map_type;
     typedef registry<KeyT, T> self_type;
-    
-    map_type _storage;
-    
+       
     registry() = default;
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
-    
+       
     bool exists(const key_type& key) const{
         return _storage.count(key);
     }
@@ -143,10 +142,13 @@ struct registry{
     void insert(const key_type& key, const value_type& value){
         _storage[key] = value;
     }
+    
+protected:
+    map_type _storage;
 };
 
 template <typename KeyT, typename... T>
-struct store: protected master<KeyT>, protected registry<KeyT, T>...{
+struct store: master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef store<KeyT, T...> self_type;
@@ -162,8 +164,8 @@ struct store: protected master<KeyT>, protected registry<KeyT, T>...{
     
     // udho::cache::store<KeyT, X, Y, Z> => udho::cache::store<KeyT, X, Y>
     
-    using master_type::issued;
-    using master_type::issue;
+//     using master_type::issued;
+//     using master_type::issue;
     
     template <typename V>
     bool exists(const key_type& key) const{
@@ -193,60 +195,69 @@ struct store: protected master<KeyT>, protected registry<KeyT, T>...{
     }
 };
 
-template <typename StoreT, typename T>
+template <typename KeyT, typename T>
 struct flake{
-    typedef StoreT store_type;
-    typedef typename store_type::key_type key_type;
-    typedef T target_type;
-    typedef flake<StoreT, T> flake_type;
+    typedef KeyT key_type;
+    typedef T value_type;
+    typedef registry<key_type, T> registry_type;
+    typedef flake<KeyT, T> flake_type;
     typedef flake_type self_type;
    
-    flake(store_type& store): _store(store){}
+    template <typename... X>
+    flake(store<KeyT, X...>& store): _registry(store){}
+    
     bool exists(const key_type& key) const{
-        return _store.template exists<T>(key);
+        return _registry.exists(key);
     }
-    const T& get(const key_type& key, const T& def=T()) const{
-        return _store.template get<T>(key, def);
+    
+    const value_type& at(const key_type& key) const{
+        return _registry.at(key);
     }
-    const T& at(const key_type& key) const{
-        return _store.template at<T>(key);
-    }
-    void insert(const key_type& key, const T& value){
-        _store.template insert(key, value);
+    
+    void insert(const key_type& key, const value_type& value){
+        _registry.insert(key, value);
     }
 private:
-    store_type& _store;
+    registry_type& _registry;
 };
 
-template <typename StoreT, typename... T>
-struct shadow: protected flake<StoreT, T>...{
-    typedef StoreT store_type;
-    typedef typename store_type::key_type key_type;
-    typedef store<key_type, T...> shadow_store_type;
-    typedef shadow<StoreT, T...> self_type;
+template <typename KeyT, typename... T>
+struct shadow: flake<KeyT, T>...{
+    typedef KeyT key_type;
+    typedef store<key_type, T...> store_type;
+    typedef shadow<key_type, T...> self_type;
     typedef self_type shadow_type;
+    typedef master<key_type> master_type;
     
-    store_type& _store;
+    master_type& _master;
     
-    shadow(store_type& store): flake<StoreT, T>(store)..., _store(store){}
     template <typename... X>
-    shadow(shadow<store_type, T..., X...>& other): flake<StoreT, T>(other._store)..., _store(other._store){}
+    shadow(store<key_type, T..., X...>& store): flake<key_type, T>(store)..., _master(store){}
+    
+    template <typename... X>
+    shadow(shadow<key_type, T..., X...>& other): flake<key_type, T>(other)..., _master(other._master){}
     
     template <typename V>
     bool exists(const key_type& key) const{
-        return flake<StoreT, V>::exists(key);
-    }
-    template <typename V>
-    const V& get(const key_type& key, const V& def=V()) const{
-        return flake<StoreT, V>::get(key, def);
+        return _master.issued(key) && flake<key_type, V>::exists(key);
     }
     template <typename V>
     const V& at(const key_type& key) const{
-        return flake<StoreT, V>::at(key);
+        return flake<key_type, V>::at(key);
+    }
+    template <typename V>
+    const V& get(const key_type& key, const V& def=V()) const{
+        if(_master.issued(key)){
+            return at<V>(key);
+        }
+        return def;
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
-        flake<StoreT, V>::insert(key, value);
+        flake<key_type, V>::insert(key, value);
+        if(!_master.issued(key)){
+            _master.issue(key);
+        }
     }
 };
    
