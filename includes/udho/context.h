@@ -527,6 +527,10 @@ struct context{
     operator request_type() const{
         return _pimpl->request();
     }
+    template <udho::logging::status Status>
+    void log(const udho::logging::message<Status>& msg){
+        _pimpl->log(msg);
+    }
     template <typename AttachmentT>
     void attach(AttachmentT& attachment){
         _pimpl->attach(attachment);
@@ -569,7 +573,21 @@ struct context<RequestT, void>{
     operator request_type() const{
         return _pimpl->request();
     }
+    template <udho::logging::status Status>
+    void log(const udho::logging::message<Status>& msg){
+        _pimpl->log(msg);
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        _pimpl->attach(attachment);
+    }
 };
+
+template <typename RequestT, typename ShadowT, udho::logging::status Status>
+context<RequestT, ShadowT>& operator<<(context<RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
+    ctx.log(msg);
+}
+
 
 namespace contexts{
     using stateless = context<udho::defs::request_type, void>;

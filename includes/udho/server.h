@@ -63,8 +63,10 @@ struct attachment<void, CacheT>: CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     attachment(){}
-    template <typename... U>
-    void log(U...){}
+    void error(const udho::logging::messages::error& msg){}
+    void warning(const udho::logging::messages::warning& msg){}
+    void info(const udho::logging::messages::info& msg){}
+    void debug(const udho::logging::messages::debug& msg){}
 };
 
 /**
@@ -90,8 +92,10 @@ struct attachment<void, void>{
     typedef void shadow_type;
     
     attachment(){}
-    template <typename... U>
-    void log(U...){}
+    void error(const udho::logging::messages::error& msg){}
+    void warning(const udho::logging::messages::warning& msg){}
+    void info(const udho::logging::messages::info& msg){}
+    void debug(const udho::logging::messages::debug& msg){}
 };
     
 /**
