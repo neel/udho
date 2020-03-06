@@ -41,61 +41,6 @@
 
 namespace udho{
 namespace cache{
-    
-// struct peer{
-//     boost::asio::ip::address _address;
-//     std::uint32_t _port;
-//     std::uint32_t _latency;
-//     
-//     peer(const boost::asio::ip::address& address, std::uint32_t port);
-// };
-// 
-// template <typename T>
-// struct item{
-//     typedef std::chrono::time_point<std::chrono::system_clock> time_type;
-//     
-//     T _item;
-//     std::size_t _order;
-//     time_type _created;
-//     time_type _updated;
-//     
-//     item(const T& v): _item(v), _created(std::chrono::system_clock::now()), _updated(_created){}
-//     template <typename StreamT>
-//     void write(StreamT& stream){
-//         // TODO implement
-//     }
-//     template <typename StreamT>
-//     static item<T> read(const StreamT& stream){
-//         // TODO implement;
-//     }
-// };
-// 
-// template <typename T, typename KeyT=std::string>
-// struct store{
-//     typedef KeyT key_type;
-//     typedef T value_type;
-//     typedef item<value_type> item_type;
-//     typedef std::map<key_type, item_type> map_type;
-//     
-//     std::string _name;
-//     map_type _registry;
-//     
-//     store(const std::string& name): _name(name){}
-//     void add(const key_type& key, const value_type& value){
-//         item_type item(value);
-//         _registry.insert(std::make_pair(key, item));
-//     }
-//     bool exists(const key_type& key) const{
-//         return _registry.find(key) != _registry.end();
-//     }
-//     T& get(const key_type& key) const{
-//         auto it = _registry.find(key);
-//         if(it != _registry.end()){
-//             return it->second;
-//         }
-//         // TODO throw exception
-//     }
-// };
 
 template <typename KeyT>
 struct master{
@@ -117,14 +62,6 @@ struct master{
 protected:
     set_type _set;
 };
-
-// template <typename KeyT, typename... U>
-// struct master_{
-//     template <typename T>
-//     using pair = std::pair<T, bool>;
-//     typedef boost::tuple<pair<U>...> tuple_type;
-//     typedef std::map<KeyT, tuple_type> map_type;
-// };
 
 template <typename KeyT, typename T>
 struct registry{
@@ -164,9 +101,6 @@ struct store: master<KeyT>, registry<KeyT, T>...{
     store() = default;
     store(const self_type&) = delete;
     store(self_type&&) = default;
-        
-//     using master_type::issued;
-//     using master_type::issue;
     
     template <typename V>
     bool exists(const key_type& key) const{
@@ -181,11 +115,8 @@ struct store: master<KeyT>, registry<KeyT, T>...{
         }
     }
     template <typename V>
-    V& at(const key_type& key, const V& def=V()){
-        if(master_type::issued(key)){
-            return registry<KeyT, V>::at(key);
-        }
-        // TODO throw
+    V& at(const key_type& key){
+        return registry<KeyT, V>::at(key);
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
@@ -222,32 +153,6 @@ private:
     registry_type& _registry;
 };
 
-//     typedef udho::cache::store<std::string, user, appearence> store_type;
-//     store_type store;
-//     udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
-//     user data;
-//     data.name = "Neel";
-//     shadow_ua.insert("x", data);
-//     appearence appr;
-//     appr.color = "red";
-//     shadow_ua.insert("x", appr);
-//     std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl;
-//     std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl;
-//     std::cout << shadow_ua.get<user>("x").name << std::endl;
-//     std::cout << shadow_ua.get<appearence>("x").color << std::endl;
-//     std::cout << shadow_ua.exists<appearence>("x") << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u(store);
-//     std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl;
-//     std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl;
-// //     std::cout << shadow_u.exists<appearence>("x") << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u2(shadow_u);
-//     std::cout << shadow_u2.get<user>("x").name << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);
-//     std::cout << shadow_u3.get<user>("x").name << std::endl;
-//     udho::cache::shadow<std::string, appearence> shadow_a(store);
-//     std::cout << shadow_a.exists<appearence>("x") << std::endl;
-//     std::cout << shadow_a.get<appearence>("x").color << std::endl;
-//     udho::cache::shadow<std::string> shadow_none(shadow_ua);
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
     typedef KeyT key_type;

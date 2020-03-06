@@ -153,36 +153,12 @@ struct plain{
         
         _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment % message << std::endl;
     }
-//     void error(const udho::logging::messages::error& msg){
-//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-//     }
-//     void warning(const udho::logging::messages::warning& msg){
-//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-//     }
-//     void info(const udho::logging::messages::info& msg){
-//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-//     }
-//     void debug(const udho::logging::messages::debug& msg){
-//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-//     }
     
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& msg){
         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
         return *this;
     }
-//     void operator()(const udho::logging::messages::error& msg){
-//         error(msg);
-//     }
-//     void operator()(const udho::logging::messages::warning& msg){
-//         warning(msg);
-//     }
-//     void operator()(const udho::logging::messages::info& msg){
-//         info(msg);
-//     }
-//     void operator()(const udho::logging::messages::debug& msg){
-//         debug(msg);
-//     }
 };
 
 typedef plain<std::ostream> ostream;

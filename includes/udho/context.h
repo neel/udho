@@ -303,16 +303,7 @@ struct session_{
     template <typename V>
     void set(const V& value){
         _shadow.template insert<V>(_id, value);
-    }
-//     template <typename V>
-//     V& operator V(){
-//         return at<V>(_id);
-//     }
-//     template <typename V>
-//     const V& operator V() const{
-//         return get<V>(_id);
-//     }
-    
+    }    
 };
 
 template <typename RequestT>
@@ -397,93 +388,6 @@ struct context_impl{
     }
 };
  
-// template <typename RequestT>
-// struct context_impl{
-//     typedef RequestT request_type;
-//     typedef ShadowT shadow_type;
-//     typedef typename shadow_type::key_type key_type;
-//     typedef context_impl<request_type, shadow_type> self_type;
-//     typedef udho::detail::form_<request_type> form_type;
-//     typedef udho::detail::cookies_<request_type> cookies_type;
-//     typedef boost::beast::http::header<true> headers_type;
-//     typedef session_<request_type, shadow_type> session_type;
-//     
-//     const request_type& _request;
-//     shadow_type _shadow;
-//     form_type    _form;
-//     headers_type& _headers;
-//     cookies_type _cookies;
-//     session_type _session;
-//     
-//     boost::signals2::signal<void (const udho::logging::abstract_message&)> logged;
-//     
-//     template <typename... V>
-//     context_impl(const request_type& request, headers_type& headers, udho::cache::store<key_type, V...>& store): _request(request), _headers(headers), _shadow(store), _form(request), _cookies(request, _headers), _session(_cookies, _shadow){}
-//     template <typename... V>
-//     context_impl(const request_type& request, headers_type& headers, udho::cache::shadow<key_type, V...>& shadow): _request(request), _headers(headers), _shadow(shadow), _form(request), _cookies(request, _headers), _session(_cookies, _shadow){}
-//     context_impl(const self_type& other) = delete;
-//     const request_type& request() const{return _request;}
-//     template<class Body, class Fields>
-//     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-//         for(const auto& header: _headers){
-//             if(header.name() != boost::beast::http::field::set_cookie){
-//                 res.set(header.name(), header.value());
-//             }
-//         }
-//         res.erase(boost::beast::http::field::set_cookie);
-//         for(const auto& header: _headers){
-//             if(header.name() == boost::beast::http::field::set_cookie){
-//                 res.insert(header.name(), header.value());
-//             }
-//         }
-//     }
-//     void log(const udho::logging::abstract_message& msg){
-//         logged(msg);
-//     }
-//     
-// };
-
-// template <typename RequestT>
-// struct context_impl<RequestT, void>{
-//     typedef RequestT request_type;
-//     typedef void shadow_type;
-//     typedef context_impl<request_type, shadow_type> self_type;
-//     typedef udho::detail::form_<request_type> form_type;
-//     typedef udho::detail::cookies_<request_type> cookies_type;
-//     typedef boost::beast::http::header<true> headers_type;
-//     typedef session_<request_type, shadow_type> session_type;
-//     
-//     const request_type& _request;
-//     form_type    _form;
-//     headers_type& _headers;
-//     cookies_type _cookies;
-//     session_type _session;
-//     
-//     boost::signals2::signal<void (const udho::logging::abstract_message&)> logged;
-//     
-//     context_impl(const request_type& request, headers_type& headers): _request(request), _headers(headers), _form(request), _cookies(request, _headers){}
-//     context_impl(const self_type& other) = delete;
-//     const request_type& request() const{return _request;}
-//     template<class Body, class Fields>
-//     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-//         for(const auto& header: _headers){
-//             if(header.name() != boost::beast::http::field::set_cookie){
-//                 res.set(header.name(), header.value());
-//             }
-//         }
-//         res.erase(boost::beast::http::field::set_cookie);
-//         for(const auto& header: _headers){
-//             if(header.name() == boost::beast::http::field::set_cookie){
-//                 res.insert(header.name(), header.value());
-//             }
-//         }
-//     }
-//     void log(const udho::logging::abstract_message& msg){
-//         logged(msg);
-//     }
-//     
-// };
-
 }
 
 /**
@@ -510,8 +414,6 @@ struct context{
     context(const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow){}
     template <typename OtherShadowT>
     context(context<RequestT, OtherShadowT>& other): _pimpl(other._pimpl), _session(other._session){}
-    
-//     context(const self_type& other): _pimpl(other._pimpl){}
     
     const request_type& request() const{return _pimpl->request();}
     
@@ -554,13 +456,10 @@ struct context<RequestT, void>{
     
     pimple_type _pimpl;
         
-//     template <typename C>
-//     context(C&): _pimpl(new impl_type(request_type())){}
     template <typename C>
     context(const RequestT& request, C&): _pimpl(new impl_type(request)){}
     template <typename ShadowT>
     context(context<RequestT, ShadowT>& other): _pimpl(other._pimpl){}
-//     context(const self_type& other): _pimpl(other._pimpl){}
     
     const request_type& request() const{return _pimpl->request();}
     
@@ -593,7 +492,6 @@ context<RequestT, ShadowT>& operator<<(context<RequestT, ShadowT>& ctx, const ud
     ctx.log(msg);
     return ctx;
 }
-
 
 namespace contexts{
     using stateless = context<udho::defs::request_type, void>;
