@@ -50,9 +50,6 @@ struct attachment: LoggerT, CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     attachment(LoggerT& logger): LoggerT(logger){}
-//     shadow_type shadow(){
-//         return shadow_type(*this);
-//     }
 };
 
 /**
@@ -68,9 +65,6 @@ struct attachment<void, CacheT>: CacheT{
     attachment(){}
     template <typename... U>
     void log(U...){}
-//     shadow_type shadow(){
-//         return shadow_type(*this);
-//     }
 };
 
 /**
@@ -124,7 +118,7 @@ struct server{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+//         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };

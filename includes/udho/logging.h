@@ -50,22 +50,19 @@ enum class status{
     debug
 };
 
-struct abstract_message{
-    virtual std::string what() const = 0;
-};
-
 template <udho::logging::status Status>
-struct message: abstract_message{
+struct message{
     typedef std::chrono::system_clock::time_point time_type;
     
     static constexpr const udho::logging::status status = Status;
     const time_type time = std::chrono::system_clock::now();
     
     const std::string _segment;
+    const unsigned    _level;
     std::string _content;
     
-    message(const std::string& segment): _segment(segment){}
-    message(const std::string& segment, const std::string& content): _segment(segment), _content(content){}
+    message(const std::string& segment, unsigned level = 0): _segment(segment), _level(level){}
+    message(const std::string& segment, const std::string& content, unsigned level = 0): _segment(segment), _content(content), _level(level){}
     
     virtual std::string what() const{
         return _content;
@@ -91,7 +88,7 @@ namespace messages{
             typedef udho::logging::message<Status> base_type;
             
             boost::format _format;
-            message(const std::string& segment, const std::string& format): base_type(segment), _format(format){}
+            message(const std::string& segment, const std::string& format, unsigned level = 0): base_type(segment, level), _format(format){}
             template <typename T>
             self_type& prepare(const T& value){
                 _format % value;
@@ -133,9 +130,9 @@ struct plain{
     
     plain(StreamT& stream): _stream(stream){}
     
-    void log(udho::logging::status status, udho::logging::segment segment, const std::string& message){
-        std::time_t time = std::time(nullptr);
-        std::tm tm = *std::localtime(&time);
+    void log(const std::chrono::system_clock::time_point& time, udho::logging::status status, const std::string& segment, int level, const std::string& message){
+        std::time_t t = std::chrono::system_clock::to_time_t(time);
+        std::tm tm = *std::localtime(&t);
         
         std::string status_str = "unknown";
         switch(status){
@@ -153,21 +150,33 @@ struct plain{
                 break;
         }
         
-        std::string segment_str = "unknown";
-        switch(segment){
-            case udho::logging::segment::unknown:
-                segment_str = "unknown";
-                break;
-            case udho::logging::segment::router:
-                segment_str = "router";
-                break;
-            case udho::logging::segment::server:
-                segment_str = "server";
-                break;
-        }
-        
-        _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment_str % message << std::endl;
-    }    
+        _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment % message << std::endl;
+    }
+    void error(const udho::logging::messages::error& msg){
+        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+    }
+    void warning(const udho::logging::messages::warning& msg){
+        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+    }
+    void info(const udho::logging::messages::info& msg){
+        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+    }
+    void debug(const udho::logging::messages::debug& msg){
+        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+    }
+    
+//     void operator()(const udho::logging::messages::error& msg){
+//         error(msg);
+//     }
+//     void operator()(const udho::logging::messages::warning& msg){
+//         warning(msg);
+//     }
+//     void operator()(const udho::logging::messages::info& msg){
+//         info(msg);
+//     }
+//     void operator()(const udho::logging::messages::debug& msg){
+//         debug(msg);
+//     }
 };
 
 typedef plain<std::ostream> ostream;

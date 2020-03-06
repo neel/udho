@@ -346,7 +346,10 @@ struct context_impl{
     headers_type _headers;
     cookies_type _cookies;
     
-    boost::signals2::signal<void (const udho::logging::abstract_message&)> logged;
+    boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
+    boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
+    boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
+    boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
     
     context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){}
     context_impl(const self_type& other) = delete;
@@ -368,10 +371,25 @@ struct context_impl{
             }
         }
     }
-    void log(const udho::logging::abstract_message& msg){
-        logged(msg);
+    void log(const udho::logging::messages::error&& msg){
+        _error(msg);
     }
-    
+    void log(const udho::logging::messages::warning&& msg){
+        _warning(msg);
+    }
+    void log(const udho::logging::messages::info&& msg){
+        _info(msg);
+    }
+    void log(const udho::logging::messages::debug&& msg){
+        _debug(msg);
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        _error.connect(boost::bind(&AttachmentT::error, &attachment, _1));
+        _warning.connect(boost::bind(&AttachmentT::warning, &attachment, _1));
+        _info.connect(boost::bind(&AttachmentT::info, &attachment, _1));
+        _debug.connect(boost::bind(&AttachmentT::debug, &attachment, _1));
+    }
 };
  
 // template <typename RequestT>
@@ -508,6 +526,10 @@ struct context{
     
     operator request_type() const{
         return _pimpl->request();
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        _pimpl->attach(attachment);
     }
 };
 
