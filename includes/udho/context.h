@@ -257,8 +257,10 @@ struct session_{
     session_(cookies_type& cookies, shadow_type& shadow): _cookies(cookies), _shadow(shadow), _sessid("UDHOSESSID"), _returning(false), _identified(false){
         identify();
     }
-    template <typename OtherShadowT>
-    session_(session_<request_type, OtherShadowT>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
+    template <typename... T>
+    session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
+//     template <typename... T>
+//     session_(session_<request_type, udho::cache::store<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
     void identify(){
         if(!_identified){
             if(_cookies.exists(_sessid)){

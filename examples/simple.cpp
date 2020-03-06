@@ -25,18 +25,57 @@ std::string hello(udho::contexts::stateful<user> ctx){
     if(ctx.session().exists<user>()){
         user data;
         ctx.session() >> data;
-        std::cout << data.name << std::endl;
+        return data.name;
     }else{
         user data;
         data.name = "Neel Basu";
         ctx.session() << data;
         ctx.cookies() << udho::cookie("planet", 3);
+        return "Neel Basu set";
     }
-    
-    return "Hello World";
 }
 
-std::string data(udho::contexts::stateless ctx){
+std::string see(udho::contexts::stateful<appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+    
+    std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    if(ctx.session().exists<appearence>()){
+        appearence data;
+        ctx.session() >> data;
+        return data.color;
+    }else{
+        appearence data;
+        data.color = "red";
+        ctx.session() << data;
+        return "red set";
+    }
+}
+
+std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+    std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
+    std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    
+    std::string name;
+    std::string color;
+    
+    if(ctx.session().exists<user>()){
+        user data;
+        ctx.session() >> data;
+        name = data.name;
+    }
+    if(ctx.session().exists<appearence>()){
+        appearence data;
+        ctx.session() >> data;
+        color = data.color;
+    }
+    
+    return name+" "+color;
+}
+
+std::string data(context ctx){
     std::cout << "name submitted" << ctx.form().has("name") << std::endl;
     std::cout << "age submitted" << ctx.form().has("age") << std::endl;
     std::cout << "planet submitted" << ctx.form().has("planet") << std::endl;
@@ -92,8 +131,11 @@ int main(){
 //     std::cout << shadow_u2.get<user>("x").name << std::endl;
 //     udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);
 //     std::cout << shadow_u3.get<user>("x").name << std::endl;
-//     udho::cache::shadow<std::string> shadow_u4(shadow_ua);
-    
+//     udho::cache::shadow<std::string, appearence> shadow_a(store);
+//     std::cout << shadow_a.exists<appearence>("x") << std::endl;
+//     std::cout << shadow_a.get<appearence>("x").color << std::endl;
+//     udho::cache::shadow<std::string> shadow_none(shadow_ua);
+//     
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
     boost::asio::io_service io;
@@ -102,6 +144,8 @@ int main(){
     auto router = udho::router<>()
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")
+        | (udho::get(&see).plain() = "^/see$")
+        | (udho::get(&hello_see).plain() = "^/hello_see$")
         | (udho::post(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         

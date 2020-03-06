@@ -233,10 +233,10 @@ struct shadow: flake<KeyT, T>...{
     master_type& _master;
     
     template <typename... X>
-    shadow(store<key_type, T..., X...>& store): flake<key_type, T>(store)..., _master(store){}
+    shadow(store<key_type, X...>& store): flake<key_type, T>(store)..., _master(store){}
     
     template <typename... X>
-    shadow(shadow<key_type, T..., X...>& other): flake<key_type, T>(other)..., _master(other._master){}
+    shadow(shadow<key_type, X...>& other): flake<key_type, T>(other)..., _master(other._master){}
     
     bool issued(const key_type& key) const{
         return _master.issued(key);
