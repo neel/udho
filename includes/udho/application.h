@@ -254,7 +254,7 @@ struct overload_group<U, app_<V>>{
     }
     template <typename AttachmentT>
     self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
-        typedef udho::http_listener<self_type, AttachmentT> listener_type;
+        typedef udho::listener<self_type, AttachmentT> listener_type;
         std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }

@@ -1,5 +1,5 @@
-#ifndef UDHO_HTTP_SESSION_H
-#define UDHO_HTTP_SESSION_H
+#ifndef UDHO_CONNECTION_H
+#define UDHO_CONNECTION_H
 
 #include <algorithm>
 #include <cstdlib>
@@ -38,7 +38,7 @@ namespace http = boost::beast::http;
  * Stateful HTTP Session
  */
 template <typename RouterT, typename AttachmentT>
-class http_session : public std::enable_shared_from_this<http_session<RouterT, AttachmentT>>{    
+class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{    
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -47,7 +47,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     
     RouterT& _router;
     AttachmentT& _attachment;
-    typedef http_session<RouterT, AttachmentT> self_type;
+    typedef connection<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
     typedef typename attachment_type::shadow_type shadow_type;
     typedef udho::context<udho::defs::request_type, shadow_type> context_type;
@@ -80,7 +80,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit http_session(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
     /**
      * start the read loop
      */
@@ -89,7 +89,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     }
     void do_read(){
         _req = {};
-        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<http_session<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
+        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<connection<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
     }
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred){
         boost::ignore_unused(bytes_transferred);
@@ -171,4 +171,4 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
 }
 
 
-#endif // UDHO_HTTP_SESSION_H
+#endif // UDHO_CONNECTION_H
