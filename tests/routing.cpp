@@ -13,7 +13,7 @@
 #include <iostream>
 
 typedef udho::servers::quiet::stateless server_type;
-typedef server_type::context context_type;
+typedef udho::contexts::stateless context_type;
 
 template <typename F>
 struct checker{

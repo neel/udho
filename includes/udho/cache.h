@@ -34,6 +34,10 @@
 #include <cstdint>
 #include <boost/asio/ip/address.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace udho{
 namespace cache{
@@ -148,10 +152,14 @@ protected:
 };
 
 template <typename KeyT, typename... T>
+struct shadow;
+
+template <typename KeyT, typename... T>
 struct store: master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef store<KeyT, T...> self_type;
+    typedef shadow<KeyT, T...> shadow_type;
       
     store() = default;
     store(const self_type&) = delete;
@@ -230,9 +238,16 @@ struct shadow: flake<KeyT, T>...{
     template <typename... X>
     shadow(shadow<key_type, T..., X...>& other): flake<key_type, T>(other)..., _master(other._master){}
     
+    bool issued(const key_type& key) const{
+        return _master.issued(key);
+    }
+    void issue(const key_type& key){
+        _master.issue(key);
+    }
+    
     template <typename V>
     bool exists(const key_type& key) const{
-        return _master.issued(key) && flake<key_type, V>::exists(key);
+        return issued(key) && flake<key_type, V>::exists(key);
     }
     template <typename V>
     const V& at(const key_type& key) const{
@@ -240,7 +255,7 @@ struct shadow: flake<KeyT, T>...{
     }
     template <typename V>
     const V& get(const key_type& key, const V& def=V()) const{
-        if(_master.issued(key)){
+        if(issued(key)){
             return at<V>(key);
         }
         return def;
@@ -248,11 +263,25 @@ struct shadow: flake<KeyT, T>...{
     template <typename V>
     void insert(const key_type& key, const V& value){
         flake<key_type, V>::insert(key, value);
-        if(!_master.issued(key)){
-            _master.issue(key);
+        if(!issued(key)){
+            issue(key);
         }
     }
 };
+
+template <typename KeyT>
+struct generator;
+
+template <>
+struct generator<boost::uuids::uuid>{
+    boost::uuids::uuid parse(const std::string& key){
+        return boost::lexical_cast<boost::uuids::uuid>(key);;
+    }
+    boost::uuids::uuid generate(){
+        return boost::uuids::random_generator()();
+    }
+};
+
    
 }
 }

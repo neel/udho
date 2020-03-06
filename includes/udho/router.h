@@ -174,7 +174,7 @@ struct module_overload{
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
     template <typename T>
-    return_type call(const T& value, const std::vector<std::string>& args){
+    return_type call(T& value, const std::vector<std::string>& args){
         std::deque<std::string> argsq;
         std::copy(args.begin(), args.end(), std::back_inserter(argsq));
         tuple_type tuple(value);
@@ -190,12 +190,12 @@ struct module_overload{
         return boost::fusion::invoke(_function, arguments);
     }
     template <typename T>
-    response_type operator()(const T& value, const std::vector<std::string>& args){
+    response_type operator()(T& value, const std::vector<std::string>& args){
         return_type ret = call(value, args);
         return _compositor(value, std::move(ret));
     }
     template <typename T>
-    response_type operator()(const T& value, const std::string& subject){
+    response_type operator()(T& value, const std::string& subject){
         std::vector<std::string> args;
         boost::smatch caps;
         try{

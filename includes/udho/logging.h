@@ -50,6 +50,76 @@ enum class status{
     debug
 };
 
+struct abstract_message{
+    virtual std::string what() const = 0;
+};
+
+template <udho::logging::status Status>
+struct message: abstract_message{
+    typedef std::chrono::system_clock::time_point time_type;
+    
+    static constexpr const udho::logging::status status = Status;
+    const time_type time = std::chrono::system_clock::now();
+    
+    const std::string _segment;
+    std::string _content;
+    
+    message(const std::string& segment): _segment(segment){}
+    message(const std::string& segment, const std::string& content): _segment(segment), _content(content){}
+    
+    virtual std::string what() const{
+        return _content;
+    }
+};
+
+template <typename StreamT, udho::logging::status Status>
+StreamT& operator<<(StreamT& stream, const message<Status>& msg){
+    stream << msg.what();
+    return stream;
+}
+
+namespace messages{
+    typedef message<udho::logging::status::error> error;
+    typedef message<udho::logging::status::warning> warning;
+    typedef message<udho::logging::status::info> info;
+    typedef message<udho::logging::status::debug> debug;
+    
+    namespace formatted{
+        template <udho::logging::status Status>
+        struct message: udho::logging::message<Status>{
+            typedef messages::formatted::message<Status> self_type;
+            typedef udho::logging::message<Status> base_type;
+            
+            boost::format _format;
+            message(const std::string& segment, const std::string& format): base_type(segment), _format(format){}
+            template <typename T>
+            self_type& prepare(const T& value){
+                _format % value;
+                return *this;
+            }
+            template <typename T>
+            self_type& operator%(const T& value){
+                return prepare(value);
+            }
+            virtual std::string what() const{
+                return boost::str(_format);
+            }
+        };
+        
+        template <udho::logging::status Status, typename T>
+        message<Status>& operator<<(message<Status>& msg, const T& value){
+            msg % value;
+            return msg;
+        }
+        
+        typedef message<udho::logging::status::error> error;
+        typedef message<udho::logging::status::warning> warning;
+        typedef message<udho::logging::status::info> info;
+        typedef message<udho::logging::status::debug> debug;
+        
+    }
+}
+
 }
     
 namespace loggers{

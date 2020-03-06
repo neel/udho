@@ -22,6 +22,7 @@
 #include <udho/context.h>
 #include "logging.h"
 #include "page.h"
+#include <udho/defs.h>
 
 namespace udho{
 
@@ -48,7 +49,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     AttachmentT& _attachment;
     typedef http_session<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
-    typedef udho::context<http::request<http::string_body>, AttachmentT> context_type;
+    typedef typename attachment_type::shadow_type shadow_type;
+    typedef udho::context<udho::defs::request_type, shadow_type> context_type;
     
     struct send_lambda{
         self_type& self_;
@@ -68,7 +70,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     boost::asio::strand<boost::asio::io_context::executor_type> _strand;
     boost::beast::flat_buffer _buffer;
     std::shared_ptr<std::string const> _doc_root;
-    http::request<http::string_body> _req;
+    udho::defs::request_type _req;
     std::shared_ptr<void> res_;
     send_lambda _lambda;
   public:
@@ -98,7 +100,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            context_type ctx(_req, _attachment);
+            shadow_type shadow(_attachment);
+            context_type ctx(_req, shadow);
             auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
