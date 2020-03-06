@@ -91,6 +91,17 @@ protected:
 template <typename KeyT, typename... T>
 struct shadow;
 
+/**
+ * A type safe non-copiable storage 
+ * \code
+ * user u("Neel");
+ * appearence a("red");
+ * udho::cache::store<std::string, user, appearence> store;
+ * store.insert("x", u);
+ * store.insert("x", a);
+ * store.exists<user>();
+ * \endcode
+ */
 template <typename KeyT, typename... T>
 struct store: master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
@@ -153,6 +164,31 @@ private:
     registry_type& _registry;
 };
 
+/**
+ * copiable shadow of a store reference.
+ * \code
+ * user u("Neel");
+ * appearence a("red");
+ * udho::cache::store<std::string, user, appearence> store;
+ * udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
+ * shadow_ua.insert("x", u);
+ * shadow_ua.insert("x", a);
+ * std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl; // true
+ * std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl; // true
+ * std::cout << shadow_ua.get<user>("x").name << std::endl; // Neel
+ * std::cout << shadow_ua.get<appearence>("x").color << std::endl; // red
+ * udho::cache::shadow<std::string, user> shadow_u(store); 
+ * std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl; // true
+ * std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl; // true
+ * std::cout << shadow_u.exists<appearence>("x") << std::endl; // won't compile
+ * udho::cache::shadow<std::string, user> shadow_u2(shadow_u); // copiable
+ * udho::cache::shadow<std::string, user> shadow_u3(shadow_ua); // narrowable
+ * udho::cache::shadow<std::string, appearence> shadow_a(store); // unordered
+ * std::cout << shadow_a.exists<appearence>("x") << std::endl; // true
+ * std::cout << shadow_a.get<appearence>("x").color << std::endl; // red
+ * udho::cache::shadow<std::string> shadow_none(shadow_ua);
+ * \endcode
+ */
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
     typedef KeyT key_type;

@@ -569,7 +569,7 @@ struct overload_group{
                 return error.result();
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
-                // ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1%") % ex.what();
+                ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
             }
             return status;
         }else{
@@ -628,6 +628,7 @@ struct overload_group<U, overload_terminal<V>>{
                 return error.result();
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
+                ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
             }
             return status;
         }else{

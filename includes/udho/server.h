@@ -128,8 +128,8 @@ struct server{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-//         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
+//         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
@@ -154,6 +154,7 @@ struct server<void, CacheT>{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
