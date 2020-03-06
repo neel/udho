@@ -100,8 +100,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            shadow_type shadow(_attachment);
-            context_type ctx(_req, shadow);
+            context_type ctx(_req, _attachment.shadow());
             ctx.attach(_attachment);
             auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();

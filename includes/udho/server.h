@@ -34,75 +34,11 @@
 #include <boost/asio.hpp>
 #include <udho/logging.h>
 #include <udho/defs.h>
+#include <udho/attachment.h>
 
 namespace udho{
 
 namespace http = boost::beast::http;
-
-/**
- * logged stateful
- */
-template <typename LoggerT=void, typename CacheT=void>
-struct attachment: LoggerT, CacheT{
-    typedef attachment<LoggerT, CacheT> self_type;
-    typedef LoggerT logger_type;
-    typedef CacheT  cache_type;
-    typedef typename cache_type::shadow_type shadow_type;
-    
-    attachment(LoggerT& logger): LoggerT(logger){}
-};
-
-/**
- * quiet stateful
- */
-template <typename CacheT>
-struct attachment<void, CacheT>: CacheT{
-    typedef attachment<void, CacheT> self_type;
-    typedef void logger_type;
-    typedef CacheT  cache_type;
-    typedef typename cache_type::shadow_type shadow_type;
-    
-    attachment(){}
-    template <udho::logging::status Status>
-    self_type& operator()(const udho::logging::message<Status>& msg){
-        return *this;
-    }
-};
-
-/**
- * logged stateless
- */
-template <typename LoggerT>
-struct attachment<LoggerT, void>: LoggerT{
-    typedef attachment<LoggerT, void> self_type;
-    typedef LoggerT logger_type;
-    typedef void shadow_type;
-    
-    attachment(LoggerT& logger): LoggerT(logger){}
-};
-
-/**
- * quiet stateless
- */
-template <>
-struct attachment<void, void>{
-    typedef attachment<void, void> self_type;
-    typedef void logger_type;
-    typedef void cache_type;
-    typedef void shadow_type;
-    
-    attachment(){}
-    template <udho::logging::status Status>
-    self_type& operator()(const udho::logging::message<Status>& msg){
-        return *this;
-    }
-};
-
-template <typename LoggerT, typename CacheT, udho::logging::status Status>
-attachment<LoggerT, CacheT>& operator<<(attachment<LoggerT, CacheT>& attachment, const udho::logging::message<Status>& msg){
-    attachment(msg);
-    return attachment;
-}
     
 /**
  * @todo write docs
@@ -214,7 +150,7 @@ namespace ostreamed{
     
     template <typename... U>
     using stateful  = ostreamed_helper<udho::cache::store<boost::uuids::uuid, U...>>;
-    using satteless = ostreamed_helper<void>;
+    using stateless = ostreamed_helper<void>;
 }
     
 }

@@ -42,7 +42,12 @@ struct attachment: LoggerT, CacheT{
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
-    attachment(LoggerT& logger): LoggerT(logger){}
+    shadow_type _shadow;
+    
+    attachment(LoggerT& logger): LoggerT(logger), _shadow(*this){}
+    shadow_type& shadow(){
+        return _shadow;
+    }
 };
 
 /**
@@ -55,10 +60,15 @@ struct attachment<void, CacheT>: CacheT{
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
-    attachment(){}
+    shadow_type _shadow;
+    
+    attachment(): _shadow(*this){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& msg){
         return *this;
+    }
+    shadow_type& shadow(){
+        return _shadow;
     }
 };
 
@@ -72,6 +82,9 @@ struct attachment<LoggerT, void>: LoggerT{
     typedef void shadow_type;
     
     attachment(LoggerT& logger): LoggerT(logger){}
+    int shadow(){
+        return 0;
+    }
 };
 
 /**
@@ -88,6 +101,9 @@ struct attachment<void, void>{
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& msg){
         return *this;
+    }
+    int shadow(){
+        return 0;
     }
 };
 

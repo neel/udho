@@ -457,7 +457,7 @@ struct context<RequestT, void>{
     pimple_type _pimpl;
         
     template <typename C>
-    context(const RequestT& request, C&): _pimpl(new impl_type(request)){}
+    context(const RequestT& request, const C&): _pimpl(new impl_type(request)){}
     template <typename ShadowT>
     context(context<RequestT, ShadowT>& other): _pimpl(other._pimpl){}
     
