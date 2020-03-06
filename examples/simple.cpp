@@ -75,7 +75,7 @@ std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
     return name+" "+color;
 }
 
-std::string data(context ctx){
+std::string data(udho::contexts::stateless ctx){
     std::cout << "name submitted" << ctx.form().has("name") << std::endl;
     std::cout << "age submitted" << ctx.form().has("age") << std::endl;
     std::cout << "planet submitted" << ctx.form().has("planet") << std::endl;
@@ -87,11 +87,11 @@ std::string data(context ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(context ctx, int a, int b){
+int add(udho::contexts::stateless ctx, int a, int b){
     return a + b;
 }
 
-boost::beast::http::response<boost::beast::http::file_body> file(context ctx){
+boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts::stateless ctx){
     std::string path("/etc/passwd");
     boost::beast::error_code err;
     boost::beast::http::file_body::value_type body;
