@@ -222,6 +222,32 @@ private:
     registry_type& _registry;
 };
 
+//     typedef udho::cache::store<std::string, user, appearence> store_type;
+//     store_type store;
+//     udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
+//     user data;
+//     data.name = "Neel";
+//     shadow_ua.insert("x", data);
+//     appearence appr;
+//     appr.color = "red";
+//     shadow_ua.insert("x", appr);
+//     std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl;
+//     std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl;
+//     std::cout << shadow_ua.get<user>("x").name << std::endl;
+//     std::cout << shadow_ua.get<appearence>("x").color << std::endl;
+//     std::cout << shadow_ua.exists<appearence>("x") << std::endl;
+//     udho::cache::shadow<std::string, user> shadow_u(store);
+//     std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl;
+//     std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl;
+// //     std::cout << shadow_u.exists<appearence>("x") << std::endl;
+//     udho::cache::shadow<std::string, user> shadow_u2(shadow_u);
+//     std::cout << shadow_u2.get<user>("x").name << std::endl;
+//     udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);
+//     std::cout << shadow_u3.get<user>("x").name << std::endl;
+//     udho::cache::shadow<std::string, appearence> shadow_a(store);
+//     std::cout << shadow_a.exists<appearence>("x") << std::endl;
+//     std::cout << shadow_a.get<appearence>("x").color << std::endl;
+//     udho::cache::shadow<std::string> shadow_none(shadow_ua);
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
     typedef KeyT key_type;

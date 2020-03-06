@@ -14,9 +14,6 @@ struct appearence{
     std::string color;
 };
 
-typedef udho::servers::ostreamed::stateful<user, appearence> server_type;
-typedef udho::contexts::stateful<user, appearence> context;
-
 std::string hello(udho::contexts::stateful<user> ctx){
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
     std::cout << "session id: " << ctx.session().id() << std::endl;
@@ -76,6 +73,8 @@ std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
 }
 
 std::string data(udho::contexts::stateless ctx){
+    ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel basu" % 42;
+    
     std::cout << "name submitted" << ctx.form().has("name") << std::endl;
     std::cout << "age submitted" << ctx.form().has("age") << std::endl;
     std::cout << "planet submitted" << ctx.form().has("planet") << std::endl;
@@ -106,40 +105,10 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
 }
 
 int main(){
-    
-//     std::cout << udho::logging::messages::formatted::error("nowhere", "Hello %1% see, %2% + %3% = %4%") << "Neel" << 2 << 3.2 << 5.2 << std::endl;
-//     
-//     typedef udho::cache::store<std::string, user, appearence> store_type;
-//     store_type store;
-//     udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
-//     user data;
-//     data.name = "Neel";
-//     shadow_ua.insert("x", data);
-//     appearence appr;
-//     appr.color = "red";
-//     shadow_ua.insert("x", appr);
-//     std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl;
-//     std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl;
-//     std::cout << shadow_ua.get<user>("x").name << std::endl;
-//     std::cout << shadow_ua.get<appearence>("x").color << std::endl;
-//     std::cout << shadow_ua.exists<appearence>("x") << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u(store);
-//     std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl;
-//     std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl;
-// //     std::cout << shadow_u.exists<appearence>("x") << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u2(shadow_u);
-//     std::cout << shadow_u2.get<user>("x").name << std::endl;
-//     udho::cache::shadow<std::string, user> shadow_u3(shadow_ua);
-//     std::cout << shadow_u3.get<user>("x").name << std::endl;
-//     udho::cache::shadow<std::string, appearence> shadow_a(store);
-//     std::cout << shadow_a.exists<appearence>("x") << std::endl;
-//     std::cout << shadow_a.get<appearence>("x").color << std::endl;
-//     udho::cache::shadow<std::string> shadow_none(shadow_ua);
-//     
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
     boost::asio::io_service io;
-    server_type server(io, std::cout);
+    udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
 
     auto router = udho::router<>()
         | (udho::get(&file).raw() = "^/file")

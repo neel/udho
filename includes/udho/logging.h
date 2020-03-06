@@ -81,6 +81,7 @@ namespace messages{
     typedef message<udho::logging::status::info> info;
     typedef message<udho::logging::status::debug> debug;
     
+    // std::cout << udho::logging::messages::formatted::error("nowhere", "Hello %1% see, %2% + %3% = %4%") << "Neel" << 2 << 3.2 << 5.2 << std::endl;
     namespace formatted{
         template <udho::logging::status Status>
         struct message: udho::logging::message<Status>{
@@ -152,19 +153,24 @@ struct plain{
         
         _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment % message << std::endl;
     }
-    void error(const udho::logging::messages::error& msg){
-        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-    }
-    void warning(const udho::logging::messages::warning& msg){
-        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-    }
-    void info(const udho::logging::messages::info& msg){
-        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-    }
-    void debug(const udho::logging::messages::debug& msg){
-        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
-    }
+//     void error(const udho::logging::messages::error& msg){
+//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+//     }
+//     void warning(const udho::logging::messages::warning& msg){
+//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+//     }
+//     void info(const udho::logging::messages::info& msg){
+//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+//     }
+//     void debug(const udho::logging::messages::debug& msg){
+//         log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+//     }
     
+    template <udho::logging::status Status>
+    self_type& operator()(const udho::logging::message<Status>& msg){
+        log(msg.time, msg.status, msg._segment, msg._level, msg.what());
+        return *this;
+    }
 //     void operator()(const udho::logging::messages::error& msg){
 //         error(msg);
 //     }

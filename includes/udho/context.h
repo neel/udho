@@ -371,24 +371,29 @@ struct context_impl{
             }
         }
     }
-    void log(const udho::logging::messages::error&& msg){
+    void log(const udho::logging::messages::error& msg){
         _error(msg);
     }
-    void log(const udho::logging::messages::warning&& msg){
+    void log(const udho::logging::messages::warning& msg){
         _warning(msg);
     }
-    void log(const udho::logging::messages::info&& msg){
+    void log(const udho::logging::messages::info& msg){
         _info(msg);
     }
-    void log(const udho::logging::messages::debug&& msg){
+    void log(const udho::logging::messages::debug& msg){
         _debug(msg);
     }
     template <typename AttachmentT>
     void attach(AttachmentT& attachment){
-        _error.connect(boost::bind(&AttachmentT::error, &attachment, _1));
-        _warning.connect(boost::bind(&AttachmentT::warning, &attachment, _1));
-        _info.connect(boost::bind(&AttachmentT::info, &attachment, _1));
-        _debug.connect(boost::bind(&AttachmentT::debug, &attachment, _1));
+        boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
+        
+        _error.connect(errorf);
+        _warning.connect(warningf);
+        _info.connect(infof);
+        _debug.connect(debugf);
     }
 };
  
@@ -586,6 +591,7 @@ struct context<RequestT, void>{
 template <typename RequestT, typename ShadowT, udho::logging::status Status>
 context<RequestT, ShadowT>& operator<<(context<RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);
+    return ctx;
 }
 
 

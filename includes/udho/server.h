@@ -63,10 +63,10 @@ struct attachment<void, CacheT>: CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     attachment(){}
-    void error(const udho::logging::messages::error& msg){}
-    void warning(const udho::logging::messages::warning& msg){}
-    void info(const udho::logging::messages::info& msg){}
-    void debug(const udho::logging::messages::debug& msg){}
+    template <udho::logging::status Status>
+    self_type& operator()(const udho::logging::message<Status>& msg){
+        return *this;
+    }
 };
 
 /**
@@ -92,11 +92,17 @@ struct attachment<void, void>{
     typedef void shadow_type;
     
     attachment(){}
-    void error(const udho::logging::messages::error& msg){}
-    void warning(const udho::logging::messages::warning& msg){}
-    void info(const udho::logging::messages::info& msg){}
-    void debug(const udho::logging::messages::debug& msg){}
+    template <udho::logging::status Status>
+    self_type& operator()(const udho::logging::message<Status>& msg){
+        return *this;
+    }
 };
+
+template <typename LoggerT, typename CacheT, udho::logging::status Status>
+attachment<LoggerT, CacheT>& operator<<(attachment<LoggerT, CacheT>& attachment, const udho::logging::message<Status>& msg){
+    attachment(msg);
+    return attachment;
+}
     
 /**
  * @todo write docs
@@ -123,6 +129,7 @@ struct server{
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
 //         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+        _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
