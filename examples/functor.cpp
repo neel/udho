@@ -5,16 +5,15 @@
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 
-typedef udho::servers::ostreamed::stateful<> server_type;
 
 struct simple{
     int add(int a, int b){
         return a+b;
     }
-    int operator()(server_type::context ctx, int a, int b){
+    int operator()(udho::contexts::stateless ctx, int a, int b){
         return a+b;
     }
-    std::string operator()(server_type::context ctx){
+    std::string operator()(udho::contexts::stateless ctx){
         return "Hello World";
     }
 };
@@ -24,10 +23,10 @@ int main(){
     boost::asio::io_service io;
 
     simple s;
-    boost::function<int (server_type::context, int, int)> add(s);
-    boost::function<std::string (server_type::context)> hello(s);
+    boost::function<int (udho::contexts::stateless, int, int)> add(s);
+    boost::function<std::string (udho::contexts::stateless)> hello(s);
 
-    server_type server(io, std::cout);
+    udho::servers::ostreamed::stateless server(io, std::cout);
     
     auto router = udho::router<>()
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")

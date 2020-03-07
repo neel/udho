@@ -36,6 +36,11 @@
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/version.hpp>
 
+//  UDHO_VERSION % 100 is the patch level
+//  UDHO_VERSION / 100 % 1000 is the minor version
+//  UDHO_VERSION / 100000 is the major version
+#define UDHO_VERSION 100000
+
 namespace udho{
 namespace defs{
     
