@@ -35,20 +35,20 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 # Example 
 
 ```cpp
-std::string login(udho::contexts::stateful<user> ctx){
+std::string login(udho::contexts::stateful<user> ctx){ /// < strictly typed stateful context
     const static username = "derp";
     const static password = "derp123";
 
     if(ctx.session().exists<user>()){
         user data;
-        ctx.session() >> data;
+        ctx.session() >> data;  /// < extract session data
         return "already logged in";
     }else{
         if(ctx.form().has("user") && ctx.form().has("pass")){
-            std::string usr = ctx.form().field<std::string>("user");
-            std::string psw = ctx.form().field<std::string>("pass");
+            std::string usr = ctx.form().field<std::string>("user"); /// < form field value from post request
+            std::string psw = ctx.form().field<std::string>("pass"); /// < form field value from post request
             if(usr == username && psw == password){
-                ctx.session() << user(usr);
+                ctx.session() << user(usr); /// < put data in session
                 return "successful";
             }
         }
