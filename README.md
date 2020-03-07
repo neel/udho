@@ -19,8 +19,8 @@ int main(){
     //        logger -^         ^- no session (use stateful for session)
     auto router = udho::router()
          |  (udho::get(&hello_world).plain() = "^/hello/(\\w+)/(\\d+)$");
-    // GET request -^   ^- callable    ^- text/plain  ^-regular expression
-    std::string doc_root("/path/to/static/document/root");
+    // GET request -^  ^- callable   ^- text/plain ^-regex ^- name ^ num
+    std::string doc_root("/path/to/static/document/root");  
     server.serve(router, 9198, doc_root);
     //    listening port -^     ^- document root
     io.run();
