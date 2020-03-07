@@ -9,7 +9,7 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/alerts/)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
-![udho example](https://i.imgur.com/f2E9IQI.png "A minimal example using udho C++ library for web development")
+![udho example](https://i.imgur.com/1Li0TCN.png "A minimal example using udho C++ library for web development")
 
 # Dependencies:
 * Boost.Filesystem
