@@ -25,9 +25,6 @@
 
 namespace udho{
     
-typedef boost::beast::http::request<boost::beast::http::string_body>    request_type;
-typedef boost::beast::http::response<boost::beast::http::string_body>   response_type;
-    
 class resolver;
 
 namespace internal{
@@ -570,6 +567,13 @@ struct overload_group{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
+                send(std::move(error.response(ctx.request())));
+                return error.result();
+            }catch(...){
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
+                send(std::move(error.response(ctx.request())));
+                return error.result();
             }
             return status;
         }else{
@@ -629,6 +633,13 @@ struct overload_group<U, overload_terminal<V>>{
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
+                send(std::move(error.response(ctx.request())));
+                return error.result();
+            }catch(...){
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
+                send(std::move(error.response(ctx.request())));
+                return error.result();
             }
             return status;
         }else{
