@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef UDHO_UTIL_H
+#define UDHO_UTIL_H
 
 #include <string>
 #include <vector>
@@ -24,4 +24,4 @@ namespace util{
 }
 }
 
-#endif // UTIL_H
+#endif // UDHO_UTIL_H
