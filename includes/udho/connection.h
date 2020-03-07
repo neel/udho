@@ -1,5 +1,5 @@
-#ifndef UDHO_HTTP_SESSION_H
-#define UDHO_HTTP_SESSION_H
+#ifndef UDHO_CONNECTION_H
+#define UDHO_CONNECTION_H
 
 #include <algorithm>
 #include <cstdlib>
@@ -22,6 +22,7 @@
 #include <udho/context.h>
 #include "logging.h"
 #include "page.h"
+#include <udho/defs.h>
 
 namespace udho{
 
@@ -37,7 +38,7 @@ namespace http = boost::beast::http;
  * Stateful HTTP Session
  */
 template <typename RouterT, typename AttachmentT>
-class http_session : public std::enable_shared_from_this<http_session<RouterT, AttachmentT>>{    
+class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{    
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -46,9 +47,10 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     
     RouterT& _router;
     AttachmentT& _attachment;
-    typedef http_session<RouterT, AttachmentT> self_type;
+    typedef connection<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
-    typedef udho::context<http::request<http::string_body>, AttachmentT> context_type;
+    typedef typename attachment_type::shadow_type shadow_type;
+    typedef udho::context<udho::defs::request_type, shadow_type> context_type;
     
     struct send_lambda{
         self_type& self_;
@@ -68,7 +70,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     boost::asio::strand<boost::asio::io_context::executor_type> _strand;
     boost::beast::flat_buffer _buffer;
     std::shared_ptr<std::string const> _doc_root;
-    http::request<http::string_body> _req;
+    udho::defs::request_type _req;
     std::shared_ptr<void> res_;
     send_lambda _lambda;
   public:
@@ -78,7 +80,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit http_session(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
     /**
      * start the read loop
      */
@@ -87,7 +89,7 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
     }
     void do_read(){
         _req = {};
-        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<http_session<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
+        http::async_read(_socket, _buffer, _req, boost::asio::bind_executor(_strand, std::bind(&self_type::on_read, std::enable_shared_from_this<connection<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
     }
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred){
         boost::ignore_unused(bytes_transferred);
@@ -98,7 +100,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            context_type ctx(_req, _attachment);
+            context_type ctx(_req, _attachment.shadow());
+            ctx.attach(_attachment);
             auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
@@ -106,18 +109,22 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
             
             if(response == http::status::unknown){
                 std::string local_path = internal::path_cat(*_doc_root, path);
-                _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path).str());
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+//                 _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path).str());
                 boost::beast::error_code err;
                 http::file_body::value_type body;
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
-                    _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count()).str());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count();
+//                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::not_found, path);
                 }else{
-                    _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path).str());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+//                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path).str());
                 }
                 if(err){
-                    _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count();
+//                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
                 }
                 auto const size = body.size();
@@ -127,7 +134,8 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
                     res.set(http::field::content_type, internal::mime_type(local_path));
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
-                    _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count()).str());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count();
+//                     _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count()).str());
                     _lambda(std::move(res));
                     return;
                 }
@@ -139,14 +147,16 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));
             }else{
-                _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count();
+//                 _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count()).str());
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count()).str());
+            _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count();
+//             _attachment.log(udho::logging::status::info, udho::logging::segment::router, (boost::format("%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count()).str());
             return _lambda(std::move(res));
         }
     }
@@ -167,4 +177,4 @@ class http_session : public std::enable_shared_from_this<http_session<RouterT, A
 }
 
 
-#endif // UDHO_HTTP_SESSION_H
+#endif // UDHO_CONNECTION_H

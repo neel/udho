@@ -21,20 +21,17 @@ SET(INCLUDE_DIRS
 )
 
 SET(UDHO_HEADERS 
-    includes/udho/http_session.h 
-    includes/udho/http_listener.h 
+    includes/udho/connection.h 
+    includes/udho/listener.h 
     includes/udho/router.h 
     includes/udho/util.h 
     includes/udho/page.h
     includes/udho/application.h
 )
 SET(UDHO_SOURCES 
-    http_session.cpp 
-    router.cpp 
+    connection.cpp 
     util.cpp 
     page.cpp
-    application.cpp
-    server.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)

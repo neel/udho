@@ -40,61 +40,12 @@
 #include <boost/utility/string_view.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <udho/util.h>
+#include <udho/cache.h>
+#include <udho/logging.h>
+#include <boost/signals2/signal.hpp>
+#include <udho/defs.h>
 
 namespace udho{
-    
-/**
- * logged stateful
- */
-template <typename LoggerT=void, typename CacheT=void>
-struct attachment: LoggerT, CacheT{
-    typedef attachment<LoggerT, CacheT> self_type;
-    typedef LoggerT logger_type;
-    typedef CacheT  cache_type;
-    
-    attachment(LoggerT& logger): LoggerT(logger){}
-};
-
-/**
- * logged stateless
- */
-template <typename LoggerT>
-struct attachment<LoggerT, void>: LoggerT{
-    typedef attachment<LoggerT, void> self_type;
-    typedef LoggerT logger_type;
-    
-    attachment(LoggerT& logger): LoggerT(logger){}
-};
-
-/**
- * quiet stateful
- */
-template <typename CacheT>
-struct attachment<void, CacheT>: CacheT{
-    typedef attachment<void, CacheT> self_type;
-    typedef void logger_type;
-    typedef CacheT  cache_type;
-    
-    attachment(){}
-    template <typename... U>
-    void log(U...){}
-};
-
-/**
- * quiet stateless
- */
-template <>
-struct attachment<void, void>{
-    typedef attachment<void, void> self_type;
-    typedef void logger_type;
-    typedef void cache_type;
-    
-    attachment(){}
-    template <typename... U>
-    void log(U...){}
-};
-
-   
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.cpp
 template <typename ValueT>
@@ -286,46 +237,52 @@ cookies_<RequestT>& operator<<(cookies_<RequestT>& cookies, const udho::cookie_<
     return cookies;
 }
     
-template <typename RequestT, typename AttachmentT>
+template <typename RequestT, typename ShadowT>
 struct session_{
     typedef RequestT request_type;
-    typedef AttachmentT attachment_type;
-    typedef boost::beast::http::header<true> headers_type;
-    typedef typename AttachmentT::key_type session_key;
-    typedef udho::detail::cookies_<RequestT> cookies_type;
-    typedef std::map<std::string, std::string> cookie_jar_type;
+    typedef udho::detail::cookies_<request_type> cookies_type;
+    typedef ShadowT shadow_type;
+    typedef typename shadow_type::key_type key_type;
+    typedef session_<request_type, shadow_type> self_type;
+    typedef udho::cache::generator<key_type> generator_type;
     
-    const request_type& _request;
-    attachment_type&    _attachment;
-    cookies_type&       _cookies;
-    std::string         _sessid;
-    cookie_jar_type     _jar;
-    session_key         _id;
-    bool                _returning;
+    cookies_type&  _cookies;
+    shadow_type    _shadow;
+    std::string    _sessid;
+    bool           _returning;
+    bool           _identified;
+    key_type       _id;
+    generator_type _generator;
     
-    session_(const request_type& request, attachment_type& attachment, cookies_type& cookies): _request(request), _attachment(attachment), _cookies(cookies), _sessid(_attachment._sessid), _returning(false){
+    session_(cookies_type& cookies, shadow_type& shadow): _cookies(cookies), _shadow(shadow), _sessid("UDHOSESSID"), _returning(false), _identified(false){
         identify();
     }
+    template <typename... T>
+    session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
+//     template <typename... T>
+//     session_(session_<request_type, udho::cache::store<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
     void identify(){
-        if(_cookies.exists(_sessid)){
-            session_key id = _cookies.template get<session_key>(_sessid);
-            if(!_attachment.issued(id)){
-                _id = attachment_type::generate();
-                _attachment.issue(_id);
+        if(!_identified){
+            if(_cookies.exists(_sessid)){
+                key_type id = _cookies.template get<key_type>(_sessid);
+                if(!_shadow.issued(id)){
+                    _id = _generator.generate();
+                    _shadow.issue(_id);
+                    _cookies.add(_sessid, _id);
+                    _returning = false;
+                }else{
+                    _id = id;
+                    _returning = true;
+                }
+            }else{
+                _id = _generator.generate();
+                _shadow.issue(_id);
                 _cookies.add(_sessid, _id);
                 _returning = false;
-            }else{
-                _id = id;
-                _returning = true;
             }
-        }else{
-            _id = attachment_type::generate();
-            _attachment.issue(_id);
-            _cookies.add(_sessid, _id);
-            _returning = false;
         }
     }
-    const session_key& id() const{
+    const key_type& id() const{
         return _id;
     }
     bool returning() const{
@@ -333,61 +290,64 @@ struct session_{
     }
     template <typename V>
     bool exists() const{
-        return _attachment.template exists<V>(_id);
+        return _shadow.template exists<V>(_id);
     }
     template <typename V>
     const V& get() const{
-        return _attachment.template get<V>(_id);
+        return _shadow.template get<V>(_id);
     }
     template <typename V>
     V& at(){
-        return _attachment.template at<V>(_id);
+        return _shadow.template at<V>(_id);
     }
     template <typename V>
     void set(const V& value){
-        _attachment.template insert<V>(_id, value);
-    }
+        _shadow.template insert<V>(_id, value);
+    }    
 };
 
-template <typename RequestT, typename LoggerT>
-struct session_<RequestT, udho::attachment<LoggerT, void>>{
+template <typename RequestT>
+struct session_<RequestT, void>{
     template <typename... U>
     session_(U...){}
 };
 
-template <typename RequestT, typename AttachmentT, typename T>
-session_<RequestT, AttachmentT>& operator<<(session_<RequestT, AttachmentT>& session, const T& data){
+template <typename RequestT, typename ShadowT, typename T>
+session_<RequestT, ShadowT>& operator<<(session_<RequestT, ShadowT>& session, const T& data){
     session.template set<T>(data);
     return session;
 }
 
-template <typename RequestT, typename AttachmentT, typename T>
-const session_<RequestT, AttachmentT>& operator>>(const session_<RequestT, AttachmentT>& session, T& data){
+template <typename RequestT, typename ShadowT, typename T>
+const session_<RequestT, ShadowT>& operator>>(const session_<RequestT, ShadowT>& session, T& data){
     data = session.template get<T>();
     return session;
 }
-    
-template <typename RequestT, typename AttachmentT, bool linked=true>
+ 
+template <typename RequestT>
 struct context_impl{
     typedef RequestT request_type;
-    typedef AttachmentT attachment_type;
-    typedef context_impl<request_type, attachment_type, linked> self_type;
+    typedef context_impl<request_type> self_type;
+    typedef udho::detail::form_<request_type> form_type;
+    typedef udho::detail::cookies_<request_type> cookies_type;
     typedef boost::beast::http::header<true> headers_type;
-    typedef udho::detail::form_<RequestT> form_type;
-    typedef udho::detail::cookies_<RequestT> cookies_type;
-    typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
     
-    request_type     _request;
-    attachment_type& _attachment;
-    form_type        _form;
-    headers_type     _headers;
-    cookies_type     _cookies;
-    sess_type        _sess;
+    const request_type& _request;
+    form_type    _form;
+    headers_type _headers;
+    cookies_type _cookies;
     
-    context_impl(attachment_type& attachment): _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
-    context_impl(const RequestT& request, attachment_type& attachment): _request(request), _attachment(attachment), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
-    context_impl(const self_type&) = delete;
+    boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
+    boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
+    boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
+    boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
+    
+    context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){}
+    context_impl(const self_type& other) = delete;
     const request_type& request() const{return _request;}
+    cookies_type& cookies(){
+        return _cookies;
+    }
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
         for(const auto& header: _headers){
@@ -402,67 +362,58 @@ struct context_impl{
             }
         }
     }
-};
-
-template <typename RequestT, typename AttachmentT>
-struct context_impl<RequestT, AttachmentT, false>{
-    typedef RequestT request_type;
-    typedef AttachmentT attachment_type;
-    typedef context_impl<request_type, attachment_type, false> self_type;
-    typedef boost::beast::http::header<true> headers_type;
-    typedef udho::detail::form_<RequestT> form_type;
-    typedef udho::detail::cookies_<RequestT> cookies_type;
-    typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
-    
-    request_type     _request;
-    attachment_type _attachment;
-    form_type        _form;
-    headers_type     _headers;
-    cookies_type     _cookies;
-    sess_type        _sess;
-    
-    context_impl(): _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
-    context_impl(const RequestT& request): _request(request), _form(request), _cookies(request, _headers), _sess(request, _attachment, _cookies){}
-    context_impl(const self_type&) = delete;
-    const request_type& request() const{return _request;}
-    template<class Body, class Fields>
-    void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-        for(const auto& header: _headers){
-            if(header.name() != boost::beast::http::field::set_cookie){
-                res.set(header.name(), header.value());
-            }
-        }
-        res.erase(boost::beast::http::field::set_cookie);
-        for(const auto& header: _headers){
-            if(header.name() == boost::beast::http::field::set_cookie){
-                res.insert(header.name(), header.value());
-            }
-        }
+    void log(const udho::logging::messages::error& msg){
+        _error(msg);
+    }
+    void log(const udho::logging::messages::warning& msg){
+        _warning(msg);
+    }
+    void log(const udho::logging::messages::info& msg){
+        _info(msg);
+    }
+    void log(const udho::logging::messages::debug& msg){
+        _debug(msg);
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
+        
+        _error.connect(errorf);
+        _warning.connect(warningf);
+        _info.connect(infof);
+        _debug.connect(debugf);
     }
 };
-
+ 
 }
 
 /**
  * @todo write docs
  */
-template <typename RequestT, typename AttachmentT>
+template <typename RequestT, typename ShadowT>
 struct context{
     typedef RequestT request_type;
-    typedef AttachmentT attachment_type;
-    typedef context<request_type, attachment_type> self_type;
-    typedef detail::context_impl<request_type, attachment_type> impl_type;
+    typedef ShadowT shadow_type;
+    typedef typename shadow_type::key_type key_type;
+    typedef context<request_type, shadow_type> self_type;
+    typedef detail::context_impl<request_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::detail::form_<RequestT> form_type;
     typedef udho::detail::cookies_<RequestT> cookies_type;
-    typedef udho::detail::session_<RequestT, AttachmentT> sess_type;
-    typedef typename attachment_type::logger_type logger_type;
+    typedef detail::session_<request_type, shadow_type> session_type;
     
     pimple_type _pimpl;
+    session_type _session;
         
-    context(attachment_type& attachment): _pimpl(new impl_type(attachment)){}
-    context(const RequestT& request, attachment_type& attachment): _pimpl(new impl_type(request, attachment)){}
-    context(const self_type& other): _pimpl(other._pimpl){}
+    template <typename... V>
+    context(udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store){}
+    template <typename... V>
+    context(const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow){}
+    template <typename OtherShadowT>
+    context(context<RequestT, OtherShadowT>& other): _pimpl(other._pimpl), _session(other._session){}
     
     const request_type& request() const{return _pimpl->request();}
     
@@ -473,8 +424,8 @@ struct context{
     form_type& form(){
         return _pimpl->_form;
     }
-    sess_type& session(){
-        return _pimpl->_sess;
+    session_type& session(){
+        return _session;
     }
     cookies_type& cookies(){
         return _pimpl->_cookies;
@@ -483,23 +434,70 @@ struct context{
     operator request_type() const{
         return _pimpl->request();
     }
-//     operator context<RequestT, udho::attachment<logger_type, void>>() const{
-//         typedef context<RequestT, udho::attachment<logger_type, void>> other_type;
-//         other_type other();
-//         return other;
-//     }
+    template <udho::logging::status Status>
+    void log(const udho::logging::message<Status>& msg){
+        _pimpl->log(msg);
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        _pimpl->attach(attachment);
+    }
 };
 
-// template <typename RequestT>
-// struct context<RequestT, udho::attachment<void, void>>{
-//     typedef RequestT request_type;
-//     typedef udho::attachment<void, void> attachment_type;
-//     typedef context<request_type, attachment_type> self_type;
-//     typedef detail::context_impl<request_type, attachment_type> impl_type;
-//     typedef boost::shared_ptr<impl_type> pimple_type;
-//     typedef udho::detail::form_<RequestT> form_type;
-//     typedef udho::detail::cookies_<RequestT> cookies_type;
-// };
+template <typename RequestT>
+struct context<RequestT, void>{
+    typedef RequestT request_type;
+    typedef void shadow_type;
+    typedef context<request_type, void> self_type;
+    typedef detail::context_impl<request_type> impl_type;
+    typedef boost::shared_ptr<impl_type> pimple_type;
+    typedef udho::detail::form_<RequestT> form_type;
+    typedef udho::detail::cookies_<RequestT> cookies_type;
+    
+    pimple_type _pimpl;
+        
+    template <typename C>
+    context(const RequestT& request, const C&): _pimpl(new impl_type(request)){}
+    template <typename ShadowT>
+    context(context<RequestT, ShadowT>& other): _pimpl(other._pimpl){}
+    
+    const request_type& request() const{return _pimpl->request();}
+    
+    template<class Body, class Fields>
+    void patch(boost::beast::http::message<false, Body, Fields>& res) const{
+        _pimpl->patch(res);
+    }
+    form_type& form(){
+        return _pimpl->_form;
+    }
+    cookies_type& cookies(){
+        return _pimpl->_cookies;
+    }
+    
+    operator request_type() const{
+        return _pimpl->request();
+    }
+    template <udho::logging::status Status>
+    void log(const udho::logging::message<Status>& msg){
+        _pimpl->log(msg);
+    }
+    template <typename AttachmentT>
+    void attach(AttachmentT& attachment){
+        _pimpl->attach(attachment);
+    }
+};
+
+template <typename RequestT, typename ShadowT, udho::logging::status Status>
+context<RequestT, ShadowT>& operator<<(context<RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
+    ctx.log(msg);
+    return ctx;
+}
+
+namespace contexts{
+    using stateless = context<udho::defs::request_type, void>;
+    template <typename... T>
+    using stateful = context<udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
+}
 
 }
 

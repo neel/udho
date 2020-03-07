@@ -25,4 +25,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "udho/server.h"
+#ifndef UDHO_DEFS_H
+#define UDHO_DEFS_H
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/beast/http/message.hpp>
+#include <boost/beast/http/string_body.hpp>
+#include <boost/beast/version.hpp>
+
+//  UDHO_VERSION % 100 is the patch level
+//  UDHO_VERSION / 100 % 1000 is the minor version
+//  UDHO_VERSION / 100000 is the major version
+#define UDHO_VERSION 100000
+
+namespace udho{
+namespace defs{
+    
+typedef boost::beast::http::request<boost::beast::http::string_body> request_type;
+typedef boost::uuids::uuid session_key_type;
+    
+}
+}
+
+#endif // DEFS_H

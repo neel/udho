@@ -19,14 +19,11 @@
 #include <boost/locale.hpp>
 #include <iomanip>
 #include <udho/context.h>
-#include "http_listener.h"
-#include "http_session.h"
+#include <udho/listener.h>
+#include <udho/connection.h>
 #include "util.h"
 
 namespace udho{
-    
-typedef boost::beast::http::request<boost::beast::http::string_body>    request_type;
-typedef boost::beast::http::response<boost::beast::http::string_body>   response_type;
     
 class resolver;
 
@@ -174,7 +171,7 @@ struct module_overload{
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
     }
     template <typename T>
-    return_type call(const T& value, const std::vector<std::string>& args){
+    return_type call(T& value, const std::vector<std::string>& args){
         std::deque<std::string> argsq;
         std::copy(args.begin(), args.end(), std::back_inserter(argsq));
         tuple_type tuple(value);
@@ -190,12 +187,12 @@ struct module_overload{
         return boost::fusion::invoke(_function, arguments);
     }
     template <typename T>
-    response_type operator()(const T& value, const std::vector<std::string>& args){
+    response_type operator()(T& value, const std::vector<std::string>& args){
         return_type ret = call(value, args);
         return _compositor(value, std::move(ret));
     }
     template <typename T>
-    response_type operator()(const T& value, const std::string& subject){
+    response_type operator()(T& value, const std::string& subject){
         std::vector<std::string> args;
         boost::smatch caps;
         try{
@@ -569,6 +566,14 @@ struct overload_group{
                 return error.result();
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
+                ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
+                send(std::move(error.response(ctx.request())));
+                return error.result();
+            }catch(...){
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
+                send(std::move(error.response(ctx.request())));
+                return error.result();
             }
             return status;
         }else{
@@ -581,7 +586,7 @@ struct overload_group{
     }
     template <typename AttachmentT>
     self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
-        typedef udho::http_listener<self_type, AttachmentT> listener_type;
+        typedef udho::listener<self_type, AttachmentT> listener_type;
         std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), std::make_shared<std::string>(doc_root))->run();
         return *this;
     }
@@ -627,6 +632,14 @@ struct overload_group<U, overload_terminal<V>>{
                 return error.result();
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
+                ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
+                send(std::move(error.response(ctx.request())));
+                return error.result();
+            }catch(...){
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
+                send(std::move(error.response(ctx.request())));
+                return error.result();
             }
             return status;
         }else{

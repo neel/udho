@@ -34,64 +34,13 @@
 #include <cstdint>
 #include <boost/asio/ip/address.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace udho{
 namespace cache{
-    
-// struct peer{
-//     boost::asio::ip::address _address;
-//     std::uint32_t _port;
-//     std::uint32_t _latency;
-//     
-//     peer(const boost::asio::ip::address& address, std::uint32_t port);
-// };
-// 
-// template <typename T>
-// struct item{
-//     typedef std::chrono::time_point<std::chrono::system_clock> time_type;
-//     
-//     T _item;
-//     std::size_t _order;
-//     time_type _created;
-//     time_type _updated;
-//     
-//     item(const T& v): _item(v), _created(std::chrono::system_clock::now()), _updated(_created){}
-//     template <typename StreamT>
-//     void write(StreamT& stream){
-//         // TODO implement
-//     }
-//     template <typename StreamT>
-//     static item<T> read(const StreamT& stream){
-//         // TODO implement;
-//     }
-// };
-// 
-// template <typename T, typename KeyT=std::string>
-// struct store{
-//     typedef KeyT key_type;
-//     typedef T value_type;
-//     typedef item<value_type> item_type;
-//     typedef std::map<key_type, item_type> map_type;
-//     
-//     std::string _name;
-//     map_type _registry;
-//     
-//     store(const std::string& name): _name(name){}
-//     void add(const key_type& key, const value_type& value){
-//         item_type item(value);
-//         _registry.insert(std::make_pair(key, item));
-//     }
-//     bool exists(const key_type& key) const{
-//         return _registry.find(key) != _registry.end();
-//     }
-//     T& get(const key_type& key) const{
-//         auto it = _registry.find(key);
-//         if(it != _registry.end()){
-//             return it->second;
-//         }
-//         // TODO throw exception
-//     }
-// };
 
 template <typename KeyT>
 struct master{
@@ -113,14 +62,6 @@ struct master{
 protected:
     set_type _set;
 };
-
-// template <typename KeyT, typename... U>
-// struct master_{
-//     template <typename T>
-//     using pair = std::pair<T, bool>;
-//     typedef boost::tuple<pair<U>...> tuple_type;
-//     typedef std::map<KeyT, tuple_type> map_type;
-// };
 
 template <typename KeyT, typename T>
 struct registry{
@@ -148,24 +89,29 @@ protected:
 };
 
 template <typename KeyT, typename... T>
+struct shadow;
+
+/**
+ * A type safe non-copiable storage 
+ * \code
+ * user u("Neel");
+ * appearence a("red");
+ * udho::cache::store<std::string, user, appearence> store;
+ * store.insert("x", u);
+ * store.insert("x", a);
+ * store.exists<user>();
+ * \endcode
+ */
+template <typename KeyT, typename... T>
 struct store: master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef store<KeyT, T...> self_type;
-    
-//     template <typename... X>
-//     static bool extended(const store<KeyT, T..., X...>&){
-//         return true;
-//     }
-    
+    typedef shadow<KeyT, T...> shadow_type;
+      
     store() = default;
     store(const self_type&) = delete;
     store(self_type&&) = default;
-    
-    // udho::cache::store<KeyT, X, Y, Z> => udho::cache::store<KeyT, X, Y>
-    
-//     using master_type::issued;
-//     using master_type::issue;
     
     template <typename V>
     bool exists(const key_type& key) const{
@@ -180,11 +126,8 @@ struct store: master<KeyT>, registry<KeyT, T>...{
         }
     }
     template <typename V>
-    V& at(const key_type& key, const V& def=V()){
-        if(master_type::issued(key)){
-            return registry<KeyT, V>::at(key);
-        }
-        // TODO throw
+    V& at(const key_type& key){
+        return registry<KeyT, V>::at(key);
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
@@ -221,6 +164,31 @@ private:
     registry_type& _registry;
 };
 
+/**
+ * copiable shadow of a store reference.
+ * \code
+ * user u("Neel");
+ * appearence a("red");
+ * udho::cache::store<std::string, user, appearence> store;
+ * udho::cache::shadow<std::string, user, appearence> shadow_ua(store);
+ * shadow_ua.insert("x", u);
+ * shadow_ua.insert("x", a);
+ * std::cout << std::boolalpha << shadow_ua.exists<user>("x") << std::endl; // true
+ * std::cout << std::boolalpha << shadow_ua.exists<appearence>("x") << std::endl; // true
+ * std::cout << shadow_ua.get<user>("x").name << std::endl; // Neel
+ * std::cout << shadow_ua.get<appearence>("x").color << std::endl; // red
+ * udho::cache::shadow<std::string, user> shadow_u(store); 
+ * std::cout << std::boolalpha << shadow_u.exists<user>("x") << std::endl; // true
+ * std::cout << std::boolalpha << shadow_u.get<user>("x").name << std::endl; // true
+ * std::cout << shadow_u.exists<appearence>("x") << std::endl; // won't compile
+ * udho::cache::shadow<std::string, user> shadow_u2(shadow_u); // copiable
+ * udho::cache::shadow<std::string, user> shadow_u3(shadow_ua); // narrowable
+ * udho::cache::shadow<std::string, appearence> shadow_a(store); // unordered
+ * std::cout << shadow_a.exists<appearence>("x") << std::endl; // true
+ * std::cout << shadow_a.get<appearence>("x").color << std::endl; // red
+ * udho::cache::shadow<std::string> shadow_none(shadow_ua);
+ * \endcode
+ */
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
     typedef KeyT key_type;
@@ -232,14 +200,21 @@ struct shadow: flake<KeyT, T>...{
     master_type& _master;
     
     template <typename... X>
-    shadow(store<key_type, T..., X...>& store): flake<key_type, T>(store)..., _master(store){}
+    shadow(store<key_type, X...>& store): flake<key_type, T>(store)..., _master(store){}
     
     template <typename... X>
-    shadow(shadow<key_type, T..., X...>& other): flake<key_type, T>(other)..., _master(other._master){}
+    shadow(shadow<key_type, X...>& other): flake<key_type, T>(other)..., _master(other._master){}
+    
+    bool issued(const key_type& key) const{
+        return _master.issued(key);
+    }
+    void issue(const key_type& key){
+        _master.issue(key);
+    }
     
     template <typename V>
     bool exists(const key_type& key) const{
-        return _master.issued(key) && flake<key_type, V>::exists(key);
+        return issued(key) && flake<key_type, V>::exists(key);
     }
     template <typename V>
     const V& at(const key_type& key) const{
@@ -247,7 +222,7 @@ struct shadow: flake<KeyT, T>...{
     }
     template <typename V>
     const V& get(const key_type& key, const V& def=V()) const{
-        if(_master.issued(key)){
+        if(issued(key)){
             return at<V>(key);
         }
         return def;
@@ -255,11 +230,25 @@ struct shadow: flake<KeyT, T>...{
     template <typename V>
     void insert(const key_type& key, const V& value){
         flake<key_type, V>::insert(key, value);
-        if(!_master.issued(key)){
-            _master.issue(key);
+        if(!issued(key)){
+            issue(key);
         }
     }
 };
+
+template <typename KeyT>
+struct generator;
+
+template <>
+struct generator<boost::uuids::uuid>{
+    boost::uuids::uuid parse(const std::string& key){
+        return boost::lexical_cast<boost::uuids::uuid>(key);;
+    }
+    boost::uuids::uuid generate(){
+        return boost::uuids::random_generator()();
+    }
+};
+
    
 }
 }

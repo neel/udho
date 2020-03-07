@@ -13,7 +13,7 @@
 #include <iostream>
 
 typedef udho::servers::quiet::stateless server_type;
-typedef server_type::context context_type;
+typedef udho::contexts::stateless context_type;
 
 template <typename F>
 struct checker{
@@ -62,7 +62,7 @@ boost::beast::http::response<boost::beast::http::file_body> file(context_type ct
     return res;
 }
 
-udho::response_type page(context_type ctx){
+boost::beast::http::response<boost::beast::http::string_body> page(context_type ctx){
     boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, ctx.request().version()};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/plain");

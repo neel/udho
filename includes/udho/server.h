@@ -33,7 +33,8 @@
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
 #include <udho/logging.h>
-#include <udho/session.h>
+#include <udho/defs.h>
+#include <udho/attachment.h>
 
 namespace udho{
 
@@ -51,7 +52,7 @@ struct server{
     
     template <typename RequestT>
     using context_type = udho::context<RequestT, attachment_type>;
-    typedef http::request<http::string_body> http_request_type;
+    typedef udho::defs::request_type http_request_type;
     typedef context_type<http_request_type> context;
     typedef http_request_type request_type;
     
@@ -63,7 +64,8 @@ struct server{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
+        _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
+//         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
@@ -76,7 +78,7 @@ struct server<void, CacheT>{
     
     template <typename RequestT>
     using context_type = udho::context<RequestT, attachment_type>;
-    typedef http::request<http::string_body> http_request_type;
+    typedef udho::defs::request_type http_request_type;
     typedef context_type<http_request_type> context;
     typedef http_request_type request_type;
     
@@ -88,6 +90,7 @@ struct server<void, CacheT>{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
@@ -102,7 +105,7 @@ namespace stateless{
 
 template <typename... T>
 struct stateful{
-    typedef udho::session<T...> cache_type;
+    typedef udho::cache::store<boost::uuids::uuid, T...> cache_type;
     
     template <typename LoggerT>
     using logged    = server<LoggerT, cache_type>;
@@ -112,7 +115,7 @@ struct stateful{
 
 namespace quiet{
     template <typename... T>
-    using stateful  = server<void, udho::session<T...>>;
+    using stateful  = server<void, udho::cache::store<boost::uuids::uuid, T...>>;
     using stateless = server<void, void>;
 }
 
@@ -121,7 +124,7 @@ struct logged{
     typedef T logger_type;
     
     template <typename... U>
-    using stateful  = server<logger_type, udho::session<U...>>;
+    using stateful  = server<logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
     using stateless = server<logger_type, void>;
 };
 
@@ -146,8 +149,8 @@ namespace ostreamed{
     };
     
     template <typename... U>
-    using stateful  = ostreamed_helper<udho::session<U...>>;
-    using satteless = ostreamed_helper<void>;
+    using stateful  = ostreamed_helper<udho::cache::store<boost::uuids::uuid, U...>>;
+    using stateless = ostreamed_helper<void>;
 }
     
 }
