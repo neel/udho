@@ -10,19 +10,19 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
 ```cpp
-std::string hello(udho::contexts::stateless ctx, std::string name, int num){
+std::string hello_world(udho::contexts::stateless ctx, std::string name, int num){
     return (boost::format("Hi! %1% this is number %2%") % name % num).str(); 
 }
 int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
-    
+    //        logger -^         ^- no session (use stateful for session)
     auto router = udho::router()
-        | (udho::get(&hello).plain() = "^/hello/(\\w+)/(\\d+)$");
-        
+         |  (udho::get(&hello_world).plain() = "^/hello/(\\w+)/(\\d+)$");
+    // GET request -^   ^- callable    ^- text/plain  ^-regular expression
     std::string doc_root("/path/to/static/document/root");
     server.serve(router, 9198, doc_root);
-    
+    //    listening port -^     ^- document root
     io.run();
     return 0;
 }
