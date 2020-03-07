@@ -18,7 +18,7 @@ int main(){
     udho::servers::ostreamed::stateless server(io, std::cout);
     
     auto router = udho::router()
-        | (udho::post(&hello).plain() = "^/hello$");
+        | (udho::get(&hello).plain() = "^/hello$");
         
     std::string doc_root("/path/to/static/document/root");
     server.serve(router, 9198, doc_root);
