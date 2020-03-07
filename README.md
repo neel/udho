@@ -9,24 +9,7 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/alerts/)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
-```cpp
-std::string hello_world(udho::contexts::stateless ctx, std::string name, int num){
-    return (boost::format("Hi! %1% this is number %2%") % name % num).str(); 
-}
-int main(){
-    boost::asio::io_service io;
-    udho::servers::ostreamed::stateless server(io, std::cout);
-
-    auto router = udho::router()
-         |  (udho::get(&hello_world).plain() = "^/hello/(\\w+)/(\\d+)$");
-
-    std::string doc_root("/path/to/static/document/root");  
-    server.serve(router, 9198, doc_root);
-
-    io.run();
-    return 0;
-}
-```
+![udho example](https://i.imgur.com/f2E9IQI.png "A minimal example using udho C++ library for web development")
 
 # Dependencies:
 * Boost.Filesystem
