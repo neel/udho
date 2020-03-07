@@ -1,7 +1,7 @@
 # Udho (উধো)
 udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html). 
 
-`Boost.Beast` is based on [`Boost.Asio`](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) which provides low level asynchronous I/O.  udho was originally created to add HTTP functionality to an existing application that is using `Boost.Asio`. The library does not depend on any JSON library, however any JSON library[^1] that `parse` and `dump` `std::string` can be used  along with it. 
+`Boost.Beast` is based on [`Boost.Asio`](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) which provides low level asynchronous I/O.  udho was originally created to add HTTP functionality to an existing application that is using `Boost.Asio`.
 
 [![pipeline status develop](https://gitlab.com/neel.basu/udho/badges/develop/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/develop) 
 [![pipeline status master](https://gitlab.com/neel.basu/udho/badges/master/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/master) 
@@ -9,147 +9,86 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/alerts/)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
-
-[^1]: udho has been used with [`nlohmann`](https://github.com/nlohmann/json) json library and [`inja`](https://github.com/pantor/inja) template library 
-
- # Dependencies:
+# Dependencies:
 * Boost.Filesystem
 * Boost.Regex
 * ICU::uc
 * Threads
+
+# Features:
+
+* regular expression based url routing to callables (functions / function objects)
+* compile time binding of routing rule with callables
+* compile time travarsable url router
+* response mime type specification in routing rule
+* any default constructible can be used as callable argument type that can be parsed from std::string
+* any ostreamable can be used as return type of callables
+* automatic type coersion for url based method calling
+* throwable http error messages
+* serving static content from disk document root if no rule matched
+* urlencoded/multipart form parsing
+* on memory session for stateful web applications (no globals) and no session for stateless applications
+* strictly typed on memory session storage
+* compile time pluggable logging
+* customizable logging
   
-# Example (Simple Function)
+# Example 
 
 ```cpp
-#include <string>
-#include <udho/router.h>
-#include <boost/asio.hpp>
+std::string login(udho::contexts::stateful<user> ctx){
+    const static username = "derp";
+    const static password = "derp123";
 
-// udho::request_type is typedef of boost::beast::http::request<boost::beast::http::string_body>
-
-std::string hello(udho::request_type req){
-    return "Hello World";
+    if(ctx.session().exists<user>()){
+        user data;
+        ctx.session() >> data;
+        return "already logged in";
+    }else{
+        if(ctx.form().has("user") && ctx.form().has("pass")){
+            std::string usr = ctx.form().field<std::string>("user");
+            std::string psw = ctx.form().field<std::string>("pass");
+            if(usr == username && psw == password){
+                ctx.session() << user(usr);
+                return "successful";
+            }
+        }
+    }
+    return "failed";
 }
 
-std::string data(udho::request_type req){
-    return "{id: 2, name: 'udho'}";
+std::string greet(udho::contexts::stateful<user> ctx, int num){
+    if(ctx.session().exists<user>()){
+        user data;
+        ctx.session() >> data;
+        return "Hi " + data.name + " this is number " + num;
+    }
+    return "not logged in";
 }
 
-int add(udho::request_type req, int a, int b){
-    return a + b;
+std::string echo(udho::contexts::stateful<user> ctx, int num){
+    if(ctx.session().exists<user>()){
+        user data;
+        ctx.session() >> data;
+        return boost::format("{'name': '%1%', 'num': %2%}") % data.name % num;
+    }
+    return "{}";
 }
 
 int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
+    std::string doc_root("/path/to/static/document/root");
+    
     boost::asio::io_service io;
+    udho::servers::ostreamed::stateful<user> server(io, std::cout);
 
     auto router = udho::router()
-        | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::get(&data).json()   = "^/data$")
-        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
-    router.listen(io, 9198, doc_root);
+        | (udho::post(&login).plain() = "^/login$")
+        | (udho::get(&greet).plain()  = "^/greet/(\\d+)$")
+        | (udho::get(&echo).json()    = "^/echo/(\\d+)$");
+
+    server.serve(router, 9198, doc_root);
         
     io.run();
     
     return 0;
 }
-
-```
-
-# Example (Function Object)
-
-```cpp
-#include <string>
-#include <udho/router.h>
-#include <boost/asio.hpp>
-#include <boost/function.hpp>
-
-struct simple{
-    int operator()(udho::request_type req, int a, int b){
-        return a+b;
-    }
-    std::string operator()(udho::request_type req){
-        return "Hello World";
-    }
-};
-
-int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
-    boost::asio::io_service io;
-    
-    simple s;
-    boost::function<int (udho::request_type, int, int)> add(s);
-    boost::function<std::string (udho::request_type)> hello(s);
-
-    auto router = udho::router()
-        | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
-        | (udho::get(hello).plain() = "^/hello$");
-    router.listen(io, 9198, doc_root);
-        
-    io.run();
-    
-    return 0;
-}
-
-```
-
-# Example (Application)
-
-```cpp
-#include <string>
-#include <functional>
-#include <udho/router.h>
-#include <boost/asio.hpp>
-#include <udho/application.h>
-
-std::string hello(udho::request_type req){
-    return "Hello World";
-}
-
-std::string data(udho::request_type req){
-    return "{id: 2, name: 'udho'}";
-}
-
-int add(udho::request_type req, int a, int b){
-    return a + b;
-}
-
-struct my_app: public udho::application<my_app>{
-    typedef udho::application<my_app> base;
-    
-    my_app();
-    int add(udho::request_type req, int a, int b);
-    int mul(udho::request_type req, int a, int b);
-    
-    template <typename RouterT>
-    auto route(RouterT& router){
-        return router | (get(&my_app::add).plain() = "^/add/(\\d+)/(\\d+)$")
-                      | (get(&my_app::mul).plain() = "^/mul/(\\d+)/(\\d+)$");
-    }
-};
-
-my_app::my_app(): base("my_app"){}
-int my_app::add(udho::request_type req, int a, int b){
-    return a + b;
-}
-int my_app::mul(udho::request_type req, int a, int b){
-    return a * b;
-}
-
-int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
-    boost::asio::io_service io;
-
-    auto router = udho::router()
-        | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::get(&data).json()   = "^/data$")
-        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$")
-        | (udho::app<my_app>()       = "^/my_app");
-    router.listen(io, 9198, doc_root);
-          
-    io.run();
-    
-    return 0;
-}
-
 ```
