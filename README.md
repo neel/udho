@@ -16,13 +16,13 @@ std::string hello_world(udho::contexts::stateless ctx, std::string name, int num
 int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
-    //        logger -^         ^- no session (use stateful for session)
+
     auto router = udho::router()
          |  (udho::get(&hello_world).plain() = "^/hello/(\\w+)/(\\d+)$");
-    // GET request -^  ^- callable   ^- text/plain ^-regex ^- name ^ num
+
     std::string doc_root("/path/to/static/document/root");  
     server.serve(router, 9198, doc_root);
-    //    listening port -^     ^- document root
+
     io.run();
     return 0;
 }
