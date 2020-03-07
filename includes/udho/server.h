@@ -53,7 +53,6 @@ struct server{
     template <typename RequestT>
     using context_type = udho::context<RequestT, attachment_type>;
     typedef udho::defs::request_type http_request_type;
-    typedef context_type<http_request_type> context;
     typedef http_request_type request_type;
     
     boost::asio::io_service& _io;
@@ -135,7 +134,6 @@ namespace ostreamed{
         typedef typename server_type::logger_type logger_type;
         typedef typename server_type::cache_type cache_type;
         typedef typename server_type::attachment_type attachment_type;
-        typedef typename server_type::context context;
         typedef typename server_type::http_request_type request_type;
         
         udho::loggers::ostream _logger;

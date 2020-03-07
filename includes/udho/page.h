@@ -6,7 +6,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-
+#include <udho/context.h>
 #include <iostream>
 
 namespace udho{
@@ -47,6 +47,10 @@ namespace exceptions{
             res.prepare_payload();
             return res;
         }
+        template <typename U, typename V>
+        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<U, V>& ctx) const{
+            return response(ctx.request());
+        }
         template <typename T, typename RouterT>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request, RouterT& router) const{
             boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::not_found, request.version()};
@@ -56,6 +60,10 @@ namespace exceptions{
             res.body() = page(router);
             res.prepare_payload();
             return res;
+        }
+        template <typename U, typename V, typename RouterT>
+        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<U, V>& ctx, RouterT& router) const{
+            return response(ctx.request(), router);
         }
         virtual std::string page(std::string content="") const;
         template <typename RouterT>

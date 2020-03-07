@@ -4,13 +4,14 @@
 #include <udho/server.h>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
+#include <udho/defs.h>
 
 
 struct simple{
     int add(int a, int b){
         return a+b;
     }
-    int operator()(udho::contexts::stateless ctx, int a, int b){
+    int operator()(udho::defs::request_type req, int a, int b){
         return a+b;
     }
     std::string operator()(udho::contexts::stateless ctx){
@@ -23,7 +24,7 @@ int main(){
     boost::asio::io_service io;
 
     simple s;
-    boost::function<int (udho::contexts::stateless, int, int)> add(s);
+    boost::function<int (udho::defs::request_type, int, int)> add(s);
     boost::function<std::string (udho::contexts::stateless)> hello(s);
 
     udho::servers::ostreamed::stateless server(io, std::cout);
