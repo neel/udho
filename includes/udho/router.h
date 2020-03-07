@@ -699,6 +699,12 @@ struct basic_router: public overload_group<void, overload_terminal<AuxT>>{
     friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
 };
 
+template <typename U, typename V, typename F>
+udho::overload_group<U, V>& operator/=(udho::overload_group<U, V>& group, F fixture){
+    group.eval(fixture);
+    return group;
+}
+
 typedef basic_router<> router;
 
 /**

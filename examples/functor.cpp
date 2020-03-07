@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 #include <udho/defs.h>
-
+#include <udho/visitor.h>
 
 struct simple{
     int add(int a, int b){
@@ -33,7 +33,7 @@ int main(){
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::get(hello).plain() = "^/hello$");
          
-    udho::util::print_summary(router);
+    router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
     
     server.serve(router, 9198, doc_root);
     

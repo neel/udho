@@ -5,6 +5,7 @@
 #include <udho/context.h>
 #include <boost/asio.hpp>
 #include <udho/application.h>
+#include <udho/visitor.h>
 
 std::string hello(udho::contexts::stateless ctx){
     return "Hello World";
@@ -50,15 +51,13 @@ int main(){
 
     udho::servers::ostreamed::stateful<my_app::state> server(io, std::cout);
     
-    
-    
     auto router = udho::router()
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::app<my_app>()       = "^/my_app");
-                  
-    udho::util::print_summary(router);
+
+    router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
     
     server.serve(router, 9198, doc_root);
     

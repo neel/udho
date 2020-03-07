@@ -4,6 +4,7 @@
 #include <udho/logging.h>
 #include <udho/server.h>
 #include <udho/context.h>
+#include <udho/visitor.h>
 #include <iostream>
 
 struct user{
@@ -118,7 +119,7 @@ int main(){
         | (udho::post(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
-    udho::util::print_summary(router);
+    router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
         
     server.serve(router, 9198, doc_root);
         

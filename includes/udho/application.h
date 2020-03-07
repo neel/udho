@@ -195,7 +195,9 @@ struct app_{
     explicit app_(T... args): _app(args...){
         _path = "^/"+_app.name();
     }
-    
+    std::string name() const{
+        return _app.name();
+    }
     self_type& operator=(const std::string& path){
         _path = path;
         return *this;
@@ -219,7 +221,7 @@ struct app_{
     void eval(F& fnc){
         auto router = udho::router();
         auto routed = _app.route(router);
-        fnc(_app);
+//         fnc(_app);
         routed.eval(fnc);
         fnc();
     }
@@ -236,7 +238,9 @@ struct app_<AppT, true>{
     explicit app_(AppT& app): _app(app){
         _path = "^/"+_app.name();
     }
-    
+    std::string name() const{
+        return _app.name();
+    }
     self_type& operator=(const std::string& path){
         _path = path;
         return *this;
@@ -260,7 +264,7 @@ struct app_<AppT, true>{
     void eval(F& fnc){
         auto router = udho::router();
         auto routed = _app.route(router);
-        fnc(_app);
+//         fnc(_app);
         routed.eval(fnc);
         fnc();
     }
