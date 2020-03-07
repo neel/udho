@@ -64,7 +64,7 @@ struct attachment<void, CacheT>: CacheT{
     
     attachment(): _shadow(*this){}
     template <udho::logging::status Status>
-    self_type& operator()(const udho::logging::message<Status>& msg){
+    self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
     }
     shadow_type& shadow(){
@@ -99,7 +99,7 @@ struct attachment<void, void>{
     
     attachment(){}
     template <udho::logging::status Status>
-    self_type& operator()(const udho::logging::message<Status>& msg){
+    self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
     }
     int shadow(){
