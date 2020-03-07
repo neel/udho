@@ -648,7 +648,9 @@ struct overload_group<U, overload_terminal<V>>{
     }
     void summary(std::vector<module_info>& /*stack*/) const{}
     template <typename F>
-    void eval(F& /*fnc*/){}
+    void eval(F& fnc){
+        fnc(_terminal);
+    }
     const terminal_type& terminal() const{
         return _terminal;
     }
