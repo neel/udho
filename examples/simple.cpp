@@ -110,7 +110,7 @@ int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
 
-    auto router = udho::router<>()
+    auto router = udho::router()
         | (udho::get(&file).raw() = "^/file")
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&see).plain() = "^/see$")

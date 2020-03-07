@@ -200,11 +200,11 @@ struct app_{
     }
     template <typename ContextT, typename Lambda>
     http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        auto router = udho::router<>();
+        auto router = udho::router();
         return _app.route(router).serve(ctx, request_method, subject, send);
     }
     void summary(std::vector<module_info>& stack) const{
-        auto router = udho::router<>();
+        auto router = udho::router();
         module_info info;
         info._pattern = _path;
         info._fptr = &_app;
@@ -215,7 +215,7 @@ struct app_{
     }
     template <typename F>
     void eval(F& fnc){
-        auto router = udho::router<>();
+        auto router = udho::router();
         auto routed = _app.route(router);
         fnc(_app);
         routed.eval(fnc);

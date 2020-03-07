@@ -687,17 +687,19 @@ struct overload_group<U, overload_terminal<void>>{
  * @ingroup routing
  */
 template <typename AuxT=void>
-struct router: public overload_group<void, overload_terminal<AuxT>>{
+struct basic_router: public overload_group<void, overload_terminal<AuxT>>{
     typedef overload_group<void, overload_terminal<AuxT>> base_type;
     /**
      * cnstructs a router
      */
     template <typename... Args>
-    router(Args... args): base_type(args...){}
+    basic_router(Args... args): base_type(args...){}
     
     template <typename U, typename V, typename F>
     friend overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method);
 };
+
+typedef basic_router<> router;
 
 /**
  * adds a callback url mapping to the router by conjugating an overload in the overload meta-chain.

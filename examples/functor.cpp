@@ -28,7 +28,7 @@ int main(){
 
     udho::servers::ostreamed::stateless server(io, std::cout);
     
-    auto router = udho::router<>()
+    auto router = udho::router()
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
         | (udho::get(hello).plain() = "^/hello$");
          
