@@ -183,17 +183,19 @@ class application{
     }
 };
 
-template <typename AppT>
+template <typename AppT, bool Ref=false>
 struct app_{
-    typedef app_<AppT> self_type;
+    typedef app_<AppT, Ref> self_type;
     typedef self_type application_type;
     
     std::string _path;
     AppT        _app;
     
-    app_(){
+    template <typename... T>
+    explicit app_(T... args): _app(args...){
         _path = "^/"+_app.name();
     }
+    
     self_type& operator=(const std::string& path){
         _path = path;
         return *this;
@@ -223,11 +225,52 @@ struct app_{
     }
 };
 
-template <typename U, typename V>
-struct overload_group<U, app_<V>>{
-    typedef overload_group<U, app_<V>>  self_type;
+template <typename AppT>
+struct app_<AppT, true>{
+    typedef app_<AppT, true> self_type;
+    typedef self_type application_type;
+    
+    std::string _path;
+    AppT&       _app;
+    
+    explicit app_(AppT& app): _app(app){
+        _path = "^/"+_app.name();
+    }
+    
+    self_type& operator=(const std::string& path){
+        _path = path;
+        return *this;
+    }
+    template <typename ContextT, typename Lambda>
+    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        auto router = udho::router();
+        return _app.route(router).serve(ctx, request_method, subject, send);
+    }
+    void summary(std::vector<module_info>& stack) const{
+        auto router = udho::router();
+        module_info info;
+        info._pattern = _path;
+        info._fptr = &_app;
+        info._compositor = "APPLICATION";
+        info._method = boost::beast::http::verb::unknown;
+        const_cast<AppT&>(_app).route(router).summary(info._children);
+        stack.push_back(info);
+    }
+    template <typename F>
+    void eval(F& fnc){
+        auto router = udho::router();
+        auto routed = _app.route(router);
+        fnc(_app);
+        routed.eval(fnc);
+        fnc();
+    }
+};
+
+template <typename U, typename V, bool Ref>
+struct overload_group<U, app_<V, Ref>>{
+    typedef overload_group<U, app_<V, Ref>>  self_type;
     typedef U                           parent_type;
-    typedef app_<V>                     overload_type;
+    typedef app_<V, Ref>                     overload_type;
     typedef typename parent_type::terminal_type terminal_type;
     
     parent_type   _parent;
@@ -269,9 +312,14 @@ struct overload_group<U, app_<V>>{
     }
 };
 
+template <typename AppT, typename... T>
+app_<AppT, false> app(T... args){
+    return app_<AppT, false>(args...);
+}
+
 template <typename AppT>
-app_<AppT> app(){
-    return app_<AppT>();
+app_<AppT, true> app(AppT& a){
+    return app_<AppT, true>(a);
 }
 
 }

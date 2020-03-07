@@ -50,6 +50,8 @@ int main(){
 
     udho::servers::ostreamed::stateful<my_app::state> server(io, std::cout);
     
+    
+    
     auto router = udho::router()
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&data).json()   = "^/data$")
