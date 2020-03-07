@@ -56,15 +56,6 @@ std::string login(udho::contexts::stateful<user> ctx){ /// < strictly typed stat
     return "failed";
 }
 
-std::string greet(udho::contexts::stateful<user> ctx, int num){
-    if(ctx.session().exists<user>()){
-        user data;
-        ctx.session() >> data;
-        return "Hi " + data.name + " this is number " + num;
-    }
-    return "not logged in";
-}
-
 std::string echo(udho::contexts::stateful<user> ctx, int num){
     if(ctx.session().exists<user>()){
         user data;
@@ -82,7 +73,6 @@ int main(){
 
     auto router = udho::router()
         | (udho::post(&login).plain() = "^/login$")
-        | (udho::get(&greet).plain()  = "^/greet/(\\d+)$")
         | (udho::get(&echo).json()    = "^/echo/(\\d+)$");
 
     server.serve(router, 9198, doc_root);
