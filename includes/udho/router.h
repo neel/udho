@@ -226,6 +226,18 @@ struct module_overload{
         }
 };
 
+template <typename Function, template <typename> class CompositorT, int N>
+module_overload<Function, CompositorT> operator<<(module_overload<Function, CompositorT> overload, const char (&expr)[N]){
+    overload = expr;
+    return overload;
+}
+
+template <typename Function, template <typename> class CompositorT, int N>
+module_overload<Function, CompositorT> operator>>(const char (&expr)[N], module_overload<Function, CompositorT> overload){
+    overload = expr;
+    return overload;
+}
+
 namespace internal{
 template <typename C>
 struct actual_callback_type{
@@ -722,6 +734,11 @@ typedef basic_router<> router;
  */
 template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method){
+    return overload_group<overload_group<U, V>, F>(group, method);
+}
+
+template <typename U, typename V, typename F>
+overload_group<overload_group<U, V>, F> operator<<(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
 }
 

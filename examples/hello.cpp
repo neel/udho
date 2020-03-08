@@ -6,18 +6,20 @@
 #include <udho/context.h>
 #include <iostream>
 
-std::string hello_world(udho::contexts::stateless ctx, std::string name, int num){
-    return (boost::format("Hi! %1% this is number %2%") % name % num).str(); 
+std::string world(udho::contexts::stateless ctx){
+    return "{'planet': 'Earth'}";
+}
+std::string planet(udho::contexts::stateless ctx, std::string name){
+    return "Hello "+name;
 }
 int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
 
-    auto router = udho::router()
-         | (udho::get(&hello_world).plain() = "^/hello/(\\w+)/(\\d+)$");
+    auto urls = udho::router() | "/world"          >> get(&world).json() 
+                               | "/planet/(\\w+)"  >> get(&planet).plain();
 
-    std::string doc_root("/path/to/static/document/root");  
-    server.serve(router, 9198, doc_root);
+    server.serve(urls, 9198, "/path/to/static/files");
 
     io.run();
     return 0;
