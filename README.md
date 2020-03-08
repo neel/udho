@@ -9,7 +9,27 @@ udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/l
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/alerts/)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
-![udho example](https://i.imgur.com/1Li0TCN.png "A minimal example using udho C++ library for web development")
+```cpp
+std::string world(udho::contexts::stateless ctx){
+    return "{'planet': 'Earth'}";
+}
+std::string planet(udho::contexts::stateless ctx, std::string name){
+    return "Hello "+name;
+}
+int main(){
+    boost::asio::io_service io;
+    udho::servers::ostreamed::stateless server(io, std::cout);
+
+    auto urls = udho::router() | "/world"          >> get(&world).json() 
+                               | "/planet/(\\w+)"  >> get(&planet).plain();
+
+    server.serve(urls, 9198, "/path/to/static/files");
+
+    io.run();
+    return 0;
+}
+
+```
 
 # Dependencies:
 * Boost.Filesystem
