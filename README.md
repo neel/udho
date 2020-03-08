@@ -20,15 +20,14 @@ int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
 
-    auto urls = udho::router() | "/world"          >> get(&world).json() 
-                               | "/planet/(\\w+)"  >> get(&planet).plain();
+    auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
+                               | "/planet/(\\w+)"  >> udho::get(&planet).plain();
 
     server.serve(urls, 9198, "/path/to/static/files");
 
     io.run();
     return 0;
 }
-
 ```
 
 # Dependencies:
