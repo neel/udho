@@ -151,7 +151,35 @@ struct form_{
         }
     }
     void parse_multipart(){
+        std::string boundary;
+        {
+            std::string content_type(_request[boost::beast::http::field::content_type]);
+            std::string boundary_key("boundary=");
+            std::string::size_type index = content_type.find(boundary_key);
+            if(index != std::string::npos){
+                boundary = "--"+content_type.substr(index+boundary_key.size());
+            }else{
+                std::cout << "multipart boundary not found in Content-Type: " << content_type << std::endl;
+                return;
+            }
+        }
         
+        std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+        
+        const std::string& content = _request.body();
+        
+        std::string::size_type last;
+        std::string::size_type index = content.find(boundary);
+        while(true){
+            last = index;
+            index = content.find(boundary, last+boundary.size());
+            
+            if(index == std::string::npos){
+                break;
+            }
+            
+            std::cout << "field " << last << " " << index << std::endl << content.substr(last, index-last) << std::endl;
+        }
     }
     bool has(const std::string& name) const{
         return _fields.find(name) != _fields.end();

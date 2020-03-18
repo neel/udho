@@ -20,6 +20,7 @@ std::string hello(udho::contexts::stateful<user> ctx){
     std::cout << "session id: " << ctx.session().id() << std::endl;
     
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
+
     if(ctx.session().exists<user>()){
         user data;
         ctx.session() >> data;
