@@ -203,7 +203,8 @@ struct form_{
             
             if(matched){
                 for(auto pair: headers){
-                    std::cout << pair.first << " -> " << pair.second << std::endl;
+                    std::cout << pair.first << " -> " << pair.second << std::endl << "BODY" << std::endl;
+                    std::cout << content.substr(std::distance(content.begin(), iter), index-last) << std::endl;
                 }
             }else{
                 std::cout << "not matched" << std::endl;
