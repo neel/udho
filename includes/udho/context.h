@@ -44,6 +44,10 @@
 #include <udho/logging.h>
 #include <boost/signals2/signal.hpp>
 #include <udho/defs.h>
+#define BOOST_SPIRIT_DEBUG
+#include <boost/spirit/include/qi.hpp>
+#include <boost/fusion/include/std_pair.hpp>
+#include <map>
 
 namespace udho{
 // https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
@@ -122,7 +126,24 @@ udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
 }
 
 namespace detail{
+    
+typedef std::map<std::string, std::string> header_map_type;
 
+template <typename Iterator, typename Skipper = boost::spirit::qi::ascii::blank_type>
+struct multipart_grammer: boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>{
+    boost::spirit::qi::rule<Iterator, header_map_type(), Skipper> fields;
+    boost::spirit::qi::rule<Iterator, std::string()> field_key, field_value;
+    
+    multipart_grammer(): boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>(fields){
+        field_key     = +boost::spirit::qi::char_("0-9a-zA-Z-");
+        field_value   = +~boost::spirit::qi::char_("\r\n");
+        fields = *(field_key >> ':' >> field_value >> boost::spirit::qi::lexeme["\r\n"]);
+    }
+};
+    
+struct urlencoded_field{};  
+struct multipart_field{};
+    
 template <typename RequestT>
 struct form_{
     typedef RequestT request_type;
@@ -170,15 +191,24 @@ struct form_{
         
         std::string::size_type last;
         std::string::size_type index = content.find(boundary);
-        while(true){
+        while(index != std::string::npos){
             last = index;
             index = content.find(boundary, last+boundary.size());
+            std::string::const_iterator iter = content.begin()+last+boundary.size()+2, end = (index == std::string::npos ? content.end() : content.begin()+index);
             
-            if(index == std::string::npos){
-                break;
+            typedef multipart_grammer<std::string::const_iterator> grammer_type;
+            grammer_type grammer;
+            header_map_type headers;
+            bool matched = boost::spirit::qi::phrase_parse(iter, end, grammer, boost::spirit::qi::ascii::blank, headers);
+            
+            if(matched){
+                for(auto pair: headers){
+                    std::cout << pair.first << " -> " << pair.second << std::endl;
+                }
+            }else{
+                std::cout << "not matched" << std::endl;
+                std::cout << content.substr(last, index-last) << std::endl;
             }
-            
-            std::cout << "field " << last << " " << index << std::endl << content.substr(last, index-last) << std::endl;
         }
     }
     bool has(const std::string& name) const{
