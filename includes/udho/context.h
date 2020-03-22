@@ -142,44 +142,69 @@ constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_fir
     }
 }
     
+template <typename ContainerT, typename Iterator>
+struct bounded_str{
+    typedef std::pair<Iterator, Iterator> pair_type;
+    typedef ContainerT container_type;
+    
+    const container_type& _container;
+    pair_type _pair;
+    
+    bounded_str(const container_type& container, Iterator begin, Iterator end): _container(container), _pair(begin, end){}
+    void copy(ContainerT& out) const{
+        std::copy(_pair.first, _pair.second, std::back_inserter(out));
+    }
+    ContainerT copied() const{
+        ContainerT out;
+        copy(out);
+        return out;
+    }
+    std::size_t size() const{
+        return std::distance(_pair.first, _pair.second);
+    }
+};
+    
 struct urlencoded_field{};
 
 struct multipart_form{
     typedef std::map<std::string, std::string> header_map_type;
+    typedef bounded_str<std::string, std::string::const_iterator> bounded_string;
     
     std::string _boundary;
     std::string _body;
     header_map_type _headers;
     
     multipart_form(const std::string& boundary, const std::string& body): _boundary(boundary), _body(body){
-        parse();
+        parse(_body.begin(), _body.end());
     }
-    void parse(){
-        std::string::size_type last  = 0;
-        std::string::size_type index = _body.find(_boundary);
+    void parse(std::string::const_iterator begin, std::string::const_iterator end){
+        std::string::const_iterator last  = begin;
+        std::string::const_iterator index = _search(last, end,_boundary.begin(), _boundary.end());
         while(true){
             last = index;
-            index = _body.find(_boundary, last+_boundary.size());
-            if(index == std::string::npos){
+            index = _search(last+_boundary.size(), end, _boundary.begin(), _boundary.end());
+            if(index == end){
                 break;
             }
-            std::cout << "NEXT PART ^" << _body.substr(last+_boundary.size()+2, index-(last+_boundary.size()+2)) << "$" << std::endl;
+            
+            std::cout << "NEXT PART ^" << bounded_string(_body, last+_boundary.size()+2, index).copied() << "$" << std::endl;
 
             parse_part(last+_boundary.size()+2, index);
         }
     }
-    void parse_part(std::string::size_type begin, std::string::size_type end){
-        std::string::size_type last  = begin;
-        std::string::size_type index = _body.find("\r\n", last);
+    void parse_part(std::string::const_iterator begin, std::string::const_iterator end){
+        std::string crlf("\r\n");
+        std::string::const_iterator last  = begin;
+        std::string::const_iterator index = _search(last, end, crlf.begin(), crlf.end());
         while(true){
-            std::cout << "Header ^" << _body.substr(last, index-last) << "$" << std::endl;
+            std::cout << "Header ^" << bounded_string(_body, last, index).copied() << "$" << std::endl;
             last = index+2;
-            index = _body.find("\r\n", last);
+            index = _search(last, end, crlf.begin(), crlf.end());
             if(index == last){
                 break;
             }
         }
-        std::cout << "BODY ^" << _body.substr(index+2, end-2 - index-2) << "$" << std::endl;
+        std::cout << "BODY ^" << bounded_string(_body, index+2, end-2).copied() << "$" << std::endl;
     }
 };
     
