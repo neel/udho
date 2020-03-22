@@ -7,13 +7,17 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
 option(UDHO_BUILD_TESTS "Build the unit tests" ON)
 option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
+option(UDHO_USE_ICU "Build with ICU" ON)
 
-if(UNIX AND APPLE)
-    SET(ICU_ROOT "/usr/local/opt/icu4c")
+if(UDHO_USE_ICU)
+    add_definitions(-DWITH_ICU)
+    IF(UNIX AND APPLE)
+        SET(ICU_ROOT "/USR/LOCAL/OPT/ICU4C")
+    ENDIF()
+    FIND_PACKAGE(ICU COMPONENTS uc REQUIRED)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-find_package(ICU COMPONENTS uc REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS filesystem regex system REQUIRED) 
 
 SET(INCLUDE_DIRS
@@ -39,8 +43,12 @@ if(UDHO_BUILD_EXAMPLES)
 endif()
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
-TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ICU::uc ${CMAKE_THREAD_LIBS_INIT}) 
+TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
+
+if(UDHO_USE_ICU)
+    TARGET_LINK_LIBRARIES(udho ICU::uc)
+endif()
 
 if(UDHO_BUILD_TESTS)
    enable_testing()

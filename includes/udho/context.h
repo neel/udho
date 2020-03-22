@@ -44,9 +44,6 @@
 #include <udho/logging.h>
 #include <boost/signals2/signal.hpp>
 #include <udho/defs.h>
-#define BOOST_SPIRIT_DEBUG
-#include <boost/spirit/include/qi.hpp>
-#include <boost/fusion/include/std_pair.hpp>
 #include <map>
 
 namespace udho{
@@ -127,22 +124,71 @@ udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
 
 namespace detail{
     
-typedef std::map<std::string, std::string> header_map_type;
-
-template <typename Iterator, typename Skipper = boost::spirit::qi::ascii::blank_type>
-struct multipart_grammer: boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>{
-    boost::spirit::qi::rule<Iterator, header_map_type(), Skipper> fields;
-    boost::spirit::qi::rule<Iterator, std::string()> field_key, field_value;
+template<class ForwardIt1, class ForwardIt2>
+constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last,
+                            ForwardIt2 s_first, ForwardIt2 s_last)
+{
+    for (; ; ++first) {
+        ForwardIt1 it = first;
+        for (ForwardIt2 s_it = s_first; ; ++it, ++s_it) {
+            if (s_it == s_last) {
+                return first;
+            }
+            if (it == last) {
+                return last;
+            }
+            if (!(*it == *s_it)) {
+                break;
+            }
+        }
+    }
+}
     
-    multipart_grammer(): boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>(fields){
-        field_key     = +boost::spirit::qi::char_("0-9a-zA-Z-");
-        field_value   = +~boost::spirit::qi::char_("\r\n");
-        fields = *(field_key >> ':' >> field_value >> boost::spirit::qi::lexeme["\r\n"]);
+// typedef std::map<std::string, std::string> header_map_type;
+// 
+// template <typename Iterator, typename Skipper = boost::spirit::qi::ascii::blank_type>
+// struct multipart_grammer: boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>{
+//     boost::spirit::qi::rule<Iterator, header_map_type(), Skipper> fields;
+//     boost::spirit::qi::rule<Iterator, std::string()> field_key, field_value;
+//     
+//     multipart_grammer(): boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>(fields){
+//         field_key     = +boost::spirit::qi::char_("0-9a-zA-Z-");
+//         field_value   = +~boost::spirit::qi::char_("\r\n");
+//         fields = *(field_key >> ':' >> field_value >> boost::spirit::qi::lexeme["\r\n"]);
+//     }
+// };
+    
+struct urlencoded_field{};
+
+template <typename Iterator>
+struct multipart_form{
+    typedef std::map<std::string, std::string> header_map_type;
+    
+    std::string _body;
+    header_map_type _headers;
+    
+    multipart_form(const std::string& body): _body(body){
+        parse();
+    }
+    void parse(){
+
+    }
+    void parse_part(){
+        std::string::size_type index = _body.find(":"), last = 0;
+        while(index != std::string::npos){
+            std::string::size_type crlf = _body.find("\r\n", index);
+            
+            std::string key = _body.substr(last, index);
+            std::string val = _body.substr(index+1, crlf);
+            
+            _headers.insert(std::make_pair(key, val));
+            std::cout << "Header " << key << " -> " << val << std::endl;
+            
+            last = index+crlf+2;
+            index = _body.find(":", last);
+        }
     }
 };
-    
-struct urlencoded_field{};  
-struct multipart_field{};
     
 template <typename RequestT>
 struct form_{
@@ -194,22 +240,24 @@ struct form_{
         while(index != std::string::npos){
             last = index;
             index = content.find(boundary, last+boundary.size());
-            std::string::const_iterator iter = content.begin()+last+boundary.size()+2, end = (index == std::string::npos ? content.end() : content.begin()+index);
             
-            typedef multipart_grammer<std::string::const_iterator> grammer_type;
-            grammer_type grammer;
-            header_map_type headers;
-            bool matched = boost::spirit::qi::phrase_parse(iter, end, grammer, boost::spirit::qi::ascii::blank, headers);
+//             multipart_form form(content.substr(last+boundary.size()+2, index-last));
             
-            if(matched){
-                for(auto pair: headers){
-                    std::cout << pair.first << " -> " << pair.second << std::endl << "BODY" << std::endl;
-                    std::cout << content.substr(std::distance(content.begin(), iter), index-last) << std::endl;
-                }
-            }else{
-                std::cout << "not matched" << std::endl;
-                std::cout << content.substr(last, index-last) << std::endl;
-            }
+//             std::string::const_iterator iter = content.begin()+last+boundary.size()+2, end = (index == std::string::npos ? content.end() : content.begin()+index);
+//             typedef multipart_grammer<std::string::const_iterator> grammer_type;
+//             grammer_type grammer;
+//             header_map_type headers;
+//             bool matched = boost::spirit::qi::phrase_parse(iter, end, grammer, boost::spirit::qi::ascii::blank, headers);
+//             
+//             if(matched){
+//                 for(auto pair: headers){
+//                     std::cout << pair.first << " -> " << pair.second << std::endl << "BODY" << std::endl;
+//                     std::cout << content.substr(std::distance(content.begin(), iter), index-last) << std::endl;
+//                 }
+//             }else{
+//                 std::cout << "not matched" << std::endl;
+//                 std::cout << content.substr(last, index-last) << std::endl;
+//             }
         }
     }
     bool has(const std::string& name) const{

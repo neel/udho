@@ -15,13 +15,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/fusion/functional/invocation/invoke.hpp>
 #include <boost/regex.hpp>
-#include <boost/regex/icu.hpp>
 #include <boost/locale.hpp>
 #include <iomanip>
 #include <udho/context.h>
 #include <udho/listener.h>
 #include <udho/connection.h>
 #include "util.h"
+
+#ifdef WITH_ICU
+#include <boost/regex/icu.hpp>
+#endif
 
 namespace udho{
     
@@ -168,7 +171,11 @@ struct module_overload{
         }
         std::string subject_decoded = udho::util::urldecode(subject);
         // std::cout << "_pattern " << _pattern << " " << " subject " << subject_decoded << std::endl;
+#ifdef WITH_ICU
         return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
+#else
+        return (request_method == _request_method) && boost::regex_search(subject_decoded, boost::regex(_pattern));
+#endif
     }
     template <typename T>
     return_type call(T& value, const std::vector<std::string>& args){
@@ -198,7 +205,11 @@ struct module_overload{
         try{
             std::string subject_decoded = udho::util::urldecode(subject);
             // std::cout << "subject_decoded: " << subject_decoded << " _pattern: " << _pattern << std::endl;
+#ifdef WITH_ICU
             if(boost::u32regex_search(subject_decoded, caps, boost::make_u32regex(_pattern))){
+#else
+            if(boost::regex_search(subject_decoded, caps, boost::regex(_pattern))){
+#endif
                 std::copy(caps.begin()+1, caps.end(), std::back_inserter(args));
             }
             // std::copy(args.begin(), args.end(), std::ostream_iterator<std::string>(std::cout, ", "));

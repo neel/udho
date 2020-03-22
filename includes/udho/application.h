@@ -21,9 +21,12 @@
 #include <string>
 #include <functional>
 #include <boost/regex.hpp>
-#include <boost/regex/icu.hpp>
 #include <boost/function.hpp>
 #include <udho/router.h>
+
+#ifdef WITH_ICU
+#include <boost/regex/icu.hpp>
+#endif
 
 namespace udho{
 
@@ -285,7 +288,11 @@ struct overload_group<U, app_<V, Ref>>{
     http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
+#ifdef WITH_ICU
         bool result = boost::u32regex_search(subject_decoded, match, boost::make_u32regex(_overload._path));
+#else
+        bool result = boost::regex_search(subject_decoded, match, boost::regex(_overload._path));
+#endif
         // std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
