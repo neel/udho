@@ -125,9 +125,7 @@ udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
 namespace detail{
     
 template<class ForwardIt1, class ForwardIt2>
-constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last,
-                            ForwardIt2 s_first, ForwardIt2 s_last)
-{
+constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_first, ForwardIt2 s_last){
     for (; ; ++first) {
         ForwardIt1 it = first;
         for (ForwardIt2 s_it = s_first; ; ++it, ++s_it) {
@@ -144,49 +142,44 @@ constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last,
     }
 }
     
-// typedef std::map<std::string, std::string> header_map_type;
-// 
-// template <typename Iterator, typename Skipper = boost::spirit::qi::ascii::blank_type>
-// struct multipart_grammer: boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>{
-//     boost::spirit::qi::rule<Iterator, header_map_type(), Skipper> fields;
-//     boost::spirit::qi::rule<Iterator, std::string()> field_key, field_value;
-//     
-//     multipart_grammer(): boost::spirit::qi::grammar<Iterator, header_map_type(), Skipper>(fields){
-//         field_key     = +boost::spirit::qi::char_("0-9a-zA-Z-");
-//         field_value   = +~boost::spirit::qi::char_("\r\n");
-//         fields = *(field_key >> ':' >> field_value >> boost::spirit::qi::lexeme["\r\n"]);
-//     }
-// };
-    
 struct urlencoded_field{};
 
-template <typename Iterator>
 struct multipart_form{
     typedef std::map<std::string, std::string> header_map_type;
     
+    std::string _boundary;
     std::string _body;
     header_map_type _headers;
     
-    multipart_form(const std::string& body): _body(body){
+    multipart_form(const std::string& boundary, const std::string& body): _boundary(boundary), _body(body){
         parse();
     }
     void parse(){
+        std::string::size_type last  = 0;
+        std::string::size_type index = _body.find(_boundary);
+        while(true){
+            last = index;
+            index = _body.find(_boundary, last+_boundary.size());
+            if(index == std::string::npos){
+                break;
+            }
+            std::cout << "NEXT PART ^" << _body.substr(last+_boundary.size()+2, index-(last+_boundary.size()+2)) << "$" << std::endl;
 
-    }
-    void parse_part(){
-        std::string::size_type index = _body.find(":"), last = 0;
-        while(index != std::string::npos){
-            std::string::size_type crlf = _body.find("\r\n", index);
-            
-            std::string key = _body.substr(last, index);
-            std::string val = _body.substr(index+1, crlf);
-            
-            _headers.insert(std::make_pair(key, val));
-            std::cout << "Header " << key << " -> " << val << std::endl;
-            
-            last = index+crlf+2;
-            index = _body.find(":", last);
+            parse_part(last+_boundary.size()+2, index);
         }
+    }
+    void parse_part(std::string::size_type begin, std::string::size_type end){
+        std::string::size_type last  = begin;
+        std::string::size_type index = _body.find("\r\n", last);
+        while(true){
+            std::cout << "Header ^" << _body.substr(last, index-last) << "$" << std::endl;
+            last = index+2;
+            index = _body.find("\r\n", last);
+            if(index == last){
+                break;
+            }
+        }
+        std::cout << "BODY ^" << _body.substr(index+2, end-2 - index-2) << "$" << std::endl;
     }
 };
     
@@ -235,30 +228,7 @@ struct form_{
         
         const std::string& content = _request.body();
         
-        std::string::size_type last;
-        std::string::size_type index = content.find(boundary);
-        while(index != std::string::npos){
-            last = index;
-            index = content.find(boundary, last+boundary.size());
-            
-//             multipart_form form(content.substr(last+boundary.size()+2, index-last));
-            
-//             std::string::const_iterator iter = content.begin()+last+boundary.size()+2, end = (index == std::string::npos ? content.end() : content.begin()+index);
-//             typedef multipart_grammer<std::string::const_iterator> grammer_type;
-//             grammer_type grammer;
-//             header_map_type headers;
-//             bool matched = boost::spirit::qi::phrase_parse(iter, end, grammer, boost::spirit::qi::ascii::blank, headers);
-//             
-//             if(matched){
-//                 for(auto pair: headers){
-//                     std::cout << pair.first << " -> " << pair.second << std::endl << "BODY" << std::endl;
-//                     std::cout << content.substr(std::distance(content.begin(), iter), index-last) << std::endl;
-//                 }
-//             }else{
-//                 std::cout << "not matched" << std::endl;
-//                 std::cout << content.substr(last, index-last) << std::endl;
-//             }
-        }
+        multipart_form form(boundary, content);
     }
     bool has(const std::string& name) const{
         return _fields.find(name) != _fields.end();
@@ -274,22 +244,22 @@ struct form_{
 
 // https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_facade.html#tutorial-example
 // https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_adaptor.html#base-parameters
-template <typename RequestT>
-struct form_iterator: boost::iterator_facade<form_iterator<RequestT>, form_<RequestT>, boost::forward_traversal_tag>{
-    typedef form_<RequestT> form_type;
-    
-    form_type& _form;
-    
-    explicit form_iterator(form_type& form): _form(form){}
-    
-    private:
-//     friend class boost::iterator_core_access;
-//     void increment() { m_node = m_node->next(); }
-//     bool equal(node_iterator const& other) const{
-//         return this->m_node == other.m_node;
-//     }
-//     node_base& dereference() const { return *m_node; }
-};
+// template <typename RequestT>
+// struct form_iterator: boost::iterator_facade<form_iterator<RequestT>, form_<RequestT>, boost::forward_traversal_tag>{
+//     typedef form_<RequestT> form_type;
+//     
+//     form_type& _form;
+//     
+//     explicit form_iterator(form_type& form): _form(form){}
+//     
+//     private:
+// //     friend class boost::iterator_core_access;
+// //     void increment() { m_node = m_node->next(); }
+// //     bool equal(node_iterator const& other) const{
+// //         return this->m_node == other.m_node;
+// //     }
+// //     node_base& dereference() const { return *m_node; }
+// };
     
 template <typename RequestT>
 struct cookies_{
