@@ -45,143 +45,17 @@
 #include <boost/signals2/signal.hpp>
 #include <udho/defs.h>
 #include <udho/form.h>
+#include <udho/cookie.h>
 #include <map>
 
 namespace udho{
-// https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
-// https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.cpp
-template <typename ValueT>
-struct cookie_{
-    typedef cookie_<ValueT> self_type;
-    
-    std::string _name;
-    ValueT _value;
-    bool _removed;
-    boost::optional<std::string> _comment;
-    boost::optional<std::string> _domain;
-    boost::optional<std::string>   _path;
-    boost::optional<unsigned long> _age;
-    boost::optional<bool>          _secure;
-    
-    cookie_(const std::string& name): _name(name), _removed(false){}
-    cookie_(const std::string& name, const ValueT& value): _name(name), _value(value), _removed(false){}
-    
-    self_type& path(const std::string& p){
-        _path = p;
-        return *this;
-    }
-    std::string path() const{
-        return !!_path ? *_path : std::string();
-    }
-    
-    self_type& domain(const std::string& d){
-        _domain = d;
-        return *this;
-    }
-    std::string domain() const{
-        return !!_domain ? *_domain : std::string();
-    }
-    
-    self_type& age(unsigned long age){
-        _age = age;
-        return *this;
-    }
-    unsigned long age() const{
-        return !!_age ? *_age : 0;
-    }
-    
-    template <typename StreamT>
-    StreamT& render(StreamT& stream) const{
-        stream << _name << '=' << boost::lexical_cast<std::string>(_value);
-        if(!!_comment && !(*_comment).empty())
-            stream << "; Comment=" << *_comment;
-        if(!!_domain && !(*_domain).empty())
-            stream << "; Domain=" << *_domain;
-        if(_removed){
-            stream << "; Expires=Fri, 01-Jan-1971 01:00:00 GMT;";
-        }else if(!!_age && 0 != *_age){
-            stream << "; Max-Age=" << *_age;
-        }
-        if(!!_path && !(*_path).empty())
-            stream << "; Path=" << *_path;
-        if(!!_secure && *_secure)
-            stream << "; Secure";
-        
-        stream << "; Version=1";
-        
-        return stream;
-    }
-    std::string to_string() const{
-        std::stringstream ss;
-        render(ss);
-        return ss.str();
-    }
-};
-
-template <typename ValueT>
-udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
-    return udho::cookie_<ValueT>(name, v);
-}
 
 namespace detail{
-    
-template <typename RequestT>
-struct cookies_{
-    typedef RequestT request_type;
-    typedef boost::beast::http::header<true> headers_type;
-    typedef std::map<std::string, std::string> cookie_jar_type;
-    
-    const request_type& _request;
-    headers_type&       _headers;
-    cookie_jar_type     _jar;
-    
-    cookies_(const request_type& request, headers_type& headers): _request(request), _headers(headers){
-        collect();
-    }
-    void collect(){
-        if(_request.count(boost::beast::http::field::cookie)){
-            std::string cookies_str(_request[boost::beast::http::field::cookie]);
-            std::vector<std::string> cookies;
-            boost::split(cookies, cookies_str, boost::is_any_of(";"));
-            for(const std::string& cookie: cookies){
-                auto pos = cookie.find("=");
-                std::string key = boost::algorithm::trim_copy(cookie.substr(0, pos));
-                std::string val = boost::algorithm::trim_copy(cookie.substr(pos+1));
-                _jar.insert(std::make_pair(key, val));
-            }
-        }
-    }
-    template <typename V>
-    void add(const cookie_<V>& c){
-        _headers.insert(boost::beast::http::field::set_cookie, c.to_string());
-    }
-    template <typename V>
-    void add(const std::string& key, const V& value){
-        add(udho::cookie_<V>(key, value));
-    }
-    bool exists(const std::string& key) const{
-        return _jar.count(key);
-    }
-    template <typename V>
-    V get(const std::string& key) const{
-        if(exists(key)){
-            return boost::lexical_cast<V>(_jar.at(key));
-        }else{
-            return V();
-        }
-    }
-};
-
-template <typename RequestT, typename V>
-cookies_<RequestT>& operator<<(cookies_<RequestT>& cookies, const udho::cookie_<V>& cookie){
-    cookies.add(cookie);
-    return cookies;
-}
     
 template <typename RequestT, typename ShadowT>
 struct session_{
     typedef RequestT request_type;
-    typedef udho::detail::cookies_<request_type> cookies_type;
+    typedef udho::cookies_<request_type> cookies_type;
     typedef ShadowT shadow_type;
     typedef typename shadow_type::key_type key_type;
     typedef session_<request_type, shadow_type> self_type;
@@ -270,7 +144,7 @@ struct context_impl{
     typedef RequestT request_type;
     typedef context_impl<request_type> self_type;
     typedef udho::form_<request_type> form_type;
-    typedef udho::detail::cookies_<request_type> cookies_type;
+    typedef udho::cookies_<request_type> cookies_type;
     typedef boost::beast::http::header<true> headers_type;
     
     const request_type& _request;
@@ -343,7 +217,7 @@ struct context{
     typedef detail::context_impl<request_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::form_<RequestT> form_type;
-    typedef udho::detail::cookies_<RequestT> cookies_type;
+    typedef udho::cookies_<RequestT> cookies_type;
     typedef detail::session_<request_type, shadow_type> session_type;
     
     pimple_type _pimpl;
@@ -393,7 +267,7 @@ struct context<RequestT, void>{
     typedef detail::context_impl<request_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::form_<RequestT> form_type;
-    typedef udho::detail::cookies_<RequestT> cookies_type;
+    typedef udho::cookies_<RequestT> cookies_type;
     
     pimple_type _pimpl;
         
