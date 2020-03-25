@@ -2,9 +2,9 @@ build
 *.kdev*
 .vs*
 dox
-docs/_build
+docs.sphinx/_build
 cmake-build-*
 .idea
-docs/bin
-docs/lib
-docs/pyvenv.cfg
+docs.sphinx/bin
+docs.sphinx/lib
+docs.sphinx/pyvenv.cfg
