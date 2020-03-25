@@ -23,7 +23,7 @@ subprocess.call('doxygen', shell=True)
 breathe_projects['udho'] = output_dir + '/xml'
 
 breathe_projects_source = {
-    "udho" : ( "../includes/udho", ["router.h", "application.h"] )
+    "udho" : ( "../includes/udho", ["router.h", "application.h", "cache.h", "context.h", "cookie.h", "form.h", "session.h", "logging.h", "server.h", "visitor.h", "page.h"] )
 }
 
 if not read_the_docs_build:

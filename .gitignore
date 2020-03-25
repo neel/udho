@@ -5,3 +5,6 @@ dox
 docs/_build
 cmake-build-*
 .idea
+docs/bin
+docs/lib
+docs/pyvenv.cfg

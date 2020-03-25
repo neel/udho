@@ -133,7 +133,7 @@ struct plain{
     
     void log(const std::chrono::system_clock::time_point& time, udho::logging::status status, const std::string& segment, int level, const std::string& message){
         std::time_t t = std::chrono::system_clock::to_time_t(time);
-        std::tm tm = *std::localtime(&t);
+        std::tm* tm = std::localtime(&t);
         
         std::string status_str = "unknown";
         switch(status){
@@ -151,7 +151,7 @@ struct plain{
                 break;
         }
         
-        _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(&tm, "%T") % status_str % segment % message << std::endl;
+        _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(tm, "%T") % status_str % segment % message << std::endl;
     }
     
     template <udho::logging::status Status>
