@@ -122,6 +122,12 @@ udho::cookie_<ValueT> cookie(const std::string& name, const ValueT& v){
     return udho::cookie_<ValueT>(name, v);
 }
 
+enum class form_type{
+    unparsed,
+    urlencoded,
+    multipart
+};
+
 namespace detail{
     
 template<class ForwardIt1, class ForwardIt2>
@@ -142,44 +148,142 @@ constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_fir
     }
 }
     
-template <typename ContainerT, typename Iterator>
+template <typename Iterator>
 struct bounded_str{
+    typedef bounded_str<Iterator> self_type;
     typedef std::pair<Iterator, Iterator> pair_type;
-    typedef ContainerT container_type;
     
-    const container_type& _container;
     pair_type _pair;
     
-    bounded_str(const container_type& container, Iterator begin, Iterator end): _container(container), _pair(begin, end){}
-    void copy(ContainerT& out) const{
-        std::copy(_pair.first, _pair.second, std::back_inserter(out));
+    bounded_str(Iterator begin, Iterator end): _pair(begin, end){}
+    bounded_str(const self_type& other): _pair(other._pair){}
+    Iterator begin() const{return _pair.first;}
+    Iterator end() const{return _pair.second;}
+    bool invalid() const{return begin() == end();}
+    bool valid() const{return !invalid();}
+    template <typename Itarator>
+    void copy(Itarator it) const{
+        std::copy(begin(), end(), it);
     }
+    template <typename ContainerT>
     ContainerT copied() const{
         ContainerT out;
-        copy(out);
+        copy(std::back_inserter(out));
         return out;
     }
     std::size_t size() const{
-        return std::distance(_pair.first, _pair.second);
+        return std::distance(begin(), end());
     }
 };
+  
+template <typename Iterator>
+struct urlencoded_form{
+    typedef Iterator iterator_type;
+    typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+    typedef std::basic_string<value_type> string_type;
+    typedef bounded_str<iterator_type> bounded_string_type;
+    typedef std::map<string_type, bounded_string_type> header_map_type;
+    typedef bounded_string_type bounded_string;
     
-struct urlencoded_field{};
+    header_map_type _fields;
+    
+    void parse(iterator_type begin, iterator_type end){
+        iterator_type last  = begin;
+        while(true){
+            iterator_type it     = std::find(last, end, '&'); 
+            iterator_type assign = std::find(last, it, '=');
+            bounded_string_type key(last, assign);
+            bounded_string_type value(assign+1, it);
+            
+            std::string key_str = key.template copied<std::string>();
+            
+            // std::cout << "Key ^"   << key.  template copied<std::string>() << "$" << std::endl;
+            // std::cout << "value ^" << value.template copied<std::string>() << "$" << std::endl;
+            
+            _fields.insert(std::make_pair(key_str, value));
+            if(it == end){
+                break;
+            }else{
+                last = it+1;
+            }
+        }
+    }
+    std::size_t count() const{
+        return _fields.size();
+    }
+    bool has(const std::string name) const{
+        return _fields.find(name) != _fields.end();
+    }
+    template <typename T>
+    const T field(const std::string& name) const{
+        return boost::lexical_cast<T>(_fields.at(name).template copied<std::string>());
+    }
+};
 
+template <typename Iterator>
 struct multipart_form{
-    typedef std::map<std::string, std::string> header_map_type;
-    typedef bounded_str<std::string, std::string::const_iterator> bounded_string;
+    typedef Iterator iterator_type;
+    typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+    typedef std::basic_string<value_type> string_type;
+    typedef bounded_str<iterator_type> bounded_string_type;
+    typedef std::map<string_type, bounded_string_type> header_map_type;
+    typedef bounded_string_type bounded_string;
+    
+    struct form_part{
+        header_map_type _headers;
+        bounded_string_type _body;
+        
+        form_part(iterator_type begin, iterator_type end): _body(begin, end){}
+        
+        void set_header(const header_map_type& headers){
+            _headers = headers;
+        }
+        const bounded_string_type& header(const std::string& key) const{
+            return _headers.at(key);
+        }
+        bounded_string_type header(const std::string& key, const std::string& sub) const{
+            bounded_string_type value = header(key);
+            std::string subfield = sub+"=";
+            iterator_type sub_begin = _search(value.begin(), value.end(), subfield.begin(), subfield.end());
+            iterator_type sub_end = std::find(sub_begin, value.end(), ';');
+            if(sub_begin != sub_end){
+                auto it = std::find(sub_begin, sub_end, '"');
+                if(it != sub_end){
+                    sub_begin = it+1;
+                    sub_end   = std::find(sub_begin, sub_end, '"');
+                }
+            }
+            return bounded_string_type(sub_begin, sub_end);
+        }
+        bounded_string_type name() const{
+            return header("Content-Disposition", "name");
+        }
+        bounded_string_type filename() const{
+            return header("Content-Disposition", "filename");
+        }
+        const bounded_string_type& body() const{
+            return _body;
+        }
+        template <typename StrT>
+        StrT copied() const{
+            return body().template copied<StrT>();
+        }
+        std::string str() const{
+            return copied<std::string>();
+        }
+        template <typename T>
+        T value() const{
+            return boost::lexical_cast<T>(str());
+        }
+    };
     
     std::string _boundary;
-    std::string _body;
-    header_map_type _headers;
-    
-    multipart_form(const std::string& boundary, const std::string& body): _boundary(boundary), _body(body){
-        parse(_body.begin(), _body.end());
-    }
-    void parse(std::string::const_iterator begin, std::string::const_iterator end){
-        std::string::const_iterator last  = begin;
-        std::string::const_iterator index = _search(last, end,_boundary.begin(), _boundary.end());
+    std::map<string_type, form_part> _parts;
+
+    void parse(const std::string& boundary, iterator_type begin, iterator_type end){
+        _boundary = boundary;
+        iterator_type last  = begin;
+        iterator_type index = _search(last, end,_boundary.begin(), _boundary.end());
         while(true){
             last = index;
             index = _search(last+_boundary.size(), end, _boundary.begin(), _boundary.end());
@@ -187,24 +291,52 @@ struct multipart_form{
                 break;
             }
             
-            std::cout << "NEXT PART ^" << bounded_string(_body, last+_boundary.size()+2, index).copied() << "$" << std::endl;
+            // std::cout << "NEXT PART ^" << bounded_string(last+_boundary.size()+2, index).template copied<string_type>() << "$" << std::endl;
 
             parse_part(last+_boundary.size()+2, index);
         }
     }
-    void parse_part(std::string::const_iterator begin, std::string::const_iterator end){
-        std::string crlf("\r\n");
-        std::string::const_iterator last  = begin;
-        std::string::const_iterator index = _search(last, end, crlf.begin(), crlf.end());
+    void parse_part(iterator_type begin, iterator_type end){
+        string_type crlf("\r\n");
+        iterator_type last  = begin;
+        iterator_type index = _search(last, end, crlf.begin(), crlf.end());
+        
+        header_map_type headers;
+        
         while(true){
-            std::cout << "Header ^" << bounded_string(_body, last, index).copied() << "$" << std::endl;
+            // std::cout << "Header ^" << bounded_string(last, index).template copied<string_type>() << "$" << std::endl;
+            iterator_type colon = std::find(last, index, ':');
+            if(colon != index){
+                std::string key = bounded_string(last, colon).template copied<std::string>();
+                // std::cout << "Key ^" << key << "$" << std::endl;
+                iterator_type vbegin = std::find_if_not(colon+1, index, [](char ch){return std::isspace(ch);});
+                // std::cout << "Value ^" << bounded_string(vbegin, index).template copied<string_type>() << "$" << std::endl;
+                headers.insert(std::make_pair(key, bounded_string(vbegin, index)));
+            }
             last = index+2;
             index = _search(last, end, crlf.begin(), crlf.end());
             if(index == last){
                 break;
             }
         }
-        std::cout << "BODY ^" << bounded_string(_body, index+2, end-2).copied() << "$" << std::endl;
+        // std::cout << "BODY ^" << bounded_string(index+2, end-2).template copied<string_type>() << "$" << std::endl;
+        
+        form_part f(index+2, end-2);
+        f.set_header(headers);
+        _parts.insert(std::make_pair(f.name().template copied<std::string>(), f));
+    }
+    std::size_t count() const{
+        return _parts.size();
+    }
+    bool has(const std::string name) const{
+        return _parts.find(name) != _parts.end();
+    }
+    const form_part& part(const std::string& name) const{
+        return _parts.at(name);
+    }
+    template <typename T>
+    const T field(const std::string& name) const{
+        return part(name).template value<T>();
     }
 };
     
@@ -215,10 +347,11 @@ struct form_{
     typedef std::map<std::string, std::string> fields_map_type;
     
     const request_type& _request;
-    body_type _body;
-    fields_map_type _fields;
+    form_type _type;
+    urlencoded_form<std::string::const_iterator> _urlencoded;
+    multipart_form<std::string::const_iterator>  _multipart;
     
-    form_(const request_type& request): _request(request), _body(request.body()){
+    form_(const request_type& request): _request(request)/*, _body(request.body())*/, _type(form_type::unparsed){
         if(_request[boost::beast::http::field::content_type].find("application/x-www-form-urlencoded") != std::string::npos){
             parse_urlencoded();
         }else if(_request[boost::beast::http::field::content_type].find("multipart/form-data") != std::string::npos){
@@ -226,14 +359,8 @@ struct form_{
         }
     }
     void parse_urlencoded(){
-        std::vector<std::string> fields;
-        boost::split(fields, _body, boost::is_any_of("&"));
-        for(const std::string& field: fields){
-            auto pos = field.find("=");
-            std::string key = boost::algorithm::trim_copy(field.substr(0, pos));
-            std::string val = boost::algorithm::trim_copy(field.substr(pos+1));
-            _fields.insert(std::make_pair(udho::util::urldecode(key), udho::util::urldecode(val)));
-        }
+        _urlencoded.parse(_request.body().begin(), _request.body().end());
+        _type = form_type::urlencoded;
     }
     void parse_multipart(){
         std::string boundary;
@@ -243,48 +370,56 @@ struct form_{
             std::string::size_type index = content_type.find(boundary_key);
             if(index != std::string::npos){
                 boundary = "--"+content_type.substr(index+boundary_key.size());
+                _type = form_type::multipart;
             }else{
                 std::cout << "multipart boundary not found in Content-Type: " << content_type << std::endl;
                 return;
             }
         }
-        
-        std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
-        
-        const std::string& content = _request.body();
-        
-        multipart_form form(boundary, content);
+        // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+        _multipart.parse(boundary, _request.body().begin(), _request.body().end());
+    }
+    bool is_urlencoded() const{
+        return _type == form_type::urlencoded;
+    }
+    bool is_multipart() const{
+        return _type == form_type::multipart;
+    }
+    const urlencoded_form<std::string::const_iterator>& urlencoded() const{
+        return _urlencoded;
+    }
+    const multipart_form<std::string::const_iterator>& multipart() const{
+        return _multipart;
+    }
+    bool parsed() const{
+        return _type != form_type::unparsed;
     }
     bool has(const std::string& name) const{
-        return _fields.find(name) != _fields.end();
+        if(is_urlencoded()){
+            return _urlencoded.has(name);
+        }else if(is_multipart()){
+            return _multipart.has(name);
+        }
+        return false;
     }
     template <typename V>
     V field(const std::string& name) const{
-        return boost::lexical_cast<V>(_fields.at(name));
+        if(is_urlencoded()){
+            return _urlencoded.field<V>(name);
+        }else if(is_multipart()){
+            return _multipart.field<V>(name);
+        }
+        return V();
     }
     fields_map_type::size_type count() const{
-        return _fields.size();
+        if(is_urlencoded()){
+            return _urlencoded.count();
+        }else if(is_multipart()){
+            return _multipart.count();
+        }
+        return 0;
     }
 };
-
-// https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_facade.html#tutorial-example
-// https://www.boost.org/doc/libs/1_72_0/libs/iterator/doc/iterator_adaptor.html#base-parameters
-// template <typename RequestT>
-// struct form_iterator: boost::iterator_facade<form_iterator<RequestT>, form_<RequestT>, boost::forward_traversal_tag>{
-//     typedef form_<RequestT> form_type;
-//     
-//     form_type& _form;
-//     
-//     explicit form_iterator(form_type& form): _form(form){}
-//     
-//     private:
-// //     friend class boost::iterator_core_access;
-// //     void increment() { m_node = m_node->next(); }
-// //     bool equal(node_iterator const& other) const{
-// //         return this->m_node == other.m_node;
-// //     }
-// //     node_base& dereference() const { return *m_node; }
-// };
     
 template <typename RequestT>
 struct cookies_{
