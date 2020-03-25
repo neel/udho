@@ -1,5 +1,5 @@
 # Udho (উধো)
-udho is a tiny http library based on [`Boost.Beast`](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html). 
+udho is a minimalistic http library based on [`Boost.Beast`](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html). 
 
 [Code](https://gitlab.com/neel.basu/udho) |
 [Build](build) |
@@ -40,10 +40,13 @@ int main(){
 }
 ```
 
+The philosophy is simple. `udho::router` comprises of mapping between url patterns (as regex) and the corresponding callables (function pointers, function objects). Multiple such mappings are combined at compile time using pipe (`|`) operator. The url mappings are passed to the server along with the listening port and document root. The request methods (GET, POST, HEAD, PUT, etc..) and the response content type are attached with the callable on compile time. Whenever an HTTP request appears to the server its path is matched against the url patterns and the matching callable is called. The values captured from the url patterns are converted (using `boost::lexical_cast`) and passed as arguments to the callables. 
 
+The server can be logging or quiet. The example above uses an ostreamed logger that logs on `std::cout`. A server can be `stateless` or `stateful` depending on the choice of `session`. If the server uses HTTP session then it has to be stateful, and the states comprising the session has to be declared at the compile time. The above example uses a stateless server (no HTTP session cookie). Callables in a stateful server can be stateless. 
+ 
 
 # Dependencies:
-boost depend on boost-beast library. As boost-beast is only available on boost >= 1.66, udho requires a boost version at least 1.66. udho may optionally use ICU library for unicode regex functionality. In that case ICU library may be required.
+udho depend on boost. As boost-beast is only available on boost >= 1.66, udho requires a boost version at least 1.66. udho may optionally use ICU library for unicode regex functionality. In that case ICU library may be required.
 
 * boost > 1.66
 * icu [optional]
