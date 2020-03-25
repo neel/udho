@@ -1,0 +1,19 @@
+site_name: udho
+site_author: Neel Basu
+site_url: https://gitlab.com/neel.basu/udho
+docs_dir: docs.md
+google_analytics: ['UA-124416042-1', 'neelex.com']
+theme: 
+        name: 'material'
+        palette: 
+                primary: 'red'
+                accent: 'red'
+        font:
+                text: 'Ubuntu'
+                code: 'Ubuntu Mono'
+markdown_extensions:
+        - admonition
+        - codehilite:
+                guess_lang: false
+        - toc:
+                permalink: true
