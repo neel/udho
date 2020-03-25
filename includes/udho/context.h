@@ -46,98 +46,12 @@
 #include <udho/defs.h>
 #include <udho/form.h>
 #include <udho/cookie.h>
+#include <udho/session.h>
 #include <map>
 
 namespace udho{
 
 namespace detail{
-    
-template <typename RequestT, typename ShadowT>
-struct session_{
-    typedef RequestT request_type;
-    typedef udho::cookies_<request_type> cookies_type;
-    typedef ShadowT shadow_type;
-    typedef typename shadow_type::key_type key_type;
-    typedef session_<request_type, shadow_type> self_type;
-    typedef udho::cache::generator<key_type> generator_type;
-    
-    cookies_type&  _cookies;
-    shadow_type    _shadow;
-    std::string    _sessid;
-    bool           _returning;
-    bool           _identified;
-    key_type       _id;
-    generator_type _generator;
-    
-    session_(cookies_type& cookies, shadow_type& shadow): _cookies(cookies), _shadow(shadow), _sessid("UDHOSESSID"), _returning(false), _identified(false){
-        identify();
-    }
-    template <typename... T>
-    session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
-//     template <typename... T>
-//     session_(session_<request_type, udho::cache::store<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
-    void identify(){
-        if(!_identified){
-            if(_cookies.exists(_sessid)){
-                key_type id = _cookies.template get<key_type>(_sessid);
-                if(!_shadow.issued(id)){
-                    _id = _generator.generate();
-                    _shadow.issue(_id);
-                    _cookies.add(_sessid, _id);
-                    _returning = false;
-                }else{
-                    _id = id;
-                    _returning = true;
-                }
-            }else{
-                _id = _generator.generate();
-                _shadow.issue(_id);
-                _cookies.add(_sessid, _id);
-                _returning = false;
-            }
-        }
-    }
-    const key_type& id() const{
-        return _id;
-    }
-    bool returning() const{
-        return _returning;
-    }
-    template <typename V>
-    bool exists() const{
-        return _shadow.template exists<V>(_id);
-    }
-    template <typename V>
-    const V& get() const{
-        return _shadow.template get<V>(_id);
-    }
-    template <typename V>
-    V& at(){
-        return _shadow.template at<V>(_id);
-    }
-    template <typename V>
-    void set(const V& value){
-        _shadow.template insert<V>(_id, value);
-    }    
-};
-
-template <typename RequestT>
-struct session_<RequestT, void>{
-    template <typename... U>
-    session_(U...){}
-};
-
-template <typename RequestT, typename ShadowT, typename T>
-session_<RequestT, ShadowT>& operator<<(session_<RequestT, ShadowT>& session, const T& data){
-    session.template set<T>(data);
-    return session;
-}
-
-template <typename RequestT, typename ShadowT, typename T>
-const session_<RequestT, ShadowT>& operator>>(const session_<RequestT, ShadowT>& session, T& data){
-    data = session.template get<T>();
-    return session;
-}
  
 template <typename RequestT>
 struct context_impl{
@@ -218,7 +132,7 @@ struct context{
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::form_<RequestT> form_type;
     typedef udho::cookies_<RequestT> cookies_type;
-    typedef detail::session_<request_type, shadow_type> session_type;
+    typedef udho::session_<request_type, shadow_type> session_type;
     
     pimple_type _pimpl;
     session_type _session;
