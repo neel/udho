@@ -27,7 +27,6 @@
 #ifndef UDHO_VISITOR_H
 #define UDHO_VISITOR_H
 
-// #include <udho/router.h>
 #include <string>
 #include <cstdint>
 #include <algorithm>
@@ -148,9 +147,9 @@ namespace udho{
                 if(Visitables & visitable::callable){
                     auto info = overload.info();
                     
-                    std::string method      = (boost::format("<div class='column udho-module-method'>%1%</div>")          % info._method).str();
-                    std::string pattern     = (boost::format("<div class='column udho-module-pattern'>%1%</div>")        % info._pattern).str();
-                    std::string fptr        = (boost::format("<div class='column udho-module-fptr'>%1%</div>")              % info._fptr).str();
+                    std::string method      = (boost::format("<div class='column udho-module-method'>%1%</div>")      % info._method).str();
+                    std::string pattern     = (boost::format("<div class='column udho-module-pattern'>%1%</div>")     % info._pattern).str();
+                    std::string fptr        = (boost::format("<div class='column udho-module-fptr'>%1%</div>")        % info._fptr).str();
                     std::string compositor  = (boost::format("<div class='column udho-module-compositor'>%1%</div>")  % info._compositor).str();
                     std::string module_html = (boost::format("<div class='udho-module'>%1% %2% %3% %4%</div>") % method % pattern % fptr % compositor).str();
                     
