@@ -6,9 +6,10 @@ udho is a minimalistic http library based on [`Boost.Beast`](https://www.boost.o
 [Quickstart](quickstart) |
 [Router](router) |
 [Server](server) |
-[Logging](logging) |
+[Context](context) |
 [Form](form) |
 [Session](session) |
+[Logging](logging) |
 [Contribute](contributing) |
 [Issues](https://gitlab.com/neel.basu/udho/issues)
 
@@ -40,9 +41,10 @@ int main(){
 }
 ```
 
-The philosophy is simple. `udho::router` comprises of mapping between url patterns (as regex) and the corresponding callables (function pointers, function objects). Multiple such mappings are combined at compile time using pipe (`|`) operator. The url mappings are passed to the server along with the listening port and document root. The request methods (GET, POST, HEAD, PUT, etc..) and the response content type are attached with the callable on compile time. Whenever an HTTP request appears to the server its path is matched against the url patterns and the matching callable is called. The values captured from the url patterns are converted (using `boost::lexical_cast`) and passed as arguments to the callables. 
+The philosophy is simple. `udho::router` comprises of mapping between url patterns (as regex) and the corresponding callables (function pointers, function objects). Multiple such mappings are combined at compile time using pipe (`|`) operator. The url mappings are passed to the server along with the listening port and document root. The request methods (`udho::get`, `udho::post`, `udho::head`, `udho::put`, etc..) and the response content type are attached with the callable on compile time. Whenever an HTTP request appears to the server its path is matched against the url patterns and the matching callable is called. The values captured from the url patterns are converted (using `boost::lexical_cast`) and passed as arguments to the callables. The server can be logging or quiet. The example above uses an ostreamed logger that logs on `std::cout`.
 
-The server can be logging or quiet. The example above uses an ostreamed logger that logs on `std::cout`. A server can be `stateless` or `stateful` depending on the choice of `session`. If the server uses HTTP session then it has to be stateful, and the states comprising the session has to be declared at the compile time. The above example uses a stateless server (no HTTP session cookie). Callables in a stateful server can be stateless. 
+### Session
+A server can be `stateless` or `stateful` depending on the choice of `session`. If the server uses HTTP session then it has to be stateful, and the states comprising the session has to be declared at the compile time. The above example uses a stateless server (no HTTP session cookie). Callables in a stateful server can have a stateless context as well as stateful context with lesser number of states. 
  
 
 # Dependencies:
