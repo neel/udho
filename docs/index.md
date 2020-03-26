@@ -12,7 +12,7 @@ udho is a minimalistic http library based on [`Boost.Beast`](https://www.boost.o
 [Contribute](contributing) |
 [Issues](https://gitlab.com/neel.basu/udho/issues)
 
-
+[![Documentation Status](https://readthedocs.org/projects/udho/badge/?version=latest)](https://udho.readthedocs.io/en/latest/?badge=latest)
 [![pipeline status develop](https://gitlab.com/neel.basu/udho/badges/develop/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/develop) 
 [![pipeline status master](https://gitlab.com/neel.basu/udho/badges/master/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/master) 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/20093f1597cd490ba923fc5401ada672)](https://www.codacy.com/manual/neel.basu.z/udho?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=neel/udho&amp;utm_campaign=Badge_Grade)
