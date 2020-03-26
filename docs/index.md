@@ -7,7 +7,6 @@ udho is a minimalistic http library based on [`Boost.Beast`](https://www.boost.o
 [Router](router) |
 [Server](server) |
 [Context](context) |
-[Form](form) |
 [Session](session) |
 [Logging](logging) |
 [Contribute](contributing) |
