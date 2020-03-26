@@ -39,12 +39,16 @@ int main(){
     return 0;
 }
 ```
+### Philosophy
 
 The philosophy is simple. `udho::router` comprises of mapping between url patterns (as regex) and the corresponding callables (function pointers, function objects). Multiple such mappings are combined at compile time using pipe (`|`) operator. The url mappings are passed to the server along with the listening port and document root. The request methods (`udho::get`, `udho::post`, `udho::head`, `udho::put`, etc..) and the response content type are attached with the callable on compile time. Whenever an HTTP request appears to the server its path is matched against the url patterns and the matching callable is called. The values captured from the url patterns are converted (using `boost::lexical_cast`) and passed as arguments to the callables. The server can be logging or quiet. The example above uses an ostreamed logger that logs on `std::cout`.
 
-### Session
-A server can be `stateless` or `stateful` depending on the choice of `session`. If the server uses HTTP session then it has to be stateful, and the states comprising the session has to be declared at the compile time. The above example uses a stateless server (no HTTP session cookie). Callables in a stateful server can have a stateless context as well as stateful context with lesser number of states. 
- 
+### States
+HTTP is stateless in general. But Session makes it stateful using a session cookie (e.g. PHPSESSID for PHP). A server can be `stateless` or `stateful` depending on the choice of `session`. If the server uses HTTP session then it has to be stateful, and the states comprising the session has to be declared at the compile time. The example above uses a stateless server (no HTTP session cookie). Hence all the callables take a statless context. The example shown below uses stateful session, where `user` is the only state. There can be multiple states passed as template parameters of  `stateful<StateA, StateB, StateC>` while constructing the server. Callables should have a matching context, that takes all `contexts::stateful<StateA, StateB, StateC>` or lesser number of states `contexts::stateful<StateB, StateC>`. Callables in a stateful server can have a `contexts::stateless` context too. 
+
+### Context
+
+All the callables must take a compatiable context as the first parameter. The context includes the HTTP request object, logger reference, cookies, session information and additional accessories that might be required for serving the request.
 
 # Dependencies:
 udho depend on boost. As boost-beast is only available on boost >= 1.66, udho requires a boost version at least 1.66. udho may optionally use ICU library for unicode regex functionality. In that case ICU library may be required.
@@ -71,6 +75,11 @@ udho depend on boost. As boost-beast is only available on boost >= 1.66, udho re
 # Example 
 
 ```cpp
+struct user{
+    std::string name;
+    user(){}
+    user(const std::string& nm): name(nm){}
+};
 std::string login(udho::contexts::stateful<user> ctx){ /// < strictly typed stateful context
     const static username = "derp";
     const static password = "derp123";
