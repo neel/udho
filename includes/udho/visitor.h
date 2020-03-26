@@ -133,6 +133,44 @@ namespace udho{
                 _indent--;
             }
         };
+        
+        template <std::uint8_t Visitables, typename StreamT>
+        struct printing_visitor_html{
+            StreamT& _stream;
+            std::size_t _indent;
+            
+            printing_visitor_html(StreamT& stream): _stream(stream), _indent(0){}
+            template <typename ModuleT>
+            void _module(const ModuleT& overload){
+                if(Visitables & visitable::callable){
+                    auto info = overload.info();
+                    
+                    std::string method      = (boost::format("<div class='udho-module-method'>%1%</div>")      % info._method).str();
+                    std::string pattern     = (boost::format("<div class='udho-module-pattern'>%1%</div>")     % info._pattern).str();
+                    std::string fptr        = (boost::format("<div class='udho-module-fptr'>%1%</div>")        % info._fptr).str();
+                    std::string compositor  = (boost::format("<div class='udho-module-compositor'>%1%</div>")  % info._compositor).str();
+                    std::string module_html = (boost::format("<div class='udho-module'>%1% %2% %3% %4%</div>") % method % pattern % fptr % compositor).str();
+                    
+                    _stream << module_html << std::endl;
+                }
+            }
+            template <typename AppT>
+            void _application(const AppT& app){
+                if(Visitables & visitable::application){                    
+                    std::string name = (boost::format("<div class='udho-application-name'>%1%</div>") % app.name()).str();
+                    std::string path = (boost::format("<div class='udho-application-path'>%1%</div>") % app._path).str();
+                    std::string fptr = (boost::format("<div class='udho-application-fptr'>%1%</div>") % &app).str();
+                    std::string appb = (boost::format("<div class='udho-application'>%1% %2% %3%<div class='udho-application-modules'>") % app.name()).str();
+                    
+                    _stream << appb << std::endl;
+                }
+            }
+            void operator()(){
+                std::string appe = "</div></div>";
+                
+                _stream << appe << std::endl;
+            }
+        };
 
         /**
          * prints the selected routes in the router
@@ -143,6 +181,11 @@ namespace udho{
         template <std::uint8_t Visitables, typename F>
         visitor<printing_visitor<Visitables, F>> print(F& callback){
             return visitor<printing_visitor<Visitables, F>>(callback);
+        }
+        
+        template <std::uint8_t Visitables, typename F>
+        visitor<printing_visitor_html<Visitables, F>> print_html(F& callback){
+            return visitor<printing_visitor_html<Visitables, F>>(callback);
         }
         
         template <typename F, std::uint8_t Visitables, std::uint8_t HasModule = (Visitables & visitable::callable)>
