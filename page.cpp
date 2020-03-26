@@ -1,45 +1,6 @@
 #include "udho/page.h"
 #include <boost/format.hpp>
 
-void udho::internal::html_dump_module_info(const std::vector<udho::module_info>& infos, std::string& buffer){
-    static int indent = 0;
-    for(auto i = infos.rbegin(); i != infos.rend(); ++i){
-        auto info = *i;
-        
-        if(info._compositor == "UNSPECIFIED") continue;
-        for(int j = 0; j < indent; ++j) buffer += "\t";
-        
-        std::string overload_template = R"(
-            <div class='overload'>
-                <div class='column method'>%1%</div>
-                <div class='column pattern'>%2%</div>
-                <div class='column fptr'>%3%</div>
-                <div class='column compositor'>(%4%)</div>
-            </div>
-        )";
-        std::string application_template = R"(
-            <div class='application'>
-                <div class='heading'></div>
-                <div class='overloads'>
-                    %1%
-                </div>
-            </div>
-        )";
-        
-        
-        if(info._children.size() > 0){
-            ++indent;
-            std::string module_info_buffer;
-            module_info_buffer += (boost::format(overload_template) % info._method % info._pattern % info._fptr % info._compositor).str();
-            html_dump_module_info(info._children, module_info_buffer);
-            buffer += (boost::format(application_template) % module_info_buffer).str();
-            --indent;
-        }else{
-            buffer += (boost::format(overload_template) % info._method % info._pattern % info._fptr % info._compositor).str();
-        }
-    }
-}
-
 udho::exceptions::http_error::http_error(boost::beast::http::status status, const std::string& resource): _status(status), _resource(resource){
 
 }
@@ -90,7 +51,37 @@ std::string udho::exceptions::http_error::page(std::string content) const{
                 .main{
                     width: 100%%;
                 }
-                .overloads{
+                .udho-module{
+                    display: table-row;
+                }
+                .column{
+                    display: table-cell;
+                    padding-right: 22px;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .udho-module-method{
+
+                }
+                .udho-module-pattern{
+
+                }
+                .udho-module-fptr{
+
+                }
+                .udho-module-compositor{
+
+                }
+                .udho-application-name{
+                    
+                }
+                .udho-application-path{
+                    
+                }
+                .udho-application-fptr{
+                    
+                }
+                .udho-application{
                     display: table-caption;
                     position: relative;
                     float: left;
@@ -104,33 +95,15 @@ std::string udho::exceptions::http_error::page(std::string content) const{
                     -moz-border-radius: 9px;
                     border-radius: 9px;
                     width: 100%%;
+                    padding-left: 8px;
+                    padding-right: 8px;
                 }
-                .overload{
-                    display: table-row;
+                .udho-application-heading{
+                    border-bottom: 2px solid #d28a93;
+                    padding-bottom: 3px;
                 }
-                .column{
-                    display: table-cell;
-                    padding-right: 22px;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                .method{
-
-                }
-                .pattern{
-
-                }
-                .fptr{
-
-                }
-                .compositor{
-
-                }
-                .application{
-                    display: table-row;
-                    width: 100%%;
-                    float: left;
-                    position: relative;
+                .udho-application-overloads{
+                    margin-top: 2px;
                 }
             </style>
         </head>

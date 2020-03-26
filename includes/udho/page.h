@@ -8,20 +8,16 @@
 #include <boost/beast/version.hpp>
 #include <udho/context.h>
 #include <iostream>
+#include <udho/visitor.h>
 
 namespace udho{
     
 namespace internal{
-    void html_dump_module_info(const std::vector<udho::module_info>& infos, std::string& buffer);
     template <typename RouterT>
     std::string html_summary(RouterT& router){
-        std::vector<udho::module_info> summary;
-        std::string buffer;
-        buffer += "<div class='overloads'>";
-        router.summary(summary);
-        html_dump_module_info(summary, buffer);
-        buffer += "</div>";
-        return buffer;
+        std::stringstream stream;
+        router /= udho::visitors::print_html<udho::visitors::visitable::both, std::stringstream>(stream);
+        return stream.str();
     }
 }
     
