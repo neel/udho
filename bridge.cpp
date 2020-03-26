@@ -45,7 +45,7 @@ std::string udho::bridge::contents(const std::string& path) const{
     return content;
 }
 
-boost::beast::http::response<boost::beast::http::file_body> udho::bridge::file(const std::string& path, const udho::defs::request_type& req) const{
+boost::beast::http::response<boost::beast::http::file_body> udho::bridge::file(const std::string& path, const udho::defs::request_type& req, std::string mime) const{
     boost::filesystem::path local_path = _docroot / path;
     boost::beast::error_code err;
     boost::beast::http::file_body::value_type body;
@@ -59,7 +59,7 @@ boost::beast::http::response<boost::beast::http::file_body> udho::bridge::file(c
     auto const size = body.size();
     boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(boost::beast::http::field::content_type, udho::internal::mime_type(local_path.c_str()));
+    res.set(boost::beast::http::field::content_type, !mime.empty() ? mime : udho::internal::mime_type(local_path.c_str()));
     res.content_length(size);
     res.keep_alive(req.keep_alive());
     return res;

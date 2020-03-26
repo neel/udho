@@ -107,7 +107,7 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
 }
 
 boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts::stateless ctx){
-    return ctx.aux().file("README.md", ctx.request());
+    return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
 
 int main(){

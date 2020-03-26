@@ -45,7 +45,7 @@ struct bridge{
     boost::filesystem::path docroot() const;
     
     std::string contents(const std::string& path) const;
-    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const udho::defs::request_type& req) const;
+    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const udho::defs::request_type& req, std::string mime = "") const;
 };
 
 }
