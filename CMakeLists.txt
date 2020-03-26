@@ -33,7 +33,6 @@ SET(UDHO_HEADERS
     includes/udho/application.h
 )
 SET(UDHO_SOURCES 
-    connection.cpp 
     util.cpp 
     page.cpp
     bridge.cpp
