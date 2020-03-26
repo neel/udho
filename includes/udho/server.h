@@ -35,6 +35,7 @@
 #include <udho/logging.h>
 #include <udho/defs.h>
 #include <udho/attachment.h>
+#include <udho/bridge.h>
 
 namespace udho{
 
@@ -43,15 +44,16 @@ namespace http = boost::beast::http;
 /**
  * @todo write docs
  */
-template <typename LoggerT=void, typename CacheT=void>
+template <typename AuxT, typename LoggerT=void, typename CacheT=void>
 struct server{
     typedef LoggerT logger_type;
     typedef CacheT cache_type;
-    typedef udho::attachment<logger_type, cache_type> attachment_type;
-    typedef server<logger_type, cache_type> self_type;
+    typedef AuxT auxiliary_type;
+    typedef udho::attachment<auxiliary_type, logger_type, cache_type> attachment_type;
+    typedef server<auxiliary_type, logger_type, cache_type> self_type;
     
     template <typename RequestT>
-    using context_type = udho::context<RequestT, attachment_type>;
+    using context_type = udho::context<auxiliary_type, RequestT, attachment_type>;
     typedef udho::defs::request_type http_request_type;
     typedef http_request_type request_type;
     
@@ -63,24 +65,25 @@ struct server{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        _attachment.aux().docroot(doc_root);
 #ifdef WITH_ICU
         _attachment << udho::logging::messages::formatted::info("server", "server (-with-icu) started on port %1%") % port;
 #else
         _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
 #endif
-//         _attachment.log(udho::logging::status::info, udho::logging::segment::server, "server started");
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
 };
 
-template <typename CacheT>
-struct server<void, CacheT>{
+template <typename AuxT, typename CacheT>
+struct server<AuxT, void, CacheT>{
     typedef CacheT cache_type;
-    typedef udho::attachment<void, cache_type> attachment_type;
-    typedef server<void, cache_type> self_type;
+    typedef AuxT auxiliary_type;
+    typedef udho::attachment<auxiliary_type, void, cache_type> attachment_type;
+    typedef server<auxiliary_type, void, cache_type> self_type;
     
     template <typename RequestT>
-    using context_type = udho::context<RequestT, attachment_type>;
+    using context_type = udho::context<auxiliary_type, RequestT, attachment_type>;
     typedef udho::defs::request_type http_request_type;
     typedef context_type<http_request_type> context;
     typedef http_request_type request_type;
@@ -93,6 +96,7 @@ struct server<void, CacheT>{
     server(self_type&& other) = default;
     template <typename RouterT>
     void serve(RouterT&& router, int port=9198, std::string doc_root=""){
+        _attachment.aux().docroot(doc_root);
 #ifdef WITH_ICU
         _attachment << udho::logging::messages::formatted::info("server", "server (-with-icu) started on port %1%") % port;
 #else
@@ -106,8 +110,8 @@ namespace servers{
 
 namespace stateless{
     template <typename LoggerT>
-    using logged = server<LoggerT, void>;
-    using quiet  = server<void, void>;
+    using logged = server<udho::bridge, LoggerT, void>;
+    using quiet  = server<udho::bridge, void, void>;
 }
 
 template <typename... T>
@@ -115,15 +119,15 @@ struct stateful{
     typedef udho::cache::store<boost::uuids::uuid, T...> cache_type;
     
     template <typename LoggerT>
-    using logged    = server<LoggerT, cache_type>;
+    using logged    = server<udho::bridge, LoggerT, cache_type>;
     using ostreamed = logged<udho::loggers::ostream>;
-    using quiet     = server<void, cache_type>;
+    using quiet     = server<udho::bridge, void, cache_type>;
 };
 
 namespace quiet{
     template <typename... T>
-    using stateful  = server<void, udho::cache::store<boost::uuids::uuid, T...>>;
-    using stateless = server<void, void>;
+    using stateful  = server<udho::bridge, void, udho::cache::store<boost::uuids::uuid, T...>>;
+    using stateless = server<udho::bridge, void, void>;
 }
 
 template <typename T>
@@ -131,14 +135,14 @@ struct logged{
     typedef T logger_type;
     
     template <typename... U>
-    using stateful  = server<logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
-    using stateless = server<logger_type, void>;
+    using stateful  = server<udho::bridge, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
+    using stateless = server<udho::bridge, logger_type, void>;
 };
 
 namespace ostreamed{
     template <typename CacheT>
     struct ostreamed_helper{
-        typedef server<udho::loggers::ostream, CacheT> server_type;
+        typedef server<udho::bridge, udho::loggers::ostream, CacheT> server_type;
         typedef typename server_type::logger_type logger_type;
         typedef typename server_type::cache_type cache_type;
         typedef typename server_type::attachment_type attachment_type;

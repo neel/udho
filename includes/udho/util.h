@@ -9,6 +9,11 @@
 #include <boost/beast/http/verb.hpp>
 
 namespace udho{
+    
+namespace internal{
+    boost::beast::string_view mime_type(boost::beast::string_view path);
+    std::string path_cat(boost::beast::string_view base, boost::beast::string_view path);
+}
 
 struct module_info{
     boost::beast::http::verb _method;

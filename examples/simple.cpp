@@ -106,6 +106,10 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
     return res;
 }
 
+boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts::stateless ctx){
+    return ctx.aux().file("README.md", ctx.request());
+}
+
 int main(){
     std::string doc_root("/home/neel/Projects/udho"); // path to static content
     
@@ -114,6 +118,7 @@ int main(){
 
     auto router = udho::router()
         | (udho::get(&file).raw() = "^/file")
+        | (udho::get(&local).raw() = "^/local")
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&see).plain() = "^/see$")
         | (udho::get(&hello_see).plain() = "^/hello_see$")

@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(mapping){
         
     context_type::request_type req;
     server_type::attachment_type attachment;
-    context_type ctx(req, attachment);
+    context_type ctx(attachment.aux(), req, attachment);
     router.serve(ctx, boost::beast::http::verb::get, "/hello", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "Hello World");
     }));

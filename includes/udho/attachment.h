@@ -35,32 +35,39 @@ namespace udho{
 /**
  * logged stateful
  */
-template <typename LoggerT=void, typename CacheT=void>
+template <typename AuxT, typename LoggerT=void, typename CacheT=void>
 struct attachment: LoggerT, CacheT{
-    typedef attachment<LoggerT, CacheT> self_type;
+    typedef attachment<AuxT, LoggerT, CacheT> self_type;
+    typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
     shadow_type _shadow;
+    AuxT _aux;
     
     attachment(LoggerT& logger): LoggerT(logger), _shadow(*this){}
     shadow_type& shadow(){
         return _shadow;
+    }
+    AuxT& aux(){
+        return _aux;
     }
 };
 
 /**
  * quiet stateful
  */
-template <typename CacheT>
-struct attachment<void, CacheT>: CacheT{
-    typedef attachment<void, CacheT> self_type;
+template <typename AuxT, typename CacheT>
+struct attachment<AuxT, void, CacheT>: CacheT{
+    typedef attachment<AuxT, void, CacheT> self_type;
+    typedef AuxT auxiliary_type;
     typedef void logger_type;
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
     shadow_type _shadow;
+    AuxT _aux;
     
     attachment(): _shadow(*this){}
     template <udho::logging::status Status>
@@ -70,32 +77,44 @@ struct attachment<void, CacheT>: CacheT{
     shadow_type& shadow(){
         return _shadow;
     }
+    AuxT& aux(){
+        return _aux;
+    }
 };
 
 /**
  * logged stateless
  */
-template <typename LoggerT>
-struct attachment<LoggerT, void>: LoggerT{
-    typedef attachment<LoggerT, void> self_type;
+template <typename AuxT, typename LoggerT>
+struct attachment<AuxT, LoggerT, void>: LoggerT{
+    typedef attachment<AuxT, LoggerT, void> self_type;
+    typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
     typedef void shadow_type;
+    
+    AuxT _aux;
     
     attachment(LoggerT& logger): LoggerT(logger){}
     int shadow(){
         return 0;
+    }
+    AuxT& aux(){
+        return _aux;
     }
 };
 
 /**
  * quiet stateless
  */
-template <>
-struct attachment<void, void>{
-    typedef attachment<void, void> self_type;
+template <typename AuxT>
+struct attachment<AuxT, void, void>{
+    typedef attachment<AuxT, void, void> self_type;
+    typedef AuxT auxiliary_type;
     typedef void logger_type;
     typedef void cache_type;
     typedef void shadow_type;
+    
+    AuxT _aux;
     
     attachment(){}
     template <udho::logging::status Status>
@@ -105,10 +124,13 @@ struct attachment<void, void>{
     int shadow(){
         return 0;
     }
+    AuxT& aux(){
+        return _aux;
+    }
 };
 
-template <typename LoggerT, typename CacheT, udho::logging::status Status>
-attachment<LoggerT, CacheT>& operator<<(attachment<LoggerT, CacheT>& attachment, const udho::logging::message<Status>& msg){
+template <typename AuxT, typename LoggerT, typename CacheT, udho::logging::status Status>
+attachment<AuxT, LoggerT, CacheT>& operator<<(attachment<AuxT, LoggerT, CacheT>& attachment, const udho::logging::message<Status>& msg){
     attachment(msg);
     return attachment;
 }

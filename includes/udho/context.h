@@ -28,6 +28,7 @@
 #ifndef UDHO_CONTEXT_H
 #define UDHO_CONTEXT_H
 
+#include <map>
 #include <sstream>
 #include <iostream>
 #include <boost/optional.hpp>
@@ -39,15 +40,15 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/utility/string_view.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/signals2/signal.hpp>
 #include <udho/util.h>
 #include <udho/cache.h>
 #include <udho/logging.h>
-#include <boost/signals2/signal.hpp>
 #include <udho/defs.h>
 #include <udho/form.h>
 #include <udho/cookie.h>
 #include <udho/session.h>
-#include <map>
+#include <udho/bridge.h>
 
 namespace udho{
 
@@ -122,12 +123,12 @@ struct context_impl{
 /**
  * @todo write docs
  */
-template <typename RequestT, typename ShadowT>
+template <typename AuxT, typename RequestT, typename ShadowT>
 struct context{
     typedef RequestT request_type;
     typedef ShadowT shadow_type;
     typedef typename shadow_type::key_type key_type;
-    typedef context<request_type, shadow_type> self_type;
+    typedef context<AuxT, request_type, shadow_type> self_type;
     typedef detail::context_impl<request_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::form_<RequestT> form_type;
@@ -136,13 +137,14 @@ struct context{
     
     pimple_type _pimpl;
     session_type _session;
+    AuxT& _aux;
         
     template <typename... V>
-    context(udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store){}
+    context(AuxT& aux, udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store), _aux(aux){}
     template <typename... V>
-    context(const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow){}
+    context(AuxT& aux, const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow), _aux(aux){}
     template <typename OtherShadowT>
-    context(context<RequestT, OtherShadowT>& other): _pimpl(other._pimpl), _session(other._session){}
+    context(context<AuxT, RequestT, OtherShadowT>& other): _pimpl(other._pimpl), _session(other._session), _aux(other._aux){}
     
     const request_type& request() const{return _pimpl->request();}
     
@@ -171,24 +173,28 @@ struct context{
     void attach(AttachmentT& attachment){
         _pimpl->attach(attachment);
     }
+    AuxT& aux(){
+        return _aux;
+    }
 };
 
-template <typename RequestT>
-struct context<RequestT, void>{
+template <typename AuxT, typename RequestT>
+struct context<AuxT, RequestT, void>{
     typedef RequestT request_type;
     typedef void shadow_type;
-    typedef context<request_type, void> self_type;
+    typedef context<AuxT, request_type, void> self_type;
     typedef detail::context_impl<request_type> impl_type;
     typedef boost::shared_ptr<impl_type> pimple_type;
     typedef udho::form_<RequestT> form_type;
     typedef udho::cookies_<RequestT> cookies_type;
     
     pimple_type _pimpl;
+    AuxT& _aux;
         
     template <typename C>
-    context(const RequestT& request, const C&): _pimpl(new impl_type(request)){}
+    context(AuxT& aux, const RequestT& request, const C&): _pimpl(new impl_type(request)), _aux(aux){}
     template <typename ShadowT>
-    context(context<RequestT, ShadowT>& other): _pimpl(other._pimpl){}
+    context(context<AuxT, RequestT, ShadowT>& other): _pimpl(other._pimpl), _aux(other._aux){}
     
     const request_type& request() const{return _pimpl->request();}
     
@@ -214,18 +220,21 @@ struct context<RequestT, void>{
     void attach(AttachmentT& attachment){
         _pimpl->attach(attachment);
     }
+    AuxT& aux(){
+        return _aux;
+    }
 };
 
-template <typename RequestT, typename ShadowT, udho::logging::status Status>
-context<RequestT, ShadowT>& operator<<(context<RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
+template <typename AuxT, typename RequestT, typename ShadowT, udho::logging::status Status>
+context<AuxT, RequestT, ShadowT>& operator<<(context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);
     return ctx;
 }
 
 namespace contexts{
-    using stateless = context<udho::defs::request_type, void>;
+    using stateless = context<udho::bridge, udho::defs::request_type, void>;
     template <typename... T>
-    using stateful = context<udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
+    using stateful = context<udho::bridge, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
 }
 
 }

@@ -20,16 +20,12 @@
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
 #include <udho/context.h>
-#include "logging.h"
-#include "page.h"
+#include <udho/logging.h>
+#include <udho/page.h>
 #include <udho/defs.h>
+#include <udho/util.h>
 
 namespace udho{
-
-namespace internal{
-    boost::beast::string_view mime_type(boost::beast::string_view path);
-    std::string path_cat(boost::beast::string_view base, boost::beast::string_view path);
-}
     
 using tcp = boost::asio::ip::tcp; 
 namespace http = boost::beast::http;
@@ -38,7 +34,8 @@ namespace http = boost::beast::http;
  * Stateful HTTP Session
  */
 template <typename RouterT, typename AttachmentT>
-class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{    
+class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{
+    typedef typename AttachmentT::auxiliary_type auxiliary_type;
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
 #else
@@ -50,7 +47,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     typedef connection<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
     typedef typename attachment_type::shadow_type shadow_type;
-    typedef udho::context<udho::defs::request_type, shadow_type> context_type;
+    typedef udho::context<auxiliary_type, udho::defs::request_type, shadow_type> context_type;
     
     struct send_lambda{
         self_type& self_;
@@ -100,7 +97,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
-            context_type ctx(_req, _attachment.shadow());
+            context_type ctx(_attachment.aux(), _req, _attachment.shadow());
             ctx.attach(_attachment);
             auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();

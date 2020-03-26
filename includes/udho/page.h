@@ -43,8 +43,8 @@ namespace exceptions{
             res.prepare_payload();
             return res;
         }
-        template <typename U, typename V>
-        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<U, V>& ctx) const{
+        template <typename AuxT, typename U, typename V>
+        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx) const{
             return response(ctx.request());
         }
         template <typename T, typename RouterT>
@@ -57,8 +57,8 @@ namespace exceptions{
             res.prepare_payload();
             return res;
         }
-        template <typename U, typename V, typename RouterT>
-        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<U, V>& ctx, RouterT& router) const{
+        template <typename AuxT, typename U, typename V, typename RouterT>
+        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx, RouterT& router) const{
             return response(ctx.request(), router);
         }
         virtual std::string page(std::string content="") const;
