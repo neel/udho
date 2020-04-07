@@ -28,6 +28,9 @@
 #ifndef UDHO_ACCESS_H
 #define UDHO_ACCESS_H
 
+#include <map>
+#include <list>
+#include <vector>
 #include <string>
 #include <type_traits>
 #include <udho/util.h>
@@ -37,39 +40,189 @@ namespace udho{
        
 namespace detail{
    
-template <typename F>
-struct association{
+template <typename F, typename R>
+struct responder{
     typedef F callback_type;
-    typedef typename F::result_type result_type;
-    
-    std::string   _key;
+    typedef R result_type;
     callback_type _callback;
     
-    association(const std::string& key, callback_type callback): _key(key), _callback(callback){}
-    auto call() const{
+    responder(callback_type callback): _callback(callback){}
+    result_type call(const std::string& key) const{
         return _callback();
     }
-    auto call(){
+    result_type call(const std::string& key){
         return _callback();
     }
+};
+    
+template <typename F>
+struct association: responder<F, typename F::result_type>{
+    typedef F callback_type;
+    typedef responder<F, typename F::result_type> responder_type;
+    typedef typename responder_type::result_type result_type;
+    
+    std::string   _key;
+    
+    association(const std::string& key, callback_type callback): _key(key), responder_type(callback){}
     bool matched(const std::string& key) const{
-        return _key == key;
-    }
-    template <typename C>
-    bool invoke(const std::string& key, C cb){
-        if(matched(key)){
-            cb(call());
-            return true;
+        auto colon = key.find_first_of(':');
+        if(colon != std::string::npos){
+            return _key == key.substr(0, colon);
+        }else{
+            return _key == key;
         }
         return false;
     }
-    template <typename C>
-    bool invoke(const std::string& key, C cb) const{
-        if(matched(key)){
-            cb(call());
-            return true;
+};
+
+template <typename F, typename V>
+struct responder<F, std::vector<V>>{
+    typedef F callback_type;
+    typedef V value_type;
+    typedef std::vector<V> container_type;
+    typedef V result_type;
+    typedef typename container_type::size_type size_type;
+    callback_type _callback;
+    
+    responder(callback_type callback): _callback(callback){}
+    result_type call(const std::string& key) const{
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                size_type index = boost::lexical_cast<size_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
         }
-        return false;
+        return result_type();
+    }
+    result_type call(const std::string& key){
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                size_type index = boost::lexical_cast<size_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
+        }
+        return result_type();
+    }
+};
+
+template <typename F, typename V>
+struct responder<F, std::list<V>>{
+    typedef F callback_type;
+    typedef V value_type;
+    typedef std::list<V> container_type;
+    typedef V result_type;
+    typedef typename container_type::size_type size_type;
+    callback_type _callback;
+    
+    responder(callback_type callback): _callback(callback){}
+    result_type call(const std::string& key) const{
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                size_type index = boost::lexical_cast<size_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
+        }
+        return result_type();
+    }
+    result_type call(const std::string& key){
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                size_type index = boost::lexical_cast<size_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
+        }
+        return result_type();
+    }
+};
+
+template <typename F, typename U, typename V>
+struct responder<F, std::map<U, V>>{
+    typedef F callback_type;
+    typedef V value_type;
+    typedef U key_type;
+    typedef std::map<U, V> container_type;
+    typedef V result_type;
+    typedef typename container_type::size_type size_type;
+    callback_type _callback;
+    
+    responder(callback_type callback): _callback(callback){}
+    result_type call(const std::string& key) const{
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                key_type index = boost::lexical_cast<key_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
+        }
+        return result_type();
+    }
+    result_type call(const std::string& key){
+        std::string khead, ktail;
+        auto colon = key.find_first_of(':');
+        if(colon == std::string::npos){
+            // TODO throw
+            return result_type();
+        }else{
+            container_type res = _callback();
+            if(colon != std::string::npos){
+                khead = key.substr(0, colon);
+                ktail = key.substr(colon+1);
+                
+                key_type index = boost::lexical_cast<key_type>(ktail);
+                value_type value = res.at(index);
+                return value;
+            }
+        }
+        return result_type();
     }
 };
 
@@ -156,11 +309,11 @@ struct association_group{
     bool exists(const std::string& key) const{
         return matched(key);
     }
-    auto call() const{
-        return _head.call();
+    auto call(const std::string& key) const{
+        return _head.call(key);
     }
-    auto call(){
-        return _head.call();
+    auto call(const std::string& key){
+        return _head.call(key);
     }
 };
 
@@ -180,11 +333,11 @@ struct association_group<U, void>{
     bool exists(const std::string& key) const{
         return matched(key);
     }
-    auto call() const{
-        return _head.call();
+    auto call(const std::string& key) const{
+        return _head.call(key);
     }
-    auto call(){
-        return _head.call();
+    auto call(const std::string& key){
+        return _head.call(key);
     }
 };
 
@@ -226,7 +379,7 @@ struct association_group_visitor<association_group<U, void>, false>{
         }else{
             khead = key;
             if(_group.matched(khead)){
-                callback(_group.call());
+                callback(_group.call(khead));
                 return true;
             }
         }
@@ -253,7 +406,7 @@ struct association_group_visitor<association_group<U, V>, false>{
         }else{
             khead = key;
             if(_group.matched(khead)){
-                callback(_group.call());
+                callback(_group.call(khead));
                 return true;
             }else{
                 return _tail_visitor.find(callback, key);
@@ -281,7 +434,7 @@ struct association_group_visitor<association_group<U, V>, true>{
             khead = key.substr(0, dot);
             ktail = key.substr(dot+1);
             if(_group.matched(khead)){
-                result_type result = _group.call();
+                result_type result = _group.call(khead);
                 auto index = result.index();
                 auto visitor = udho::detail::visit(index);
                 return visitor.find(callback, ktail);
@@ -289,7 +442,7 @@ struct association_group_visitor<association_group<U, V>, true>{
         }else{
             khead = key;
             if(_group.matched(khead)){
-                callback(_group.call());
+                callback(_group.call(khead));
                 return true;
             }else{
                 return _tail_visitor.find(callback, key);
@@ -305,7 +458,7 @@ struct association_leaf{
     bool matched(const std::string& /*key*/) const{
         return false;
     }
-    bool call() const{return false;}
+    bool call(const std::string& /*key*/) const{return false;}
     template <typename C>
     bool invoke(const std::string& /*key*/, C /*cb*/) const{
         return false;

@@ -10,14 +10,14 @@
 
 struct book: udho::prepare<book>{
     std::string  title;
-    std::string  author;
+    std::vector<std::string>  authors;
     unsigned     year;
        
     template <typename DictT>
     auto dict(DictT assoc) const{
-        return assoc | var("title",  &book::title)
-                     | var("author", &book::author)
-                     | var("year",   &book::year);
+        return assoc | var("title",   &book::title)
+                     | var("authors", &book::authors)
+                     | var("year",    &book::year);
     }
 };
 
@@ -25,7 +25,8 @@ struct student: udho::prepare<student>{
     unsigned int roll;
     std::string  first;
     std::string  last;
-    book         _book;
+    std::vector<book> books_issued;
+    std::map<std::string, double> marks_obtained;
     
     std::string name() const{
         return first + " " + last;
@@ -34,9 +35,10 @@ struct student: udho::prepare<student>{
     template <typename DictT>
     auto dict(DictT assoc) const{
         return assoc | var("roll",  &student::roll)
-                     | var("book",  &student::_book)
                      | var("first", &student::first)
                      | var("last",  &student::last)
+                     | var("books", &student::books_issued)
+                     | var("marks", &student::marks_obtained)
                      | fn("name",   &student::name);
     }
     
@@ -49,18 +51,27 @@ struct student: udho::prepare<student>{
 //     return "Hello "+name;
 // }
 int main(){
+    book b1;
+    b1.title = "Book1 Title";
+    b1.year  = 2020;
+    b1.authors.push_back("Sunanda Bose");
+    
     student neel;
     neel.roll  = 2;
     neel.first = "Neel";
     neel.last  = "Bose";
-    neel._book.year = 2020;
+    
+    neel.books_issued.push_back(b1);
+    neel.marks_obtained["chemistry"] = -10.42;
     
     udho::prepared<student> prepared(neel);
     std::cout << prepared["roll"] << std::endl;
     std::cout << prepared.at<unsigned>("roll") << std::endl;
     std::cout << prepared["first"] << std::endl;
     std::cout << prepared["name"] << std::endl;
-    std::cout << prepared["book.year"] << std::endl;
+    std::cout << prepared["books:0.year"] << std::endl;
+    std::cout << prepared["books:0.authors:0"] << std::endl;
+    std::cout << prepared["marks:chemistry"] << std::endl;
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);
