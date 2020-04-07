@@ -34,10 +34,10 @@ struct student: udho::prepare<student>{
     template <typename DictT>
     auto dict(DictT assoc) const{
         return assoc | var("roll",  &student::roll)
+                     | var("book",  &student::_book)
                      | var("first", &student::first)
                      | var("last",  &student::last)
-                     | fn("name",   &student::name)
-                     | var("book",  &student::_book);
+                     | fn("name",   &student::name);
     }
     
 };

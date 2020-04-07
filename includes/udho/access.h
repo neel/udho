@@ -221,7 +221,7 @@ struct association_group_visitor<association_group<U, void>, false>{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
-            // TODO exception
+            // TODO exception There is neither nesting nor a tail
             return false;
         }else{
             khead = key;
@@ -248,8 +248,8 @@ struct association_group_visitor<association_group<U, V>, false>{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
-            // TODO exception
-            return false;
+            // This cannot be a match. So no need to check, pass to the tail.
+            return _tail_visitor.find(callback, key);
         }else{
             khead = key;
             if(_group.matched(khead)){
