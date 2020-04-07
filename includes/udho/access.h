@@ -40,6 +40,7 @@ namespace detail{
 template <typename F>
 struct association{
     typedef F callback_type;
+    typedef typename F::result_type result_type;
     
     std::string   _key;
     callback_type _callback;
@@ -73,34 +74,43 @@ struct association{
 };
 
 template <typename ValueT>
-struct association_visitor{
+struct association_value_extractor{
     ValueT _value;
     
-    association_visitor(ValueT def=ValueT()): _value(def){}
+    association_value_extractor(ValueT def=ValueT()): _value(def){}
     void operator()(ValueT value){
-        std::cout << "found " << value << std::endl;
         _value = value;
     }
     template <typename T>
     typename std::enable_if<!std::is_same<ValueT, T>::value>::type operator()(const T& value){
-        std::cout << "lost " << value << std::endl;
+
     }
     ValueT value() const{
         return _value;
     }
 };
 
-template <typename GroupT>
-struct association_accessibility{
-    std::string _key;
-    GroupT&     _group;
-    
-    association_accessibility(const std::string& key, GroupT& group): _key(key), _group(group){}
-    template <typename T>
-    T as(){
-        return _group.at(_key, T());
-    }
-};
+// template <typename GroupT>
+// struct association_accessibility{
+//     std::string _key;
+//     GroupT     _group;
+//     
+//     association_accessibility(const std::string& key, const GroupT& group): _key(key), _group(group){}
+//     template <typename T>
+//     T as(){
+//         return _group.at(_key, T());
+//     }
+//     template <typename T>
+//     T as() const{
+//         return _group.at(_key, T());
+//     }
+//     auto operator[](const std::string& key) const{
+//         return _group[key];
+//     }
+//     auto operator[](const std::string& key){
+//         return _group[key];
+//     }
+// };
 
 /**
  * \code
@@ -113,6 +123,7 @@ template <typename U, typename V=void>
 struct association_group{
     typedef U head_type;
     typedef V tail_type;
+    typedef typename head_type::result_type result_type;
     typedef association_group<U, V> self_type;
 
     head_type _head;
@@ -131,50 +142,13 @@ struct association_group{
     auto call(){
         return _head.call();
     }
-    template <typename C>
-    bool invoke(const std::string& key, C& cb) const{
-        if(matched(key)){
-            cb(call());
-            return true;
-        }else{
-            return _tail.template invoke<C>(key, cb);
-        }
-        return false;
-    }
-    template <typename C>
-    bool invoke(const std::string& key, C& cb){
-        if(matched(key)){
-            cb(call());
-            return true;
-        }else{
-            return _tail.template invoke<C>(key, cb);
-        }
-        return false;
-    }
-    template <typename ValueT>
-    ValueT at(const std::string& key, ValueT def) const {       
-        association_visitor<ValueT> visitor(def);
-        invoke(key, visitor);
-        return visitor.value();
-    }
-    template <typename ValueT>
-    ValueT at(const std::string& key, ValueT def){
-        association_visitor<ValueT> visitor(def);
-        invoke(key, visitor);
-        return visitor.value();
-    }
-    association_accessibility<self_type> operator[](const std::string& key) const{
-        return association_accessibility<self_type>(key, *this);
-    }
-    association_accessibility<self_type> operator[](const std::string& key){
-        return association_accessibility<self_type>(key, *this);
-    }
 };
 
 template <typename U>
 struct association_group<U, void>{
     typedef U head_type;
     typedef void tail_type;
+    typedef typename head_type::result_type result_type;
     typedef association_group<U, void> self_type;
 
     head_type _head;
@@ -192,43 +166,122 @@ struct association_group<U, void>{
     auto call(){
         return _head.call();
     }
-    template <typename C>
-    bool invoke(const std::string& key, C& cb) const{
-        if(matched(key)){
-            cb(call());
-            return true;
+};
+
+template <typename U, typename V, typename F>
+association_group<association<F>, association_group<U, V>> operator|(const association_group<U, V>& nonterminal, const association<F>& terminal){
+    return association_group<association<F>, association_group<U, V>>(terminal, nonterminal);
+}
+
+template <typename U>
+struct is_prepared{
+    template <typename V>
+    static typename V::prepared_type test(int);
+    template <typename>
+    static void test(...);
+    enum {value = !std::is_void<decltype(test<U>(0))>::value};
+};
+
+template <typename GroupT, bool IsPrepared=is_prepared<typename GroupT::head_type::result_type>::value>
+struct association_group_visitor;
+
+template <typename U, typename V>
+association_group_visitor<association_group<U, V>> visit(const association_group<U, V>& nonterminal){
+    return association_group_visitor<association_group<U, V>>(nonterminal);
+}
+
+template <typename U>
+struct association_group_visitor<association_group<U, void>, false>{
+    typedef association_group<U, void> group_type;
+    const group_type& _group;
+    
+    association_group_visitor(const group_type& group): _group(group){}
+    template <typename CallbackT>
+    bool find(CallbackT& callback, const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            // TODO exception
+            return false;
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                callback(_group.call());
+                return true;
+            }
         }
         return false;
-    }
-    template <typename C>
-    bool invoke(const std::string& key, C& cb){
-        if(matched(key)){
-            cb(call());
-            return true;
-        }
-        return false;
-    }
-    template <typename ValueT>
-    ValueT at(const std::string& key, ValueT def) const {
-        association_visitor<ValueT> visitor(def);
-        invoke(key, visitor);
-        return visitor.value();
-    }
-    template <typename ValueT>
-    ValueT at(const std::string& key, ValueT def){
-        association_visitor<ValueT> visitor(def);
-        invoke(key, visitor);
-        return visitor.value();
-    }
-    association_accessibility<self_type> operator[](const std::string& key) const{
-        return association_accessibility<self_type>(key, *this);
-    }
-    association_accessibility<self_type> operator[](const std::string& key){
-        return association_accessibility<self_type>(key, *this);
     }
 };
 
+template <typename U, typename V>
+struct association_group_visitor<association_group<U, V>, false>{
+    typedef association_group<U, V> group_type;
+    typedef V tail_type;
+    typedef association_group_visitor<tail_type> tail_visitor_type;
+    const group_type& _group;
+    tail_visitor_type _tail_visitor;
+    
+    association_group_visitor(const group_type& group): _group(group), _tail_visitor(group._tail){}
+    template <typename CallbackT>
+    bool find(CallbackT& callback, const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            // TODO exception
+            return false;
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                callback(_group.call());
+                return true;
+            }else{
+                return _tail_visitor.find(callback, key);
+            }
+        }
+        return false;
+    }
+};
+
+template <typename U, typename V>
+struct association_group_visitor<association_group<U, V>, true>{
+    typedef association_group<U, V> group_type;
+    typedef typename group_type::result_type result_type;
+    typedef V tail_type;
+    typedef association_group_visitor<tail_type> tail_visitor_type;
+    const group_type& _group;
+    tail_visitor_type _tail_visitor;
+    
+    association_group_visitor(const group_type& group): _group(group), _tail_visitor(group._tail){}
+    template <typename CallbackT>
+    bool find(CallbackT& callback, const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            khead = key.substr(0, dot);
+            ktail = key.substr(dot+1);
+            if(_group.matched(khead)){
+                result_type result = _group.call();
+                auto index = result.index();
+                auto visitor = udho::detail::visit(index);
+                return visitor.find(callback, ktail);
+            }
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                callback(_group.call());
+                return true;
+            }else{
+                return _tail_visitor.find(callback, key);
+            }
+        }
+        return false;
+    }
+};
+
+
 struct association_leaf{
+    typedef void result_type;
     bool matched(const std::string& /*key*/) const{
         return false;
     }
@@ -238,11 +291,6 @@ struct association_leaf{
         return false;
     }
 };
-
-template <typename U, typename V, typename F>
-association_group<association<F>, association_group<U, V>> operator|(const association_group<U, V>& nonterminal, const association<F>& terminal){
-    return association_group<association<F>, association_group<U, V>>(terminal, nonterminal);
-}
 
 }
 
@@ -257,6 +305,8 @@ detail::association<F> associate(const std::string& key, F callback){
 
 template <typename DerivedT>
 struct prepare{
+    typedef DerivedT prepared_type;
+    
     template <typename F>
     auto var(const std::string& key, F f){
         return udho::associate(key, internal::member(f, static_cast<DerivedT*>(this)));
@@ -281,28 +331,7 @@ struct prepare{
         const DerivedT& obj = static_cast<const DerivedT&>(*this);
         return obj.dict(udho::assoc());
     }
-    auto operator[](const std::string& key) const{
-        auto idx = index();
-        return idx[key];
-    }
-    auto operator[](const std::string& key){
-        auto idx = index();
-        return idx[key];
-    }
 };
-
-
-/**
- * @todo write docs
- */
-// template <typename T>
-// class access{
-//     const T& _target;
-//     
-//     auto value(const std::string& key){
-//         _target.dict()
-//     }
-// };
 
 }
 

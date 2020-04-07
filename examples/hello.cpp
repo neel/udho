@@ -36,8 +36,10 @@ struct student: udho::prepare<student>{
         return assoc | var("roll",  &student::roll)
                      | var("first", &student::first)
                      | var("last",  &student::last)
-                     | fn("name",   &student::name);
+                     | fn("name",   &student::name)
+                     | var("book",  &student::_book);
     }
+    
 };
 
 // std::string world(udho::contexts::stateless ctx){
@@ -48,18 +50,33 @@ struct student: udho::prepare<student>{
 // }
 int main(){
     student neel;
-    neel.roll  = 1;
+    neel.roll  = 2;
     neel.first = "Neel";
     neel.last  = "Bose";
     neel._book.year = 2020;
         
     auto index = neel.index();
     
-    std::cout << neel["roll"].as<unsigned>() << std::endl;
-    std::cout << neel["first"].as<std::string>() << std::endl;
-    std::cout << neel["last"].as<std::string>() << std::endl;
-    std::cout << neel["name"].as<std::string>() << std::endl;
-    std::cout << index["book"].as<book>()["year"].as<unsigned>() << std::endl;
+    udho::detail::association_value_extractor<unsigned> extractor;
+    udho::detail::association_value_extractor<std::string> str_extractor;
+    
+    auto visitor = udho::detail::visit(index);
+    auto str_visitor = udho::detail::visit(index);
+    
+    visitor.find(extractor, "roll");
+    std::cout << extractor.value() << std::endl;
+    
+    str_visitor.find(str_extractor, "last");
+    std::cout << str_extractor.value() << std::endl;
+    
+    visitor.find(extractor, "book.year");
+    std::cout << extractor.value() << std::endl;
+    
+//     std::cout << neel["roll"].as<unsigned>() << std::endl;
+//     std::cout << neel["first"].as<std::string>() << std::endl;
+//     std::cout << neel["last"].as<std::string>() << std::endl;
+//     std::cout << neel["name"].as<std::string>() << std::endl;
+//     std::cout << neel["book"]["year"].as<unsigned>() << std::endl;
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);
