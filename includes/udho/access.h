@@ -76,17 +76,59 @@ struct association{
 template <typename ValueT>
 struct association_value_extractor{
     ValueT _value;
+    bool   _success;
     
-    association_value_extractor(ValueT def=ValueT()): _value(def){}
+    association_value_extractor(): _success(false){}
     void operator()(ValueT value){
         _value = value;
+        _success = true;
     }
     template <typename T>
-    typename std::enable_if<!std::is_same<ValueT, T>::value>::type operator()(const T& value){
-
-    }
+    typename std::enable_if<!std::is_same<ValueT, T>::value>::type operator()(const T& /*value*/){}
     ValueT value() const{
         return _value;
+    }
+    void clear(){
+        _value = ValueT();
+        _success = false;
+    }
+};
+
+template<typename S, typename T>
+class is_streamable{
+    template<typename SS, typename TT>
+    static auto test(int) -> decltype( std::declval<SS&>() << std::declval<TT>(), std::true_type() );
+
+    template<typename, typename>
+    static auto test(...) -> std::false_type;
+
+  public:
+    static const bool value = decltype(test<S,T>(0))::value;
+};
+
+template <typename ValueT>
+struct association_lexical_extractor{
+    ValueT _value;
+    bool   _success;
+    
+    association_lexical_extractor(): _success(false){}
+    void operator()(ValueT value){
+        _value = value;
+        _success = true;
+    }
+    template <typename T>
+    typename std::enable_if<!std::is_same<ValueT, T>::value && is_streamable<std::stringstream, T>::value>::type operator()(const T& value){
+        _value = boost::lexical_cast<ValueT>(value);
+        _success = true;
+    }
+    template <typename T>
+    typename std::enable_if<!std::is_same<ValueT, T>::value && !is_streamable<std::stringstream, T>::value>::type operator()(const T& value){}
+    ValueT value() const{
+        return _value;
+    }
+    void clear(){
+        _value = ValueT();
+        _success = false;
     }
 };
 
