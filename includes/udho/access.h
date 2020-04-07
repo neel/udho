@@ -132,28 +132,6 @@ struct association_lexical_extractor{
     }
 };
 
-// template <typename GroupT>
-// struct association_accessibility{
-//     std::string _key;
-//     GroupT     _group;
-//     
-//     association_accessibility(const std::string& key, const GroupT& group): _key(key), _group(group){}
-//     template <typename T>
-//     T as(){
-//         return _group.at(_key, T());
-//     }
-//     template <typename T>
-//     T as() const{
-//         return _group.at(_key, T());
-//     }
-//     auto operator[](const std::string& key) const{
-//         return _group[key];
-//     }
-//     auto operator[](const std::string& key){
-//         return _group[key];
-//     }
-// };
-
 /**
  * \code
  * association_group<X, void> | Y                                             => association_group<Y, association_group<X, void>>
@@ -345,6 +323,47 @@ detail::association<F> associate(const std::string& key, F callback){
     return detail::association<F>(key, callback);
 }
 
+template <typename T, bool IsPrepared=detail::is_prepared<T>::value>
+struct prepared;
+
+template <typename T>
+struct prepared<T, false>;
+
+template <typename T>
+struct prepared<T, true>{
+    typedef T prepared_type;
+    typedef typename std::result_of<decltype(&prepared_type::index)(prepared_type*)>::type index_type;
+    typedef detail::association_group_visitor<index_type> visitor_type;
+    
+    const prepared_type& _data;
+    index_type           _index;
+    visitor_type         _visitor;
+    
+    prepared(const prepared_type& data): _data(data), _index(data.index()), _visitor(_index){}
+    template <typename V>
+    V extract(const std::string& key){
+        detail::association_value_extractor<V> extractor;
+        _visitor.find(extractor, key);
+        return extractor.value();
+    }
+    template <typename V>
+    V parse(const std::string& key){
+        detail::association_lexical_extractor<V> extractor;
+        _visitor.find(extractor, key);
+        return extractor.value();
+    }
+    std::string stringify(const std::string& key){
+        return parse<std::string>(key);
+    }
+    template <typename V>
+    V at(const std::string& key){
+        return extract<V>(key);
+    }
+    std::string operator[](const std::string& key){
+        return stringify(key);
+    }
+};
+
 template <typename DerivedT>
 struct prepare{
     typedef DerivedT prepared_type;
@@ -364,10 +383,6 @@ struct prepare{
     template <typename F>
     auto fn(const std::string& key, F f) const{
         return udho::associate(key, internal::reduced(f, static_cast<const DerivedT*>(this)));
-    }
-    auto index(){
-        DerivedT& obj = static_cast<DerivedT&>(*this);
-        return obj.dict(udho::assoc());
     }
     auto index() const{
         const DerivedT& obj = static_cast<const DerivedT&>(*this);

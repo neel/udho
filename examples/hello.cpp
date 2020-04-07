@@ -54,41 +54,13 @@ int main(){
     neel.first = "Neel";
     neel.last  = "Bose";
     neel._book.year = 2020;
-        
-    auto index = neel.index();
     
-    udho::detail::association_value_extractor<unsigned> extractor;
-    udho::detail::association_value_extractor<std::string> str_extractor;
-    udho::detail::association_lexical_extractor<std::string> lex_str_extractor;
-    udho::detail::association_lexical_extractor<unsigned> lex_uint_extractor;
-    
-    auto visitor = udho::detail::visit(index);
-    
-    visitor.find(extractor, "roll");
-    std::cout << extractor.value() << std::endl;
-    extractor.clear();
-    
-    visitor.find(str_extractor, "last");
-    std::cout << str_extractor.value() << std::endl;
-    str_extractor.clear();
-    
-    visitor.find(extractor, "book.year");
-    std::cout << extractor.value() << std::endl;
-    extractor.clear();
-    
-    visitor.find(lex_str_extractor, "book.year");
-    std::cout << lex_str_extractor.value() << std::endl;
-    lex_str_extractor.clear();
-    
-    visitor.find(lex_uint_extractor, "book.year");
-    std::cout << lex_uint_extractor.value()+2 << std::endl;
-    lex_uint_extractor.clear();
-    
-//     std::cout << neel["roll"].as<unsigned>() << std::endl;
-//     std::cout << neel["first"].as<std::string>() << std::endl;
-//     std::cout << neel["last"].as<std::string>() << std::endl;
-//     std::cout << neel["name"].as<std::string>() << std::endl;
-//     std::cout << neel["book"]["year"].as<unsigned>() << std::endl;
+    udho::prepared<student> prepared(neel);
+    std::cout << prepared["roll"] << std::endl;
+    std::cout << prepared.at<unsigned>("roll") << std::endl;
+    std::cout << prepared["first"] << std::endl;
+    std::cout << prepared["name"] << std::endl;
+    std::cout << prepared["book.year"] << std::endl;
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);
