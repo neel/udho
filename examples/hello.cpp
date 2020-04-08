@@ -40,8 +40,7 @@ struct student: udho::prepare<student>{
                      | var("books", &student::books_issued)
                      | var("marks", &student::marks_obtained)
                      | fn("name",   &student::name);
-    }
-    
+    }    
 };
 
 // std::string world(udho::contexts::stateless ctx){
@@ -55,6 +54,9 @@ int main(){
     b1.title = "Book1 Title";
     b1.year  = 2020;
     b1.authors.push_back("Sunanda Bose");
+    b1.authors.push_back("Neel Bose");
+    b1.authors.push_back("Anindita Sinha Roy");
+    b1.authors.push_back("Nandini Mukherjee");
     
     student neel;
     neel.roll  = 2;
@@ -72,6 +74,12 @@ int main(){
     std::cout << prepared["books:0.year"] << std::endl;
     std::cout << prepared["books:0.authors:0"] << std::endl;
     std::cout << prepared["marks:chemistry"] << std::endl;
+    
+    std::cout << prepared.count("books:0.authors") << std::endl;
+    
+    std::vector<std::string> keys = prepared.keys("books:0.authors");
+    std::copy(keys.begin(), keys.end(), std::ostream_iterator<std::string>(std::cout, ","));
+    std::cout << std::endl;
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);

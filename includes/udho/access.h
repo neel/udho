@@ -47,11 +47,23 @@ struct responder{
     callback_type _callback;
     
     responder(callback_type callback): _callback(callback){}
-    result_type call(const std::string& key) const{
+    result_type call(const std::string& /*key*/) const{
         return _callback();
     }
-    result_type call(const std::string& key){
+    result_type call(const std::string& /*key*/){
         return _callback();
+    }
+    bool iterable() const{
+        return false;
+    }
+    bool leaf() const{
+        return true;
+    }
+    std::size_t count() const{
+        return 0;
+    }
+    std::vector<std::string> keys() const{
+        return std::vector<std::string>();
     }
 };
     
@@ -123,55 +135,24 @@ struct responder<F, std::vector<V>>{
         }
         return result_type();
     }
-};
-
-template <typename F, typename V>
-struct responder<F, std::list<V>>{
-    typedef F callback_type;
-    typedef V value_type;
-    typedef std::list<V> container_type;
-    typedef V result_type;
-    typedef typename container_type::size_type size_type;
-    callback_type _callback;
-    
-    responder(callback_type callback): _callback(callback){}
-    result_type call(const std::string& key) const{
-        std::string khead, ktail;
-        auto colon = key.find_first_of(':');
-        if(colon == std::string::npos){
-            // TODO throw
-            return result_type();
-        }else{
-            container_type res = _callback();
-            if(colon != std::string::npos){
-                khead = key.substr(0, colon);
-                ktail = key.substr(colon+1);
-                
-                size_type index = boost::lexical_cast<size_type>(ktail);
-                value_type value = res.at(index);
-                return value;
-            }
-        }
-        return result_type();
+    bool iterable() const{
+        return true;
     }
-    result_type call(const std::string& key){
-        std::string khead, ktail;
-        auto colon = key.find_first_of(':');
-        if(colon == std::string::npos){
-            // TODO throw
-            return result_type();
-        }else{
-            container_type res = _callback();
-            if(colon != std::string::npos){
-                khead = key.substr(0, colon);
-                ktail = key.substr(colon+1);
-                
-                size_type index = boost::lexical_cast<size_type>(ktail);
-                value_type value = res.at(index);
-                return value;
-            }
-        }
-        return result_type();
+    bool leaf() const{
+        return false;
+    }
+    std::size_t count() const{
+        container_type res = _callback();
+        return res.size();
+    }
+    std::vector<std::string> keys() const{
+        container_type res = _callback();
+        std::vector<std::string> ks;
+        std::size_t i = 0;
+        std::generate_n(std::back_inserter(ks), res.size(), [&i](){
+            return boost::lexical_cast<std::string>(i++);
+        });
+        return ks;
     }
 };
 
@@ -223,6 +204,25 @@ struct responder<F, std::map<U, V>>{
             }
         }
         return result_type();
+    }
+    bool iterable() const{
+        return true;
+    }
+    bool leaf() const{
+        return false;
+    }
+    std::size_t count() const{
+        container_type res = _callback();
+        return res.size();
+    }
+    std::vector<std::string> keys() const{
+        container_type res = _callback();
+        std::vector<std::string> ks;
+        typename container_type::const_iterator i = res.begin();;
+        std::generate_n(std::back_inserter(ks), res.size(), [&i](){
+            return boost::lexical_cast<std::string>((i++)->first);
+        });
+        return ks;
     }
 };
 
@@ -315,6 +315,18 @@ struct association_group{
     auto call(const std::string& key){
         return _head.call(key);
     }
+    bool iterable() const{
+        return _head.iterable();
+    }
+    bool leaf() const{
+        return _head.leaf();
+    }
+    std::size_t count() const{
+        return _head.count();
+    }
+    std::vector<std::string> keys() const{
+        return _head.keys();
+    }
 };
 
 template <typename U>
@@ -338,6 +350,18 @@ struct association_group<U, void>{
     }
     auto call(const std::string& key){
         return _head.call(key);
+    }
+    bool iterable() const{
+        return false;
+    }
+    bool leaf() const{
+        return true;
+    }
+    std::size_t count() const{
+        return 0;
+    }
+    std::vector<std::string> keys() const{
+        return std::vector<std::string>();
     }
 };
 
@@ -385,6 +409,12 @@ struct association_group_visitor<association_group<U, void>, false>{
         }
         return false;
     }
+    std::size_t count(const std::string& /*key*/){
+        return 0;
+    }
+    std::vector<std::string> keys(const std::string& /*key*/){
+        return std::vector<std::string>();
+    }
 };
 
 template <typename U, typename V>
@@ -413,6 +443,38 @@ struct association_group_visitor<association_group<U, V>, false>{
             }
         }
         return false;
+    }
+    std::size_t count(const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            // This cannot be a match. So no need to check, pass to the tail.
+            return _tail_visitor.count(key);
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                return _group.count();
+            }else{
+                return _tail_visitor.count(key);
+            }
+        }
+        return 0;
+    }
+    std::vector<std::string> keys(const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            // This cannot be a match. So no need to check, pass to the tail.
+            return _tail_visitor.keys(key);
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                return _group.keys();
+            }else{
+                return _tail_visitor.keys(key);
+            }
+        }
+        return std::vector<std::string>();
     }
 };
 
@@ -449,6 +511,50 @@ struct association_group_visitor<association_group<U, V>, true>{
             }
         }
         return false;
+    }
+    std::size_t count(const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            khead = key.substr(0, dot);
+            ktail = key.substr(dot+1);
+            if(_group.matched(khead)){
+                result_type result = _group.call(khead);
+                auto index = result.index();
+                auto visitor = udho::detail::visit(index);
+                return visitor.count(ktail);
+            }
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                return _group.count();
+            }else{
+                return _tail_visitor.count(key);
+            }
+        }
+        return 0;
+    }
+    std::vector<std::string> keys(const std::string& key){
+        std::string khead, ktail;
+        auto dot = key.find_first_of('.');
+        if(dot != std::string::npos){
+            khead = key.substr(0, dot);
+            ktail = key.substr(dot+1);
+            if(_group.matched(khead)){
+                result_type result = _group.call(khead);
+                auto index = result.index();
+                auto visitor = udho::detail::visit(index);
+                return visitor.keys(ktail);
+            }
+        }else{
+            khead = key;
+            if(_group.matched(khead)){
+                return _group.keys();
+            }else{
+                return _tail_visitor.keys(key);
+            }
+        }
+        return std::vector<std::string>();
     }
 };
 
@@ -514,6 +620,12 @@ struct prepared<T, true>{
     }
     std::string operator[](const std::string& key){
         return stringify(key);
+    }
+    std::size_t count(const std::string& key){
+        return _visitor.count(key);
+    }
+    std::vector<std::string> keys(const std::string& key){
+        return _visitor.keys(key);
     }
 };
 
