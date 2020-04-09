@@ -26,3 +26,8 @@
  */
 
 #include "udho/scope.h"
+
+udho::declaration::declaration(const std::string& key, std::size_t depth): _id(key), _depth(depth){}
+bool udho::declaration::operator<(const declaration& decl) const{
+    return _id < decl._id;
+}
