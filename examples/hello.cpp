@@ -6,6 +6,7 @@
 #include <udho/context.h>
 #include <iostream>
 
+#include <udho/scope.h>
 #include <udho/access.h>
 
 struct book: udho::prepare<book>{
@@ -80,6 +81,14 @@ int main(){
     std::vector<std::string> keys = prepared.keys("books:0.authors");
     std::copy(keys.begin(), keys.end(), std::ostream_iterator<std::string>(std::cout, ","));
     std::cout << std::endl;
+    
+    auto table = udho::scope(prepared);
+    table.add("papers", "books", 0);
+    std::cout << table.eval("papers:0.title") << std::endl;
+    table.add("thesis", "papers:0", 1);
+    std::cout << table.eval("thesis.year") << std::endl;
+    table.clear(0);
+    std::cout << table.eval("thesis.year") << std::endl;
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);

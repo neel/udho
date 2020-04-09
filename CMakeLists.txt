@@ -36,6 +36,7 @@ SET(UDHO_SOURCES
     util.cpp 
     page.cpp
     bridge.cpp
+    scope.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
