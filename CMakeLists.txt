@@ -5,9 +5,12 @@ SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+
 option(UDHO_BUILD_TESTS "Build the unit tests" ON)
 option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
 option(UDHO_USE_ICU "Build with ICU" ON)
+option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
 
 if(UDHO_USE_ICU)
     add_definitions(-DWITH_ICU)
@@ -15,6 +18,11 @@ if(UDHO_USE_ICU)
         SET(ICU_ROOT "/USR/LOCAL/OPT/ICU4C")
     ENDIF()
     FIND_PACKAGE(ICU COMPONENTS uc REQUIRED)
+endif()
+
+if(UDHO_USE_PUGIXML)
+    add_definitions(-DWITH_PUGI)
+    FIND_PACKAGE(PugiXML REQUIRED)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
@@ -37,6 +45,7 @@ SET(UDHO_SOURCES
     page.cpp
     bridge.cpp
     scope.cpp
+    parser.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
@@ -49,6 +58,10 @@ TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
 if(UDHO_USE_ICU)
     TARGET_LINK_LIBRARIES(udho ICU::uc)
+endif()
+
+if(UDHO_USE_PUGIXML)
+    TARGET_LINK_LIBRARIES(udho ${PUGIXML_LIBRARIES})
 endif()
 
 if(UDHO_BUILD_TESTS)

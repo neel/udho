@@ -8,6 +8,7 @@
 
 #include <udho/scope.h>
 #include <udho/access.h>
+#include <udho/parser.h>
 
 struct book: udho::prepare<book>{
     std::string  title;
@@ -56,8 +57,14 @@ int main(){
     b1.year  = 2020;
     b1.authors.push_back("Sunanda Bose");
     b1.authors.push_back("Neel Bose");
-    b1.authors.push_back("Anindita Sinha Roy");
     b1.authors.push_back("Nandini Mukherjee");
+    
+    book b2;
+    b2.title = "Book2 Title";
+    b2.year  = 2018;
+    b2.authors.push_back("Sunanda Bose");
+    b2.authors.push_back("Neel Bose");
+    b2.authors.push_back("Nandini Mukherjee");
     
     student neel;
     neel.roll  = 2;
@@ -65,6 +72,7 @@ int main(){
     neel.last  = "Bose";
     
     neel.books_issued.push_back(b1);
+    neel.books_issued.push_back(b2);
     neel.marks_obtained["chemistry"] = -10.42;
     
     udho::prepared<student> prepared(neel);
@@ -83,12 +91,40 @@ int main(){
     std::cout << std::endl;
     
     auto table = udho::scope(prepared);
-    table.add("papers", "books", 0);
-    std::cout << table.eval("papers:0.title") << std::endl;
-    table.add("thesis", "papers:0", 1);
-    std::cout << table.eval("thesis.year") << std::endl;
-    table.clear(0);
-    std::cout << table.eval("thesis.year") << std::endl;
+//     table.add("papers", "books", 0);
+//     std::cout << table.eval("papers:0.title") << std::endl;
+//     table.add("thesis", "papers:0", 1);
+//     std::cout << table.eval("thesis.year") << std::endl;
+//     table.clear(0);
+//     std::cout << table.eval("thesis.year") << std::endl;
+    
+    
+    std::string xml_template = R"(
+        <udho:template name="foo">
+            <div class="foo">
+                <span class="name">
+                    <udho:text name="name" />
+                </span>
+                <udho:block>
+                    <article class="thesis">
+                        <udho:var name="thesis" value="books:0" />
+                        <label class="year">
+                            <udho:text name="thesis.year" />
+                        </label>
+                    </article>
+                </udho:block>
+                <div class="publications">
+                    <udho:for value="book" key="id" in="books">
+                        <div class="title">
+                            <udho:text name="book.title" />
+                        </div>
+                    </udho:for>
+                </div>
+            </div>
+        </udho:template>
+    )";
+    
+    udho::parse_xml(table, xml_template);
     
 //     boost::asio::io_service io;
 //     udho::servers::ostreamed::stateless server(io, std::cout);

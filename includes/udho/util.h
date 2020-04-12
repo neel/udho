@@ -155,6 +155,52 @@ struct module_info{
     
     std::vector<module_info> _children;
 };
+
+template<class ForwardIt1, class ForwardIt2>
+constexpr ForwardIt1 _search(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_first, ForwardIt2 s_last){
+    for (; ; ++first) {
+        ForwardIt1 it = first;
+        for (ForwardIt2 s_it = s_first; ; ++it, ++s_it) {
+            if (s_it == s_last) {
+                return first;
+            }
+            if (it == last) {
+                return last;
+            }
+            if (!(*it == *s_it)) {
+                break;
+            }
+        }
+    }
+}
+    
+template <typename Iterator>
+struct bounded_str{
+    typedef bounded_str<Iterator> self_type;
+    typedef std::pair<Iterator, Iterator> pair_type;
+    
+    pair_type _pair;
+    
+    bounded_str(Iterator begin, Iterator end): _pair(begin, end){}
+    bounded_str(const self_type& other): _pair(other._pair){}
+    Iterator begin() const{return _pair.first;}
+    Iterator end() const{return _pair.second;}
+    bool invalid() const{return begin() == end();}
+    bool valid() const{return !invalid();}
+    template <typename Itarator>
+    void copy(Itarator it) const{
+        std::copy(begin(), end(), it);
+    }
+    template <typename ContainerT>
+    ContainerT copied() const{
+        ContainerT out;
+        copy(std::back_inserter(out));
+        return out;
+    }
+    std::size_t size() const{
+        return std::distance(begin(), end());
+    }
+};
     
 namespace util{
     template <typename CharT>

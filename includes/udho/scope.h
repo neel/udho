@@ -29,6 +29,7 @@
 #define UDHO_SCOPE_H
 
 #include <map>
+#include <vector>
 #include <string>
 #include <iostream>
 #include <boost/multi_index_container.hpp>
@@ -106,11 +107,15 @@ struct lookup_table{
         }
         return false;
     }
-    void clear(std::size_t depth){
-        _storage_depth.erase(depth);
+    std::size_t clear(std::size_t depth){
+        std::size_t removed = _storage_depth.erase(depth);
+        return removed;
     }
     std::string eval(const std::string& key){
         return _group[lookup(key)];
+    }
+    std::vector<std::string> keys(const std::string& key){
+        return _group.keys(key);
     }
     std::size_t down(){
         return ++_level;
@@ -118,6 +123,14 @@ struct lookup_table{
     std::size_t up(){
         clear(_level);
         return --_level;
+    }
+    bool add(const std::string& key, const std::string& ref){
+        return add(key, ref, _level);
+    }
+    void list(){
+        for(const udho::declaration& decl: _storage_named){
+            std::cout << decl._id << " " << decl._ref << " -> " << decl._depth << std::endl;
+        }
     }
 };
 
