@@ -36,12 +36,165 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 
+#include <set>
+#include <map>
+#include <stack>
+#include <boost/tokenizer.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 #ifdef WITH_PUGI
 #include <pugixml.hpp>
 #endif
 
 namespace udho{
-
+    
+namespace view{
+    
+template <typename ScopeT>
+struct shunting_yard{
+    typedef ScopeT scope_type;
+    typedef shunting_yard<ScopeT> self_type;
+    
+    std::map<std::string, std::size_t> _operators;
+    std::set<std::string>              _functions;
+    
+    bool is_operator(const std::string& buff) const{
+        auto oit = _operators.find(buff);
+        if(oit != _operators.end()){
+            return true;
+        }
+        return false;
+    };
+    bool is_function(const std::string& buff) const{
+        auto oit = _functions.find(buff);
+        if(oit != _functions.end()){
+            return true;
+        }
+        return false;
+    };
+    bool is_comma(const std::string& buff) const{
+        return buff == ",";
+    }
+    bool is_parenthesis_open(const std::string& buff) const{
+        return buff == "(";
+    }
+    bool is_parenthesis_close(const std::string& buff) const{
+        return buff == ")";
+    }
+    bool is_parenthesis(const std::string& buff) const{
+        return is_parenthesis_open(buff) || is_parenthesis_close(buff);
+    }
+    std::size_t precedence(const std::string& buff) const{
+        if(is_operator(buff)){
+            auto oit = _operators.find(buff);
+            if(oit != _operators.end()){
+                return oit->second;
+            }
+        }
+        return 0;
+    }
+    void add_operator(const std::string& op, std::size_t precedence){
+        _operators.insert(std::make_pair(op, precedence));
+    }
+    void add_function(const std::string& fnc){
+        _functions.insert(fnc);
+    }
+    std::vector<std::string> tokenized(const std::string& infix){
+        typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
+        boost::char_separator<char> sep(" \t\n", ",+-*/%()&|<>=", boost::drop_empty_tokens);
+        tokenizer tokens(infix, sep);
+        std::vector<std::string> raw_tokens, processed_tokens;
+        for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter){
+            std::string ctoken = *tok_iter;
+            tokenizer::iterator next = tok_iter;
+            ++next;
+            if(next != tokens.end()){
+                std::string ntoken = *next;
+                if(ctoken == "<" && ntoken == "="){
+                    processed_tokens.push_back("<=");
+                    ++tok_iter;
+                }else if(ctoken == ">" && ntoken == "="){
+                    processed_tokens.push_back(">=");
+                    ++tok_iter;
+                }else if(ctoken == "=" && ntoken == "="){
+                    processed_tokens.push_back("==");
+                    ++tok_iter;
+                }else if(ctoken == "&" && ntoken == "&"){
+                    processed_tokens.push_back("&&");
+                    ++tok_iter;
+                }else if(ctoken == "|" && ntoken == "|"){
+                    processed_tokens.push_back("||");
+                    ++tok_iter;
+                }else{
+                    processed_tokens.push_back(ctoken);
+                }
+            }else{
+                processed_tokens.push_back(ctoken);
+            }
+        }
+        return processed_tokens;
+    }
+    std::vector<std::string> reverse_polish(const std::string& infix){
+        std::vector<std::string> output;
+        std::stack<std::string> stack;
+        std::vector<std::string> processed_tokens = tokenized(infix);
+        std::size_t fargc = 0;
+        for (std::vector<std::string>::iterator tok_iter = processed_tokens.begin(); tok_iter != processed_tokens.end(); ++tok_iter){
+            std::string value = *tok_iter;
+            if(self_type::is_real(value)){
+                output.push_back(value);
+            }else if(self_type::is_id(value)){
+                output.push_back(value);
+            }else if(self_type::is_fnc(value)){
+                stack.push(value);
+            }else if(self_type::is_comma(value)){
+                ++fargc;
+            }else if(self_type::is_parenthesis_open(value)){
+                stack.push(value);
+            }else if(self_type::is_parenthesis_close(value)){
+                while(!stack.empty() && !self_type::is_parenthesis_open(stack.top())){
+                    output.push_back(stack.top());
+                    stack.pop();
+                }
+                if(!stack.empty()){
+                    stack.pop();
+                }
+                if(!stack.empty() && self_type::is_fnc(stack.top())){
+                    output.push_back(stack.top()+"@"+boost::lexical_cast<std::string>(fargc+1));
+                    fargc = 0;
+                    stack.pop();
+                }
+            }else if(self_type::is_op(value)){
+                while(!stack.empty() 
+                    && (
+                        (self_type::is_op(stack.top()) && self_type::precedence(stack.top()) >= self_type::precedence(value))
+                    )
+                ){
+                    output.push_back(stack.top());
+                    stack.pop();
+                }
+                stack.push(value);
+            }
+        }
+        
+        std::vector<std::string> rest;
+        while(!stack.empty()){
+            rest.push_back(stack.top());
+            stack.pop();
+        }
+        
+        for(auto it = rest.begin(); it != rest.end(); ++it){
+            output.push_back(*it);
+        }
+        
+        return output;
+    }
+    template <typename T>
+    T evaluate(const std::string& infix){
+        return T();
+    }
+};
+    
 #ifdef WITH_PUGI
       
 template <typename ScopeT>
@@ -130,6 +283,8 @@ void parse_xml(ScopeT& table, const std::string& contents){
     xml_parser<ScopeT> prsr(table);
     prsr.open(contents);
     prsr.parse();
+}
+
 }
 
 #endif
