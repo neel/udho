@@ -81,8 +81,10 @@ BOOST_AUTO_TEST_CASE(mapping){
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
+    boost::asio::io_service io;
+        
     context_type::request_type req;
-    server_type::attachment_type attachment;
+    server_type::attachment_type attachment(io);
     context_type ctx(attachment.aux(), req, attachment);
     router.serve(ctx, boost::beast::http::verb::get, "/hello", generate_checker([](const std::string& res){
         BOOST_CHECK(res == "Hello World");

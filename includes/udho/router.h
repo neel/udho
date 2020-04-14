@@ -546,6 +546,37 @@ struct overload_terminal<void>{
     overload_terminal(Args...){}
 };
 
+// template <typename OverloadT, typename ResponseT = typename OverloadT::response_type>
+// struct overload_group_helper{
+//     typedef OverloadT overload_type;
+//     typedef typename overload_type::response_type response_type;
+//     
+//     OverloadT& _overload;
+//     
+//     overload_group_helper(OverloadT& overload): _overload(overload){}
+//     template <typename ContextT, typename Lambda>
+//     void resolve(ContextT& ctx, Lambda send, const std::string& subject){
+//         response_type res = _overload(ctx, subject);
+//         http::status status = res.result();
+//         ctx.patch(res);
+//         send(std::move(res));
+//     }
+// };
+// 
+// template <typename OverloadT>
+// struct overload_group_helper<OverloadT, void>{
+//     typedef OverloadT overload_type;
+//     typedef void response_type;
+//     
+//     OverloadT& _overload;
+//     
+//     overload_group_helper(OverloadT& overload): _overload(overload){}
+//     template <typename ContextT, typename Lambda>
+//     void resolve(ContextT& ctx, Lambda send, const std::string& subject){
+//         _overload(ctx, subject);
+//     }
+// };
+
 /**
  * compile time chain of url mappings 
  * @see content_wrapper0

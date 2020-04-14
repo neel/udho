@@ -29,8 +29,23 @@
 #define UDHO_ATTACHMENT_H
 
 #include <udho/logging.h>
+#include <udho/router.h>
 
 namespace udho{
+    
+namespace detail{
+    
+// template <typename F>
+// struct delayed_response{
+//     typedef F callback_type;
+//     
+//     callback_type _callback;
+//     
+//     delayed_response(callback_type callback): _callback(callback){}
+//     
+// };
+    
+}
 
 /**
  * logged stateful
@@ -43,10 +58,11 @@ struct attachment: LoggerT, CacheT{
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
+    boost::asio::io_service& _io;
     shadow_type _shadow;
     AuxT _aux;
     
-    attachment(LoggerT& logger): LoggerT(logger), _shadow(*this){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), LoggerT(logger), _shadow(*this){}
     shadow_type& shadow(){
         return _shadow;
     }
@@ -66,10 +82,11 @@ struct attachment<AuxT, void, CacheT>: CacheT{
     typedef CacheT  cache_type;
     typedef typename cache_type::shadow_type shadow_type;
     
+    boost::asio::io_service& _io;
     shadow_type _shadow;
     AuxT _aux;
     
-    attachment(): _shadow(*this){}
+    attachment(boost::asio::io_service& io): _io(io), _shadow(*this){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
@@ -92,9 +109,10 @@ struct attachment<AuxT, LoggerT, void>: LoggerT{
     typedef LoggerT logger_type;
     typedef void shadow_type;
     
+    boost::asio::io_service& _io;
     AuxT _aux;
     
-    attachment(LoggerT& logger): LoggerT(logger){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), LoggerT(logger){}
     int shadow(){
         return 0;
     }
@@ -114,9 +132,10 @@ struct attachment<AuxT, void, void>{
     typedef void cache_type;
     typedef void shadow_type;
     
+    boost::asio::io_service& _io;
     AuxT _aux;
     
-    attachment(){}
+    attachment(boost::asio::io_service& io): _io(io){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;

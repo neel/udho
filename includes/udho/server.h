@@ -60,7 +60,7 @@ struct server{
     boost::asio::io_service& _io;
     attachment_type _attachment;
     
-    server(boost::asio::io_service& io, logger_type& logger): _io(io), _attachment(logger){}
+    server(boost::asio::io_service& io, logger_type& logger): _io(io), _attachment(io, logger){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
