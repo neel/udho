@@ -55,10 +55,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         explicit send_lambda(self_type& self): self_(self){}
 
         template<bool isRequest, class Body, class Fields>
+        void operator()(http::message<isRequest, Body, Fields>& msg) const {
+            operator()(std::move(msg));
+        }
+        
+        template<bool isRequest, class Body, class Fields>
         void operator()(http::message<isRequest, Body, Fields>&& msg) const {
             auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(std::move(msg));
             self_.res_ = sp;
-
             http::async_write(self_._socket, *sp, boost::asio::bind_executor(self_._strand, std::bind(&self_type::on_write, self_.shared_from_this(), std::placeholders::_1, std::placeholders::_2, sp->need_eof())));
         }
     };
@@ -70,6 +74,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     udho::defs::request_type _req;
     std::shared_ptr<void> res_;
     send_lambda _lambda;
+    bool _delayed;
   public:
     /**
      * session constructor
@@ -77,12 +82,15 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this){}
+    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this), _delayed(false){}
     /**
      * start the read loop
      */
     void run(){
         do_read();
+    }
+    bool is_delayed() const{
+        return _delayed;
     }
     void do_read(){
         _req = {};
@@ -90,8 +98,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     }
     void on_read(boost::system::error_code ec, std::size_t bytes_transferred){
         boost::ignore_unused(bytes_transferred);
-        if(ec == http::error::end_of_stream)
+        if(ec == http::error::end_of_stream){
             return do_close();
+        }
         std::string path;
         std::stringstream path_stream(_req.target().to_string());
         std::getline(path_stream, path, '?');
@@ -99,10 +108,15 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         try{
             context_type ctx(_attachment.aux(), _req, _attachment.shadow());
             ctx.attach(_attachment);
+            ctx._pimpl->_respond.connect(std::bind(&self_type::respond, std::enable_shared_from_this<connection<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
             auto response = _router.serve(ctx, _req.method(), path, _lambda);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
+                       
+            if(response == http::status::not_extended){
+                return;
+            }
             
             if(response == http::status::unknown){
                 std::string local_path = internal::path_cat(*_doc_root, path);
@@ -161,6 +175,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     void do_close(){
         boost::system::error_code ec;
         _socket.shutdown(tcp::socket::shutdown_send, ec);
+    }
+    void respond(udho::defs::response_type& msg){
+        _lambda(std::move(msg));
     }
 };
 

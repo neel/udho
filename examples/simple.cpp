@@ -106,6 +106,19 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
     return res;
 }
 
+void long_poll(udho::contexts::stateless ctx){
+    typedef boost::beast::http::response<boost::beast::http::string_body>  response_type;
+    std::string content = "Hello World";
+    response_type res{boost::beast::http::status::ok, ctx.request().version()};
+    res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(boost::beast::http::field::content_type,   "text/plain");
+    res.set(boost::beast::http::field::content_length, content.size());
+    res.keep_alive(ctx.request().keep_alive());
+    res.body() = content;
+    res.prepare_payload();
+    ctx.respond(res);
+}
+
 boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts::stateless ctx){
     return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
@@ -118,6 +131,7 @@ int main(){
 
     auto router = udho::router()
         | (udho::get(&file).raw() = "^/file")
+        | (udho::get(&long_poll).deferred() = "^/poll")
         | (udho::get(&local).raw() = "^/local")
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&see).plain() = "^/see$")

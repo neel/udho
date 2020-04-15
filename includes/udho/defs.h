@@ -44,7 +44,8 @@
 namespace udho{
 namespace defs{
     
-typedef boost::beast::http::request<boost::beast::http::string_body> request_type;
+typedef boost::beast::http::request<boost::beast::http::string_body>  request_type;
+typedef boost::beast::http::response<boost::beast::http::string_body> response_type;
 typedef boost::uuids::uuid session_key_type;
     
 }

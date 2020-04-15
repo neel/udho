@@ -115,6 +115,16 @@ namespace compositors{
             return "UNSPECIFIED";
         }
     };
+    template <typename OutputT>
+    struct deferred{
+        typedef OutputT response_type;
+        
+        template <typename... T>
+        void operator()(T...){}
+        std::string name() const{
+            return "DEFERRED";
+        }
+    };
 
     template <typename OutputT>
     struct mimed{
@@ -218,6 +228,103 @@ struct module_overload{
             std::cout << "ex: " << ex.what() << std::endl;
         }
         return operator()(value, args);
+    }
+    module_info info() const{
+        module_info inf;
+        inf._pattern = _pattern;
+        inf._method = _request_method;
+        inf._compositor = _compositor.name();
+        inf._fptr = &_function;
+        return inf;
+    }
+    private:
+        self_type& operator=(const self_type& other){
+            _request_method = other._request_method;
+            _function = other._function;
+            _pattern = other._pattern;
+            _compositor = other._compositor;
+            return *this;
+        }
+};
+
+template <typename Function>
+struct module_overload<Function, compositors::deferred>{    
+    typedef Function                                                           function_type;
+    typedef module_overload<Function, compositors::deferred>                   self_type;
+    typedef typename internal::function_signature<Function>::return_type       return_type;
+    typedef typename internal::function_signature<Function>::tuple_type        tuple_type;
+    typedef typename internal::function_signature<Function>::arguments_type    arguments_type;
+    typedef compositors::deferred<return_type>                                 compositor_type;
+    typedef typename compositor_type::response_type                            response_type;
+    
+    boost::beast::http::verb _request_method;
+    std::string              _pattern;
+    function_type            _function;
+    compositor_type          _compositor;
+    
+    module_overload(boost::beast::http::verb request_method, function_type f, compositor_type compositor=compositor_type()): _request_method(request_method), _function(f), _compositor(compositor){}
+    module_overload(const self_type& other): _request_method(other._request_method), _pattern(other._pattern), _function(other._function), _compositor(other._compositor){}
+
+    self_type& operator=(const std::string& pattern){
+        _pattern = pattern;
+        return *this;
+    }
+    /**
+     * check number of arguments supplied on runtime and number of arguments with which this overload has been prepared at compile time.
+     */
+    bool feasible(boost::beast::http::verb request_method, const std::string& subject) const{
+        if(_pattern.empty()){
+            return false;
+        }
+        std::string subject_decoded = udho::util::urldecode(subject);
+        // std::cout << "_pattern " << _pattern << " " << " subject " << subject_decoded << std::endl;
+#ifdef WITH_ICU
+        return (request_method == _request_method) && boost::u32regex_search(subject_decoded, boost::make_u32regex(_pattern));
+#else
+        return (request_method == _request_method) && boost::regex_search(subject_decoded, boost::regex(_pattern));
+#endif
+    }
+    template <typename T>
+    void call(T& value, const std::vector<std::string>& args){
+        std::deque<std::string> argsq;
+        std::copy(args.begin(), args.end(), std::back_inserter(argsq));
+        tuple_type tuple(value);
+        if(::boost::tuples::length<tuple_type>::value > args.size()){
+            argsq.push_front("");
+        }
+        std::vector<std::string> args_str;
+        std::copy(argsq.begin(), argsq.end(), std::back_inserter(args_str));
+        internal::arguments_to_tuple(tuple, args_str);
+//         boost::get<0>(tuple) = value;
+        arguments_type arguments = internal::to_fusion(tuple);
+        // https://www.boost.org/doc/libs/1_68_0/libs/fusion/doc/html/fusion/functional/invocation/functions/invoke.html
+        boost::fusion::invoke(_function, arguments);
+    }
+    template <typename T>
+    void operator()(T& value, const std::vector<std::string>& args){
+        call(value, args);
+        _compositor();
+    }
+    template <typename T>
+    void operator()(T& value, const std::string& subject){
+        std::vector<std::string> args;
+        boost::smatch caps;
+        try{
+            std::string subject_decoded = udho::util::urldecode(subject);
+            // std::cout << "subject_decoded: " << subject_decoded << " _pattern: " << _pattern << std::endl;
+#ifdef WITH_ICU
+            if(boost::u32regex_search(subject_decoded, caps, boost::make_u32regex(_pattern))){
+#else
+            if(boost::regex_search(subject_decoded, caps, boost::regex(_pattern))){
+#endif
+                std::copy(caps.begin()+1, caps.end(), std::back_inserter(args));
+            }
+            // std::copy(args.begin(), args.end(), std::ostream_iterator<std::string>(std::cout, ", "));
+            // std::cout << std::endl;
+        }catch(std::exception& ex){
+            std::cout << "ex: " << ex.what() << std::endl;
+        }
+        operator()(value, args);
     }
     module_info info() const{
         module_info inf;
@@ -380,9 +487,11 @@ struct content_wrapper0{
     content_wrapper0(boost::beast::http::verb method, F ftor): _ftor(ftor), _method(method){}    
     template <template <typename> class CompositorT=compositors::transparent>
     auto unwrap(CompositorT<typename internal::function_signature<F>::return_type> compositor = CompositorT<typename internal::function_signature<F>::return_type>()){
-        // typedef CompositorT<typename internal::function_signature<F>::return_type> compositor_type;
-        
         return overload<F, CompositorT>(_method, _ftor, compositor);
+    }
+    auto deferred(){
+        compositors::deferred<typename internal::function_signature<F>::return_type> compositor = compositors::deferred<typename internal::function_signature<F>::return_type>();
+        return overload<F, compositors::deferred>(_method, _ftor, compositor);
     }
     /**
      * raw content delivery using transparent compositor
@@ -546,36 +655,38 @@ struct overload_terminal<void>{
     overload_terminal(Args...){}
 };
 
-// template <typename OverloadT, typename ResponseT = typename OverloadT::response_type>
-// struct overload_group_helper{
-//     typedef OverloadT overload_type;
-//     typedef typename overload_type::response_type response_type;
-//     
-//     OverloadT& _overload;
-//     
-//     overload_group_helper(OverloadT& overload): _overload(overload){}
-//     template <typename ContextT, typename Lambda>
-//     void resolve(ContextT& ctx, Lambda send, const std::string& subject){
-//         response_type res = _overload(ctx, subject);
-//         http::status status = res.result();
-//         ctx.patch(res);
-//         send(std::move(res));
-//     }
-// };
-// 
-// template <typename OverloadT>
-// struct overload_group_helper<OverloadT, void>{
-//     typedef OverloadT overload_type;
-//     typedef void response_type;
-//     
-//     OverloadT& _overload;
-//     
-//     overload_group_helper(OverloadT& overload): _overload(overload){}
-//     template <typename ContextT, typename Lambda>
-//     void resolve(ContextT& ctx, Lambda send, const std::string& subject){
-//         _overload(ctx, subject);
-//     }
-// };
+template <typename OverloadT, typename ResponseT = typename OverloadT::response_type>
+struct overload_group_helper{
+    typedef OverloadT overload_type;
+    typedef typename overload_type::response_type response_type;
+    
+    OverloadT& _overload;
+    
+    overload_group_helper(OverloadT& overload): _overload(overload){}
+    template <typename ContextT, typename Lambda>
+    http::status resolve(ContextT& ctx, Lambda send, const std::string& subject){
+        response_type res = _overload(ctx, subject);
+        http::status status = res.result();
+        ctx.patch(res);
+        send(std::move(res));
+        return status;
+    }
+};
+
+template <typename OverloadT>
+struct overload_group_helper<OverloadT, void>{
+    typedef OverloadT overload_type;
+    typedef void response_type;
+    
+    OverloadT& _overload;
+    
+    overload_group_helper(OverloadT& overload): _overload(overload){}
+    template <typename ContextT, typename Lambda>
+    http::status resolve(ContextT& ctx, Lambda send, const std::string& subject){
+        _overload(ctx, subject);
+        return http::status::not_extended;
+    }
+};
 
 /**
  * compile time chain of url mappings 
@@ -609,12 +720,9 @@ struct overload_group{
     http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         http::status status = http::status::unknown;
         if(_overload.feasible(request_method, subject)){
-            typename overload_type::response_type res;
             try{
-                res = _overload(ctx, subject);
-                status = res.result();
-                ctx.patch(res);
-                send(std::move(res));
+                overload_group_helper<overload_type> helper(_overload);
+                status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
                 return error.result();
@@ -675,12 +783,9 @@ struct overload_group<U, overload_terminal<V>>{
     http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         http::status status = http::status::unknown;
         if(_terminal.feasible(request_method, subject)){
-            typename overload_type::response_type res;
             try{
-                res = _terminal(ctx, subject);
-                status = res.result();
-                ctx.patch(res);
-                send(std::move(res));
+                overload_group_helper<terminal_type> helper(_terminal);
+                status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
                 return error.result();

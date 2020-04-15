@@ -22,6 +22,8 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     
     typedef listener<RouterT, AttachmentT> self_type;
     typedef AttachmentT attachment_type;
+    typedef connection<RouterT, AttachmentT> connection_type;
+    
     boost::asio::io_service& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
     socket_type _socket;
@@ -29,6 +31,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     boost::asio::signal_set _signals;
     RouterT& _router;
     attachment_type& _attachment;
+    std::vector<std::shared_ptr<connection_type>> _delayed;
   public:
     /**
      * @param router HTTP url mapping router
@@ -40,6 +43,8 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
+        _acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
+        if(ec) throw std::runtime_error((boost::format("Failed to set reusable option %1%") % ec.message()).str());
         _acceptor.bind(endpoint, ec);
         if(ec) throw std::runtime_error((boost::format("Failed to bind acceptor %1%") % ec.message()).str());
         _acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
@@ -75,11 +80,15 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
         if(ec){
             // TODO failed to accept
             _attachment << udho::logging::messages::formatted::info("listener", "failed to accept new connection from %1%") % _socket.remote_endpoint().address();
-//             _attachment.log(udho::logging::status::error, udho::logging::segment::server, (boost::format("failed to accept new connection from %1%") % _socket.remote_endpoint().address()).str());
         }else{
             _attachment << udho::logging::messages::formatted::info("listener", "accepting new connection from %1%") % _socket.remote_endpoint().address();
-//             _attachment.log(udho::logging::status::info, udho::logging::segment::server, (boost::format("accepting new connection from %1%") % _socket.remote_endpoint().address()).str());
-            std::make_shared<connection<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot)->run();
+            std::shared_ptr<connection_type> conn = std::make_shared<connection<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot);
+            conn->run();
+//             std::cout << "conn->is_delayed(): " << conn->is_delayed() << std::endl;
+//             if(true){
+//                 std::cout << "delayed" << std::endl;
+//                 _delayed.push_back(conn);
+//             }
         }
         accept();
     }

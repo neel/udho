@@ -49,6 +49,8 @@
 #include <udho/cookie.h>
 #include <udho/session.h>
 #include <udho/bridge.h>
+#include <udho/attachment.h>
+
 
 namespace udho{
 
@@ -71,6 +73,7 @@ struct context_impl{
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
     boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
     boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
+    boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
     
     context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){}
     context_impl(const self_type& other) = delete;
@@ -104,8 +107,8 @@ struct context_impl{
     void log(const udho::logging::messages::debug& msg){
         _debug(msg);
     }
-    template <typename AttachmentT>
-    void attach(AttachmentT& attachment){
+    template <typename AuxT, typename LoggerT, typename CacheT>
+    void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
         boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
         boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
         boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
@@ -115,6 +118,9 @@ struct context_impl{
         _warning.connect(warningf);
         _info.connect(infof);
         _debug.connect(debugf);
+    }
+    void respond(udho::defs::response_type& response){
+        _respond(response);
     }
 };
  
@@ -169,12 +175,15 @@ struct context{
     void log(const udho::logging::message<Status>& msg){
         _pimpl->log(msg);
     }
-    template <typename AttachmentT>
-    void attach(AttachmentT& attachment){
+    template <typename LoggerT, typename CacheT>
+    void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
         _pimpl->attach(attachment);
     }
     AuxT& aux(){
         return _aux;
+    }
+    void respond(udho::defs::response_type& response){
+        _pimpl->respond(std::move(response));
     }
 };
 
@@ -190,7 +199,7 @@ struct context<AuxT, RequestT, void>{
     
     pimple_type _pimpl;
     AuxT& _aux;
-        
+    
     template <typename C>
     context(AuxT& aux, const RequestT& request, const C&): _pimpl(new impl_type(request)), _aux(aux){}
     template <typename ShadowT>
@@ -222,6 +231,9 @@ struct context<AuxT, RequestT, void>{
     }
     AuxT& aux(){
         return _aux;
+    }
+    void respond(udho::defs::response_type& response){
+        _pimpl->respond(response);
     }
 };
 
