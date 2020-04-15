@@ -11,7 +11,7 @@ build:
   # before_script:
   #   - apt update && apt -y install make autoconf
   script:
-    - sudo pacman -S pugixml
+    - sudo pacman -S pugixml --noconfirm
     - mkdir build
     - cd build
     - cmake ..
