@@ -29,16 +29,8 @@ struct delayed{
     
     delayed(boost::asio::io_service& io): _timer(io), _started(false){}
     void triggered(udho::contexts::stateless ctx, const boost::system::error_code& e){
-        typedef boost::beast::http::response<boost::beast::http::string_body> response_type;
-        std::string content = "Hello World\n";
-        response_type res{boost::beast::http::status::ok, ctx.request().version()};
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type,   "text/plain");
-        res.set(boost::beast::http::field::content_length, content.size());
-        res.keep_alive(ctx.request().keep_alive());
-        res.body() = content;
-        res.prepare_payload();
-        ctx.respond(res);
+        std::string content = "Hello Mars\n";
+        ctx.respond(content, "text/plain");
         std::cout << "timer error: " << e << std::endl;
         _started = false;
     }

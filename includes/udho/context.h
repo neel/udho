@@ -50,7 +50,7 @@
 #include <udho/session.h>
 #include <udho/bridge.h>
 #include <udho/attachment.h>
-
+#include <udho/compositors.h>
 
 namespace udho{
 
@@ -185,6 +185,12 @@ struct context{
     void respond(udho::defs::response_type& response){
         _pimpl->respond(std::move(response));
     }
+    template <typename OutputT>
+    void respond(const OutputT& output, const std::string& mime){
+        udho::compositors::mimed<OutputT> compositor(mime);
+        udho::defs::response_type response = compositor(*this, output);
+        respond(response);
+    }
 };
 
 template <typename AuxT, typename RequestT>
@@ -234,6 +240,12 @@ struct context<AuxT, RequestT, void>{
     }
     void respond(udho::defs::response_type& response){
         _pimpl->respond(response);
+    }
+    template <typename OutputT>
+    void respond(const OutputT& output, const std::string& mime){
+        udho::compositors::mimed<OutputT> compositor(mime);
+        udho::defs::response_type response = compositor(*this, output);
+        respond(response);
     }
 };
 

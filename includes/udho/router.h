@@ -18,6 +18,7 @@
 #include <boost/locale.hpp>
 #include <iomanip>
 #include <udho/context.h>
+#include <udho/compositors.h>
 #include <udho/listener.h>
 #include <udho/connection.h>
 #include "util.h"
@@ -100,54 +101,6 @@ namespace internal{
     void arguments_to_tuple(TupleT& tuple, const std::vector<std::string>& args){
         arg_to_tuple<TupleT>::convert(tuple, args);
     }
-}
-
-namespace compositors{
-    template <typename OutputT>
-    struct transparent{
-        typedef OutputT response_type;
-        
-        template <typename ContextT>
-        response_type&& operator()(const ContextT& /*ctx*/, OutputT&& out){
-            return std::move(out);
-        }
-        std::string name() const{
-            return "UNSPECIFIED";
-        }
-    };
-    template <typename OutputT>
-    struct deferred{
-        typedef OutputT response_type;
-        
-        template <typename... T>
-        void operator()(T...){}
-        std::string name() const{
-            return "DEFERRED";
-        }
-    };
-
-    template <typename OutputT>
-    struct mimed{
-        typedef boost::beast::http::response<boost::beast::http::string_body> response_type;
-        std::string _mime;
-        
-        mimed(const std::string& mime): _mime(mime){}
-        template <typename ContextT>
-        response_type operator()(const ContextT& ctx, const OutputT& out){
-            std::string content = boost::lexical_cast<std::string>(out);
-            response_type res{boost::beast::http::status::ok, ctx.request().version()};
-            res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-            res.set(boost::beast::http::field::content_type,   _mime);
-            res.set(boost::beast::http::field::content_length, content.size());
-            res.keep_alive(ctx.request().keep_alive());
-            res.body() = content;
-            res.prepare_payload();
-            return res;
-        }
-        std::string name() const{
-            return (boost::format("MIMED %1%") % _mime).str();
-        }
-    };
 }
 
 template <typename Function, template <typename> class CompositorT=compositors::transparent>
