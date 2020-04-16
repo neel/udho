@@ -121,6 +121,9 @@ struct lookup_table{
     std::vector<std::string> keys(const std::string& key){
         return _group.keys(key);
     }
+    std::size_t count(const std::string& key){
+        return _group.count(key);
+    }
     std::size_t down(){
         return ++_level;
     }
