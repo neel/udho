@@ -61,6 +61,7 @@ struct bridge{
         auto scope = ::udho::scope(data);
         return render(path, scope);
     }
+    std::string render(const std::string& path) const;
 };
 
 }

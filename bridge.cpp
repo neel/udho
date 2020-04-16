@@ -45,6 +45,10 @@ std::string udho::bridge::contents(const std::string& path) const{
     return content;
 }
 
+std::string udho::bridge::render(const std::string& path) const{
+    return contents(path);
+}
+
 boost::beast::http::response<boost::beast::http::file_body> udho::bridge::file(const std::string& path, const udho::defs::request_type& req, std::string mime) const{
     boost::filesystem::path local_path = _docroot / path;
     boost::beast::error_code err;
