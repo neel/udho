@@ -223,7 +223,7 @@ struct shunting_yard{
         T value;
         bool convertible = boost::conversion::try_lexical_convert<T>(token, value);
         if(!convertible){
-            value = _table.template extract<T>(token);
+            value = _table.template parse<T>(token);
         }
         return value;
     }
@@ -241,7 +241,7 @@ struct shunting_yard{
 //                 T value;
 //                 bool convertible = boost::conversion::try_lexical_convert<T>(token, value);
 //                 if(!convertible){
-//                     value = _table.template extract<T>(token);
+//                     value = _table.template parse<T>(token);
 //                 }
                 stack.push(token);
             }else{
@@ -313,7 +313,7 @@ struct shunting_yard{
                         if(is_real(key)){
                             value = boost::lexical_cast<T>(key);
                         }else{
-                            value = _table.template extract<T>(key);
+                            value = _table.template parse<T>(key);
                         }
                         push(stack, !value);
                     }
@@ -447,7 +447,7 @@ struct xml_parser{
         std::stringstream stream;
         pugi::xml_node root = _transformed.document_element();
         for(pugi::xml_node child: root){
-            child.print(stream);
+            child.print(stream, "\t", pugi::format_indent | pugi::format_no_empty_element_tags);
         }
         return stream.str();
     }

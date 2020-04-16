@@ -423,14 +423,40 @@ template <typename T>
 using optional = field<T, false>;
   
 namespace validators{
-struct length{
+struct max_length{
     std::size_t _length;
     std::string _custom;
     
-    length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
+    max_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
     bool operator()(const std::string& value, std::string& error) const{
         if(value.size() > _length){
             error = _custom.empty() ? (boost::format("constrain size <= %1% failed") % _length).str() : _custom;
+            return false;
+        }
+        return true;
+    }
+};
+struct min_length{
+    std::size_t _length;
+    std::string _custom;
+    
+    min_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
+    bool operator()(const std::string& value, std::string& error) const{
+        if(value.size() < _length){
+            error = _custom.empty() ? (boost::format("constrain size >= %1% failed") % _length).str() : _custom;
+            return false;
+        }
+        return true;
+    }
+};
+struct exact_length{
+    std::size_t _length;
+    std::string _custom;
+    
+    exact_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
+    bool operator()(const std::string& value, std::string& error) const{
+        if(value.size() == _length){
+            error = _custom.empty() ? (boost::format("constrain size == %1% failed") % _length).str() : _custom;
             return false;
         }
         return true;

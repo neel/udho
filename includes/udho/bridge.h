@@ -53,7 +53,7 @@ struct bridge{
     template <typename GroupT>
     std::string render(const std::string& path, ::udho::lookup_table<GroupT>& scope) const{
         std::string template_contents = contents(path);
-        auto parser = ::udho::view::parse_xml(scope, contents);
+        auto parser = ::udho::view::parse_xml(scope, template_contents);
         return parser.output();
     }
     template <typename DataT>
@@ -61,6 +61,12 @@ struct bridge{
         auto scope = ::udho::scope(data);
         return render(path, scope);
     }
+//     template <typename DataT>
+//     std::string render(const std::string& path, DataT& data) const{
+//         udho::prepared<DataT> prepared(data);
+//         auto scope = ::udho::scope(prepared);
+//         return render(path, scope);
+//     }
     std::string render(const std::string& path) const;
 };
 
