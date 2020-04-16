@@ -274,15 +274,24 @@ struct xml_parser{
     }
     void parse(){
         parse(_source.document_element(), _transformed.document_element());
-        _transformed.save(std::cout);
+//         _transformed.save(std::cout);
+    }
+    std::string output(){
+        std::stringstream stream;
+        pugi::xml_node root = _transformed.document_element();
+        for(pugi::xml_node child: root){
+            child.print(stream);
+        }
+        return stream.str();
     }
 };
 
 template <typename ScopeT>
-void parse_xml(ScopeT& table, const std::string& contents){
+xml_parser<ScopeT> parse_xml(ScopeT& table, const std::string& contents){
     xml_parser<ScopeT> prsr(table);
     prsr.open(contents);
     prsr.parse();
+    return prsr;
 }
 
 }

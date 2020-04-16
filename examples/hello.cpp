@@ -278,7 +278,6 @@ int main(){
     
     
     std::string xml_template = R"(
-        <udho:template name="foo">
             <div class="foo">
                 <span class="name">
                     <udho:text name="name" />
@@ -299,7 +298,6 @@ int main(){
                     </udho:for>
                 </div>
             </div>
-        </udho:template>
     )";
     
     udho::view::parse_xml(table, xml_template);

@@ -33,6 +33,9 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/file_body.hpp>
 #include <udho/defs.h>
+#include <udho/access.h>
+#include <udho/scope.h>
+#include <udho/parser.h>
 
 namespace udho{
 /**
@@ -46,6 +49,18 @@ struct bridge{
     
     std::string contents(const std::string& path) const;
     boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const udho::defs::request_type& req, std::string mime = "") const;
+    
+    template <typename GroupT>
+    std::string render(const std::string& path, udho::lookup_table<GroupT>& scope) const{
+        std::string template_contents = contents(path);
+        auto parser = udho::view::parse_xml(scope, contents);
+        return parser.output();
+    }
+    template <typename DataT>
+    std::string render(const std::string& path, udho::prepared<DataT>& data) const{
+        auto scope = udho::scope(data);
+        return render(path, scope);
+    }
 };
 
 }
