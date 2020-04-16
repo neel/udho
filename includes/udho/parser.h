@@ -243,6 +243,15 @@ struct xml_parser{
                 if(truth){
                     travarse(node, target);
                 }
+            }else if(parts[1] == "if-not"){
+                pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
+                    return attr.name() == std::string("cond");
+                });
+                std::string condition = cond.as_string();
+                bool truth = !_table.template extract<bool>(condition);
+                if(truth){
+                    travarse(node, target);
+                }
             }else if(parts[1] == "var"){
                 pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
                     return attr.name() == std::string("name");
