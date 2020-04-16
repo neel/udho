@@ -114,6 +114,10 @@ struct lookup_table{
     std::string eval(const std::string& key){
         return _group[lookup(key)];
     }
+    template <typename T>
+    T extract(const std::string& key){
+        return _group.template extract<T>(lookup(key));
+    }
     std::vector<std::string> keys(const std::string& key){
         return _group.keys(key);
     }

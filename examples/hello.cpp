@@ -38,15 +38,18 @@ struct student: udho::prepare<student>{
     std::string name() const{
         return first + " " + last;
     }
-    
+    bool qualified() const{
+        return true;
+    }
     template <typename DictT>
     auto dict(DictT assoc) const{
-        return assoc | var("roll",  &student::roll)
-                     | var("first", &student::first)
-                     | var("last",  &student::last)
-                     | var("books", &student::books_issued)
-                     | var("marks", &student::marks_obtained)
-                     | fn("name",   &student::name);
+        return assoc | var("roll",     &student::roll)
+                     | var("first",    &student::first)
+                     | var("last",     &student::last)
+                     | var("books",    &student::books_issued)
+                     | var("marks",    &student::marks_obtained)
+                     | fn("name",      &student::name)
+                     | fn("qualified", &student::qualified);
     }    
 };
 
@@ -290,17 +293,20 @@ int main(){
                         </label>
                     </article>
                 </udho:block>
-                <div class="publications">
-                    <udho:for value="book" key="id" in="books">
-                        <div class="title">
-                            <udho:text name="book.title" />
-                        </div>
-                    </udho:for>
-                </div>
+                <udho:if cond="qualified">
+                    <div class="publications">
+                        <udho:for value="book" key="id" in="books">
+                            <div class="title" udho:target:title="book.title">
+                                <udho:text name="book.title" />
+                            </div>
+                        </udho:for>
+                    </div>
+                </udho:if>
             </div>
     )";
     
-    udho::view::parse_xml(table, xml_template);
+    auto parser = udho::view::parse_xml(table, xml_template);
+    std::cout << parser.output() << std::endl;
     
     std::string str = "count(books) >= 0";
     typedef boost::tokenizer<boost::char_separator<char>> tokenizer;

@@ -234,6 +234,15 @@ struct xml_parser{
                     travarse(node, target);
                     _table.up();
                 }
+            }else if(parts[1] == "if"){
+                pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
+                    return attr.name() == std::string("cond");
+                });
+                std::string condition = cond.as_string();
+                bool truth = _table.template extract<bool>(condition);
+                if(truth){
+                    travarse(node, target);
+                }
             }else if(parts[1] == "var"){
                 pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
                     return attr.name() == std::string("name");
@@ -253,6 +262,20 @@ struct xml_parser{
                 step_in(node, target);
             }
         }else{
+            for(pugi::xml_attribute attr: node.attributes()){
+                std::string name = attr.name();
+                std::vector<std::string> parts;
+                boost::split(parts, name, boost::is_any_of(":"));
+                if(parts[0] == "udho"){
+                    if(parts[1] == "target"){
+                        std::string target_attr_name  = parts[2];
+                        std::string target_attr_value = attr.value();
+                        std::string resolved_value    = _table.eval(target_attr_value);
+                        attr.set_name(target_attr_name.c_str());
+                        attr.set_value(resolved_value.c_str());
+                    }
+                }
+            }
             step_in(node, target);
         }
     }
@@ -271,7 +294,6 @@ struct xml_parser{
     }
     void parse(){
         parse(_source.document_element(), _transformed.document_element());
-//         _transformed.save(std::cout);
     }
     std::string output(){
         std::stringstream stream;
