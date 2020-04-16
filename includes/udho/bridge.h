@@ -48,17 +48,17 @@ struct bridge{
     boost::filesystem::path docroot() const;
     
     std::string contents(const std::string& path) const;
-    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const udho::defs::request_type& req, std::string mime = "") const;
+    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const;
     
     template <typename GroupT>
-    std::string render(const std::string& path, udho::lookup_table<GroupT>& scope) const{
+    std::string render(const std::string& path, ::udho::lookup_table<GroupT>& scope) const{
         std::string template_contents = contents(path);
-        auto parser = udho::view::parse_xml(scope, contents);
+        auto parser = ::udho::view::parse_xml(scope, contents);
         return parser.output();
     }
     template <typename DataT>
-    std::string render(const std::string& path, udho::prepared<DataT>& data) const{
-        auto scope = udho::scope(data);
+    std::string render(const std::string& path, ::udho::prepared<DataT>& data) const{
+        auto scope = ::udho::scope(data);
         return render(path, scope);
     }
 };

@@ -42,9 +42,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
-#ifdef WITH_PUGI
 #include <pugixml.hpp>
-#endif
 
 namespace udho{
     
@@ -195,7 +193,6 @@ struct shunting_yard{
     }
 };
     
-#ifdef WITH_PUGI
       
 template <typename ScopeT>
 struct xml_parser{
@@ -296,7 +293,6 @@ xml_parser<ScopeT> parse_xml(ScopeT& table, const std::string& contents){
 
 }
 
-#endif
 
 }
 
