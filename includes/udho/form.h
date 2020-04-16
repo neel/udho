@@ -211,7 +211,10 @@ struct multipart_form{
         return part(name).template value<T>();
     }
 };
-    
+
+template <typename T, bool Required>
+struct field;
+
 template <typename RequestT>
 struct form_{
     typedef RequestT request_type;
@@ -293,13 +296,10 @@ struct form_{
     }
 };
 
-template <typename T, bool Required>
-struct field;
-
 template <typename T>
 struct field<T, true>{
     typedef field<T, true> self_type;
-    typedef boost::function<bool (const std::string&, const T&, std::string&)> function_type;
+    typedef boost::function<bool (const std::string&, std::string&)> function_type;
     typedef std::vector<function_type> validators_collection_type;
     
     std::string _name;
@@ -326,7 +326,7 @@ struct field<T, true>{
             std::size_t counter = 0;
             for(const function_type& f: _validators){
                 std::string message;
-                if(!f(_name, value, message)){
+                if(!f(value, message)){
                     _is_valid = false;
                     _err = message;
                     break;
@@ -342,6 +342,12 @@ struct field<T, true>{
     }
     bool validated() const{
         return _validated;
+    }
+    bool valid() const{
+        return _is_valid;
+    }
+    std::string error() const{
+        return _err;
     }
     void clear(){
         _validated = false;
@@ -391,6 +397,12 @@ struct field<T, false>{
     bool validated() const{
         return _validated;
     }
+    bool valid() const{
+        return _is_valid;
+    }
+    std::string error() const{
+        return _err;
+    }
     void clear(){
         _validated = false;
         _is_valid = true;
@@ -405,12 +417,12 @@ const form_<RequestT>& operator>>(const form_<RequestT>& form, field<T, Required
 }
 
 namespace form{
-namespace fields{
+
 template <typename T>
 using required = field<T, true>;
 template <typename T>
 using optional = field<T, false>;
-}
+  
 namespace validators{
 struct length{
     std::size_t _length;
