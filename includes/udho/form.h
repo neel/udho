@@ -36,6 +36,8 @@
 #include <udho/util.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/beast/http/message.hpp>
+#include <boost/function.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 
 namespace udho{
     
@@ -290,6 +292,171 @@ struct form_{
         return 0;
     }
 };
+
+template <typename T, bool Required>
+struct field;
+
+template <typename T>
+struct field<T, true>{
+    typedef field<T, true> self_type;
+    typedef boost::function<bool (const std::string&, const T&, std::string&)> function_type;
+    typedef std::vector<function_type> validators_collection_type;
+    
+    std::string _name;
+    T _value;
+    validators_collection_type _validators;
+    std::string _message_required;
+    bool _is_valid;
+    bool _validated;
+    std::string _err;
+    
+    field(const std::string& name, const std::string& message): _name(name), _message_required(message), _is_valid(true), _validated(false){}
+    template <typename F>
+    self_type& constrain(F ftor){
+        _validators.push_back(ftor);
+        return *this;
+    }
+    template <typename RequestT>
+    void validate(const form_<RequestT>& form){
+        if(!form.has(_name)){
+            _is_valid = false;
+            _err = _message_required;
+        }else{
+            std::string value = form.template field<std::string>(_name);
+            std::size_t counter = 0;
+            for(const function_type& f: _validators){
+                std::string message;
+                if(!f(_name, value, message)){
+                    _is_valid = false;
+                    _err = message;
+                    break;
+                }
+                ++counter;
+            }
+            if(counter == _validators.size()){
+                _is_valid = true;
+                _value = boost::lexical_cast<T>(value);
+            }
+        }
+        _validated = true;
+    }
+    bool validated() const{
+        return _validated;
+    }
+    void clear(){
+        _validated = false;
+        _is_valid = true;
+        _err = std::string();
+    }
+};
+
+template <typename T>
+struct field<T, false>{
+    typedef field<T, false> self_type;
+    typedef boost::function<bool (const std::string&, std::string&)> function_type;
+    typedef std::vector<function_type> validators_collection_type;
+    
+    std::string _name;
+    T _value;
+    validators_collection_type _validators;
+    bool _is_valid;
+    bool _validated;
+    std::string _err;
+    
+    field(const std::string& name): _name(name), _is_valid(true), _validated(false){}
+    template <typename F>
+    self_type& constrain(F ftor){
+        _validators.push_back(ftor);
+        return *this;
+    }
+    template <typename RequestT>
+    void validate(const form_<RequestT>& form){
+        std::string value = form.template field<std::string>(_name);
+        std::size_t counter = 0;
+        for(const function_type& f: _validators){
+            std::string message;
+            if(!f(value, message)){
+                _is_valid = false;
+                _err = message;
+                break;
+            }
+            ++counter;
+        }
+        if(counter == _validators.size()){
+            _is_valid = true;
+            _value = boost::lexical_cast<T>(value);
+        }
+        _validated = true;
+    }
+    bool validated() const{
+        return _validated;
+    }
+    void clear(){
+        _validated = false;
+        _is_valid = true;
+        _err = std::string();
+    }
+};
+
+template <typename T, bool Required, typename RequestT>
+const form_<RequestT>& operator>>(const form_<RequestT>& form, field<T, Required>& field_){
+    field_.validate(form);
+    return form;
+}
+
+namespace form{
+namespace fields{
+template <typename T>
+using required = field<T, true>;
+template <typename T>
+using optional = field<T, false>;
+}
+namespace validators{
+struct length{
+    std::size_t _length;
+    std::string _custom;
+    
+    length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
+    bool operator()(const std::string& value, std::string& error) const{
+        if(value.size() > _length){
+            error = _custom.empty() ? (boost::format("constrain size <= %1% failed") % _length).str() : _custom;
+            return false;
+        }
+        return true;
+    }
+};
+struct no_space{
+    std::string _custom;
+    
+    no_space(std::string custom = ""): _custom(custom){}
+    bool operator()(const std::string& value, std::string& error) const{
+        if(value.find(" ") != std::string::npos){
+            error = _custom.empty() ? (boost::format("constrain no space failed")).str() : _custom;
+            return false;
+        }
+        return true;
+    }
+};
+struct all_digit{
+    std::string _custom;
+    
+    all_digit(std::string custom = ""): _custom(custom){}
+    bool operator()(const std::string& value, std::string& error) const{
+        for(char c: value){
+            if(!std::isdigit(c)){
+                error = _custom.empty() ? (boost::format("constrain all digits failed")).str() : _custom;
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+
+}
+
+}
+
 }
 
 #endif // UDHO_FORM_H
