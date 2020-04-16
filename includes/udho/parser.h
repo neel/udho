@@ -380,7 +380,7 @@ struct xml_parser{
                 }
             }else if(parts[1] == "if"){
                 pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("cond");
+                    return attr.name() == std::string("test");
                 });
                 std::string condition = cond.as_string();
                 bool truth = _expression_evaluator.template evaluate<int>(condition);

@@ -121,7 +121,7 @@ int main(){
                         </label>
                     </article>
                 </udho:block>
-                <udho:if cond="count(books) > 1">
+                <udho:if test="count(books) > 1">
                     <div class="publications">
                         <udho:for value="book" key="id" in="books">
                             <div class="title" udho:target:title="book.title">
@@ -130,7 +130,7 @@ int main(){
                         </udho:for>
                     </div>
                 </udho:if>
-                <udho:if cond="not(count(books) > 1)">
+                <udho:if test="not(count(books) > 1)">
                     <div class="freshers">
                         Not much publications
                     </div>
