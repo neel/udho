@@ -42,6 +42,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <pugixml.hpp>
 
 namespace udho{
@@ -217,11 +218,11 @@ struct shunting_yard{
         return output;
     }
     template <typename T>
-    T pop(std::stack<std::string>& stack){
+    T pop(std::stack<std::string>& stack, bool resolve = true){
         std::string token = stack.top();
         stack.pop();
         T value;
-        bool convertible = boost::conversion::try_lexical_convert<T>(token, value);
+        bool convertible = resolve && boost::conversion::try_lexical_convert<T>(token, value);
         if(!convertible){
             value = _table.template parse<T>(token);
         }
@@ -238,11 +239,6 @@ struct shunting_yard{
         for(const std::string& token: rpn_tokens){
             if(!is_operator(token) && token.find("@") == std::string::npos){
                 // terminal
-//                 T value;
-//                 bool convertible = boost::conversion::try_lexical_convert<T>(token, value);
-//                 if(!convertible){
-//                     value = _table.template parse<T>(token);
-//                 }
                 stack.push(token);
             }else{
                 // non terminal
@@ -288,13 +284,45 @@ struct shunting_yard{
                         T second = pop<T>(stack);
                         push(stack, second == first);
                     }else if(token == "&&" || token == "&"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second && first);
+                        std::string token_first  = stack.top();
+                        stack.pop();
+                        std::string token_second = stack.top();
+                        stack.pop();
+                        T value_first, value_second;
+                        bool convertible = boost::conversion::try_lexical_convert<T>(token_second, value_second);
+                        if(!convertible){
+                            value_second = _table.template parse<T>(token_second);
+                        }
+                        // partial evaluation
+                        if(!value_second){
+                            push(stack, value_second);
+                        }else{
+                            bool convertible = boost::conversion::try_lexical_convert<T>(token_first, value_first);
+                            if(!convertible){
+                                value_first = _table.template parse<T>(token_first);
+                            }
+                            push(stack, value_second && value_first);
+                        }
                     }else if(token == "||" || token == "|"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second || first);
+                        std::string token_first  = stack.top();
+                        stack.pop();
+                        std::string token_second = stack.top();
+                        stack.pop();
+                        T value_first, value_second;
+                        bool convertible = boost::conversion::try_lexical_convert<T>(token_second, value_second);
+                        if(!convertible){
+                            value_second = _table.template parse<T>(token_second);
+                        }
+                        // partial evaluation
+                        if(value_second){
+                            push(stack, value_second);
+                        }else{
+                            bool convertible = boost::conversion::try_lexical_convert<T>(token_first, value_first);
+                            if(!convertible){
+                                value_first = _table.template parse<T>(token_first);
+                            }
+                            push(stack, value_second || value_first);
+                        }
                     }
                 }else if(token.find("@") != std::string::npos){
                     std::vector<std::string> parts;
@@ -313,7 +341,12 @@ struct shunting_yard{
                         if(is_real(key)){
                             value = boost::lexical_cast<T>(key);
                         }else{
-                            value = _table.template parse<T>(key);
+                            try{
+                                value = _table.template parse<T>(key);
+                            }catch(const std::out_of_range&){
+                                value = T(0);
+                                std::cout << "out_of_range " << key <<", substituting with 0" << std::endl;
+                            }
                         }
                         push(stack, !value);
                     }
@@ -384,6 +417,7 @@ struct xml_parser{
                 });
                 std::string condition = cond.as_string();
                 bool truth = _expression_evaluator.template evaluate<int>(condition);
+                std::cout << "udho:if (" << condition << ") : " << truth << std::endl;
                 if(truth){
                     travarse(node, target);
                 }
@@ -406,19 +440,74 @@ struct xml_parser{
                 step_in(node, target);
             }
         }else{
+            std::vector<pugi::xml_attribute> removed;
             for(pugi::xml_attribute attr: node.attributes()){
                 std::string name = attr.name();
                 std::vector<std::string> parts;
                 boost::split(parts, name, boost::is_any_of(":"));
                 if(parts[0] == "udho"){
-                    if(parts[1] == "target"){
+                    if(parts[1] == "target"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
                         std::string target_attr_name  = parts[2];
                         std::string target_attr_value = attr.value();
-                        std::string resolved_value    = _table.eval(target_attr_value);
-                        attr.set_name(target_attr_name.c_str());
-                        attr.set_value(resolved_value.c_str());
+                        bool truth = false;
+                        if(target_attr_value.find("?") != std::string::npos){
+                            std::vector<std::string> condition_parts;
+                            boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
+                            std::string value_condition = condition_parts[0];
+                            target_attr_value = condition_parts[1];
+                            truth = _expression_evaluator.template evaluate<int>(value_condition);
+                        }else{
+                            truth = true;
+                        }
+                        if(truth){
+                            std::string resolved_value    = _table.eval(boost::algorithm::trim_copy(target_attr_value));
+                            attr.set_name(target_attr_name.c_str());
+                            attr.set_value(resolved_value.c_str());
+                        }else{
+                            removed.push_back(attr);
+                        }
+                    }else if(parts[1] == "eval"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
+                        std::string target_attr_name  = parts[2];
+                        std::string target_attr_value = attr.value();
+                        bool truth = false;
+                        if(target_attr_value.find("?") != std::string::npos){
+                            std::vector<std::string> condition_parts;
+                            boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
+                            std::string value_condition = condition_parts[0];
+                            target_attr_value = condition_parts[1];
+                            truth = _expression_evaluator.template evaluate<int>(value_condition);
+                        }else{
+                            truth = true;
+                        }
+                        if(truth){
+                            std::string resolved_value    = boost::lexical_cast<std::string>(_expression_evaluator.template evaluate<int>(target_attr_value));
+                            attr.set_name(target_attr_name.c_str());
+                            attr.set_value(resolved_value.c_str());
+                        }else{
+                            removed.push_back(attr);
+                        }
+                    }else if(parts[1] == "add-class"){                      // <div class="message" udho:add-class:warning="not(field.valid)"></div> -> <div class="message warning"></div>
+                        std::string target_attr_name  = parts[2];
+                        std::string target_attr_value = attr.value();
+                        bool truth = _expression_evaluator.template evaluate<int>(target_attr_value);
+                        if(truth){
+                            pugi::xml_attribute class_attr = node.attribute("class");
+                            if(class_attr.empty()){
+                                class_attr.set_name("class");
+                                class_attr.set_value(target_attr_name.c_str());
+                                node.append_copy(class_attr);
+                            }else{
+                                std::string existing_classes = class_attr.value();
+                                existing_classes += " "+target_attr_name;
+                                class_attr.set_value(existing_classes.c_str());
+                            }
+                        }
+                        removed.push_back(attr);
                     }
                 }
+            }
+            for(pugi::xml_attribute attr: removed){
+                node.remove_attribute(attr);
             }
             step_in(node, target);
         }

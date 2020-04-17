@@ -61,12 +61,12 @@ struct bridge{
         auto scope = ::udho::scope(data);
         return render(path, scope);
     }
-//     template <typename DataT>
-//     std::string render(const std::string& path, DataT& data) const{
-//         udho::prepared<DataT> prepared(data);
-//         auto scope = ::udho::scope(prepared);
-//         return render(path, scope);
-//     }
+    template <typename DataT>
+    std::string render(const std::string& path, DataT& data) const{
+        udho::prepared<DataT> prepared(data);
+        auto scope = ::udho::scope(prepared);
+        return render(path, scope);
+    }
     std::string render(const std::string& path) const;
 };
 

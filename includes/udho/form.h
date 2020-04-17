@@ -37,6 +37,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/function.hpp>
+#include <udho/access.h>
 
 namespace udho{
     
@@ -87,7 +88,7 @@ struct urlencoded_form{
     }
     template <typename T>
     const T field(const std::string& name) const{
-        return boost::lexical_cast<T>(_fields.at(name).template copied<std::string>());
+        return boost::lexical_cast<T>(udho::util::urldecode(_fields.at(name).template copied<std::string>()));
     }
 };
 
@@ -295,21 +296,58 @@ struct form_{
     }
 };
 
-template <typename T>
-struct field<T, true>{
-    typedef field<T, true> self_type;
-    typedef boost::function<bool (const std::string&, std::string&)> function_type;
-    typedef std::vector<function_type> validators_collection_type;
-    
+struct field_common: udho::prepare<field_common>{
     std::string _name;
-    T _value;
-    validators_collection_type _validators;
-    std::string _message_required;
     bool _is_valid;
     bool _validated;
     std::string _err;
+    std::string _value;
     
-    field(const std::string& name, const std::string& message): _name(name), _message_required(message), _is_valid(true), _validated(false){}
+    field_common(const std::string& name): _name(name){
+        clear();
+    }
+    inline bool validated() const{
+        return _validated;
+    }
+    inline std::string name() const{
+        return _name;
+    }
+    inline bool valid() const{
+        return _is_valid;
+    }
+    inline std::string error() const{
+        return _err;
+    }
+    inline void clear(){
+        _validated = false;
+        _is_valid = true;
+        _err = std::string();
+    }
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | fn("validated", &field_common::validated)
+                     | fn("name",      &field_common::name)
+                     | var("value",    &field_common::_value)
+                     | fn("valid",     &field_common::valid)
+                     | fn("error",     &field_common::error);
+    }
+};
+
+template <typename T>
+struct field<T, true>: field_common{
+    typedef field<T, true> self_type;
+    typedef field_common common_type;
+    typedef boost::function<bool (const std::string&, std::string&)> function_type;
+    typedef std::vector<function_type> validators_collection_type;
+    
+    T _value;
+    validators_collection_type _validators;
+    std::string _message_required;
+    
+    field(const std::string& name, const std::string& message): common_type(name), _message_required(message){}
+    T value() const{
+        return _value;
+    }
     template <typename F>
     self_type& constrain(F ftor){
         _validators.push_back(ftor);
@@ -317,58 +355,45 @@ struct field<T, true>{
     }
     template <typename RequestT>
     void validate(const form_<RequestT>& form){
-        if(!form.has(_name)){
-            _is_valid = false;
-            _err = _message_required;
+        if(!form.has(common_type::name())){
+            common_type::_is_valid = false;
+            common_type::_err = _message_required;
         }else{
-            std::string value = form.template field<std::string>(_name);
+            std::string value = form.template field<std::string>(common_type::name());
+            field_common::_value = value;
             std::size_t counter = 0;
             for(const function_type& f: _validators){
                 std::string message;
                 if(!f(value, message)){
-                    _is_valid = false;
-                    _err = message;
+                    common_type::_is_valid = false;
+                    common_type::_err = message;
                     break;
                 }
                 ++counter;
             }
             if(counter == _validators.size()){
-                _is_valid = true;
+                common_type::_is_valid = true;
                 _value = boost::lexical_cast<T>(value);
             }
         }
-        _validated = true;
-    }
-    bool validated() const{
-        return _validated;
-    }
-    bool valid() const{
-        return _is_valid;
-    }
-    std::string error() const{
-        return _err;
-    }
-    void clear(){
-        _validated = false;
-        _is_valid = true;
-        _err = std::string();
+        common_type::_validated = true;
     }
 };
 
 template <typename T>
-struct field<T, false>{
+struct field<T, false>: field_common{
     typedef field<T, false> self_type;
+    typedef field_common common_type;
     typedef boost::function<bool (const std::string&, std::string&)> function_type;
     typedef std::vector<function_type> validators_collection_type;
     
-    std::string _name;
     T _value;
     validators_collection_type _validators;
-    bool _is_valid;
-    bool _validated;
-    std::string _err;
     
-    field(const std::string& name): _name(name), _is_valid(true), _validated(false){}
+    field(const std::string& name): common_type(name){}
+    T value() const{
+        return _value;
+    }
     template <typename F>
     self_type& constrain(F ftor){
         _validators.push_back(ftor);
@@ -376,46 +401,77 @@ struct field<T, false>{
     }
     template <typename RequestT>
     void validate(const form_<RequestT>& form){
-        std::string value = form.template field<std::string>(_name);
-        std::size_t counter = 0;
-        for(const function_type& f: _validators){
-            std::string message;
-            if(!f(value, message)){
-                _is_valid = false;
-                _err = message;
-                break;
+        if(!form.has(common_type::name())){
+            common_type::_is_valid = true;
+            common_type::_validated = true;
+        }else{
+            std::string value = form.template field<std::string>(common_type::name());
+            field_common::_value = value;
+            std::size_t counter = 0;
+            for(const function_type& f: _validators){
+                std::string message;
+                if(!f(value, message)){
+                    common_type::_is_valid = false;
+                    common_type::_err = message;
+                    break;
+                }
+                ++counter;
             }
-            ++counter;
+            if(counter == _validators.size()){
+                common_type::_is_valid = true;
+                _value = boost::lexical_cast<T>(value);
+            }
         }
-        if(counter == _validators.size()){
-            _is_valid = true;
-            _value = boost::lexical_cast<T>(value);
-        }
-        _validated = true;
-    }
-    bool validated() const{
-        return _validated;
-    }
-    bool valid() const{
-        return _is_valid;
-    }
-    std::string error() const{
-        return _err;
-    }
-    void clear(){
-        _validated = false;
-        _is_valid = true;
-        _err = std::string();
+        common_type::_validated = true;
     }
 };
 
-template <typename T, bool Required, typename RequestT>
-const form_<RequestT>& operator>>(const form_<RequestT>& form, field<T, Required>& field_){
-    field_.validate(form);
-    return form;
+namespace form{
+    
+template <typename FormT>
+struct validated: udho::prepare<validated<FormT>>{
+    typedef udho::prepare<validated<FormT>> base;
+    typedef FormT form_type;
+    typedef validated<FormT> self_type;
+    
+    form_type& _form;
+    bool _submitted;
+    bool _valid;
+    std::vector<std::string> _errors;
+    std::map<std::string, field_common> _fields;
+    
+    validated(form_type& form): _form(form), _submitted(false), _valid(false){}
+    void add(const field_common& fld){
+        _fields.insert(std::make_pair(fld.name(), fld));
+        _submitted = true;
+        _valid = _valid && fld.valid();
+        if(!fld.valid()){
+            _errors.push_back(fld.error());
+        }
+    }
+    bool valid() const{
+        return _valid;
+    }
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | base::var("submitted", &self_type::_submitted)
+                     | base::var("valid",     &self_type::_valid)
+                     | base::var("errors",    &self_type::_errors)
+                     | base::var("fields",    &self_type::_fields);
+    }
+};
+
+template <typename RequestT>
+validated<udho::form_<RequestT>> validate(udho::form_<RequestT>& form){
+    return validated<udho::form_<RequestT>>(form);
 }
 
-namespace form{
+template <typename T, bool Required, typename RequestT>
+validated<udho::form_<RequestT>>& operator>>(validated<udho::form_<RequestT>>& validator, field<T, Required>& field_){
+    field_.validate(validator._form);
+    validator.add(field_);
+    return validator;
+}
 
 template <typename T>
 using required = field<T, true>;
@@ -428,7 +484,7 @@ struct max_length{
     std::string _custom;
     
     max_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
-    bool operator()(const std::string& value, std::string& error) const{
+    inline bool operator()(const std::string& value, std::string& error) const{
         if(value.size() > _length){
             error = _custom.empty() ? (boost::format("constrain size <= %1% failed") % _length).str() : _custom;
             return false;
@@ -441,7 +497,7 @@ struct min_length{
     std::string _custom;
     
     min_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
-    bool operator()(const std::string& value, std::string& error) const{
+    inline bool operator()(const std::string& value, std::string& error) const{
         if(value.size() < _length){
             error = _custom.empty() ? (boost::format("constrain size >= %1% failed") % _length).str() : _custom;
             return false;
@@ -454,8 +510,8 @@ struct exact_length{
     std::string _custom;
     
     exact_length(std::size_t length, std::string custom = ""): _length(length), _custom(custom){}
-    bool operator()(const std::string& value, std::string& error) const{
-        if(value.size() == _length){
+    inline bool operator()(const std::string& value, std::string& error) const{
+        if(value.size() != _length){
             error = _custom.empty() ? (boost::format("constrain size == %1% failed") % _length).str() : _custom;
             return false;
         }
@@ -466,7 +522,7 @@ struct no_space{
     std::string _custom;
     
     no_space(std::string custom = ""): _custom(custom){}
-    bool operator()(const std::string& value, std::string& error) const{
+    inline bool operator()(const std::string& value, std::string& error) const{
         if(value.find(" ") != std::string::npos){
             error = _custom.empty() ? (boost::format("constrain no space failed")).str() : _custom;
             return false;
@@ -478,8 +534,9 @@ struct all_digit{
     std::string _custom;
     
     all_digit(std::string custom = ""): _custom(custom){}
-    bool operator()(const std::string& value, std::string& error) const{
-        for(char c: value){
+    inline bool operator()(const std::string& value, std::string& error) const{
+        for(auto it = value.begin(); it != value.end(); ++it){
+            char c = *it;
             if(!std::isdigit(c)){
                 error = _custom.empty() ? (boost::format("constrain all digits failed")).str() : _custom;
                 return false;
