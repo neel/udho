@@ -88,7 +88,7 @@ struct urlencoded_form{
     }
     template <typename T>
     const T field(const std::string& name) const{
-        return boost::lexical_cast<T>(udho::util::urldecode(_fields.at(name).template copied<std::string>()));
+        return boost::lexical_cast<T>(udho::util::urldecode(boost::trim_copy(_fields.at(name).template copied<std::string>())));
     }
 };
 
@@ -141,7 +141,7 @@ struct multipart_form{
             return body().template copied<StrT>();
         }
         std::string str() const{
-            return copied<std::string>();
+            return boost::trim_copy(copied<std::string>());
         }
         template <typename T>
         T value() const{
@@ -440,7 +440,7 @@ struct validated: udho::prepare<validated<FormT>>{
     std::vector<std::string> _errors;
     std::map<std::string, field_common> _fields;
     
-    validated(form_type& form): _form(form), _submitted(false), _valid(false){}
+    validated(form_type& form): _form(form), _submitted(false), _valid(true){}
     void add(const field_common& fld){
         _fields.insert(std::make_pair(fld.name(), fld));
         _submitted = true;
