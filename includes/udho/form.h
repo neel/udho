@@ -355,7 +355,7 @@ struct field<T, true>: field_common{
     }
     template <typename RequestT>
     void validate(const form_<RequestT>& form){
-        if(!form.has(common_type::name())){
+        if(!form.has(common_type::name()) || (form.has(common_type::name()) && form.template field<std::string>(common_type::name()).empty())){
             common_type::_is_valid = false;
             common_type::_err = _message_required;
         }else{
@@ -467,7 +467,7 @@ validated<udho::form_<RequestT>> validate(udho::form_<RequestT>& form){
 }
 
 template <typename T, bool Required, typename RequestT>
-validated<udho::form_<RequestT>>& operator>>(validated<udho::form_<RequestT>>& validator, field<T, Required>& field_){
+validated<udho::form_<RequestT>>& operator<<(validated<udho::form_<RequestT>>& validator, field<T, Required>& field_){
     field_.validate(validator._form);
     validator.add(field_);
     return validator;
