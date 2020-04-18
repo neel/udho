@@ -183,7 +183,7 @@ struct context{
         return _aux;
     }
     void respond(udho::defs::response_type& response){
-        _pimpl->respond(std::move(response));
+        _pimpl->respond(response);
     }
     template <typename OutputT>
     void respond(const OutputT& output, const std::string& mime){

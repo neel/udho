@@ -51,8 +51,9 @@ struct cookie_{
     boost::optional<unsigned long> _age;
     boost::optional<bool>          _secure;
     
-    cookie_(const std::string& name): _name(name), _removed(false){}
-    cookie_(const std::string& name, const ValueT& value): _name(name), _value(value), _removed(false){}
+    cookie_(const std::string& name): _name(name), _removed(false), _path("/"){}
+    cookie_(const std::string& name, const ValueT& value): _name(name), _value(value), _removed(false), _path("/"){}
+    cookie_(const std::string& name, const ValueT& value, const std::string& path): _name(name), _value(value), _removed(false), _path(path){}
     
     self_type& path(const std::string& p){
         _path = p;
