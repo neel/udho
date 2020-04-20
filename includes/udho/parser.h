@@ -387,7 +387,7 @@ struct xml_parser{
     void parse(pugi::xml_node node, pugi::xml_node head){
         pugi::xml_node target = head;
         std::string name = node.name();
-        std::vector<std::string> parts;
+        std::vector<std::string> parts;        
         boost::split(parts, name, boost::is_any_of(":"));
         if(parts.front() == "udho" && parts.size() > 1){
             if(parts[1] == "block"){
@@ -443,67 +443,79 @@ struct xml_parser{
             std::vector<pugi::xml_attribute> removed;
             for(pugi::xml_attribute attr: node.attributes()){
                 std::string name = attr.name();
-                std::vector<std::string> parts;
+                std::size_t index = name.find(':');
+                if(index != std::string::npos){
+                    std::size_t next = name.find(':', index+1);
+                    if(next != std::string::npos){
+                        std::string sub = name.substr(index+1, next-index-1);
+                        std::string rest = name.substr(next+1);
+                        
+                        std::cout << "sub  " << sub  << std::endl;
+                        std::cout << "rest " << rest << std::endl;
+                        
+                        if(sub == "target"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
+                            std::string target_attr_name  = rest;
+                            std::string target_attr_value = attr.value();
+                            bool truth = false;
+                            if(target_attr_value.find("?") != std::string::npos){
+                                std::vector<std::string> condition_parts;
+                                boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
+                                std::string value_condition = condition_parts[0];
+                                target_attr_value = condition_parts[1];
+                                truth = _expression_evaluator.template evaluate<int>(value_condition);
+                            }else{
+                                truth = true;
+                            }
+                            if(truth){
+                                std::string resolved_value    = _table.eval(boost::algorithm::trim_copy(target_attr_value));
+                                attr.set_name(target_attr_name.c_str());
+                                attr.set_value(resolved_value.c_str());
+                            }else{
+                                removed.push_back(attr);
+                            }
+                        }else if(sub == "eval"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
+                            std::string target_attr_name  = rest;
+                            std::string target_attr_value = attr.value();
+                            bool truth = false;
+                            if(target_attr_value.find("?") != std::string::npos){
+                                std::vector<std::string> condition_parts;
+                                boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
+                                std::string value_condition = condition_parts[0];
+                                target_attr_value = condition_parts[1];
+                                truth = _expression_evaluator.template evaluate<int>(value_condition);
+                            }else{
+                                truth = true;
+                            }
+                            if(truth){
+                                std::string resolved_value    = boost::lexical_cast<std::string>(_expression_evaluator.template evaluate<int>(target_attr_value));
+                                attr.set_name(target_attr_name.c_str());
+                                attr.set_value(resolved_value.c_str());
+                            }else{
+                                removed.push_back(attr);
+                            }
+                        }else if(sub == "add-class"){                      // <div class="message" udho:add-class:warning="not(field.valid)"></div> -> <div class="message warning"></div>
+                            std::string target_attr_name  = rest;
+                            std::string target_attr_value = attr.value();
+                            bool truth = _expression_evaluator.template evaluate<int>(target_attr_value);
+                            if(truth){
+                                pugi::xml_attribute class_attr = node.attribute("class");
+                                if(class_attr.empty()){
+                                    class_attr.set_name("class");
+                                    class_attr.set_value(target_attr_name.c_str());
+                                    node.append_copy(class_attr);
+                                }else{
+                                    std::string existing_classes = class_attr.value();
+                                    existing_classes += " "+target_attr_name;
+                                    class_attr.set_value(existing_classes.c_str());
+                                }
+                            }
+                            removed.push_back(attr);
+                        }
+                    }
+                }
                 boost::split(parts, name, boost::is_any_of(":"));
                 if(parts[0] == "udho"){
-                    if(parts[1] == "target"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
-                        std::string target_attr_name  = parts[2];
-                        std::string target_attr_value = attr.value();
-                        bool truth = false;
-                        if(target_attr_value.find("?") != std::string::npos){
-                            std::vector<std::string> condition_parts;
-                            boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
-                            std::string value_condition = condition_parts[0];
-                            target_attr_value = condition_parts[1];
-                            truth = _expression_evaluator.template evaluate<int>(value_condition);
-                        }else{
-                            truth = true;
-                        }
-                        if(truth){
-                            std::string resolved_value    = _table.eval(boost::algorithm::trim_copy(target_attr_value));
-                            attr.set_name(target_attr_name.c_str());
-                            attr.set_value(resolved_value.c_str());
-                        }else{
-                            removed.push_back(attr);
-                        }
-                    }else if(parts[1] == "eval"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
-                        std::string target_attr_name  = parts[2];
-                        std::string target_attr_value = attr.value();
-                        bool truth = false;
-                        if(target_attr_value.find("?") != std::string::npos){
-                            std::vector<std::string> condition_parts;
-                            boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
-                            std::string value_condition = condition_parts[0];
-                            target_attr_value = condition_parts[1];
-                            truth = _expression_evaluator.template evaluate<int>(value_condition);
-                        }else{
-                            truth = true;
-                        }
-                        if(truth){
-                            std::string resolved_value    = boost::lexical_cast<std::string>(_expression_evaluator.template evaluate<int>(target_attr_value));
-                            attr.set_name(target_attr_name.c_str());
-                            attr.set_value(resolved_value.c_str());
-                        }else{
-                            removed.push_back(attr);
-                        }
-                    }else if(parts[1] == "add-class"){                      // <div class="message" udho:add-class:warning="not(field.valid)"></div> -> <div class="message warning"></div>
-                        std::string target_attr_name  = parts[2];
-                        std::string target_attr_value = attr.value();
-                        bool truth = _expression_evaluator.template evaluate<int>(target_attr_value);
-                        if(truth){
-                            pugi::xml_attribute class_attr = node.attribute("class");
-                            if(class_attr.empty()){
-                                class_attr.set_name("class");
-                                class_attr.set_value(target_attr_name.c_str());
-                                node.append_copy(class_attr);
-                            }else{
-                                std::string existing_classes = class_attr.value();
-                                existing_classes += " "+target_attr_name;
-                                class_attr.set_value(existing_classes.c_str());
-                            }
-                        }
-                        removed.push_back(attr);
-                    }
+
                 }
             }
             for(pugi::xml_attribute attr: removed){
