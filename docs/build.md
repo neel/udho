@@ -13,26 +13,26 @@ udho can be built like a regular cmake library. The requirements of udho library
 ### Ubuntu
 
 ```bash
-sudo apt-get install git cmake build-essential boost-all-dev libicu-dev
+sudo apt-get install git cmake build-essential boost-all-dev libicu-dev pugixml-dev
 ```
 
 ### Fedora
 
 ```bash
 sudo dnf install @development-tools
-sudo dnf install git cmake boost-devel libicu-devel
+sudo dnf install git cmake boost-devel libicu-devel pugixml-devel
 ```
 
 ### Arch Linux
 
 ```bash
-sudo pacman -S base-devel git cmake boost icu
+sudo pacman -S base-devel git cmake boost icu pugixml
 ```
 
 ### Mac
 
 ```bash
-brew install git cmake boost icu
+brew install git cmake boost icu pugixml
 ```
 
 ## Build
