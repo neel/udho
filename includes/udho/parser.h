@@ -345,7 +345,7 @@ struct shunting_yard{
                                 value = _table.template parse<T>(key);
                             }catch(const std::out_of_range&){
                                 value = T(0);
-                                std::cout << "out_of_range " << key <<", substituting with 0" << std::endl;
+                                // std::cout << "out_of_range " << key <<", substituting with 0" << std::endl;
                             }
                         }
                         push(stack, !value);
@@ -417,7 +417,7 @@ struct xml_parser{
                 });
                 std::string condition = cond.as_string();
                 bool truth = _expression_evaluator.template evaluate<int>(condition);
-                std::cout << "udho:if (" << condition << ") : " << truth << std::endl;
+                // std::cout << "udho:if (" << condition << ") : " << truth << std::endl;
                 if(truth){
                     travarse(node, target);
                 }
@@ -450,8 +450,8 @@ struct xml_parser{
                         std::string sub = name.substr(index+1, next-index-1);
                         std::string rest = name.substr(next+1);
                         
-                        std::cout << "sub  " << sub  << std::endl;
-                        std::cout << "rest " << rest << std::endl;
+                        // std::cout << "sub  " << sub  << std::endl;
+                        // std::cout << "rest " << rest << std::endl;
                         
                         if(sub == "target"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
                             std::string target_attr_name  = rest;

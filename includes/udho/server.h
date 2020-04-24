@@ -73,6 +73,10 @@ struct server{
 #endif
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
     }
+    template <typename FeatureT>
+    auto operator+=(const FeatureT& feature){
+        return (_attachment += feature);
+    }
 };
 
 template <typename AuxT, typename CacheT>
@@ -103,6 +107,10 @@ struct server<AuxT, void, CacheT>{
         _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
 #endif
         router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+    }
+    template <typename FeatureT>
+    auto operator+=(const FeatureT& feature){
+        return (_attachment += feature);
     }
 };
 
@@ -155,6 +163,10 @@ namespace ostreamed{
         template <typename RouterT>
         void serve(RouterT&& router, int port=9198, std::string doc_root=""){
             _server.template serve(router, port, doc_root);
+        }
+        template <typename FeatureT>
+        auto operator+=(const FeatureT& feature){
+            return (_server += feature);
         }
     };
     

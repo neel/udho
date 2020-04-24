@@ -32,6 +32,9 @@
 #include <chrono>
 #include <iomanip>
 #include <boost/format.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <udho/termcolor.hpp>
 
 namespace udho{
     
@@ -40,7 +43,9 @@ namespace logging{
 enum class segment{
     unknown,
     router,
-    server
+    server,
+    parser,
+    user
 };
 
 enum class status{
@@ -118,9 +123,21 @@ namespace messages{
     }
 }
 
+namespace features{
+
+struct colored{
+    bool _colored;
+    
+    inline explicit colored(): _colored(false){}
+    inline explicit colored(bool c): _colored(c){}
+};
+    
+}
+
 }
     
 namespace loggers{
+    
  
 template <typename StreamT>
 struct plain{
@@ -128,13 +145,11 @@ struct plain{
     typedef plain<StreamT> self_type;
     
     StreamT& _stream;
+    logging::features::colored _feature_color;
     
     plain(StreamT& stream): _stream(stream){}
     
     void log(const std::chrono::system_clock::time_point& time, udho::logging::status status, const std::string& segment, int level, const std::string& message){
-        std::time_t t = std::chrono::system_clock::to_time_t(time);
-        std::tm* tm = std::localtime(&t);
-        
         std::string status_str = "unknown";
         switch(status){
             case udho::logging::status::error:
@@ -151,7 +166,35 @@ struct plain{
                 break;
         }
         
-        _stream << boost::format("%1% > [%2%] (%3%) %4%") % std::put_time(tm, "%T") % status_str % segment % message << std::endl;
+        if(!_feature_color._colored){
+            _stream << boost::format("%1% > [%2%] (%3%) %4%") % boost::posix_time::second_clock::local_time() % status_str % segment % message << std::endl;
+        }else{
+            _stream << boost::posix_time::second_clock::local_time();
+            _stream << " ";
+            _stream << ">>";
+            _stream << " ";
+            _stream << "(" << segment << ")";
+            _stream << " ";
+            if(status == udho::logging::status::error){
+                _stream << termcolor::red;
+            }else if(status == udho::logging::status::warning){
+                _stream << termcolor::yellow;
+            }else if(status == udho::logging::status::debug){
+                _stream << termcolor::green;
+            }else if(status == udho::logging::status::info){
+                _stream << termcolor::blue;
+            }
+            _stream << "[" << status_str << "]";
+            _stream << " ";
+            _stream << message;
+            _stream << termcolor::reset;
+            _stream << std::endl;
+        }
+    }
+    
+    self_type& operator+=(const logging::features::colored& colored){
+        _feature_color = colored;
+        return *this;
     }
     
     template <udho::logging::status Status>
