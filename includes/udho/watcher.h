@@ -130,15 +130,27 @@ struct watcher{
             iterator_type it = i->second;
             watch_type watch = *it;
             std::cout << "watch found " << key << std::endl;
-            std::cout << "watch._context.request().version(): " << watch._context.request().version() << std::endl;
             watch.release(boost::asio::error::operation_aborted);
             _watchers.erase(it);
             i = _index.erase(i);
         }
         return std::distance(range.first, range.second);
     }
+    std::size_t notify_all(){
+        for(auto i = _index.begin(); i != _index.end();){
+            iterator_type it = i->second;
+            watch_type watch = *it;
+            watch.release(boost::asio::error::operation_aborted);
+            _watchers.erase(it);
+            i = _index.erase(i);
+        }
+        return _index.size();
+    }
     void async_notify(const key_type& key){
         _io.post(boost::bind(&self_type::notify, this, key));
+    }
+    void async_notify_all(){
+        _io.post(boost::bind(&self_type::notify_all, this));
     }
 };
     
