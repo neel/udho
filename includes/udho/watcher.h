@@ -63,21 +63,7 @@ struct watch{
         return _key;
     }
 };
-
-// template <typename DerivedT, typename ContextT>
-// struct web_watch: watch<web_watch<DerivedT, ContextT>>{
-//     typedef ContextT context_type;
-//     typedef watch<web_watch<DerivedT, ContextT>> base_type;
-//     
-//     context_type _context;
-//     
-//     web_watch(const ContextT& ctx, const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): base_type(duration), _context(ctx){}
-//     void operator()(const boost::system::error_code& e){
-//         DerivedT& self = static_cast<DerivedT&>(*this);
-//         self(_context, e);
-//     }
-// };
-    
+   
 template <typename WatchT>
 struct watcher{
     typedef WatchT watch_type;
