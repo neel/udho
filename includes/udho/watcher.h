@@ -37,15 +37,17 @@
 
 namespace udho{
     
-template <typename DerivedT>
+template <typename DerivedT, typename KeyT>
 struct watch{
+    typedef KeyT                             key_type;
     typedef boost::posix_time::ptime         time_point_type;
     typedef boost::posix_time::time_duration time_duration_type;
     
+    key_type        _key;
     time_point_type _expiry;
     bool            _released;
     
-    watch(const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): _expiry(boost::posix_time::second_clock::local_time() + duration), _released(false){}
+    watch(const key_type& key, const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): _key(key), _expiry(boost::posix_time::second_clock::local_time() + duration), _released(false){}
     void release(const boost::system::error_code& e = boost::asio::error::operation_aborted){
         DerivedT& self = static_cast<DerivedT&>(*this);
         self(e);
@@ -57,27 +59,30 @@ struct watch{
     bool released() const{
         return _released;
     }
-};
-
-template <typename DerivedT, typename ContextT>
-struct web_watch: watch<web_watch<DerivedT, ContextT>>{
-    typedef ContextT context_type;
-    typedef watch<web_watch<DerivedT, ContextT>> base_type;
-    
-    context_type _context;
-    
-    web_watch(const ContextT& ctx, const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): base_type(duration), _context(ctx){}
-    void operator()(const boost::system::error_code& e){
-        DerivedT& self = static_cast<DerivedT&>(*this);
-        self(_context, e);
+    key_type key() const{
+        return _key;
     }
 };
+
+// template <typename DerivedT, typename ContextT>
+// struct web_watch: watch<web_watch<DerivedT, ContextT>>{
+//     typedef ContextT context_type;
+//     typedef watch<web_watch<DerivedT, ContextT>> base_type;
+//     
+//     context_type _context;
+//     
+//     web_watch(const ContextT& ctx, const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): base_type(duration), _context(ctx){}
+//     void operator()(const boost::system::error_code& e){
+//         DerivedT& self = static_cast<DerivedT&>(*this);
+//         self(_context, e);
+//     }
+// };
     
-template <typename KeyT, typename WatchT>
+template <typename WatchT>
 struct watcher{
-    typedef KeyT key_type;
     typedef WatchT watch_type;
-    typedef watcher<KeyT, WatchT> self_type;
+    typedef typename watch_type::key_type key_type;
+    typedef watcher<WatchT> self_type;
     typedef std::list<watch_type> container_type;
     typedef typename container_type::iterator iterator_type;
     typedef std::multimap<key_type, iterator_type> index_type;
@@ -88,7 +93,7 @@ struct watcher{
     index_type                  _index;
     
     watcher(boost::asio::io_service& io): _io(io), _timer(io){}    
-    bool insert(const key_type& key, watch_type& watch){
+    bool insert(const key_type& key, const watch_type& watch){
         if(watch.released()){
             return false;
         }
@@ -108,6 +113,18 @@ struct watcher{
         if(err != boost::asio::error::operation_aborted){
             if(!_watchers.empty()){
                 watch_type current = _watchers.front();
+                auto iterator = _watchers.begin();
+                key_type key = current.key();
+                auto range = _index.equal_range(key);
+                for(auto i = range.first; i != range.second;){
+                    std::cout << "iterating" << std::endl;
+                    if(i->second == iterator){
+                        std::cout << "removing" << std::endl;
+                        i = _index.erase(i);
+                    }else{
+                        ++i;
+                    }
+                }
                 _watchers.pop_front();
                 current.release(err);
             }
@@ -123,10 +140,11 @@ struct watcher{
     std::size_t notify(const key_type& key){
         std::cout << "notifying " << key << std::endl;
         auto range = _index.equal_range(key);
-        for(auto i = range.first; i != range.second; ++i){
+        for(auto i = range.first; i != range.second;){
             iterator_type it = i->second;
             watch_type watch = *it;
             std::cout << "watch found " << key << std::endl;
+            std::cout << "watch._context.request().version(): " << watch._context.request().version() << std::endl;
             watch.release(boost::asio::error::operation_aborted);
             _watchers.erase(it);
             i = _index.erase(i);
