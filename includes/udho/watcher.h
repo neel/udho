@@ -37,17 +37,21 @@
 
 namespace udho{
     
+template <typename WatchT>
+struct watcher;
+    
 template <typename DerivedT, typename KeyT>
 struct watch{
     typedef KeyT                             key_type;
+    typedef watch<DerivedT, KeyT>            self_type;
     typedef boost::posix_time::ptime         time_point_type;
     typedef boost::posix_time::time_duration time_duration_type;
-    
+       
     key_type        _key;
     time_point_type _expiry;
     bool            _released;
     
-    watch(const key_type& key, const boost::posix_time::time_duration& duration = boost::posix_time::seconds(15)): _key(key), _expiry(boost::posix_time::second_clock::local_time() + duration), _released(false){}
+    watch(const key_type& key): _key(key), _expiry(boost::posix_time::not_a_date_time), _released(false){}
     void release(const boost::system::error_code& e = boost::asio::error::operation_aborted){
         DerivedT& self = static_cast<DerivedT&>(*this);
         self(e);
@@ -62,36 +66,47 @@ struct watch{
     key_type key() const{
         return _key;
     }
+    bool valid() const{
+        return !_expiry.is_not_a_date_time();
+    }
+    void expire_at(boost::posix_time::ptime time){
+        _expiry = time;
+    }
 };
    
 template <typename WatchT>
 struct watcher{
-    typedef WatchT watch_type;
-    typedef typename watch_type::key_type key_type;
-    typedef watcher<WatchT> self_type;
-    typedef std::list<watch_type> container_type;
-    typedef typename container_type::iterator iterator_type;
-    typedef std::multimap<key_type, iterator_type> index_type;
+    typedef WatchT                                  watch_type;
+    typedef typename watch_type::key_type           key_type;
+    typedef watcher<WatchT>                         self_type;
+    typedef std::list<watch_type>                   container_type;
+    typedef typename container_type::iterator       iterator_type;
+    typedef std::multimap<key_type, iterator_type>  index_type;
+    typedef boost::posix_time::ptime                time_point_type;
+    typedef boost::posix_time::time_duration        time_duration_type;
     
     boost::asio::io_service&    _io;
+    time_duration_type          _duration;
     boost::asio::deadline_timer _timer;
     container_type              _watchers;
     index_type                  _index;
     
-    watcher(boost::asio::io_service& io): _io(io), _timer(io){}    
-    bool insert(const key_type& key, const watch_type& watch){
-        if(watch.released()){
+    watcher(boost::asio::io_service& io, const time_duration_type& duration): _io(io), _timer(io), _duration(duration){}    
+    bool insert(watch_type watch){
+        if(watch.released() || watch.valid()){
+            // watch is valid iff an expiry time is set by the watcher
+            // which implies that the watch has already been added to the queue
+            // so reject such watches
             return false;
         }
+        key_type key = watch.key();
+        watch.expire_at(boost::posix_time::second_clock::local_time() + _duration);
         if(_watchers.empty()){
             boost::posix_time::time_duration duration = watch.expiry() - boost::posix_time::second_clock::local_time();
             _timer.expires_from_now(duration);
             std::cout << this << " async_wait for" << duration <<" from " << boost::posix_time::second_clock::local_time() << std::endl;
             _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
             std::cout << this << " watch expiring at " << watch.expiry() << std::endl;
-        }
-        if(watch.expiry() <= _watchers.back().expiry()){
-            std::cout << this << " watch infeasible last " << _watchers.back().expiry() << " current " << watch.expiry() << std::endl;
         }
         _watchers.push_back(watch);
         iterator_type it = _watchers.end();
