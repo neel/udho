@@ -101,6 +101,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         if(ec == http::error::end_of_stream){
             return do_close();
         }
+        if(bytes_transferred == 0 || ec == boost::asio::error::connection_reset){
+            return;
+        }
         std::string path;
         std::stringstream path_stream(_req.target().to_string());
         std::getline(path_stream, path, '?');
