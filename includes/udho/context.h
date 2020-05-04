@@ -191,6 +191,16 @@ struct context{
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
     }
+    
+    std::string target() const{
+        return _pimpl->_request.target().to_string();
+    }
+    std::string path() const{
+        std::string path;
+        std::stringstream path_stream(target());
+        std::getline(path_stream, path, '?');
+        return path;
+    }
 };
 
 template <typename AuxT, typename RequestT>
@@ -246,6 +256,16 @@ struct context<AuxT, RequestT, void>{
         udho::compositors::mimed<OutputT> compositor(mime);
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
+    }
+    
+    std::string target() const{
+        return _pimpl->_request.target().to_string();
+    }
+    std::string path() const{
+        std::string path;
+        std::stringstream path_stream(target());
+        std::getline(path_stream, path, '?');
+        return path;
     }
 };
 

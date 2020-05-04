@@ -11,6 +11,7 @@ extraction:
                 - libicu-dev
                 - cmake
                 - libboost-dev
+                - pugixml-dev
         configure:
             command:
                 - mkdir build
