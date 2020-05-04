@@ -58,22 +58,26 @@ udho depend on boost. As boost-beast is only available on boost >= 1.66, udho re
 
 # Features:
 
-* regular expression based url routing to callables (functions / function objects)
-* compile time binding of routing rule with callables
-* compile time travarsable url router
-* response mime type specification in routing rule
-* any default constructible can be used as callable argument type that can be parsed from std::string
-* any ostreamable can be used as return type of callables
-* automatic type coersion for url based method calling
-* throwable http error messages
-* serving static content from disk document root if no rule matched
-* urlencoded/multipart form parsing
-* on memory session for stateful web applications (no globals) and no session for stateless applications
-* strictly typed on memory session storage
-* compile time pluggable & customizable logging
-* deferred response and long polling
-* xml based template parsing
-* arithmatic and logical expression evaluation in xml template
+* [x] regular expression based url routing to callables (functions / function objects)
+* [x] compile time binding of routing rule with callables
+* [x] compile time travarsable url router
+* [x] response mime type specification in routing rule
+* [x] any default constructible can be used as callable argument type that can be parsed from std::string
+* [x] any ostreamable can be used as return type of callables
+* [x] automatic type coersion for url based method calling
+* [x] throwable http error messages
+* [ ] throwable HTTP redirection
+* [x] serving static content from disk document root if no rule matched
+* [x] urlencoded/multipart form parsing
+* [x] form field validation
+* [x] on memory session for stateful web applications (no globals) and no session for stateless applications
+* [x] strictly typed on memory session storage
+* [x] compile time pluggable & customizable logging
+* [ ] server-sent events
+* [x] deferred response and long polling
+* [x] xml based template parsing (working but need refactoring)
+* [x] arithmatic and logical expression evaluation in xml template (working but need refactoring)
+
   
 # Stateful Example  <a name="stateful-example"></a>
 
