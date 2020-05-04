@@ -16,6 +16,9 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/asio/bind_executor.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
@@ -74,7 +77,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     udho::defs::request_type _req;
     std::shared_ptr<void> res_;
     send_lambda _lambda;
-    bool _delayed;
+    boost::posix_time::ptime _time;
   public:
     /**
      * session constructor
@@ -82,15 +85,20 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
      * @param socket TCP socket
      * @param doc_root document root to serve static contents
      */
-    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root): _router(router), _attachment(attachment), _socket(std::move(socket)), _strand(_socket.get_executor()), _doc_root(doc_root), _lambda(*this), _delayed(false){}
+    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root)
+        : _router(router), 
+          _attachment(attachment),
+          _socket(std::move(socket)),
+          _strand(_socket.get_executor()),
+          _doc_root(doc_root),
+          _lambda(*this),
+          _time(boost::posix_time::second_clock::local_time())
+          {}
     /**
      * start the read loop
      */
     void run(){
         do_read();
-    }
-    bool is_delayed() const{
-        return _delayed;
     }
     void do_read(){
         _req = {};
@@ -104,6 +112,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         if(bytes_transferred == 0 || ec == boost::asio::error::connection_reset){
             return;
         }
+        
+        _time = boost::posix_time::second_clock::local_time();
+        
         std::string path;
         std::stringstream path_stream(_req.target().to_string());
         std::getline(path_stream, path, '?');
@@ -116,13 +127,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-                       
+             
+            std::string local_path = internal::path_cat(*_doc_root, path);
             if(response == http::status::not_extended){
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 return;
             }
             
             if(response == http::status::unknown){
-                std::string local_path = internal::path_cat(*_doc_root, path);
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 boost::beast::error_code err;
                 http::file_body::value_type body;
@@ -180,6 +192,15 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         _socket.shutdown(tcp::socket::shutdown_send, ec);
     }
     void respond(udho::defs::response_type& msg){
+        std::string path;
+        std::stringstream path_stream(_req.target().to_string());
+        std::getline(path_stream, path, '?');
+        
+        std::string local_path = internal::path_cat(*_doc_root, path);
+        
+        boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() - _time;
+        
+        _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% responded %4% after %5% delay") % _socket.remote_endpoint().address() % _req.method() % path % local_path % diff;
         _lambda(std::move(msg));
     }
 };
