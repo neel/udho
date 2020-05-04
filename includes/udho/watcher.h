@@ -144,7 +144,6 @@ struct watcher{
         }
     }
     std::size_t notify(const key_type& key){
-        std::cout << "notifying " << key << std::endl;
         auto range = _index.equal_range(key);
         auto count = std::distance(range.first, range.second);
         for(auto i = range.first; i != range.second;){
