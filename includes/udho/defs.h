@@ -39,7 +39,9 @@
 //  UDHO_VERSION % 100 is the patch level
 //  UDHO_VERSION / 100 % 1000 is the minor version
 //  UDHO_VERSION / 100000 is the major version
+
 #define UDHO_VERSION 100000
+#define UDHO_VERSION_STRING "Udho (উধো) 1.0.0 "  BOOST_BEAST_VERSION_STRING " Boost " BOOST_LIB_VERSION
 
 namespace udho{
 namespace defs{

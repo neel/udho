@@ -5,6 +5,14 @@ udho::exceptions::http_error::http_error(boost::beast::http::status status, cons
 
 }
 
+void udho::exceptions::http_error::add_header(boost::beast::http::field key, const std::string& value){
+    _headers.insert(key, value);
+}
+
+void udho::exceptions::http_error::redirect(const std::string& url){
+    add_header(boost::beast::http::field::location, url);
+}
+
 const char* udho::exceptions::http_error::what() const noexcept{
     return (boost::format("%1% Error") % _status).str().c_str();
 }
@@ -130,5 +138,9 @@ boost::beast::http::status udho::exceptions::http_error::result() const{
     return _status;
 }
 
-
+udho::exceptions::http_error udho::exceptions::http_redirection(const std::string& location, boost::beast::http::status status){
+    udho::exceptions::http_error error(status);
+    error.redirect(location);
+    return error;
+}
 

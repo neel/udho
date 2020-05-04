@@ -513,10 +513,10 @@ struct xml_parser{
                         }
                     }
                 }
-                boost::split(parts, name, boost::is_any_of(":"));
-                if(parts[0] == "udho"){
-
-                }
+//                 boost::split(parts, name, boost::is_any_of(":"));
+//                 if(parts[0] == "udho"){
+//                     
+//                 }
             }
             for(pugi::xml_attribute attr: removed){
                 node.remove_attribute(attr);

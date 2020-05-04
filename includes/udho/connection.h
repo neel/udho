@@ -153,7 +153,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 auto const size = body.size();
                 if(_req.method() == boost::beast::http::verb::head){
                     http::response<boost::beast::http::string_body> res{http::status::ok, _req.version()};
-                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::server, UDHO_VERSION_STRING);
                     res.set(http::field::content_type, internal::mime_type(local_path));
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
@@ -163,7 +163,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 }
                 // Respond to GET request
                 http::response<http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(http::status::ok, _req.version())};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                res.set(http::field::server, UDHO_VERSION_STRING);
                 res.set(http::field::content_type, internal::mime_type(local_path));
                 res.content_length(size);
                 res.keep_alive(_req.keep_alive());

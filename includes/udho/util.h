@@ -183,6 +183,7 @@ struct bounded_str{
     
     bounded_str(Iterator begin, Iterator end): _pair(begin, end){}
     bounded_str(const self_type& other): _pair(other._pair){}
+    self_type& operator=(const self_type& other){_pair = other._pair; return *this;}
     Iterator begin() const{return _pair.first;}
     Iterator end() const{return _pair.second;}
     bool invalid() const{return begin() == end();}

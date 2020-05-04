@@ -68,7 +68,7 @@ namespace compositors{
         response_type operator()(const ContextT& ctx, const OutputT& out){
             std::string content = boost::lexical_cast<std::string>(out);
             response_type res{boost::beast::http::status::ok, ctx.request().version()};
-            res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type,   _mime);
             res.set(boost::beast::http::field::content_length, content.size());
             res.keep_alive(ctx.request().keep_alive());
