@@ -104,9 +104,7 @@ struct watcher{
         if(_watchers.empty()){
             boost::posix_time::time_duration duration = watch.expiry() - boost::posix_time::second_clock::local_time();
             _timer.expires_from_now(duration);
-            std::cout << this << " async_wait for" << duration <<" from " << boost::posix_time::second_clock::local_time() << std::endl;
             _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
-            std::cout << this << " watch expiring at " << watch.expiry() << std::endl;
         }
         _watchers.push_back(watch);
         iterator_type it = _watchers.end();
@@ -114,7 +112,6 @@ struct watcher{
         return true;
     }
     void expired(const boost::system::error_code& err){
-        std::cout << this << " watch expired " << err << std::endl;
         if(err != boost::asio::error::operation_aborted){
             if(!_watchers.empty()){
                 watch_type current = _watchers.front();
@@ -122,18 +119,14 @@ struct watcher{
                 if(current.expiry() > now){
                     boost::posix_time::time_duration duration = current.expiry() - now;
                     _timer.expires_from_now(duration);
-                    std::cout << this << " async_wait for" << duration <<" from " << now << std::endl;
                     _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
-                    std::cout << this << " watch expiring at " << current.expiry() << std::endl;
                     return;
                 }
                 auto iterator = _watchers.begin();
                 key_type key = current.key();
                 auto range = _index.equal_range(key);
                 for(auto i = range.first; i != range.second;){
-                    std::cout << "iterating" << std::endl;
                     if(i->second == iterator){
-                        std::cout << "removing" << std::endl;
                         i = _index.erase(i);
                     }else{
                         ++i;
@@ -146,9 +139,7 @@ struct watcher{
                 watch_type next = _watchers.front();
                 boost::posix_time::time_duration duration = next.expiry() - boost::posix_time::second_clock::local_time();
                 _timer.expires_from_now(duration);
-                std::cout << this << " async_wait for" << duration <<" from " << boost::posix_time::second_clock::local_time() << std::endl;
                 _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
-                std::cout << this << " watch expiring at " << next.expiry() << std::endl;
             }
         }
     }
@@ -159,7 +150,6 @@ struct watcher{
         for(auto i = range.first; i != range.second;){
             iterator_type it = i->second;
             watch_type watch = *it;
-            std::cout << this << " watch found " << key << std::endl;
             watch.release(boost::asio::error::operation_aborted);
             _watchers.erase(it);
             i = _index.erase(i);
