@@ -31,7 +31,6 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     boost::asio::signal_set _signals;
     RouterT& _router;
     attachment_type& _attachment;
-    std::vector<std::shared_ptr<connection_type>> _delayed;
   public:
     /**
      * @param router HTTP url mapping router
@@ -84,11 +83,6 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
             _attachment << udho::logging::messages::formatted::info("listener", "accepting new connection from %1%") % _socket.remote_endpoint().address();
             std::shared_ptr<connection_type> conn = std::make_shared<connection<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot);
             conn->run();
-//             std::cout << "conn->is_delayed(): " << conn->is_delayed() << std::endl;
-//             if(true){
-//                 std::cout << "delayed" << std::endl;
-//                 _delayed.push_back(conn);
-//             }
         }
         accept();
     }
