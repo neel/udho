@@ -142,13 +142,13 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count();
-                    throw exceptions::http_error(boost::beast::http::status::not_found, path);
+                    throw exceptions::http_error(boost::beast::http::status::not_found);
                 }else{
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 }
                 if(err){
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count();
-                    throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
+                    throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
                 }
                 auto const size = body.size();
                 if(_req.method() == boost::beast::http::verb::head){

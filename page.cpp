@@ -1,16 +1,19 @@
 #include "udho/page.h"
 #include <boost/format.hpp>
 
-udho::exceptions::http_error::http_error(boost::beast::http::status status, const std::string& resource): _status(status), _resource(resource){
+udho::exceptions::http_error::http_error(boost::beast::http::status status, const std::string& message): _status(status), _message(message){
 
 }
 
 const char* udho::exceptions::http_error::what() const noexcept{
-    return (boost::format("%1% Error while accessing %2%") % _status % _resource).str().c_str();
+    return (boost::format("%1% Error") % _status).str().c_str();
 }
 
-std::string udho::exceptions::http_error::page(std::string content) const{
-    std::string message = (boost::format("%1% Error while accessing <span class='resource-path'>%2%</span>") % _status % _resource).str();
+std::string udho::exceptions::http_error::page(const std::string& target, std::string content) const{
+    std::string message = (boost::format("%1% Error while accessing <span class='resource-path'>%2%</span>") % _status % target).str();
+    if(!_message.empty()){
+        message += (boost::format("<div class='error-message'>%1%</div>") % _message).str();
+    }
     std::string html    = R"page(
     <html>
         <head>

@@ -686,7 +686,7 @@ struct overload_group{
                 send(std::move(error.response(ctx.request())));
                 return error.result();
             }catch(...){
-                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
+                udho::exceptions::http_error error(boost::beast::http::status::internal_server_error);
                 send(std::move(error.response(ctx.request())));
                 return error.result();
             }

@@ -55,10 +55,10 @@ boost::beast::http::response<boost::beast::http::file_body> udho::bridge::file(c
     boost::beast::http::file_body::value_type body;
     body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
     if(err == boost::system::errc::no_such_file_or_directory){
-        throw exceptions::http_error(boost::beast::http::status::not_found, path);
+        throw exceptions::http_error(boost::beast::http::status::not_found, (boost::format("File `%1%` not found in disk") % local_path).str());
     }
     if(err){
-        throw exceptions::http_error(boost::beast::http::status::internal_server_error, path);
+        throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
     }
     auto const size = body.size();
     boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
