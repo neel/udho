@@ -66,7 +66,7 @@ udho depend on boost. As boost-beast is only available on boost >= 1.66, udho re
 * [x] any ostreamable can be used as return type of callables
 * [x] automatic type coersion for url based method calling
 * [x] throwable http error messages
-* [ ] throwable HTTP redirection
+* [x] throwable HTTP redirection
 * [x] serving static content from disk document root if no rule matched
 * [x] urlencoded/multipart form parsing
 * [x] form field validation

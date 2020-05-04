@@ -29,17 +29,25 @@ namespace exceptions{
      * @endcode
      */
     struct http_error: public std::exception{
-        std::string _resource;
-        boost::beast::http::status _status;
+        typedef boost::beast::http::header<false> headers_type;
         
-        http_error(boost::beast::http::status status, const std::string& resource);
+        boost::beast::http::status _status;
+        std::string _message;
+        headers_type _headers;
+        
+        http_error(boost::beast::http::status status, const std::string& message = "");
+        void add_header(boost::beast::http::field key, const std::string& value);
+        void redirect(const std::string& url);
         template <typename T>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request) const{
-            boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::not_found, request.version()};
-            res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+            boost::beast::http::response<boost::beast::http::string_body> res{_status, request.version()};
+            for(const auto& header: _headers){
+                res.set(header.name(), header.value());
+            }
+            res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type, "text/html");
             res.keep_alive(request.keep_alive());
-            res.body() = page();
+            res.body() = page(request.target().to_string());
             res.prepare_payload();
             return res;
         }
@@ -49,11 +57,14 @@ namespace exceptions{
         }
         template <typename T, typename RouterT>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request, RouterT& router) const{
-            boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::not_found, request.version()};
-            res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+            boost::beast::http::response<boost::beast::http::string_body> res{_status, request.version()};
+            for(const auto& header: _headers){
+                res.set(header.name(), header.value());
+            }
+            res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type, "text/html");
             res.keep_alive(request.keep_alive());
-            res.body() = page(router);
+            res.body() = page(request.target().to_string(), router);
             res.prepare_payload();
             return res;
         }
@@ -61,15 +72,16 @@ namespace exceptions{
         boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx, RouterT& router) const{
             return response(ctx.request(), router);
         }
-        virtual std::string page(std::string content="") const;
+        virtual std::string page(const std::string& target, std::string content="") const;
         template <typename RouterT>
-        std::string page(RouterT& router) const{
+        std::string page(const std::string& target, RouterT& router) const{
             std::string buffer = internal::html_summary(router);
-            return page(buffer);
+            return page(target, buffer);
         }
         virtual const char* what() const noexcept;
         boost::beast::http::status result() const;
     };
+    http_error http_redirection(const std::string& location, boost::beast::http::status status = boost::beast::http::status::temporary_redirect);
 }
     
 }
