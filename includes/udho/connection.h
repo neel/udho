@@ -128,13 +128,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
              
-            std::string local_path = internal::path_cat(*_doc_root, path);
             if(response == http::status::not_extended){
-                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred") % _socket.remote_endpoint().address() % _req.method() % path;
                 return;
             }
             
             if(response == http::status::unknown){
+                std::string local_path = internal::path_cat(*_doc_root, path);
+                
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 boost::beast::error_code err;
                 http::file_body::value_type body;
@@ -196,11 +197,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         std::stringstream path_stream(_req.target().to_string());
         std::getline(path_stream, path, '?');
         
-        std::string local_path = internal::path_cat(*_doc_root, path);
-        
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() - _time;
         
-        _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% responded %4% after %5% delay") % _socket.remote_endpoint().address() % _req.method() % path % local_path % diff;
+        _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% responded after %4% delay") % _socket.remote_endpoint().address() % _req.method() % path % diff;
         _lambda(std::move(msg));
     }
 };
