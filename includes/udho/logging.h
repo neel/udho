@@ -33,7 +33,7 @@
 #include <iomanip>
 #include <boost/format.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <udho/termcolor.hpp>
 
 namespace udho{
@@ -166,10 +166,12 @@ struct plain{
                 break;
         }
         
+        boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+        
         if(!_feature_color._colored){
-            _stream << boost::format("%1% > [%2%] (%3%) %4%") % boost::posix_time::second_clock::local_time() % status_str % segment % message << std::endl;
+            _stream << boost::format("%1% > [%2%] (%3%) %4%") % now % status_str % segment % message << std::endl;
         }else{
-            _stream << boost::posix_time::second_clock::local_time();
+            _stream << now;
             _stream << " ";
             _stream << ">>";
             _stream << " ";
