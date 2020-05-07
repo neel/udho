@@ -8,8 +8,8 @@ extraction:
         prepare:
             packages:
                 - build-essential
-                - libicu-dev
                 - cmake
+                - libicu-dev
                 - libboost-dev
                 - pugixml-dev
         configure:
