@@ -12,6 +12,7 @@ udho is a minimalistic http framework based on [`Boost.Beast`](https://www.boost
 [Contribute](contributing) |
 [Issues](https://gitlab.com/neel.basu/udho/issues)
 
+[![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)](https://opensource.org/licenses/BSD-2-Clause)
 [![Documentation Status](https://readthedocs.org/projects/udho/badge/?version=latest)](https://udho.readthedocs.io/en/latest/?badge=latest)
 [![pipeline status develop](https://gitlab.com/neel.basu/udho/badges/develop/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/develop) 
 [![pipeline status master](https://gitlab.com/neel.basu/udho/badges/master/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/master) 
