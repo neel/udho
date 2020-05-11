@@ -89,6 +89,11 @@ std::string data(udho::contexts::stateless ctx){
 }
 
 int add(udho::contexts::stateless ctx, int a, int b){
+    std::cout << "target: " << ctx.target() << std::endl;
+    std::cout << "path: " << ctx.path() << std::endl;
+    if(ctx.query().has("apiKey")){
+        std::cout << "Request have apiKey: " << ctx.query().field<std::string>("apiKey") << std::endl;
+    }
     return a + b;
 }
 
