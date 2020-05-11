@@ -29,6 +29,7 @@
 #define UDHO_CONTEXT_H
 
 #include <map>
+#include <string>
 #include <sstream>
 #include <iostream>
 #include <boost/optional.hpp>
@@ -58,16 +59,19 @@ namespace detail{
  
 template <typename RequestT>
 struct context_impl{
-    typedef RequestT request_type;
-    typedef context_impl<request_type> self_type;
-    typedef udho::form_<request_type> form_type;
-    typedef udho::cookies_<request_type> cookies_type;
-    typedef boost::beast::http::header<true> headers_type;
+    typedef RequestT                                     request_type;
+    typedef context_impl<request_type>                   self_type;
+    typedef udho::form_<request_type>                    form_type;
+    typedef udho::cookies_<request_type>                 cookies_type;
+    typedef boost::beast::http::header<true>             headers_type;
+    typedef urlencoded_form<std::string::const_iterator> query_parser_type;
     
     const request_type& _request;
-    form_type    _form;
-    headers_type _headers;
-    cookies_type _cookies;
+    form_type           _form;
+    std::string         _query_string;
+    query_parser_type   _query;
+    headers_type        _headers;
+    cookies_type        _cookies;
     
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
@@ -75,7 +79,10 @@ struct context_impl{
     boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
     boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
     
-    context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){}
+    context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){
+        _query_string = query_string();
+        _query.parse(_query_string.begin(), _query_string.end());
+    }
     context_impl(const self_type& other) = delete;
     const request_type& request() const{return _request;}
     cookies_type& cookies(){
@@ -122,6 +129,23 @@ struct context_impl{
     void respond(udho::defs::response_type& response){
         _respond(response);
     }
+    std::string target() const{
+        return _request.target().to_string();
+    }
+    std::string path() const{
+        std::string path;
+        std::stringstream path_stream(target());
+        std::getline(path_stream, path, '?');
+        return path;
+    }
+    std::string query_string() const{
+        std::string path = target();
+        std::size_t pos = path.find('?');
+        return pos != std::string::npos ? path.substr(pos+1) : std::string();
+    }
+    const query_parser_type& query() const{
+        return _query;
+    }
 };
  
 }
@@ -131,19 +155,20 @@ struct context_impl{
  */
 template <typename AuxT, typename RequestT, typename ShadowT>
 struct context{
-    typedef RequestT request_type;
-    typedef ShadowT shadow_type;
-    typedef typename shadow_type::key_type key_type;
-    typedef context<AuxT, request_type, shadow_type> self_type;
-    typedef detail::context_impl<request_type> impl_type;
-    typedef boost::shared_ptr<impl_type> pimple_type;
-    typedef udho::form_<RequestT> form_type;
-    typedef udho::cookies_<RequestT> cookies_type;
-    typedef udho::session_<request_type, shadow_type> session_type;
+    typedef RequestT                                        request_type;
+    typedef ShadowT                                         shadow_type;
+    typedef typename shadow_type::key_type                  key_type;
+    typedef context<AuxT, request_type, shadow_type>        self_type;
+    typedef detail::context_impl<request_type>              impl_type;
+    typedef boost::shared_ptr<impl_type>                    pimple_type;
+    typedef udho::form_<RequestT>                           form_type;
+    typedef udho::cookies_<RequestT>                        cookies_type;
+    typedef udho::session_<request_type, shadow_type>       session_type;
+    typedef urlencoded_form<std::string::const_iterator>    query_parser_type;
     
-    pimple_type _pimpl;
+    pimple_type  _pimpl;
     session_type _session;
-    AuxT& _aux;
+    AuxT&        _aux;
         
     template <typename... V>
     context(AuxT& aux, udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store), _aux(aux){}
@@ -193,28 +218,29 @@ struct context{
     }
     
     std::string target() const{
-        return _pimpl->_request.target().to_string();
+        return _pimpl->target();
     }
     std::string path() const{
-        std::string path;
-        std::stringstream path_stream(target());
-        std::getline(path_stream, path, '?');
-        return path;
+        return _pimpl->path();
+    }
+    const query_parser_type& query() const{
+        return _pimpl->query();
     }
 };
 
 template <typename AuxT, typename RequestT>
 struct context<AuxT, RequestT, void>{
-    typedef RequestT request_type;
-    typedef void shadow_type;
-    typedef context<AuxT, request_type, void> self_type;
-    typedef detail::context_impl<request_type> impl_type;
-    typedef boost::shared_ptr<impl_type> pimple_type;
-    typedef udho::form_<RequestT> form_type;
-    typedef udho::cookies_<RequestT> cookies_type;
+    typedef RequestT                                        request_type;
+    typedef void                                            shadow_type;
+    typedef context<AuxT, request_type, void>               self_type;
+    typedef detail::context_impl<request_type>              impl_type;
+    typedef boost::shared_ptr<impl_type>                    pimple_type;
+    typedef udho::form_<RequestT>                           form_type;
+    typedef udho::cookies_<RequestT>                        cookies_type;
+    typedef urlencoded_form<std::string::const_iterator>    query_parser_type;
     
     pimple_type _pimpl;
-    AuxT& _aux;
+    AuxT&       _aux;
     
     template <typename C>
     context(AuxT& aux, const RequestT& request, const C&): _pimpl(new impl_type(request)), _aux(aux){}
@@ -259,13 +285,13 @@ struct context<AuxT, RequestT, void>{
     }
     
     std::string target() const{
-        return _pimpl->_request.target().to_string();
+        return _pimpl->target();
     }
     std::string path() const{
-        std::string path;
-        std::stringstream path_stream(target());
-        std::getline(path_stream, path, '?');
-        return path;
+        return _pimpl->path();
+    }
+    const query_parser_type& query() const{
+        return _pimpl->query();
     }
 };
 
