@@ -83,6 +83,10 @@ std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
     std::cout << "session id: " << ctx.session().id() << std::endl;
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
     std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    std::cout << "created " << ctx.session().created() << std::endl;
+    std::cout << "updated " << ctx.session().updated() << std::endl;
+    std::cout << "age " << ctx.session().age() << std::endl;
+    std::cout << "idle " << ctx.session().idle() << std::endl;
     
     std::string name;
     std::string color;

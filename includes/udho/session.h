@@ -106,12 +106,40 @@ struct session_{
     std::size_t size() const{
         return _shadow.template size<V>(_id);
     }
-    void remove(){
-        _shadow.remove(_id);
+    bool remove(){
+        return _shadow.remove(_id);
     }
     template <typename V>
-    void remove(){
-        _shadow.template remove<V>(_id);
+    bool remove(){
+        return _shadow.template remove<V>(_id);
+    }
+    boost::posix_time::ptime created() const{
+        return _shadow.created(_id);
+    }
+    boost::posix_time::ptime updated() const{
+        return _shadow.updated(_id);
+    }
+    boost::posix_time::time_duration age() const{
+        return _shadow.age(_id);
+    }
+    boost::posix_time::time_duration idle() const{
+        return _shadow.idle(_id);
+    }
+    template <typename V>
+    boost::posix_time::ptime created() const{
+        return _shadow.template created<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::ptime updated() const{
+        return _shadow.template updated<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::time_duration age() const{
+        return _shadow.template age<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::time_duration idle() const{
+        return _shadow.template idle<V>(_id);
     }
 };
 
