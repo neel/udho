@@ -58,7 +58,13 @@ struct master{
     void issue(const key_type& key){
         _set.insert(key);
     }
-    
+    std::size_t size() const{
+        return _set.size();
+    }
+    void remove(const key_type& key){
+        typename set_type::iterator it = _set.find(key);
+        _set.erase(it);
+    }
 protected:
     set_type _set;
 };
@@ -73,9 +79,12 @@ struct registry{
     registry() = default;
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
-       
-    bool exists(const key_type& key) const{
+    
+    std::size_t size(const key_type& key) const{
         return _storage.count(key);
+    }
+    bool exists(const key_type& key) const{
+        return size(key);
     }
     const value_type& at(const key_type& key) const{
         return _storage.at(key);
@@ -83,7 +92,10 @@ struct registry{
     void insert(const key_type& key, const value_type& value){
         _storage[key] = value;
     }
-    
+    void remove(const key_type& key){
+        typename map_type::iterator it = _storage.find(key);
+        _storage.erase(it);
+    }
 protected:
     map_type _storage;
 };
@@ -136,8 +148,25 @@ struct store: master<KeyT>, registry<KeyT, T>...{
             master_type::issue(key);
         }
     }
+    std::size_t size() const{
+        return master_type::size();
+    }
+    template <typename V>
+    std::size_t size(const key_type& key) const{
+        return registry<KeyT, V>::size(key);
+    }
+    void remove(){
+        master_type::remove();
+    }
+    template <typename V>
+    void remove(const key_type& key){
+        registry<KeyT, V>::remove(key);
+    }
 };
 
+/**
+ * copiable flake containes a reference to the actual registry object
+ */
 template <typename KeyT, typename T>
 struct flake{
     typedef KeyT key_type;
@@ -152,13 +181,17 @@ struct flake{
     bool exists(const key_type& key) const{
         return _registry.exists(key);
     }
-    
     const value_type& at(const key_type& key) const{
         return _registry.at(key);
     }
-    
     void insert(const key_type& key, const value_type& value){
         _registry.insert(key, value);
+    }
+    std::size_t size(const key_type& key) const{
+        return _registry.size(key);
+    }
+    void remove(const key_type& key){
+        _registry.remove(key);
     }
 private:
     registry_type& _registry;
@@ -233,6 +266,22 @@ struct shadow: flake<KeyT, T>...{
         if(!issued(key)){
             issue(key);
         }
+    }
+    
+    std::size_t size() const{
+        return _master.size();
+    }
+    template <typename V>
+    std::size_t size(const key_type& key) const{
+        return flake<KeyT, V>::size(key);
+    }
+    
+    void remove(const key_type& key) {
+        _master.remove(key);
+    }
+    template <typename V>
+    void remove(const key_type& key) {
+        flake<KeyT, V>::remove(key);
     }
 };
 

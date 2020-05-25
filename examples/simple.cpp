@@ -51,7 +51,34 @@ std::string see(udho::contexts::stateful<appearence> ctx){
     }
 }
 
+std::string unset_see(udho::contexts::stateful<appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+    
+    std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    if(ctx.session().exists<appearence>()){
+        ctx.session().remove<appearence>();
+        return "appearence unset";
+    }else{
+        return "appearence not set";
+    }
+}
+
+std::string unset(udho::contexts::stateful<appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+
+    if(ctx.session().returning()){
+        ctx.session().remove();
+        return "session unset";
+    }else{
+        return "user not returning";
+    }
+}
+
 std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
+    std::cout << "server sessions: " << ctx.session().size() << std::endl;
+    std::cout << "server sessions having user: " << ctx.session().size<user>() << std::endl;
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
     std::cout << "session id: " << ctx.session().id() << std::endl;
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
@@ -111,7 +138,7 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
     return res;
 }
 
-void long_poll(udho::contexts::stateless ctx){
+void long_poll(udho::contexts::stateful<appearence> ctx){
     typedef boost::beast::http::response<boost::beast::http::string_body>  response_type;
     std::string content = "Hello World";
     response_type res{boost::beast::http::status::ok, ctx.request().version()};
@@ -141,6 +168,8 @@ int main(){
         | (udho::get(&hello).plain() = "^/hello$")
         | (udho::get(&see).plain() = "^/see$")
         | (udho::get(&hello_see).plain() = "^/hello_see$")
+        | (udho::get(&unset_see).plain() = "^/unset_see$")
+        | (udho::get(&unset).plain() = "^/unset$")
         | (udho::post(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
