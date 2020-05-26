@@ -82,6 +82,14 @@ namespace exceptions{
         boost::beast::http::status result() const;
     };
     http_error http_redirection(const std::string& location, boost::beast::http::status status = boost::beast::http::status::temporary_redirect);
+    struct reroute: public std::exception{
+        std::string _alt_path;
+        
+        explicit inline reroute(const std::string& alt_path): _alt_path(alt_path){}
+        inline std::string alt_path() const{
+            return _alt_path;
+        }
+    };
 }
     
 }
