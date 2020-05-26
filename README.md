@@ -35,6 +35,7 @@ int main(){
 boost depend on boost-beast library. As boost-beast is only available on boost >= 1.66, udho requires a boost version at least 1.66. udho may optionally use ICU library for unicode regex functionality. In that case ICU library may be required.
 
 * boost > 1.66
+* pugixml
 * icu [optional]
 
 # Features:
