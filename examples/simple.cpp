@@ -166,16 +166,17 @@ int main(){
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
 
     auto router = udho::router()
-        | (udho::get(&file).raw() = "^/file")
-        | (udho::get(&long_poll).deferred() = "^/poll")
-        | (udho::get(&local).raw() = "^/local")
-        | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::get(&see).plain() = "^/see$")
-        | (udho::get(&hello_see).plain() = "^/hello_see$")
-        | (udho::get(&unset_see).plain() = "^/unset_see$")
-        | (udho::get(&unset).plain() = "^/unset$")
-        | (udho::post(&data).json()   = "^/data$")
-        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
+        | (udho::get(&file).raw()            = "^/file")
+        | (udho::get(&long_poll).deferred()  = "^/poll")
+        | (udho::get(&local).raw()           = "^/local")
+        | (udho::get(&hello).plain()         = "^/hello$")
+        | (udho::get(&see).plain()           = "^/see$")
+        | (udho::get(&hello_see).plain()     = "^/hello_see$")
+        | (udho::get(&unset_see).plain()     = "^/unset_see$")
+        | (udho::get(&unset).plain()         = "^/unset$")
+        | (udho::post(&data).json()          = "^/data$")
+        | (udho::get(&add).plain()           = "^/add/(\\d+)/(\\d+)$")
+        | (udho::get(udho::reroute("/add/$2/$1")).raw()  = "^/sum/(\\d+)/(\\d+)$");
         
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
         

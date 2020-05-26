@@ -27,6 +27,9 @@
 #include <boost/regex/icu.hpp>
 #endif
 
+#define ROUTING_DEFERRED -102
+#define ROUTING_REROUTED -301
+
 namespace udho{
     
 class resolver;
@@ -121,6 +124,9 @@ struct module_overload{
     module_overload(boost::beast::http::verb request_method, function_type f, compositor_type compositor=compositor_type()): _request_method(request_method), _function(f), _compositor(compositor){}
     module_overload(const self_type& other): _request_method(other._request_method), _pattern(other._pattern), _function(other._function), _compositor(other._compositor){}
 
+    std::string pattern() const{
+        return _pattern;
+    }
     self_type& operator=(const std::string& pattern){
         _pattern = pattern;
         return *this;
@@ -218,6 +224,9 @@ struct module_overload<Function, compositors::deferred>{
     module_overload(boost::beast::http::verb request_method, function_type f, compositor_type compositor=compositor_type()): _request_method(request_method), _function(f), _compositor(compositor){}
     module_overload(const self_type& other): _request_method(other._request_method), _pattern(other._pattern), _function(other._function), _compositor(other._compositor){}
 
+    std::string pattern() const{
+        return _pattern;
+    }
     self_type& operator=(const std::string& pattern){
         _pattern = pattern;
         return *this;
@@ -617,12 +626,17 @@ struct overload_group_helper{
     
     overload_group_helper(OverloadT& overload): _overload(overload){}
     template <typename ContextT, typename Lambda>
-    http::status resolve(ContextT& ctx, Lambda send, const std::string& subject){
+    int resolve(ContextT& ctx, Lambda send, const std::string& subject){
+        ctx.pattern(_overload.pattern());
         response_type res = _overload(ctx, subject);
         http::status status = res.result();
         ctx.patch(res);
-        send(std::move(res));
-        return status;
+        if(ctx.alt_path().empty()){
+            send(std::move(res));
+            return static_cast<int>(status);
+        }else{
+            return ROUTING_DEFERRED;
+        }
     }
 };
 
@@ -635,9 +649,10 @@ struct overload_group_helper<OverloadT, void>{
     
     overload_group_helper(OverloadT& overload): _overload(overload){}
     template <typename ContextT, typename Lambda>
-    http::status resolve(ContextT& ctx, Lambda send, const std::string& subject){
+    int resolve(ContextT& ctx, Lambda send, const std::string& subject){
+        ctx.pattern(_overload.pattern());
         _overload(ctx, subject);
-        return http::status::not_extended;
+        return ROUTING_DEFERRED;
     }
 };
 
@@ -670,25 +685,25 @@ struct overload_group{
      * @param send the write callback
      */
     template <typename ContextT, typename Lambda>
-    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        http::status status = http::status::unknown;
+    int serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        int status = 0;
         if(_overload.feasible(request_method, subject)){
             try{
                 overload_group_helper<overload_type> helper(_overload);
                 status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
                 udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }catch(...){
                 udho::exceptions::http_error error(boost::beast::http::status::internal_server_error);
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }
             return status;
         }else{
@@ -733,29 +748,29 @@ struct overload_group<U, overload_terminal<V>>{
     template <typename... Args>
     overload_group(Args... args): _terminal(args...){}
     template <typename ContextT, typename Lambda>
-    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
-        http::status status = http::status::unknown;
+    int serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+        int status = 0;
         if(_terminal.feasible(request_method, subject)){
             try{
                 overload_group_helper<terminal_type> helper(_terminal);
                 status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
                 udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, (boost::format("unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method).str());
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }catch(...){
                 udho::exceptions::http_error error(boost::beast::http::status::internal_server_error, "Server encountered an unknown error");
                 send(std::move(error.response(ctx.request())));
-                return error.result();
+                return static_cast<int>(error.result());
             }
             return status;
         }else{
-            return http::status::unknown;
+            return 0;
         }
     }
     void summary(std::vector<module_info>& /*stack*/) const{}
@@ -780,8 +795,8 @@ struct overload_group<U, overload_terminal<void>>{
     template <typename... Args>
     overload_group(Args...){}
     template <typename ContextT, typename Lambda>
-    http::status serve(ContextT& /*ctx*/, boost::beast::http::verb /*request_method*/, const std::string& /*subject*/, Lambda /*send*/){
-        return http::status::unknown;
+    int serve(ContextT& /*ctx*/, boost::beast::http::verb /*request_method*/, const std::string& /*subject*/, Lambda /*send*/){
+        return 0;
     }
     void summary(std::vector<module_info>& /*stack*/) const{}
     template <typename F>
@@ -841,6 +856,23 @@ template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator<<(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
 }
+
+struct reroute{
+    typedef boost::function<boost::beast::http::response<boost::beast::http::string_body> (udho::contexts::stateless)> function_type;
+    
+    std::string _alt_path;
+    
+    explicit inline reroute(const std::string& alt_path): _alt_path(alt_path){}
+    inline std::string alt_path() const{
+        return _alt_path;
+    }
+    inline boost::beast::http::response<boost::beast::http::string_body> operator()(udho::contexts::stateless ctx){
+        ctx.alt_path(_alt_path);
+        
+        boost::beast::http::response<boost::beast::http::string_body> response{boost::beast::http::status::ok, ctx.request().version()};
+        return response;
+    }
+};
 
 template <typename StreamT, typename U, typename V>
 StreamT& operator<<(StreamT& stream, const overload_group<U, V>& router){

@@ -73,13 +73,17 @@ struct context_impl{
     headers_type        _headers;
     cookies_type        _cookies;
     
+    boost::beast::http::status _status;
+    std::string         _alt_path;
+    std::string         _pattern;
+    
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
     boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
     boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
     boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
     
-    context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers){
+    context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers), _status(boost::beast::http::status::ok){
         _query_string = query_string();
         _query.parse(_query_string.begin(), _query_string.end());
     }
@@ -90,6 +94,7 @@ struct context_impl{
     }
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
+        res.result(_status);
         for(const auto& header: _headers){
             if(header.name() != boost::beast::http::field::set_cookie){
                 res.set(header.name(), header.value());
@@ -128,6 +133,24 @@ struct context_impl{
     }
     void respond(udho::defs::response_type& response){
         _respond(response);
+    }
+    void status(boost::beast::http::status status){
+        _status = status;
+    }
+    void clear_alt_path(){
+        _alt_path = "";
+    }
+    void alt_path(const std::string& path){
+        _alt_path = path;
+    }
+    std::string alt_path() const{
+        return _alt_path;
+    }
+    void pattern(const std::string& p){
+        _pattern = p;
+    }
+    std::string pattern() const{
+        return _pattern;
     }
     std::string target() const{
         return _request.target().to_string();
@@ -226,6 +249,22 @@ struct context{
     const query_parser_type& query() const{
         return _pimpl->query();
     }
+    
+    void clear_alt_path(){
+        _pimpl->clear_alt_path();
+    }
+    void alt_path(const std::string& path){
+        _pimpl->alt_path(path);
+    }
+    std::string alt_path() const{
+        return _pimpl->alt_path();
+    }
+    void pattern(const std::string& p){
+        _pimpl->pattern(p);
+    }
+    std::string pattern() const{
+        return _pimpl->pattern();
+    }
 };
 
 template <typename AuxT, typename RequestT>
@@ -292,6 +331,22 @@ struct context<AuxT, RequestT, void>{
     }
     const query_parser_type& query() const{
         return _pimpl->query();
+    }
+    
+    void clear_alt_path(){
+        _pimpl->clear_alt_path();
+    }
+    void alt_path(const std::string& path){
+        _pimpl->alt_path(path);
+    }
+    std::string alt_path() const{
+        return _pimpl->alt_path();
+    }
+    void pattern(const std::string& p){
+        _pimpl->pattern(p);
+    }
+    std::string pattern() const{
+        return _pimpl->pattern();
     }
 };
 

@@ -123,17 +123,33 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             context_type ctx(_attachment.aux(), _req, _attachment.shadow());
             ctx.attach(_attachment);
             ctx._pimpl->_respond.connect(std::bind(&self_type::respond, std::enable_shared_from_this<connection<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
-            auto response = _router.serve(ctx, _req.method(), path, _lambda);
+            int status = 0;
+            do{
+                if(!ctx.alt_path().empty()){
+                    std::string last = path;
+//                     std::cout << "last path: " << path << std::endl;
+//                     std::cout << "alt path:  " << ctx.alt_path() << std::endl;
+//                     std::cout << "pattern:   " << ctx.pattern() << std::endl;
+//                     std::cout << "resolved:  " << boost::regex_replace(path, boost::regex(ctx.pattern()), ctx.alt_path()) << std::endl;
+//                     
+                    path = boost::regex_replace(last, boost::regex(ctx.pattern()), ctx.alt_path());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % _socket.remote_endpoint().address() % _req.method() % last % path;
+                    ctx.clear_alt_path();
+                }
+                status = _router.serve(ctx, _req.method(), path, _lambda);
+            }while(!ctx.alt_path().empty());
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
              
-            if(response == http::status::not_extended){
+            if(status == -102){ // ROUTING_DEFERRED
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred") % _socket.remote_endpoint().address() % _req.method() % path;
                 return;
+            }else if(status == -301){ // ROUTING_REROUTED
+                
             }
             
-            if(response == http::status::unknown){
+            if(status == 0){
                 std::string local_path = internal::path_cat(*_doc_root, path);
                 
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
@@ -147,7 +163,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 }
                 if(err){
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count();
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4%μs") % _socket.remote_endpoint().address() % _req.method() % path % ms.count();
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
                 }
                 auto const size = body.size();
@@ -169,7 +185,8 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));
             }else{
-                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) response % response % _req.method() % path % ms.count();
+                http::status response = static_cast<http::status>(status);
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % status % response % _req.method() % path % ms.count();
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
