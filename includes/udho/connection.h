@@ -125,19 +125,18 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             ctx._pimpl->_respond.connect(std::bind(&self_type::respond, std::enable_shared_from_this<connection<RouterT, AttachmentT>>::shared_from_this(), std::placeholders::_1));
             int status = 0;
             do{
-                if(!ctx.alt_path().empty()){
+                if(ctx.rerouted()){
                     std::string last = path;
-//                     std::cout << "last path: " << path << std::endl;
-//                     std::cout << "alt path:  " << ctx.alt_path() << std::endl;
-//                     std::cout << "pattern:   " << ctx.pattern() << std::endl;
-//                     std::cout << "resolved:  " << boost::regex_replace(path, boost::regex(ctx.pattern()), ctx.alt_path()) << std::endl;
-//                     
                     path = boost::regex_replace(last, boost::regex(ctx.pattern()), ctx.alt_path());
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % _socket.remote_endpoint().address() % _req.method() % last % path;
-                    ctx.clear_alt_path();
+                    ctx.clear();
                 }
-                status = _router.serve(ctx, _req.method(), path, _lambda);
-            }while(!ctx.alt_path().empty());
+                try{
+                    status = _router.serve(ctx, _req.method(), path, _lambda);
+                }catch(const udho::exceptions::reroute& rerouted){
+                    ctx.reroute(rerouted.alt_path());
+                }
+            }while(ctx.rerouted());
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
@@ -145,8 +144,6 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             if(status == -102){ // ROUTING_DEFERRED
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred") % _socket.remote_endpoint().address() % _req.method() % path;
                 return;
-            }else if(status == -301){ // ROUTING_REROUTED
-                
             }
             
             if(status == 0){
@@ -157,13 +154,13 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 http::file_body::value_type body;
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count();
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count();
                     throw exceptions::http_error(boost::beast::http::status::not_found);
                 }else{
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 }
                 if(err){
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4%μs") % _socket.remote_endpoint().address() % _req.method() % path % ms.count();
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4%μs") % _socket.remote_endpoint().address() % _req.method() % path % ms.count();
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
                 }
                 auto const size = body.size();
@@ -193,7 +190,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count();
+            _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count();
             return _lambda(std::move(res));
         }
     }

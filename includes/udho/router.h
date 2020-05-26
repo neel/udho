@@ -28,7 +28,6 @@
 #endif
 
 #define ROUTING_DEFERRED -102
-#define ROUTING_REROUTED -301
 
 namespace udho{
     
@@ -183,6 +182,8 @@ struct module_overload{
             }
             // std::copy(args.begin(), args.end(), std::ostream_iterator<std::string>(std::cout, ", "));
             // std::cout << std::endl;
+        }catch(const udho::exceptions::reroute&){
+            throw;
         }catch(std::exception& ex){
             std::cout << "ex: " << ex.what() << std::endl;
         }
@@ -283,6 +284,8 @@ struct module_overload<Function, compositors::deferred>{
             }
             // std::copy(args.begin(), args.end(), std::ostream_iterator<std::string>(std::cout, ", "));
             // std::cout << std::endl;
+        }catch(const udho::exceptions::reroute&){
+            throw;
         }catch(std::exception& ex){
             std::cout << "ex: " << ex.what() << std::endl;
         }
@@ -694,6 +697,8 @@ struct overload_group{
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
                 return static_cast<int>(error.result());
+            }catch(const udho::exceptions::reroute&){
+                throw;
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
@@ -757,6 +762,8 @@ struct overload_group<U, overload_terminal<V>>{
             }catch(const udho::exceptions::http_error& error){
                 send(std::move(error.response(ctx.request())));
                 return static_cast<int>(error.result());
+            }catch(const udho::exceptions::reroute&){
+                throw;
             }catch(const std::exception& ex){
                 std::cout << ex.what() << std::endl;
                 ctx << udho::logging::messages::formatted::error("router", "unhandled exception %1% while serving %2% using method %3%") % ex.what() % subject % request_method;
@@ -867,7 +874,7 @@ struct reroute{
         return _alt_path;
     }
     inline boost::beast::http::response<boost::beast::http::string_body> operator()(udho::contexts::stateless ctx){
-        ctx.alt_path(_alt_path);
+        ctx.reroute(_alt_path);
         
         boost::beast::http::response<boost::beast::http::string_body> response{boost::beast::http::status::ok, ctx.request().version()};
         return response;

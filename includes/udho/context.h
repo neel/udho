@@ -74,8 +74,8 @@ struct context_impl{
     cookies_type        _cookies;
     
     boost::beast::http::status _status;
-    std::string         _alt_path;
-    std::string         _pattern;
+    std::string                _alt_path;
+    std::string               _pattern;
     
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
@@ -137,11 +137,16 @@ struct context_impl{
     void status(boost::beast::http::status status){
         _status = status;
     }
-    void clear_alt_path(){
+    void clear(){
+        _status   = boost::beast::http::status::ok;
         _alt_path = "";
+        _pattern  = "";
     }
-    void alt_path(const std::string& path){
+    void reroute(const std::string& path){
         _alt_path = path;
+    }
+    bool rerouted() const{
+        return !_alt_path.empty();
     }
     std::string alt_path() const{
         return _alt_path;
@@ -250,11 +255,14 @@ struct context{
         return _pimpl->query();
     }
     
-    void clear_alt_path(){
-        _pimpl->clear_alt_path();
+    void clear(){
+        _pimpl->clear();
     }
-    void alt_path(const std::string& path){
-        _pimpl->alt_path(path);
+    void reroute(const std::string& path){
+        _pimpl->reroute(path);
+    }
+    bool rerouted() const{
+        return _pimpl->rerouted();
     }
     std::string alt_path() const{
         return _pimpl->alt_path();
@@ -333,11 +341,14 @@ struct context<AuxT, RequestT, void>{
         return _pimpl->query();
     }
     
-    void clear_alt_path(){
-        _pimpl->clear_alt_path();
+    void clear(){
+        _pimpl->clear();
     }
-    void alt_path(const std::string& path){
-        _pimpl->alt_path(path);
+    void reroute(const std::string& path){
+        _pimpl->reroute(path);
+    }
+    bool rerouted() const{
+        return _pimpl->rerouted();
     }
     std::string alt_path() const{
         return _pimpl->alt_path();

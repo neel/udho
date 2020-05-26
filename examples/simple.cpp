@@ -119,13 +119,26 @@ std::string data(udho::contexts::stateless ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(udho::contexts::stateless ctx, int a, int b){
+int sub(udho::contexts::stateless ctx, int a, int b){
     std::cout << "target: " << ctx.target() << std::endl;
     std::cout << "path: " << ctx.path() << std::endl;
     if(ctx.query().has("apiKey")){
         std::cout << "Request have apiKey: " << ctx.query().field<std::string>("apiKey") << std::endl;
     }
-    return a + b;
+    return a - b;
+}
+
+int absolute(udho::contexts::stateless ctx, int a, int b){
+    std::cout << "target: " << ctx.target() << std::endl;
+    std::cout << "path: " << ctx.path() << std::endl;
+    if(a > b){
+        return a - b;
+    }else if(a < b){
+        ctx.reroute("/sub/$2/$1");
+        return 42;
+    }else{
+        throw udho::exceptions::reroute("/sub/$2/$1");
+    }
 }
 
 boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts::stateless ctx){
@@ -175,8 +188,9 @@ int main(){
         | (udho::get(&unset_see).plain()     = "^/unset_see$")
         | (udho::get(&unset).plain()         = "^/unset$")
         | (udho::post(&data).json()          = "^/data$")
-        | (udho::get(&add).plain()           = "^/add/(\\d+)/(\\d+)$")
-        | (udho::get(udho::reroute("/add/$2/$1")).raw()  = "^/sum/(\\d+)/(\\d+)$");
+        | (udho::get(&sub).plain()           = "^/sub/(\\d+)/(\\d+)$")
+        | (udho::get(udho::reroute("/sub/$2/$1")).raw()  = "^/bus/(\\d+)/(\\d+)$")
+        | (udho::get(&absolute).plain()      = "^/abs/(\\d+)/(\\d+)$");
         
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
         
