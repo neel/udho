@@ -56,8 +56,6 @@ struct session_{
     }
     template <typename... T>
     session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
-//     template <typename... T>
-//     session_(session_<request_type, udho::cache::store<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
     void identify(){
         if(!_identified){
             if(_cookies.exists(_sessid)){
@@ -100,7 +98,49 @@ struct session_{
     template <typename V>
     void set(const V& value){
         _shadow.template insert<V>(_id, value);
-    }    
+    }
+    std::size_t size() const{
+        return _shadow.size();
+    }
+    template <typename V>
+    std::size_t size() const{
+        return _shadow.template size<V>(_id);
+    }
+    bool remove(){
+        return _shadow.remove(_id);
+    }
+    template <typename V>
+    bool remove(){
+        return _shadow.template remove<V>(_id);
+    }
+    boost::posix_time::ptime created() const{
+        return _shadow.created(_id);
+    }
+    boost::posix_time::ptime updated() const{
+        return _shadow.updated(_id);
+    }
+    boost::posix_time::time_duration age() const{
+        return _shadow.age(_id);
+    }
+    boost::posix_time::time_duration idle() const{
+        return _shadow.idle(_id);
+    }
+    template <typename V>
+    boost::posix_time::ptime created() const{
+        return _shadow.template created<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::ptime updated() const{
+        return _shadow.template updated<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::time_duration age() const{
+        return _shadow.template age<V>(_id);
+    }
+    template <typename V>
+    boost::posix_time::time_duration idle() const{
+        return _shadow.template idle<V>(_id);
+    }
 };
 
 template <typename RequestT>

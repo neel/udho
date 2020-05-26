@@ -38,14 +38,60 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace udho{
 namespace cache{
 
+template <typename T = void>
+struct content{
+    typedef T value_type;
+    typedef content<T> self_type;
+    
+    boost::posix_time::ptime _created;
+    boost::posix_time::ptime _updated;
+    value_type _value;
+        
+    explicit content(const value_type& value): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()), _value(value){}
+    boost::posix_time::ptime created() const { return _created; }
+    boost::posix_time::ptime updated() const { return _updated; }
+    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - _created; }
+    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - _updated; }
+    const value_type& value() const { return _value; }
+    value_type& value() { return _value; }
+    void update(const value_type& value){
+        _value = value;
+        _updated = boost::posix_time::second_clock::local_time();
+    }
+    void update(){
+        _updated = boost::posix_time::second_clock::local_time();
+    }
+};
+
+template <>
+struct content<void>{
+    typedef void value_type;
+    typedef content<> self_type;
+    
+    boost::posix_time::ptime _created;
+    boost::posix_time::ptime _updated;
+    
+    explicit content(): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()){}
+    boost::posix_time::ptime created() const { return _created; }
+    boost::posix_time::ptime updated() const { return _updated; }
+    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - _created; }
+    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - _updated; }
+    void update(){
+        _updated = boost::posix_time::second_clock::local_time();
+    }
+};
+    
 template <typename KeyT>
 struct master{
     typedef KeyT key_type;
-    typedef std::set<key_type> set_type;
+    typedef content<> content_type;
+    typedef std::map<key_type, content_type> map_type;
     typedef master<KeyT> self_type;
        
     master() = default;
@@ -53,37 +99,102 @@ struct master{
     master(self_type&&) = default;
     
     bool issued(const key_type& key) const{
-        return _set.find(key) != _set.cend();
+        return _storage.find(key) != _storage.cend();
     }
     void issue(const key_type& key){
-        _set.insert(key);
+        _storage.insert(std::make_pair(key, content_type()));
     }
-    
+    std::size_t size() const{
+        return _storage.size();
+    }
+    bool remove(const key_type& key){
+        typename map_type::iterator it = _storage.find(key);
+        if(it != _storage.end()){
+            _storage.erase(it);
+            return true;
+        }
+        return false;
+    }
+    boost::posix_time::ptime created(const key_type& key) const{
+        typename map_type::const_iterator it = _storage.find(key);
+        return it->second.created();
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        typename map_type::const_iterator it = _storage.find(key);
+        return it->second.updated();
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        typename map_type::const_iterator it = _storage.find(key);
+        return it->second.age();
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        typename map_type::const_iterator it = _storage.find(key);
+        return it->second.idle();
+    }
+    bool update(const key_type& key){
+        typename map_type::iterator it = _storage.find(key);
+        if(it != _storage.cend()){
+            it->second.update();
+            return true;
+        }
+        return false;
+    }
 protected:
-    set_type _set;
+    map_type _storage;
 };
 
 template <typename KeyT, typename T>
 struct registry{
     typedef KeyT key_type;
     typedef T value_type;
-    typedef std::map<KeyT, T> map_type;
+    typedef content<value_type> content_type;
+    typedef std::map<KeyT, content_type> map_type;
     typedef registry<KeyT, T> self_type;
        
     registry() = default;
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
-       
-    bool exists(const key_type& key) const{
+    
+    std::size_t size(const key_type& key) const{
         return _storage.count(key);
     }
+    bool exists(const key_type& key) const{
+        return size(key);
+    }
     const value_type& at(const key_type& key) const{
-        return _storage.at(key);
+        return _storage.at(key).value();
     }
     void insert(const key_type& key, const value_type& value){
-        _storage[key] = value;
+        _storage.insert(std::make_pair(key, content_type(value)));
     }
-    
+    void update(const key_type& key, const value_type& value){
+        typename map_type::iterator it = _storage.find(key);
+        it->second.update(value);
+    }
+    bool remove(const key_type& key){
+        typename map_type::iterator it = _storage.find(key);
+        if(it != _storage.end()){
+            _storage.erase(it);
+            return true;
+        }
+        return false;
+    }
+    boost::posix_time::ptime created(const key_type& key) const{
+        typename map_type::iterator it = _storage.find(key);
+        return it->second.created();
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        typename map_type::iterator it = _storage.find(key);
+        return it->second.updated();
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        typename map_type::iterator it = _storage.find(key);
+        return it->second.age();
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        typename map_type::iterator it = _storage.find(key);
+        return it->second.idle();
+    }
 protected:
     map_type _storage;
 };
@@ -135,9 +246,44 @@ struct store: master<KeyT>, registry<KeyT, T>...{
         if(!master_type::issued(key)){
             master_type::issue(key);
         }
+        master_type::update();
+    }
+    std::size_t size() const{
+        return master_type::size();
+    }
+    template <typename V>
+    std::size_t size(const key_type& key) const{
+        return registry<KeyT, V>::size(key);
+    }
+    bool remove(){
+        return master_type::remove();
+    }
+    template <typename V>
+    bool remove(const key_type& key){
+        if(registry<KeyT, V>::remove(key)){
+            master_type::update();
+            return true;
+        }
+        return false;
+    }
+    
+    boost::posix_time::ptime created(const key_type& key) const{
+        return master_type::created(key);
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        return master_type::updated(key);
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        return master_type::age(key);
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        return master_type::idle(key);
     }
 };
 
+/**
+ * copiable flake containes a reference to the actual registry object
+ */
 template <typename KeyT, typename T>
 struct flake{
     typedef KeyT key_type;
@@ -152,13 +298,29 @@ struct flake{
     bool exists(const key_type& key) const{
         return _registry.exists(key);
     }
-    
     const value_type& at(const key_type& key) const{
         return _registry.at(key);
     }
-    
     void insert(const key_type& key, const value_type& value){
         _registry.insert(key, value);
+    }
+    std::size_t size(const key_type& key) const{
+        return _registry.size(key);
+    }
+    bool remove(const key_type& key){
+        return _registry.remove(key);
+    }
+    boost::posix_time::ptime created(const key_type& key) const{
+        return _registry.created(key);
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        return _registry.updated(key);
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        return _registry.age(key);
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        return _registry.idle(key);
     }
 private:
     registry_type& _registry;
@@ -230,9 +392,58 @@ struct shadow: flake<KeyT, T>...{
     template <typename V>
     void insert(const key_type& key, const V& value){
         flake<key_type, V>::insert(key, value);
+        _master.update(key);
         if(!issued(key)){
             issue(key);
         }
+    }
+    
+    std::size_t size() const{
+        return _master.size();
+    }
+    template <typename V>
+    std::size_t size(const key_type& key) const{
+        return flake<KeyT, V>::size(key);
+    }
+    
+    bool remove(const key_type& key) {
+        return _master.remove(key);
+    }
+    template <typename V>
+    bool remove(const key_type& key) {
+        if(flake<KeyT, V>::remove(key)){
+            return _master.update(key);
+        }
+        return false;
+    }
+    
+    boost::posix_time::ptime created(const key_type& key) const{
+        return _master.created(key);
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        return _master.updated(key);
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        return _master.age(key);
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        return _master.idle(key);
+    }
+    template <typename V>
+    boost::posix_time::ptime created(const key_type& key) const{
+        return flake<KeyT, V>::created(key);
+    }
+    template <typename V>
+    boost::posix_time::ptime updated(const key_type& key) const{
+        return flake<KeyT, V>::updated(key);
+    }
+    template <typename V>
+    boost::posix_time::time_duration age(const key_type& key) const{
+        return flake<KeyT, V>::age(key);
+    }
+    template <typename V>
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        return flake<KeyT, V>::idle(key);
     }
 };
 
@@ -242,7 +453,7 @@ struct generator;
 template <>
 struct generator<boost::uuids::uuid>{
     boost::uuids::uuid parse(const std::string& key){
-        return boost::lexical_cast<boost::uuids::uuid>(key);;
+        return boost::lexical_cast<boost::uuids::uuid>(key);
     }
     boost::uuids::uuid generate(){
         return boost::uuids::random_generator()();

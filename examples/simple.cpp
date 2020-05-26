@@ -51,11 +51,42 @@ std::string see(udho::contexts::stateful<appearence> ctx){
     }
 }
 
+std::string unset_see(udho::contexts::stateful<appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+    
+    std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    if(ctx.session().exists<appearence>()){
+        ctx.session().remove<appearence>();
+        return "appearence unset";
+    }else{
+        return "appearence not set";
+    }
+}
+
+std::string unset(udho::contexts::stateful<appearence> ctx){
+    std::cout << "user returning: " << ctx.session().returning() << std::endl;
+    std::cout << "session id: " << ctx.session().id() << std::endl;
+
+    if(ctx.session().returning()){
+        ctx.session().remove();
+        return "session unset";
+    }else{
+        return "user not returning";
+    }
+}
+
 std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
+    std::cout << "server sessions: " << ctx.session().size() << std::endl;
+    std::cout << "server sessions having user: " << ctx.session().size<user>() << std::endl;
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
     std::cout << "session id: " << ctx.session().id() << std::endl;
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
     std::cout << "appearence data exists: " << ctx.session().exists<appearence>() << std::endl;
+    std::cout << "created " << ctx.session().created() << std::endl;
+    std::cout << "updated " << ctx.session().updated() << std::endl;
+    std::cout << "age " << ctx.session().age() << std::endl;
+    std::cout << "idle " << ctx.session().idle() << std::endl;
     
     std::string name;
     std::string color;
@@ -88,13 +119,26 @@ std::string data(udho::contexts::stateless ctx){
     return "{id: 2, name: 'udho'}";
 }
 
-int add(udho::contexts::stateless ctx, int a, int b){
+int sub(udho::contexts::stateless ctx, int a, int b){
     std::cout << "target: " << ctx.target() << std::endl;
     std::cout << "path: " << ctx.path() << std::endl;
     if(ctx.query().has("apiKey")){
         std::cout << "Request have apiKey: " << ctx.query().field<std::string>("apiKey") << std::endl;
     }
-    return a + b;
+    return a - b;
+}
+
+int absolute(udho::contexts::stateless ctx, int a, int b){
+    std::cout << "target: " << ctx.target() << std::endl;
+    std::cout << "path: " << ctx.path() << std::endl;
+    if(a > b){
+        return a - b;
+    }else if(a < b){
+        ctx.reroute("/sub/$2/$1");
+        return 42;
+    }else{
+        throw udho::exceptions::reroute("/sub/$2/$1");
+    }
 }
 
 boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts::stateless ctx){
@@ -111,7 +155,7 @@ boost::beast::http::response<boost::beast::http::file_body> file(udho::contexts:
     return res;
 }
 
-void long_poll(udho::contexts::stateless ctx){
+void long_poll(udho::contexts::stateful<appearence> ctx){
     typedef boost::beast::http::response<boost::beast::http::string_body>  response_type;
     std::string content = "Hello World";
     response_type res{boost::beast::http::status::ok, ctx.request().version()};
@@ -135,14 +179,18 @@ int main(){
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
 
     auto router = udho::router()
-        | (udho::get(&file).raw() = "^/file")
-        | (udho::get(&long_poll).deferred() = "^/poll")
-        | (udho::get(&local).raw() = "^/local")
-        | (udho::get(&hello).plain() = "^/hello$")
-        | (udho::get(&see).plain() = "^/see$")
-        | (udho::get(&hello_see).plain() = "^/hello_see$")
-        | (udho::post(&data).json()   = "^/data$")
-        | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
+        | (udho::get(&file).raw()            = "^/file")
+        | (udho::get(&long_poll).deferred()  = "^/poll")
+        | (udho::get(&local).raw()           = "^/local")
+        | (udho::get(&hello).plain()         = "^/hello$")
+        | (udho::get(&see).plain()           = "^/see$")
+        | (udho::get(&hello_see).plain()     = "^/hello_see$")
+        | (udho::get(&unset_see).plain()     = "^/unset_see$")
+        | (udho::get(&unset).plain()         = "^/unset$")
+        | (udho::post(&data).json()          = "^/data$")
+        | (udho::get(&sub).plain()           = "^/sub/(\\d+)/(\\d+)$")
+        | (udho::get(udho::reroute("/sub/$2/$1")).raw()  = "^/bus/(\\d+)/(\\d+)$")
+        | (udho::get(&absolute).plain()      = "^/abs/(\\d+)/(\\d+)$");
         
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
         

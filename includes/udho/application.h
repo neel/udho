@@ -123,7 +123,7 @@ struct app_{
         return *this;
     }
     template <typename ContextT, typename Lambda>
-    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    int serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         auto router = udho::router();
         return _app.route(router).serve(ctx, request_method, subject, send);
     }
@@ -166,7 +166,7 @@ struct app_<AppT, true>{
         return *this;
     }
     template <typename ContextT, typename Lambda>
-    http::status serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    int serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         auto router = udho::router();
         return _app.route(router).serve(ctx, request_method, subject, send);
     }
@@ -202,7 +202,7 @@ struct overload_group<U, app_<V, Ref>>{
     
     overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
     template <typename ReqT, typename Lambda>
-    http::status serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    int serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
 #ifdef WITH_ICU
@@ -210,7 +210,6 @@ struct overload_group<U, app_<V, Ref>>{
 #else
         bool result = boost::regex_search(subject_decoded, match, boost::regex(_overload._path));
 #endif
-        // std::cout << "app match " << result << std::endl;
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
             return _overload.serve(req, request_method, rest, send);
