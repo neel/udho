@@ -49,330 +49,321 @@ namespace udho{
     
 namespace view{
     
-template <typename ScopeT>
-struct shunting_yard{
-    typedef ScopeT scope_type;
-    typedef shunting_yard<ScopeT> self_type;
-    
-    std::map<std::string, std::size_t> _operators;
-    std::set<std::string>              _functions;
-    scope_type&  _table;
-    
-    shunting_yard(scope_type& table): _table(table){
-        _operators.insert(std::make_pair("&&", 1));
-        _operators.insert(std::make_pair("||", 1));
-        _operators.insert(std::make_pair("&",  1));
-        _operators.insert(std::make_pair("|",  1));
-        _operators.insert(std::make_pair("<",  2));
-        _operators.insert(std::make_pair(">",  2));
-        _operators.insert(std::make_pair("<=", 2));
-        _operators.insert(std::make_pair(">=", 2));
-        _operators.insert(std::make_pair("==", 2));
-        _operators.insert(std::make_pair("=",  2));
-        _operators.insert(std::make_pair("+",  3));
-        _operators.insert(std::make_pair("-",  3));
-        _operators.insert(std::make_pair("/",  4));
-        _operators.insert(std::make_pair("*",  4));
+namespace parser{
+
+struct token{
+    typedef std::map<std::string, std::size_t> operator_map_type;
+    typedef std::map<std::string, int>         function_map_type;
+    enum class type{
+        op, function, call, comma, parenthesis_open, parenthesis_close, real, id
+    };
+    enum class category{
+        none, arithmetic, logical, junction
+    };
+    inline static token create(const std::string& buff){
+        static operator_map_type opmap = operator_map();
+        static function_map_type fnmap = function_map();
         
-        _functions.insert("count");
-        _functions.insert("not");
-        _functions.insert("max");
-        _functions.insert("min");
-    }
-    bool is_operator(const std::string& buff) const{
-        auto oit = _operators.find(buff);
-        if(oit != _operators.end()){
-            return true;
-        }
-        return false;
-    };
-    bool is_function(const std::string& buff) const{
-        auto oit = _functions.find(buff);
-        if(oit != _functions.end()){
-            return true;
-        }
-        return false;
-    };
-    bool is_comma(const std::string& buff) const{
-        return buff == ",";
-    }
-    bool is_parenthesis_open(const std::string& buff) const{
-        return buff == "(";
-    }
-    bool is_parenthesis_close(const std::string& buff) const{
-        return buff == ")";
-    }
-    bool is_parenthesis(const std::string& buff) const{
-        return is_parenthesis_open(buff) || is_parenthesis_close(buff);
-    }
-    bool is_real(const std::string& buff) const{
         double res;
-        return boost::conversion::try_lexical_convert<double>(buff, res);
+        bool is_real = boost::conversion::try_lexical_convert<double>(buff, res);
+        if(is_real){
+            return token(type::real, buff);
+        }else if(buff == ","){
+            return token(type::comma, buff);
+        }else if(buff == "("){
+            return token(type::parenthesis_open, buff);
+        }else if(buff == ")"){
+            return token(type::parenthesis_close, buff);
+        }else if(opmap.count(buff)){
+            return token(type::op, buff);
+        }else if(fnmap.count(buff)){
+            return token(type::function, buff);
+        }else if(buff.find('@') != std::string::npos){
+            return token(type::call, buff);
+        }else{
+            return token(type::id, buff);
+        }
     }
-    bool is_id(const std::string& buff) const{
-        return !is_function(buff) && !is_real(buff) && !is_comma(buff) && !is_parenthesis(buff) && !is_operator(buff);
+    inline bool is(const type& t) const{
+        return _type == t;
     }
-    std::size_t precedence(const std::string& buff) const{
-        if(is_operator(buff)){
-            auto oit = _operators.find(buff);
-            if(oit != _operators.end()){
-                return oit->second;
+    inline bool is(const category& c) const{
+        if(_type != type::op){
+            return c == category::none;
+        }
+        static const std::set<std::string> arithmatic_operators = {"+", "-", "/", "*"};
+        static const std::set<std::string> logical_operators    = {"<", ">", "<=", ">=", "==", "=", "!="};
+        static const std::set<std::string> junction_operators   = {"&", "|", "&&", "||"};
+        if(arithmatic_operators.count(value())){
+            return c == category::arithmetic;
+        }else if(logical_operators.count(value())){
+            return c == category::logical;
+        }else if(junction_operators.count(value())){
+            return c == category::junction;
+        }
+        return false;
+    }
+    template <typename T>
+    static T arithmatic(const token& op_token, const T& l, const T& r){
+        T res;
+        static const std::map<std::string, boost::function<T (const T&, const T&)>> action_map_arithmetic = {
+            {"+", std::plus<T>()},
+            {"-", std::minus<T>()},
+            {"/", std::divides<T>()},
+            {"*", std::multiplies<T>()}
+        };
+        if(op_token.is(category::arithmetic)){
+            if(action_map_arithmetic.count(op_token.value())){
+                const auto& action = action_map_arithmetic.at(op_token.value());
+                res = action(l, r);
             }
+        }
+        return res;
+    }
+    template <typename T>
+    static bool logical(const token& op_token, const T& l, const T& r){
+        T res;
+        static const std::map<std::string, boost::function<T (const T&, const T&)>> action_map_logical = {
+            {"<",  std::less<T>()},
+            {">",  std::greater<T>()},
+            {"<=", std::less_equal<T>()},
+            {">=", std::greater_equal<T>()},
+            {"==", std::equal_to<T>()},
+            {"=",  std::equal_to<T>()},
+            {"!=", std::not_equal_to<T>()},
+        };
+        if(op_token.is(category::logical)){
+            if(action_map_logical.count(op_token.value())){
+                const auto& action = action_map_logical.at(op_token.value());
+                res = action(l, r);
+            }
+        }
+        return res;
+    }
+    inline int precedence() const{
+        static operator_map_type opmap = operator_map();
+        
+        if(_type == type::op){
+            return opmap[_value];
         }
         return 0;
     }
-    void add_operator(const std::string& op, std::size_t precedence){
-        _operators.insert(std::make_pair(op, precedence));
+    inline std::string value() const{
+        return _value;
     }
-    void add_function(const std::string& fnc){
-        _functions.insert(fnc);
+  private:
+    type         _type;
+    std::string _value;
+    
+    inline token(type t, const std::string& v): _type(t), _value(v){}
+    inline static operator_map_type operator_map(){
+        return {
+            {"&&", 1}, {"||", 1}, {"&", 1}, {"|", 1},
+            {"<=", 2}, {">=", 2}, {"<", 2}, {">", 2}, {"==", 2}, {"=", 2}, {"!=", 2},
+            {"+",  3}, {"-",  3},
+            {"*",  4}, {"/",  4}
+        };
     }
-    std::vector<std::string> tokenized(const std::string& infix){
-        typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
-        boost::char_separator<char> sep(" \t\n", ",+-*/%()&|<>=", boost::drop_empty_tokens);
-        tokenizer tokens(infix, sep);
-        std::vector<std::string> raw_tokens, processed_tokens;
-        for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter){
-            std::string ctoken = *tok_iter;
-            tokenizer::iterator next = tok_iter;
-            ++next;
-            if(next != tokens.end()){
-                std::string ntoken = *next;
-                if(ctoken == "<" && ntoken == "="){
-                    processed_tokens.push_back("<=");
-                    ++tok_iter;
-                }else if(ctoken == ">" && ntoken == "="){
-                    processed_tokens.push_back(">=");
-                    ++tok_iter;
-                }else if(ctoken == "=" && ntoken == "="){
-                    processed_tokens.push_back("==");
-                    ++tok_iter;
-                }else if(ctoken == "&" && ntoken == "&"){
-                    processed_tokens.push_back("&&");
-                    ++tok_iter;
-                }else if(ctoken == "|" && ntoken == "|"){
-                    processed_tokens.push_back("||");
-                    ++tok_iter;
-                }else{
-                    processed_tokens.push_back(ctoken);
-                }
+    inline static function_map_type function_map(){
+        return {
+            {"count", 1},
+            {"not",   1},
+            {"max",  -1},
+            {"min",  -1},
+            {"avg",  -1},
+        };
+    }
+};
+
+template <typename InputIt, typename OutputIt>
+OutputIt tokenize(InputIt begin, InputIt end, OutputIt output){
+    typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
+    boost::char_separator<char> sep(" \t\n", ",+-*/%()&|<>=", boost::drop_empty_tokens);
+    tokenizer tokens(begin, end, sep);
+    for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter){
+        std::string ctoken = *tok_iter;
+        tokenizer::iterator next = tok_iter;
+        ++next;
+        if(next != tokens.end()){
+            std::string ntoken = *next;
+            if(ctoken == "<" && ntoken == "="){
+                *output++ = token::create("<=");
+                tok_iter++;
+            }else if(ctoken == ">" && ntoken == "="){
+                *output++ = token::create(">=");
+                tok_iter++;
+            }else if(ctoken == "=" && ntoken == "="){
+                *output++ = token::create("==");
+                tok_iter++;
+            }else if(ctoken == "&" && ntoken == "&"){
+                *output++ = token::create("&&");
+                tok_iter++;
+            }else if(ctoken == "|" && ntoken == "|"){
+                *output++ = token::create("||");
+                tok_iter++;
             }else{
-                processed_tokens.push_back(ctoken);
+                *output++ = token::create(ctoken);
             }
+        }else{
+            *output++ = token::create(ctoken);
         }
-        return processed_tokens;
     }
-    std::vector<std::string> reverse_polish(const std::string& infix){
-        std::vector<std::string> output;
-        std::stack<std::string> stack;
-        std::vector<std::string> processed_tokens = tokenized(infix);
+    return output;
+}
+
+
+template <typename ScopeT>
+struct expression{
+    typedef ScopeT scope_type;
+    
+    scope_type& _table;
+    
+    explicit expression(scope_type& table): _table(table){}
+    
+    std::vector<token> rpn(const std::string& infix){
+        typedef std::vector<token> container_type;
+        typedef std::stack<token>  stack_type;
+
+        container_type output;
+        stack_type     stack;
+        container_type tokens;
+        tokenize(infix.cbegin(), infix.cend(), std::back_inserter(tokens));
         std::size_t fargc = 0;
-        for (std::vector<std::string>::iterator tok_iter = processed_tokens.begin(); tok_iter != processed_tokens.end(); ++tok_iter){
-            std::string value = *tok_iter;
-            if(self_type::is_real(value)){
-                output.push_back(value);
-            }else if(self_type::is_id(value)){
-                output.push_back(value);
-            }else if(self_type::is_function(value)){
-                stack.push(value);
-            }else if(self_type::is_comma(value)){
+        for (container_type::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter){
+            token t = *tok_iter;
+            if(t.is(token::type::real)){
+                output.push_back(t);
+            }else if(t.is(token::type::id)){
+                output.push_back(t);
+            }else if(t.is(token::type::function)){
+                stack.push(t);
+            }else if(t.is(token::type::comma)){
                 ++fargc;
-            }else if(self_type::is_parenthesis_open(value)){
-                stack.push(value);
-            }else if(self_type::is_parenthesis_close(value)){
-                while(!stack.empty() && !self_type::is_parenthesis_open(stack.top())){
+            }else if(t.is(token::type::parenthesis_open)){
+                stack.push(t);
+            }else if(t.is(token::type::parenthesis_close)){
+                while(!stack.empty() && !stack.top().is(token::type::parenthesis_open)){
                     output.push_back(stack.top());
                     stack.pop();
                 }
                 if(!stack.empty()){
                     stack.pop();
                 }
-                if(!stack.empty() && self_type::is_function(stack.top())){
-                    output.push_back(stack.top()+"@"+boost::lexical_cast<std::string>(fargc+1));
+                if(!stack.empty() && stack.top().is(token::type::function)){
+                    std::string func_name = stack.top().value();
+                    std::string call_name = func_name+"@"+boost::lexical_cast<std::string>(fargc+1);
+                    output.push_back(token::create(call_name));
                     fargc = 0;
                     stack.pop();
                 }
-            }else if(self_type::is_operator(value)){
-                while(!stack.empty() 
-                    && (
-                        (self_type::is_operator(stack.top()) && self_type::precedence(stack.top()) >= self_type::precedence(value))
-                    )
-                ){
+            }else if(t.is(token::type::op)){
+                while(!stack.empty() && (stack.top().is(token::type::op) && stack.top().precedence() >= t.precedence())){
                     output.push_back(stack.top());
                     stack.pop();
                 }
-                stack.push(value);
+                stack.push(t);
             }
         }
-        
-        std::vector<std::string> rest;
+        std::vector<token> rest;
         while(!stack.empty()){
             rest.push_back(stack.top());
             stack.pop();
         }
-        
         for(auto it = rest.begin(); it != rest.end(); ++it){
             output.push_back(*it);
         }
-        
         return output;
     }
     template <typename T>
-    T pop(std::stack<std::string>& stack, bool resolve = true){
-        std::string token = stack.top();
-        stack.pop();
+    T fetch(const token& t){
         T value;
-        bool convertible = resolve && boost::conversion::try_lexical_convert<T>(token, value);
-        if(!convertible){
-            value = _table.template parse<T>(token);
+        if(t.is(token::type::real)){
+            boost::conversion::try_lexical_convert<T>(t.value(), value);
+        }else if(t.is(token::type::id)){
+            value = _table.template parse<T>(t.value());
         }
         return value;
     }
-    template<typename T>
-    void push(std::stack<std::string>& stack, T value){
-        stack.push(boost::lexical_cast<std::string>(value));
+    std::size_t count(const token& t) const{
+        if(t.is(token::type::id)){
+            return _table.count(t.value());
+        }
+        return 0;
     }
     template <typename T>
     T evaluate(const std::string& infix){
-        std::vector<std::string> rpn_tokens = reverse_polish(infix);
-        std::stack<std::string> stack;
-        for(const std::string& token: rpn_tokens){
-            if(!is_operator(token) && token.find("@") == std::string::npos){
-                // terminal
-                stack.push(token);
+        std::vector<token> tokens = rpn(infix);
+        std::stack<token> stack;
+        
+        for(const token& t: tokens){
+            if(!t.is(token::type::op) && !t.is(token::type::call)){
+                stack.push(t);
             }else{
-                // non terminal
-                if(is_operator(token)){
-                    if(token == "+"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second + first);
-                    }else if(token == "-"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second - first);
-                    }else if(token == "*"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second * first);
-                    }else if(token == "/"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second / first);
-                    }else if(token == "%"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second % first);
-                    }else if(token == "<"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second < first);
-                    }else if(token == ">"){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second > first);
-                    }else if(token == "<="){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second <= first);
-                    }else if(token == ">="){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second >= first);
-                    }else if(token == "==" || token == "="){
-                        T first  = pop<T>(stack);
-                        T second = pop<T>(stack);
-                        push(stack, second == first);
-                    }else if(token == "&&" || token == "&"){
-                        std::string token_first  = stack.top();
-                        stack.pop();
-                        std::string token_second = stack.top();
-                        stack.pop();
-                        T value_first, value_second;
-                        bool convertible = boost::conversion::try_lexical_convert<T>(token_second, value_second);
-                        if(!convertible){
-                            value_second = _table.template parse<T>(token_second);
-                        }
-                        // partial evaluation
-                        if(!value_second){
-                            push(stack, value_second);
-                        }else{
-                            bool convertible = boost::conversion::try_lexical_convert<T>(token_first, value_first);
-                            if(!convertible){
-                                value_first = _table.template parse<T>(token_first);
+                if(t.is(token::type::op)){
+                    token rhs  = stack.top(); stack.pop();
+                    token lhs  = stack.top(); stack.pop();
+                    T r, l, result;
+                    if(t.is(token::category::arithmetic)){
+                        l = fetch<T>(lhs);
+                        r = fetch<T>(rhs);
+                        result  = token::arithmatic(t, l, r);
+                    }else if(t.is(token::category::logical)){
+                        l = fetch<T>(lhs);
+                        r = fetch<T>(rhs);
+                        result  = token::logical(t, l, r);
+                    }else if(t.is(token::category::junction)){
+                        l = fetch<T>(lhs);
+                        if(t.value().front() == '&'){ // & or &&
+                            if(!l){
+                                result = static_cast<T>(false);
+                            }else{
+                                r = fetch<T>(rhs);
+                                result = l && r;
                             }
-                            push(stack, value_second && value_first);
-                        }
-                    }else if(token == "||" || token == "|"){
-                        std::string token_first  = stack.top();
-                        stack.pop();
-                        std::string token_second = stack.top();
-                        stack.pop();
-                        T value_first, value_second;
-                        bool convertible = boost::conversion::try_lexical_convert<T>(token_second, value_second);
-                        if(!convertible){
-                            value_second = _table.template parse<T>(token_second);
-                        }
-                        // partial evaluation
-                        if(value_second){
-                            push(stack, value_second);
-                        }else{
-                            bool convertible = boost::conversion::try_lexical_convert<T>(token_first, value_first);
-                            if(!convertible){
-                                value_first = _table.template parse<T>(token_first);
+                        }else if(t.value().front() == '|'){ // | or ||
+                            if(l){
+                                result = static_cast<T>(true);
+                            }else{
+                                r = fetch<T>(rhs);
+                                result = l || r;
                             }
-                            push(stack, value_second || value_first);
                         }
                     }
-                }else if(token.find("@") != std::string::npos){
+                    stack.push(token::create(boost::lexical_cast<std::string>(result)));
+                }else if(t.is(token::type::call)){
                     std::vector<std::string> parts;
-                    boost::split(parts, token, boost::is_any_of("@"));
-                    std::size_t nargs = boost::lexical_cast<std::size_t>(parts[1]);
-                    std::string function_name = parts[0];
-                    if(function_name == "count"){
-                        std::string key = stack.top();
-                        stack.pop();
-                        std::size_t count = _table.count(key);
-                        push(stack, count);
-                    }else if(function_name == "not"){
-                        std::string key = stack.top();
-                        stack.pop();
-                        T value;
-                        if(is_real(key)){
-                            value = boost::lexical_cast<T>(key);
-                        }else{
-                            try{
-                                value = _table.template parse<T>(key);
-                            }catch(const std::out_of_range&){
-                                value = T(0);
-                                // std::cout << "out_of_range " << key <<", substituting with 0" << std::endl;
-                            }
-                        }
-                        push(stack, !value);
+                    boost::split(parts, t.value(), boost::is_any_of("@"));
+                    std::size_t args = boost::lexical_cast<std::size_t>(parts[1]);
+                    std::string name = parts[0];
+                    T result;
+                    token key_token = stack.top(); stack.pop();
+                    if(name == "count"){
+                        result = static_cast<T>(count(key_token));
+                    }else if(name == "not"){
+                        result = !fetch<T>(key_token);
                     }
+                    stack.push(token::create(boost::lexical_cast<std::string>(result)));
                 }
             }
         }
-//         std::cout << "rest" << std::endl;
-//         while(!stack.empty()){
-//             std::cout << stack.top() << std::endl;
-//             stack.pop();
-//         }
-        T last = pop<T>(stack);
-        return last;
+        token last = stack.top();
+        stack.pop();
+        return fetch<T>(last);
     }
 };
+    
+}
 
 template <typename ScopeT>
-shunting_yard<ScopeT> arithmatic(ScopeT& scope){
-    return shunting_yard<ScopeT>(scope);
+parser::expression<ScopeT> arithmatic(ScopeT& scope){
+    return parser::expression<ScopeT>(scope);
 }
     
       
 template <typename ScopeT>
 struct xml_parser{
     typedef ScopeT& lookup_table_type;
-    typedef shunting_yard<ScopeT> expression_evaluator_type;
+    typedef parser::expression<ScopeT> expression_evaluator_type;
 
     lookup_table_type&  _table;
     pugi::xml_document  _source;
@@ -405,7 +396,6 @@ struct xml_parser{
                 std::vector<std::string> keys = _table.keys(collection);
                 for(const std::string& key: keys){
                     _table.down();
-                    _table.list();
                     std::string ref = collection + ":" +key;
                     _table.add(value.as_string(), ref);
                     travarse(node, target);

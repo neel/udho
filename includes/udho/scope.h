@@ -138,11 +138,6 @@ struct lookup_table{
     bool add(const std::string& key, const std::string& ref){
         return add(key, ref, _level);
     }
-    void list(){
-        for(const udho::declaration& decl: _storage_named){
-            std::cout << decl._id << " " << decl._ref << " -> " << decl._depth << std::endl;
-        }
-    }
 };
 
 template <typename GroupT>
