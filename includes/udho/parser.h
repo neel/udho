@@ -333,7 +333,8 @@ struct expression{
                     stack.push(token::create(boost::lexical_cast<std::string>(result)));
                 }else if(t.is(token::type::call)){
                     std::vector<std::string> parts;
-                    boost::split(parts, t.value(), boost::is_any_of("@"));
+                    std::string value = t.value();
+                    boost::split(parts, value, boost::is_any_of("@"));
                     std::size_t args = boost::lexical_cast<std::size_t>(parts[1]);
                     std::string name = parts[0];
                     T result;
