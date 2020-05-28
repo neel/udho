@@ -354,13 +354,15 @@ struct expression{
 };
 
 struct xml{
-    typedef boost::function<bool (pugi::xml_node, pugi::xml_node)> processor_type;
-    typedef std::map<std::string, processor_type>        processor_map_type;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node)>                      tag_processor_type;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, pugi::xml_attribute)> attr_processor_type;
+    typedef std::map<std::string, tag_processor_type>                                   tag_processor_map_type;
+    typedef std::map<std::string, attr_processor_type>                                  attr_processor_map_type;
     
-    pugi::xml_document  _source;
-    pugi::xml_document  _transformed;
-    processor_map_type  _processors_tag;
-    processor_map_type  _processors_attr;
+    pugi::xml_document       _source;
+    pugi::xml_document       _transformed;
+    tag_processor_map_type   _processors_tag;
+    attr_processor_map_type  _processors_attr;
     
     inline void open(const std::string& contents){
         _source.load_string(contents.c_str());
@@ -376,6 +378,14 @@ struct xml{
             }
         }
         if(!processor_matched){
+            for(pugi::xml_attribute attr: node.attributes()){
+                std::string name = attr.name();
+                for(auto& p: _processors_attr){
+                    if(boost::starts_with(name, p.first)){
+                        p.second(node, target, attr);
+                    }
+                }
+            }
             step_in(node, target);
         }
     }
@@ -407,11 +417,11 @@ struct xml{
         }
         return stream.str();
     }
-    inline xml& process_tag(const std::string& name, processor_type processor){
+    inline xml& process_tag(const std::string& name, tag_processor_type processor){
         _processors_tag.insert(std::make_pair(name, processor));
         return *this;
     }
-    inline xml& process_attr(const std::string& name, processor_type processor){
+    inline xml& process_attr(const std::string& name, attr_processor_type processor){
         _processors_attr.insert(std::make_pair(name, processor));
         return *this;
     }
@@ -570,6 +580,155 @@ struct skip{
 }
 
 namespace attrs{
+    
+/**
+ * udho::target:NAME = KEY will add an attribute named `NAME` with value retrieved by resolving `KEY` through scope table. 
+ * It can have a conditional form too where the condition `expr` is first evaluated and if expr is true then the attribute is added, otherwise not
+ * \code
+ * <div class="book" udho:target:title="book.title"></div>
+ * <div class="book" udho:target:title="expr ? book.title"></div>
+ * \endcode
+ * is transformed to
+ * \code
+ * <div class="book" title="Some title"></div>
+ * <div class="book" title="Some title"></div>
+ * \endcode
+ */
+template <typename ScopeT>
+struct target{
+    typedef ScopeT& table_type;
+    typedef parser::expression<ScopeT> evaluator_type;
+    
+    parser::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    target(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+        std::string name = attr.name();
+        std::size_t indx = name.find(prefix());
+        std::string rest = name.substr(indx+prefix().size()+1);
+        std::string expr = attr.value();
+        
+        bool truth = true;
+        if(expr.find("?") != std::string::npos){
+            std::vector<std::string> parts;
+            boost::split(parts, expr, boost::is_any_of("?"));
+            std::string condition = boost::algorithm::trim_copy(parts[0]);
+            expr = parts[1];
+            truth = _evaluator.template evaluate<int>(condition);
+        }
+        if(truth){
+            std::string resolved = _table.eval(boost::algorithm::trim_copy(expr));
+            attr.set_name(rest.c_str());
+            attr.set_value(resolved.c_str());
+        }else{
+            node.remove_attribute(attr);
+        }
+        return true;
+    }
+    std::string prefix() const{
+        return "udho:target";
+    }
+};
+
+/**
+ * udho::eval:NAME = EXPR will add an attribute named `NAME` with value retrieved by evaluating the expression `EXPR`. 
+ * It can have a conditional form too where the condition `expr` is first evaluated and if expr is true then the attribute is added, otherwise not
+ * \code
+ * <input type="text" udho:eval:value="count(books)"></input>
+ * <input type="text" udho:eval:title="expr ? count(books)"></input>
+ * \endcode
+ * is transformed to
+ * \code
+ * <input type="text" value="2"></input>
+ * <input type="text" value="2"></input>
+ * \endcode
+ */
+template <typename ScopeT>
+struct eval{
+    typedef ScopeT& table_type;
+    typedef parser::expression<ScopeT> evaluator_type;
+    
+    parser::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    eval(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+        std::string name = attr.name();
+        std::size_t indx = name.find(prefix());
+        std::string rest = name.substr(indx+prefix().size()+1);
+        std::string expr = attr.value();
+        
+        bool truth = true;
+        if(expr.find("?") != std::string::npos){
+            std::vector<std::string> parts;
+            boost::split(parts, expr, boost::is_any_of("?"));
+            std::string condition = boost::algorithm::trim_copy(parts[0]);
+            expr = parts[1];
+            truth = _evaluator.template evaluate<int>(condition);
+        }
+        if(truth){
+            std::string resolved = boost::lexical_cast<std::string>(_evaluator.template evaluate<int>(boost::algorithm::trim_copy(expr)));
+            attr.set_name(rest.c_str());
+            attr.set_value(resolved.c_str());
+        }else{
+            node.remove_attribute(attr);
+        }
+        return true;
+    }
+    std::string prefix() const{
+        return "udho:eval";
+    }
+};
+
+/**
+ * udho::add-class:NAME = EXPR will add a class named `NAME` if the expression `EXPR` is true. 
+ * \code
+ * <div udho:add-class:visible="count(books) > 1"></div>
+ * \endcode
+ * is transformed to
+ * \code
+ * <div class="visible"></div>
+ * \endcode
+ */
+template <typename ScopeT>
+struct add_class{
+    typedef ScopeT& table_type;
+    typedef parser::expression<ScopeT> evaluator_type;
+    
+    parser::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    add_class(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+        std::string name = attr.name();
+        std::size_t indx = name.find(prefix());
+        std::string rest = name.substr(indx+prefix().size()+1);
+        std::string expr = attr.value();
+        
+        bool truth = _evaluator.template evaluate<int>(expr);
+        if(truth){
+            pugi::xml_attribute class_attr = node.attribute("class");
+            if(class_attr.empty()){
+                class_attr.set_name("class");
+                class_attr.set_value(rest.c_str());
+                node.append_copy(class_attr);
+            }else{
+                std::string existing_classes = class_attr.value();
+                existing_classes += " "+rest;
+                class_attr.set_value(existing_classes.c_str());
+            }
+        }
+        node.remove_attribute(attr);
+        return true;
+    }
+    std::string prefix() const{
+        return "udho:add-class";
+    }
+};
     
 }
 

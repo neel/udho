@@ -147,12 +147,18 @@ BOOST_AUTO_TEST_CASE(expression){
     udho::view::parser::tags::condition<udho::lookup_table<udho::prepared<student>>>    condition(parser, table);
     udho::view::parser::tags::text<udho::lookup_table<udho::prepared<student>>>         text(parser, table);
     udho::view::parser::tags::skip<udho::lookup_table<udho::prepared<student>>>         skip(parser, table);
+    udho::view::parser::attrs::target<udho::lookup_table<udho::prepared<student>>>      target(parser, table);
+    udho::view::parser::attrs::eval<udho::lookup_table<udho::prepared<student>>>        eval(parser, table);
+    udho::view::parser::attrs::add_class<udho::lookup_table<udho::prepared<student>>>   add_class(parser, table);
     parser.process_tag("udho:block",    block)
           .process_tag("udho:var",      var)
           .process_tag("udho:for",      loop)
           .process_tag("udho:if",       condition)
           .process_tag("udho:text",     text)
           .process_tag("udho:template", skip);
+    parser.process_attr("udho:target",    target)
+          .process_attr("udho:eval",      eval)
+          .process_attr("udho:add-class", add_class);
     parser.open(xml_template);
     parser.parse();
     std::cout << parser.output() << std::endl;
