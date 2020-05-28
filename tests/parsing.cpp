@@ -137,31 +137,9 @@ BOOST_AUTO_TEST_CASE(expression){
             </div>
     )TEMPLATE";
     
-//     auto parser = udho::view::parse_xml(table, xml_template);
-//     std::cout << parser.output() << std::endl;
-
-    udho::view::parser::xml parser;
-    udho::view::parser::tags::block<udho::lookup_table<udho::prepared<student>>>        block(parser, table);
-    udho::view::parser::tags::var<udho::lookup_table<udho::prepared<student>>>          var(parser, table);
-    udho::view::parser::tags::loop<udho::lookup_table<udho::prepared<student>>>         loop(parser, table);
-    udho::view::parser::tags::condition<udho::lookup_table<udho::prepared<student>>>    condition(parser, table);
-    udho::view::parser::tags::text<udho::lookup_table<udho::prepared<student>>>         text(parser, table);
-    udho::view::parser::tags::skip<udho::lookup_table<udho::prepared<student>>>         skip(parser, table);
-    udho::view::parser::attrs::target<udho::lookup_table<udho::prepared<student>>>      target(parser, table);
-    udho::view::parser::attrs::eval<udho::lookup_table<udho::prepared<student>>>        eval(parser, table);
-    udho::view::parser::attrs::add_class<udho::lookup_table<udho::prepared<student>>>   add_class(parser, table);
-    parser.process_tag("udho:block",    block)
-          .process_tag("udho:var",      var)
-          .process_tag("udho:for",      loop)
-          .process_tag("udho:if",       condition)
-          .process_tag("udho:text",     text)
-          .process_tag("udho:template", skip);
-    parser.process_attr("udho:target",    target)
-          .process_attr("udho:eval",      eval)
-          .process_attr("udho:add-class", add_class);
-    parser.open(xml_template);
-    parser.parse();
-    std::cout << parser.output() << std::endl;
+    udho::view::parser<udho::lookup_table<udho::prepared<student>>> processor = udho::view::processor(table);
+    std::string output = processor.process(xml_template);
+    std::cout << output << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

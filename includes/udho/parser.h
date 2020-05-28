@@ -50,7 +50,7 @@ namespace udho{
     
 namespace view{
     
-namespace parser{
+namespace parsing{
 
 struct token{
     typedef std::map<std::string, std::size_t> operator_map_type;
@@ -354,24 +354,28 @@ struct expression{
 };
 
 struct xml{
-    typedef boost::function<bool (pugi::xml_node, pugi::xml_node)>                      tag_processor_type;
-    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, pugi::xml_attribute)> attr_processor_type;
-    typedef std::map<std::string, tag_processor_type>                                   tag_processor_map_type;
-    typedef std::map<std::string, attr_processor_type>                                  attr_processor_map_type;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node)>                      tag_directive;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, pugi::xml_attribute)> attr_directive;
+    typedef std::map<std::string, tag_directive>    tag_directive_map;
+    typedef std::map<std::string, attr_directive>   attr_directive_map;
     
-    pugi::xml_document       _source;
-    pugi::xml_document       _transformed;
-    tag_processor_map_type   _processors_tag;
-    attr_processor_map_type  _processors_attr;
+    pugi::xml_document  _source;
+    pugi::xml_document  _transformed;
+    tag_directive_map   _directives_tag;
+    attr_directive_map  _directives_attr;
     
     inline void open(const std::string& contents){
         _source.load_string(contents.c_str());
         _transformed.append_child("udho:transformed");
     }
+    inline void clear(){
+        _source = pugi::xml_document();
+        _transformed = pugi::xml_document();
+    }
     inline void parse(pugi::xml_node node, pugi::xml_node target){
         std::string name = node.name();
         bool processor_matched = false;
-        for(auto& p: _processors_tag){
+        for(auto& p: _directives_tag){
             if(boost::starts_with(name, p.first)){
                 p.second(node, target);
                 processor_matched = true;
@@ -380,7 +384,7 @@ struct xml{
         if(!processor_matched){
             for(pugi::xml_attribute attr: node.attributes()){
                 std::string name = attr.name();
-                for(auto& p: _processors_attr){
+                for(auto& p: _directives_attr){
                     if(boost::starts_with(name, p.first)){
                         p.second(node, target, attr);
                     }
@@ -417,12 +421,14 @@ struct xml{
         }
         return stream.str();
     }
-    inline xml& process_tag(const std::string& name, tag_processor_type processor){
-        _processors_tag.insert(std::make_pair(name, processor));
+    template <typename DirectiveT>
+    inline xml& add_directive_tag(DirectiveT directive){
+        _directives_tag.insert(std::make_pair(directive.prefix(), directive));
         return *this;
     }
-    inline xml& process_attr(const std::string& name, attr_processor_type processor){
-        _processors_attr.insert(std::make_pair(name, processor));
+    template <typename DirectiveT>
+    inline xml& add_directive_attr(DirectiveT directive){
+        _directives_attr.insert(std::make_pair(directive.prefix(), directive));
         return *this;
     }
 };
@@ -434,19 +440,22 @@ namespace tags{
  */
 template <typename ScopeT>
 struct block{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    block(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    block(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         _table.down();
         _ctrl.travarse(node, target);
         _table.up();
         return true;
+    }
+    std::string prefix() const{
+        return "udho:block";
     }
 };
 
@@ -455,14 +464,14 @@ struct block{
  */
 template <typename ScopeT>
 struct var{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    var(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    var(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
@@ -473,6 +482,9 @@ struct var{
         _table.add(name.as_string(), value.as_string());
         return true;
     }
+    std::string prefix() const{
+        return "udho:var";
+    }
 };
     
 /**
@@ -480,14 +492,14 @@ struct var{
  */
 template <typename ScopeT>
 struct loop{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    loop(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    loop(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         pugi::xml_attribute in = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("in");
@@ -506,6 +518,9 @@ struct loop{
         }
         return true;
     }
+    std::string prefix() const{
+        return "udho:for";
+    }
 };
 
 /**
@@ -513,14 +528,14 @@ struct loop{
  */
 template <typename ScopeT>
 struct condition{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    condition(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    condition(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("test");
@@ -532,6 +547,9 @@ struct condition{
         }
         return true;
     }
+    std::string prefix() const{
+        return "udho:if";
+    }
 };
 
 /**
@@ -539,14 +557,14 @@ struct condition{
  */
 template <typename ScopeT>
 struct text{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    text(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    text(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
@@ -556,6 +574,9 @@ struct text{
         target.append_child(pugi::node_pcdata).text().set(value.c_str());
         return true;
     }
+    std::string prefix() const{
+        return "udho:text";
+    }
 };
 
 /**
@@ -563,17 +584,20 @@ struct text{
  */
 template <typename ScopeT>
 struct skip{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    skip(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    skip(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node target){
         _ctrl.step_in(node, target);
         return true;
+    }
+    std::string prefix() const{
+        return "udho:template";
     }
 };
 
@@ -596,14 +620,14 @@ namespace attrs{
  */
 template <typename ScopeT>
 struct target{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    target(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    target(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
@@ -647,14 +671,14 @@ struct target{
  */
 template <typename ScopeT>
 struct eval{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    eval(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    eval(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
@@ -695,14 +719,14 @@ struct eval{
  */
 template <typename ScopeT>
 struct add_class{
-    typedef ScopeT& table_type;
-    typedef parser::expression<ScopeT> evaluator_type;
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
     
-    parser::xml&   _ctrl;
+    parsing::xml&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    add_class(parser::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    add_class(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
@@ -735,201 +759,65 @@ struct add_class{
 }
 
 template <typename ScopeT>
-parser::expression<ScopeT> arithmatic(ScopeT& scope){
-    return parser::expression<ScopeT>(scope);
+parsing::expression<ScopeT> arithmatic(ScopeT& scope){
+    return parsing::expression<ScopeT>(scope);
 }
-    
-      
-template <typename ScopeT>
-struct xml_parser{
-    typedef ScopeT& lookup_table_type;
-    typedef parser::expression<ScopeT> expression_evaluator_type;
 
-    lookup_table_type&  _table;
-    pugi::xml_document  _source;
-    pugi::xml_document  _transformed;
-    expression_evaluator_type _expression_evaluator;
+template <typename ScopeT>
+struct parser{
+    typedef ScopeT                                  table_type;
+    typedef parsing::expression<table_type>         evaluator_type;
+    typedef parsing::xml                            xml_parser_type;
+    typedef parsing::tags::block<table_type>        block_directive_type;
+    typedef parsing::tags::var<table_type>          var_directive_type;
+    typedef parsing::tags::loop<table_type>         loop_directive_type;
+    typedef parsing::tags::condition<table_type>    condition_directive_type;
+    typedef parsing::tags::text<table_type>         text_directive_type;
+    typedef parsing::tags::skip<table_type>         skip_directive_type;
+    typedef parsing::attrs::target<table_type>      target_directive_type;
+    typedef parsing::attrs::eval<table_type>        eval_directive_type;
+    typedef parsing::attrs::add_class<table_type>   add_class_directive_type;
     
-    xml_parser(lookup_table_type& table): _table(table), _expression_evaluator(table){}
-    void open(const std::string& contents){
-        _source.load_string(contents.c_str());
-        _transformed.append_child("udho:transformed");
-    }    
-    void parse(pugi::xml_node node, pugi::xml_node head){
-        pugi::xml_node target = head;
-        std::string name = node.name();
-        std::vector<std::string> parts;        
-        boost::split(parts, name, boost::is_any_of(":"));
-        if(parts.front() == "udho" && parts.size() > 1){
-            if(parts[1] == "block"){
-                _table.down();
-                travarse(node, target);
-                _table.up();
-            }else if(parts[1] == "for"){
-                pugi::xml_attribute in = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("in");
-                });
-                pugi::xml_attribute value = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("value");
-                });
-                std::string collection = in.as_string();
-                std::vector<std::string> keys = _table.keys(collection);
-                for(const std::string& key: keys){
-                    _table.down();
-                    std::string ref = collection + ":" +key;
-                    _table.add(value.as_string(), ref);
-                    travarse(node, target);
-                    _table.up();
-                }
-            }else if(parts[1] == "if"){
-                pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("test");
-                });
-                std::string condition = cond.as_string();
-                bool truth = _expression_evaluator.template evaluate<int>(condition);
-                // std::cout << "udho:if (" << condition << ") : " << truth << std::endl;
-                if(truth){
-                    travarse(node, target);
-                }
-            }else if(parts[1] == "var"){
-                pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("name");
-                });
-                pugi::xml_attribute value = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("value");
-                });
-                _table.add(name.as_string(), value.as_string());
-            }else if(parts[1] == "text"){
-                pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
-                    return attr.name() == std::string("name");
-                });
-                std::string var = name.as_string();
-                std::string value = _table.eval(var);
-                target.append_child(pugi::node_pcdata).text().set(value.c_str());
-            }else if(parts[1] == "template"){
-                step_in(node, target);
-            }
-        }else{
-            std::vector<pugi::xml_attribute> removed;
-            for(pugi::xml_attribute attr: node.attributes()){
-                std::string name = attr.name();
-                std::size_t index = name.find(':');
-                if(index != std::string::npos){
-                    std::size_t next = name.find(':', index+1);
-                    if(next != std::string::npos){
-                        std::string sub = name.substr(index+1, next-index-1);
-                        std::string rest = name.substr(next+1);
-                        
-                        // std::cout << "sub  " << sub  << std::endl;
-                        // std::cout << "rest " << rest << std::endl;
-                        
-                        if(sub == "target"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
-                            std::string target_attr_name  = rest;
-                            std::string target_attr_value = attr.value();
-                            bool truth = false;
-                            if(target_attr_value.find("?") != std::string::npos){
-                                std::vector<std::string> condition_parts;
-                                boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
-                                std::string value_condition = condition_parts[0];
-                                target_attr_value = condition_parts[1];
-                                truth = _expression_evaluator.template evaluate<int>(value_condition);
-                            }else{
-                                truth = true;
-                            }
-                            if(truth){
-                                std::string resolved_value    = _table.eval(boost::algorithm::trim_copy(target_attr_value));
-                                attr.set_name(target_attr_name.c_str());
-                                attr.set_value(resolved_value.c_str());
-                            }else{
-                                removed.push_back(attr);
-                            }
-                        }else if(sub == "eval"){                                // <div class="book" udho:target:title="book.title"></div> -> <div class="book" title="Some title"></div>
-                            std::string target_attr_name  = rest;
-                            std::string target_attr_value = attr.value();
-                            bool truth = false;
-                            if(target_attr_value.find("?") != std::string::npos){
-                                std::vector<std::string> condition_parts;
-                                boost::split(condition_parts, target_attr_value, boost::is_any_of("?"));
-                                std::string value_condition = condition_parts[0];
-                                target_attr_value = condition_parts[1];
-                                truth = _expression_evaluator.template evaluate<int>(value_condition);
-                            }else{
-                                truth = true;
-                            }
-                            if(truth){
-                                std::string resolved_value    = boost::lexical_cast<std::string>(_expression_evaluator.template evaluate<int>(target_attr_value));
-                                attr.set_name(target_attr_name.c_str());
-                                attr.set_value(resolved_value.c_str());
-                            }else{
-                                removed.push_back(attr);
-                            }
-                        }else if(sub == "add-class"){                      // <div class="message" udho:add-class:warning="not(field.valid)"></div> -> <div class="message warning"></div>
-                            std::string target_attr_name  = rest;
-                            std::string target_attr_value = attr.value();
-                            bool truth = _expression_evaluator.template evaluate<int>(target_attr_value);
-                            if(truth){
-                                pugi::xml_attribute class_attr = node.attribute("class");
-                                if(class_attr.empty()){
-                                    class_attr.set_name("class");
-                                    class_attr.set_value(target_attr_name.c_str());
-                                    node.append_copy(class_attr);
-                                }else{
-                                    std::string existing_classes = class_attr.value();
-                                    existing_classes += " "+target_attr_name;
-                                    class_attr.set_value(existing_classes.c_str());
-                                }
-                            }
-                            removed.push_back(attr);
-                        }
-                    }
-                }
-//                 boost::split(parts, name, boost::is_any_of(":"));
-//                 if(parts[0] == "udho"){
-//                     
-//                 }
-            }
-            for(pugi::xml_attribute attr: removed){
-                node.remove_attribute(attr);
-            }
-            step_in(node, target);
-        }
+    table_type&              _table;
+    evaluator_type           _evaluator;
+    xml_parser_type          _xml_parser;
+    block_directive_type     _block;
+    var_directive_type       _var;
+    loop_directive_type      _loop;
+    condition_directive_type _condition;
+    text_directive_type      _text;
+    skip_directive_type      _skip;
+    target_directive_type    _target;
+    eval_directive_type      _eval;
+    add_class_directive_type _add_class;
+    
+    parser(table_type& scope): _table(scope), _evaluator(scope), 
+    _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _skip(_xml_parser, scope),
+    _target(_xml_parser, scope), _eval(_xml_parser, scope), _add_class(_xml_parser, scope)
+    {
+        prepare();
     }
-    void step_in(pugi::xml_node node, pugi::xml_node target){
-        pugi::xml_node child = target.append_child(node.name());
-        for(const pugi::xml_attribute& attr: node.attributes()){
-            child.append_copy(attr);
-        }
-        target = child;
-        travarse(node, target);
+    void prepare(){
+        _xml_parser.add_directive_tag(_block)
+            .add_directive_tag(_var)
+            .add_directive_tag(_loop)
+            .add_directive_tag(_condition)
+            .add_directive_tag(_text)
+            .add_directive_tag(_skip);
+        _xml_parser.add_directive_attr(_target)
+            .add_directive_attr(_eval)
+            .add_directive_attr(_add_class);
     }
-    void travarse(pugi::xml_node node, pugi::xml_node target){
-        for(pugi::xml_node& child: node.children()){
-            if(child.type() == pugi::node_pcdata){
-                target.append_copy(child);
-            }else{
-                parse(child, target);
-            }
-        }
-    }
-    void parse(){
-        parse(_source.document_element(), _transformed.document_element());
-    }
-    std::string output(){
-        std::stringstream stream;
-        pugi::xml_node root = _transformed.document_element();
-        for(pugi::xml_node child: root){
-            child.print(stream, "\t", pugi::format_indent | pugi::format_no_empty_element_tags);
-        }
-        return stream.str();
+    std::string process(const std::string& contents){
+        _xml_parser.open(contents);
+        _xml_parser.parse();
+        return _xml_parser.output();
     }
 };
 
 template <typename ScopeT>
-xml_parser<ScopeT> parse_xml(ScopeT& table, const std::string& contents){
-    xml_parser<ScopeT> prsr(table);
-    prsr.open(contents);
-    prsr.parse();
-    return prsr;
+parser<ScopeT> processor(ScopeT& scope){
+    return parser<ScopeT>(scope);
 }
 
 }
