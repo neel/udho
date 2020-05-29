@@ -342,7 +342,11 @@ struct expression{
                     if(name == "count"){
                         result = static_cast<T>(count(key_token));
                     }else if(name == "not"){
-                        result = !fetch<T>(key_token);
+                        try{
+                            result = !fetch<T>(key_token);
+                        }catch(const std::out_of_range&){
+                            result = T(0);
+                        }
                     }
                     stack.push(token::create(boost::lexical_cast<std::string>(result)));
                 }

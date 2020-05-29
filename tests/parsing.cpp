@@ -57,7 +57,24 @@ struct student: udho::prepare<student>{
                      | var("marks",    &student::marks_obtained)
                      | fn("name",      &student::name)
                      | fn("qualified", &student::qualified);
-    }    
+    }
+};
+
+struct lazy: udho::prepare<lazy>{
+    bool populated;
+    mutable bool _value_called;
+    
+    lazy(): populated(false), _value_called(false){}
+    double value() const{
+        _value_called = true;
+        return populated;
+    }
+    
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | var("populated",  &lazy::populated)
+                     | fn ("value",      &lazy::value);
+    }
 };
 
 BOOST_AUTO_TEST_SUITE(parsing)
@@ -119,6 +136,14 @@ BOOST_AUTO_TEST_CASE(expression){
     BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1)") == true);
     BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1) && roll == 2") == true);
     BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1) && roll != 2") == false);
+    
+    lazy lobj;
+    lobj.populated = false;
+    auto plobj = udho::data(lobj);
+    auto tlobj = udho::scope(plobj);
+    auto elobj = udho::view::expression(tlobj);
+    elobj.evaluate<double>("populated && not(value)");
+    std::cout << "_value_called " << lobj._value_called << std::endl;
     
     std::string xml_template = R"TEMPLATE(
             <div class="foo">

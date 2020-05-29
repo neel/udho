@@ -771,6 +771,10 @@ struct prepare{
         const DerivedT& obj = static_cast<const DerivedT&>(*this);
         return obj.dict(udho::assoc());
     }
+//     auto index(){
+//         DerivedT& obj = static_cast<DerivedT&>(*this);
+//         return obj.dict(udho::assoc());
+//     }
 };
 
 }
