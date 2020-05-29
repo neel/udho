@@ -140,6 +140,10 @@ struct lookup_table{
     }
 };
 
+/**
+ * returns a table of strings mapped with value returning objects
+ * GroupT must be an instance of udho::prepare<T> which can be obtained by using udho::data(const T&)
+ */
 template <typename GroupT>
 lookup_table<GroupT> scope(GroupT& group){
     return lookup_table<GroupT>(group);

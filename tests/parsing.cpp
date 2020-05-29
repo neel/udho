@@ -10,15 +10,28 @@
 #include <boost/lexical_cast/try_lexical_convert.hpp>
 
 struct book: udho::prepare<book>{
-    std::string  title;
+    std::string title;
+    unsigned    year;
     std::vector<std::string>  authors;
-    unsigned     year;
        
     template <typename DictT>
     auto dict(DictT assoc) const{
         return assoc | var("title",   &book::title)
                      | var("authors", &book::authors)
                      | var("year",    &book::year);
+    }
+};
+
+struct publisher: udho::prepare<publisher>{
+    std::string name;
+    std::string address;
+    unsigned    year;
+       
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | var("label",   &publisher::name)
+                     | var("since",   &publisher::year)
+                     | var("address", &publisher::address);
     }
 };
 
@@ -99,7 +112,7 @@ BOOST_AUTO_TEST_CASE(expression){
     table.clear(1);
     BOOST_CHECK(table.eval("thesis.year") == "");
         
-    auto expr = udho::view::arithmatic(table);
+    auto expr = udho::view::expression(table);
     BOOST_CHECK(static_cast<unsigned>(expr.evaluate<double>("0.5 * ((books:0.year + books:1.year) / 2) + roll - 0.5")) == 1011);
     BOOST_CHECK(expr.evaluate<unsigned>("count(books)") == 2);
     BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 3)") == false);
@@ -140,6 +153,20 @@ BOOST_AUTO_TEST_CASE(expression){
     udho::view::parser<udho::lookup_table<udho::prepared<student>>> processor = udho::view::processor(table);
     std::string output = processor.process(xml_template);
     std::cout << output << std::endl;
+    
+    publisher pub;
+    pub.name    = "Some Publisher";
+    pub.address = "Somewhere";
+    pub.year    = 1987;
+    
+    auto package = (udho::data(neel) | udho::data(b1) | udho::data(pub));
+    auto pkg_expr = udho::view::expression(package);
+    std::cout << package["name"] << std::endl;
+    std::cout << package["title"] << std::endl;
+    std::cout << package["label"] << std::endl;
+    std::cout << package["year"] << std::endl;
+    std::cout << package["since"] << std::endl;
+    std::cout << pkg_expr.evaluate<int>("since + year") << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

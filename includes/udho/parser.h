@@ -760,7 +760,7 @@ struct add_class{
 }
 
 template <typename ScopeT>
-parsing::expression<ScopeT> arithmatic(ScopeT& scope){
+parsing::expression<ScopeT> expression(ScopeT& scope){
     return parsing::expression<ScopeT>(scope);
 }
 
@@ -816,6 +816,10 @@ struct parser{
     }
 };
 
+/**
+ * returns a parser interface using which an xml based view can be parsed
+ * ScopeT must be a lookup table which can be obtained by using udho::scope
+ */
 template <typename ScopeT>
 parser<ScopeT> processor(ScopeT& scope){
     return parser<ScopeT>(scope);

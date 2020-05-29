@@ -46,7 +46,9 @@ struct responder{
     typedef R result_type;
     callback_type _callback;
     
-    responder(callback_type callback): _callback(callback){}
+    responder() = delete;
+    
+    explicit responder(callback_type callback): _callback(callback){}
     result_type call(const std::string& /*key*/) const{
         return _callback();
     }
@@ -594,17 +596,80 @@ struct prepared<T, true>{
     visitor_type         _visitor;
     
     prepared(const prepared_type& data): _data(data), _index(data.index()), _visitor(_index){}
+    prepared(const prepared<T, true>& other): _data(other._data), _index(other._index), _visitor(_index){}
     template <typename V>
-    V extract(const std::string& key){
+    V extract(const std::string& key, bool* okay = 0x0){
         detail::association_value_extractor<V> extractor;
-        _visitor.find(extractor, key);
+        bool found = _visitor.find(extractor, key);
+        if(okay){
+            *okay = found;
+        }
         return extractor.value();
     }
     template <typename V>
-    V parse(const std::string& key){
+    V parse(const std::string& key, bool* okay = 0x0){
         detail::association_lexical_extractor<V> extractor;
-        _visitor.find(extractor, key);
+        bool found = _visitor.find(extractor, key);
+        if(okay){
+            *okay = found;
+        }
         return extractor.value();
+    }
+    std::string stringify(const std::string& key, bool* okay = 0x0){
+        return parse<std::string>(key, okay);
+    }
+    template <typename V>
+    V at(const std::string& key, bool* okay = 0x0){
+        return extract<V>(key, okay);
+    }
+    std::string operator[](const std::string& key){
+        return stringify(key);
+    }
+    std::size_t count(const std::string& key){
+        return _visitor.count(key);
+    }
+    std::vector<std::string> keys(const std::string& key){
+        return _visitor.keys(key);
+    }
+};
+
+/**
+ * T must inherit from udho::prepare
+ */
+template <typename T>
+prepared<T> data(const T& obj){
+    return prepared<T>(obj);
+}
+
+template <typename H, typename T = void>
+struct prepared_group{
+    typedef H head_type;
+    typedef T tail_type;
+    typedef prepared_group<H, T> self_type;
+
+    head_type _head;
+    tail_type _tail;
+    
+    prepared_group(const head_type& head, const tail_type& tail): _head(head), _tail(tail){}
+    template <typename V>
+    V extract(const std::string& key){
+        bool found = false;
+        V value = _head.template extract<V>(key, &found);
+        if(found){
+            return value;
+        }else{
+            return _tail.template extract<V>(key);
+        }
+    }
+    template <typename V>
+    V parse(const std::string& key){
+        bool found = false;
+        V value = _head.template parse<V>(key, &found);
+        if(found){
+            return value;
+        }else{
+            return _tail.template parse<V>(key);
+        }
     }
     std::string stringify(const std::string& key){
         return parse<std::string>(key);
@@ -617,12 +682,70 @@ struct prepared<T, true>{
         return stringify(key);
     }
     std::size_t count(const std::string& key){
-        return _visitor.count(key);
+        detail::association_value_extractor<int> extractor;
+        bool found;
+        _head.template extract<int>(key, &found);
+        if(found){
+            return _head.count(key);
+        }else{
+            return _tail.count(key);
+        }
     }
     std::vector<std::string> keys(const std::string& key){
-        return _visitor.keys(key);
+        detail::association_value_extractor<int> extractor;
+        bool found;
+        _head.template extract<int>(key, &found);
+        if(found){
+            return _head.keys(key);
+        }else{
+            return _tail.keys(key);
+        }
     }
 };
+
+template <typename H>
+struct prepared_group<H, void>{
+    typedef H head_type;
+    typedef prepared_group<H, void> self_type;
+
+    head_type _head;
+    
+    prepared_group(const head_type& head): _head(head){}
+    template <typename V>
+    V extract(const std::string& key){
+        return _head.template extract<V>(key);
+    }
+    template <typename V>
+    V parse(const std::string& key){
+        return _head.template parse<V>(key);
+    }
+    std::string stringify(const std::string& key){
+        return parse<std::string>(key);
+    }
+    template <typename V>
+    V at(const std::string& key){
+        return _head.template at<V>(key);
+    }
+    std::string operator[](const std::string& key){
+        return _head.operator[](key);
+    }
+    std::size_t count(const std::string& key){
+        return _head.count(key);
+    }
+    std::vector<std::string> keys(const std::string& key){
+        return _head.keys(key);
+    }
+};
+
+template <typename U, typename V, typename P>
+prepared_group<udho::prepared<P>, prepared_group<U, V>> operator|(const prepared_group<U, V>& nonterminal, const udho::prepared<P>& terminal){
+    return prepared_group<udho::prepared<P>, prepared_group<U, V>>(terminal, nonterminal);
+}
+
+template <typename U, typename V>
+prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>> operator|(const udho::prepared<U>& left, const udho::prepared<V>& right){
+    return prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>>(right,  prepared_group<udho::prepared<U>, void>(left));
+}
 
 template <typename DerivedT>
 struct prepare{

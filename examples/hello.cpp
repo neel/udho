@@ -6,7 +6,6 @@
 #include <udho/context.h>
 #include <iostream>
 
-
 std::string world(udho::contexts::stateless ctx){
     return "{'planet': 'Earth'}";
 }
@@ -14,7 +13,7 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
     return "Hello "+name;
 }
 
-int main(){    
+int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
 
