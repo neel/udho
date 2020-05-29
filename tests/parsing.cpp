@@ -158,15 +158,13 @@ BOOST_AUTO_TEST_CASE(expression){
                         </label>
                     </article>
                 </udho:block>
-                <udho:if test="count(books) > 1">
-                    <div class="publications">
-                        <udho:for value="book" key="id" in="books">
-                            <div class="title" udho:target:title="book.title">
-                                <udho:text name="book.title" />
-                            </div>
-                        </udho:for>
-                    </div>
-                </udho:if>
+                <div class="publications" udho:if="count(books) > 1">
+                    <udho:for value="book" key="id" in="books">
+                        <div class="title" udho:target:title="book.title">
+                            <udho:text name="book.title" />
+                        </div>
+                    </udho:for>
+                </div>
                 <udho:if test="not(count(books) > 1)">
                     <div class="freshers">
                         Not much publications

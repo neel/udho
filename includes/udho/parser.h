@@ -384,18 +384,26 @@ struct xml{
             if(boost::starts_with(name, p.first)){
                 p.second(node, target);
                 processor_matched = true;
+                break;
             }
         }
         if(!processor_matched){
+            bool keep = true;
             for(pugi::xml_attribute attr: node.attributes()){
                 std::string name = attr.name();
                 for(auto& p: _directives_attr){
                     if(boost::starts_with(name, p.first)){
-                        p.second(node, target, attr);
+                        keep = keep && p.second(node, target, attr);
+                        break;
                     }
                 }
+                if(!keep){
+                    break;
+                }
             }
-            step_in(node, target);
+            if(keep){
+                step_in(node, target);
+            }
         }
     }
     inline void step_in(pugi::xml_node node, pugi::xml_node target){
@@ -611,6 +619,35 @@ struct skip{
 namespace attrs{
     
 /**
+ * works like the udho:if tag but can be used in attribute 
+ */
+template <typename ScopeT>
+struct condition{
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
+    
+    parsing::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    condition(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+        std::string expr = attr.value();
+        
+        bool truth = _evaluator.template evaluate<int>(expr);
+        if(truth){
+            node.remove_attribute(attr);
+            return true;
+        }else{
+            return false;
+        }
+    }
+    std::string prefix() const{
+        return "udho:if";
+    }
+};
+    
+/**
  * udho::target:NAME = KEY will add an attribute named `NAME` with value retrieved by resolving `KEY` through scope table. 
  * It can have a conditional form too where the condition `expr` is first evaluated and if expr is true then the attribute is added, otherwise not
  * \code
@@ -782,6 +819,7 @@ struct parser{
     typedef parsing::attrs::target<table_type>      target_directive_type;
     typedef parsing::attrs::eval<table_type>        eval_directive_type;
     typedef parsing::attrs::add_class<table_type>   add_class_directive_type;
+    typedef parsing::attrs::condition<table_type>   condition_attr_directive_type;
     
     table_type&              _table;
     evaluator_type           _evaluator;
@@ -795,10 +833,11 @@ struct parser{
     target_directive_type    _target;
     eval_directive_type      _eval;
     add_class_directive_type _add_class;
+    condition_attr_directive_type _condition_attr;
     
     parser(table_type& scope): _table(scope), _evaluator(scope), 
     _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _skip(_xml_parser, scope),
-    _target(_xml_parser, scope), _eval(_xml_parser, scope), _add_class(_xml_parser, scope)
+    _target(_xml_parser, scope), _eval(_xml_parser, scope), _add_class(_xml_parser, scope), _condition_attr(_xml_parser, scope)
     {
         prepare();
     }
@@ -811,7 +850,8 @@ struct parser{
             .add_directive_tag(_skip);
         _xml_parser.add_directive_attr(_target)
             .add_directive_attr(_eval)
-            .add_directive_attr(_add_class);
+            .add_directive_attr(_add_class)
+            .add_directive_attr(_condition_attr);
     }
     std::string process(const std::string& contents){
         _xml_parser.open(contents);
