@@ -190,6 +190,21 @@ BOOST_AUTO_TEST_CASE(expression){
     std::cout << package["year"] << std::endl;
     std::cout << package["since"] << std::endl;
     std::cout << pkg_expr.evaluate<int>("since + year") << std::endl;
+    
+    
+    std::string xml_str = "<tag attr1='value1' attr2='value2' attr3='value3'></tag>";
+    pugi::xml_document source;
+    source.load_string(xml_str.c_str());
+    pugi::xml_node root = source.document_element();
+    for(pugi::xml_attribute_iterator it = root.attributes_begin(); it != root.attributes_end();){
+        pugi::xml_attribute attr = *it++;
+        std::cout << attr.name() << " " << attr.value() << std::endl;
+        std::string name = attr.name();
+        if(name == "attr2"){
+            root.remove_attribute(attr);
+        }
+    }
+    root.print(std::cout);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

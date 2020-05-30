@@ -389,7 +389,8 @@ struct xml{
         }
         if(!processor_matched){
             bool keep = true;
-            for(pugi::xml_attribute attr: node.attributes()){
+            for(pugi::xml_attribute_iterator it = node.attributes_begin(); it != node.attributes_end();){
+                pugi::xml_attribute attr = *it++;
                 std::string name = attr.name();
                 for(auto& p: _directives_attr){
                     if(boost::starts_with(name, p.first)){
