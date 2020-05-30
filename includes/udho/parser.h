@@ -594,6 +594,33 @@ struct text{
 };
 
 /**
+ * udho::eval
+ */
+template <typename ScopeT>
+struct eval{
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
+    
+    parsing::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    eval(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node target){
+        pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
+            return attr.name() == std::string("name");
+        });
+        std::string var = name.as_string();
+        std::string value = boost::lexical_cast<std::string>(_evaluator.template evaluate<int>(var));
+        target.append_child(pugi::node_pcdata).text().set(value.c_str());
+        return true;
+    }
+    std::string prefix() const{
+        return "udho:eval";
+    }
+};
+
+/**
  * udho::template
  */
 template <typename ScopeT>
@@ -611,7 +638,7 @@ struct skip{
         return true;
     }
     std::string prefix() const{
-        return "udho:template";
+        return "udho:view";
     }
 };
 
@@ -816,9 +843,10 @@ struct parser{
     typedef parsing::tags::loop<table_type>         loop_directive_type;
     typedef parsing::tags::condition<table_type>    condition_directive_type;
     typedef parsing::tags::text<table_type>         text_directive_type;
+    typedef parsing::tags::eval<table_type>         eval_directive_type;
     typedef parsing::tags::skip<table_type>         skip_directive_type;
     typedef parsing::attrs::target<table_type>      target_directive_type;
-    typedef parsing::attrs::eval<table_type>        eval_directive_type;
+    typedef parsing::attrs::eval<table_type>        eval_attr_directive_type;
     typedef parsing::attrs::add_class<table_type>   add_class_directive_type;
     typedef parsing::attrs::condition<table_type>   condition_attr_directive_type;
     
@@ -830,15 +858,16 @@ struct parser{
     loop_directive_type      _loop;
     condition_directive_type _condition;
     text_directive_type      _text;
+    eval_directive_type      _eval;
     skip_directive_type      _skip;
     target_directive_type    _target;
-    eval_directive_type      _eval;
+    eval_attr_directive_type _eval_attr;
     add_class_directive_type _add_class;
     condition_attr_directive_type _condition_attr;
     
     parser(table_type& scope): _table(scope), _evaluator(scope), 
-    _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _skip(_xml_parser, scope),
-    _target(_xml_parser, scope), _eval(_xml_parser, scope), _add_class(_xml_parser, scope), _condition_attr(_xml_parser, scope)
+    _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _eval(_xml_parser, scope),_skip(_xml_parser, scope),
+    _target(_xml_parser, scope), _eval_attr(_xml_parser, scope), _add_class(_xml_parser, scope), _condition_attr(_xml_parser, scope)
     {
         prepare();
     }
@@ -848,9 +877,10 @@ struct parser{
             .add_directive_tag(_loop)
             .add_directive_tag(_condition)
             .add_directive_tag(_text)
+            .add_directive_tag(_eval)
             .add_directive_tag(_skip);
         _xml_parser.add_directive_attr(_target)
-            .add_directive_attr(_eval)
+            .add_directive_attr(_eval_attr)
             .add_directive_attr(_add_class)
             .add_directive_attr(_condition_attr);
     }
