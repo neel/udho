@@ -1,6 +1,3 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE "udho Unit Test (udho::parsing)"
-#include <boost/test/unit_test.hpp>
 #include <set>
 #include <map>
 #include <stack>
@@ -77,9 +74,7 @@ struct lazy: udho::prepare<lazy>{
     }
 };
 
-BOOST_AUTO_TEST_SUITE(parsing)
-
-BOOST_AUTO_TEST_CASE(expression){
+int main(){
     book b1;
     b1.title = "Book1 Title";
     b1.year  = 2020;
@@ -104,38 +99,16 @@ BOOST_AUTO_TEST_CASE(expression){
     neel.marks_obtained["chemistry"] = -10.42;
     
     udho::prepared<student> prepared(neel);
-    BOOST_CHECK(prepared["roll"] == "2");
-    BOOST_CHECK(prepared.at<unsigned>("roll") == 2);
-    BOOST_CHECK(prepared["first"] == "Neel");
-    BOOST_CHECK(prepared["name"] == "Neel Bose");
-    BOOST_CHECK(prepared["books:0.year"] == "2020");
-    BOOST_CHECK(prepared["books:0.authors:0"] == "Sunanda Bose");
-    BOOST_CHECK(prepared["marks:chemistry"] == "-10.42");
-    BOOST_CHECK(prepared.count("books:0.authors") == 3);
-    BOOST_CHECK(prepared.count("books") == 2);
     
     std::vector<std::string> keys = prepared.keys("books:0.authors");
-    BOOST_CHECK(keys.size() == 3);
-    BOOST_CHECK(keys[0] == "0");
-    BOOST_CHECK(keys[1] == "1");
-    BOOST_CHECK(keys[2] == "2");
-    
+
     udho::lookup_table<udho::prepared<student>> table = udho::scope(prepared);
     
     table.add("papers", "books", 0);
-    BOOST_CHECK(table.eval("papers:0.title") == "Book1 Title");
     table.add("thesis", "papers:0", 1);
-    BOOST_CHECK(table.eval("thesis.year") == "2020");
     table.clear(1);
-    BOOST_CHECK(table.eval("thesis.year") == "");
         
     auto expr = udho::view::expression(table);
-    BOOST_CHECK(static_cast<unsigned>(expr.evaluate<double>("0.5 * ((books:0.year + books:1.year) / 2) + roll - 0.5")) == 1011);
-    BOOST_CHECK(expr.evaluate<unsigned>("count(books)") == 2);
-    BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 3)") == false);
-    BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1)") == true);
-    BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1) && roll == 2") == true);
-    BOOST_CHECK(expr.evaluate<unsigned>("not(count(books) < 1) && roll != 2") == false);
     
     lazy lobj;
     lobj.populated = false;
@@ -181,16 +154,25 @@ BOOST_AUTO_TEST_CASE(expression){
     pub.name    = "Some Publisher";
     pub.address = "Somewhere";
     pub.year    = 1987;
+
     
-//     auto package = udho::scope(udho::data(neel) | udho::data(b1) | udho::data(pub));
+    auto package = (udho::data(neel) | udho::data(b1) | udho::data(pub));
 //     auto pkg_expr = udho::view::expression(package);
-//     std::cout << package["name"] << std::endl;
+    std::cout << package["name"] << std::endl;
+    auto scoped_pkg = udho::scope(package);
+    std::cout << scoped_pkg["name"] << std::endl;
+    auto scoped_pkg2 = udho::scope(udho::data(neel) | udho::data(b1) | udho::data(pub));
+    auto package2 = udho::data(neel, b1, pub);
+    std::cout << package2["name"] << std::endl;
 //     std::cout << package["title"] << std::endl;
 //     std::cout << package["label"] << std::endl;
 //     std::cout << package["year"] << std::endl;
 //     std::cout << package["since"] << std::endl;
 //     std::cout << pkg_expr.evaluate<int>("since + year") << std::endl;
-
+    
+    
+    return 0;
+    
+    
 }
 
-BOOST_AUTO_TEST_SUITE_END()

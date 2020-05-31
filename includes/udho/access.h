@@ -44,11 +44,14 @@ template <typename F, typename R>
 struct responder{
     typedef F callback_type;
     typedef R result_type;
+    typedef responder<F, R> self_type;
+    
     callback_type _callback;
     
     responder() = delete;
     
     explicit responder(callback_type callback): _callback(callback){}
+    responder(const self_type& other): _callback(other._callback){}
     result_type call(const std::string& /*key*/) const{
         return _callback();
     }
@@ -376,6 +379,10 @@ struct is_prepared{
     enum {value = !std::is_void<decltype(test<U>(0))>::value};
 };
 
+/**
+ * An association group visitor visits the association group returned by T::index()
+ * where T is a subclass of udho::prepare
+ */
 template <typename GroupT, bool IsPrepared=is_prepared<typename GroupT::head_type::result_type>::value>
 struct association_group_visitor;
 
@@ -384,14 +391,18 @@ association_group_visitor<association_group<U, V>> visit(const association_group
     return association_group_visitor<association_group<U, V>>(nonterminal);
 }
 
+/**
+ * last association, does not have nested object
+ */
 template <typename U>
 struct association_group_visitor<association_group<U, void>, false>{
     typedef association_group<U, void> group_type;
+    
     const group_type& _group;
     
     association_group_visitor(const group_type& group): _group(group){}
     template <typename CallbackT>
-    bool find(CallbackT& callback, const std::string& key){
+    bool find(CallbackT& callback, const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -406,25 +417,29 @@ struct association_group_visitor<association_group<U, void>, false>{
         }
         return false;
     }
-    std::size_t count(const std::string& /*key*/){
+    std::size_t count(const std::string& /*key*/) const{
         return 0;
     }
-    std::vector<std::string> keys(const std::string& /*key*/){
+    std::vector<std::string> keys(const std::string& /*key*/) const{
         return std::vector<std::string>();
     }
 };
 
+/**
+ * not the last association, does not have nested objects
+ */
 template <typename U, typename V>
 struct association_group_visitor<association_group<U, V>, false>{
     typedef association_group<U, V> group_type;
     typedef V tail_type;
     typedef association_group_visitor<tail_type> tail_visitor_type;
+    
     const group_type& _group;
     tail_visitor_type _tail_visitor;
     
     association_group_visitor(const group_type& group): _group(group), _tail_visitor(group._tail){}
     template <typename CallbackT>
-    bool find(CallbackT& callback, const std::string& key){
+    bool find(CallbackT& callback, const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -441,7 +456,7 @@ struct association_group_visitor<association_group<U, V>, false>{
         }
         return false;
     }
-    std::size_t count(const std::string& key){
+    std::size_t count(const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -457,7 +472,7 @@ struct association_group_visitor<association_group<U, V>, false>{
         }
         return 0;
     }
-    std::vector<std::string> keys(const std::string& key){
+    std::vector<std::string> keys(const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -475,18 +490,22 @@ struct association_group_visitor<association_group<U, V>, false>{
     }
 };
 
+/**
+ * not the last association, have nested objects
+ */
 template <typename U, typename V>
 struct association_group_visitor<association_group<U, V>, true>{
     typedef association_group<U, V> group_type;
     typedef typename group_type::result_type result_type;
     typedef V tail_type;
     typedef association_group_visitor<tail_type> tail_visitor_type;
+    
     const group_type& _group;
     tail_visitor_type _tail_visitor;
     
     association_group_visitor(const group_type& group): _group(group), _tail_visitor(group._tail){}
     template <typename CallbackT>
-    bool find(CallbackT& callback, const std::string& key){
+    bool find(CallbackT& callback, const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -509,7 +528,7 @@ struct association_group_visitor<association_group<U, V>, true>{
         }
         return false;
     }
-    std::size_t count(const std::string& key){
+    std::size_t count(const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -531,7 +550,7 @@ struct association_group_visitor<association_group<U, V>, true>{
         }
         return 0;
     }
-    std::vector<std::string> keys(const std::string& key){
+    std::vector<std::string> keys(const std::string& key) const{
         std::string khead, ktail;
         auto dot = key.find_first_of('.');
         if(dot != std::string::npos){
@@ -579,6 +598,12 @@ detail::association<F> associate(const std::string& key, F callback){
     return detail::association<F>(key, callback);
 }
 
+
+/**
+ * prepared<T> keeps a copy of the string based index returned by the T::index() function
+ * and const references the actual data object of type T. It also instantiates a visitor 
+ * for travarsing that data object and extracting the values.
+ */
 template <typename T, bool IsPrepared=detail::is_prepared<T>::value>
 struct prepared;
 
@@ -588,17 +613,22 @@ struct prepared<T, false>;
 template <typename T>
 struct prepared<T, true>{
     typedef T prepared_type;
-    typedef typename std::result_of<decltype(&prepared_type::index)(prepared_type*)>::type index_type;
+    typedef typename std::result_of<decltype(&prepared_type::index)(const prepared_type*)>::type index_type;
     typedef detail::association_group_visitor<index_type> visitor_type;
     
-    const prepared_type& _data;
+    const prepared_type& _data;  // it may not be necessary to have a reference to the real data object
     index_type           _index;
     visitor_type         _visitor;
     
     prepared(const prepared_type& data): _data(data), _index(data.index()), _visitor(_index){}
+    /**
+     * a visitor keeps a reference to the index, So while copy constructing if the other object
+     * is going to be destructed then the copied visitor will have a dangling reference to the other._index
+     * hence the copy constructor instantiates a visitor again from the copied index
+     */
     prepared(const prepared<T, true>& other): _data(other._data), _index(other._index), _visitor(_index){}
     template <typename V>
-    V extract(const std::string& key, bool* okay = 0x0){
+    V extract(const std::string& key, bool* okay = 0x0) const{
         detail::association_value_extractor<V> extractor;
         bool found = _visitor.find(extractor, key);
         if(okay){
@@ -607,7 +637,7 @@ struct prepared<T, true>{
         return extractor.value();
     }
     template <typename V>
-    V parse(const std::string& key, bool* okay = 0x0){
+    V parse(const std::string& key, bool* okay = 0x0) const{
         detail::association_lexical_extractor<V> extractor;
         bool found = _visitor.find(extractor, key);
         if(okay){
@@ -615,25 +645,26 @@ struct prepared<T, true>{
         }
         return extractor.value();
     }
-    std::string stringify(const std::string& key, bool* okay = 0x0){
+    std::string stringify(const std::string& key, bool* okay = 0x0) const{
         return parse<std::string>(key, okay);
     }
     template <typename V>
-    V at(const std::string& key, bool* okay = 0x0){
+    V at(const std::string& key, bool* okay = 0x0) const{
         return extract<V>(key, okay);
     }
-    std::string operator[](const std::string& key){
+    std::string operator[](const std::string& key) const{
         return stringify(key);
     }
-    std::size_t count(const std::string& key){
+    std::size_t count(const std::string& key) const{
         return _visitor.count(key);
     }
-    std::vector<std::string> keys(const std::string& key){
+    std::vector<std::string> keys(const std::string& key) const{
         return _visitor.keys(key);
     }
 };
 
 /**
+ * A short hand for <tt>udho::prepare<T>(obj)</tt> where obj is of type T. 
  * T must inherit from udho::prepare
  */
 template <typename T>
@@ -641,6 +672,12 @@ prepared<T> data(const T& obj){
     return prepared<T>(obj);
 }
 
+/**
+ * Fold expression containing multiple prepared objects.
+ * Head is always type of udho::prepared<X> where X subclasses from udho::prepare<X>
+ * Tail is another prepared_group
+ * The actual prepared object is copied so it works even if the actual prepared object is an rvalue
+ */
 template <typename H, typename T = void>
 struct prepared_group{
     typedef H head_type;
@@ -652,7 +689,7 @@ struct prepared_group{
     
     prepared_group(const head_type& head, const tail_type& tail): _head(head), _tail(tail){}
     template <typename V>
-    V extract(const std::string& key){
+    V extract(const std::string& key) const{
         bool found = false;
         V value = _head.template extract<V>(key, &found);
         if(found){
@@ -662,7 +699,7 @@ struct prepared_group{
         }
     }
     template <typename V>
-    V parse(const std::string& key){
+    V parse(const std::string& key) const{
         bool found = false;
         V value = _head.template parse<V>(key, &found);
         if(found){
@@ -671,17 +708,17 @@ struct prepared_group{
             return _tail.template parse<V>(key);
         }
     }
-    std::string stringify(const std::string& key){
+    std::string stringify(const std::string& key) const{
         return parse<std::string>(key);
     }
     template <typename V>
-    V at(const std::string& key){
+    V at(const std::string& key) const{
         return extract<V>(key);
     }
-    std::string operator[](const std::string& key){
+    std::string operator[](const std::string& key) const{
         return stringify(key);
     }
-    std::size_t count(const std::string& key){
+    std::size_t count(const std::string& key) const{
         detail::association_value_extractor<int> extractor;
         bool found;
         _head.template extract<int>(key, &found);
@@ -691,7 +728,7 @@ struct prepared_group{
             return _tail.count(key);
         }
     }
-    std::vector<std::string> keys(const std::string& key){
+    std::vector<std::string> keys(const std::string& key) const{
         detail::association_value_extractor<int> extractor;
         bool found;
         _head.template extract<int>(key, &found);
@@ -712,27 +749,27 @@ struct prepared_group<H, void>{
     
     prepared_group(const head_type& head): _head(head){}
     template <typename V>
-    V extract(const std::string& key){
+    V extract(const std::string& key) const{
         return _head.template extract<V>(key);
     }
     template <typename V>
-    V parse(const std::string& key){
+    V parse(const std::string& key) const{
         return _head.template parse<V>(key);
     }
-    std::string stringify(const std::string& key){
+    std::string stringify(const std::string& key) const{
         return parse<std::string>(key);
     }
     template <typename V>
-    V at(const std::string& key){
+    V at(const std::string& key) const{
         return _head.template at<V>(key);
     }
-    std::string operator[](const std::string& key){
+    std::string operator[](const std::string& key) const{
         return _head.operator[](key);
     }
-    std::size_t count(const std::string& key){
+    std::size_t count(const std::string& key) const{
         return _head.count(key);
     }
-    std::vector<std::string> keys(const std::string& key){
+    std::vector<std::string> keys(const std::string& key) const{
         return _head.keys(key);
     }
 };
@@ -745,6 +782,16 @@ prepared_group<udho::prepared<P>, prepared_group<U, V>> operator|(const prepared
 template <typename U, typename V>
 prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>> operator|(const udho::prepared<U>& left, const udho::prepared<V>& right){
     return prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>>(right,  prepared_group<udho::prepared<U>, void>(left));
+}
+
+template <typename H, typename T>
+auto data(const H& head, const T& tail){
+    return head | data(tail);
+}
+
+template <typename H, typename T, typename... Rest>
+auto data(const H& head, const T& tail, const Rest&... rest){
+    return data(data(data(head), tail), rest...);
 }
 
 template <typename DerivedT>
