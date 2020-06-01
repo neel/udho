@@ -36,19 +36,64 @@
 #include <udho/access.h>
 #include <udho/scope.h>
 #include <udho/parser.h>
+#include <udho/util.h>
+#include <udho/page.h>
+#include <udho/configuration.h>
 
 namespace udho{
 /**
  * @todo write docs
  */
+template <typename ConfigT>
 struct bridge{
-    boost::filesystem::path _docroot;
+    typedef ConfigT configuration_type;
     
-    void docroot(const boost::filesystem::path& path);
-    boost::filesystem::path docroot() const;
+    configuration_type _config; 
+//     boost::filesystem::path _docroot;
     
-    std::string contents(const std::string& path) const;
-    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const;
+//     bridge(){}
+    
+//     void docroot(const boost::filesystem::path& path){
+//         _docroot = path;
+//     }
+    configuration_type& config(){
+        return _config;
+    }
+    const configuration_type& config() const{
+        return _config;
+    }
+    std::string docroot() const{
+        return _config[udho::configs::server::document_root];
+    }
+    
+    std::string contents(const std::string& path) const{
+        boost::filesystem::path doc_root = docroot();
+        boost::filesystem::path local_path = doc_root / path;
+        std::ifstream ifs(local_path.c_str());
+        std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+        
+        return content;
+    }
+    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const{
+        boost::filesystem::path doc_root = docroot();
+        boost::filesystem::path local_path = doc_root / path;
+        boost::beast::error_code err;
+        boost::beast::http::file_body::value_type body;
+        body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
+        if(err == boost::system::errc::no_such_file_or_directory){
+            throw udho::exceptions::http_error(boost::beast::http::status::not_found, (boost::format("File `%1%` not found in disk") % local_path).str());
+        }
+        if(err){
+            throw udho::exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
+        }
+        auto const size = body.size();
+        boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
+        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(boost::beast::http::field::content_type, !mime.empty() ? mime : udho::internal::mime_type(local_path.c_str()));
+        res.content_length(size);
+        res.keep_alive(req.keep_alive());
+        return res;
+    }
     
     template <typename GroupT>
     std::string render(const std::string& path, ::udho::lookup_table<GroupT>& scope) const{
@@ -72,7 +117,9 @@ struct bridge{
         auto scope = ::udho::scope(prepared);
         return render(path, scope);
     }
-    std::string render(const std::string& path) const;
+    std::string render(const std::string& path) const{
+        return contents(path);
+    }
 };
 
 }

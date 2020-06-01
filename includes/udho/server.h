@@ -36,6 +36,7 @@
 #include <udho/defs.h>
 #include <udho/attachment.h>
 #include <udho/bridge.h>
+#include <udho/configuration.h>
 
 namespace udho{
 
@@ -51,6 +52,7 @@ struct server{
     typedef AuxT auxiliary_type;
     typedef udho::attachment<auxiliary_type, logger_type, cache_type> attachment_type;
     typedef server<auxiliary_type, logger_type, cache_type> self_type;
+    typedef typename attachment_type::configuration_type configuration_type;
     
     template <typename RequestT>
     using context_type = udho::context<auxiliary_type, RequestT, attachment_type>;
@@ -64,18 +66,31 @@ struct server{
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
-    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.aux().docroot(doc_root);
+    void serve(RouterT&& router, int port=9198){
 #ifdef WITH_ICU
         _attachment << udho::logging::messages::formatted::info("server", "server (-with-icu) started on port %1%") % port;
 #else
         _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
 #endif
-        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+        router.template listen<attachment_type>(_io, _attachment, port);
     }
     template <typename FeatureT>
     auto operator+=(const FeatureT& feature){
         return (_attachment += feature);
+    }
+    configuration_type& config(){
+        return _attachment.aux().config();
+    }
+    const configuration_type& config() const{
+        return _attachment.aux().config();
+    }
+    template <typename ConfigKeyT>
+    auto operator[](const ConfigKeyT& k){
+        return config()[k];
+    }
+    template <typename ConfigKeyT>
+    auto operator[](const ConfigKeyT& k) const{
+        return config()[k];
     }
 };
 
@@ -85,6 +100,7 @@ struct server<AuxT, void, CacheT>{
     typedef AuxT auxiliary_type;
     typedef udho::attachment<auxiliary_type, void, cache_type> attachment_type;
     typedef server<auxiliary_type, void, cache_type> self_type;
+    typedef typename attachment_type::configuration_type configuration_type;
     
     template <typename RequestT>
     using context_type = udho::context<auxiliary_type, RequestT, attachment_type>;
@@ -99,27 +115,42 @@ struct server<AuxT, void, CacheT>{
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
-    void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-        _attachment.aux().docroot(doc_root);
+    void serve(RouterT&& router, int port=9198){
 #ifdef WITH_ICU
         _attachment << udho::logging::messages::formatted::info("server", "server (-with-icu) started on port %1%") % port;
 #else
         _attachment << udho::logging::messages::formatted::info("server", "server started on port %1%") % port;
 #endif
-        router.template listen<attachment_type>(_io, _attachment, port, doc_root);
+        router.template listen<attachment_type>(_io, _attachment, port);
     }
     template <typename FeatureT>
     auto operator+=(const FeatureT& feature){
         return (_attachment += feature);
     }
+    configuration_type& config(){
+        return _attachment.aux().config();
+    }
+    const configuration_type& config() const{
+        return _attachment.aux().config();
+    }
+    template <typename ConfigKeyT>
+    auto operator[](const ConfigKeyT& k){
+        return config()[k];
+    }
+    template <typename ConfigKeyT>
+    auto operator[](const ConfigKeyT& k) const{
+        return config()[k];
+    }
 };
 
 namespace servers{
-
+    
+typedef udho::config<udho::configs::server> conf_type;
+    
 namespace stateless{
     template <typename LoggerT>
-    using logged = server<udho::bridge, LoggerT, void>;
-    using quiet  = server<udho::bridge, void, void>;
+    using logged = server<udho::bridge<conf_type>, LoggerT, void>;
+    using quiet  = server<udho::bridge<conf_type>, void, void>;
 }
 
 template <typename... T>
@@ -127,15 +158,15 @@ struct stateful{
     typedef udho::cache::store<boost::uuids::uuid, T...> cache_type;
     
     template <typename LoggerT>
-    using logged    = server<udho::bridge, LoggerT, cache_type>;
+    using logged    = server<udho::bridge<conf_type>, LoggerT, cache_type>;
     using ostreamed = logged<udho::loggers::ostream>;
-    using quiet     = server<udho::bridge, void, cache_type>;
+    using quiet     = server<udho::bridge<conf_type>, void, cache_type>;
 };
 
 namespace quiet{
     template <typename... T>
-    using stateful  = server<udho::bridge, void, udho::cache::store<boost::uuids::uuid, T...>>;
-    using stateless = server<udho::bridge, void, void>;
+    using stateful  = server<udho::bridge<conf_type>, void, udho::cache::store<boost::uuids::uuid, T...>>;
+    using stateless = server<udho::bridge<conf_type>, void, void>;
 }
 
 template <typename T>
@@ -143,14 +174,14 @@ struct logged{
     typedef T logger_type;
     
     template <typename... U>
-    using stateful  = server<udho::bridge, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
-    using stateless = server<udho::bridge, logger_type, void>;
+    using stateful  = server<udho::bridge<conf_type>, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
+    using stateless = server<udho::bridge<conf_type>, logger_type, void>;
 };
 
 namespace ostreamed{
     template <typename CacheT>
     struct ostreamed_helper{
-        typedef server<udho::bridge, udho::loggers::ostream, CacheT> server_type;
+        typedef server<udho::bridge<conf_type>, udho::loggers::ostream, CacheT> server_type;
         typedef typename server_type::logger_type logger_type;
         typedef typename server_type::cache_type cache_type;
         typedef typename server_type::attachment_type attachment_type;
@@ -161,12 +192,26 @@ namespace ostreamed{
         
         ostreamed_helper(boost::asio::io_service& io, udho::loggers::ostream::stream_type& stream): _logger(stream), _server(io, _logger){}
         template <typename RouterT>
-        void serve(RouterT&& router, int port=9198, std::string doc_root=""){
-            _server.template serve(router, port, doc_root);
+        void serve(RouterT&& router, int port=9198){
+            _server.template serve(router, port);
         }
         template <typename FeatureT>
         auto operator+=(const FeatureT& feature){
             return (_server += feature);
+        }
+        typename server_type::configuration_type& config(){
+            return _server.config();
+        }
+        const typename server_type::configuration_type& config() const{
+            return _server.config();
+        }
+        template <typename ConfigKeyT>
+        auto operator[](const ConfigKeyT& k){
+            return config()[k];
+        }
+        template <typename ConfigKeyT>
+        auto operator[](const ConfigKeyT& k) const{
+            return config()[k];
         }
     };
     

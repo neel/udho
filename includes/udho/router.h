@@ -17,7 +17,7 @@
 #include <boost/regex.hpp>
 #include <boost/locale.hpp>
 #include <iomanip>
-#include <udho/context.h>
+#include <udho/contexts.h>
 #include <udho/compositors.h>
 #include <udho/listener.h>
 #include <udho/connection.h>
@@ -720,9 +720,9 @@ struct overload_group{
         _parent.summary(stack);
     }
     template <typename AttachmentT>
-    self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198, std::string doc_root=""){
+    self_type& listen(boost::asio::io_service& io, AttachmentT& attachment, int port=9198){
         typedef udho::listener<self_type, AttachmentT> listener_type;
-        std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("0.0.0.0"), port), std::make_shared<std::string>(doc_root))->run();
+        std::make_shared<listener_type>(*this, io, attachment, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address("0.0.0.0"), port))->run();
         return *this;
     }
     template <typename F>

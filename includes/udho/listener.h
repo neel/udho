@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <udho/configuration.h>
 
 namespace udho{
 
@@ -27,7 +28,6 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     boost::asio::io_service& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
     socket_type _socket;
-    std::shared_ptr<std::string const> _docroot;
     boost::asio::signal_set _signals;
     RouterT& _router;
     attachment_type& _attachment;
@@ -36,9 +36,8 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
      * @param router HTTP url mapping router
      * @param service I/O service
      * @param endpoint HTTP server endpoint to listen on
-     * @param docroot HTTP document rot to serve static contents
      */
-    listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint, std::shared_ptr<std::string const> const& docroot): _service(service), _acceptor(service), _socket(service), _docroot(docroot), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
+    listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
@@ -81,7 +80,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
             _attachment << udho::logging::messages::formatted::info("listener", "failed to accept new connection from %1%") % _socket.remote_endpoint().address();
         }else{
             _attachment << udho::logging::messages::formatted::info("listener", "accepting new connection from %1%") % _socket.remote_endpoint().address();
-            std::shared_ptr<connection_type> conn = std::make_shared<connection<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket), _docroot);
+            std::shared_ptr<connection_type> conn = std::make_shared<connection<RouterT, AttachmentT>>(_router, _attachment, std::move(_socket));
             conn->run();
         }
         accept();

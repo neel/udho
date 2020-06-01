@@ -47,6 +47,7 @@ SET(UDHO_SOURCES
     scope.cpp
     parser.cpp
     configuration.cpp
+    contexts.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
