@@ -612,15 +612,15 @@ struct prepared<T, false>;
 
 template <typename T>
 struct prepared<T, true>{
-    typedef T prepared_type;
-    typedef typename std::result_of<decltype(&prepared_type::index)(const prepared_type*)>::type index_type;
+    typedef T derived_type;
+    typedef typename std::result_of<decltype(&derived_type::index)(const derived_type*)>::type index_type;
     typedef detail::association_group_visitor<index_type> visitor_type;
     
-    const prepared_type& _data;  // it may not be necessary to have a reference to the real data object
+    const derived_type& _data;  // it may not be necessary to have a reference to the real data object
     index_type           _index;
     visitor_type         _visitor;
     
-    prepared(const prepared_type& data): _data(data), _index(data.index()), _visitor(_index){}
+    prepared(const derived_type& data): _data(data), _index(data.index()), _visitor(_index){}
     /**
      * a visitor keeps a reference to the index, So while copy constructing if the other object
      * is going to be destructed then the copied visitor will have a dangling reference to the other._index
@@ -784,9 +784,30 @@ prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>> opera
     return prepared_group<udho::prepared<V>, prepared_group<udho::prepared<U>, void>>(right,  prepared_group<udho::prepared<U>, void>(left));
 }
 
+template <typename H, typename T, bool IsPrepared=detail::is_prepared<H>::value>
+struct data_helper;
+
 template <typename H, typename T>
-auto data(const H& head, const T& tail){
-    return head | data(tail);
+struct data_helper<H, T, false>{
+    typedef prepared_group<udho::prepared<T>, prepared_group<H, void>> result_type;
+    
+    static result_type data(const H& head, const T& tail){
+        return result_type(tail,  prepared_group<H, void>(head));
+    }
+};
+
+template <typename H, typename T>
+struct data_helper<H, T, true>{
+    typedef prepared_group<udho::prepared<T>, prepared_group<udho::prepared<H>, void>> result_type;
+    
+    static result_type data(const H& head, const T& tail){
+        return result_type(udho::data(tail), prepared_group<udho::prepared<H>, void>(udho::data(head)));
+    }
+};
+
+template <typename H, typename T>
+typename data_helper<H, T>::result_type data(const H& head, const T& tail){
+    return data_helper<H, T>::data(head, tail);
 }
 
 template <typename H, typename T, typename... Rest>

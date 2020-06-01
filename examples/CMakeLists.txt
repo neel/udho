@@ -16,3 +16,8 @@ TARGET_LINK_LIBRARIES(udho-example-functor udho)
 
 ADD_EXECUTABLE(udho-example-application application.cpp)
 TARGET_LINK_LIBRARIES(udho-example-application udho)
+
+add_definitions(-DWWW_PATH="${CMAKE_CURRENT_SOURCE_DIR}/www")
+
+ADD_EXECUTABLE(udho-example-view view.cpp)
+TARGET_LINK_LIBRARIES(udho-example-view udho)
