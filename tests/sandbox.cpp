@@ -11,10 +11,11 @@ int main(){
     
     conf[udho::configs::server::port] =  9198;
     conf[udho::configs::server::document_root] = "/path/to/document/root";
+    conf[udho::configs::server::template_root] = "/path/to/template/root";
     
     std::string value = conf[udho::configs::server::document_root];
     
-//     std::cout << conf[udho::configs::server::document_root] << std::endl;
+    std::cout << conf[udho::configs::server::port] << std::endl;
     
     return 0;
 }

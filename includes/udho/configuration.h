@@ -45,47 +45,48 @@ class configuration{
     
 };
 
+template <typename K, typename C>
+struct proxy{
+    typedef K key_type;
+    typedef C config_type;
+    typedef decltype(C().get(K())) value_type;
+    typedef proxy<K, C> proxy_type;
+    
+    config_type& _config;
+    
+    proxy(config_type& conf): _config(conf){}
+    value_type value() const{
+        return _config.get(K());
+    }
+    operator value_type() const{
+        return value();
+    }
+    template <typename V>
+    proxy_type& operator=(V value){
+        _config.set(K(), value);
+        return *this;
+    }
+};
+
 template <typename T>
 struct config: T{
     typedef config<T> self_type;    
-    
-    template <typename K>
-    struct proxy{
-        typedef K key_type;
-        typedef proxy<K> proxy_type;
-        typedef decltype(self_type().get(K())) value_type;
-        
-        self_type& _self;
-        
-        proxy(self_type& self): _self(self){}
-        value_type value() const{
-            return _self.get(K());
-        }
-        operator value_type() const{
-            return value();
-        }
-        template <typename V>
-        proxy_type& operator=(V value){
-            _self.set(K(), value);
-            return *this;
-        }
-    };
         
     template <typename K>
     auto operator[](const K& /*key*/) const{
         return T::get(K());
     }
     template <typename K>
-    proxy<K> operator[](const K& /*key*/){
-        return proxy<K>(*this);
+    proxy<K, self_type> operator[](const K& /*key*/){
+        return proxy<K, self_type>(*this);
     }
 };
 
-// template <typename K, typename... T>
-// std::ostream& operator<<(std::ostream& stream, const typename config<T...>::proxy<K>& p){
-//     stream << p.value();
-//     return stream;
-// }
+template <typename K, typename C>
+std::ostream& operator<<(std::ostream& stream, const proxy<K, C>& p){
+    stream << p.value();
+    return stream;
+}
 
 
 namespace configs{
