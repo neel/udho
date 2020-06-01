@@ -46,6 +46,7 @@ SET(UDHO_SOURCES
     bridge.cpp
     scope.cpp
     parser.cpp
+    configuration.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
