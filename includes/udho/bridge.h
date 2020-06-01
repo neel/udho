@@ -49,13 +49,7 @@ struct bridge{
     typedef ConfigT configuration_type;
     
     configuration_type _config; 
-//     boost::filesystem::path _docroot;
-    
-//     bridge(){}
-    
-//     void docroot(const boost::filesystem::path& path){
-//         _docroot = path;
-//     }
+
     configuration_type& config(){
         return _config;
     }
@@ -65,13 +59,12 @@ struct bridge{
     std::string docroot() const{
         return _config[udho::configs::server::document_root];
     }
-    
-    std::string contents(const std::string& path) const{
-        boost::filesystem::path doc_root = docroot();
-        boost::filesystem::path local_path = doc_root / path;
+    std::string tmplroot() const{
+        return _config[udho::configs::server::template_root];
+    }
+    std::string contents(const boost::filesystem::path& local_path) const{
         std::ifstream ifs(local_path.c_str());
         std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-        
         return content;
     }
     boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const{
@@ -97,7 +90,7 @@ struct bridge{
     
     template <typename GroupT>
     std::string render(const std::string& path, ::udho::lookup_table<GroupT>& scope) const{
-        std::string template_contents = contents(path);
+        std::string template_contents = render(path);
         auto processor = ::udho::view::processor(scope);
         return processor.process(template_contents);
     }
@@ -118,7 +111,9 @@ struct bridge{
         return render(path, scope);
     }
     std::string render(const std::string& path) const{
-        return contents(path);
+        boost::filesystem::path tmpl_root  = tmplroot();
+        boost::filesystem::path local_path = tmpl_root / path;
+        return contents(local_path);
     }
 };
 
