@@ -7,6 +7,7 @@
 #include <iostream>
 #include <boost/format.hpp>
 #include <boost/function.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/beast/http/verb.hpp>
 
 namespace udho{
@@ -143,7 +144,24 @@ namespace internal{
 }
     
 namespace internal{
-    std::string path_cat(boost::beast::string_view base, boost::beast::string_view path);
+//     std::string path_cat(boost::beast::string_view base, boost::beast::string_view path);
+    inline boost::filesystem::path path_cat(const boost::filesystem::path& base, const std::string& path){
+        return (boost::filesystem::canonical(base) / boost::filesystem::path(path).make_preferred());
+    }
+    inline bool path_inside(const boost::filesystem::path& base, const boost::filesystem::path& path){
+        std::string left = base.string(), right = path.string();
+        std::string::const_iterator lit = left.cbegin(), rit = right.cbegin();
+        std::size_t matched = 0;
+        while(lit != left.cend() && rit != right.cend()){
+            if(*lit != *rit){
+                break;
+            }
+            ++matched;
+            ++lit;
+            ++rit;
+        }
+        return matched >= left.size();
+    }
 }
 
 struct module_info{

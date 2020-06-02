@@ -56,10 +56,10 @@ struct bridge{
     const configuration_type& config() const{
         return _config;
     }
-    std::string docroot() const{
+    boost::filesystem::path docroot() const{
         return _config[udho::configs::server::document_root];
     }
-    std::string tmplroot() const{
+    boost::filesystem::path tmplroot() const{
         return _config[udho::configs::server::template_root];
     }
     std::string contents(const boost::filesystem::path& local_path) const{
@@ -69,7 +69,10 @@ struct bridge{
     }
     boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const{
         boost::filesystem::path doc_root = docroot();
-        boost::filesystem::path local_path = doc_root / path;
+        boost::filesystem::path local_path = internal::path_cat(doc_root, path);
+        if(!internal::path_inside(doc_root, local_path)){
+            throw exceptions::http_error(boost::beast::http::status::forbidden, (boost::format("Access denied to %1%") % local_path).str());
+        }
         std::string extension = local_path.extension().string();
         std::string mime_type = _config[udho::configs::server::mime_default];
         if(!extension.empty() && extension.front() == '.'){

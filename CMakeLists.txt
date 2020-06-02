@@ -41,7 +41,6 @@ SET(UDHO_HEADERS
     includes/udho/application.h
 )
 SET(UDHO_SOURCES 
-    util.cpp 
     page.cpp
 )
 

@@ -30,6 +30,7 @@
 
 #include <map>
 #include <string>
+#include <boost/filesystem/path.hpp>
 
 namespace udho{
 
@@ -111,8 +112,8 @@ struct server_{
         typedef server_<T> component;
     } mimes;
     
-    std::string _document_root;
-    std::string _template_root;
+    boost::filesystem::path _document_root;
+    boost::filesystem::path _template_root;
     std::string _mime_default;
     mime_map    _mimes;
     
@@ -142,11 +143,11 @@ struct server_{
         _mimes.insert(std::make_pair("svgz",  "image/svg+xml"));
     }
         
-    void set(document_root_t, std::string v){_document_root = v;}
-    std::string get(document_root_t) const{return _document_root;}
+    void set(document_root_t, const boost::filesystem::path& v){_document_root = v;}
+    boost::filesystem::path get(document_root_t) const{return _document_root;}
     
-    void set(template_root_t, std::string v){_template_root = v;}
-    std::string get(template_root_t) const{return _template_root;}
+    void set(template_root_t, const boost::filesystem::path& v){_template_root = v;}
+    boost::filesystem::path get(template_root_t) const{return _template_root;}
     
     void set(mime_default_t, std::string v){_mime_default = v;}
     std::string get(mime_default_t) const{return _mime_default;}

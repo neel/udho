@@ -144,10 +144,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             }
             
             if(status == 0){
-                std::string doc_root = _attachment.aux().docroot();
-                std::string local_path = internal::path_cat(doc_root, path);
-                boost::filesystem::path plocal_path(local_path);
-                std::string extension = plocal_path.extension().string();
+                std::cout << path << std::endl;
+                boost::filesystem::path doc_root = _attachment.aux().docroot();
+                boost::filesystem::path local_path = internal::path_cat(doc_root, path);
+                if(!internal::path_inside(doc_root, local_path)){
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% access denied for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                    throw exceptions::http_error(boost::beast::http::status::forbidden, (boost::format("Access denied to %1%") % local_path).str());
+                }
+                std::string extension = local_path.extension().string();
                 std::string mime_type = _attachment.aux().config()[udho::configs::server::mime_default];
                 if(!extension.empty() && extension.front() == '.'){
                     extension = extension.substr(1);
