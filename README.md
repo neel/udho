@@ -20,11 +20,11 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
 int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
-
+    server[udho::configs::server::document_root] = "/path/to/static/files";
     auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
                                | "/planet/(\\w+)"  >> udho::get(&planet).plain();
 
-    server.serve(urls, 9198, "/path/to/static/files");
+    server.serve(urls, 9198);
 
     io.run();
     return 0;
@@ -54,6 +54,7 @@ boost depend on boost-beast library. As boost-beast is only available on boost >
 * strictly typed on memory session storage
 * compile time pluggable logging
 * customizable logging
+* typesafe configuration 
   
 # Example 
 
@@ -89,16 +90,14 @@ std::string echo(udho::contexts::stateful<user> ctx, int num){
 }
 
 int main(){
-    std::string doc_root("/path/to/static/document/root");
-    
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user> server(io, std::cout);
-
+    server[udho::configs::server::document_root] = "/path/to/static/files";
     auto router = udho::router()
         | (udho::post(&login).plain() = "^/login$")
         | (udho::get(&echo).json()    = "^/echo/(\\d+)$");
 
-    server.serve(router, 9198, doc_root);
+    server.serve(router, 9198);
         
     io.run();
     
