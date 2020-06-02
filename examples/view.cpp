@@ -68,6 +68,11 @@ int main(){
     udho::servers::ostreamed::stateless server(io, std::cout);
     server[udho::configs::server::template_root] = WWW_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
+    
+    const std::map<std::string, std::string>& mime_map = server[udho::configs::server::mimes];
+    std::cout << mime_map.at("png") << std::endl;
+    server[udho::configs::server::mimes].set("png", "something else");
+    std::cout << server[udho::configs::server::mimes].of("png") << std::endl;
 
     auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
                                | "/planet/(\\w+)"  >> udho::get(&planet).html();

@@ -28,22 +28,10 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
+#include <map>
 #include <string>
 
-/**
- * typedef udho::configuration<udho::config::server, udho::config::router, udho::config::logging, udho::config::view> configuration;
- * configuration config;
- * config[udho::configs::document_root] = "/path/to/document/root";
- */
-
 namespace udho{
-/**
- * @todo write docs
- */
-template <typename... T>
-class configuration{
-    
-};
 
 template <typename K, typename C>
 struct proxy{
@@ -88,37 +76,194 @@ std::ostream& operator<<(std::ostream& stream, const proxy<K, C>& p){
     return stream;
 }
 
+/**
+ * typedef udho::configuration<udho::config::server, udho::config::router, udho::config::logging, udho::config::view> configuration;
+ * configuration config;
+ * config[udho::configs::server::document_root] = "/path/to/document/root";
+ */
+template <typename... T>
+struct configuration: udho::config<T>...{
+    template <typename K>
+    auto operator[](const K& k) const{
+        return udho::config<typename K::component>::operator[](k);
+    }
+    template <typename K>
+    auto operator[](const K& k){
+        return udho::config<typename K::component>::operator[](k);
+    }
+};
 
 namespace configs{
 template <typename T = void>
 struct server_{
-    const static struct port_t{} port;
-    const static struct document_root_t{} document_root;
-    const static struct template_root_t{} template_root;
+    typedef std::map<std::string, std::string> mime_map;
     
-    unsigned _port;
+    const static struct document_root_t{
+        typedef server_<T> component;
+    } document_root;
+    const static struct template_root_t{
+        typedef server_<T> component;
+    } template_root;
+    const static struct mime_default_t{
+        typedef server_<T> component;
+    } mime_default;
+    const static struct mimes_t{
+        typedef server_<T> component;
+    } mimes;
+    
     std::string _document_root;
     std::string _template_root;
+    std::string _mime_default;
+    mime_map    _mimes;
     
-    inline void set(port_t, unsigned v){_port = v;}
-    inline unsigned get(port_t) const{return _port;}
     
-    inline void set(document_root_t, std::string v){_document_root = v;}
-    inline std::string get(document_root_t) const{return _document_root;}
+    server_(): _mime_default("application/octet-stream"){
+        _mimes.insert(std::make_pair("htm",   "text/html"));
+        _mimes.insert(std::make_pair("html",  "text/html"));
+        _mimes.insert(std::make_pair("xhtm",  "text/html"));
+        _mimes.insert(std::make_pair("xhtml", "text/html"));
+        _mimes.insert(std::make_pair("txt",   "text/plain"));
+        _mimes.insert(std::make_pair("js",    "application/javascript"));
+        _mimes.insert(std::make_pair("css",   "application/css"));
+        _mimes.insert(std::make_pair("json",  "application/json"));
+        _mimes.insert(std::make_pair("xml",   "application/xml"));
+        _mimes.insert(std::make_pair("swf",   "application/x-shockwave-flash"));
+        _mimes.insert(std::make_pair("flv",   "video/x-flv"));
+        _mimes.insert(std::make_pair("png",   "image/png"));
+        _mimes.insert(std::make_pair("jpe",   "image/jpeg"));
+        _mimes.insert(std::make_pair("jpeg",  "image/jpeg"));
+        _mimes.insert(std::make_pair("jpg",   "image/jpeg"));
+        _mimes.insert(std::make_pair("gif",   "image/gif"));
+        _mimes.insert(std::make_pair("bmp",   "image/bmp"));
+        _mimes.insert(std::make_pair("ico",   "image/x-icon"));
+        _mimes.insert(std::make_pair("tiff",  "image/tiff"));
+        _mimes.insert(std::make_pair("tif",   "image/tiff"));
+        _mimes.insert(std::make_pair("svg",   "image/svg+xml"));
+        _mimes.insert(std::make_pair("svgz",  "image/svg+xml"));
+    }
+        
+    void set(document_root_t, std::string v){_document_root = v;}
+    std::string get(document_root_t) const{return _document_root;}
     
-    inline void set(template_root_t, std::string v){_template_root = v;}
-    inline std::string get(template_root_t) const{return _template_root;}
+    void set(template_root_t, std::string v){_template_root = v;}
+    std::string get(template_root_t) const{return _template_root;}
+    
+    void set(mime_default_t, std::string v){_mime_default = v;}
+    std::string get(mime_default_t) const{return _mime_default;}
+
+    const mime_map& get(mimes_t) const{return _mimes;}
+    std::string mime(const std::string& extension) const{
+        return _mimes.at(extension);
+    }
+    void mime(const std::string& extension, const std::string& type){
+        _mimes[extension] = type;
+    }
 };
 
-template <typename T> const typename server_<T>::port_t server_<T>::port;
 template <typename T> const typename server_<T>::document_root_t server_<T>::document_root;
 template <typename T> const typename server_<T>::template_root_t server_<T>::template_root;
+template <typename T> const typename server_<T>::mime_default_t  server_<T>::mime_default;
+template <typename T> const typename server_<T>::mimes_t         server_<T>::mimes;
 
 typedef server_<> server;
 
 }
 
+template <>
+struct config<configs::server_<>>: configs::server_<>{
+    typedef config<configs::server_<>> self_type;    
+        
+    template <typename K>
+    auto operator[](const K& /*key*/) const{
+        return configs::server_<>::get(K());
+    }
+    template <typename K>
+    proxy<K, self_type> operator[](const K& /*key*/){
+        return proxy<K, self_type>(*this);
+    }
+    void mime(const std::string& extension, const std::string& type){
+         configs::server_<>::mime(extension, type);
+    }
+};
 
+template <>
+struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
+    typedef configs::server_<>::mimes_t key_type;
+    typedef config<configs::server_<>> config_type;
+    typedef decltype(config_type().get(key_type())) value_type;
+    typedef proxy<key_type, config_type> proxy_type;
+    
+    config_type& _config;
+    
+    proxy(config_type& conf): _config(conf){}
+    value_type value() const{
+        return _config.get(key_type());
+    }
+    operator value_type() const{
+        return value();
+    }
+    template <typename V>
+    proxy_type& operator=(V value){
+        _config.set(key_type(), value);
+        return *this;
+    }
+    std::string at(const std::string& key) const{
+        return value().at(key);
+    }
+    std::string of(const std::string& key) const{
+        return at(key);
+    }
+    void set(const std::string& ext, const std::string& mime){
+        _config.mime(ext, mime);
+    }
+};
+
+namespace configs{
+template <typename T = void>
+struct session_{
+    enum class format{
+        none, binary, json, xml
+    };
+    
+    const static struct persistent_t{
+        typedef session_<T> component;
+    } persistent;
+    const static struct serialization_t{
+        typedef session_<T> component;
+    } serialization;
+    const static struct id_t{
+        typedef session_<T> component;
+    } id;
+    const static struct handler_t{
+        typedef session_<T> component;
+    } handler;
+    
+    bool        _persistent;
+    format      _serialization;
+    std::string _id;
+    
+    session_(): _persistent(false), _serialization(format::none), _id("UDHOSESSID"){}
+    
+    void set(persistent_t, bool v){_persistent = v;}
+    unsigned get(persistent_t) const{return _persistent;}
+    
+    void set(serialization_t, format v){_serialization = v;}
+    format get(serialization_t) const{return _serialization;}
+    
+    void set(id_t, std::string v){_id = v;}
+    std::string get(id_t) const{return _id;}
+};
+
+template <typename T> const typename session_<T>::persistent_t session_<T>::persistent;
+template <typename T> const typename session_<T>::serialization_t session_<T>::serialization;
+template <typename T> const typename session_<T>::handler_t session_<T>::handler;
+template <typename T> const typename session_<T>::id_t session_<T>::id;
+
+typedef session_<> session;
+
+}
+
+typedef udho::configuration<udho::configs::server, udho::configs::session> configuration_type;
 
 }
 

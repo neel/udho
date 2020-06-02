@@ -33,12 +33,10 @@
 #include <udho/configuration.h>
 
 namespace udho{
-namespace contexts{
-    typedef udho::config<udho::configs::server> conf_type;
-    
-    using stateless = context<udho::bridge<conf_type>, udho::defs::request_type, void>;
+namespace contexts{    
+    using stateless = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, void>;
     template <typename... T>
-    using stateful = context<udho::bridge<conf_type>, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
+    using stateful = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
 }
 }
 

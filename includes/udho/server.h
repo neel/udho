@@ -145,12 +145,10 @@ struct server<AuxT, void, CacheT>{
 
 namespace servers{
     
-typedef udho::config<udho::configs::server> conf_type;
-    
 namespace stateless{
     template <typename LoggerT>
-    using logged = server<udho::bridge<conf_type>, LoggerT, void>;
-    using quiet  = server<udho::bridge<conf_type>, void, void>;
+    using logged = server<udho::bridge<udho::configuration_type>, LoggerT, void>;
+    using quiet  = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
 template <typename... T>
@@ -158,15 +156,15 @@ struct stateful{
     typedef udho::cache::store<boost::uuids::uuid, T...> cache_type;
     
     template <typename LoggerT>
-    using logged    = server<udho::bridge<conf_type>, LoggerT, cache_type>;
+    using logged    = server<udho::bridge<udho::configuration_type>, LoggerT, cache_type>;
     using ostreamed = logged<udho::loggers::ostream>;
-    using quiet     = server<udho::bridge<conf_type>, void, cache_type>;
+    using quiet     = server<udho::bridge<udho::configuration_type>, void, cache_type>;
 };
 
 namespace quiet{
     template <typename... T>
-    using stateful  = server<udho::bridge<conf_type>, void, udho::cache::store<boost::uuids::uuid, T...>>;
-    using stateless = server<udho::bridge<conf_type>, void, void>;
+    using stateful  = server<udho::bridge<udho::configuration_type>, void, udho::cache::store<boost::uuids::uuid, T...>>;
+    using stateless = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
 template <typename T>
@@ -174,14 +172,14 @@ struct logged{
     typedef T logger_type;
     
     template <typename... U>
-    using stateful  = server<udho::bridge<conf_type>, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
-    using stateless = server<udho::bridge<conf_type>, logger_type, void>;
+    using stateful  = server<udho::bridge<udho::configuration_type>, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
+    using stateless = server<udho::bridge<udho::configuration_type>, logger_type, void>;
 };
 
 namespace ostreamed{
     template <typename CacheT>
     struct ostreamed_helper{
-        typedef server<udho::bridge<conf_type>, udho::loggers::ostream, CacheT> server_type;
+        typedef server<udho::bridge<udho::configuration_type>, udho::loggers::ostream, CacheT> server_type;
         typedef typename server_type::logger_type logger_type;
         typedef typename server_type::cache_type cache_type;
         typedef typename server_type::attachment_type attachment_type;
