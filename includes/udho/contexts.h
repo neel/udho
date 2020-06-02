@@ -25,9 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "udho/parser.h"
+#ifndef UDHO_CONTEXTS_H
+#define UDHO_CONTEXTS_H
 
+#include <udho/context.h>
+#include <udho/bridge.h>
+#include <udho/configuration.h>
 
-#ifdef WITH_PUGI
+namespace udho{
+namespace contexts{    
+    using stateless = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, void>;
+    template <typename... T>
+    using stateful = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
+}
+}
 
-#endif
+#endif // UDHO_CONTEXTS_H

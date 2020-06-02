@@ -73,7 +73,6 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     socket_type _socket;
     boost::asio::strand<boost::asio::io_context::executor_type> _strand;
     boost::beast::flat_buffer _buffer;
-    std::shared_ptr<std::string const> _doc_root;
     udho::defs::request_type _req;
     std::shared_ptr<void> res_;
     send_lambda _lambda;
@@ -83,14 +82,12 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
      * session constructor
      * @param router router
      * @param socket TCP socket
-     * @param doc_root document root to serve static contents
      */
-    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket, std::shared_ptr<std::string const> const& doc_root)
+    explicit connection(RouterT& router, attachment_type& attachment, socket_type socket)
         : _router(router), 
           _attachment(attachment),
           _socket(std::move(socket)),
           _strand(_socket.get_executor()),
-          _doc_root(doc_root),
           _lambda(*this),
           _time(boost::posix_time::second_clock::local_time())
           {}
@@ -147,8 +144,19 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             }
             
             if(status == 0){
-                std::string local_path = internal::path_cat(*_doc_root, path);
-                
+                std::cout << path << std::endl;
+                boost::filesystem::path doc_root = _attachment.aux().docroot();
+                boost::filesystem::path local_path = internal::path_cat(doc_root, path);
+                if(!internal::path_inside(doc_root, local_path)){
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% access denied for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                    throw exceptions::http_error(boost::beast::http::status::forbidden, (boost::format("Access denied to %1%") % local_path).str());
+                }
+                std::string extension = local_path.extension().string();
+                std::string mime_type = _attachment.aux().config()[udho::configs::server::mime_default];
+                if(!extension.empty() && extension.front() == '.'){
+                    extension = extension.substr(1);
+                    mime_type = _attachment.aux().config()[udho::configs::server::mimes].of(extension);
+                }
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 boost::beast::error_code err;
                 http::file_body::value_type body;
@@ -167,7 +175,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 if(_req.method() == boost::beast::http::verb::head){
                     http::response<boost::beast::http::string_body> res{http::status::ok, _req.version()};
                     res.set(http::field::server, UDHO_VERSION_STRING);
-                    res.set(http::field::content_type, internal::mime_type(local_path));
+                    res.set(http::field::content_type, mime_type);
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count();
@@ -177,7 +185,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 // Respond to GET request
                 http::response<http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(http::status::ok, _req.version())};
                 res.set(http::field::server, UDHO_VERSION_STRING);
-                res.set(http::field::content_type, internal::mime_type(local_path));
+                res.set(http::field::content_type, mime_type);
                 res.content_length(size);
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));

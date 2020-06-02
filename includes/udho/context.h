@@ -49,7 +49,6 @@
 #include <udho/form.h>
 #include <udho/cookie.h>
 #include <udho/session.h>
-#include <udho/bridge.h>
 #include <udho/attachment.h>
 #include <udho/compositors.h>
 
@@ -365,12 +364,6 @@ template <typename AuxT, typename RequestT, typename ShadowT, udho::logging::sta
 context<AuxT, RequestT, ShadowT>& operator<<(context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);
     return ctx;
-}
-
-namespace contexts{
-    using stateless = context<udho::bridge, udho::defs::request_type, void>;
-    template <typename... T>
-    using stateful = context<udho::bridge, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;
 }
 
 }

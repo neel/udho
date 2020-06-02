@@ -66,11 +66,13 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
 int main(){
     boost::asio::io_service io;
     udho::servers::ostreamed::stateless server(io, std::cout);
+    server[udho::configs::server::template_root] = TMPL_PATH;
+    server[udho::configs::server::document_root] = WWW_PATH;
 
     auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
                                | "/planet/(\\w+)"  >> udho::get(&planet).html();
 
-    server.serve(urls, 9198, WWW_PATH);
+    server.serve(urls, 9198);
 
     io.run();
     return 0;

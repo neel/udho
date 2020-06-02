@@ -36,23 +36,70 @@
 #include <udho/access.h>
 #include <udho/scope.h>
 #include <udho/parser.h>
+#include <udho/util.h>
+#include <udho/page.h>
+#include <udho/configuration.h>
 
 namespace udho{
 /**
  * @todo write docs
  */
+template <typename ConfigT>
 struct bridge{
-    boost::filesystem::path _docroot;
+    typedef ConfigT configuration_type;
     
-    void docroot(const boost::filesystem::path& path);
-    boost::filesystem::path docroot() const;
-    
-    std::string contents(const std::string& path) const;
-    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const;
+    configuration_type _config; 
+
+    configuration_type& config(){
+        return _config;
+    }
+    const configuration_type& config() const{
+        return _config;
+    }
+    boost::filesystem::path docroot() const{
+        return _config[udho::configs::server::document_root];
+    }
+    boost::filesystem::path tmplroot() const{
+        return _config[udho::configs::server::template_root];
+    }
+    std::string contents(const boost::filesystem::path& local_path) const{
+        std::ifstream ifs(local_path.c_str());
+        std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+        return content;
+    }
+    boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const{
+        boost::filesystem::path doc_root = docroot();
+        boost::filesystem::path local_path = internal::path_cat(doc_root, path);
+        if(!internal::path_inside(doc_root, local_path)){
+            throw exceptions::http_error(boost::beast::http::status::forbidden, (boost::format("Access denied to %1%") % local_path).str());
+        }
+        std::string extension = local_path.extension().string();
+        std::string mime_type = _config[udho::configs::server::mime_default];
+        if(!extension.empty() && extension.front() == '.'){
+            extension = extension.substr(1);
+            mime_type = _config[udho::configs::server::mimes].at(extension);
+        }
+        boost::beast::error_code err;
+        boost::beast::http::file_body::value_type body;
+        body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
+        if(err == boost::system::errc::no_such_file_or_directory){
+            throw udho::exceptions::http_error(boost::beast::http::status::not_found, (boost::format("File `%1%` not found in disk") % local_path).str());
+        }
+        if(err){
+            throw udho::exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
+        }
+        auto const size = body.size();
+        boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
+        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(boost::beast::http::field::content_type, !mime.empty() ? mime : mime_type);
+        res.content_length(size);
+        res.keep_alive(req.keep_alive());
+        return res;
+    }
     
     template <typename GroupT>
     std::string render(const std::string& path, ::udho::lookup_table<GroupT>& scope) const{
-        std::string template_contents = contents(path);
+        std::string template_contents = render(path);
         auto processor = ::udho::view::processor(scope);
         return processor.process(template_contents);
     }
@@ -72,7 +119,11 @@ struct bridge{
         auto scope = ::udho::scope(prepared);
         return render(path, scope);
     }
-    std::string render(const std::string& path) const;
+    std::string render(const std::string& path) const{
+        boost::filesystem::path tmpl_root  = tmplroot();
+        boost::filesystem::path local_path = tmpl_root / path;
+        return contents(local_path);
+    }
 };
 
 }

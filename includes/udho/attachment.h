@@ -57,6 +57,7 @@ struct attachment: LoggerT, CacheT{
     typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
     typedef CacheT  cache_type;
+    typedef typename auxiliary_type::configuration_type configuration_type;
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
@@ -81,6 +82,7 @@ struct attachment<AuxT, void, CacheT>: CacheT{
     typedef AuxT auxiliary_type;
     typedef void logger_type;
     typedef CacheT  cache_type;
+    typedef typename auxiliary_type::configuration_type configuration_type;
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
@@ -108,6 +110,7 @@ struct attachment<AuxT, LoggerT, void>: LoggerT{
     typedef attachment<AuxT, LoggerT, void> self_type;
     typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
+    typedef typename auxiliary_type::configuration_type configuration_type;
     typedef void shadow_type;
     
     boost::asio::io_service& _io;
@@ -132,6 +135,7 @@ struct attachment<AuxT, void, void>{
     typedef void logger_type;
     typedef void cache_type;
     typedef void shadow_type;
+    typedef typename auxiliary_type::configuration_type configuration_type;
     
     boost::asio::io_service& _io;
     AuxT _aux;

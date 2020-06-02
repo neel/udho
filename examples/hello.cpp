@@ -3,8 +3,9 @@
 #include <udho/router.h>
 #include <udho/logging.h>
 #include <udho/server.h>
-#include <udho/context.h>
+#include <udho/contexts.h>
 #include <iostream>
+#include <udho/configuration.h>
 
 std::string world(udho::contexts::stateless ctx){
     return "{'planet': 'Earth'}";
@@ -20,7 +21,7 @@ int main(){
     auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
                                | "/planet/(\\w+)"  >> udho::get(&planet).plain();
 
-    server.serve(urls, 9198, "/path/to/static/files");
+    server.serve(urls, 9198);
 
     io.run();
     return 0;

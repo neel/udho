@@ -45,8 +45,10 @@ struct declaration{
     std::string _ref;
     std::size_t _depth;
     
-    declaration(const std::string& key, std::size_t depth);
-    bool operator<(const declaration& decl) const;
+    inline declaration(const std::string& key, std::size_t depth): _id(key), _depth(depth){}
+    inline bool operator<(const declaration& decl) const{
+        return _id < decl._id;
+    }
 };
   
 /**

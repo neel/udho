@@ -46,7 +46,6 @@ struct delayed{
 };
 
 int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
     boost::asio::io_service io;
     
     simple s;
@@ -57,6 +56,8 @@ int main(){
     boost::function<void (udho::contexts::stateless)> delayed_5(boost::ref(d1));
 
     udho::servers::ostreamed::stateless server(io, std::cout);
+    server[udho::configs::server::template_root] = TMPL_PATH;
+    server[udho::configs::server::document_root] = WWW_PATH;
     
     auto router = udho::router()
         | (udho::get(add).plain()   = "^/add/(\\d+)/(\\d+)$")
@@ -65,7 +66,7 @@ int main(){
          
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
     
-    server.serve(router, 9198, doc_root);
+    server.serve(router, 9198);
     
     io.run();
 

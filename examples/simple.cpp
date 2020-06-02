@@ -172,12 +172,11 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
     return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
 
-int main(){
-    std::string doc_root("/home/neel/Projects/udho"); // path to static content
-    
+int main(){    
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
-
+    server[udho::configs::server::template_root] = TMPL_PATH;
+    server[udho::configs::server::document_root] = WWW_PATH;
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")
@@ -194,7 +193,7 @@ int main(){
         
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
         
-    server.serve(router, 9198, doc_root);
+    server.serve(router, 9198);
         
     io.run();
     

@@ -1,5 +1,5 @@
-#ifndef PAGE_H
-#define PAGE_H
+#ifndef UDHO_PAGE_H
+#define UDHO_PAGE_H
 
 #include "util.h"
 #include <stdexcept>
@@ -94,4 +94,4 @@ namespace exceptions{
     
 }
 
-#endif // PAGE_H
+#endif // UDHO_PAGE_H
