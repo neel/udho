@@ -146,7 +146,13 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             if(status == 0){
                 std::string doc_root = _attachment.aux().docroot();
                 std::string local_path = internal::path_cat(doc_root, path);
-                
+                boost::filesystem::path plocal_path(local_path);
+                std::string extension = plocal_path.extension().string();
+                std::string mime_type = _attachment.aux().config()[udho::configs::server::mime_default];
+                if(!extension.empty() && extension.front() == '.'){
+                    extension = extension.substr(1);
+                    mime_type = _attachment.aux().config()[udho::configs::server::mimes].of(extension);
+                }
                 _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
                 boost::beast::error_code err;
                 http::file_body::value_type body;
@@ -165,7 +171,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 if(_req.method() == boost::beast::http::verb::head){
                     http::response<boost::beast::http::string_body> res{http::status::ok, _req.version()};
                     res.set(http::field::server, UDHO_VERSION_STRING);
-                    res.set(http::field::content_type, internal::mime_type(local_path));
+                    res.set(http::field::content_type, mime_type);
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
                     _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count();
@@ -175,7 +181,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 // Respond to GET request
                 http::response<http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(http::status::ok, _req.version())};
                 res.set(http::field::server, UDHO_VERSION_STRING);
-                res.set(http::field::content_type, internal::mime_type(local_path));
+                res.set(http::field::content_type, mime_type);
                 res.content_length(size);
                 res.keep_alive(_req.keep_alive());
                 return _lambda(std::move(res));

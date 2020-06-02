@@ -70,6 +70,12 @@ struct bridge{
     boost::beast::http::response<boost::beast::http::file_body> file(const std::string& path, const ::udho::defs::request_type& req, std::string mime = "") const{
         boost::filesystem::path doc_root = docroot();
         boost::filesystem::path local_path = doc_root / path;
+        std::string extension = local_path.extension().string();
+        std::string mime_type = _config[udho::configs::server::mime_default];
+        if(!extension.empty() && extension.front() == '.'){
+            extension = extension.substr(1);
+            mime_type = _config[udho::configs::server::mimes].of(extension);
+        }
         boost::beast::error_code err;
         boost::beast::http::file_body::value_type body;
         body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
@@ -82,7 +88,7 @@ struct bridge{
         auto const size = body.size();
         boost::beast::http::response<boost::beast::http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(boost::beast::http::status::ok, req.version())};
         res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, !mime.empty() ? mime : udho::internal::mime_type(local_path.c_str()));
+        res.set(boost::beast::http::field::content_type, !mime.empty() ? mime : mime_type);
         res.content_length(size);
         res.keep_alive(req.keep_alive());
         return res;

@@ -208,7 +208,11 @@ struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
         return *this;
     }
     std::string at(const std::string& key) const{
-        return value().at(key);
+        auto map = value();
+        if(map.count(key)){
+            return map.at(key);
+        }
+        return _config[configs::server::mime_default];
     }
     std::string of(const std::string& key) const{
         return at(key);
@@ -260,10 +264,36 @@ template <typename T> const typename session_<T>::handler_t session_<T>::handler
 template <typename T> const typename session_<T>::id_t session_<T>::id;
 
 typedef session_<> session;
-
 }
 
-typedef udho::configuration<udho::configs::server, udho::configs::session> configuration_type;
+namespace configs{
+template <typename T = void>
+struct router_{
+
+};
+
+typedef router_<> router;
+}
+
+namespace configs{
+template <typename T = void>
+struct logger_{
+
+};
+
+typedef logger_<> logger;
+}
+
+namespace configs{
+template <typename T = void>
+struct form_{
+
+};
+
+typedef form_<> form;
+}
+
+typedef udho::configuration<udho::configs::server, udho::configs::session, udho::configs::router, udho::configs::logger, udho::configs::form> configuration_type;
 
 }
 
