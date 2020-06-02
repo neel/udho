@@ -77,7 +77,7 @@ struct bridge{
         std::string mime_type = _config[udho::configs::server::mime_default];
         if(!extension.empty() && extension.front() == '.'){
             extension = extension.substr(1);
-            mime_type = _config[udho::configs::server::mimes].of(extension);
+            mime_type = _config[udho::configs::server::mimes].at(extension);
         }
         boost::beast::error_code err;
         boost::beast::http::file_body::value_type body;

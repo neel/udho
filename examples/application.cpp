@@ -46,10 +46,11 @@ int my_app::mul(udho::contexts::stateful<my_app::state> ctx, int a, int b){
 }
 
 int main(){
-    std::string doc_root("/tmp/www"); // path to static content
     boost::asio::io_service io;
 
     udho::servers::ostreamed::stateful<my_app::state> server(io, std::cout);
+    server[udho::configs::server::template_root] = TMPL_PATH;
+    server[udho::configs::server::document_root] = WWW_PATH;
     
     auto router = udho::router()
         | (udho::get(&hello).plain() = "^/hello$")
@@ -59,7 +60,7 @@ int main(){
 
     router /= udho::visitors::print<udho::visitors::visitable::both, std::ostream>(std::cout);
     
-    server.serve(router, 9198, doc_root);
+    server.serve(router, 9198);
     
     io.run();
     
