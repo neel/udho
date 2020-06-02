@@ -43,11 +43,6 @@ SET(UDHO_HEADERS
 SET(UDHO_SOURCES 
     util.cpp 
     page.cpp
-    bridge.cpp
-    scope.cpp
-    parser.cpp
-    configuration.cpp
-    contexts.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
