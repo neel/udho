@@ -234,6 +234,7 @@ struct context{
     AuxT& aux(){
         return _aux;
     }
+    
     void respond(udho::defs::response_type& response){
         _pimpl->respond(response);
     }
@@ -242,6 +243,14 @@ struct context{
         udho::compositors::mimed<OutputT> compositor(mime);
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
+    }
+    template <typename OutputT>
+    void respond(boost::beast::http::status s, const OutputT& output, const std::string& mime){
+        status(s);
+        respond<OutputT>(output, mime);
+    }
+    void status(boost::beast::http::status s){
+        _pimpl->status(s);
     }
     
     std::string target() const{
@@ -328,6 +337,14 @@ struct context<AuxT, RequestT, void>{
         udho::compositors::mimed<OutputT> compositor(mime);
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
+    }
+    template <typename OutputT>
+    void respond(boost::beast::http::status s, const OutputT& output, const std::string& mime){
+        status(s);
+        respond<OutputT>(output, mime);
+    }
+    void status(boost::beast::http::status s){
+        _pimpl->status(s);
     }
     
     std::string target() const{
