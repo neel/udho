@@ -109,7 +109,11 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         if(bytes_transferred == 0 || ec == boost::asio::error::connection_reset){
             return;
         }
-        
+        boost::asio::ip::tcp::endpoint remote = _socket.remote_endpoint(ec);
+        if(ec){
+            _attachment << udho::logging::messages::formatted::error("connection", "Unexpected error while retrieving socket remote endpoint %1%") % ec;
+            return do_close();
+        }
         _time = boost::posix_time::second_clock::local_time();
         
         std::string path;
@@ -125,7 +129,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 if(ctx.rerouted()){
                     std::string last = path;
                     path = boost::regex_replace(last, boost::regex(ctx.pattern()), ctx.alt_path());
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % _socket.remote_endpoint().address() % _req.method() % last % path;
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % remote.address() % _req.method() % last % path;
                     ctx.clear();
                 }
                 try{
@@ -139,16 +143,15 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
              
             if(status == -102){ // ROUTING_DEFERRED
-                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred") % _socket.remote_endpoint().address() % _req.method() % path;
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% deferred") % remote.address() % _req.method() % path;
                 return;
             }
             
             if(status == 0){
-                std::cout << path << std::endl;
                 boost::filesystem::path doc_root = _attachment.aux().docroot();
                 boost::filesystem::path local_path = internal::path_cat(doc_root, path);
                 if(!internal::path_inside(doc_root, local_path)){
-                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% access denied for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% access denied for %4%") % remote.address() % _req.method() % path % local_path;
                     throw exceptions::http_error(boost::beast::http::status::forbidden, (boost::format("Access denied to %1%") % local_path).str());
                 }
                 std::string extension = local_path.extension().string();
@@ -157,18 +160,18 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                     extension = extension.substr(1);
                     mime_type = _attachment.aux().config()[udho::configs::server::mimes].of(extension);
                 }
-                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% looking for %4%") % remote.address() % _req.method() % path % local_path;
                 boost::beast::error_code err;
                 http::file_body::value_type body;
                 body.open(local_path.c_str(), boost::beast::file_mode::scan, err);
                 if(err == boost::system::errc::no_such_file_or_directory){
-                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% not found %4% %5%μs") % _socket.remote_endpoint().address() % _req.method() % path % local_path % ms.count();
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% not found %4% %5%μs") % remote.address() % _req.method() % path % local_path % ms.count();
                     throw exceptions::http_error(boost::beast::http::status::not_found);
                 }else{
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % _socket.remote_endpoint().address() % _req.method() % path % local_path;
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% found %4%") % remote.address() % _req.method() % path % local_path;
                 }
                 if(err){
-                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4%μs") % _socket.remote_endpoint().address() % _req.method() % path % ms.count();
+                    _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4%μs") % remote.address() % _req.method() % path % ms.count();
                     throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error %1% while reading file `%2%` from disk") % err % local_path).str());
                 }
                 auto const size = body.size();
@@ -178,7 +181,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                     res.set(http::field::content_type, mime_type);
                     res.content_length(size);
                     res.keep_alive(_req.keep_alive());
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % 200 % http::status::ok % _req.method() % path % ms.count();
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % remote.address() % 200 % http::status::ok % _req.method() % path % ms.count();
                     _lambda(std::move(res));
                     return;
                 }
@@ -191,14 +194,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
                 return _lambda(std::move(res));
             }else{
                 http::status response = static_cast<http::status>(status);
-                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % status % response % _req.method() % path % ms.count();
+                _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% %4% %5% %6%μs") % remote.address() % status % response % _req.method() % path % ms.count();
             }
         }catch(const exceptions::http_error& ex){
             auto res = ex.response(_req, _router);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> delta = end - start;
             std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(delta);
-            _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4% %5% %6%μs") % _socket.remote_endpoint().address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count();
+            _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% %4% %5% %6%μs") % remote.address() % (int) ex.result() % ex.result() % _req.method() % path % ms.count();
             return _lambda(std::move(res));
         }
     }
