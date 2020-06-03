@@ -40,6 +40,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace udho{
 namespace cache{
@@ -52,14 +53,14 @@ struct content{
     boost::posix_time::ptime _created;
     boost::posix_time::ptime _updated;
     value_type _value;
+    
         
     explicit content(const value_type& value): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()), _value(value){}
     boost::posix_time::ptime created() const { return _created; }
     boost::posix_time::ptime updated() const { return _updated; }
-    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - _created; }
-    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - _updated; }
+    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - created(); }
+    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - updated(); }
     const value_type& value() const { return _value; }
-    value_type& value() { return _value; }
     void update(const value_type& value){
         _value = value;
         _updated = boost::posix_time::second_clock::local_time();
@@ -80,8 +81,8 @@ struct content<void>{
     explicit content(): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()){}
     boost::posix_time::ptime created() const { return _created; }
     boost::posix_time::ptime updated() const { return _updated; }
-    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - _created; }
-    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - _updated; }
+    boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - created(); }
+    boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - updated(); }
     void update(){
         _updated = boost::posix_time::second_clock::local_time();
     }
@@ -99,15 +100,19 @@ struct master{
     master(self_type&&) = default;
     
     bool issued(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         return _storage.find(key) != _storage.cend();
     }
     void issue(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
         _storage.insert(std::make_pair(key, content_type()));
     }
     std::size_t size() const{
+        boost::mutex::scoped_lock lock(_mutex);
         return _storage.size();
     }
     bool remove(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         if(it != _storage.end()){
             _storage.erase(it);
@@ -116,22 +121,27 @@ struct master{
         return false;
     }
     boost::posix_time::ptime created(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::const_iterator it = _storage.find(key);
         return it->second.created();
     }
     boost::posix_time::ptime updated(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::const_iterator it = _storage.find(key);
         return it->second.updated();
     }
     boost::posix_time::time_duration age(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::const_iterator it = _storage.find(key);
         return it->second.age();
     }
     boost::posix_time::time_duration idle(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::const_iterator it = _storage.find(key);
         return it->second.idle();
     }
     bool update(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         if(it != _storage.cend()){
             it->second.update();
@@ -141,6 +151,7 @@ struct master{
     }
 protected:
     map_type _storage;
+    mutable boost::mutex _mutex;
 };
 
 template <typename KeyT, typename T>
@@ -156,22 +167,27 @@ struct registry{
     registry(self_type&&) = default;
     
     std::size_t size(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         return _storage.count(key);
     }
     bool exists(const key_type& key) const{
         return size(key);
     }
     const value_type& at(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         return _storage.at(key).value();
     }
     void insert(const key_type& key, const value_type& value){
+        boost::mutex::scoped_lock lock(_mutex);
         _storage.insert(std::make_pair(key, content_type(value)));
     }
     void update(const key_type& key, const value_type& value){
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         it->second.update(value);
     }
     bool remove(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         if(it != _storage.end()){
             _storage.erase(it);
@@ -180,23 +196,28 @@ struct registry{
         return false;
     }
     boost::posix_time::ptime created(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         return it->second.created();
     }
     boost::posix_time::ptime updated(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         return it->second.updated();
     }
     boost::posix_time::time_duration age(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         return it->second.age();
     }
     boost::posix_time::time_duration idle(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
         typename map_type::iterator it = _storage.find(key);
         return it->second.idle();
     }
 protected:
     map_type _storage;
+    mutable boost::mutex _mutex;
 };
 
 template <typename KeyT, typename... T>

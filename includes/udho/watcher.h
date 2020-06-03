@@ -34,6 +34,7 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace udho{
     
@@ -90,6 +91,7 @@ struct watcher{
     boost::asio::deadline_timer _timer;
     container_type              _watchers;
     index_type                  _index;
+    mutable boost::mutex        _mutex;
     
     watcher(boost::asio::io_service& io, const time_duration_type& duration): _io(io), _timer(io), _duration(duration){}    
     bool insert(watch_type watch){
@@ -101,6 +103,7 @@ struct watcher{
         }
         key_type key = watch.key();
         watch.expire_at(boost::posix_time::second_clock::local_time() + _duration);
+        boost::mutex::scoped_lock lock(_mutex);
         if(_watchers.empty()){
             boost::posix_time::time_duration duration = watch.expiry() - boost::posix_time::second_clock::local_time();
             _timer.expires_from_now(duration);
@@ -112,6 +115,7 @@ struct watcher{
         return true;
     }
     void expired(const boost::system::error_code& err){
+        boost::mutex::scoped_lock lock(_mutex);
         if(err != boost::asio::error::operation_aborted){
             if(!_watchers.empty()){
                 watch_type current = _watchers.front();
@@ -144,6 +148,7 @@ struct watcher{
         }
     }
     std::size_t notify(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
         auto range = _index.equal_range(key);
         auto count = std::distance(range.first, range.second);
         for(auto i = range.first; i != range.second;){
@@ -156,6 +161,7 @@ struct watcher{
         return count;
     }
     std::size_t notify_all(){
+        boost::mutex::scoped_lock lock(_mutex);
         for(auto i = _index.begin(); i != _index.end();){
             iterator_type it = i->second;
             watch_type watch = *it;
