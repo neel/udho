@@ -126,6 +126,7 @@ struct watcher{
                     boost::posix_time::time_duration duration = current.expiry() - now;
                     _timer.expires_from_now(duration);
                     _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
+                    _mutex.unlock();
                     return;
                 }
                 auto iterator = _watchers.begin();
