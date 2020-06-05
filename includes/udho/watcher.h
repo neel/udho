@@ -115,9 +115,11 @@ struct watcher{
         return true;
     }
     void expired(const boost::system::error_code& err){
-        boost::mutex::scoped_lock lock(_mutex);
         if(err != boost::asio::error::operation_aborted){
+            _mutex.lock();
             if(!_watchers.empty()){
+                _mutex.unlock();
+                _mutex.lock();
                 watch_type current = _watchers.front();
                 auto now = boost::posix_time::second_clock::local_time();
                 if(current.expiry() > now){
@@ -137,39 +139,55 @@ struct watcher{
                     }
                 }
                 _watchers.pop_front();
-                current.release(err);
+                _mutex.unlock();
+                current.release(err); // May call another watcher function. So must unlock before calling
+                _mutex.lock();
             }
-            if(!_watchers.empty()){
+            _mutex.unlock();
+            _mutex.lock();
+            if(!_watchers.empty()){ // The previous block may pop
                 watch_type next = _watchers.front();
                 boost::posix_time::time_duration duration = next.expiry() - boost::posix_time::second_clock::local_time();
                 _timer.expires_from_now(duration);
                 _timer.async_wait(boost::bind(&self_type::expired, this, boost::asio::placeholders::error));
             }
+            _mutex.unlock();
         }
     }
     std::size_t notify(const key_type& key){
-        boost::mutex::scoped_lock lock(_mutex);
+        _mutex.lock();
         auto range = _index.equal_range(key);
         auto count = std::distance(range.first, range.second);
+        std::vector<watch_type> released;
         for(auto i = range.first; i != range.second;){
             iterator_type it = i->second;
             watch_type watch = *it;
-            watch.release(boost::asio::error::operation_aborted);
+            released.push_back(watch);
             _watchers.erase(it);
             i = _index.erase(i);
+        }
+        _mutex.unlock();
+        for(watch_type& watch: released){
+            watch.release(boost::asio::error::operation_aborted);
         }
         return count;
     }
     std::size_t notify_all(){
-        boost::mutex::scoped_lock lock(_mutex);
+        _mutex.lock();
+        std::vector<watch_type> released;
         for(auto i = _index.begin(); i != _index.end();){
             iterator_type it = i->second;
             watch_type watch = *it;
-            watch.release(boost::asio::error::operation_aborted);
+            released.push_back(watch);
             _watchers.erase(it);
             i = _index.erase(i);
         }
-        return _index.size();
+        std::size_t count = _index.size();
+        _mutex.unlock();
+        for(watch_type& watch: released){
+            watch.release(boost::asio::error::operation_aborted);
+        }
+        return count;
     }
     void async_notify(const key_type& key){
         _io.post(boost::bind(&self_type::notify, this, key));
