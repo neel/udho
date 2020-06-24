@@ -35,6 +35,7 @@
 #include <iterator>
 #include <udho/util.h>
 #include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/function.hpp>
 #include <udho/access.h>
@@ -212,6 +213,50 @@ struct multipart_form{
     }
 };
 
+template <typename T>
+struct field_value_extractor{
+    typedef T value_type;
+    std::string _message;
+    
+    field_value_extractor(const std::string& message = "Extraction Failed"): _message(message){}
+    bool operator()(const std::string& input, value_type& value) const{
+        return boost::conversion::try_lexical_convert<value_type>(input, value);
+    }
+    std::string message() const{
+        return _message;
+    }
+};
+
+template <>
+struct field_value_extractor<std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds>>{
+    typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> value_type;
+    
+    std::string _format;
+    std::string _message;
+    
+    field_value_extractor(const std::string& format, const std::string& message = "Extraction Failed"): _format(format), _message(message){}
+    bool operator()(const std::string& input, value_type& value) const{
+        if(!input.empty()){
+            std::tm tm = {};
+            std::istringstream ss(input);
+            ss >> std::get_time(&tm, _format.c_str());
+            if(ss.fail()){
+                return false;
+            }
+            boost::posix_time::ptime created_time(boost::gregorian::date(tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday));
+            boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+            boost::posix_time::time_duration diff = created_time - epoch;
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> time_chrono(std::chrono::microseconds(diff.total_microseconds()));
+            value = time_chrono;
+            return true;
+        }
+        return false;
+    }
+    std::string message() const{
+        return _message;
+    }
+};
+
 template <typename T, bool Required>
 struct field;
 
@@ -334,17 +379,19 @@ struct field_common: udho::prepare<field_common>{
 };
 
 template <typename T>
-struct field<T, true>: field_common{
+struct field<T, true>: field_common, field_value_extractor<T>{
     typedef field<T, true> self_type;
     typedef field_common common_type;
     typedef boost::function<bool (const std::string&, std::string&)> function_type;
+    typedef field_value_extractor<T> extractor_type;
     typedef std::vector<function_type> validators_collection_type;
     
     T _value;
     validators_collection_type _validators;
     std::string _message_required;
     
-    field(const std::string& name, const std::string& message): common_type(name), _message_required(message){}
+    template <typename... U>
+    field(const std::string& name, const std::string& message, U... args): extractor_type(args...), common_type(name), _message_required(message){}
     T value() const{
         return _value;
     }
@@ -353,44 +400,67 @@ struct field<T, true>: field_common{
         _validators.push_back(ftor);
         return *this;
     }
-    template <typename RequestT>
-    void validate(const form_<RequestT>& form){
+    template <typename FormT>
+    void validate(const FormT& form){
         if(!form.has(common_type::name()) || (form.has(common_type::name()) && form.template field<std::string>(common_type::name()).empty())){
             common_type::_is_valid = false;
             common_type::_err = _message_required;
         }else{
             std::string value = form.template field<std::string>(common_type::name());
-            field_common::_value = value;
-            std::size_t counter = 0;
-            for(const function_type& f: _validators){
-                std::string message;
-                if(!f(value, message)){
-                    common_type::_is_valid = false;
-                    common_type::_err = message;
-                    break;
-                }
-                ++counter;
+            check(value);
+        }
+        common_type::_validated = true;
+    }
+    void check(const std::string& input){
+        field_common::_value = input;
+        std::size_t counter = 0;
+        for(const function_type& f: _validators){
+            std::string message;
+            if(!f(input, message)){
+                common_type::_is_valid = false;
+                common_type::_err = message;
+                break;
             }
-            if(counter == _validators.size()){
-                common_type::_is_valid = true;
-                _value = boost::lexical_cast<T>(value);
+            ++counter;
+        }
+        if(counter == _validators.size()){
+            bool success = extractor_type::operator()(input, _value);
+            common_type::_is_valid = success;
+            if(!success){
+                common_type::_err = extractor_type::message();
             }
         }
+    }
+    /**
+     * validate the field when using a field without a form (e.g. JSON or XML document) if a value if provided in the document
+     */
+    void operator()(const std::string& input){
+        check(input);
+        common_type::_validated = true;
+    }
+    /**
+     * validate the field when using a field without a form (e.g. JSON or XML document) if no value if provided in the document
+     */
+    void operator()(){
+        common_type::_is_valid = false;
+        common_type::_err = _message_required;
         common_type::_validated = true;
     }
 };
 
 template <typename T>
-struct field<T, false>: field_common{
+struct field<T, false>: field_common, field_value_extractor<T>{
     typedef field<T, false> self_type;
     typedef field_common common_type;
     typedef boost::function<bool (const std::string&, std::string&)> function_type;
+    typedef field_value_extractor<T> extractor_type;
     typedef std::vector<function_type> validators_collection_type;
     
     T _value;
     validators_collection_type _validators;
     
-    field(const std::string& name): common_type(name){}
+    template <typename... U>
+    field(const std::string& name, U... args): extractor_type(args...), common_type(name){}
     T value() const{
         return _value;
     }
@@ -399,29 +469,49 @@ struct field<T, false>: field_common{
         _validators.push_back(ftor);
         return *this;
     }
-    template <typename RequestT>
-    void validate(const form_<RequestT>& form){
+    template <typename FormT>
+    void validate(const FormT& form){
         if(!form.has(common_type::name())){
             common_type::_is_valid = true;
             common_type::_validated = true;
         }else{
             std::string value = form.template field<std::string>(common_type::name());
-            field_common::_value = value;
-            std::size_t counter = 0;
-            for(const function_type& f: _validators){
-                std::string message;
-                if(!f(value, message)){
-                    common_type::_is_valid = false;
-                    common_type::_err = message;
-                    break;
-                }
-                ++counter;
+            check(value);
+        }
+        common_type::_validated = true;
+    }
+    void check(const std::string& input){
+        field_common::_value = input;
+        std::size_t counter = 0;
+        for(const function_type& f: _validators){
+            std::string message;
+            if(!f(input, message)){
+                common_type::_is_valid = false;
+                common_type::_err = message;
+                break;
             }
-            if(counter == _validators.size()){
-                common_type::_is_valid = true;
-                _value = boost::lexical_cast<T>(value);
+            ++counter;
+        }
+        if(counter == _validators.size()){
+            bool success = extractor_type::operator()(input, _value);
+            common_type::_is_valid = success;
+            if(!success){
+                common_type::_err = extractor_type::message();
             }
         }
+    }
+    /**
+     * validate the field when using a field without a form (e.g. JSON or XML document) if a value if provided in the document
+     */
+    void operator()(const std::string& input){
+        check(input);
+        common_type::_validated = true;
+    }
+    /**
+     * validate the field when using a field without a form (e.g. JSON or XML document) if no value if provided in the document
+     */
+    void operator()(){
+        common_type::_is_valid = true;
         common_type::_validated = true;
     }
 };
@@ -434,13 +524,13 @@ struct validated: udho::prepare<validated<FormT>>{
     typedef FormT form_type;
     typedef validated<FormT> self_type;
     
-    form_type& _form;
+    const form_type& _form;
     bool _submitted;
     bool _valid;
     std::vector<std::string> _errors;
     std::map<std::string, field_common> _fields;
     
-    validated(form_type& form): _form(form), _submitted(false), _valid(true){}
+    validated(const form_type& form): _form(form), _submitted(false), _valid(true){}
     void add(const field_common& fld){
         _fields.insert(std::make_pair(fld.name(), fld));
         _submitted = true;
@@ -466,8 +556,20 @@ validated<udho::form_<RequestT>> validate(udho::form_<RequestT>& form){
     return validated<udho::form_<RequestT>>(form);
 }
 
+template <typename IteratorT>
+validated<udho::multipart_form<IteratorT>> validate(const udho::multipart_form<IteratorT>& form){
+    return validated<udho::multipart_form<IteratorT>>(form);
+}
+
 template <typename T, bool Required, typename RequestT>
 validated<udho::form_<RequestT>>& operator<<(validated<udho::form_<RequestT>>& validator, field<T, Required>& field_){
+    field_.validate(validator._form);
+    validator.add(field_);
+    return validator;
+}
+
+template <typename T, bool Required, typename IteratorT>
+validated<udho::multipart_form<IteratorT>>& operator<<(validated<udho::multipart_form<IteratorT>>& validator, field<T, Required>& field_){
     field_.validate(validator._form);
     validator.add(field_);
     return validator;
@@ -541,6 +643,23 @@ struct all_digit{
                 error = _custom.empty() ? (boost::format("constrain all digits failed")).str() : _custom;
                 return false;
             }
+        }
+        return true;
+    }
+};
+
+struct date_time{
+    std::string _format;
+    std::string _custom;
+    
+    date_time(std::string format, std::string custom = ""): _format(format), _custom(custom){}
+    inline bool operator()(const std::string& value, std::string& error) const{
+        std::tm tm = {};
+        std::istringstream ss(value);
+        ss >> std::get_time(&tm, _format.c_str());
+        if(ss.fail()){
+            error = _custom.empty() ? (boost::format("constain date time format %1% failed") % _format).str() : _custom;
+            return false;
         }
         return true;
     }

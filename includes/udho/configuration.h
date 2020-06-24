@@ -119,28 +119,29 @@ struct server_{
     
     
     server_(): _mime_default("application/octet-stream"){
-        _mimes.insert(std::make_pair("htm",   "text/html"));
-        _mimes.insert(std::make_pair("html",  "text/html"));
-        _mimes.insert(std::make_pair("xhtm",  "text/html"));
-        _mimes.insert(std::make_pair("xhtml", "text/html"));
-        _mimes.insert(std::make_pair("txt",   "text/plain"));
-        _mimes.insert(std::make_pair("js",    "application/javascript"));
-        _mimes.insert(std::make_pair("css",   "application/css"));
-        _mimes.insert(std::make_pair("json",  "application/json"));
-        _mimes.insert(std::make_pair("xml",   "application/xml"));
-        _mimes.insert(std::make_pair("swf",   "application/x-shockwave-flash"));
-        _mimes.insert(std::make_pair("flv",   "video/x-flv"));
-        _mimes.insert(std::make_pair("png",   "image/png"));
-        _mimes.insert(std::make_pair("jpe",   "image/jpeg"));
-        _mimes.insert(std::make_pair("jpeg",  "image/jpeg"));
-        _mimes.insert(std::make_pair("jpg",   "image/jpeg"));
-        _mimes.insert(std::make_pair("gif",   "image/gif"));
-        _mimes.insert(std::make_pair("bmp",   "image/bmp"));
-        _mimes.insert(std::make_pair("ico",   "image/x-icon"));
-        _mimes.insert(std::make_pair("tiff",  "image/tiff"));
-        _mimes.insert(std::make_pair("tif",   "image/tiff"));
-        _mimes.insert(std::make_pair("svg",   "image/svg+xml"));
-        _mimes.insert(std::make_pair("svgz",  "image/svg+xml"));
+        _mimes.insert(std::make_pair("htm",     "text/html"));
+        _mimes.insert(std::make_pair("html",    "text/html"));
+        _mimes.insert(std::make_pair("xhtm",    "text/html"));
+        _mimes.insert(std::make_pair("xhtml",   "text/html"));
+        _mimes.insert(std::make_pair("txt",     "text/plain"));
+        _mimes.insert(std::make_pair("js",      "application/javascript"));
+        _mimes.insert(std::make_pair("css",     "application/css"));
+        _mimes.insert(std::make_pair("json",    "application/json"));
+        _mimes.insert(std::make_pair("geojson", "application/json"));
+        _mimes.insert(std::make_pair("xml",     "application/xml"));
+        _mimes.insert(std::make_pair("swf",     "application/x-shockwave-flash"));
+        _mimes.insert(std::make_pair("flv",     "video/x-flv"));
+        _mimes.insert(std::make_pair("png",     "image/png"));
+        _mimes.insert(std::make_pair("jpe",     "image/jpeg"));
+        _mimes.insert(std::make_pair("jpeg",    "image/jpeg"));
+        _mimes.insert(std::make_pair("jpg",     "image/jpeg"));
+        _mimes.insert(std::make_pair("gif",     "image/gif"));
+        _mimes.insert(std::make_pair("bmp",     "image/bmp"));
+        _mimes.insert(std::make_pair("ico",     "image/x-icon"));
+        _mimes.insert(std::make_pair("tiff",    "image/tiff"));
+        _mimes.insert(std::make_pair("tif",     "image/tiff"));
+        _mimes.insert(std::make_pair("svg",     "image/svg+xml"));
+        _mimes.insert(std::make_pair("svgz",    "image/svg+xml"));
     }
         
     void set(document_root_t, const boost::filesystem::path& v){_document_root = v;}
