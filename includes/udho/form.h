@@ -413,38 +413,46 @@ struct field<T, true>: field_common, field_value_extractor<T>{
     }
     void check(const std::string& input){
         field_common::_value = input;
-        std::size_t counter = 0;
-        for(const function_type& f: _validators){
-            std::string message;
-            if(!f(input, message)){
-                common_type::_is_valid = false;
-                common_type::_err = message;
-                break;
+                
+        if(input.empty()){
+            common_type::_is_valid = false;
+            common_type::_err = _message_required;
+        }else{
+            std::size_t counter = 0;
+            for(const function_type& f: _validators){
+                std::string message;
+                if(!f(input, message)){
+                    common_type::_is_valid = false;
+                    common_type::_err = message;
+                    break;
+                }
+                ++counter;
             }
-            ++counter;
-        }
-        if(counter == _validators.size()){
-            bool success = extractor_type::operator()(input, _value);
-            common_type::_is_valid = success;
-            if(!success){
-                common_type::_err = extractor_type::message();
+            if(counter == _validators.size()){
+                bool success = extractor_type::operator()(input, _value);
+                common_type::_is_valid = success;
+                if(!success){
+                    common_type::_err = extractor_type::message();
+                }
             }
         }
     }
     /**
      * validate the field when using a field without a form (e.g. JSON or XML document) if a value if provided in the document
      */
-    void operator()(const std::string& input){
+    self_type& operator()(const std::string& input){
         check(input);
         common_type::_validated = true;
+        return *this;
     }
     /**
      * validate the field when using a field without a form (e.g. JSON or XML document) if no value if provided in the document
      */
-    void operator()(){
+    self_type& operator()(){
         common_type::_is_valid = false;
         common_type::_err = _message_required;
         common_type::_validated = true;
+        return *this;
     }
 };
 
@@ -503,22 +511,24 @@ struct field<T, false>: field_common, field_value_extractor<T>{
     /**
      * validate the field when using a field without a form (e.g. JSON or XML document) if a value if provided in the document
      */
-    void operator()(const std::string& input){
+    self_type& operator()(const std::string& input){
         check(input);
         common_type::_validated = true;
+        return *this;
     }
     /**
      * validate the field when using a field without a form (e.g. JSON or XML document) if no value if provided in the document
      */
-    void operator()(){
+    self_type& operator()(){
         common_type::_is_valid = true;
         common_type::_validated = true;
+        return *this;
     }
 };
 
 namespace form{
     
-template <typename FormT>
+template <typename FormT = void>
 struct validated: udho::prepare<validated<FormT>>{
     typedef udho::prepare<validated<FormT>> base;
     typedef FormT form_type;
@@ -542,6 +552,12 @@ struct validated: udho::prepare<validated<FormT>>{
     bool valid() const{
         return _valid;
     }
+    const std::vector<std::string>& errors() const{
+        return _errors;
+    }
+    const field_common& operator[](const std::string& name) const {
+        return _fields.at(name);
+    }
     template <typename DictT>
     auto dict(DictT assoc) const{
         return assoc | base::var("submitted", &self_type::_submitted)
@@ -550,6 +566,47 @@ struct validated: udho::prepare<validated<FormT>>{
                      | base::var("fields",    &self_type::_fields);
     }
 };
+
+template <>
+struct validated<void>: udho::prepare<validated<void>>{
+    typedef udho::prepare<validated<>> base;
+    typedef validated<void> self_type;
+    
+    bool _submitted;
+    bool _valid;
+    std::vector<std::string> _errors;
+    std::map<std::string, field_common> _fields;
+    
+    validated(): _submitted(false), _valid(true){}
+    void add(const field_common& fld){
+        _fields.insert(std::make_pair(fld.name(), fld));
+        _submitted = true;
+        _valid = _valid && fld.valid();
+        if(!fld.valid()){
+            _errors.push_back(fld.error());
+        }
+    }
+    bool valid() const{
+        return _valid;
+    }
+    const std::vector<std::string>& errors() const{
+        return _errors;
+    }
+    const field_common& operator[](const std::string& name) const {
+        return _fields.at(name);
+    }
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | base::var("submitted", &self_type::_submitted)
+                     | base::var("valid",     &self_type::_valid)
+                     | base::var("errors",    &self_type::_errors)
+                     | base::var("fields",    &self_type::_fields);
+    }
+};
+
+inline validated<void> validate(){
+    return validated<void>();
+}
 
 template <typename RequestT>
 validated<udho::form_<RequestT>> validate(udho::form_<RequestT>& form){
@@ -571,6 +628,12 @@ validated<udho::form_<RequestT>>& operator<<(validated<udho::form_<RequestT>>& v
 template <typename T, bool Required, typename IteratorT>
 validated<udho::multipart_form<IteratorT>>& operator<<(validated<udho::multipart_form<IteratorT>>& validator, field<T, Required>& field_){
     field_.validate(validator._form);
+    validator.add(field_);
+    return validator;
+}
+
+template <typename T, bool Required>
+validated<>& operator<<(validated<>& validator, field<T, Required>& field_){
     validator.add(field_);
     return validator;
 }
