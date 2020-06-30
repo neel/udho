@@ -445,6 +445,12 @@ struct field<T, true>: field_common, field_value_extractor<T>{
         common_type::_validated = true;
         return *this;
     }
+    self_type& unchecked(const T& input){
+        _value = input;
+        common_type::_is_valid  = true;
+        common_type::_validated = true;
+        return *this;
+    }
     /**
      * validate the field when using a field without a form (e.g. JSON or XML document) if no value if provided in the document
      */
@@ -513,6 +519,12 @@ struct field<T, false>: field_common, field_value_extractor<T>{
      */
     self_type& operator()(const std::string& input){
         check(input);
+        common_type::_validated = true;
+        return *this;
+    }
+    self_type& unchecked(const T& input){
+        _value = input;
+        common_type::_is_valid = true;
         common_type::_validated = true;
         return *this;
     }
