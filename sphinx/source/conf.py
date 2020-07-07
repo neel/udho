@@ -30,15 +30,34 @@ author = 'Neel Basu (Sunanda Bose)'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["breathe", "sphinx.ext.autosectionlabel"]
+extensions = ["breathe", "exhale", "sphinx.ext.autosectionlabel"]
 breathe_projects = {}
 breathe_default_project = "udho"
 autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 3
-input_dir = '../'
 output_dir = 'dox'
 subprocess.call('doxygen', shell=True)
 breathe_projects['udho'] = output_dir + '/xml'
+
+exhale_args = {
+    # These arguments are required
+    "containmentFolder":     "./api",
+    "rootFileName":          "root.rst",
+    "rootFileTitle":         "Udho API",
+    "doxygenStripFromPath":  "..",
+    # Suggested optional arguments
+    "createTreeView":        True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+    "exhaleExecutesDoxygen": True,
+    "exhaleDoxygenStdin":    "INPUT = ../../includes"
+}
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'cpp'
+
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = 'cpp'
 
 breathe_projects_source = {
     "udho" : ( "../includes/udho", [

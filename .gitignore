@@ -4,6 +4,7 @@ build
 dox
 docs.sphinx/_build
 sphinx/build
+sphinx/source/api
 cmake-build-*
 .idea
 docs.sphinx/bin

@@ -10,6 +10,7 @@ Welcome to udho's documentation!
    :maxdepth: 1
    :caption: Contents:
    
+   api/root
    pages/quickstart
    pages/build
    pages/router
