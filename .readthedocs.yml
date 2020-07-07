@@ -22,6 +22,9 @@ python:
   install:
     - requirements: requirements.txt
     
-mkdocs:
-  configuration: mkdocs.yml
-  fail_on_warning: false
+#mkdocs:
+#  configuration: mkdocs.yml
+#  fail_on_warning: false
+
+sphinx:
+  configuration: sphinx/source/conf.py

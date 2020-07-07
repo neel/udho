@@ -3,6 +3,7 @@ build
 .vs*
 dox
 docs.sphinx/_build
+sphinx/build
 cmake-build-*
 .idea
 docs.sphinx/bin
