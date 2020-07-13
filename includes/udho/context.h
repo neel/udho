@@ -178,7 +178,15 @@ struct context_impl{
 }
 
 /**
- * @todo write docs
+ * A Stateful context passed to all callables along with the arguments. 
+ * The context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
+ * A stateful context should be used in callables that need to use session states.
+ * 
+ * \tparam AuxT bridge between the server and the callable
+ * \tparam RequestT HTTP request type
+ * \tparam ShadowT the session data structure
+ * 
+ * \note instead of instantiating this template directly use \ref udho::contexts::stateful
  */
 template <typename AuxT, typename RequestT, typename ShadowT>
 struct context{
@@ -206,59 +214,132 @@ struct context{
     
     const request_type& request() const{return _pimpl->request();}
     
+    /**
+     * patches a HTTP response with the headers added to the context
+     */
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
         _pimpl->patch(res);
     }
+    /**
+     * The form may be url enocded or multipart
+     * \see udho::form_
+     * \see udho::urlencoded_form
+     * \see udho::multipart_form
+     */
     form_type& form(){
         return _pimpl->_form;
     }
+    /**
+     * access the HTTP Session
+     * \see udho::session_
+     */
     session_type& session(){
         return _session;
     }
+    /**
+     * accesses the HTTP cookies
+     * \see udho::cookies_
+     */
     cookies_type& cookies(){
         return _pimpl->_cookies;
     }
     
+    /**
+     * conversion operator to convert to the corresponding beast request type
+     */
     operator request_type() const{
         return _pimpl->request();
     }
+    
+    /**
+     * Logs a message to the logger attached with the server. A logging message can be passed to the `log` method or the `operator<<` can be used to log a message.
+     * \code
+     * ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::info("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::warning("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::error("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * \endcode
+     * \see udho::logging::message
+     */
     template <udho::logging::status Status>
     void log(const udho::logging::message<Status>& msg){
         _pimpl->log(msg);
     }
+    /**
+     * attaches a context with its server counter part 
+     * \internal
+     */
     template <typename LoggerT, typename CacheT>
     void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
         _pimpl->attach(attachment);
     }
+    /**
+     * returns a reference to the bridge between the callable and the server
+     */
     AuxT& aux(){
         return _aux;
     }
-    
+    /**
+     * respond with a raw Beast HTTP response.
+     */
     void respond(udho::defs::response_type& response){
         _pimpl->respond(response);
     }
+   /**
+     * the responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
+     */
     template <typename OutputT>
     void respond(const OutputT& output, const std::string& mime){
         udho::compositors::mimed<OutputT> compositor(mime);
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
     }
+    /**
+     * respond with a http status. The responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
+     */
     template <typename OutputT>
     void respond(boost::beast::http::status s, const OutputT& output, const std::string& mime){
         status(s);
         respond<OutputT>(output, mime);
     }
+    /**
+     * set a status code for the HTTP response
+     */
     void status(boost::beast::http::status s){
         _pimpl->status(s);
     }
-    
+    /**
+     * target of the HTTP request including the `?` if the request includes get parameters
+     * \code
+     * // https://localhost/user/profile?id=245
+     * ctx.target() // /user/profile?id=245
+     * \endcode
+     */
     std::string target() const{
         return _pimpl->target();
     }
+    /**
+     * path of the HTTP request before `?` if any
+     * \code
+     * // https://localhost/user/profile?id=245
+     * ctx.path() // /user/profile
+     * \endcode
+     */
     std::string path() const{
         return _pimpl->path();
     }
+    /**
+     * The get query of the HTTP request.
+     * \code
+     * if(!ctx.query().has("type") || ctx.query().field<std::string>("type") == "json"){
+     *     // respond with JSON content
+     * }else if(ctx.query().field<std::string>("type") == "xml")
+     *     // respond with xml content
+     * }
+     * \endcode
+     * \see udho::urlencoded_form
+     */
     const query_parser_type& query() const{
         return _pimpl->query();
     }
@@ -266,9 +347,15 @@ struct context{
     void clear(){
         _pimpl->clear();
     }
+    /**
+     * Internally reroute an HTTP request to another request
+     */
     void reroute(const std::string& path){
         _pimpl->reroute(path);
     }
+    /**
+     * check whether this is a rerouted request or not
+     */
     bool rerouted() const{
         return _pimpl->rerouted();
     }
@@ -278,11 +365,24 @@ struct context{
     void pattern(const std::string& p){
         _pimpl->pattern(p);
     }
+    /**
+     * That pattern that was qualified to choose this callable
+     */
     std::string pattern() const{
         return _pimpl->pattern();
     }
 };
 
+/**
+ * A Stateless context passed to all callables along with the arguments. 
+ * he context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
+ * A stateless context should be used in callables that need not to use session states.
+ * 
+ * \tparam AuxT bridge between the server and the callable
+ * \tparam RequestT HTTP request type
+ * 
+ * \note instead of instantiating this template directly use \ref udho::contexts::stateless
+ */
 template <typename AuxT, typename RequestT>
 struct context<AuxT, RequestT, void>{
     typedef RequestT                                        request_type;
@@ -302,57 +402,127 @@ struct context<AuxT, RequestT, void>{
     template <typename ShadowT>
     context(context<AuxT, RequestT, ShadowT>& other): _pimpl(other._pimpl), _aux(other._aux){}
     
+    /**
+     * returns the boost beast HTTP request
+     */
     const request_type& request() const{return _pimpl->request();}
-    
+    /**
+     * patches the response with the headers added in the context from inside the callable
+     */
     template<class Body, class Fields>
     void patch(boost::beast::http::message<false, Body, Fields>& res) const{
         _pimpl->patch(res);
     }
+    /**
+     * returns the form handler object.
+     * \see udho::form_
+     * \see udho::urlencoded_form
+     * \see udho::multipart_form
+     */
     form_type& form(){
         return _pimpl->_form;
     }
+    /**
+     * accesses the HTTP cookies
+     * \see udho::cookies_
+     */
     cookies_type& cookies(){
         return _pimpl->_cookies;
     }
-    
+    /**
+     * conversion operator to convert to the corresponding beast request type
+     */
     operator request_type() const{
         return _pimpl->request();
     }
+    /**
+     * Logs a message to the logger attached with the server. A logging message can be passed to the `log` method or the `operator<<` can be used to log a message.
+     * \code
+     * ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::info("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::warning("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * ctx << udho::logging::messages::formatted::error("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
+     * \endcode
+     * \see udho::logging::message
+     */
     template <udho::logging::status Status>
     void log(const udho::logging::message<Status>& msg){
         _pimpl->log(msg);
     }
+    /**
+     * attaches a context with its server counter part 
+     * \internal
+     */
     template <typename AttachmentT>
     void attach(AttachmentT& attachment){
         _pimpl->attach(attachment);
     }
+    /**
+     * returns a reference to the bridge between the callable and the server
+     */
     AuxT& aux(){
         return _aux;
     }
+    /**
+     * respond with a http status. The responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
+     */
     void respond(udho::defs::response_type& response){
         _pimpl->respond(response);
     }
+    /**
+     * the responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
+     */
     template <typename OutputT>
     void respond(const OutputT& output, const std::string& mime){
         udho::compositors::mimed<OutputT> compositor(mime);
         udho::defs::response_type response = compositor(*this, output);
         respond(response);
     }
+    /**
+     * respond with a http status. The responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
+     */
     template <typename OutputT>
     void respond(boost::beast::http::status s, const OutputT& output, const std::string& mime){
         status(s);
         respond<OutputT>(output, mime);
     }
+    /**
+     * set a status code for the HTTP response
+     */
     void status(boost::beast::http::status s){
         _pimpl->status(s);
     }
-    
+    /**
+     * target of the HTTP request including the `?` if the request includes get parameters
+     * \code
+     * // https://localhost/user/profile?id=245
+     * ctx.target() // /user/profile?id=245
+     * \endcode
+     */
     std::string target() const{
         return _pimpl->target();
     }
+    /**
+     * path of the HTTP request before `?` if any
+     * \code
+     * // https://localhost/user/profile?id=245
+     * ctx.path() // /user/profile
+     * \endcode
+     */
     std::string path() const{
         return _pimpl->path();
     }
+    /**
+     * The get query of the HTTP request.
+     * \code
+     * if(!ctx.query().has("type") || ctx.query().field<std::string>("type") == "json"){
+     *     // respond with JSON content
+     * }else if(ctx.query().field<std::string>("type") == "xml")
+     *     // respond with xml content
+     * }
+     * \endcode
+     * \see udho::urlencoded_form
+     */
     const query_parser_type& query() const{
         return _pimpl->query();
     }
@@ -360,9 +530,15 @@ struct context<AuxT, RequestT, void>{
     void clear(){
         _pimpl->clear();
     }
+    /**
+     * Internally reroute an HTTP request to another request
+     */
     void reroute(const std::string& path){
         _pimpl->reroute(path);
     }
+    /**
+     * check whether this is a rerouted request or not
+     */
     bool rerouted() const{
         return _pimpl->rerouted();
     }
@@ -372,6 +548,9 @@ struct context<AuxT, RequestT, void>{
     void pattern(const std::string& p){
         _pimpl->pattern(p);
     }
+    /**
+     * That pattern that was qualified to choose this callable
+     */
     std::string pattern() const{
         return _pimpl->pattern();
     }
