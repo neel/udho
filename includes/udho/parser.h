@@ -594,6 +594,37 @@ struct text{
 };
 
 /**
+ * udho::html
+ */
+template <typename ScopeT>
+struct html{
+    typedef ScopeT table_type;
+    typedef parsing::expression<ScopeT> evaluator_type;
+    
+    parsing::xml&   _ctrl;
+    table_type&    _table;
+    evaluator_type _evaluator;
+    
+    html(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    bool operator()(pugi::xml_node node, pugi::xml_node target){
+        pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
+            return attr.name() == std::string("name");
+        });
+        std::string var = name.as_string();
+        std::string value = _table.eval(var);
+        pugi::xml_document doc;
+        if (!doc.load_buffer(value.c_str(), value.length()))
+            return false;
+        for (pugi::xml_node child = doc.first_child(); child; child = child.next_sibling())
+            target.append_copy(child);
+        return true;
+    }
+    std::string prefix() const{
+        return "udho:html";
+    }
+};
+
+/**
  * udho::eval
  */
 template <typename ScopeT>
@@ -843,6 +874,7 @@ struct parser{
     typedef parsing::tags::loop<table_type>         loop_directive_type;
     typedef parsing::tags::condition<table_type>    condition_directive_type;
     typedef parsing::tags::text<table_type>         text_directive_type;
+    typedef parsing::tags::html<table_type>         html_directive_type;
     typedef parsing::tags::eval<table_type>         eval_directive_type;
     typedef parsing::tags::skip<table_type>         skip_directive_type;
     typedef parsing::attrs::target<table_type>      target_directive_type;
@@ -858,6 +890,7 @@ struct parser{
     loop_directive_type      _loop;
     condition_directive_type _condition;
     text_directive_type      _text;
+    html_directive_type      _html;
     eval_directive_type      _eval;
     skip_directive_type      _skip;
     target_directive_type    _target;
@@ -866,7 +899,7 @@ struct parser{
     condition_attr_directive_type _condition_attr;
     
     parser(table_type& scope): _table(scope), _evaluator(scope), 
-    _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _eval(_xml_parser, scope),_skip(_xml_parser, scope),
+    _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _html(_xml_parser, scope), _eval(_xml_parser, scope),_skip(_xml_parser, scope),
     _target(_xml_parser, scope), _eval_attr(_xml_parser, scope), _add_class(_xml_parser, scope), _condition_attr(_xml_parser, scope)
     {
         prepare();
@@ -877,6 +910,7 @@ struct parser{
             .add_directive_tag(_loop)
             .add_directive_tag(_condition)
             .add_directive_tag(_text)
+            .add_directive_tag(_html)
             .add_directive_tag(_eval)
             .add_directive_tag(_skip);
         _xml_parser.add_directive_attr(_target)
