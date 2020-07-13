@@ -56,6 +56,10 @@ enum class status{
     debug
 };
 
+/**
+ * A logging message
+ * \tparam Status
+ */
 template <udho::logging::status Status>
 struct message{
     typedef std::chrono::system_clock::time_point time_type;

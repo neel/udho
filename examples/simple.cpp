@@ -106,7 +106,7 @@ std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
 }
 
 std::string data(udho::contexts::stateless ctx){
-    ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel basu" % 42;
+    ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
     
     std::cout << "name submitted" << ctx.form().has("name") << std::endl;
     std::cout << "age submitted" << ctx.form().has("age") << std::endl;

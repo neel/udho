@@ -48,7 +48,9 @@ enum class form_type{
     multipart
 };
     
- 
+/**
+ * Form accessor for urlencoded forms
+ */
 template <typename Iterator>
 struct urlencoded_form{
     typedef Iterator iterator_type;
@@ -81,18 +83,30 @@ struct urlencoded_form{
             }
         }
     }
+    /**
+     * number of fields in the form
+     */
     std::size_t count() const{
         return _fields.size();
     }
+    /**
+     * checks whether there exists any field with the name provided
+     */
     bool has(const std::string name) const{
         return _fields.find(name) != _fields.end();
     }
+    /**
+     * returns the value of the field with the name provided lexically casted to type T
+     */
     template <typename T>
     const T field(const std::string& name) const{
         return boost::lexical_cast<T>(udho::util::urldecode(boost::trim_copy(_fields.at(name).template copied<std::string>())));
     }
 };
 
+/**
+ * Form accessor for multipart forms
+ */
 template <typename Iterator>
 struct multipart_form{
     typedef Iterator iterator_type;
@@ -102,6 +116,9 @@ struct multipart_form{
     typedef std::map<string_type, bounded_string_type> header_map_type;
     typedef bounded_string_type bounded_string;
     
+    /**
+     * A part in the multipart form data
+     */
     struct form_part{
         header_map_type _headers;
         bounded_string_type _body;
@@ -111,9 +128,21 @@ struct multipart_form{
         void set_header(const header_map_type& headers){
             _headers = headers;
         }
+        /**
+         * returns the value associated with the key in the header of the part
+         * \code
+         * header("Content-Disposition").copied<std::string>();
+         * \endcode
+         */
         const bounded_string_type& header(const std::string& key) const{
             return _headers.at(key);
         }
+        /**
+         * returns the value associated with the key and sub key in the header of the part
+         * \code
+         * header("Content-Disposition", "name").copied<std::string>();
+         * \endcode
+         */
         bounded_string_type header(const std::string& key, const std::string& sub) const{
             bounded_string_type value = header(key);
             std::string subfield = sub+"=";
@@ -128,12 +157,30 @@ struct multipart_form{
             }
             return bounded_string_type(sub_begin, sub_end);
         }
+        /**
+         * name of the part
+         * \code
+         * name().copied<std::string>();
+         * \endcode
+         */
         bounded_string_type name() const{
             return header("Content-Disposition", "name");
         }
+        /**
+         * filename of the part
+         * \code
+         * name().copied<std::string>();
+         * \endcode
+         */
         bounded_string_type filename() const{
             return header("Content-Disposition", "filename");
         }
+        /**
+         * body of the part returned as a pair of string iterators
+         * \code
+         * body().copied<std::string>();
+         * \endcode
+         */
         const bounded_string_type& body() const{
             return _body;
         }
@@ -141,9 +188,15 @@ struct multipart_form{
         StrT copied() const{
             return body().template copied<StrT>();
         }
+        /**
+         * returns the body of the part as string
+         */
         std::string str() const{
             return boost::trim_copy(copied<std::string>());
         }
+        /**
+         * lexically convert the contents of the body to the requested type
+         */
         template <typename T>
         T value() const{
             return boost::lexical_cast<T>(str());
@@ -198,15 +251,30 @@ struct multipart_form{
         f.set_header(headers);
         _parts.insert(std::make_pair(f.name().template copied<std::string>(), f));
     }
+    /**
+     * number of fields in the form
+     */
     std::size_t count() const{
         return _parts.size();
     }
+    /**
+     * checks whether the form has any field with the given name
+     */
     bool has(const std::string name) const{
         return _parts.find(name) != _parts.end();
     }
+    /**
+     * returns the part associated with the given name
+     */
     const form_part& part(const std::string& name) const{
         return _parts.at(name);
     }
+    /**
+     * returns the value of the field lexically casted with the desired type
+     * \code
+     * form.field<int>("age");
+     * \endcode
+     */
     template <typename T>
     const T field(const std::string& name) const{
         return part(name).template value<T>();
@@ -260,6 +328,9 @@ struct field_value_extractor<std::chrono::time_point<std::chrono::system_clock, 
 template <typename T, bool Required>
 struct field;
 
+/**
+ * unified form accessor that can extract field from both urlencoded as well as multipart forms.
+ */
 template <typename RequestT>
 struct form_{
     typedef RequestT request_type;
@@ -278,10 +349,16 @@ struct form_{
             parse_multipart();
         }
     }
+    /**
+     * parse the beast request body as urlencoded form data
+     */
     void parse_urlencoded(){
         _urlencoded.parse(_request.body().begin(), _request.body().end());
         _type = form_type::urlencoded;
     }
+    /**
+     * parse the beast request body as multipart form data
+     */
     void parse_multipart(){
         std::string boundary;
         {
@@ -299,21 +376,40 @@ struct form_{
         // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
         _multipart.parse(boundary, _request.body().begin(), _request.body().end());
     }
+    /**
+     * check whether the submitted form is urlencoded
+     */
     bool is_urlencoded() const{
         return _type == form_type::urlencoded;
     }
+    /**
+     * check whether the submitted form is multipart
+     */
     bool is_multipart() const{
         return _type == form_type::multipart;
     }
+    /**
+     * return the urlencoded specific form accessor
+     */
     const urlencoded_form<std::string::const_iterator>& urlencoded() const{
         return _urlencoded;
     }
+    /**
+     * return the multipart specific form accessor
+     */
     const multipart_form<std::string::const_iterator>& multipart() const{
         return _multipart;
     }
+    /**
+     * returns true once the form is parsed
+     */
     bool parsed() const{
         return _type != form_type::unparsed;
     }
+    /**
+     * checks whether the form contains any field with matching name
+     * \param name name of the form field
+     */
     bool has(const std::string& name) const{
         if(is_urlencoded()){
             return _urlencoded.has(name);
@@ -322,6 +418,9 @@ struct form_{
         }
         return false;
     }
+    /**
+     * returns a form field object for a given field
+     */
     template <typename V>
     V field(const std::string& name) const{
         if(is_urlencoded()){
@@ -331,6 +430,9 @@ struct form_{
         }
         return V();
     }
+    /**
+     * returns number of fields in the form
+     */
     fields_map_type::size_type count() const{
         if(is_urlencoded()){
             return _urlencoded.count();
@@ -341,6 +443,9 @@ struct form_{
     }
 };
 
+/**
+ * common meta parameters of a form field
+ */
 struct field_common: udho::prepare<field_common>{
     std::string _name;
     bool _is_valid;
