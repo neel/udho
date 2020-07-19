@@ -525,9 +525,13 @@ struct loop{
         std::vector<std::string> keys = _table.keys(collection);
         for(const std::string& key: keys){
             _table.down();
+            std::cout << "DOWN" << std::endl;
             std::string ref = collection + ":" +key;
             _table.add(value.as_string(), ref);
-            _ctrl.travarse(node, target);
+            pugi::xml_node cloned = node.parent().append_copy(node);
+            _ctrl.travarse(cloned, target);
+            node.parent().remove_child(cloned);
+            std::cout << "UP" << std::endl;
             _table.up();
         }
         return true;
@@ -745,11 +749,9 @@ struct target{
         }
         if(truth){
             std::string resolved = _table.eval(boost::algorithm::trim_copy(expr));
-            attr.set_name(rest.c_str());
-            attr.set_value(resolved.c_str());
-        }else{
-            node.remove_attribute(attr);
+            node.append_attribute(rest.c_str()) = resolved.c_str();
         }
+        node.remove_attribute(attr);
         return true;
     }
     std::string prefix() const{
@@ -831,19 +833,23 @@ struct add_class{
     bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
-        std::string rest = name.substr(indx+prefix().size()+1);
+        std::string rest = (indx+prefix().size() != name.size()) ? name.substr(indx+prefix().size()+1) : std::string();
         std::string expr = attr.value();
         
-        bool truth = _evaluator.template evaluate<int>(expr);
+        bool truth = rest.empty() ? true : _evaluator.template evaluate<int>(expr);
         if(truth){
             pugi::xml_attribute class_attr = node.attribute("class");
+            std::string classname = rest;
+            if(classname.empty()){
+                classname = _table.eval(boost::algorithm::trim_copy(expr));
+            }
             if(class_attr.empty()){
                 class_attr.set_name("class");
-                class_attr.set_value(rest.c_str());
+                class_attr.set_value(classname.c_str());
                 node.append_copy(class_attr);
             }else{
                 std::string existing_classes = class_attr.value();
-                existing_classes += " "+rest;
+                existing_classes += " "+classname;
                 class_attr.set_value(existing_classes.c_str());
             }
         }

@@ -106,39 +106,33 @@ struct responder<F, std::vector<V>>{
         std::string khead, ktail;
         auto colon = key.find_first_of(':');
         if(colon == std::string::npos){
-            // TODO throw
-            return result_type();
+            throw std::invalid_argument((boost::format("expected a colon (:) character in key `%1%`") % key).str());
+            // return result_type();
         }else{
             container_type res = _callback();
-            if(colon != std::string::npos){
-                khead = key.substr(0, colon);
-                ktail = key.substr(colon+1);
-                
-                size_type index = boost::lexical_cast<size_type>(ktail);
-                value_type value = res.at(index);
-                return value;
-            }
+            khead = key.substr(0, colon);
+            ktail = key.substr(colon+1);
+            
+            size_type index = boost::lexical_cast<size_type>(ktail);
+            value_type value = res.at(index);
+            return value;
         }
-        return result_type();
     }
     result_type call(const std::string& key){
         std::string khead, ktail;
         auto colon = key.find_first_of(':');
         if(colon == std::string::npos){
-            // TODO throw
-            return result_type();
+            throw std::invalid_argument((boost::format("expected a colon (:) character in key `%1%`") % key).str());
+            // return result_type();
         }else{
             container_type res = _callback();
-            if(colon != std::string::npos){
-                khead = key.substr(0, colon);
-                ktail = key.substr(colon+1);
-                
-                size_type index = boost::lexical_cast<size_type>(ktail);
-                value_type value = res.at(index);
-                return value;
-            }
+            khead = key.substr(0, colon);
+            ktail = key.substr(colon+1);
+            
+            size_type index = boost::lexical_cast<size_type>(ktail);
+            value_type value = res.at(index);
+            return value;
         }
-        return result_type();
     }
     bool iterable() const{
         return true;
@@ -176,7 +170,6 @@ struct responder<F, std::map<U, V>>{
         std::string khead, ktail;
         auto colon = key.find_first_of(':');
         if(colon == std::string::npos){
-            // TODO throw
             throw std::out_of_range((boost::format("key %1% does not exist") % key).str());
             // return result_type();
         }
@@ -192,7 +185,6 @@ struct responder<F, std::map<U, V>>{
         std::string khead, ktail;
         auto colon = key.find_first_of(':');
         if(colon == std::string::npos){
-            // TODO throw
             throw std::out_of_range((boost::format("key %1% does not exist") % key).str());
             // return result_type();
         }
@@ -516,6 +508,8 @@ struct association_group_visitor<association_group<U, V>, true>{
                 auto index = result.index();
                 auto visitor = udho::detail::visit(index);
                 return visitor.find(callback, ktail);
+            }else{
+                return _tail_visitor.find(callback, key);
             }
         }else{
             khead = key;
