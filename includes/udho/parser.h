@@ -525,13 +525,11 @@ struct loop{
         std::vector<std::string> keys = _table.keys(collection);
         for(const std::string& key: keys){
             _table.down();
-            std::cout << "DOWN" << std::endl;
             std::string ref = collection + ":" +key;
             _table.add(value.as_string(), ref);
             pugi::xml_node cloned = node.parent().append_copy(node);
             _ctrl.travarse(cloned, target);
             node.parent().remove_child(cloned);
-            std::cout << "UP" << std::endl;
             _table.up();
         }
         return true;
