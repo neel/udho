@@ -746,8 +746,31 @@ struct target{
             truth = _evaluator.template evaluate<int>(condition);
         }
         if(truth){
-            std::string resolved = _table.eval(boost::algorithm::trim_copy(expr));
-            node.append_attribute(rest.c_str()) = resolved.c_str();
+            if(expr.find('`') == std::string::npos){
+                std::string resolved = _table.eval(boost::algorithm::trim_copy(expr));
+                node.append_attribute(rest.c_str()) = resolved.c_str();
+            }else{
+                // https://stackoverflow.com/a/40592666/256007
+                
+                std::string resolved;
+                size_t start = 0;
+                size_t nextQuote = 0;
+                while(nextQuote = expr.find('`', start), nextQuote != std::string::npos){
+                    size_t endQuote = expr.find('`', nextQuote+1);
+                    resolved += expr.substr(start, nextQuote-start);
+                    if (endQuote == std::string::npos){
+                        throw std::logic_error("Unmatched quotes");
+                    }
+                    std::string query = expr.substr(nextQuote+1, endQuote-(nextQuote+1));
+                    std::string part = _table.eval(boost::algorithm::trim_copy(query));
+                    resolved += part;
+                    start = endQuote+1;
+                }
+                if (start < expr.size()){
+                    resolved += expr.substr(start);
+                }
+                node.append_attribute(rest.c_str()) = resolved.c_str();
+            }
         }
         node.remove_attribute(attr);
         return true;
