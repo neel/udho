@@ -7,6 +7,8 @@
 #include <udho/scope.h>
 #include <udho/access.h>
 #include <udho/parser.h>
+#include <udho/server.h>
+#include <udho/contexts.h>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
 
 struct book: udho::prepare<book>{
@@ -80,6 +82,14 @@ struct lazy: udho::prepare<lazy>{
 BOOST_AUTO_TEST_SUITE(parsing)
 
 BOOST_AUTO_TEST_CASE(expression){
+    typedef udho::servers::quiet::stateless server_type;
+    typedef udho::contexts::stateless context_type;
+    
+    boost::asio::io_service io;
+    context_type::request_type req;
+    server_type::attachment_type attachment(io);
+    context_type ctx(attachment.aux(), req, attachment);
+    
     book b1;
     b1.title = "Book1 Title";
     b1.year  = 2020;
@@ -146,34 +156,34 @@ BOOST_AUTO_TEST_CASE(expression){
     std::cout << "_value_called " << lobj._value_called << std::endl;
     
     std::string xml_template = R"TEMPLATE(
-            <div class="foo">
-                <span class="name">
-                    Hi! <udho:text name="name" />
-                </span>
-                <udho:block>
-                    <article class="thesis">
-                        <udho:var name="thesis" value="books:0" />
-                        <label class="year">
-                            <udho:text name="thesis.year" />
-                        </label>
-                    </article>
-                </udho:block>
-                <div class="publications" udho:if="count(books) > 1">
-                    <udho:for value="book" key="id" in="books">
-                        <div class="title" udho:target:title="book.title">
-                            <udho:text name="book.title" />
-                        </div>
-                    </udho:for>
-                </div>
-                <udho:if test="not(count(books) > 1)">
-                    <div class="freshers">
-                        Not much publications
+        <div class="foo">
+            <span class="name">
+                Hi! <udho:text value="name" />
+            </span>
+            <udho:block>
+                <article class="thesis">
+                    <udho:var name="thesis" value="books:0" />
+                    <label class="year">
+                        <udho:text value="thesis.year" />
+                    </label>
+                </article>
+            </udho:block>
+            <div class="publications" udho:if="count(books) > 1">
+                <udho:for value="book" key="id" in="books">
+                    <div class="title" udho:target:title="book.title">
+                        <udho:text value="book.title" />
                     </div>
-                </udho:if>
+                </udho:for>
             </div>
+            <udho:if test="not(count(books) > 1)">
+                <div class="freshers">
+                    Not much publications
+                </div>
+            </udho:if>
+        </div>
     )TEMPLATE";
     
-    udho::view::parser<udho::lookup_table<udho::prepared<student>>> processor = udho::view::processor(table);
+    auto processor = udho::view::processor(table, ctx);
     std::string output = processor.process(xml_template);
     std::cout << output << std::endl;
     

@@ -60,7 +60,7 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
     data::ship ship;
     ship.name = "Alpha Traveller";
     
-    return ctx.aux().render("planet.html", planet, person, ship);
+    return ctx.render("planet.html", planet, person, ship);
 }
 
 int main(){
