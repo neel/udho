@@ -593,10 +593,10 @@ struct text{
     text(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
     bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
-        pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
-            return attr.name() == std::string("name");
+        pugi::xml_attribute ref = node.find_attribute([](const pugi::xml_attribute& attr){
+            return attr.name() == std::string("value");
         });
-        std::string var = name.as_string();
+        std::string var = ref.as_string();
         std::string value = _table.eval(var);
         if(value.empty()){
             ctx << udho::logging::messages::formatted::info("template", "udho:text %1% evaluated as empty string") % var;
@@ -624,10 +624,10 @@ struct html{
     html(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
     bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
-        pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
-            return attr.name() == std::string("name");
+        pugi::xml_attribute ref = node.find_attribute([](const pugi::xml_attribute& attr){
+            return attr.name() == std::string("value");
         });
-        std::string var = name.as_string();
+        std::string var = ref.as_string();
         std::string value = _table.eval(var);
         if(value.empty()){
             ctx << udho::logging::messages::formatted::info("template", "udho:html %1% evaluated as empty string") % var;
@@ -659,10 +659,10 @@ struct eval{
     eval(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
     bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
-        pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
-            return attr.name() == std::string("name");
+        pugi::xml_attribute expr = node.find_attribute([](const pugi::xml_attribute& attr){
+            return attr.name() == std::string("expr");
         });
-        std::string var = name.as_string();
+        std::string var = expr.as_string();
         std::string value = boost::lexical_cast<std::string>(_evaluator.template evaluate<int>(var));
         if(value.empty()){
             ctx << udho::logging::messages::formatted::info("template", "udho:eval %1% evaluated as empty string") % var;
