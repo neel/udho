@@ -28,22 +28,23 @@
 #ifndef UDHO_PARSER_H
 #define UDHO_PARSER_H
 
+#include <set>
+#include <map>
+#include <stack>
 #include <vector>
 #include <iterator>
 #include <iostream>
 #include <udho/util.h>
 #include <udho/scope.h>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/classification.hpp>
-
-#include <set>
-#include <map>
-#include <stack>
+#include <udho/logging.h>
+#include <udho/context.h>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <pugixml.hpp>
 
 namespace udho{
@@ -358,17 +359,21 @@ struct expression{
     }
 };
 
+template <typename ContextT>
 struct xml{
-    typedef boost::function<bool (pugi::xml_node, pugi::xml_node)>                      tag_directive;
-    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, pugi::xml_attribute)> attr_directive;
+    typedef ContextT context_type;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, const context_type&)>                      tag_directive;
+    typedef boost::function<bool (pugi::xml_node, pugi::xml_node, pugi::xml_attribute, const context_type&)> attr_directive;
     typedef std::map<std::string, tag_directive>    tag_directive_map;
     typedef std::map<std::string, attr_directive>   attr_directive_map;
     
+    const context_type& _ctx;
     pugi::xml_document  _source;
     pugi::xml_document  _transformed;
     tag_directive_map   _directives_tag;
     attr_directive_map  _directives_attr;
     
+    xml(const context_type& ctx): _ctx(ctx){}
     inline void open(const std::string& contents){
         _source.load_string(contents.c_str());
         _transformed.append_child("udho:transformed");
@@ -382,7 +387,7 @@ struct xml{
         bool processor_matched = false;
         for(auto& p: _directives_tag){
             if(boost::starts_with(name, p.first)){
-                p.second(node, target);
+                p.second(node, target, _ctx);
                 processor_matched = true;
                 break;
             }
@@ -394,7 +399,7 @@ struct xml{
                 std::string name = attr.name();
                 for(auto& p: _directives_attr){
                     if(boost::starts_with(name, p.first)){
-                        keep = keep && p.second(node, target, attr);
+                        keep = keep && p.second(node, target, attr, _ctx);
                         break;
                     }
                 }
@@ -452,17 +457,18 @@ namespace tags{
 /**
  * udho::block
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct block{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    block(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    block(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         _table.down();
         _ctrl.travarse(node, target);
         _table.up();
@@ -476,17 +482,18 @@ struct block{
 /**
  * udho::var
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct var{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    var(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    var(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
         });
@@ -504,17 +511,18 @@ struct var{
 /**
  * udho::for
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct loop{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    loop(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    loop(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute in = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("in");
         });
@@ -542,22 +550,24 @@ struct loop{
 /**
  * udho::if
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct condition{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    condition(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    condition(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute cond = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("test");
         });
         std::string condition = cond.as_string();
         bool truth = _evaluator.template evaluate<int>(condition);
+        ctx << udho::logging::messages::formatted::info("template", "udho:if condition %1% evaluated as %2%") % condition % truth;
         if(truth){
             _ctrl.travarse(node, target);
         }
@@ -571,22 +581,26 @@ struct condition{
 /**
  * udho::text
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct text{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    text(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    text(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
         });
         std::string var = name.as_string();
         std::string value = _table.eval(var);
+        if(value.empty()){
+            ctx << udho::logging::messages::formatted::info("template", "udho:text %1% evaluated as empty string") % var;
+        }
         target.append_child(pugi::node_pcdata).text().set(value.c_str());
         return true;
     }
@@ -598,22 +612,26 @@ struct text{
 /**
  * udho::html
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct html{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    html(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    html(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
         });
         std::string var = name.as_string();
         std::string value = _table.eval(var);
+        if(value.empty()){
+            ctx << udho::logging::messages::formatted::info("template", "udho:html %1% evaluated as empty string") % var;
+        }
         pugi::xml_document doc;
         if (!doc.load_buffer(value.c_str(), value.length()))
             return false;
@@ -629,22 +647,26 @@ struct html{
 /**
  * udho::eval
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct eval{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    eval(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    eval(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
         });
         std::string var = name.as_string();
         std::string value = boost::lexical_cast<std::string>(_evaluator.template evaluate<int>(var));
+        if(value.empty()){
+            ctx << udho::logging::messages::formatted::info("template", "udho:eval %1% evaluated as empty string") % var;
+        }
         target.append_child(pugi::node_pcdata).text().set(value.c_str());
         return true;
     }
@@ -656,17 +678,18 @@ struct eval{
 /**
  * udho::template
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct skip{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    skip(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node target){
+    skip(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
         _ctrl.step_in(node, target);
         return true;
     }
@@ -682,20 +705,22 @@ namespace attrs{
 /**
  * works like the udho:if tag but can be used in attribute 
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct condition{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    condition(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+    condition(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& ctx){
         std::string expr = attr.value();
         
         bool truth = _evaluator.template evaluate<int>(expr);
+        ctx << udho::logging::messages::formatted::info("template", "udho:if condition %1% evaluated as %2%") % expr % truth;
         if(truth){
             node.remove_attribute(attr);
             return true;
@@ -721,17 +746,18 @@ struct condition{
  * <div class="book" title="Some title"></div>
  * \endcode
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct target{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    target(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+    target(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& ctx){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
         std::string rest = name.substr(indx+prefix().size()+1);
@@ -744,10 +770,14 @@ struct target{
             std::string condition = boost::algorithm::trim_copy(parts[0]);
             expr = parts[1];
             truth = _evaluator.template evaluate<int>(condition);
+            ctx << udho::logging::messages::formatted::info("template", "udho:target condition %1% evaluated as %2%") % condition % truth;
         }
         if(truth){
             if(expr.find('`') == std::string::npos){
                 std::string resolved = _table.eval(boost::algorithm::trim_copy(expr));
+                if(resolved.empty()){
+                    ctx << udho::logging::messages::formatted::info("template", "udho:target %1% evaluated as empty string") % expr;
+                }
                 node.append_attribute(rest.c_str()) = resolved.c_str();
             }else{
                 // https://stackoverflow.com/a/40592666/256007
@@ -759,10 +789,14 @@ struct target{
                     size_t endQuote = expr.find('`', nextQuote+1);
                     resolved += expr.substr(start, nextQuote-start);
                     if (endQuote == std::string::npos){
+                        ctx << udho::logging::messages::formatted::warning("template", "udho:target encountered unmatched quote in %1%") % expr;
                         throw std::logic_error("Unmatched quotes");
                     }
                     std::string query = expr.substr(nextQuote+1, endQuote-(nextQuote+1));
                     std::string part = _table.eval(boost::algorithm::trim_copy(query));
+                    if(part.empty()){
+                        ctx << udho::logging::messages::formatted::info("template", "udho:target %1% evaluated as empty string") % query;
+                    }
                     resolved += part;
                     start = endQuote+1;
                 }
@@ -793,17 +827,18 @@ struct target{
  * <input type="text" value="2"></input>
  * \endcode
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct eval{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    eval(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+    eval(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& ctx){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
         std::string rest = name.substr(indx+prefix().size()+1);
@@ -816,6 +851,7 @@ struct eval{
             std::string condition = boost::algorithm::trim_copy(parts[0]);
             expr = parts[1];
             truth = _evaluator.template evaluate<int>(condition);
+            ctx << udho::logging::messages::formatted::info("template", "udho:target condition %1% evaluated as %2%") % condition % truth;
         }
         if(truth){
             std::string resolved = boost::lexical_cast<std::string>(_evaluator.template evaluate<int>(boost::algorithm::trim_copy(expr)));
@@ -841,17 +877,18 @@ struct eval{
  * <div class="visible"></div>
  * \endcode
  */
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct add_class{
     typedef ScopeT table_type;
     typedef parsing::expression<ScopeT> evaluator_type;
     
-    parsing::xml&   _ctrl;
+    parsing::xml<ContextT>&   _ctrl;
     table_type&    _table;
     evaluator_type _evaluator;
     
-    add_class(parsing::xml& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
-    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr){
+    add_class(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
+    
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& ctx){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
         std::string rest = (indx+prefix().size() != name.size()) ? name.substr(indx+prefix().size()+1) : std::string();
@@ -891,23 +928,23 @@ parsing::expression<ScopeT> expression(ScopeT& scope){
     return parsing::expression<ScopeT>(scope);
 }
 
-template <typename ScopeT>
+template <typename ScopeT, typename ContextT>
 struct parser{
-    typedef ScopeT                                  table_type;
-    typedef parsing::expression<table_type>         evaluator_type;
-    typedef parsing::xml                            xml_parser_type;
-    typedef parsing::tags::block<table_type>        block_directive_type;
-    typedef parsing::tags::var<table_type>          var_directive_type;
-    typedef parsing::tags::loop<table_type>         loop_directive_type;
-    typedef parsing::tags::condition<table_type>    condition_directive_type;
-    typedef parsing::tags::text<table_type>         text_directive_type;
-    typedef parsing::tags::html<table_type>         html_directive_type;
-    typedef parsing::tags::eval<table_type>         eval_directive_type;
-    typedef parsing::tags::skip<table_type>         skip_directive_type;
-    typedef parsing::attrs::target<table_type>      target_directive_type;
-    typedef parsing::attrs::eval<table_type>        eval_attr_directive_type;
-    typedef parsing::attrs::add_class<table_type>   add_class_directive_type;
-    typedef parsing::attrs::condition<table_type>   condition_attr_directive_type;
+    typedef ScopeT                                            table_type;
+    typedef parsing::expression<table_type>                   evaluator_type;
+    typedef parsing::xml<ContextT>                            xml_parser_type;
+    typedef parsing::tags::block<table_type, ContextT>        block_directive_type;
+    typedef parsing::tags::var<table_type, ContextT>          var_directive_type;
+    typedef parsing::tags::loop<table_type, ContextT>         loop_directive_type;
+    typedef parsing::tags::condition<table_type, ContextT>    condition_directive_type;
+    typedef parsing::tags::text<table_type, ContextT>         text_directive_type;
+    typedef parsing::tags::html<table_type, ContextT>         html_directive_type;
+    typedef parsing::tags::eval<table_type, ContextT>         eval_directive_type;
+    typedef parsing::tags::skip<table_type, ContextT>         skip_directive_type;
+    typedef parsing::attrs::target<table_type, ContextT>      target_directive_type;
+    typedef parsing::attrs::eval<table_type, ContextT>        eval_attr_directive_type;
+    typedef parsing::attrs::add_class<table_type, ContextT>   add_class_directive_type;
+    typedef parsing::attrs::condition<table_type, ContextT>   condition_attr_directive_type;
     
     table_type&              _table;
     evaluator_type           _evaluator;
@@ -925,7 +962,7 @@ struct parser{
     add_class_directive_type _add_class;
     condition_attr_directive_type _condition_attr;
     
-    parser(table_type& scope): _table(scope), _evaluator(scope), 
+    parser(table_type& scope, const ContextT& ctx): _table(scope), _evaluator(scope), _xml_parser(ctx),
     _block(_xml_parser, scope), _var(_xml_parser, scope), _loop(_xml_parser, scope), _condition(_xml_parser, scope), _text(_xml_parser, scope), _html(_xml_parser, scope), _eval(_xml_parser, scope),_skip(_xml_parser, scope),
     _target(_xml_parser, scope), _eval_attr(_xml_parser, scope), _add_class(_xml_parser, scope), _condition_attr(_xml_parser, scope)
     {
@@ -956,9 +993,9 @@ struct parser{
  * returns a parser interface using which an xml based view can be parsed
  * ScopeT must be a lookup table which can be obtained by using udho::scope
  */
-template <typename ScopeT>
-parser<ScopeT> processor(ScopeT& scope){
-    return parser<ScopeT>(scope);
+template <typename ScopeT, typename ContextT>
+parser<ScopeT, ContextT> processor(ScopeT& scope, const ContextT& ctx){
+    return parser<ScopeT, ContextT>(scope, ctx);
 }
 
 }

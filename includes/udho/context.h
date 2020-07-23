@@ -106,16 +106,16 @@ struct context_impl{
             }
         }
     }
-    void log(const udho::logging::messages::error& msg){
+    void log(const udho::logging::messages::error& msg) const{
         _error(msg);
     }
-    void log(const udho::logging::messages::warning& msg){
+    void log(const udho::logging::messages::warning& msg) const{
         _warning(msg);
     }
-    void log(const udho::logging::messages::info& msg){
+    void log(const udho::logging::messages::info& msg) const{
         _info(msg);
     }
-    void log(const udho::logging::messages::debug& msg){
+    void log(const udho::logging::messages::debug& msg) const{
         _debug(msg);
     }
     template <typename AuxT, typename LoggerT, typename CacheT>
@@ -263,7 +263,7 @@ struct context{
      * \see udho::logging::message
      */
     template <udho::logging::status Status>
-    void log(const udho::logging::message<Status>& msg){
+    void log(const udho::logging::message<Status>& msg) const{
         _pimpl->log(msg);
     }
     /**
@@ -371,6 +371,19 @@ struct context{
     std::string pattern() const{
         return _pimpl->pattern();
     }
+    /**
+     * render a file in path
+     */
+    std::string render(const std::string& path) const{
+        return _aux.render(path);
+    }
+    /**
+     * render a template in path
+     */
+    template <typename... DataT>
+    std::string render(const std::string& path, const DataT&... data) const{
+        return _aux.render(path, *this, data...);
+    }
 };
 
 /**
@@ -446,7 +459,7 @@ struct context<AuxT, RequestT, void>{
      * \see udho::logging::message
      */
     template <udho::logging::status Status>
-    void log(const udho::logging::message<Status>& msg){
+    void log(const udho::logging::message<Status>& msg) const{
         _pimpl->log(msg);
     }
     /**
@@ -554,10 +567,23 @@ struct context<AuxT, RequestT, void>{
     std::string pattern() const{
         return _pimpl->pattern();
     }
+    /**
+     * render a file in path
+     */
+    std::string render(const std::string& path) const{
+        return _aux.render(path);
+    }
+    /**
+     * render a template in path
+     */
+    template <typename... DataT>
+    std::string render(const std::string& path, const DataT&... data) const{
+        return _aux.render(path, *this, data...);
+    }
 };
 
 template <typename AuxT, typename RequestT, typename ShadowT, udho::logging::status Status>
-context<AuxT, RequestT, ShadowT>& operator<<(context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
+const context<AuxT, RequestT, ShadowT>& operator<<(const context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);
     return ctx;
 }

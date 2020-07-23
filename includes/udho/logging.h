@@ -79,11 +79,11 @@ struct message{
     }
 };
 
-template <typename StreamT, udho::logging::status Status>
-StreamT& operator<<(StreamT& stream, const message<Status>& msg){
-    stream << msg.what();
-    return stream;
-}
+// template <typename StreamT, udho::logging::status Status>
+// StreamT& operator<<(StreamT& stream, const message<Status>& msg){
+//     stream << msg.what();
+//     return stream;
+// }
 
 namespace messages{
     typedef message<udho::logging::status::error> error;
