@@ -127,9 +127,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             int status = 0;
             do{
                 if(ctx.rerouted()){
-                    std::string last = path;
-                    path = boost::regex_replace(last, boost::regex(ctx.pattern()), ctx.alt_path());
-                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % remote.address() % _req.method() % last % path;
+                    if(!ctx.reroutes()){
+                        _attachment << udho::logging::messages::formatted::error("router", "Error expecting rerouted context but got empty stack while serving %1%") % _req.target().to_string();
+                        throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error expecting rerouted context but got empty stack while serving %1%") % _req.target().to_string()).str());
+                    }
+                    
+                    udho::detail::route last = ctx.top();
+                    path = boost::regex_replace(last._subject, boost::regex(last._pattern), ctx.alt_path());
+                    _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% rerouted to %4%") % remote.address() % _req.method() % last._path % path;
                     ctx.clear();
                 }
                 try{

@@ -201,8 +201,8 @@ struct overload_group<U, app_<V, Ref>>{
     overload_type _overload;
     
     overload_group(const parent_type& parent, const overload_type& overload): _parent(parent), _overload(overload){}
-    template <typename ReqT, typename Lambda>
-    int serve(ReqT& req, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
+    template <typename ContextT, typename Lambda>
+    int serve(ContextT& ctx, boost::beast::http::verb request_method, const std::string& subject, Lambda send){
         std::string subject_decoded = udho::util::urldecode(subject);
         boost::smatch match;
 #ifdef WITH_ICU
@@ -212,9 +212,9 @@ struct overload_group<U, app_<V, Ref>>{
 #endif
         if(result){
             std::string rest = result ? subject.substr(match.length()) : subject;
-            return _overload.serve(req, request_method, rest, send);
+            return _overload.serve(ctx, request_method, rest, send);
         }else{
-            return _parent.template serve<ReqT, Lambda>(req, request_method, subject, send);
+            return _parent.template serve<ContextT, Lambda>(ctx, request_method, subject, send);
         }
     }
     

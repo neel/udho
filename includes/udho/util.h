@@ -5,10 +5,15 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <boost/regex.hpp>
 #include <boost/format.hpp>
 #include <boost/function.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/beast/http/verb.hpp>
+
+#ifdef WITH_ICU
+#include <boost/regex/icu.hpp>
+#endif
 
 namespace udho{
     
@@ -339,6 +344,26 @@ namespace util{
     }
 
 }
+
+namespace detail{
+    struct route{
+        std::string _path;
+        std::string _subject;
+        std::string _pattern;
+        std::string _rerouted;
+        
+        inline void reroute(const std::string& path){
+            _rerouted = path;
+        }
+        inline bool rerouted() const{
+            return !_rerouted.empty();
+        }
+        inline std::string rerouted_path() const{
+            return _rerouted;
+        }
+    };
+}
+
 }
 
 #endif // UDHO_UTIL_H

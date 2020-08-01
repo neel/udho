@@ -630,7 +630,6 @@ struct overload_group_helper{
     overload_group_helper(OverloadT& overload): _overload(overload){}
     template <typename ContextT, typename Lambda>
     int resolve(ContextT& ctx, Lambda send, const std::string& subject){
-        ctx.pattern(_overload.pattern());
         response_type res = _overload(ctx, subject);
         http::status status = res.result();
         ctx.patch(res);
@@ -653,7 +652,6 @@ struct overload_group_helper<OverloadT, void>{
     overload_group_helper(OverloadT& overload): _overload(overload){}
     template <typename ContextT, typename Lambda>
     int resolve(ContextT& ctx, Lambda send, const std::string& subject){
-        ctx.pattern(_overload.pattern());
         _overload(ctx, subject);
         return ROUTING_DEFERRED;
     }
@@ -692,6 +690,7 @@ struct overload_group{
         int status = 0;
         if(_overload.feasible(request_method, subject)){
             try{
+                ctx.push(udho::detail::route{ctx.path(), subject, _overload.pattern()});
                 overload_group_helper<overload_type> helper(_overload);
                 status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
@@ -757,6 +756,7 @@ struct overload_group<U, overload_terminal<V>>{
         int status = 0;
         if(_terminal.feasible(request_method, subject)){
             try{
+                ctx.push(udho::detail::route{ctx.path(), subject, _terminal.pattern()});
                 overload_group_helper<terminal_type> helper(_terminal);
                 status = helper.resolve(ctx, send, subject);
             }catch(const udho::exceptions::http_error& error){
@@ -912,7 +912,7 @@ StreamT& operator<<(StreamT& stream, const overload_group<U, V>& router){
     return stream;
 }
 
-
 }
 
 #endif // ROUTER_H
+

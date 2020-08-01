@@ -29,6 +29,7 @@
 #define UDHO_CONTEXT_H
 
 #include <map>
+#include <stack>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -64,6 +65,7 @@ struct context_impl{
     typedef udho::cookies_<request_type>                 cookies_type;
     typedef boost::beast::http::header<true>             headers_type;
     typedef urlencoded_form<std::string::const_iterator> query_parser_type;
+    typedef std::stack<udho::detail::route>              route_stack_type;
     
     const request_type& _request;
     form_type           _form;
@@ -71,10 +73,10 @@ struct context_impl{
     query_parser_type   _query;
     headers_type        _headers;
     cookies_type        _cookies;
+    route_stack_type    _routes;
     
     boost::beast::http::status _status;
-    std::string                _alt_path;
-    std::string               _pattern;
+//     std::string                _pattern;
     
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
@@ -138,31 +140,38 @@ struct context_impl{
     }
     void clear(){
         _status   = boost::beast::http::status::ok;
-        _alt_path = "";
-        _pattern  = "";
     }
     void reroute(const std::string& path){
-        _alt_path = path;
+        if(_routes.size()){
+            _routes.top().reroute(path);
+        }else{
+            log(udho::logging::messages::formatted::error("context", "reroute() called with %1% before a push") % path);
+        }
     }
     bool rerouted() const{
-        return !_alt_path.empty();
+        if(_routes.size()){
+            return _routes.top().rerouted();
+        }
+        return false;
     }
     std::string alt_path() const{
-        return _alt_path;
-    }
-    void pattern(const std::string& p){
-        _pattern = p;
-    }
-    std::string pattern() const{
-        return _pattern;
+        if(_routes.size()){
+            return _routes.top().rerouted_path();
+        }
+        return "";
     }
     std::string target() const{
         return _request.target().to_string();
     }
     std::string path() const{
-        std::string path;
-        std::stringstream path_stream(target());
-        std::getline(path_stream, path, '?');
+        std::string path; 
+        if(rerouted()){
+            std::stringstream path_stream(alt_path());
+            std::getline(path_stream, path, '?');
+        }else{
+            std::stringstream path_stream(target());
+            std::getline(path_stream, path, '?');
+        }
         return path;
     }
     std::string query_string() const{
@@ -172,6 +181,21 @@ struct context_impl{
     }
     const query_parser_type& query() const{
         return _query;
+    }
+    
+    void push(const udho::detail::route& r){
+        _routes.push(r);
+    }
+    udho::detail::route top() const{
+        return _routes.top();
+    }
+    udho::detail::route pop(){
+        udho::detail::route last = top();
+        _routes.pop();
+        return last;
+    }
+    std::size_t reroutes() const{
+        return _routes.size();
     }
 };
  
@@ -362,15 +386,6 @@ struct context{
     std::string alt_path() const{
         return _pimpl->alt_path();
     }
-    void pattern(const std::string& p){
-        _pimpl->pattern(p);
-    }
-    /**
-     * That pattern that was qualified to choose this callable
-     */
-    std::string pattern() const{
-        return _pimpl->pattern();
-    }
     /**
      * render a file in path
      */
@@ -383,6 +398,19 @@ struct context{
     template <typename... DataT>
     std::string render(const std::string& path, const DataT&... data) const{
         return _aux.render(path, *this, data...);
+    }
+    
+    void push(const udho::detail::route& r){
+        _pimpl->push(r);
+    }
+    udho::detail::route top() const{
+        return _pimpl->top();
+    }
+    udho::detail::route pop(){
+        return _pimpl->pop();
+    }
+    std::size_t reroutes() const{
+        return _pimpl->reroutes();
     }
 };
 
@@ -558,15 +586,6 @@ struct context<AuxT, RequestT, void>{
     std::string alt_path() const{
         return _pimpl->alt_path();
     }
-    void pattern(const std::string& p){
-        _pimpl->pattern(p);
-    }
-    /**
-     * That pattern that was qualified to choose this callable
-     */
-    std::string pattern() const{
-        return _pimpl->pattern();
-    }
     /**
      * render a file in path
      */
@@ -579,6 +598,19 @@ struct context<AuxT, RequestT, void>{
     template <typename... DataT>
     std::string render(const std::string& path, const DataT&... data) const{
         return _aux.render(path, *this, data...);
+    }
+    
+    void push(const udho::detail::route& r){
+        _pimpl->push(r);
+    }
+    udho::detail::route top() const{
+        return _pimpl->top();
+    }
+    udho::detail::route pop(){
+        return _pimpl->pop();
+    }
+    std::size_t reroutes() const{
+        return _pimpl->reroutes();
     }
 };
 
