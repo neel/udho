@@ -5,6 +5,9 @@ SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 
+FIND_PACKAGE(Boost COMPONENTS thread REQUIRED) 
+FIND_PACKAGE(Threads REQUIRED)
+
 ADD_EXECUTABLE(udho-example-hello hello.cpp)
 TARGET_LINK_LIBRARIES(udho-example-hello udho)
 
@@ -15,7 +18,7 @@ ADD_EXECUTABLE(udho-example-functor functor.cpp)
 TARGET_LINK_LIBRARIES(udho-example-functor udho)
 
 ADD_EXECUTABLE(udho-example-application application.cpp)
-TARGET_LINK_LIBRARIES(udho-example-application udho)
+TARGET_LINK_LIBRARIES(udho-example-application udho ${Boost_LIBRARIES})
 # 
 add_definitions(-DWWW_PATH="${CMAKE_CURRENT_SOURCE_DIR}/www")
 add_definitions(-DTMPL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/templates")

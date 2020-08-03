@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <udho/application.h>
 #include <udho/visitor.h>
+#include <boost/thread.hpp>
 
 std::string hello(udho::contexts::stateless ctx){
     return "Hello World";
@@ -62,7 +63,13 @@ int main(){
     
     server.serve(router, 9198);
     
-    io.run();
+    std::cout << "using " << boost::thread::hardware_concurrency() << " threads" << std::endl;
+    boost::thread_group pool;
+    for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i){
+        pool.create_thread(boost::bind(&boost::asio::io_service::run, &io));
+    }
+    pool.join_all();
+    // io.run();
     
     return 0;
 }
