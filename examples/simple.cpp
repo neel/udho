@@ -78,7 +78,7 @@ std::string unset(udho::contexts::stateful<appearence> ctx){
 
 std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
     std::cout << "server sessions: " << ctx.session().size() << std::endl;
-    std::cout << "server sessions having user: " << ctx.session().size<user>() << std::endl;
+    std::cout << "server sessions having user: " << ctx.session().exists<user>() << std::endl;
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
     std::cout << "session id: " << ctx.session().id() << std::endl;
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;

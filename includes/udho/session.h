@@ -102,10 +102,6 @@ struct session_{
     std::size_t size() const{
         return _shadow.size();
     }
-    template <typename V>
-    std::size_t size() const{
-        return _shadow.template size<V>(_id);
-    }
     bool remove(){
         return _shadow.remove(_id);
     }

@@ -41,10 +41,11 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace udho{
 namespace cache{
-
+  
 template <typename T = void>
 struct content{
     typedef T value_type;
@@ -53,7 +54,6 @@ struct content{
     boost::posix_time::ptime _created;
     boost::posix_time::ptime _updated;
     value_type _value;
-    
         
     explicit content(const value_type& value): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()), _value(value){}
     boost::posix_time::ptime created() const { return _created; }
@@ -61,6 +61,9 @@ struct content{
     boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - created(); }
     boost::posix_time::time_duration idle() const { return boost::posix_time::second_clock::local_time() - updated(); }
     const value_type& value() const { return _value; }
+    void update(const self_type& other){
+        update(other.value());
+    }
     void update(const value_type& value){
         _value = value;
         _updated = boost::posix_time::second_clock::local_time();
@@ -79,6 +82,8 @@ struct content<void>{
     boost::posix_time::ptime _updated;
     
     explicit content(): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()){}
+    template <typename U>
+    explicit content(U): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()){}
     boost::posix_time::ptime created() const { return _created; }
     boost::posix_time::ptime updated() const { return _updated; }
     boost::posix_time::time_duration age() const { return boost::posix_time::second_clock::local_time() - created(); }
@@ -86,30 +91,49 @@ struct content<void>{
     void update(){
         _updated = boost::posix_time::second_clock::local_time();
     }
+    void update(const self_type& /*other*/){
+        update();
+    }
 };
-    
-template <typename KeyT>
-struct master{
+
+namespace storage{
+   
+template <typename KeyT, typename ValueT = void>
+struct memory{
     typedef KeyT key_type;
-    typedef content<> content_type;
+    typedef ValueT value_type;
+    typedef content<ValueT> content_type;
     typedef std::map<key_type, content_type> map_type;
-    typedef master<KeyT> self_type;
-       
-    master() = default;
-    master(const self_type&) = delete;
-    master(self_type&&) = default;
+    typedef storage::memory<KeyT, ValueT> self_type;
     
-    bool issued(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        return _storage.find(key) != _storage.cend();
-    }
-    void issue(const key_type& key){
-        boost::mutex::scoped_lock lock(_mutex);
-        _storage.insert(std::make_pair(key, content_type()));
-    }
+    memory() = default;
+    memory(const self_type&) = delete;
+    memory(self_type&&) = default;
+    
     std::size_t size() const{
         boost::mutex::scoped_lock lock(_mutex);
         return _storage.size();
+    }
+    bool exists(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
+        return _storage.count(key);
+    }
+    void create(const key_type& key, const content_type& content){
+        boost::mutex::scoped_lock lock(_mutex);
+        _storage.insert(std::make_pair(key, content));
+    }
+    const content_type& retrieve(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
+        return _storage.at(key);
+    }
+    bool update(const key_type& key, const content_type& content){
+        boost::mutex::scoped_lock lock(_mutex);
+        typename map_type::iterator it = _storage.find(key);
+        if(it != _storage.cend()){
+            it->second.update(content);
+            return true;
+        }
+        return false;
     }
     bool remove(const key_type& key){
         boost::mutex::scoped_lock lock(_mutex);
@@ -119,105 +143,129 @@ struct master{
             return true;
         }
         return false;
-    }
-    boost::posix_time::ptime created(const key_type& key) const{
+    }    
+    protected:
+        map_type _storage;
+        mutable boost::mutex _mutex;
+};
+
+template <typename KeyT, typename ValueT = void>
+struct disk{
+    typedef KeyT key_type;
+    typedef ValueT value_type;
+    typedef content<> content_type;
+    typedef std::map<key_type, content_type> map_type;
+    typedef storage::disk<KeyT, ValueT> self_type;
+    
+    disk(const boost::filesystem::path& path): _storage(path){}
+    disk(const self_type&) = delete;
+    disk(self_type&&) = default;
+    
+    std::size_t size() const{
         boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::const_iterator it = _storage.find(key);
-        return it->second.created();
+        return 0;
     }
-    boost::posix_time::ptime updated(const key_type& key) const{
+    bool exists(const key_type& key) const{
         boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::const_iterator it = _storage.find(key);
-        return it->second.updated();
-    }
-    boost::posix_time::time_duration age(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::const_iterator it = _storage.find(key);
-        return it->second.age();
-    }
-    boost::posix_time::time_duration idle(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::const_iterator it = _storage.find(key);
-        return it->second.idle();
-    }
-    bool update(const key_type& key){
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        if(it != _storage.cend()){
-            it->second.update();
-            return true;
-        }
         return false;
     }
-protected:
-    map_type _storage;
-    mutable boost::mutex _mutex;
+    void create(const key_type& key, const content_type& content){
+        boost::mutex::scoped_lock lock(_mutex);
+        
+    }
+    const content_type& retrieve(const key_type& key) const{
+        boost::mutex::scoped_lock lock(_mutex);
+
+    }
+    bool update(const key_type& key, const content_type& content){
+        boost::mutex::scoped_lock lock(_mutex);
+
+        return false;
+    }
+    bool remove(const key_type& key){
+        boost::mutex::scoped_lock lock(_mutex);
+
+        return false;
+    }    
+    
+    protected:
+        boost::filesystem::path _storage;
+        mutable boost::mutex _mutex;
+};
+
+struct redis{};
+   
+}
+
+template <typename StorageT>
+struct engine: StorageT{
+    typedef StorageT storage_type;
+    typedef typename storage_type::key_type key_type;
+    typedef typename storage_type::value_type value_type;
+    typedef typename storage_type::content_type content_type;
+    typedef engine<StorageT> self_type;
+    
+    engine() = default;
+    engine(const self_type&) = delete;
+    engine(self_type&&) = default;
+    
+    boost::posix_time::ptime created(const key_type& key) const{
+        return storage_type::retrieve(key).created();
+    }
+    boost::posix_time::ptime updated(const key_type& key) const{
+        return storage_type::retrieve(key).updated();
+    }
+    boost::posix_time::time_duration age(const key_type& key) const{
+        return storage_type::retrieve(key).age();
+    }
+    boost::posix_time::time_duration idle(const key_type& key) const{
+        return storage_type::retrieve(key).idle();
+    }
+    template<typename U=value_type>
+    typename std::enable_if<!std::is_same<U,void>::value>::type insert(const key_type& key, const U& value){
+        storage_type::create(key, content_type(value));
+    }
+    template<typename U=value_type>
+    typename std::enable_if<std::is_same<U,void>::value>::type insert(const key_type& key){
+        storage_type::create(key, content_type());
+    }
+    template<typename U=value_type>
+    const typename std::enable_if<!std::is_same<U,void>::value, value_type>::type& at(const key_type& key) const{
+           return storage_type::retrieve(key).value();
+    }
+    template<typename U=value_type>
+    typename std::enable_if<!std::is_same<U,void>::value, bool>::type update(const key_type& key, const U& value){
+        return storage_type::update(key, content_type(value));
+    }
+    bool update(const key_type& key){
+        return storage_type::update(key, content_type());
+    }
+    bool remove(const key_type& key){
+        return storage_type::remove(key);
+    }
+};
+    
+template <typename KeyT>
+struct master: public engine<storage::memory<KeyT>>{
+    typedef KeyT key_type;
+    typedef engine<storage::memory<KeyT>> storage_type;
+    
+    bool issued(const key_type& key) const{
+        return storage_type::exists(key);
+    }
+    void issue(const key_type& key){
+        storage_type::insert(key);
+    }
 };
 
 template <typename KeyT, typename T>
-struct registry{
-    typedef KeyT key_type;
-    typedef T value_type;
-    typedef content<value_type> content_type;
-    typedef std::map<KeyT, content_type> map_type;
+struct registry: public engine<storage::memory<KeyT, T>>{
     typedef registry<KeyT, T> self_type;
        
     registry() = default;
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
     
-    std::size_t size(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        return _storage.count(key);
-    }
-    bool exists(const key_type& key) const{
-        return size(key);
-    }
-    const value_type& at(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        return _storage.at(key).value();
-    }
-    void insert(const key_type& key, const value_type& value){
-        boost::mutex::scoped_lock lock(_mutex);
-        _storage.insert(std::make_pair(key, content_type(value)));
-    }
-    void update(const key_type& key, const value_type& value){
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        it->second.update(value);
-    }
-    bool remove(const key_type& key){
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        if(it != _storage.end()){
-            _storage.erase(it);
-            return true;
-        }
-        return false;
-    }
-    boost::posix_time::ptime created(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        return it->second.created();
-    }
-    boost::posix_time::ptime updated(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        return it->second.updated();
-    }
-    boost::posix_time::time_duration age(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        return it->second.age();
-    }
-    boost::posix_time::time_duration idle(const key_type& key) const{
-        boost::mutex::scoped_lock lock(_mutex);
-        typename map_type::iterator it = _storage.find(key);
-        return it->second.idle();
-    }
-protected:
-    map_type _storage;
-    mutable boost::mutex _mutex;
 };
 
 template <typename KeyT, typename... T>
