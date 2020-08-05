@@ -26,7 +26,8 @@ if(UDHO_USE_PUGIXML)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex system REQUIRED) 
+FIND_PACKAGE(Boost COMPONENTS filesystem regex system REQUIRED)
+FIND_PACKAGE(OpenSSL REQUIRED)
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
@@ -42,14 +43,18 @@ SET(UDHO_HEADERS
 )
 SET(UDHO_SOURCES 
     page.cpp
+    client.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 endif()
 
+add_subdirectory(deps)
+include_directories(deps/certify/include)
+
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
-TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} OpenSSL::SSL certify::core)
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
 if(UDHO_USE_ICU)
