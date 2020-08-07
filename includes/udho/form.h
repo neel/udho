@@ -36,9 +36,11 @@
 #include <udho/util.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/function.hpp>
 #include <udho/access.h>
+#include <iomanip>
 
 namespace udho{
     

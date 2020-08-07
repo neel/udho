@@ -172,6 +172,12 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
     return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
 
+void fetch(udho::contexts::stateless ctx){
+    return ctx.client(udho::url("https://voxpeople.org:443/projects")).get([](udho::contexts::stateless c, boost::beast::http::response<boost::beast::http::string_body> res) {
+        c.respond(res);
+    });
+}
+
 int main(){    
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
@@ -180,6 +186,7 @@ int main(){
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")
+        | (udho::get(&fetch).deferred()      = "^/fetch")
         | (udho::get(&local).raw()           = "^/local")
         | (udho::get(&hello).plain()         = "^/hello$")
         | (udho::get(&see).plain()           = "^/see$")

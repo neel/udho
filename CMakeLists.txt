@@ -31,6 +31,7 @@ FIND_PACKAGE(OpenSSL REQUIRED)
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
+  deps/certify/include
 )
 
 SET(UDHO_HEADERS 
@@ -51,7 +52,6 @@ if(UDHO_BUILD_EXAMPLES)
 endif()
 
 add_subdirectory(deps)
-include_directories(deps/certify/include)
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
 TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} OpenSSL::SSL certify::core)

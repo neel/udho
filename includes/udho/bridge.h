@@ -40,8 +40,10 @@
 #include <udho/page.h>
 #include <udho/context.h>
 #include <udho/configuration.h>
+#include <udho/client.h>
 
 namespace udho{
+    
 /**
  * @todo write docs
  */
@@ -50,8 +52,11 @@ struct bridge{
     typedef ConfigT configuration_type;
     typedef bridge<ConfigT> self_type;
     
+    boost::asio::io_service& _io;
     configuration_type _config; 
 
+    bridge(boost::asio::io_service& io): _io(io){}
+    
     configuration_type& config(){
         return _config;
     }
@@ -125,6 +130,11 @@ struct bridge{
         boost::filesystem::path tmpl_root  = tmplroot();
         boost::filesystem::path local_path = tmpl_root / path;
         return contents(local_path);
+    }
+    
+    template <typename ContextT>
+    detail::https_connection_wrapper<ContextT> client(ContextT ctx, udho::url u){
+        return detail::https_connection_wrapper<ContextT>(_io, ctx, u);
     }
 };
 
