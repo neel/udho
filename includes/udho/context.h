@@ -413,7 +413,10 @@ struct context{
         return _pimpl->reroutes();
     }
     
-    detail::https_connection_wrapper<self_type> client(udho::url u){
+    detail::client_connection_wrapper<self_type> client(const std::string& url){
+        return _aux.client(*this, udho::url(url));
+    }
+    detail::client_connection_wrapper<self_type> client(udho::url u){
         return _aux.client(*this, u);
     }
 };
@@ -617,7 +620,10 @@ struct context<AuxT, RequestT, void>{
         return _pimpl->reroutes();
     }
     
-    detail::https_connection_wrapper<self_type> client(udho::url u){
+    detail::client_connection_wrapper<self_type> client(const std::string& url){
+        return _aux.client(*this, udho::url(url));
+    }
+    detail::client_connection_wrapper<self_type> client(udho::url u){
         return _aux.client(*this, u);
     }
 };

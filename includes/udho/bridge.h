@@ -133,8 +133,8 @@ struct bridge{
     }
     
     template <typename ContextT>
-    detail::https_connection_wrapper<ContextT> client(ContextT ctx, udho::url u){
-        return detail::https_connection_wrapper<ContextT>(_io, ctx, u);
+    detail::client_connection_wrapper<ContextT> client(ContextT ctx, udho::url u){
+        return detail::client_connection_wrapper<ContextT>(_io, ctx, u);
     }
 };
 

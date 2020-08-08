@@ -173,9 +173,10 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
 }
 
 void fetch(udho::contexts::stateless ctx){
-    return ctx.client(udho::url("https://voxpeople.org:443/projects")).get([](udho::contexts::stateless c, boost::beast::http::response<boost::beast::http::string_body> res) {
-        c.respond(res);
-    });
+    ctx.client("https://voxpeople.org:443/projects").get()
+        .done([ctx](boost::beast::http::status status, const std::string body) mutable -> void {
+            ctx.respond(body, "text/plain");
+        });
 }
 
 int main(){    
