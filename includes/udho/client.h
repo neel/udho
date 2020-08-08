@@ -57,7 +57,8 @@ struct async_result{
     typedef udho::config<udho::client_options> options_type;
     
     typedef boost::function<void (ContextT, const boost::beast::http::response<boost::beast::http::string_body>&)> success_callback_type;
-    typedef boost::function<void (ContextT, boost::beast::error_code)> error_callback_type;
+    typedef boost::function<void (ContextT, const boost::beast::error_code&)> error_callback_type;
+    typedef boost::function<void (const boost::beast::error_code&)> error_callback_type_aux;
     
     typedef boost::function<void (const boost::beast::http::response<boost::beast::http::string_body>&)> success_callback_type_aux_r;
     typedef boost::function<void (ContextT, boost::beast::http::status, const std::string&)> success_callback_type_aux_xsc;
@@ -84,7 +85,7 @@ struct async_result{
             bool is_redirected = res.count(boost::beast::http::field::location);
             if(is_redirected && _options[udho::client_options::follow_redirect]){
                 std::string redirected_url(res[boost::beast::http::field::location]);
-                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url(redirected_url)).then(_callback).error(_ecallback);
+                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url(redirected_url)).then(_callback).failed(_ecallback);
             }else{
                 _callback(_ctx, res);
             }
@@ -99,12 +100,16 @@ struct async_result{
     }
     self_type& then(success_callback_type cb){
         _callback = cb;
-        std::cout << "callback added " << !_callback.empty() << std::endl;
         return *this;
     }
-    self_type& error(error_callback_type cb){
+    self_type& failed(error_callback_type cb){
         _ecallback = cb;
         return *this;
+    }
+    self_type& error(error_callback_type_aux cb){
+        return failed([cb](context_type, const boost::beast::error_code& ec) mutable {
+            cb(ec);
+        });
     }
     self_type& fetch(success_callback_type_aux_xsc cb){
         return then([cb, this](context_type, const boost::beast::http::response<boost::beast::http::string_body>& res) mutable -> void{
@@ -167,6 +172,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
         req.version(version);
         req.method(method);
         req.target(target);
+        std::cout << "https request target " << target << std::endl;
         req.set(boost::beast::http::field::host, host);
         req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 
@@ -277,6 +283,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
         req.version(version);
         req.method(method);
         req.target(target);
+        std::cout << "http request target " << target << std::endl;
         req.set(boost::beast::http::field::host, host);
         req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 

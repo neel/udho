@@ -173,10 +173,16 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
 }
 
 void fetch(udho::contexts::stateless ctx){
-    ctx.client().get("https://voxpeople.org/adada")
-        .done([ctx](boost::beast::http::status status, const std::string body) mutable {
+    udho::configuration<udho::client_options> options;
+    options[udho::client_options::verify_certificate] = true;
+    
+    ctx.client(options).get("https://tls-v1-2.badssl.com:1012/")
+        .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
             ctx.status(status);
             ctx.respond(body, "text/html");
+        }).error([ctx](const boost::beast::error_code& ec) mutable {
+            ctx.status(boost::beast::http::status::internal_server_error);
+            ctx.respond(ec.message(), "text/plain");
         })
         .option(udho::client_options::follow_redirect, true)
         .option(udho::client_options::verify_certificate, true);
