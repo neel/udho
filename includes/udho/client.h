@@ -233,7 +233,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     typedef ContextT context_type;
     
     boost::asio::ip::tcp::resolver resolver;
-    boost::beast::ssl_stream<boost::beast::tcp_stream> stream;
+    boost::beast::ssl_stream<boost::asio::ip::tcp::socket> stream;
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
@@ -265,10 +265,9 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             result_type::failure( ec);
             return;
         }
-        boost::beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
-        boost::beast::get_lowest_layer(stream).async_connect(results, std::bind(&self_type::on_connect, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+        boost::asio::async_connect(stream.next_layer(), results.begin(), results.end(), std::bind(&self_type::on_connect, base::shared_from_this(), std::placeholders::_1));
     }
-    void on_connect(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type::endpoint_type){
+    void on_connect(boost::beast::error_code ec){
         if(ec){
             std::cout << "failed to connect" << std::endl;
             std::cout << ec << std::endl;
@@ -284,7 +283,6 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             result_type::failure(ec);
             return;
         }
-        boost::beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
         boost::beast::http::async_write(stream, req, std::bind(&self_type::on_write, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
     void on_write(boost::beast::error_code ec, std::size_t /*bytes_transferred*/) {
@@ -305,8 +303,94 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
         }
         std::cout << res << std::endl;
         result_type::success(res);
-        boost::beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
         stream.async_shutdown(std::bind(&self_type::on_shutdown, base::shared_from_this(), std::placeholders::_1));
+    }
+    void on_shutdown(boost::beast::error_code ec) {
+        if(ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated){
+            // Rationale:
+            // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
+            ec = {};
+        }
+        if(ec){
+            std::cout << "failed to shutdown" << std::endl;
+            std::cout << ec.message() << std::endl;
+            result_type::failure(ec);
+            return;
+        }
+    }
+    result_type& result(){
+        return *this;
+    }
+};
+
+/**
+ * @todo write docs
+ */
+template <typename ContextT>
+struct http_client_connection: public std::enable_shared_from_this<http_client_connection<ContextT>>, public async_result<ContextT>{
+    typedef std::enable_shared_from_this<http_client_connection<ContextT>> base;
+    typedef async_result<ContextT> result_type;
+    typedef http_client_connection<ContextT> self_type;
+    typedef ContextT context_type;
+    
+    boost::asio::ip::tcp::resolver resolver;
+    boost::asio::ip::tcp::socket socket;
+    boost::beast::flat_buffer buffer;
+    boost::beast::http::request<boost::beast::http::empty_body> req;
+    boost::beast::http::response<boost::beast::http::string_body> res;
+    
+    explicit http_client_connection(ContextT context, boost::asio::executor ex): result_type(context), resolver(ex), socket(ex){}
+    void start(const udho::url& u, boost::beast::http::verb method = boost::beast::http::verb::get, int version = 11){
+        std::string host   = u[url::host];
+        std::string port   = std::to_string(u[url::port]);
+        std::string target = u[url::target];
+        
+        req.version(version);
+        req.method(method);
+        req.target(target);
+        req.set(boost::beast::http::field::host, host);
+        req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+
+        resolver.async_resolve(host, port, std::bind(&self_type::on_resolve, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    }
+    void on_resolve(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type results){
+        if(ec){
+            std::cout << "failed to resolve" << std::endl;
+            std::cout << ec.message() << std::endl;
+            result_type::failure( ec);
+            return;
+        }
+        boost::asio::async_connect(socket, results.begin(), results.end(), std::bind(&self_type::on_connect, base::shared_from_this(), std::placeholders::_1));
+    }
+    void on_connect(boost::beast::error_code ec){
+        if(ec){
+            std::cout << "failed to connect" << std::endl;
+            std::cout << ec << std::endl;
+            result_type::failure(ec);
+            return;
+        }
+        boost::beast::http::async_write(socket, req, std::bind(&self_type::on_write, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    }
+    void on_write(boost::beast::error_code ec, std::size_t /*bytes_transferred*/) {
+        if(ec){
+            std::cout << "failed to write" << std::endl;
+            std::cout << ec << std::endl;
+            result_type::failure(ec);
+            return;
+        }
+        boost::beast::http::async_read(socket, buffer, res, std::bind(&self_type::on_read, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    }
+    void on_read(boost::beast::error_code ec, std::size_t /*bytes_transferred*/){
+        if(ec){
+            std::cout << "failed to read" << std::endl;
+            std::cout << ec << std::endl;
+            result_type::failure( ec);
+            return;
+        }
+        std::cout << res << std::endl;
+        result_type::success(res);
+        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        on_shutdown(ec);
     }
     void on_shutdown(boost::beast::error_code ec) {
         if(ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated){
@@ -336,14 +420,28 @@ struct client_connection_wrapper{
     
     explicit inline client_connection_wrapper(boost::asio::io_service& io, ContextT ctx, udho::url u): _io(io), _context(ctx), _url(u){}
     result_type& request(boost::beast::http::verb method){
-        boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
-        ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
-        // boost::certify::enable_native_https_server_verification(ssl_ctx);
-        
-        typedef udho::detail::https_client_connection<ContextT> connection_type;
-        std::shared_ptr<connection_type> connection = std::make_shared<connection_type>(_context, boost::asio::make_strand(_io), ssl_ctx);
-        connection->start(_url, method);
-        return connection->result();
+        std::string protocol = _url[udho::url::protocol];
+        if(protocol == "https"){
+            if(!_url[udho::url::port]){
+                _url[udho::url::port] = 443;
+            }
+            boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
+            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
+            // boost::certify::enable_native_https_server_verification(ssl_ctx);
+            typedef udho::detail::https_client_connection<ContextT> connection_type;
+            std::shared_ptr<connection_type> connection = std::make_shared<connection_type>(_context, boost::asio::make_strand(_io), ssl_ctx);
+            connection->start(_url, method);
+            return connection->result();
+        }else{ // assuming http
+            if(!_url[udho::url::port]){
+                _url[udho::url::port] = 80;
+            }
+            
+            typedef udho::detail::http_client_connection<ContextT> connection_type;
+            std::shared_ptr<connection_type> connection = std::make_shared<connection_type>(_context, boost::asio::make_strand(_io));
+            connection->start(_url, method);
+            return connection->result();
+        }
     }
     result_type& get(){
         return request(boost::beast::http::verb::get);
