@@ -53,6 +53,7 @@
 #include <udho/attachment.h>
 #include <udho/compositors.h>
 #include <udho/client.h>
+#include <udho/url.h>
 
 namespace udho{
 
@@ -413,11 +414,11 @@ struct context{
         return _pimpl->reroutes();
     }
     
-    detail::client_connection_wrapper<self_type> client(const std::string& url){
-        return _aux.client(*this, udho::url(url));
+    detail::client_connection_wrapper<self_type> client(const std::string& url, udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, udho::url(url), options);
     }
-    detail::client_connection_wrapper<self_type> client(udho::url u){
-        return _aux.client(*this, u);
+    detail::client_connection_wrapper<self_type> client(udho::url u, udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, u, options);
     }
 };
 
@@ -620,11 +621,8 @@ struct context<AuxT, RequestT, void>{
         return _pimpl->reroutes();
     }
     
-    detail::client_connection_wrapper<self_type> client(const std::string& url){
-        return _aux.client(*this, udho::url(url));
-    }
-    detail::client_connection_wrapper<self_type> client(udho::url u){
-        return _aux.client(*this, u);
+    detail::client_connection_wrapper<self_type> client(udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, options);
     }
 };
 

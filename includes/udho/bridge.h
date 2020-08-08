@@ -41,6 +41,7 @@
 #include <udho/context.h>
 #include <udho/configuration.h>
 #include <udho/client.h>
+#include <udho/url.h>
 
 namespace udho{
     
@@ -133,8 +134,8 @@ struct bridge{
     }
     
     template <typename ContextT>
-    detail::client_connection_wrapper<ContextT> client(ContextT ctx, udho::url u){
-        return detail::client_connection_wrapper<ContextT>(_io, ctx, u);
+    detail::client_connection_wrapper<ContextT> client(ContextT ctx, udho::config<udho::client_options> options){
+        return detail::client_connection_wrapper<ContextT>(_io, ctx, options);
     }
 };
 

@@ -173,11 +173,13 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
 }
 
 void fetch(udho::contexts::stateless ctx){
-    ctx.client("http://voxpeople.org/adada").get()
+    ctx.client().get("https://voxpeople.org/adada")
         .done([ctx](boost::beast::http::status status, const std::string body) mutable {
             ctx.status(status);
             ctx.respond(body, "text/html");
-        });
+        })
+        .option(udho::client_options::follow_redirect, true)
+        .option(udho::client_options::verify_certificate, true);
 }
 
 int main(){    

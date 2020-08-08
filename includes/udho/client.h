@@ -36,120 +36,17 @@
 #include <boost/asio/io_service.hpp>
 #include <udho/configuration.h>
 #include <udho/form.h>
+#include <udho/url.h>
 #include <iostream>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
-// #include <boost/certify/extensions.hpp>
-// #include <boost/certify/https_verification.hpp>
+#include <boost/certify/extensions.hpp>
+#include <boost/certify/https_verification.hpp>
 
 namespace udho{
-namespace detail{
-    
-template <typename T = void>
-struct url_data_{
-    const static struct protocol_t{
-        typedef url_data_<T> component;
-    } protocol;
-    const static struct host_t{
-        typedef url_data_<T> component;
-    } host;
-    const static struct port_t{
-        typedef url_data_<T> component;
-    } port;
-    const static struct target_t{
-        typedef url_data_<T> component;
-    } target;
-    const static struct path_t{
-        typedef url_data_<T> component;
-    } path;
-    const static struct query_t{
-        typedef url_data_<T> component;
-    } query;
-    
-    std::string _protocol;
-    std::string _host;
-    std::size_t _port;
-    std::string _path;
-    std::string _target;
-    std::string _query;
-    
-    url_data_(): _port(0){}
-    
-    void set(protocol_t, const std::string& v){_protocol = v;}
-    std::string get(protocol_t) const{return _protocol;}
-    
-    void set(host_t, const std::string& v){_host = v;}
-    std::string get(host_t) const{return _host;}
-    
-    void set(port_t, std::size_t v){_port = v;}
-    std::size_t get(port_t) const{return _port;}
-    
-    void set(target_t, const std::string& v){_target = v;}
-    std::string get(target_t) const{return _target;}
-    
-    void set(path_t, const std::string& v){_path = v;}
-    std::string get(path_t) const{return _path;}
-    
-    void set(query_t, const std::string& v){_query = v;}
-    const std::string& get(query_t) const{return _query;}
-};
-
-template <typename T> const typename url_data_<T>::protocol_t   url_data_<T>::protocol;
-template <typename T> const typename url_data_<T>::host_t       url_data_<T>::host;
-template <typename T> const typename url_data_<T>::port_t       url_data_<T>::port;
-template <typename T> const typename url_data_<T>::target_t     url_data_<T>::target;
-template <typename T> const typename url_data_<T>::path_t       url_data_<T>::path;
-template <typename T> const typename url_data_<T>::query_t      url_data_<T>::query;
-
-typedef url_data_<> url_data;
-      
-}
-
-struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::string::const_iterator>{
-    explicit url(const std::string& url_str){
-        parse(url_str);
-    }
-    private:
-        inline void parse(const std::string& url){
-            std::string proto, hst, prt, pth, tgt, qry;
-            std::string protocol_terminal = "://";
-            std::string::const_iterator protocol_end = std::search(url.begin(), url.end(), protocol_terminal.begin(), protocol_terminal.end());
-            if(protocol_end != url.end()){
-                std::copy(url.begin(), protocol_end, std::back_inserter(proto));
-                std::advance(protocol_end, 3);
-            }else{
-                protocol_end = url.begin();
-            }
-            std::string terminals = ":/";
-            std::string::const_iterator it = std::find_first_of(protocol_end, url.end(), terminals.begin(), terminals.end());
-            std::copy(protocol_end, it, std::back_inserter(hst));
-            if(it != url.end()){
-                if(*it == ':'){
-                    std::string::const_iterator slash_it = std::find(++it, url.end(), '/');
-                    std::copy(it, slash_it, std::back_inserter(prt));
-                    it = slash_it;
-                }
-                std::copy(it, url.end(), std::back_inserter(tgt));
-                std::string::const_iterator query_it = std::find(it, url.end(), '?');
-                std::copy(it, query_it, std::back_inserter(pth));
-                std::copy(++query_it, url.end(), std::back_inserter(qry));
-            }
-            
-            (*this)[protocol] = proto;
-            (*this)[host]     = hst;
-            (*this)[port]     = !prt.empty() ? std::stoul(prt) : 0;
-            (*this)[path]     = !pth.empty() ? pth : std::string("/");
-            (*this)[target]   = tgt;
-            (*this)[query]    = qry;
-            
-            const std::string& qstr_ref = (*this)[query];
-            
-            udho::urlencoded_form<std::string::const_iterator>::parse(qstr_ref.begin(), qstr_ref.end());
-        }
-};
 
 namespace detail{
     
@@ -157,6 +54,8 @@ template <typename ContextT>
 struct async_result{
     typedef ContextT context_type;
     typedef async_result<ContextT> self_type;
+    typedef udho::config<udho::client_options> options_type;
+    
     typedef boost::function<void (ContextT, const boost::beast::http::response<boost::beast::http::string_body>&)> success_callback_type;
     typedef boost::function<void (ContextT, boost::beast::error_code)> error_callback_type;
     
@@ -169,14 +68,26 @@ struct async_result{
     context_type          _ctx;
     success_callback_type _callback;
     error_callback_type   _ecallback;
+    options_type          _options;
     
     async_result() = delete;
-    async_result(const context_type& ctx): _ctx(ctx){}
+    async_result(const context_type& ctx, options_type options): _ctx(ctx), _options(options){}
     async_result(const self_type& other) = delete;
     
+    template <typename KeyT, typename ValueT>
+    self_type& option(KeyT key, ValueT value){
+        _options[key] = value;
+        return *this;
+    }
     void success(const boost::beast::http::response<boost::beast::http::string_body>& res){
         if(!_callback.empty()){
-            _callback(_ctx, res);
+            bool is_redirected = res.count(boost::beast::http::field::location);
+            if(is_redirected && _options[udho::client_options::follow_redirect]){
+                std::string redirected_url(res[boost::beast::http::field::location]);
+                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url(redirected_url)).then(_callback).error(_ecallback);
+            }else{
+                _callback(_ctx, res);
+            }
         }else{
             std::cout << "No callback added" << std::endl;
         }
@@ -231,14 +142,17 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     typedef async_result<ContextT> result_type;
     typedef https_client_connection<ContextT> self_type;
     typedef ContextT context_type;
+    typedef udho::config<udho::client_options> options_type;
+    typedef boost::function<void (const std::string&)> redirector_type;
     
     boost::asio::ip::tcp::resolver resolver;
     boost::beast::ssl_stream<boost::asio::ip::tcp::socket> stream;
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
+    options_type _options;
     
-    explicit https_client_connection(ContextT context, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx): result_type(context), resolver(ex), stream(ex, ssl_ctx){}
+    explicit https_client_connection(ContextT context, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), resolver(ex), stream(ex, ssl_ctx), _options(options){}
     void start(const udho::url& u, boost::beast::http::verb method = boost::beast::http::verb::get, int version = 11){
         std::string host   = u[url::host];
         std::string port   = std::to_string(u[url::port]);
@@ -318,6 +232,18 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             return;
         }
     }
+    
+    static std::shared_ptr<self_type> create(boost::asio::io_service& io, ContextT ctx, options_type options){
+        boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
+        if(!options[udho::client_options::verify_certificate]){
+            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
+        }else{
+            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_peer);
+            boost::certify::enable_native_https_server_verification(ssl_ctx);
+        }
+        std::shared_ptr<self_type> connection = std::make_shared<self_type>(ctx, boost::asio::make_strand(io), ssl_ctx, options);
+        return connection;
+    }
     result_type& result(){
         return *this;
     }
@@ -332,14 +258,17 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     typedef async_result<ContextT> result_type;
     typedef http_client_connection<ContextT> self_type;
     typedef ContextT context_type;
+    typedef udho::config<udho::client_options> options_type;
+    typedef boost::function<void (const std::string&)> redirector_type;
     
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::ip::tcp::socket socket;
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
+    options_type _options;
     
-    explicit http_client_connection(ContextT context, boost::asio::executor ex): result_type(context), resolver(ex), socket(ex){}
+    explicit http_client_connection(ContextT context, boost::asio::executor ex, options_type options): result_type(context, options), resolver(ex), socket(ex), _options(options){}
     void start(const udho::url& u, boost::beast::http::verb method = boost::beast::http::verb::get, int version = 11){
         std::string host   = u[url::host];
         std::string port   = std::to_string(u[url::port]);
@@ -405,6 +334,11 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
             return;
         }
     }
+    
+    static std::shared_ptr<self_type> create(boost::asio::io_service& io, ContextT ctx, options_type options){
+        std::shared_ptr<self_type> connection = std::make_shared<self_type>(ctx, boost::asio::make_strand(io), options);
+        return connection;
+    }
     result_type& result(){
         return *this;
     }
@@ -412,45 +346,53 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     
 template <typename ContextT>
 struct client_connection_wrapper{
+    typedef client_connection_wrapper<ContextT> self_type;
     typedef udho::detail::async_result<ContextT> result_type;
+    typedef udho::config<udho::client_options> options_type;
     
     boost::asio::io_service& _io;
     ContextT _context;
-    udho::url _url;
+    options_type _options;
     
-    explicit inline client_connection_wrapper(boost::asio::io_service& io, ContextT ctx, udho::url u): _io(io), _context(ctx), _url(u){}
-    result_type& request(boost::beast::http::verb method){
-        std::string protocol = _url[udho::url::protocol];
+    explicit inline client_connection_wrapper(boost::asio::io_service& io, ContextT ctx, options_type options): _io(io), _context(ctx), _options(options){}
+    result_type& request(boost::beast::http::verb method, udho::url url){
+        self_type self(*this);
+        
+        std::string protocol = url[udho::url::protocol];
         if(protocol == "https"){
-            if(!_url[udho::url::port]){
-                _url[udho::url::port] = 443;
+            if(!url[udho::url::port]){
+                url[udho::url::port] = 443;
             }
-            boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
-            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
-            // boost::certify::enable_native_https_server_verification(ssl_ctx);
-            typedef udho::detail::https_client_connection<ContextT> connection_type;
-            std::shared_ptr<connection_type> connection = std::make_shared<connection_type>(_context, boost::asio::make_strand(_io), ssl_ctx);
-            connection->start(_url, method);
+            auto connection = udho::detail::https_client_connection<ContextT>::create(_io, _context, _options);
+            connection->start(url, method);
             return connection->result();
         }else{ // assuming http
-            if(!_url[udho::url::port]){
-                _url[udho::url::port] = 80;
+            if(!url[udho::url::port]){
+                url[udho::url::port] = 80;
             }
-            
-            typedef udho::detail::http_client_connection<ContextT> connection_type;
-            std::shared_ptr<connection_type> connection = std::make_shared<connection_type>(_context, boost::asio::make_strand(_io));
-            connection->start(_url, method);
+            auto connection = udho::detail::http_client_connection<ContextT>::create(_io, _context, _options);
+            connection->start(url, method);
             return connection->result();
         }
     }
-    result_type& get(){
-        return request(boost::beast::http::verb::get);
+    result_type& get(udho::url url){
+        return request(boost::beast::http::verb::get, url);
     }
-    result_type& post(){
-        return request(boost::beast::http::verb::post);
+    result_type& post(udho::url url){
+        return request(boost::beast::http::verb::post, url);
     }
-    result_type& put(){
-        return request(boost::beast::http::verb::put);
+    result_type& put(udho::url url){
+        return request(boost::beast::http::verb::put, url);
+    }
+    
+    result_type& get(const std::string& url){
+        return get(udho::url(url));
+    }
+    result_type& post(const std::string& url){
+        return post(udho::url(url));
+    }
+    result_type& put(const std::string& url){
+        return put(udho::url(url));
     }
 };
 

@@ -45,6 +45,7 @@ SET(UDHO_HEADERS
 SET(UDHO_SOURCES 
     page.cpp
     client.cpp
+    url.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)
