@@ -172,11 +172,11 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
     return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
 
-void fetch(udho::contexts::stateless ctx){
-    udho::configuration<udho::client_options> options;
-    options[udho::client_options::verify_certificate] = true;
+void fetch_good(udho::contexts::stateless ctx){
+//     udho::configuration<udho::client_options> options;
+//     options[udho::client_options::verify_certificate] = true;
     
-    ctx.client(options).get("http://tls-v1-2.badssl.com") // Good:  http://tls-v1-2.badssl.com Bad: http://expired.badssl.com
+    ctx.client().get("https://tls-v1-2.badssl.com:1012")
         .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
             ctx.status(status);
             ctx.respond(body, "text/html");
@@ -188,6 +188,22 @@ void fetch(udho::contexts::stateless ctx){
         .option(udho::client_options::verify_certificate, true);
 }
 
+void fetch_bad(udho::contexts::stateless ctx){
+    udho::configuration<udho::client_options> options;
+    options[udho::client_options::verify_certificate] = true;
+    
+    ctx.client(options).get("http://expired.badssl.com")
+        .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
+            ctx.status(status);
+            ctx.respond(body, "text/html");
+        }).error([ctx](const boost::beast::error_code& ec) mutable {
+            ctx.status(boost::beast::http::status::internal_server_error);
+            ctx.respond(ec.message(), "text/plain");
+        })
+        .option(udho::client_options::follow_redirect, false)
+        .option(udho::client_options::verify_certificate, false);
+}
+
 int main(){    
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
@@ -196,7 +212,8 @@ int main(){
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")
-        | (udho::get(&fetch).deferred()      = "^/fetch")
+        | (udho::get(&fetch_good).deferred() = "^/fetch/good")
+        | (udho::get(&fetch_bad).deferred()  = "^/fetch/bad")
         | (udho::get(&local).raw()           = "^/local")
         | (udho::get(&hello).plain()         = "^/hello$")
         | (udho::get(&see).plain()           = "^/see$")

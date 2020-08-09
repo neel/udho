@@ -82,10 +82,14 @@ struct async_result{
         _options[key] = value;
         return *this;
     }
+    template <typename KeyT>
+    auto option(KeyT key) const{
+        return _options[key];
+    }
     void success(const boost::beast::http::response<boost::beast::http::string_body>& res){
         if(!_callback.empty()){
             bool is_redirected = res.count(boost::beast::http::field::location);
-            if(is_redirected && _options[udho::client_options::follow_redirect]){
+            if(is_redirected && option(udho::client_options::follow_redirect)){
                 std::string redirected_url(res[boost::beast::http::field::location]);
                 _ctx.client(_options).request(boost::beast::http::verb::get, udho::url(redirected_url)).then(_callback).failed(_ecallback);
             }else{
@@ -154,13 +158,14 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     
     udho::url _url;
     boost::asio::ip::tcp::resolver resolver;
+    boost::asio::ssl::context& _ssl_ctx;
     boost::asio::ssl::stream<boost::asio::ip::tcp::socket> stream;
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
-    options_type _options;
+//     options_type _options;
     
-    explicit https_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), stream(ex, ssl_ctx), _options(options){}
+    explicit https_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx)/*, _options(options)*/{}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);
@@ -188,6 +193,12 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             result_type::failure( ec);
             return;
         }
+        std::cout << "certificate verification " << result_type::option(udho::client_options::verify_certificate) << std::endl;
+        if(!result_type::option(udho::client_options::verify_certificate)){
+            stream.set_verify_mode(boost::asio::ssl::verify_none);
+        }else{
+            stream.set_verify_mode(boost::asio::ssl::verify_peer);
+        }
         boost::asio::async_connect(stream.next_layer(), results.begin(), results.end(), std::bind(&self_type::on_connect, base::shared_from_this(), std::placeholders::_1));
     }
     void on_connect(boost::beast::error_code ec){
@@ -208,7 +219,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             result_type::failure(ec);
             return;
         }
-        int version = _options[udho::client_options::http_version];
+        int version = result_type::option(udho::client_options::http_version);
         
         req.version(version);
         stream.async_handshake(boost::asio::ssl::stream_base::client, std::bind(&self_type::on_handshake, base::shared_from_this(), std::placeholders::_1));
@@ -258,13 +269,8 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     
     static std::shared_ptr<self_type> create(boost::asio::io_service& io, ContextT ctx, udho::url url, options_type options){
         boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
-        if(!options[udho::client_options::verify_certificate]){
-            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
-        }else{
-            ssl_ctx.set_verify_mode(boost::asio::ssl::context::verify_peer);
-            ssl_ctx.set_default_verify_paths();
-            boost::certify::enable_native_https_server_verification(ssl_ctx);
-        }
+        ssl_ctx.set_default_verify_paths();
+        boost::certify::enable_native_https_server_verification(ssl_ctx);
         std::shared_ptr<self_type> connection = std::make_shared<self_type>(ctx, url, boost::asio::make_strand(io), ssl_ctx, options);
         return connection;
     }
@@ -291,14 +297,14 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
-    options_type _options;
+//     options_type _options;
     
-    explicit http_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex), _options(options){}
+    explicit http_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex)/*, _options(options)*/{}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);
         std::string target = _url[url::target];
-        int version = _options[udho::client_options::http_version];
+        int version = result_type::option(udho::client_options::http_version);
         
         std::string host_str = host;
         if(_url[url::port] != 443){
