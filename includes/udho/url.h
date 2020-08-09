@@ -98,40 +98,6 @@ typedef url_data_<> url_data;
       
 }
 
-template <typename T = void>
-struct client_options_{
-    const static struct verify_certificate_t{
-        typedef client_options_<T> component;
-    } verify_certificate;
-    const static struct follow_redirect_t{
-        typedef client_options_<T> component;
-    } follow_redirect;
-    const static struct http_version_t{
-        typedef client_options_<T> component;
-    } http_version;
-
-    bool _verify_certificate;
-    bool _follow_redirect;
-    int  _http_version;
-    
-    client_options_(): _verify_certificate(false), _follow_redirect(false), _http_version(11){}
-    
-    void set(verify_certificate_t, bool v){_verify_certificate = v;}
-    bool get(verify_certificate_t) const{return _verify_certificate;}
-    
-    void set(follow_redirect_t, bool v){_follow_redirect = v;}
-    bool get(follow_redirect_t) const{return _follow_redirect;}
-    
-    void set(http_version_t, int v){_http_version = v;}
-    int get(http_version_t) const{return _http_version;}
-};
-
-template <typename T> const typename client_options_<T>::verify_certificate_t client_options_<T>::verify_certificate;
-template <typename T> const typename client_options_<T>::follow_redirect_t client_options_<T>::follow_redirect;
-template <typename T> const typename client_options_<T>::http_version_t client_options_<T>::http_version;
-
-typedef client_options_<> client_options;
-
 struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::string::const_iterator>{
     class param{
       std::string _key;
@@ -146,7 +112,6 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
         std::vector<std::string> stringified_params;
         std::transform(params.begin(), params.end(), std::back_inserter(stringified_params), std::bind(&param::to_string, std::placeholders::_1));
         std::string joined = boost::algorithm::join(stringified_params, "&");
-        std::cout << "joined " << joined << std::endl;
         std::string::const_iterator it = std::find(base.begin(), base.end(), '?');
         if(it != base.end()){
             return url(base+"&"+joined);
@@ -157,8 +122,13 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
     static inline url parse(const std::string& str){
         return url(str);
     }
+    
     url() = delete;
     url(const url& other): udho::configuration<detail::url_data>(other), udho::urlencoded_form<std::string::const_iterator>(other){}
+    
+    std::string stringify() const{
+        return to_string();
+    }
     private:
         explicit url(const std::string& url_str){
             from_string(url_str);
@@ -198,6 +168,9 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
             const std::string& qstr_ref = (*this)[query];
             
             udho::urlencoded_form<std::string::const_iterator>::parse(qstr_ref.begin(), qstr_ref.end());
+        }
+        inline std::string to_string() const{
+            return (boost::format("%1%://%2%:%3%%4%") % (*this)[protocol] % (*this)[host] % (*this)[port] % (*this)[target]).str();
         }
 };
 

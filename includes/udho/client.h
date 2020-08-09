@@ -38,6 +38,7 @@
 #include <udho/form.h>
 #include <udho/url.h>
 #include <udho/defs.h>
+#include <udho/logging.h>
 #include <iostream>
 #include <cstdlib>
 #include <functional>
@@ -50,6 +51,40 @@
 
 namespace udho{
 
+template <typename T = void>
+struct client_options_{
+    const static struct verify_certificate_t{
+        typedef client_options_<T> component;
+    } verify_certificate;
+    const static struct follow_redirect_t{
+        typedef client_options_<T> component;
+    } follow_redirect;
+    const static struct http_version_t{
+        typedef client_options_<T> component;
+    } http_version;
+
+    bool _verify_certificate;
+    bool _follow_redirect;
+    int  _http_version;
+    
+    client_options_(): _verify_certificate(false), _follow_redirect(false), _http_version(11){}
+    
+    void set(verify_certificate_t, bool v){_verify_certificate = v;}
+    bool get(verify_certificate_t) const{return _verify_certificate;}
+    
+    void set(follow_redirect_t, bool v){_follow_redirect = v;}
+    bool get(follow_redirect_t) const{return _follow_redirect;}
+    
+    void set(http_version_t, int v){_http_version = v;}
+    int get(http_version_t) const{return _http_version;}
+};
+
+template <typename T> const typename client_options_<T>::verify_certificate_t client_options_<T>::verify_certificate;
+template <typename T> const typename client_options_<T>::follow_redirect_t client_options_<T>::follow_redirect;
+template <typename T> const typename client_options_<T>::http_version_t client_options_<T>::http_version;
+
+typedef client_options_<> client_options;
+    
 namespace detail{
     
 template <typename ContextT>
@@ -96,12 +131,14 @@ struct async_result{
                 _callback(_ctx, res);
             }
         }else{
-            std::cout << "No callback added" << std::endl;
+            _ctx << udho::logging::messages::formatted::error("client", "No success callback attached with client");
         }
     }
     void failure(const boost::beast::error_code& ec){
         if(!_ecallback.empty()){
             _ecallback(_ctx, ec);
+        }else{
+            _ctx << udho::logging::messages::formatted::error("client", "No error callback attached with client");
         }
     }
     self_type& then(success_callback_type cb){
@@ -142,6 +179,10 @@ struct async_result{
             cb(res.body());
         });
     }
+    
+    context_type& context(){
+        return _ctx;
+    }
 };
     
 /**
@@ -181,18 +222,15 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
         req.set(boost::beast::http::field::user_agent, UDHO_VERSION_STRING);
         req.set(boost::beast::http::field::accept, "*/*");
         
-        std::cout << "request " << std::endl << req << std::endl;
-        
         resolver.async_resolve(host, port, std::bind(&self_type::on_resolve, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
     void on_resolve(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type results){
         if(ec){
-            std::cout << "failed to resolve" << std::endl;
-            std::cout << ec.message() << std::endl;
-            result_type::failure( ec);
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url::host] % ec.message();
+            result_type::failure(ec);
             return;
         }
-        std::cout << "certificate verification " << result_type::option(udho::client_options::verify_certificate) << std::endl;
+
         if(!result_type::option(udho::client_options::verify_certificate)){
             stream.set_verify_mode(boost::asio::ssl::verify_none);
         }else{
@@ -202,8 +240,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_connect(boost::beast::error_code ec){
         if(ec){
-            std::cout << "failed to connect" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -213,8 +250,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             boost::certify::sni_hostname(stream, host, ec);
         }
         if(ec){
-            std::cout << "ssl failed to set host name" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to set ssl hostname %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -225,8 +261,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_handshake(boost::beast::error_code ec) {
         if(ec){
-            std::cout << "failed to handshake" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "ssl handshake failed with %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -234,8 +269,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_write(boost::beast::error_code ec, std::size_t /*bytes_transferred*/) {
         if(ec){
-            std::cout << "failed to write" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to write request %1% with error %2%") % _url.stringify() % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -243,12 +277,10 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_read(boost::beast::error_code ec, std::size_t /*bytes_transferred*/){
         if(ec){
-            std::cout << "failed to read" << std::endl;
-            std::cout << ec << std::endl;
-            result_type::failure( ec);
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to read response %1% with error %2%") % _url.stringify() % ec.message();
+            result_type::failure(ec);
             return;
         }
-        std::cout << res << std::endl;
         result_type::success(res);
         stream.async_shutdown(std::bind(&self_type::on_shutdown, base::shared_from_this(), std::placeholders::_1));
     }
@@ -259,8 +291,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             ec = {};
         }
         if(ec){
-            std::cout << "failed to shutdown" << std::endl;
-            std::cout << ec.message() << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -312,7 +343,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
         req.version(version);
         req.method(method);
         req.target(target);
-        std::cout << "http request target " << target << std::endl;
+
         req.set(boost::beast::http::field::host, host_str);
         req.set(boost::beast::http::field::user_agent, UDHO_VERSION_STRING);
         req.set(boost::beast::http::field::accept, "*/*");
@@ -321,8 +352,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_resolve(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type results){
         if(ec){
-            std::cout << "failed to resolve" << std::endl;
-            std::cout << ec.message() << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url::host] % ec.message();
             result_type::failure( ec);
             return;
         }
@@ -330,8 +360,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_connect(boost::beast::error_code ec){
         if(ec){
-            std::cout << "failed to connect" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -339,8 +368,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_write(boost::beast::error_code ec, std::size_t /*bytes_transferred*/) {
         if(ec){
-            std::cout << "failed to write" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to write request %1% with error %2%") % _url.stringify() % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -348,12 +376,11 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_read(boost::beast::error_code ec, std::size_t /*bytes_transferred*/){
         if(ec){
-            std::cout << "failed to read" << std::endl;
-            std::cout << ec << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to read response %1% with error %2%") % _url.stringify() % ec.message();
             result_type::failure( ec);
             return;
         }
-        std::cout << res << std::endl;
+
         result_type::success(res);
         socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         on_shutdown(ec);
@@ -365,8 +392,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
             ec = {};
         }
         if(ec){
-            std::cout << "failed to shutdown" << std::endl;
-            std::cout << ec.message() << std::endl;
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
             result_type::failure(ec);
             return;
         }
