@@ -91,7 +91,7 @@ struct async_result{
             bool is_redirected = res.count(boost::beast::http::field::location);
             if(is_redirected && option(udho::client_options::follow_redirect)){
                 std::string redirected_url(res[boost::beast::http::field::location]);
-                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url(redirected_url)).then(_callback).failed(_ecallback);
+                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url::parse(redirected_url)).then(_callback).failed(_ecallback);
             }else{
                 _callback(_ctx, res);
             }
@@ -423,13 +423,13 @@ struct client_connection_wrapper{
     }
     
     result_type& get(const std::string& url){
-        return get(udho::url(url));
+        return get(udho::url::parse(url));
     }
     result_type& post(const std::string& url){
-        return post(udho::url(url));
+        return post(udho::url::parse(url));
     }
     result_type& put(const std::string& url){
-        return put(udho::url(url));
+        return put(udho::url::parse(url));
     }
 };
 

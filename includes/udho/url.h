@@ -154,11 +154,16 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
             return url(base+"?"+joined);
         }
     }
-    explicit url(const std::string& url_str){
-        parse(url_str);
+    static inline url parse(const std::string& str){
+        return url(str);
     }
+    url() = delete;
+    url(const url& other): udho::configuration<detail::url_data>(other), udho::urlencoded_form<std::string::const_iterator>(other){}
     private:
-        inline void parse(const std::string& url){
+        explicit url(const std::string& url_str){
+            from_string(url_str);
+        }
+        inline void from_string(const std::string& url){
             std::string proto, hst, prt, pth, tgt, qry;
             std::string protocol_terminal = "://";
             std::string::const_iterator protocol_end = std::search(url.begin(), url.end(), protocol_terminal.begin(), protocol_terminal.end());
