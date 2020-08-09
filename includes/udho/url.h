@@ -33,6 +33,7 @@
 #include <udho/form.h>
 #include <functional>
 #include <memory>
+#include <boost/algorithm/string/join.hpp>
 
 namespace udho{
 namespace detail{
@@ -132,6 +133,27 @@ template <typename T> const typename client_options_<T>::http_version_t client_o
 typedef client_options_<> client_options;
 
 struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::string::const_iterator>{
+    class param{
+      std::string _key;
+      std::string _value;
+      public:
+        inline param(const std::string& k, const std::string& v): _key(k), _value(v){}
+        inline std::string key() const{return _key;}
+        inline std::string value() const{return _value;}
+        inline std::string to_string() const{return _key+"="+_value;}
+    };
+    static url build(const std::string& base, const std::initializer_list<param>& params){
+        std::vector<std::string> stringified_params;
+        std::transform(params.begin(), params.end(), std::back_inserter(stringified_params), std::bind(&param::to_string, std::placeholders::_1));
+        std::string joined = boost::algorithm::join(stringified_params, "&");
+        std::cout << "joined " << joined << std::endl;
+        std::string::const_iterator it = std::find(base.begin(), base.end(), '?');
+        if(it != base.end()){
+            return url(base+"&"+joined);
+        }else{
+            return url(base+"?"+joined);
+        }
+    }
     explicit url(const std::string& url_str){
         parse(url_str);
     }

@@ -163,9 +163,8 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
-//     options_type _options;
     
-    explicit https_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx)/*, _options(options)*/{}
+    explicit https_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);
@@ -297,9 +296,8 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     boost::beast::flat_buffer buffer;
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
-//     options_type _options;
     
-    explicit http_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex)/*, _options(options)*/{}
+    explicit http_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);
@@ -317,6 +315,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
         std::cout << "http request target " << target << std::endl;
         req.set(boost::beast::http::field::host, host_str);
         req.set(boost::beast::http::field::user_agent, UDHO_VERSION_STRING);
+        req.set(boost::beast::http::field::accept, "*/*");
 
         resolver.async_resolve(host, port, std::bind(&self_type::on_resolve, base::shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
