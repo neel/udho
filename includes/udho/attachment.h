@@ -34,20 +34,6 @@
 
 namespace udho{
     
-namespace detail{
-    
-// template <typename F>
-// struct delayed_response{
-//     typedef F callback_type;
-//     
-//     callback_type _callback;
-//     
-//     delayed_response(callback_type callback): _callback(callback){}
-//     
-// };
-    
-}
-
 /**
  * logged stateful
  */
@@ -61,10 +47,10 @@ struct attachment: LoggerT, CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
-    shadow_type _shadow;
     AuxT _aux;
+    shadow_type _shadow;
     
-    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), LoggerT(logger), _shadow(*this){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), _aux(io), LoggerT(logger), _shadow(*this){}
     shadow_type& shadow(){
         return _shadow;
     }
@@ -86,10 +72,10 @@ struct attachment<AuxT, void, CacheT>: CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
-    shadow_type _shadow;
     AuxT _aux;
+    shadow_type _shadow;
     
-    attachment(boost::asio::io_service& io): _io(io), _shadow(*this){}
+    attachment(boost::asio::io_service& io): _io(io), _aux(io), _shadow(*this){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
@@ -116,7 +102,7 @@ struct attachment<AuxT, LoggerT, void>: LoggerT{
     boost::asio::io_service& _io;
     AuxT _aux;
     
-    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), LoggerT(logger){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), _aux(io), LoggerT(logger){}
     int shadow(){
         return 0;
     }
@@ -140,7 +126,7 @@ struct attachment<AuxT, void, void>{
     boost::asio::io_service& _io;
     AuxT _aux;
     
-    attachment(boost::asio::io_service& io): _io(io){}
+    attachment(boost::asio::io_service& io): _io(io), _aux(io){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;

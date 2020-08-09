@@ -52,6 +52,8 @@
 #include <udho/session.h>
 #include <udho/attachment.h>
 #include <udho/compositors.h>
+#include <udho/client.h>
+#include <udho/url.h>
 
 namespace udho{
 
@@ -76,7 +78,6 @@ struct context_impl{
     route_stack_type    _routes;
     
     boost::beast::http::status _status;
-//     std::string                _pattern;
     
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
@@ -412,6 +413,13 @@ struct context{
     std::size_t reroutes() const{
         return _pimpl->reroutes();
     }
+    
+    detail::client_connection_wrapper<self_type> client(const std::string& url, udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, udho::url(url), options);
+    }
+    detail::client_connection_wrapper<self_type> client(udho::url u, udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, u, options);
+    }
 };
 
 /**
@@ -611,6 +619,10 @@ struct context<AuxT, RequestT, void>{
     }
     std::size_t reroutes() const{
         return _pimpl->reroutes();
+    }
+    
+    detail::client_connection_wrapper<self_type> client(udho::config<udho::client_options> options = udho::config<udho::client_options>()){
+        return _aux.client(*this, options);
     }
 };
 
