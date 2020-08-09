@@ -160,7 +160,7 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
             
             (*this)[protocol] = proto;
             (*this)[host]     = hst;
-            (*this)[port]     = !prt.empty() ? std::stoul(prt) : 0;
+            (*this)[port]     = !prt.empty() ? std::stoul(prt) : (proto == "https" ? 443 : 80);
             (*this)[path]     = !pth.empty() ? pth : std::string("/");
             (*this)[target]   = !tgt.empty() ? tgt : std::string("/");
             (*this)[query]    = qry;

@@ -336,7 +336,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
         int version = result_type::option(udho::client_options::http_version);
         
         std::string host_str = host;
-        if(_url[url::port] != 443){
+        if(_url[url::port] != 80){
             host_str += ":"+port;
         }
         
@@ -423,16 +423,10 @@ struct client_connection_wrapper{
         
         std::string protocol = url[udho::url::protocol];
         if(protocol == "https"){
-            if(!url[udho::url::port]){
-                url[udho::url::port] = 443;
-            }
             auto connection = udho::detail::https_client_connection<ContextT>::create(_io, _context, url, _options);
             connection->start(method);
             return connection->result();
         }else{ // assuming http
-            if(!url[udho::url::port]){
-                url[udho::url::port] = 80;
-            }
             auto connection = udho::detail::http_client_connection<ContextT>::create(_io, _context, url, _options);
             connection->start(method);
             return connection->result();
