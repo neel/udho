@@ -105,21 +105,29 @@ struct client_options_{
     const static struct follow_redirect_t{
         typedef client_options_<T> component;
     } follow_redirect;
+    const static struct http_version_t{
+        typedef client_options_<T> component;
+    } http_version;
 
     bool _verify_certificate;
     bool _follow_redirect;
+    int  _http_version;
     
-    client_options_(): _verify_certificate(false), _follow_redirect(false){}
+    client_options_(): _verify_certificate(false), _follow_redirect(false), _http_version(11){}
     
     void set(verify_certificate_t, bool v){_verify_certificate = v;}
     bool get(verify_certificate_t) const{return _verify_certificate;}
     
     void set(follow_redirect_t, bool v){_follow_redirect = v;}
     bool get(follow_redirect_t) const{return _follow_redirect;}
+    
+    void set(http_version_t, int v){_http_version = v;}
+    int get(http_version_t) const{return _http_version;}
 };
 
 template <typename T> const typename client_options_<T>::verify_certificate_t client_options_<T>::verify_certificate;
 template <typename T> const typename client_options_<T>::follow_redirect_t client_options_<T>::follow_redirect;
+template <typename T> const typename client_options_<T>::http_version_t client_options_<T>::http_version;
 
 typedef client_options_<> client_options;
 

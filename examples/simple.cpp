@@ -176,7 +176,7 @@ void fetch(udho::contexts::stateless ctx){
     udho::configuration<udho::client_options> options;
     options[udho::client_options::verify_certificate] = true;
     
-    ctx.client(options).get("https://tls-v1-2.badssl.com:1012/")
+    ctx.client(options).get("http://tls-v1-2.badssl.com") // Good:  http://tls-v1-2.badssl.com Bad: http://expired.badssl.com
         .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
             ctx.status(status);
             ctx.respond(body, "text/html");
