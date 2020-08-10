@@ -1,6 +1,20 @@
 cmake_minimum_required(VERSION 3.9)
 project(udho)
 
+MACRO(update_submodule submodule_dir)
+  EXECUTE_PROCESS(COMMAND git submodule init
+                  WORKING_DIRECTORY ${submodule_dir}
+                  RESULT_VARIABLE submodule_init_exit_code)
+  EXECUTE_PROCESS(COMMAND git submodule update --init --recursive --force
+                  WORKING_DIRECTORY ${submodule_dir}
+                  RESULT_VARIABLE submodule_update_exit_code)
+  IF(NOT(submodule_init_exit_code EQUAL 0 AND submodule_update_exit_code EQUAL 0))
+    MESSAGE(FATAL_ERROR "It was not possible update '${submodule_dir}' submodule.")
+  ENDIF()
+ENDMACRO()
+
+update_submodule(${PROJECT_SOURCE_DIR}/deps/)
+
 SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")

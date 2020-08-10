@@ -84,6 +84,15 @@ template <typename T> const typename client_options_<T>::follow_redirect_t clien
 template <typename T> const typename client_options_<T>::http_version_t client_options_<T>::http_version;
 
 typedef client_options_<> client_options;
+
+// template <typename DerivedT>
+// struct async_task_group: std::enable_shared_from_this<async_task_group<DerivedT>>, DerivedT{
+//     typedef std::enable_shared_from_this<async_task_group> base;
+//     ~async_task_group(){
+//         DerivedT& self = static_cast<DerivedT&>(*this);
+//         self();
+//     }
+// };
     
 namespace detail{
     
@@ -103,9 +112,12 @@ struct async_result{
     typedef boost::function<void (boost::beast::http::status, const std::string&)> success_callback_type_aux_sc;
     typedef boost::function<void (const std::string&)> success_callback_type_aux_c;
     
+    typedef boost::function<void ()> finally_callback_type;
+    
     context_type          _ctx;
     success_callback_type _callback;
     error_callback_type   _ecallback;
+    finally_callback_type _fcallback;
     options_type          _options;
     
     async_result() = delete;
@@ -133,12 +145,19 @@ struct async_result{
         }else{
             _ctx << udho::logging::messages::formatted::error("client", "No success callback attached with client");
         }
+        finish();
     }
     void failure(const boost::beast::error_code& ec){
         if(!_ecallback.empty()){
             _ecallback(_ctx, ec);
         }else{
             _ctx << udho::logging::messages::formatted::error("client", "No error callback attached with client");
+        }
+        finish();
+    }
+    void finish(){
+        if(!_fcallback.empty()){
+            _fcallback();
         }
     }
     self_type& then(success_callback_type cb){
@@ -147,6 +166,10 @@ struct async_result{
     }
     self_type& failed(error_callback_type cb){
         _ecallback = cb;
+        return *this;
+    }
+    self_type& finally(finally_callback_type f){
+        _fcallback = f;
         return *this;
     }
     self_type& error(error_callback_type_aux cb){
