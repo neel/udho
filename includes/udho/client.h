@@ -85,15 +85,7 @@ template <typename T> const typename client_options_<T>::http_version_t client_o
 
 typedef client_options_<> client_options;
 
-// template <typename DerivedT>
-// struct async_task_group: std::enable_shared_from_this<async_task_group<DerivedT>>, DerivedT{
-//     typedef std::enable_shared_from_this<async_task_group> base;
-//     ~async_task_group(){
-//         DerivedT& self = static_cast<DerivedT&>(*this);
-//         self();
-//     }
-// };
-    
+   
 namespace detail{
     
 template <typename ContextT>
