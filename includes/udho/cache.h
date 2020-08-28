@@ -42,6 +42,8 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/filesystem/path.hpp>
+#include <ctti/type_id.hpp>
+#include <ctti/name.hpp>
 
 namespace udho{
 namespace cache{
@@ -157,7 +159,10 @@ struct disk{
     typedef std::map<key_type, content_type> map_type;
     typedef storage::disk<KeyT, ValueT> self_type;
     
-    disk(const boost::filesystem::path& path): _storage(path){}
+    disk(const boost::filesystem::path& path): _storage(path){
+        ctti::name_t name = ctti::nameof<value_type>();
+        _name = name.name().str();
+    }
     disk(const self_type&) = delete;
     disk(self_type&&) = default;
     
@@ -189,6 +194,7 @@ struct disk{
     }    
     
     protected:
+        std::string _name;
         boost::filesystem::path _storage;
         mutable boost::mutex _mutex;
 };
@@ -265,6 +271,9 @@ struct registry: public engine<storage::memory<KeyT, T>>{
     registry() = default;
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
+    
+    private:
+        std::string _name;
     
 };
 
