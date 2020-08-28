@@ -172,6 +172,48 @@ boost::beast::http::response<boost::beast::http::file_body> local(udho::contexts
     return ctx.aux().file("README.md", ctx.request(), "text/plain");
 }
 
+void fetch_good(udho::contexts::stateless ctx){
+    ctx.client().get("https://tls-v1-2.badssl.com:1012")
+        .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
+            ctx.status(status);
+            ctx.respond(body, "text/html");
+        }).error([ctx](const boost::beast::error_code& ec) mutable {
+            ctx.status(boost::beast::http::status::internal_server_error);
+            ctx.respond(ec.message(), "text/plain");
+        })
+        .option(udho::client_options::follow_redirect, true)
+        .option(udho::client_options::verify_certificate, true);
+}
+
+void fetch_bad(udho::contexts::stateless ctx){   
+    ctx.client().get("http://expired.badssl.com")
+        .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
+            ctx.status(status);
+            ctx.respond(body, "text/html");
+        }).error([ctx](const boost::beast::error_code& ec) mutable {
+            ctx.status(boost::beast::http::status::internal_server_error);
+            ctx.respond(ec.message(), "text/plain");
+        })
+        .option(udho::client_options::follow_redirect, true)
+        .option(udho::client_options::verify_certificate, false);
+}
+
+void fetch_echo(udho::contexts::stateless ctx){   
+    ctx.client().get(udho::url::build("https://postman-echo.com/get", {
+            {"foo", "bar"},
+            {"key", "shajdhwuhuemkzwef5454rcjkrjm"}
+        }))
+        .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
+            ctx.status(status);
+            ctx.respond(body, "text/json");
+        }).error([ctx](const boost::beast::error_code& ec) mutable {
+            ctx.status(boost::beast::http::status::internal_server_error);
+            ctx.respond(ec.message(), "text/plain");
+        })
+        .option(udho::client_options::follow_redirect, true)
+        .option(udho::client_options::verify_certificate, false);
+}
+
 int main(){    
     boost::asio::io_service io;
     udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
@@ -180,6 +222,9 @@ int main(){
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")
+        | (udho::get(&fetch_good).deferred() = "^/fetch/good")
+        | (udho::get(&fetch_bad).deferred()  = "^/fetch/bad")
+        | (udho::get(&fetch_echo).deferred() = "^/fetch/echo")
         | (udho::get(&local).raw()           = "^/local")
         | (udho::get(&hello).plain()         = "^/hello$")
         | (udho::get(&see).plain()           = "^/see$")
