@@ -44,6 +44,8 @@
 #include <boost/filesystem/path.hpp>
 #include <ctti/type_id.hpp>
 #include <ctti/name.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 namespace udho{
 namespace cache{
@@ -73,6 +75,14 @@ struct content{
     void update(){
         _updated = boost::posix_time::second_clock::local_time();
     }
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & _created;
+        ar & _updated;
+        ar & _value;
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 template <>
@@ -96,6 +106,13 @@ struct content<void>{
     void update(const self_type& /*other*/){
         update();
     }
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & _created;
+        ar & _updated;
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 namespace storage{
@@ -155,7 +172,7 @@ template <typename KeyT, typename ValueT = void>
 struct disk{
     typedef KeyT key_type;
     typedef ValueT value_type;
-    typedef content<> content_type;
+    typedef content<ValueT> content_type;
     typedef std::map<key_type, content_type> map_type;
     typedef storage::disk<KeyT, ValueT> self_type;
     
@@ -172,31 +189,49 @@ struct disk{
     }
     bool exists(const key_type& key) const{
         boost::mutex::scoped_lock lock(_mutex);
-        return false;
+        return boost::filesystem::exists(path(key));
     }
     void create(const key_type& key, const content_type& content){
         boost::mutex::scoped_lock lock(_mutex);
-        
+        std::ofstream file(path(key).c_str());
+        boost::archive::text_oarchive archive(file);
+        archive << content;
     }
-    const content_type& retrieve(const key_type& key) const{
+    content_type retrieve(const key_type& key) const{
         boost::mutex::scoped_lock lock(_mutex);
-
+        content_type content;
+        std::ifstream file(path(key).c_str());
+        boost::archive::text_iarchive archive(file);
+        archive >> content;
+        return content;
     }
     bool update(const key_type& key, const content_type& content){
         boost::mutex::scoped_lock lock(_mutex);
-
+        if(exists(key)){
+            std::ofstream file(path(key).c_str());
+            boost::archive::text_oarchive archive(file);
+            archive << content;
+            return true;
+        }
         return false;
     }
     bool remove(const key_type& key){
         boost::mutex::scoped_lock lock(_mutex);
-
-        return false;
+        return boost::filesystem::remove(path(key));
     }    
     
     protected:
         std::string _name;
         boost::filesystem::path _storage;
         mutable boost::mutex _mutex;
+        
+        std::string filename(const key_type& key) const{
+            std::string key_str = boost::lexical_cast<std::string>(key);
+            return (boost::format("%1%-%2%.udho.cache.sess") % key_str % _name).str();
+        }
+        boost::filesystem::path path(const std::string& key) const{
+            return _storage / filename(key);
+        }
 };
 
 struct redis{};
