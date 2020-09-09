@@ -292,10 +292,10 @@ struct engine: StorageT{
     }
 };
     
-template <typename KeyT>
-struct master: public engine<storage::memory<KeyT>>{
+template <typename KeyT, template<typename, typename> class StorageT = storage::memory>
+struct master: public engine<StorageT<KeyT, void>>{
     typedef KeyT key_type;
-    typedef engine<storage::memory<KeyT>> storage_type;
+    typedef engine<StorageT<KeyT, void>> storage_type;
     
     bool issued(const key_type& key) const{
         return storage_type::exists(key);
@@ -305,8 +305,8 @@ struct master: public engine<storage::memory<KeyT>>{
     }
 };
 
-template <typename KeyT, typename T>
-struct registry: public engine<storage::memory<KeyT, T>>{
+template <typename KeyT, typename T, template<typename, typename> class StorageT = storage::memory>
+struct registry: public engine<StorageT<KeyT, T>>{
     typedef registry<KeyT, T> self_type;
        
     registry() = default;
@@ -318,7 +318,7 @@ struct registry: public engine<storage::memory<KeyT, T>>{
     
 };
 
-template <typename KeyT, typename... T>
+template <typename KeyT, template<typename, typename> class StorageT = storage::memory, typename... T>
 struct shadow;
 
 /**
@@ -332,12 +332,12 @@ struct shadow;
  * store.exists<user>();
  * \endcode
  */
-template <typename KeyT, typename... T>
-struct store: master<KeyT>, registry<KeyT, T>...{ 
+template <typename KeyT, template<typename, typename> class StorageT = storage::memory, typename... T>
+struct store: master<KeyT, StorageT>, registry<KeyT, T, StorageT>...{ 
     typedef KeyT key_type;
-    typedef master<KeyT> master_type;
-    typedef store<KeyT, T...> self_type;
-    typedef shadow<KeyT, T...> shadow_type;
+    typedef master<KeyT, StorageT> master_type;
+    typedef store<KeyT, StorageT, T...> self_type;
+    typedef shadow<KeyT, StorageT, T...> shadow_type;
       
     store() = default;
     store(const self_type&) = delete;
@@ -345,23 +345,23 @@ struct store: master<KeyT>, registry<KeyT, T>...{
     
     template <typename V>
     bool exists(const key_type& key) const{
-        return master_type::issued(key) && registry<KeyT, V>::exists(key);
+        return master_type::issued(key) && registry<KeyT, V, StorageT>::exists(key);
     }
     template <typename V>
     const V& get(const key_type& key, const V& def=V()) const{
         if(master_type::issued(key)){
-            return registry<KeyT, V>::at(key);
+            return registry<KeyT, V, StorageT>::at(key);
         }else{
             return def;
         }
     }
     template <typename V>
     V& at(const key_type& key){
-        return registry<KeyT, V>::at(key);
+        return registry<KeyT, V, StorageT>::at(key);
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
-        registry<KeyT, V>::insert(key, value);
+        registry<KeyT, V, StorageT>::insert(key, value);
         if(!master_type::issued(key)){
             master_type::issue(key);
         }
@@ -372,14 +372,14 @@ struct store: master<KeyT>, registry<KeyT, T>...{
     }
     template <typename V>
     std::size_t size(const key_type& key) const{
-        return registry<KeyT, V>::size(key);
+        return registry<KeyT, V, StorageT>::size(key);
     }
     bool remove(){
         return master_type::remove();
     }
     template <typename V>
     bool remove(const key_type& key){
-        if(registry<KeyT, V>::remove(key)){
+        if(registry<KeyT, V, StorageT>::remove(key)){
             master_type::update();
             return true;
         }
