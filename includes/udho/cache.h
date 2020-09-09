@@ -46,6 +46,9 @@
 #include <ctti/name.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
+#define UDHO_SESSION_FILE_EXTENSION "udho.cache.sess"
 
 namespace udho{
 namespace cache{
@@ -185,6 +188,9 @@ struct disk{
     
     std::size_t size() const{
         boost::mutex::scoped_lock lock(_mutex);
+        std::count_if(boost::filesystem::directory_iterator(_storage), boost::filesystem::directory_iterator(), [](const boost::filesystem::path& p){
+            return boost::algorithm::ends_with(p.filename(), UDHO_SESSION_FILE_EXTENSION);
+        });
         return 0;
     }
     bool exists(const key_type& key) const{
@@ -227,7 +233,7 @@ struct disk{
         
         std::string filename(const key_type& key) const{
             std::string key_str = boost::lexical_cast<std::string>(key);
-            return (boost::format("%1%-%2%.udho.cache.sess") % key_str % _name).str();
+            return (boost::format("%1%-%2%.%3%") % key_str % _name % UDHO_SESSION_FILE_EXTENSION).str();
         }
         boost::filesystem::path path(const std::string& key) const{
             return _storage / filename(key);
