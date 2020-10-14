@@ -244,53 +244,89 @@ struct redis{};
    
 }
 
-template <typename StorageT>
-struct engine: StorageT{
-    typedef StorageT storage_type;
-    typedef typename storage_type::key_type key_type;
-    typedef typename storage_type::value_type value_type;
-    typedef typename storage_type::content_type content_type;
-    typedef engine<StorageT> self_type;
+template <typename KeyT, typename ValueT = void>
+struct abstract_engine{
+    typedef KeyT key_type;
+    typedef ValueT value_type;
+    typedef content<ValueT> content_type;
+    typedef abstract_engine<KeyT, ValueT> self_type;
     
-    engine() = default;
-    engine(const self_type&) = delete;
-    engine(self_type&&) = default;
+    virtual std::size_t size() const = 0;
+    virtual bool exists(const key_type& key) const = 0;
+    virtual void create(const key_type& key, const content_type& content) = 0;
+    virtual content_type retrieve(const key_type& key) const = 0;
+    virtual bool update(const key_type& key, const content_type& content) = 0;
+    virtual bool remove(const key_type& key) = 0;
     
     boost::posix_time::ptime created(const key_type& key) const{
-        return storage_type::retrieve(key).created();
+        return retrieve(key).created();
     }
     boost::posix_time::ptime updated(const key_type& key) const{
-        return storage_type::retrieve(key).updated();
+        return retrieve(key).updated();
     }
     boost::posix_time::time_duration age(const key_type& key) const{
-        return storage_type::retrieve(key).age();
+        return retrieve(key).age();
     }
     boost::posix_time::time_duration idle(const key_type& key) const{
-        return storage_type::retrieve(key).idle();
+        return retrieve(key).idle();
     }
+    
     template<typename U=value_type>
     typename std::enable_if<!std::is_same<U,void>::value>::type insert(const key_type& key, const U& value){
-        storage_type::create(key, content_type(value));
+        create(key, content_type(value));
     }
     template<typename U=value_type>
     typename std::enable_if<std::is_same<U,void>::value>::type insert(const key_type& key){
-        storage_type::create(key, content_type());
+        create(key, content_type());
     }
+    
     template<typename U=value_type>
     const typename std::enable_if<!std::is_same<U,void>::value, value_type>::type& at(const key_type& key) const{
-           return storage_type::retrieve(key).value();
+           return retrieve(key).value();
     }
+    
     template<typename U=value_type>
     typename std::enable_if<!std::is_same<U,void>::value, bool>::type update(const key_type& key, const U& value){
-        return storage_type::update(key, content_type(value));
+        return update(key, content_type(value));
     }
     bool update(const key_type& key){
-        return storage_type::update(key, content_type());
-    }
-    bool remove(const key_type& key){
-        return storage_type::remove(key);
+        return update(key, content_type());
     }
 };
+
+template <typename StorageT>
+struct basic_engine: private StorageT, public abstract_engine<typename StorageT::key_type, typename StorageT::value_type>{
+    typedef StorageT storage_type;
+    typedef abstract_engine<typename StorageT::key_type, typename StorageT::value_type> abstract_engine_type;
+    typedef typename StorageT::key_type key_type;
+    typedef typename StorageT::value_type value_type;
+    typedef typename StorageT::content_type content_type;
+    typedef basic_engine<StorageT> self_type;
+    
+    std::size_t size() const override{
+        return storage_type::size();
+    };
+    bool exists(const key_type& key) const override{
+        return storage_type::exists(key);
+    }
+    void create(const key_type& key, const content_type& content) override{
+        storage_type::create(key, content);
+    }
+    content_type retrieve(const key_type& key) const override{
+        return storage_type::retrieve(key);
+    }
+    bool update(const key_type& key, const content_type& content) override{
+        return storage_type::update(key, content);
+    }
+    bool remove(const key_type& key) override{
+        return storage_type::remove(key);
+    }
+    
+    using abstract_engine_type::update;
+};
+
+template <typename StorageT>
+using engine = basic_engine<StorageT>;
     
 template <typename KeyT>
 struct master: public engine<storage::memory<KeyT>>{
