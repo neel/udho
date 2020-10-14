@@ -48,6 +48,10 @@
 #include <ctti/name.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include "udho/configuration.h"
 
@@ -84,9 +88,9 @@ struct content{
     }
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version){
-        ar & _created;
-        ar & _updated;
-        ar & _value;
+        ar & BOOST_SERIALIZATION_NVP(_created);
+        ar & BOOST_SERIALIZATION_NVP(_updated);
+        ar & BOOST_SERIALIZATION_NVP(_value);
     }
     private:
         friend class boost::serialization::access;
@@ -115,8 +119,8 @@ struct content<void>{
     }
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version){
-        ar & _created;
-        ar & _updated;
+        ar & BOOST_SERIALIZATION_NVP(_created);
+        ar & BOOST_SERIALIZATION_NVP(_updated);
     }
     private:
         friend class boost::serialization::access;
@@ -206,23 +210,20 @@ struct disk{
     void create(const key_type& key, const content_type& content){
         boost::mutex::scoped_lock lock(_mutex);
         std::ofstream file(path(key).c_str());
-        boost::archive::text_oarchive archive(file);
-        archive << content;
+        save(file, content);
     }
     content_type retrieve(const key_type& key) const{
         boost::mutex::scoped_lock lock(_mutex);
         content_type content;
         std::ifstream file(path(key).c_str());
-        boost::archive::text_iarchive archive(file);
-        archive >> content;
+        load(file, content);
         return content;
     }
     bool update(const key_type& key, const content_type& content){
         if(exists(key)){
             boost::mutex::scoped_lock lock(_mutex);
             std::ofstream file(path(key).c_str());
-            boost::archive::text_oarchive archive(file);
-            archive << content;
+            save(file, content);
             return true;
         }
         return false;
@@ -240,12 +241,62 @@ struct disk{
         boost::filesystem::path storage() const{
             return _config[udho::configs::session::path];
         }
+        udho::configs::session::format format() const{
+            return _config[udho::configs::session::serialization];
+        }
         std::string filename(const key_type& key) const{
             std::string key_str = boost::lexical_cast<std::string>(key);
             return (boost::format("%1%-%2%.%3%") % key_str % _name % UDHO_SESSION_FILE_EXTENSION).str();
         }
         boost::filesystem::path path(const key_type& key) const{
             return storage() / filename(key);
+        }
+        
+        void save(udho::configs::session::format format, std::ofstream& file, const content_type& content){
+            switch(format){
+                case udho::configs::session::format::text:{
+                    boost::archive::text_oarchive archive(file);
+                    archive << content;
+                }
+                break;
+                case udho::configs::session::format::binary:{
+                    boost::archive::binary_oarchive archive(file);
+                    archive << content;
+                }
+                break;
+                case udho::configs::session::format::xml:{
+                    boost::archive::xml_oarchive archive(file);
+                    archive << BOOST_SERIALIZATION_NVP(content);
+                }
+                break;
+            }
+        }
+        void load(udho::configs::session::format format, std::ifstream& file, content_type& content) const{
+            switch(format){
+                case udho::configs::session::format::text:{
+                    boost::archive::text_iarchive archive(file);
+                    archive >> content;
+                }
+                break;
+                case udho::configs::session::format::binary:{
+                    boost::archive::binary_iarchive archive(file);
+                    archive >> content;
+                }
+                break;
+                case udho::configs::session::format::xml:{
+                    boost::archive::xml_iarchive archive(file);
+                    archive >> BOOST_SERIALIZATION_NVP(content);
+                }
+                break;
+            }
+        }
+        void save(std::ofstream& file, const content_type& content){
+            udho::configs::session::format storage_format = format();
+            save(storage_format, file, content);
+        }
+        void load(std::ifstream& file, content_type& content) const{
+            udho::configs::session::format storage_format = format();
+            load(storage_format, file, content);
         }
 };
 

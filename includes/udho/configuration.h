@@ -228,7 +228,7 @@ namespace configs{
 template <typename T = void>
 struct session_{
     enum class format{
-        none, binary, json, xml
+        text, binary, xml
     };
     
     const static struct persistent_t{
@@ -249,7 +249,7 @@ struct session_{
     boost::filesystem::path _path;
     std::string _id;
     
-    session_(): _persistent(false), _serialization(format::none), _id("UDHOSESSID"){}
+    session_(): _persistent(false), _serialization(format::binary), _id("UDHOSESSID"){}
     
     void set(persistent_t, bool v){_persistent = v;}
     unsigned get(persistent_t) const{return _persistent;}

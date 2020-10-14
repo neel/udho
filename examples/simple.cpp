@@ -13,7 +13,7 @@ struct user{
     
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version){
-        ar & name;
+        ar & BOOST_SERIALIZATION_NVP(name);
     }
     private:
         friend class boost::serialization::access;
@@ -24,7 +24,7 @@ struct appearence{
     
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version){
-        ar & color;
+        ar & BOOST_SERIALIZATION_NVP(color);
     }
     private:
         friend class boost::serialization::access;
@@ -235,6 +235,8 @@ int main(){
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
     server[udho::configs::session::path] = "sessions";
+    server[udho::configs::session::serialization] = udho::configs::session::format::text;
+
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")
