@@ -6,13 +6,28 @@
 #include <udho/context.h>
 #include <udho/visitor.h>
 #include <iostream>
+#include <boost/serialization/access.hpp>
 
 struct user{
     std::string name;
+    
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & name;
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 struct appearence{
     std::string color;
+    
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & color;
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 std::string hello(udho::contexts::stateful<user> ctx){
@@ -216,9 +231,10 @@ void fetch_echo(udho::contexts::stateless ctx){
 
 int main(){    
     boost::asio::io_service io;
-    udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
+    udho::servers::ostreamed::stateful<udho::cache::storage::disk, user, appearence> server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
+    server[udho::configs::session::path] = "sessions";
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")

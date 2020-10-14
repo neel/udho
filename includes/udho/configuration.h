@@ -237,15 +237,16 @@ struct session_{
     const static struct serialization_t{
         typedef session_<T> component;
     } serialization;
+    const static struct path_t{
+        typedef session_<T> component;
+    } path;
     const static struct id_t{
         typedef session_<T> component;
     } id;
-    const static struct handler_t{
-        typedef session_<T> component;
-    } handler;
     
     bool        _persistent;
     format      _serialization;
+    boost::filesystem::path _path;
     std::string _id;
     
     session_(): _persistent(false), _serialization(format::none), _id("UDHOSESSID"){}
@@ -256,13 +257,16 @@ struct session_{
     void set(serialization_t, format v){_serialization = v;}
     format get(serialization_t) const{return _serialization;}
     
+    void set(path_t, const boost::filesystem::path& p){_path = p;}
+    boost::filesystem::path get(path_t) const{return _path;}
+    
     void set(id_t, std::string v){_id = v;}
     std::string get(id_t) const{return _id;}
 };
 
 template <typename T> const typename session_<T>::persistent_t session_<T>::persistent;
 template <typename T> const typename session_<T>::serialization_t session_<T>::serialization;
-template <typename T> const typename session_<T>::handler_t session_<T>::handler;
+template <typename T> const typename session_<T>::path_t session_<T>::path;
 template <typename T> const typename session_<T>::id_t session_<T>::id;
 
 typedef session_<> session;

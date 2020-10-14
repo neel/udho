@@ -230,8 +230,8 @@ struct context{
     session_type _session;
     AuxT&        _aux;
         
-    template <typename... V>
-    context(AuxT& aux, udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store), _aux(aux){}
+//     template <typename... V>
+//     context(AuxT& aux, udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store), _aux(aux){}
     template <typename... V>
     context(AuxT& aux, const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow), _aux(aux){}
     template <typename OtherShadowT>

@@ -39,6 +39,8 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/gregorian/greg_serialize.hpp>
+#include <boost/date_time/posix_time/time_serialize.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/filesystem/path.hpp>
@@ -47,6 +49,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include "udho/configuration.h"
 
 #define UDHO_SESSION_FILE_EXTENSION "udho.cache.sess"
 
@@ -62,6 +65,7 @@ struct content{
     boost::posix_time::ptime _updated;
     value_type _value;
         
+    content(): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()) {}
     explicit content(const value_type& value): _created(boost::posix_time::second_clock::local_time()), _updated(boost::posix_time::second_clock::local_time()), _value(value){}
     boost::posix_time::ptime created() const { return _created; }
     boost::posix_time::ptime updated() const { return _updated; }
@@ -128,7 +132,7 @@ struct memory{
     typedef std::map<key_type, content_type> map_type;
     typedef storage::memory<KeyT, ValueT> self_type;
     
-    memory() = default;
+    memory(const udho::configuration_type& config): _config(config){};
     memory(const self_type&) = delete;
     memory(self_type&&) = default;
     
@@ -167,6 +171,7 @@ struct memory{
         return false;
     }    
     protected:
+        const udho::configuration_type& _config;
         map_type _storage;
         mutable boost::mutex _mutex;
 };
@@ -179,7 +184,7 @@ struct disk{
     typedef std::map<key_type, content_type> map_type;
     typedef storage::disk<KeyT, ValueT> self_type;
     
-    disk(const boost::filesystem::path& path): _storage(path){
+    disk(const udho::configuration_type& config): _config(config){
         ctti::name_t name = ctti::nameof<value_type>();
         _name = name.name().str();
     }
@@ -188,8 +193,9 @@ struct disk{
     
     std::size_t size() const{
         boost::mutex::scoped_lock lock(_mutex);
-        std::count_if(boost::filesystem::directory_iterator(_storage), boost::filesystem::directory_iterator(), [](const boost::filesystem::path& p){
-            return boost::algorithm::ends_with(p.filename(), UDHO_SESSION_FILE_EXTENSION);
+        std::string ext(UDHO_SESSION_FILE_EXTENSION);
+        std::count_if(boost::filesystem::directory_iterator(storage()), boost::filesystem::directory_iterator(), [ext](const boost::filesystem::path& p){
+            return boost::algorithm::ends_with(p.filename().string(), ext);
         });
         return 0;
     }
@@ -212,8 +218,8 @@ struct disk{
         return content;
     }
     bool update(const key_type& key, const content_type& content){
-        boost::mutex::scoped_lock lock(_mutex);
         if(exists(key)){
+            boost::mutex::scoped_lock lock(_mutex);
             std::ofstream file(path(key).c_str());
             boost::archive::text_oarchive archive(file);
             archive << content;
@@ -227,16 +233,19 @@ struct disk{
     }    
     
     protected:
+        const udho::configuration_type& _config;
         std::string _name;
-        boost::filesystem::path _storage;
         mutable boost::mutex _mutex;
         
+        boost::filesystem::path storage() const{
+            return _config[udho::configs::session::path];
+        }
         std::string filename(const key_type& key) const{
             std::string key_str = boost::lexical_cast<std::string>(key);
             return (boost::format("%1%-%2%.%3%") % key_str % _name % UDHO_SESSION_FILE_EXTENSION).str();
         }
-        boost::filesystem::path path(const std::string& key) const{
-            return _storage / filename(key);
+        boost::filesystem::path path(const key_type& key) const{
+            return storage() / filename(key);
         }
 };
 
@@ -280,11 +289,11 @@ struct abstract_engine{
         create(key, content_type());
     }
     
-    template<typename U=value_type>
-    const typename std::enable_if<!std::is_same<U,void>::value, value_type>::type& at(const key_type& key) const{
-           return retrieve(key).value();
-    }
-    
+//     template<typename U=value_type>
+//     const typename std::enable_if<!std::is_same<U,void>::value, value_type>::type& at(const key_type& key) const{
+//            return retrieve(key).value();
+//     }
+//     
     template<typename U=value_type>
     typename std::enable_if<!std::is_same<U,void>::value, bool>::type update(const key_type& key, const U& value){
         return update(key, content_type(value));
@@ -303,35 +312,68 @@ struct basic_engine: private StorageT, public abstract_engine<typename StorageT:
     typedef typename StorageT::content_type content_type;
     typedef basic_engine<StorageT> self_type;
     
-    std::size_t size() const override{
+    explicit basic_engine(const udho::configuration_type& config): StorageT(config) {}
+    
+    std::size_t size() const final{
         return storage_type::size();
     };
-    bool exists(const key_type& key) const override{
+    bool exists(const key_type& key) const final{
         return storage_type::exists(key);
     }
-    void create(const key_type& key, const content_type& content) override{
+    void create(const key_type& key, const content_type& content) final{
         storage_type::create(key, content);
     }
-    content_type retrieve(const key_type& key) const override{
+    content_type retrieve(const key_type& key) const final{
         return storage_type::retrieve(key);
     }
-    bool update(const key_type& key, const content_type& content) override{
+    bool update(const key_type& key, const content_type& content) final{
         return storage_type::update(key, content);
     }
-    bool remove(const key_type& key) override{
+    bool remove(const key_type& key) final{
         return storage_type::remove(key);
     }
     
     using abstract_engine_type::update;
 };
 
-template <typename StorageT>
-using engine = basic_engine<StorageT>;
+template <typename KeyT, typename ValueT = void>
+struct engine{
+    typedef KeyT key_type;
+    typedef ValueT value_type;
+    typedef content<ValueT> content_type;
+    typedef abstract_engine<KeyT, ValueT> abstract_engine_type;
+    
+    abstract_engine_type& _engine;
+    
+    explicit engine(abstract_engine_type& e): _engine(e){}
+    std::size_t size() const { return _engine.size(); }
+    bool exists(const key_type& key) const{ return _engine.exists(key); }
+    bool update(const key_type& key, const content_type& content){ return _engine.update(key, content); }
+    bool update(const key_type& key) { return _engine.update(key); }
+    bool remove(const key_type& key) { return _engine.remove(key); }
+    template<typename U=value_type>
+    typename std::enable_if<!std::is_same<U,void>::value>::type insert(const key_type& key, const U& value){ return _engine.insert(key, value); }
+    template<typename U=value_type>
+    typename std::enable_if<std::is_same<U,void>::value>::type insert(const key_type& key){ return _engine.insert(key); }
+    content_type retrieve(const key_type& key) const{ return _engine.retrieve(key); }
+    
+    boost::posix_time::ptime created(const key_type& key) const{ return _engine.created(key); }
+    boost::posix_time::ptime updated(const key_type& key) const{ return _engine.updated(key); }
+    boost::posix_time::time_duration age(const key_type& key) const{ return _engine.age(key); }
+    boost::posix_time::time_duration idle(const key_type& key) const{ return _engine.idle(key); }
+};
     
 template <typename KeyT>
-struct master: public engine<storage::memory<KeyT>>{
+struct master: public engine<KeyT>{
     typedef KeyT key_type;
-    typedef engine<storage::memory<KeyT>> storage_type;
+    typedef engine<KeyT> storage_type;
+    typedef abstract_engine<KeyT> abstract_engine_type;
+    typedef master<KeyT> self_type;
+    
+    master(abstract_engine_type& e): engine<KeyT>(e){}
+    
+    master(const self_type&) = delete;
+    master(self_type&&) = default;
     
     bool issued(const key_type& key) const{
         return storage_type::exists(key);
@@ -342,13 +384,21 @@ struct master: public engine<storage::memory<KeyT>>{
 };
 
 template <typename KeyT, typename T>
-struct registry: public engine<storage::memory<KeyT, T>>{
+struct registry: public engine<KeyT, T>{
     typedef registry<KeyT, T> self_type;
+    typedef KeyT key_type;
+    typedef T value_type;
+    typedef abstract_engine<KeyT, T> abstract_engine_type;
        
-    registry() = default;
+    registry(abstract_engine_type& e): engine<KeyT, T>(e){}
+    
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
     
+    const value_type& at(const key_type& key) const{
+        return engine<KeyT, T>::retrieve(key).value();
+    }
+        
     private:
         std::string _name;
     
@@ -368,16 +418,15 @@ struct shadow;
  * store.exists<user>();
  * \endcode
  */
-template <typename KeyT, typename... T>
-struct store: master<KeyT>, registry<KeyT, T>...{ 
+template <template <typename, typename> class StorageT, typename KeyT, typename... T>
+struct store: basic_engine<StorageT<KeyT, void>>, basic_engine<StorageT<KeyT, T>>..., master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
-    typedef store<KeyT, T...> self_type;
     typedef shadow<KeyT, T...> shadow_type;
+    typedef store<StorageT, KeyT, T...> self_type;
       
-    store() = default;
+    store(const udho::configuration_type& config): basic_engine<StorageT<KeyT, void>>(config), basic_engine<StorageT<KeyT, T>>(config)..., master<KeyT>(static_cast<basic_engine<StorageT<KeyT, void>>&>(*this)), registry<KeyT, T>(static_cast<basic_engine<StorageT<KeyT, T>>&>(*this))... {};
     store(const self_type&) = delete;
-    store(self_type&&) = default;
     
     template <typename V>
     bool exists(const key_type& key) const{
@@ -403,16 +452,16 @@ struct store: master<KeyT>, registry<KeyT, T>...{
         }
         master_type::update();
     }
-    std::size_t size() const{
-        return master_type::size();
-    }
+//     std::size_t size() const{
+//         return master_type::size();
+//     }
     template <typename V>
     std::size_t size(const key_type& key) const{
         return registry<KeyT, V>::size(key);
     }
-    bool remove(){
-        return master_type::remove();
-    }
+//     bool remove(){
+//         return master_type::remove();
+//     }
     template <typename V>
     bool remove(const key_type& key){
         if(registry<KeyT, V>::remove(key)){
@@ -447,8 +496,8 @@ struct flake{
     typedef flake<KeyT, T> flake_type;
     typedef flake_type self_type;
    
-    template <typename... X>
-    flake(store<KeyT, X...>& store): _registry(store){}
+    template <template <typename, typename> class StorageT, typename... X>
+    flake(store<StorageT, KeyT, X...>& store): _registry(store){}
     
     bool exists(const key_type& key) const{
         return _registry.exists(key);
@@ -509,15 +558,15 @@ private:
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
     typedef KeyT key_type;
-    typedef store<key_type, T...> store_type;
+//     typedef store<key_type, T...> store_type;
     typedef shadow<key_type, T...> self_type;
     typedef self_type shadow_type;
     typedef master<key_type> master_type;
     
     master_type& _master;
     
-    template <typename... X>
-    shadow(store<key_type, X...>& store): flake<key_type, T>(store)..., _master(store){}
+    template <template <typename, typename> class StorageT, typename... X>
+    shadow(store<StorageT, key_type, X...>& store): flake<key_type, T>(store)..., _master(store){}
     
     template <typename... X>
     shadow(shadow<key_type, X...>& other): flake<key_type, T>(other)..., _master(other._master){}

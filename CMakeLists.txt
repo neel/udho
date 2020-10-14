@@ -40,7 +40,7 @@ if(UDHO_USE_PUGIXML)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex system REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
 
 SET(INCLUDE_DIRS

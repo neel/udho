@@ -38,7 +38,7 @@ namespace udho{
  * logged stateful
  */
 template <typename AuxT, typename LoggerT=void, typename CacheT=void>
-struct attachment: LoggerT, CacheT{
+struct attachment: AuxT, CacheT, LoggerT{
     typedef attachment<AuxT, LoggerT, CacheT> self_type;
     typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
@@ -47,15 +47,14 @@ struct attachment: LoggerT, CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
-    AuxT _aux;
     shadow_type _shadow;
     
-    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), _aux(io), LoggerT(logger), _shadow(*this){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): AuxT(io), CacheT(AuxT::config()), LoggerT(logger), _io(io), _shadow(*this){}
     shadow_type& shadow(){
         return _shadow;
     }
     AuxT& aux(){
-        return _aux;
+        return *this;
     }
 };
 
@@ -63,7 +62,7 @@ struct attachment: LoggerT, CacheT{
  * quiet stateful
  */
 template <typename AuxT, typename CacheT>
-struct attachment<AuxT, void, CacheT>: CacheT{
+struct attachment<AuxT, void, CacheT>: AuxT, CacheT{
     typedef attachment<AuxT, void, CacheT> self_type;
     typedef AuxT auxiliary_type;
     typedef void logger_type;
@@ -72,10 +71,9 @@ struct attachment<AuxT, void, CacheT>: CacheT{
     typedef typename cache_type::shadow_type shadow_type;
     
     boost::asio::io_service& _io;
-    AuxT _aux;
     shadow_type _shadow;
     
-    attachment(boost::asio::io_service& io): _io(io), _aux(io), _shadow(*this){}
+    attachment(boost::asio::io_service& io): AuxT(io), CacheT(AuxT::config()), _io(io), _shadow(*this){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
@@ -84,7 +82,7 @@ struct attachment<AuxT, void, CacheT>: CacheT{
         return _shadow;
     }
     AuxT& aux(){
-        return _aux;
+        return *this;
     }
 };
 
@@ -92,7 +90,7 @@ struct attachment<AuxT, void, CacheT>: CacheT{
  * logged stateless
  */
 template <typename AuxT, typename LoggerT>
-struct attachment<AuxT, LoggerT, void>: LoggerT{
+struct attachment<AuxT, LoggerT, void>: AuxT, LoggerT{
     typedef attachment<AuxT, LoggerT, void> self_type;
     typedef AuxT auxiliary_type;
     typedef LoggerT logger_type;
@@ -100,14 +98,14 @@ struct attachment<AuxT, LoggerT, void>: LoggerT{
     typedef void shadow_type;
     
     boost::asio::io_service& _io;
-    AuxT _aux;
+//     AuxT _aux;
     
-    attachment(boost::asio::io_service& io, LoggerT& logger): _io(io), _aux(io), LoggerT(logger){}
+    attachment(boost::asio::io_service& io, LoggerT& logger): AuxT(io), LoggerT(logger), _io(io){}
     int shadow(){
         return 0;
     }
     AuxT& aux(){
-        return _aux;
+        return *this;
     }
 };
 
@@ -115,7 +113,7 @@ struct attachment<AuxT, LoggerT, void>: LoggerT{
  * quiet stateless
  */
 template <typename AuxT>
-struct attachment<AuxT, void, void>{
+struct attachment<AuxT, void, void>: AuxT{
     typedef attachment<AuxT, void, void> self_type;
     typedef AuxT auxiliary_type;
     typedef void logger_type;
@@ -124,9 +122,9 @@ struct attachment<AuxT, void, void>{
     typedef typename auxiliary_type::configuration_type configuration_type;
     
     boost::asio::io_service& _io;
-    AuxT _aux;
+//     AuxT _aux;
     
-    attachment(boost::asio::io_service& io): _io(io), _aux(io){}
+    attachment(boost::asio::io_service& io): AuxT(io), _io(io){}
     template <udho::logging::status Status>
     self_type& operator()(const udho::logging::message<Status>& /*msg*/){
         return *this;
@@ -135,7 +133,7 @@ struct attachment<AuxT, void, void>{
         return 0;
     }
     AuxT& aux(){
-        return _aux;
+        return *this;
     }
 };
 
