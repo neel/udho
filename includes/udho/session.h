@@ -102,7 +102,7 @@ struct session_{
     }
     template <typename V>
     void set(const V& value){
-        _shadow.template insert<V>(_id, value);
+        _shadow.template set<V>(_id, value);
     }
     std::size_t size() const{
         return _shadow.size();

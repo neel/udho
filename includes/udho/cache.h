@@ -225,9 +225,11 @@ struct disk{
     }
     bool update(const key_type& key, const content_type& content){
         if(exists(key)){
+            content_type current = retrieve(key);
+            current.update(content);
             boost::mutex::scoped_lock lock(_mutex);
             std::ofstream file(path(key).c_str());
-            save(file, content);
+            save(file, current);
             return true;
         }
         return false;
@@ -404,14 +406,16 @@ struct driver{
     explicit driver(abstract_engine_type& e): _engine(e){}
     std::size_t size() const { return _engine.size(); }
     bool exists(const key_type& key) const{ return _engine.exists(key); }
-    bool update(const key_type& key, const content_type& content){ return _engine.update(key, content); }
-    bool update(const key_type& key) { return _engine.update(key); }
-    bool remove(const key_type& key) { return _engine.remove(key); }
     template<typename U=value_type>
     typename std::enable_if<!std::is_same<U,void>::value>::type insert(const key_type& key, const U& value){ return _engine.insert(key, value); }
     template<typename U=value_type>
     typename std::enable_if<std::is_same<U,void>::value>::type insert(const key_type& key){ return _engine.insert(key); }
     content_type retrieve(const key_type& key) const{ return _engine.retrieve(key); }
+    bool update(const key_type& key, const content_type& content){ return _engine.update(key, content); }
+    bool update(const key_type& key) { return _engine.update(key); }
+    template<typename U=value_type>
+    typename std::enable_if<std::is_same<U, ValueT>::value, bool>::type update(const key_type& key, const U& value){ return update(key, content_type(value)); }
+    bool remove(const key_type& key) { return _engine.remove(key); }
     
     boost::posix_time::ptime created(const key_type& key) const{ return _engine.created(key); }
     boost::posix_time::ptime updated(const key_type& key) const{ return _engine.updated(key); }
@@ -565,6 +569,9 @@ struct flake{
     void insert(const key_type& key, const value_type& value){
         _registry.insert(key, value);
     }
+    void update(const key_type& key, const value_type& value){
+        _registry.update(key, value);
+    }
     std::size_t size(const key_type& key) const{
         return _registry.size(key);
     }
@@ -649,6 +656,15 @@ struct shadow: flake<KeyT, T>...{
             return at<V>(key);
         }
         return def;
+    }
+    template <typename V>
+    void set(const key_type& key, const V& value) {
+        if(exists<V>(key)){
+            flake<key_type, V>::update(key, value);
+            _master.update(key);
+        }else{
+            insert<V>(key, value);
+        }
     }
     template <typename V>
     void insert(const key_type& key, const V& value){
