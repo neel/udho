@@ -29,5 +29,7 @@ build:
 test:
  stage: test
  script:
+   - pwd
+   - ls
    - cd build
    - ctest
