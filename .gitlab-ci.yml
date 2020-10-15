@@ -17,6 +17,9 @@ build:
     - cd build
     - cmake ..
     - make
+  cache:
+    paths:
+      - build/
   # artifacts:
     # paths:
       # - mybinary
