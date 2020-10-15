@@ -32,6 +32,9 @@
 #include <string>
 #include <boost/filesystem/path.hpp>
 
+#define UDHO_SESSION_FILE_EXTENSION "udho.cache.sess"
+#define UDHO_SESSION_COOKIE_NAME    "UDHOSESSID"
+
 namespace udho{
 
 template <typename K, typename C>
@@ -231,9 +234,9 @@ struct session_{
         text, binary, xml
     };
     
-    const static struct persistent_t{
+    const static struct extension_t{
         typedef session_<T> component;
-    } persistent;
+    } extension;
     const static struct serialization_t{
         typedef session_<T> component;
     } serialization;
@@ -244,15 +247,15 @@ struct session_{
         typedef session_<T> component;
     } id;
     
-    bool        _persistent;
+    std::string _extension;
     format      _serialization;
     boost::filesystem::path _path;
     std::string _id;
     
-    session_(): _persistent(false), _serialization(format::binary), _id("UDHOSESSID"){}
+    session_(): _extension(UDHO_SESSION_FILE_EXTENSION), _serialization(format::binary), _id(UDHO_SESSION_COOKIE_NAME){}
     
-    void set(persistent_t, bool v){_persistent = v;}
-    unsigned get(persistent_t) const{return _persistent;}
+    void set(extension_t, const std::string& e){_extension = e;}
+    std::string get(extension_t) const{return _extension;}
     
     void set(serialization_t, format v){_serialization = v;}
     format get(serialization_t) const{return _serialization;}
@@ -264,7 +267,7 @@ struct session_{
     std::string get(id_t) const{return _id;}
 };
 
-template <typename T> const typename session_<T>::persistent_t session_<T>::persistent;
+template <typename T> const typename session_<T>::extension_t session_<T>::extension;
 template <typename T> const typename session_<T>::serialization_t session_<T>::serialization;
 template <typename T> const typename session_<T>::path_t session_<T>::path;
 template <typename T> const typename session_<T>::id_t session_<T>::id;

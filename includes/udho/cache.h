@@ -53,9 +53,7 @@
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include "udho/configuration.h"
-
-#define UDHO_SESSION_FILE_EXTENSION "udho.cache.sess"
+#include <udho/configuration.h>
 
 namespace udho{
 namespace cache{
@@ -201,7 +199,7 @@ struct disk{
     
     std::size_t size() const{
         boost::mutex::scoped_lock lock(_mutex);
-        std::string ext(UDHO_SESSION_FILE_EXTENSION);
+        std::string ext = extension();
         std::count_if(boost::filesystem::directory_iterator(storage()), boost::filesystem::directory_iterator(), [ext](const boost::filesystem::path& p){
             return boost::algorithm::ends_with(p.filename().string(), ext);
         });
@@ -250,9 +248,12 @@ struct disk{
         udho::configs::session::format format() const{
             return _config[udho::configs::session::serialization];
         }
+        std::string extension() const{
+            return _config[udho::configs::session::extension];
+        }
         std::string filename(const key_type& key) const{
             std::string key_str = boost::lexical_cast<std::string>(key);
-            return (boost::format("%1%-%2%.%3%") % key_str % _name % UDHO_SESSION_FILE_EXTENSION).str();
+            return (boost::format("%1%-%2%.%3%") % key_str % _name % extension()).str();
         }
         boost::filesystem::path path(const key_type& key) const{
             return storage() / filename(key);
