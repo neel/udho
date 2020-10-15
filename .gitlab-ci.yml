@@ -2,15 +2,16 @@
 # use the official gcc image, based on debian
 # can use verions as well, like gcc:5.2
 # see https://hub.docker.com/_/gcc/
-image: neelbasu/arch-cpp-boost-cmake
+image: archlinux/base
 
 build:
   stage: build
   # instead of calling g++ directly you can also use some build toolkit like make
   # install the necessary build tools when needed
   before_script:
-    - sudo pacman -Syu
-    - sudo pacman -S pugixml --noconfirm
+    - pacman -Syu --noconfirm
+    - pacman -S base-devel boost cmake gcc clang git curl wget --noconfirm
+    - pacman -S pugixml --noconfirm
   script:
     - mkdir build
     - cd build
