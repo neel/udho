@@ -43,8 +43,9 @@ struct session_{
     typedef typename shadow_type::key_type key_type;
     typedef session_<request_type, shadow_type> self_type;
     typedef udho::cache::generator<key_type> generator_type;
+    typedef udho::config<udho::configs::session> session_config_type;
     
-    const udho::configuration_type& _config;
+    const session_config_type& _config;
     cookies_type&  _cookies;
     shadow_type    _shadow;
     bool           _returning;
@@ -52,7 +53,7 @@ struct session_{
     key_type       _id;
     generator_type _generator;
     
-    session_(cookies_type& cookies, shadow_type& shadow, const udho::configuration_type& config): _config(config), _cookies(cookies), _shadow(shadow), _returning(false), _identified(false){
+    session_(cookies_type& cookies, shadow_type& shadow, const session_config_type& config): _config(config), _cookies(cookies), _shadow(shadow), _returning(false), _identified(false){
         identify();
     }
     template <typename... T>
@@ -78,7 +79,7 @@ struct session_{
             }
         }
     }
-    const udho::configuration_type& config() const{
+    const session_config_type& config() const{
         return _config;
     }
     const key_type& id() const{

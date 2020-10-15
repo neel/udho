@@ -135,8 +135,10 @@ struct memory{
     typedef content<ValueT> content_type;
     typedef std::map<key_type, content_type> map_type;
     typedef storage::memory<KeyT, ValueT> self_type;
+    typedef udho::config<udho::configs::session> session_config_type;
+    typedef session_config_type config_type;
     
-    memory(const udho::configuration_type& config): _config(config){};
+    memory(const session_config_type& config): _config(config){};
     memory(const self_type&) = delete;
     memory(self_type&&) = default;
     
@@ -175,7 +177,7 @@ struct memory{
         return false;
     }    
     protected:
-        const udho::configuration_type& _config;
+        const session_config_type& _config;
         map_type _storage;
         mutable boost::mutex _mutex;
 };
@@ -187,8 +189,10 @@ struct disk{
     typedef content<ValueT> content_type;
     typedef std::map<key_type, content_type> map_type;
     typedef storage::disk<KeyT, ValueT> self_type;
+    typedef udho::config<udho::configs::session> session_config_type;
+    typedef session_config_type config_type;
     
-    disk(const udho::configuration_type& config): _config(config){
+    disk(const session_config_type& config): _config(config){
         ctti::name_t name = ctti::nameof<value_type>();
         _name = name.name().str();
     }
@@ -234,7 +238,7 @@ struct disk{
     }    
     
     protected:
-        const udho::configuration_type& _config;
+        const session_config_type& _config;
         std::string _name;
         mutable boost::mutex _mutex;
         
@@ -362,8 +366,9 @@ struct basic_engine: private StorageT, public abstract_engine<typename StorageT:
     typedef typename StorageT::value_type value_type;
     typedef typename StorageT::content_type content_type;
     typedef basic_engine<StorageT> self_type;
+    typedef typename StorageT::config_type config_type;
     
-    explicit basic_engine(const udho::configuration_type& config): StorageT(config) {}
+    explicit basic_engine(const config_type& config): StorageT(config) {}
     
     std::size_t size() const final{
         return storage_type::size();
@@ -475,8 +480,9 @@ struct store: basic_engine<StorageT<KeyT, void>>, basic_engine<StorageT<KeyT, T>
     typedef master<KeyT> master_type;
     typedef shadow<KeyT, T...> shadow_type;
     typedef store<StorageT, KeyT, T...> self_type;
+    typedef typename basic_engine<StorageT<KeyT, void>>::config_type config_type;
       
-    store(const udho::configuration_type& config): basic_engine<StorageT<KeyT, void>>(config), basic_engine<StorageT<KeyT, T>>(config)..., master<KeyT>(static_cast<basic_engine<StorageT<KeyT, void>>&>(*this)), registry<KeyT, T>(static_cast<basic_engine<StorageT<KeyT, T>>&>(*this))... {};
+    store(const config_type& config): basic_engine<StorageT<KeyT, void>>(config), basic_engine<StorageT<KeyT, T>>(config)..., master<KeyT>(static_cast<basic_engine<StorageT<KeyT, void>>&>(*this)), registry<KeyT, T>(static_cast<basic_engine<StorageT<KeyT, T>>&>(*this))... {};
     store(const self_type&) = delete;
     
     template <typename V>
