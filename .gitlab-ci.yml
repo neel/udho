@@ -17,22 +17,20 @@ build:
     - cd build
     - cmake ..
     - make
-  cache:
+  artifacts:
     paths:
-      - build/
-  # artifacts:
-    # paths:
-      # - mybinary
-      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-      # cache:
-      #   paths:
-      #     - "*.o"
+      - build
+      #cache:
+        #paths:
+          #- "*.o"
 
 # run tests using the binary built before
 test:
- stage: test
- script:
-   - pwd
-   - ls
-   - cd build
-   - ctest
+  stage: test
+  script:
+    - pwd
+    - ls
+    - cd build
+    - ctest
+  dependencies:
+    - build
