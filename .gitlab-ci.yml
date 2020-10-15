@@ -8,15 +8,14 @@ build:
   stage: build
   # instead of calling g++ directly you can also use some build toolkit like make
   # install the necessary build tools when needed
-  # before_script:
-  #   - apt update && apt -y install make autoconf
-  script:
+  before_script:
+    - sudo pacman -Syu
     - sudo pacman -S pugixml --noconfirm
+  script:
     - mkdir build
     - cd build
     - cmake ..
     - make
-    - ctest
   # artifacts:
     # paths:
       # - mybinary
@@ -26,7 +25,8 @@ build:
       #     - "*.o"
 
 # run tests using the binary built before
-#test:
-#  stage: test
-#  script:
-#    - ./runmytests.sh
+test:
+ stage: test
+ script:
+   - cd build
+   - ctest
