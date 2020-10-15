@@ -359,16 +359,16 @@ struct abstract_engine{
 };
 
 template <typename StorageT>
-struct basic_engine: private StorageT, public abstract_engine<typename StorageT::key_type, typename StorageT::value_type>{
+struct engine: private StorageT, public abstract_engine<typename StorageT::key_type, typename StorageT::value_type>{
     typedef StorageT storage_type;
     typedef abstract_engine<typename StorageT::key_type, typename StorageT::value_type> abstract_engine_type;
     typedef typename StorageT::key_type key_type;
     typedef typename StorageT::value_type value_type;
     typedef typename StorageT::content_type content_type;
-    typedef basic_engine<StorageT> self_type;
+    typedef engine<StorageT> self_type;
     typedef typename StorageT::config_type config_type;
     
-    explicit basic_engine(const config_type& config): StorageT(config) {}
+    explicit engine(const config_type& config): StorageT(config) {}
     
     std::size_t size() const final{
         return storage_type::size();
@@ -393,7 +393,7 @@ struct basic_engine: private StorageT, public abstract_engine<typename StorageT:
 };
 
 template <typename KeyT, typename ValueT = void>
-struct engine{
+struct driver{
     typedef KeyT key_type;
     typedef ValueT value_type;
     typedef content<ValueT> content_type;
@@ -401,7 +401,7 @@ struct engine{
     
     abstract_engine_type& _engine;
     
-    explicit engine(abstract_engine_type& e): _engine(e){}
+    explicit driver(abstract_engine_type& e): _engine(e){}
     std::size_t size() const { return _engine.size(); }
     bool exists(const key_type& key) const{ return _engine.exists(key); }
     bool update(const key_type& key, const content_type& content){ return _engine.update(key, content); }
@@ -420,13 +420,13 @@ struct engine{
 };
     
 template <typename KeyT>
-struct master: public engine<KeyT>{
+struct master: public driver<KeyT>{
     typedef KeyT key_type;
-    typedef engine<KeyT> storage_type;
+    typedef driver<KeyT> storage_type;
     typedef abstract_engine<KeyT> abstract_engine_type;
     typedef master<KeyT> self_type;
     
-    master(abstract_engine_type& e): engine<KeyT>(e){}
+    master(abstract_engine_type& e): driver<KeyT>(e){}
     
     master(const self_type&) = delete;
     master(self_type&&) = default;
@@ -440,19 +440,19 @@ struct master: public engine<KeyT>{
 };
 
 template <typename KeyT, typename T>
-struct registry: public engine<KeyT, T>{
+struct registry: public driver<KeyT, T>{
     typedef registry<KeyT, T> self_type;
     typedef KeyT key_type;
     typedef T value_type;
     typedef abstract_engine<KeyT, T> abstract_engine_type;
        
-    registry(abstract_engine_type& e): engine<KeyT, T>(e){}
+    registry(abstract_engine_type& e): driver<KeyT, T>(e){}
     
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
     
     const value_type& at(const key_type& key) const{
-        return engine<KeyT, T>::retrieve(key).value();
+        return driver<KeyT, T>::retrieve(key).value();
     }
         
     private:
@@ -475,14 +475,14 @@ struct shadow;
  * \endcode
  */
 template <template <typename, typename> class StorageT, typename KeyT, typename... T>
-struct store: basic_engine<StorageT<KeyT, void>>, basic_engine<StorageT<KeyT, T>>..., master<KeyT>, registry<KeyT, T>...{ 
+struct store: engine<StorageT<KeyT, void>>, engine<StorageT<KeyT, T>>..., master<KeyT>, registry<KeyT, T>...{ 
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef shadow<KeyT, T...> shadow_type;
     typedef store<StorageT, KeyT, T...> self_type;
-    typedef typename basic_engine<StorageT<KeyT, void>>::config_type config_type;
+    typedef typename engine<StorageT<KeyT, void>>::config_type config_type;
       
-    store(const config_type& config): basic_engine<StorageT<KeyT, void>>(config), basic_engine<StorageT<KeyT, T>>(config)..., master<KeyT>(static_cast<basic_engine<StorageT<KeyT, void>>&>(*this)), registry<KeyT, T>(static_cast<basic_engine<StorageT<KeyT, T>>&>(*this))... {};
+    store(const config_type& config): engine<StorageT<KeyT, void>>(config), engine<StorageT<KeyT, T>>(config)..., master<KeyT>(static_cast<engine<StorageT<KeyT, void>>&>(*this)), registry<KeyT, T>(static_cast<engine<StorageT<KeyT, T>>&>(*this))... {};
     store(const self_type&) = delete;
     
     template <typename V>
