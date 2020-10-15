@@ -32,8 +32,6 @@ test:
     - pacman -S base-devel boost cmake gcc clang git curl wget --noconfirm
     - pacman -S pugixml --noconfirm
   script:
-    - pwd
-    - ls
     - cd build
     - ctest
   dependencies:
