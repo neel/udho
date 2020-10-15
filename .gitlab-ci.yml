@@ -27,6 +27,10 @@ build:
 # run tests using the binary built before
 test:
   stage: test
+  before_script:
+    - pacman -Syu --noconfirm
+    - pacman -S base-devel boost cmake gcc clang git curl wget --noconfirm
+    - pacman -S pugixml --noconfirm
   script:
     - pwd
     - ls
