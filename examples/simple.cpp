@@ -236,6 +236,7 @@ int main(){
     server[udho::configs::server::document_root] = WWW_PATH;
     server[udho::configs::session::path] = "sessions";
     server[udho::configs::session::serialization] = udho::configs::session::format::text;
+    server[udho::configs::session::id] = "MYSESSID";
 
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
