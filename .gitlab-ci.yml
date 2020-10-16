@@ -31,7 +31,7 @@ test:arch:
   dependencies:
     - build:arch
     
-build:ubuntu:focal
+build:ubuntu:focal:
   image: ubuntu:20.04
   stage: build
   before_script:
