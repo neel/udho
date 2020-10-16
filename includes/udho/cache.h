@@ -347,11 +347,6 @@ struct abstract_engine{
         create(key, content_type());
     }
     
-//     template<typename U=value_type>
-//     const typename std::enable_if<!std::is_same<U,void>::value, value_type>::type& at(const key_type& key) const{
-//            return retrieve(key).value();
-//     }
-//     
     template<typename U=value_type>
     typename std::enable_if<!std::is_same<U,void>::value, bool>::type update(const key_type& key, const U& value){
         return update(key, content_type(value));
@@ -480,7 +475,9 @@ struct shadow;
  * \endcode
  */
 template <template <typename, typename> class StorageT, typename KeyT, typename... T>
-struct store: engine<StorageT<KeyT, void>>, engine<StorageT<KeyT, T>>..., master<KeyT>, registry<KeyT, T>...{ 
+struct store: private engine<StorageT<KeyT, void>>, private engine<StorageT<KeyT, T>>..., protected master<KeyT>, public registry<KeyT, T>...{
+    friend struct shadow<KeyT, T...>;
+    
     typedef KeyT key_type;
     typedef master<KeyT> master_type;
     typedef shadow<KeyT, T...> shadow_type;
