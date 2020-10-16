@@ -49,7 +49,7 @@ int my_app::mul(udho::contexts::stateful<my_app::state> ctx, int a, int b){
 int main(){
     boost::asio::io_service io;
 
-    udho::servers::ostreamed::stateful<my_app::state> server(io, std::cout);
+    udho::servers::ostreamed::stateful<udho::cache::storage::memory, my_app::state> server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
     

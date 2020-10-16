@@ -6,13 +6,28 @@
 #include <udho/context.h>
 #include <udho/visitor.h>
 #include <iostream>
+#include <boost/serialization/access.hpp>
 
 struct user{
     std::string name;
+    
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & BOOST_SERIALIZATION_NVP(name);
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 struct appearence{
     std::string color;
+    
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version){
+        ar & BOOST_SERIALIZATION_NVP(color);
+    }
+    private:
+        friend class boost::serialization::access;
 };
 
 std::string hello(udho::contexts::stateful<user> ctx){
@@ -78,7 +93,7 @@ std::string unset(udho::contexts::stateful<appearence> ctx){
 
 std::string hello_see(udho::contexts::stateful<user, appearence> ctx){
     std::cout << "server sessions: " << ctx.session().size() << std::endl;
-    std::cout << "server sessions having user: " << ctx.session().size<user>() << std::endl;
+    std::cout << "server sessions having user: " << ctx.session().exists<user>() << std::endl;
     std::cout << "user returning: " << ctx.session().returning() << std::endl;
     std::cout << "session id: " << ctx.session().id() << std::endl;
     std::cout << "user data exists: " << ctx.session().exists<user>() << std::endl;
@@ -216,9 +231,13 @@ void fetch_echo(udho::contexts::stateless ctx){
 
 int main(){    
     boost::asio::io_service io;
-    udho::servers::ostreamed::stateful<user, appearence> server(io, std::cout);
+    udho::servers::ostreamed::stateful<udho::cache::storage::disk, user, appearence> server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
+    server[udho::configs::session::path] = "sessions";
+    server[udho::configs::session::serialization] = udho::configs::session::format::text;
+    server[udho::configs::session::id] = "MYSESSID";
+
     auto router = udho::router()
         | (udho::get(&file).raw()            = "^/file")
         | (udho::get(&long_poll).deferred()  = "^/poll")

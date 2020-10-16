@@ -151,9 +151,9 @@ namespace stateless{
     using quiet  = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
-template <typename... T>
+template <template <typename, typename> class StorageT, typename... T>
 struct stateful{
-    typedef udho::cache::store<boost::uuids::uuid, T...> cache_type;
+    typedef udho::cache::store<StorageT, boost::uuids::uuid, T...> cache_type;
     
     template <typename LoggerT>
     using logged    = server<udho::bridge<udho::configuration_type>, LoggerT, cache_type>;
@@ -162,8 +162,8 @@ struct stateful{
 };
 
 namespace quiet{
-    template <typename... T>
-    using stateful  = server<udho::bridge<udho::configuration_type>, void, udho::cache::store<boost::uuids::uuid, T...>>;
+    template <template <typename, typename> class StorageT, typename... T>
+    using stateful  = server<udho::bridge<udho::configuration_type>, void, udho::cache::store<StorageT, boost::uuids::uuid, T...>>;
     using stateless = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
@@ -171,8 +171,8 @@ template <typename T>
 struct logged{
     typedef T logger_type;
     
-    template <typename... U>
-    using stateful  = server<udho::bridge<udho::configuration_type>, logger_type, udho::cache::store<boost::uuids::uuid, U...>>;
+    template <template <typename, typename> class StorageT, typename... U>
+    using stateful  = server<udho::bridge<udho::configuration_type>, logger_type, udho::cache::store<StorageT, boost::uuids::uuid, U...>>;
     using stateless = server<udho::bridge<udho::configuration_type>, logger_type, void>;
 };
 
@@ -213,8 +213,8 @@ namespace ostreamed{
         }
     };
     
-    template <typename... U>
-    using stateful  = ostreamed_helper<udho::cache::store<boost::uuids::uuid, U...>>;
+    template <template <typename, typename> class StorageT, typename... U>
+    using stateful  = ostreamed_helper<udho::cache::store<StorageT, boost::uuids::uuid, U...>>;
     using stateless = ostreamed_helper<void>;
 }
     

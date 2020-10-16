@@ -31,6 +31,7 @@
 #include <string>
 #include <udho/cache.h>
 #include <udho/cookie.h>
+#include <udho/configuration.h>
 
 namespace udho{
     
@@ -42,28 +43,29 @@ struct session_{
     typedef typename shadow_type::key_type key_type;
     typedef session_<request_type, shadow_type> self_type;
     typedef udho::cache::generator<key_type> generator_type;
+    typedef udho::config<udho::configs::session> session_config_type;
     
+    const session_config_type& _config;
     cookies_type&  _cookies;
     shadow_type    _shadow;
-    std::string    _sessid;
     bool           _returning;
     bool           _identified;
     key_type       _id;
     generator_type _generator;
     
-    session_(cookies_type& cookies, shadow_type& shadow): _cookies(cookies), _shadow(shadow), _sessid("UDHOSESSID"), _returning(false), _identified(false){
+    session_(cookies_type& cookies, shadow_type& shadow, const session_config_type& config): _config(config), _cookies(cookies), _shadow(shadow), _returning(false), _identified(false){
         identify();
     }
     template <typename... T>
-    session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _cookies(other._cookies), _shadow(other._shadow), _sessid(other._sessid), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
+    session_(session_<request_type, udho::cache::shadow<key_type, T...>>& other): _config(other.config()), _cookies(other._cookies), _shadow(other._shadow), _returning(other._returning), _identified(other._identified), _id(other._id), _generator(other._generator){}
     void identify(){
         if(!_identified){
-            if(_cookies.exists(_sessid)){
-                key_type id = _cookies.template get<key_type>(_sessid);
+            if(_cookies.exists(sessid())){
+                key_type id = _cookies.template get<key_type>(sessid());
                 if(!_shadow.issued(id)){
                     _id = _generator.generate();
                     _shadow.issue(_id);
-                    _cookies.add(_sessid, _id);
+                    _cookies.add(sessid(), _id);
                     _returning = false;
                 }else{
                     _id = id;
@@ -72,10 +74,13 @@ struct session_{
             }else{
                 _id = _generator.generate();
                 _shadow.issue(_id);
-                _cookies.add(_sessid, _id);
+                _cookies.add(sessid(), _id);
                 _returning = false;
             }
         }
+    }
+    const session_config_type& config() const{
+        return _config;
     }
     const key_type& id() const{
         return _id;
@@ -97,14 +102,10 @@ struct session_{
     }
     template <typename V>
     void set(const V& value){
-        _shadow.template insert<V>(_id, value);
+        _shadow.template set<V>(_id, value);
     }
     std::size_t size() const{
         return _shadow.size();
-    }
-    template <typename V>
-    std::size_t size() const{
-        return _shadow.template size<V>(_id);
     }
     bool remove(){
         return _shadow.remove(_id);
@@ -140,6 +141,9 @@ struct session_{
     template <typename V>
     boost::posix_time::time_duration idle() const{
         return _shadow.template idle<V>(_id);
+    }
+    std::string sessid() const{
+        return _config[udho::configs::session::id];
     }
 };
 
