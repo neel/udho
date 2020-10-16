@@ -35,7 +35,7 @@ build:ubuntu:focal:
   before_script:
     - apt-get update
     - apt-get upgrade -y
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget pugixml-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
   script:
     - mkdir build
     - cd build
@@ -50,7 +50,7 @@ test:ubuntu:focal:
   before_script:
     - apt-get update
     - apt-get upgrade -y
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget pugixml-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
   script:
     - cd build
     - ctest
