@@ -18,6 +18,7 @@ build:arch:
       - build
            
 test:arch:
+  image: archlinux/base
   stage: test
   before_script:
     - pacman -Syu --noconfirm
@@ -52,6 +53,7 @@ build:ubuntu:focal:
       - build
     
 test:ubuntu:focal:
+  image: ubuntu:20.04
   stage: test
   variables:
     DEBIAN_FRONTEND: "noninteractive"
