@@ -32,9 +32,14 @@ test:arch:
 build:ubuntu:focal:
   image: ubuntu:20.04
   stage: build
+  variables:
+    DEBIAN_FRONTEND: "noninteractive"
   before_script:
     - apt-get update
     - apt-get upgrade -y
+    - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+    - apt-get install -y tzdata
+    - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
   script:
     - mkdir build
@@ -47,9 +52,14 @@ build:ubuntu:focal:
     
 test:ubuntu:focal:
   stage: test
+  variables:
+    DEBIAN_FRONTEND: "noninteractive"
   before_script:
     - apt-get update
     - apt-get upgrade -y
+    - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+    - apt-get install -y tzdata
+    - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
   script:
     - cd build
