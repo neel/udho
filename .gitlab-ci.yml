@@ -40,7 +40,8 @@ build:ubuntu:focal:
     - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
+    - apt-get install -y build-essential checkinstall zlib1g-dev 
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev
   script:
     - mkdir build
     - cd build
@@ -60,7 +61,8 @@ test:ubuntu:focal:
     - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libpugixml-dev
+    - apt-get install -y build-essential checkinstall zlib1g-dev 
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev
   script:
     - cd build
     - ctest
