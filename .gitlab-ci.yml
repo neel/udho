@@ -2,16 +2,14 @@
 # use the official gcc image, based on debian
 # can use verions as well, like gcc:5.2
 # see https://hub.docker.com/_/gcc/
-image: archlinux/base
 
-build:
+
+build:arch:
+  image: archlinux/base
   stage: build
-  # instead of calling g++ directly you can also use some build toolkit like make
-  # install the necessary build tools when needed
   before_script:
     - pacman -Syu --noconfirm
-    - pacman -S base-devel boost cmake gcc clang git curl wget --noconfirm
-    - pacman -S pugixml --noconfirm
+    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml --noconfirm
   script:
     - mkdir build
     - cd build
@@ -20,12 +18,8 @@ build:
   artifacts:
     paths:
       - build
-      #cache:
-        #paths:
-          #- "*.o"
-
-# run tests using the binary built before
-test:
+           
+test:arch:
   stage: test
   before_script:
     - pacman -Syu --noconfirm
@@ -35,4 +29,32 @@ test:
     - cd build
     - ctest
   dependencies:
-    - build
+    - build:arch
+    
+build:ubuntu:focal
+  image: ubuntu:20.04
+  stage: build
+  before_script:
+    - apt-get update
+    - apt-get upgrade -y
+    - apt-get install -y libboost-all-devel cmake gcc clang git curl wget pugixml-dev
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+  artifacts:
+    paths:
+      - build
+    
+test:ubuntu:focal:
+  stage: test
+  before_script:
+    - apt-get update
+    - apt-get upgrade -y
+    - apt-get install -y libboost-all-devel cmake gcc clang git curl wget pugixml-dev
+  script:
+    - cd build
+    - ctest
+  dependencies:
+    - build:ubuntu:focal
