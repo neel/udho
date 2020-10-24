@@ -33,6 +33,7 @@
 #include <atomic>
 #include <boost/signals2.hpp>
 #include <udho/cache.h>
+#include <boost/bind.hpp>
 
 namespace udho{
 namespace activities{
@@ -75,7 +76,7 @@ namespace activities{
     };
        
     template <typename... T>
-    struct collector{
+    struct collector: std::enable_shared_from_this<collector<T...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, T...>> base_type;
         typedef udho::cache::store<udho::cache::storage::memory, std::string, T...> store_type;
         typedef typename store_type::shadow_type shadow_type;
@@ -99,7 +100,7 @@ namespace activities{
         shadow_type _shadow;
         
         template <typename... U>
-        accessor(collector<U...>& collector): base_type(_shadow, collector.name()), _shadow(collector.shadow()){}
+        accessor(std::shared_ptr<collector<U...>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
         std::string name() const{ return base_type::key(); }
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
@@ -211,7 +212,10 @@ namespace activities{
         
         template <typename CallbackT>
         void done(CallbackT& cb){
-            boost::function<void (const data_type&)> fnc(boost::ref(cb));
+            typedef typename CallbackT::element_type class_type;
+            boost::function<void (const data_type&)> fnc([cb](const data_type& data){
+                cb->operator()(data);
+            });
             _signal.connect(fnc);
         }
         protected:
@@ -226,7 +230,7 @@ namespace activities{
         private:
             void completed(){
                 data_type self = static_cast<const data_type&>(*this);
-                _shadow << self;
+//                 _shadow << self;
                 _signal(self);
             }
     };
@@ -238,9 +242,9 @@ namespace activities{
     
     template <typename NextT, typename... DependenciesT>
     struct combinator: junction<typename DependenciesT::result_type>...{
-        typedef NextT next_type;
+        typedef std::shared_ptr<NextT> next_type;
         
-        next_type&  _next;
+        next_type  _next;
         std::atomic<std::size_t> _counter;
         std::mutex  _mutex;
         
@@ -251,7 +255,7 @@ namespace activities{
             _counter--;
             if(!_counter){
                 _mutex.lock();
-                _next();
+                (*_next)();
                 _mutex.unlock();
             }
         }
