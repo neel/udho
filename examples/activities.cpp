@@ -32,7 +32,7 @@ struct A1: udho::activities::result<A1SData, A1FData>, std::enable_shared_from_t
     }
     
     void finished(const boost::system::error_code& e){
-        std::cout << e << std::endl;
+        std::cout << e.message() << std::endl;
         std::cout << "A1 begin" << std::endl;
         A1SData data;
         data.value = 42;
@@ -59,7 +59,7 @@ struct A2: udho::activities::result<A2SData, A2FData>, std::enable_shared_from_t
     A2(std::shared_ptr<CollectorT> c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(5));
+        _timer.expires_from_now(boost::posix_time::seconds(10));
         _timer.async_wait(boost::bind(&self_type::finished, self_type::shared_from_this(), boost::asio::placeholders::error));
     }
     
@@ -124,6 +124,25 @@ struct A4: udho::activities::result<A4SData, A4FData>, std::enable_shared_from_t
     A4(std::shared_ptr<CollectorT> c, udho::contexts::stateless& ctx, std::string planet): base(c), _ctx(ctx), _planet(planet), _collector(c){}
     
     void operator()(){
+        
+        if(_collector->template exists<udho::activities::result_data<A3SData, A3FData>>()){
+            udho::activities::result_data<A3SData, A3FData> data;
+            *_collector >> data;
+            std::cout << "A3 " << data.success_data().value << std::endl;
+        }
+        
+        if(_collector->template exists<udho::activities::result_data<A2SData, A2FData>>()){
+            udho::activities::result_data<A2SData, A2FData> data;
+            *_collector >> data;
+            std::cout << "A2 " << data.success_data().value << std::endl;
+        }
+        
+        if(_collector->template exists<udho::activities::result_data<A1SData, A1FData>>()){
+            udho::activities::result_data<A1SData, A1FData> data;
+            *_collector >> data;
+            std::cout << "A1 " << data.success_data().value << std::endl;
+        }
+        
         std::cout << "A4 begin" << std::endl;
         _ctx.respond(_planet, "text/plain");
         std::cout << "A4 end" << std::endl;

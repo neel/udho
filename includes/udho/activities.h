@@ -76,7 +76,7 @@ namespace activities{
     };
        
     template <typename... T>
-    struct collector: std::enable_shared_from_this<collector<T...>>{
+    struct collector: fixed_key_accessor<udho::cache::shadow<std::string, T...>>, std::enable_shared_from_this<collector<T...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, T...>> base_type;
         typedef udho::cache::store<udho::cache::storage::memory, std::string, T...> store_type;
         typedef typename store_type::shadow_type shadow_type;
@@ -85,11 +85,10 @@ namespace activities{
         shadow_type _shadow;
         std::string _name;
         
-        collector(const udho::configuration_type& config, const std::string& name): _store(config), _shadow(_store), _name(name){}
+        collector(const udho::configuration_type& config, const std::string& name): base_type(_shadow, name), _store(config), _shadow(_store), _name(name){}
         std::string name() const{ return _name; }
-        shadow_type& shadow() {
-            return _shadow;
-        }
+        shadow_type& shadow() { return _shadow; }
+        const shadow_type& shadow() const { return _shadow; }
     };
     
     template <typename... T>
@@ -115,7 +114,7 @@ namespace activities{
 
     template <typename U, typename... T>
     const collector<T...>& operator>>(const collector<T...>& h, U& data){
-        auto& shadow = h.shadow();
+        const auto& shadow = h.shadow();
         data = shadow.template get<U>(h.name());
         return h;
     }
@@ -212,7 +211,6 @@ namespace activities{
         
         template <typename CallbackT>
         void done(CallbackT& cb){
-            typedef typename CallbackT::element_type class_type;
             boost::function<void (const data_type&)> fnc([cb](const data_type& data){
                 cb->operator()(data);
             });
@@ -230,7 +228,7 @@ namespace activities{
         private:
             void completed(){
                 data_type self = static_cast<const data_type&>(*this);
-//                 _shadow << self;
+                _shadow << self;
                 _signal(self);
             }
     };
