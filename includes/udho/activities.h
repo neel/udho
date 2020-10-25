@@ -284,7 +284,7 @@ namespace activities{
         static self_type with(U&&... u){
             return self_type(0, u...);
         }
-        
+               
         private:
             template <typename... U>
             task(int, U&&... u){
@@ -330,6 +330,19 @@ namespace activities{
             }
             
             std::shared_ptr<activity_type> _activity;
+    };
+    
+    template <typename DerivedT, typename... T>
+    struct aggregated: std::enable_shared_from_this<DerivedT>{
+        typedef collector<typename T::result_type...> collector_type;
+        
+        template <typename ContextT>
+        aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)){}
+        
+        std::shared_ptr<collector_type> data() { return _collector; }
+        std::shared_ptr<DerivedT> self() { return std::enable_shared_from_this<DerivedT>::shared_from_this(); }
+        private:
+            std::shared_ptr<collector_type> _collector;
     };
 }
 }

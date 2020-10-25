@@ -106,33 +106,31 @@ struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_t
     }
 };
 
-template <typename CollectorT>
-struct A4: std::enable_shared_from_this<A4<CollectorT>>{
+struct A4: udho::activities::aggregated<A4, A3, A2, A1>{
+    typedef udho::activities::aggregated<A4, A3, A2, A1> base;
     
     udho::contexts::stateless _ctx;
     std::string _planet;
-    std::shared_ptr<CollectorT> _collector;
     
-    A4(std::shared_ptr<CollectorT> c, udho::contexts::stateless& ctx, std::string planet): _ctx(ctx), _planet(planet), _collector(c){}
+    A4(const udho::contexts::stateless& ctx, std::string planet): base(ctx, "A"), _ctx(ctx), _planet(planet){}
     
     void operator()(){
-        
-        if(_collector->template exists<udho::activities::result_data<A3SData, A3FData>>()){
-            udho::activities::result_data<A3SData, A3FData> data;
-            *_collector >> data;
-            std::cout << "A3 " << data.success_data().value << std::endl;
+        if(data()->template exists<udho::activities::result_data<A3SData, A3FData>>()){
+            udho::activities::result_data<A3SData, A3FData> d;
+            *data() >> d;
+            std::cout << "A3 " << d.success_data().value << std::endl;
         }
         
-        if(_collector->template exists<udho::activities::result_data<A2SData, A2FData>>()){
-            udho::activities::result_data<A2SData, A2FData> data;
-            *_collector >> data;
-            std::cout << "A2 " << data.success_data().value << std::endl;
+        if(data()->template exists<udho::activities::result_data<A2SData, A2FData>>()){
+            udho::activities::result_data<A2SData, A2FData> d;
+            *data() >> d;
+            std::cout << "A2 " << d.success_data().value << std::endl;
         }
         
-        if(_collector->template exists<udho::activities::result_data<A1SData, A1FData>>()){
-            udho::activities::result_data<A1SData, A1FData> data;
-            *_collector >> data;
-            std::cout << "A1 " << data.success_data().value << std::endl;
+        if(data()->template exists<udho::activities::result_data<A1SData, A1FData>>()){
+            udho::activities::result_data<A1SData, A1FData> d;
+            *data() >> d;
+            std::cout << "A1 " << d.success_data().value << std::endl;
         }
         
         std::cout << "A4 begin" << std::endl;
@@ -142,18 +140,12 @@ struct A4: std::enable_shared_from_this<A4<CollectorT>>{
 };
 
 void planet(udho::contexts::stateless ctx, std::string name){
-    typedef udho::activities::collector<
-        A3::result_type, 
-        A2::result_type, 
-        A1::result_type
-    > collector_type;
+    auto& io = ctx.aux()._io;
     
-    auto collector = std::make_shared<collector_type>(ctx.aux().config(), "A");
-
-    auto t4 = udho::activities::task<A4<collector_type>, A2, A3>::with(collector, ctx, name);
-    auto t2 = udho::activities::task<A2, A1>::with(collector, ctx.aux()._io).done(t4);
-    auto t3 = udho::activities::task<A3, A1>::with(collector, ctx.aux()._io).done(t4);
-    auto t1 = udho::activities::task<A1>::with(collector, ctx.aux()._io).done(t2).done(t3);
+    auto t4 = udho::activities::task<A4, A2, A3>::with(ctx, name);
+    auto t2 = udho::activities::task<A2, A1>::with(t4.activity()->data(), io).done(t4);
+    auto t3 = udho::activities::task<A3, A1>::with(t4.activity()->data(), io).done(t4);
+    auto t1 = udho::activities::task<A1>::with(t4.activity()->data(), io).done(t2).done(t3);
     t1();
 }
 
