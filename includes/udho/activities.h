@@ -209,10 +209,10 @@ namespace activities{
         template <typename StoreT>
         result(StoreT& store): _shadow(store){}
         
-        template <typename CallbackT>
-        void done(CallbackT& cb){
-            boost::function<void (const data_type&)> fnc([cb](const data_type& data){
-                cb->operator()(data);
+        template <typename CombinatorT>
+        void done(CombinatorT cmb){
+            boost::function<void (const data_type&)> fnc([cmb](const data_type& data){
+                cmb->operator()(data);
             });
             _signal.connect(fnc);
         }
@@ -257,6 +257,79 @@ namespace activities{
                 _mutex.unlock();
             }
         }
+    };
+    
+    template <typename T, typename... DependenciesT>
+    struct task{
+        typedef T activity_type;
+        typedef combinator<T, DependenciesT...> combinator_type;
+        typedef task<T, DependenciesT...> self_type;
+        
+        template <typename U, typename... DependenciesU>
+        friend class task;
+        
+        task(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
+                
+        std::shared_ptr<activity_type> activity() {
+            return _activity;
+        }
+        
+        template <typename V, typename... DependenciesV>
+        self_type& done(task<V, DependenciesV...>& next){
+            activity()->done(next._combinator);
+            return *this;
+        }
+        
+        template <typename... U>
+        static self_type with(U&&... u){
+            return self_type(0, u...);
+        }
+        
+        private:
+            template <typename... U>
+            task(int, U&&... u){
+                _activity = std::make_shared<activity_type>(u...);
+                _combinator = std::make_shared<combinator_type>(_activity);
+            }
+            
+            std::shared_ptr<activity_type> _activity;
+            std::shared_ptr<combinator_type> _combinator;
+    };
+    
+    template <typename T>
+    struct task<T>{
+        typedef T activity_type;
+        typedef task<T> self_type;
+        
+        task(const self_type& other): _activity(other._activity){}
+                
+        std::shared_ptr<activity_type> activity() {
+            return _activity;
+        }
+                
+        template <typename V, typename... DependenciesV>
+        self_type& done(task<V, DependenciesV...>& next){
+            activity()->done(next._combinator);
+            return *this;
+        }
+        
+        template <typename... U>
+        static self_type with(U&&... u){
+            return self_type(0, u...);
+        }
+        
+        template <typename... U>
+        void operator()(U&&... u){
+            _activity->operator()(u...);
+        }
+        
+        private:
+            template <typename... U>
+            task(int, U&&... u){
+                _activity = std::make_shared<activity_type>(u...);
+            }
+            
+            std::shared_ptr<activity_type> _activity;
     };
 }
 }

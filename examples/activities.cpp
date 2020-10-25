@@ -17,13 +17,13 @@ struct A1FData{
     int reason;
 };
 
-template <typename CollectorT>
-struct A1: udho::activities::result<A1SData, A1FData>, std::enable_shared_from_this<A1<CollectorT>>{
+struct A1: udho::activities::result<A1SData, A1FData>, std::enable_shared_from_this<A1>{
     typedef udho::activities::result<A1SData, A1FData> base;
-    typedef A1<CollectorT> self_type;
+    typedef A1 self_type;
     
     boost::asio::deadline_timer _timer;
     
+    template <typename CollectorT>
     A1(std::shared_ptr<CollectorT> c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
@@ -49,13 +49,13 @@ struct A2FData{
     int reason;
 };
 
-template <typename CollectorT>
-struct A2: udho::activities::result<A2SData, A2FData>, std::enable_shared_from_this<A2<CollectorT>>{
+struct A2: udho::activities::result<A2SData, A2FData>, std::enable_shared_from_this<A2>{
     typedef udho::activities::result<A2SData, A2FData> base;
-    typedef A2<CollectorT> self_type;
+    typedef A2 self_type;
     
     boost::asio::deadline_timer _timer;
     
+    template <typename CollectorT>
     A2(std::shared_ptr<CollectorT> c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
@@ -81,13 +81,14 @@ struct A3FData{
     int reason;
 };
 
-template <typename CollectorT>
-struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_this<A3<CollectorT>>{
+
+struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_this<A3>{
     typedef udho::activities::result<A3SData, A3FData> base;
-    typedef A3<CollectorT> self_type;
+    typedef A3 self_type;
     
     boost::asio::deadline_timer _timer;
     
+    template <typename CollectorT>
     A3(std::shared_ptr<CollectorT> c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
@@ -105,23 +106,14 @@ struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_t
     }
 };
 
-struct A4SData{
-    int value;
-};
-
-struct A4FData{
-    int reason;
-};
-
 template <typename CollectorT>
-struct A4: udho::activities::result<A4SData, A4FData>, std::enable_shared_from_this<A4<CollectorT>>{
-    typedef udho::activities::result<A4SData, A4FData> base;
+struct A4: std::enable_shared_from_this<A4<CollectorT>>{
     
     udho::contexts::stateless _ctx;
     std::string _planet;
     std::shared_ptr<CollectorT> _collector;
     
-    A4(std::shared_ptr<CollectorT> c, udho::contexts::stateless& ctx, std::string planet): base(c), _ctx(ctx), _planet(planet), _collector(c){}
+    A4(std::shared_ptr<CollectorT> c, udho::contexts::stateless& ctx, std::string planet): _ctx(ctx), _planet(planet), _collector(c){}
     
     void operator()(){
         
@@ -151,35 +143,18 @@ struct A4: udho::activities::result<A4SData, A4FData>, std::enable_shared_from_t
 
 void planet(udho::contexts::stateless ctx, std::string name){
     typedef udho::activities::collector<
-        udho::activities::result_data<A4SData, A4FData>, 
-        udho::activities::result_data<A3SData, A3FData>, 
-        udho::activities::result_data<A2SData, A2FData>, 
-        udho::activities::result_data<A1SData, A1FData>
+        A3::result_type, 
+        A2::result_type, 
+        A1::result_type
     > collector_type;
     
-//     collector_type collector(ctx.aux().config(), "A");
     auto collector = std::make_shared<collector_type>(ctx.aux().config(), "A");
-    
-//     A4<collector_type> a4(collector, ctx, name);
-    auto a4 = std::make_shared<A4<collector_type>>(collector, ctx, name);
-//     udho::activities::combinator<A4<collector_type>, A2<collector_type>, A3<collector_type>> c4(a4);
-    auto c4 = std::make_shared<udho::activities::combinator<A4<collector_type>, A2<collector_type>, A3<collector_type>>>(a4);
-//     A2<collector_type> a2(collector, ctx.aux()._io);
-    auto a2 = std::make_shared<A2<collector_type>>(collector, ctx.aux()._io);
-    a2->done(c4);
-//     A3<collector_type> a3(collector, ctx.aux()._io);
-    auto a3 = std::make_shared<A3<collector_type>>(collector, ctx.aux()._io);
-    a3->done(c4);
-//     udho::activities::combinator<A2<collector_type>, A1<collector_type>> c2(a2);
-    auto c2 = std::make_shared<udho::activities::combinator<A2<collector_type>, A1<collector_type>>>(a2);
-//     udho::activities::combinator<A3<collector_type>, A1<collector_type>> c3(a3);
-    auto c3 = std::make_shared<udho::activities::combinator<A3<collector_type>, A1<collector_type>>>(a3);
-//     A1<collector_type> a1(collector, ctx.aux()._io);
-    auto a1 = std::make_shared<A1<collector_type>>(collector, ctx.aux()._io);
-    a1->done(c2);
-    a1->done(c3);
-    
-    (*a1)();
+
+    auto t4 = udho::activities::task<A4<collector_type>, A2, A3>::with(collector, ctx, name);
+    auto t2 = udho::activities::task<A2, A1>::with(collector, ctx.aux()._io).done(t4);
+    auto t3 = udho::activities::task<A3, A1>::with(collector, ctx.aux()._io).done(t4);
+    auto t1 = udho::activities::task<A1>::with(collector, ctx.aux()._io).done(t2).done(t3);
+    t1();
 }
 
 int main(){
