@@ -344,6 +344,18 @@ namespace activities{
         private:
             std::shared_ptr<collector_type> _collector;
     };
+    
+    template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
+    struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<SuccessDataT, FailureDataT>{
+        typedef std::shared_ptr<DerivedT> derived_ptr_type;
+        
+        template <typename StoreT>
+        activity(StoreT& store): udho::activities::result<SuccessDataT, FailureDataT>(store){}
+        
+        derived_ptr_type self() {
+            return std::enable_shared_from_this<DerivedT>::shared_from_this();
+        }
+    };
 }
 }
 

@@ -17,9 +17,8 @@ struct A1FData{
     int reason;
 };
 
-struct A1: udho::activities::result<A1SData, A1FData>, std::enable_shared_from_this<A1>{
-    typedef udho::activities::result<A1SData, A1FData> base;
-    typedef A1 self_type;
+struct A1: udho::activities::activity<A1, A1SData, A1FData>{
+    typedef udho::activities::activity<A1, A1SData, A1FData> base;
     
     boost::asio::deadline_timer _timer;
     
@@ -28,7 +27,7 @@ struct A1: udho::activities::result<A1SData, A1FData>, std::enable_shared_from_t
     
     void operator()(){
         _timer.expires_from_now(boost::posix_time::seconds(5));
-        _timer.async_wait(boost::bind(&self_type::finished, self_type::shared_from_this(), boost::asio::placeholders::error));
+        _timer.async_wait(boost::bind(&A1::finished, self(), boost::asio::placeholders::error));
     }
     
     void finished(const boost::system::error_code& e){
@@ -49,9 +48,8 @@ struct A2FData{
     int reason;
 };
 
-struct A2: udho::activities::result<A2SData, A2FData>, std::enable_shared_from_this<A2>{
-    typedef udho::activities::result<A2SData, A2FData> base;
-    typedef A2 self_type;
+struct A2: udho::activities::activity<A2, A2SData, A2FData>{
+    typedef udho::activities::activity<A2, A2SData, A2FData> base;
     
     boost::asio::deadline_timer _timer;
     
@@ -60,7 +58,7 @@ struct A2: udho::activities::result<A2SData, A2FData>, std::enable_shared_from_t
     
     void operator()(){
         _timer.expires_from_now(boost::posix_time::seconds(10));
-        _timer.async_wait(boost::bind(&self_type::finished, self_type::shared_from_this(), boost::asio::placeholders::error));
+        _timer.async_wait(boost::bind(&A2::finished, self(), boost::asio::placeholders::error));
     }
     
     void finished(const boost::system::error_code& e){
@@ -82,9 +80,8 @@ struct A3FData{
 };
 
 
-struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_this<A3>{
-    typedef udho::activities::result<A3SData, A3FData> base;
-    typedef A3 self_type;
+struct A3: udho::activities::activity<A3, A3SData, A3FData>{
+    typedef udho::activities::activity<A3, A3SData, A3FData> base;
     
     boost::asio::deadline_timer _timer;
     
@@ -93,7 +90,7 @@ struct A3: udho::activities::result<A3SData, A3FData>, std::enable_shared_from_t
     
     void operator()(){
         _timer.expires_from_now(boost::posix_time::seconds(5));
-        _timer.async_wait(boost::bind(&self_type::finished, self_type::shared_from_this(), boost::asio::placeholders::error));
+        _timer.async_wait(boost::bind(&A3::finished, self(), boost::asio::placeholders::error));
     }
     
     void finished(const boost::system::error_code& e){
