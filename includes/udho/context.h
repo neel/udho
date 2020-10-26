@@ -417,6 +417,10 @@ struct context{
     detail::client_connection_wrapper<self_type> client(udho::config<udho::client_options> options = udho::config<udho::client_options>()){
         return _aux.client(*this, options);
     }
+    
+    boost::asio::io_service& io() {
+        return _aux._io;
+    }
 };
 
 /**
@@ -620,6 +624,10 @@ struct context<AuxT, RequestT, void>{
     
     detail::client_connection_wrapper<self_type> client(udho::config<udho::client_options> options = udho::config<udho::client_options>()){
         return _aux.client(*this, options);
+    }
+    
+    boost::asio::io_service& io() {
+        return _aux._io;
     }
 };
 

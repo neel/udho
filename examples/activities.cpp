@@ -110,7 +110,7 @@ struct A3: udho::activities::activity<A3, A3SData, A3FData>{
 };
 
 void planet(udho::contexts::stateless ctx, std::string name){
-    auto& io = ctx.aux()._io;
+    auto& io = ctx.io();
     
     auto data = udho::activities::collect<A1, A2, A3>(ctx, "A");
     
