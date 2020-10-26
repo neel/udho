@@ -1,11 +1,16 @@
-#include <string>
-#include <memory>
-#include <iostream>
-#include <boost/asio.hpp>
+#define BOOST_TEST_DYN_LINK
+#define BOOST_TEST_MODULE "udho Unit Test (udho::activity)"
+#include <boost/test/unit_test.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string_regex.hpp>
 #include <udho/router.h>
-#include <udho/logging.h>
+#include <boost/lexical_cast.hpp>
+#include <boost/bind.hpp>
 #include <udho/server.h>
-#include <udho/contexts.h>
+#include <iostream>
 #include <udho/configuration.h>
 #include <udho/activities.h>
 
@@ -31,12 +36,9 @@ struct A1: udho::activities::activity<A1, A1SData, A1FData>{
     }
     
     void finished(const boost::system::error_code& e){
-        std::cout << e.message() << std::endl;
-        std::cout << "A1 begin" << std::endl;
         A1SData data;
         data.value = 42;
         success(data);
-        std::cout << "A1 end" << std::endl;
     }
 };
 
@@ -63,14 +65,12 @@ struct A2: udho::activities::activity<A2, A2SData, A2FData>{
     }
     
     void finished(const boost::system::error_code& err){
-        std::cout << "A2 begin" << std::endl;
         if(!err && !_accessor.failed<A1>()){
             A1SData pre = _accessor.success<A1>();
             A2SData data;
             data.value = pre.value + 2;
             success(data);
         }
-        std::cout << "A2 end" << std::endl;
     }
 };
 
@@ -98,18 +98,16 @@ struct A3: udho::activities::activity<A3, A3SData, A3FData>{
     }
     
     void finished(const boost::system::error_code& err){
-        std::cout << "A3 begin" << std::endl;
         if(!err && !_accessor.failed<A1>()){
             A1SData pre = _accessor.success<A1>();
             A3SData data;
             data.value = pre.value * 2;
             success(data);
         }
-        std::cout << "A3 end" << std::endl;
     }
 };
 
-void planet(udho::contexts::stateless ctx, std::string name){
+void hello(udho::contexts::stateless ctx){
     auto& io = ctx.aux()._io;
     
     auto data = udho::activities::collect<A1, A2, A3>(ctx, "A");
@@ -118,41 +116,46 @@ void planet(udho::contexts::stateless ctx, std::string name){
     auto t2 = udho::activities::task<A2, A1>::with(data, io).after(t1);
     auto t3 = udho::activities::task<A3, A1>::with(data, io).after(t1); 
         
-    udho::activities::depending<A2, A3>::with(data).exec([ctx, name](const udho::activities::accessor<A1, A2, A3>& d) mutable{
-        std::cout << "A4 begin" << std::endl;
-        
+    udho::activities::depending<A2, A3>::with(data).exec([ctx](const udho::activities::accessor<A1, A2, A3>& d) mutable{
         int sum = 0;
         
         if(!d.failed<A2>()){
             A2SData pre = d.success<A2>();
             sum += pre.value;
-            std::cout << "A2 " << pre.value << std::endl;
         }
         
         if(!d.failed<A3>()){
             A3SData pre = d.success<A3>();
             sum += pre.value;
-            std::cout << "A3 " << pre.value << std::endl;
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
-        
-        std::cout << "A4 end" << std::endl;
     }).after(t2).after(t3);
     
     t1();
 }
 
-int main(){
+BOOST_AUTO_TEST_SUITE(activity)
+
+BOOST_AUTO_TEST_CASE(success){
     boost::asio::io_service io;
-    udho::servers::ostreamed::stateless server(io, std::cout);
-
-    auto urls = udho::router() | "/planet/(\\w+)"  >> udho::get(&planet).deferred();
-
+    udho::servers::quiet::stateless server(io);
+    auto urls = udho::router()
+        | (udho::get(&hello).deferred() = "^/hello");
     server.serve(urls, 9198);
-
+    
+    udho::servers::quiet::stateless::request_type req;
+    udho::servers::quiet::stateless::attachment_type attachment(io);
+    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+    
+    ctx.client().get("http://localhost:9198/hello")
+        .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
+            BOOST_CHECK(status == boost::beast::http::status::ok);
+            BOOST_CHECK(body == "128");
+            io.stop();
+        });
+    
     io.run();
-    return 0;
 }
 
-
+BOOST_AUTO_TEST_SUITE_END()

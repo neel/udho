@@ -66,20 +66,17 @@ namespace activities{
         std::size_t size() const{
             return _shadow.size();
         }
-        bool remove(){
-            return _shadow.remove(key());
-        }
-        template <typename V>
-        bool remove(){
-            return _shadow.template remove<V>(key());
-        }
     };
        
     template <typename... T>
-    struct collector: fixed_key_accessor<udho::cache::shadow<std::string, T...>>, std::enable_shared_from_this<collector<T...>>{
-        typedef fixed_key_accessor<udho::cache::shadow<std::string, T...>> base_type;
-        typedef udho::cache::store<udho::cache::storage::memory, std::string, T...> store_type;
+    struct accessor;
+    
+    template <typename... T>
+    struct collector: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>, std::enable_shared_from_this<collector<T...>>{
+        typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;
+        typedef udho::cache::store<udho::cache::storage::memory, std::string, typename T::result_type...> store_type;
         typedef typename store_type::shadow_type shadow_type;
+        typedef accessor<T...> accessor_type;
         
         store_type  _store;
         shadow_type _shadow;
@@ -92,9 +89,9 @@ namespace activities{
     };
     
     template <typename... T>
-    struct accessor: fixed_key_accessor<udho::cache::shadow<std::string, T...>>{
-        typedef fixed_key_accessor<udho::cache::shadow<std::string, T...>> base_type;
-        typedef udho::cache::shadow<std::string, T...> shadow_type;
+    struct accessor: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>{
+        typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;
+        typedef udho::cache::shadow<std::string, typename T::result_type...> shadow_type;
         
         shadow_type _shadow;
         
@@ -103,6 +100,43 @@ namespace activities{
         std::string name() const{ return base_type::key(); }
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
+        
+        template <typename V>
+        bool exists() const{
+            return base_type::template exists<typename V::result_type>();
+        }
+        template <typename V>
+        const typename V::result_type& get() const{
+            return base_type::template get<typename V::result_type>();
+        }
+        template <typename V>
+        bool failed() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.failed();
+            }
+            return true;
+        }
+        template <typename V>
+        typename V::result_type::success_type success() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.success_data();
+            }
+            return typename V::result_type::success_type();
+        }
+        template <typename V>
+        typename V::result_type::failure_type failure() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.failure_data();
+            }
+            return typename V::result_type::failure_type();
+        }
+        template <typename V>
+        void set(const typename V::result_type& value){
+            base_type::template set<typename V::result_type>(value);
+        }
     };
     
     template <typename U, typename... T>
@@ -248,8 +282,8 @@ namespace activities{
         
         combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)){}
         template <typename U>
-        void operator()(U& u){
-//             junction<U>::operator()(u);
+        void operator()(const U& u){
+            junction<U>::operator()(u);
             _counter--;
             if(!_counter){
                 _mutex.lock();
@@ -280,6 +314,12 @@ namespace activities{
             return *this;
         }
         
+        template <typename V, typename... DependenciesV>
+        self_type& after(task<V, DependenciesV...>& next){
+            next._activity->done(_combinator);
+            return *this;
+        }
+        
         template <typename... U>
         static self_type with(U&&... u){
             return self_type(0, u...);
@@ -300,6 +340,9 @@ namespace activities{
     struct task<T>{
         typedef T activity_type;
         typedef task<T> self_type;
+        
+        template <typename U, typename... DependenciesU>
+        friend class task;
         
         task(const self_type& other): _activity(other._activity){}
                 
@@ -334,15 +377,100 @@ namespace activities{
     
     template <typename DerivedT, typename... T>
     struct aggregated: std::enable_shared_from_this<DerivedT>{
-        typedef collector<typename T::result_type...> collector_type;
+        typedef collector<T...> collector_type;
+        typedef accessor<T...> accessor_type;
         
         template <typename ContextT>
-        aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)){}
+        aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)), _accessor(_collector){}
         
         std::shared_ptr<collector_type> data() { return _collector; }
+        accessor_type& access() { return _accessor; }
         std::shared_ptr<DerivedT> self() { return std::enable_shared_from_this<DerivedT>::shared_from_this(); }
+        
+        template <typename V>
+        bool exists() const{
+            return _accessor.template exists<typename V::result_type>();
+        }
+        template <typename V>
+        const typename V::result_type& get() const{
+            return _accessor.template get<typename V::result_type>();
+        }
+        template <typename V>
+        bool failed() const{
+            if(_accessor.template exists<typename V::result_type>()){
+                typename V::result_type res = _accessor.template get<typename V::result_type>();
+                return res.failed();
+            }
+            return true;
+        }
+        template <typename V>
+        typename V::result_type::success_type success() const{
+            if(_accessor.template exists<typename V::result_type>()){
+                typename V::result_type res = _accessor.template get<typename V::result_type>();
+                return res.success_data();
+            }
+            return typename V::result_type::success_type();
+        }
+        template <typename V>
+        typename V::result_type::failure_type failure() const{
+            if(_accessor.template exists<typename V::result_type>()){
+                typename V::result_type res = _accessor.template get<typename V::result_type>();
+                return res.failure_data();
+            }
+            return typename V::result_type::failure_type();
+        }
         private:
             std::shared_ptr<collector_type> _collector;
+            accessor_type _accessor;
+    };
+    
+    template <typename... T, typename ContextT>
+    std::shared_ptr<collector<T...>> collect(ContextT& ctx, const std::string& name){
+        return std::make_shared<collector<T...>>(ctx.aux().config(), name);
+    }
+    
+    template <typename CollectorT, typename CallbackT>
+    struct joined{
+        typedef CollectorT collector_type;
+        typedef typename collector_type::accessor_type accessor_type;
+        typedef CallbackT callback_type;
+        typedef joined<CollectorT, CallbackT> self_type;
+        
+        joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
+        void operator()(){
+            accessor_type accessor(_collector);
+            _callback(accessor);
+        }
+        private:
+            std::shared_ptr<collector_type> _collector;
+            callback_type _callback;
+    };
+    
+//     template <typename... DependenciesT, typename CollectorT, typename CallbackT>
+//     task<joined<CollectorT, CallbackT>, DependenciesT...> exec(std::shared_ptr<CollectorT> collector, CallbackT callback){
+//         return task<joined<CollectorT, CallbackT>, DependenciesT...>::with(collector, callback);
+//     }
+    
+    namespace detail{
+        template <typename CollectorT, typename... DependenciesT>
+        struct final_intermediate{
+            std::shared_ptr<CollectorT> _collector;
+            
+            final_intermediate(std::shared_ptr<CollectorT> collector): _collector(collector){}
+            
+            template <typename CallbackT>
+            task<joined<CollectorT, CallbackT>, DependenciesT...> exec(CallbackT callback){
+                return task<joined<CollectorT, CallbackT>, DependenciesT...>::with(_collector, callback);
+            }
+        };
+    }
+    
+    template <typename... DependenciesT>
+    struct depending{
+        template <typename CollectorT>
+        static detail::final_intermediate<CollectorT, DependenciesT...> with(std::shared_ptr<CollectorT> collector){
+            return detail::final_intermediate<CollectorT, DependenciesT...>(collector);
+        }
     };
     
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
