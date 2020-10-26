@@ -112,11 +112,11 @@ void hello(udho::contexts::stateless ctx){
     
     auto data = udho::activities::collect<A1, A2, A3>(ctx, "A");
     
-    auto t1 = udho::activities::task<A1>::with(data, io);
-    auto t2 = udho::activities::task<A2, A1>::with(data, io).after(t1);
-    auto t3 = udho::activities::task<A3, A1>::with(data, io).after(t1); 
+    auto t1 = udho::activities::perform<A1>::with(data, io);
+    auto t2 = udho::activities::perform<A2>::require<A1>::with(data, io).after(t1);
+    auto t3 = udho::activities::perform<A3>::require<A1>::with(data, io).after(t1);
         
-    udho::activities::depending<A2, A3>::with(data).exec([ctx](const udho::activities::accessor<A1, A2, A3>& d) mutable{
+    udho::activities::require<A2, A3>::with(data).exec([ctx](const udho::activities::accessor<A1, A2, A3>& d) mutable{
         int sum = 0;
         
         if(!d.failed<A2>()){

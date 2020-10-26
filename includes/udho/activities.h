@@ -375,6 +375,22 @@ namespace activities{
             std::shared_ptr<activity_type> _activity;
     };
     
+    template <typename T>
+    struct perform{
+        template <typename... DependenciesT>
+        struct require{
+            template <typename... U>
+            static task<T, DependenciesT...> with(U&&... u){
+                return task<T, DependenciesT...>::with(u...);
+            }
+        };
+        
+        template <typename... U>
+        static task<T> with(U&&... u){
+            return task<T>::with(u...);
+        }
+    };
+    
     template <typename DerivedT, typename... T>
     struct aggregated: std::enable_shared_from_this<DerivedT>{
         typedef collector<T...> collector_type;
@@ -466,7 +482,7 @@ namespace activities{
     }
     
     template <typename... DependenciesT>
-    struct depending{
+    struct require{
         template <typename CollectorT>
         static detail::final_intermediate<CollectorT, DependenciesT...> with(std::shared_ptr<CollectorT> collector){
             return detail::final_intermediate<CollectorT, DependenciesT...>(collector);
