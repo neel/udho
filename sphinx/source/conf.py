@@ -30,7 +30,7 @@ author = 'Neel Basu (Sunanda Bose)'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["breathe", "exhale", "sphinx.ext.autosectionlabel"]
+extensions = ["breathe", "exhale", "sphinx.ext.autosectionlabel", 'sphinx.ext.graphviz']
 breathe_projects = {}
 breathe_default_project = "udho"
 autosectionlabel_prefix_document = True
