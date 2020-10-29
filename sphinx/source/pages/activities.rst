@@ -81,9 +81,32 @@ Activities serves the purpose of defining an action. however to action is suppos
 
 In the above mentioned task graph, Both A2 and A3 depends on A1. Hence A2 and A3 may start as soon as A1 completes. A4 depends on both A2 and A3 and cannot start until both A2 and A3 completes. In this situation A2 and A3 can access the data fetched by A1 activity because that has already been completed (succeded or failed) before A2 or A3 is invoked. Similarly A4 can access the data collected by A1, A2, A3 that has completed before A4 has been invoked.
 
+``usho::activities::perform`` describes the above subtask graph as shown in the following code block.
+
 .. code-block:: cpp
 
     auto t1 = udho::activities::perform<A1>::with(data, io);
     auto t2 = udho::activities::perform<A2>::require<A1>::with(data, io).after(t1);
     auto t3 = udho::activities::perform<A3>::require<A1>::with(data, io).after(t1);
     auto t4 = udho::activities::perform<A4>::require<A2, A3>::with(data, io).after(t2).after(t3);
+
+Example
+###
+
+API
+###
+
+.. doxygenstruct:: udho::activities::activity
+   :members:
+
+.. doxygenstruct:: udho::activities::subtask
+   :members:
+
+.. doxygenstruct:: udho::activities::perform
+   :members:
+
+.. doxygenstruct:: udho::activities::collector
+   :members:
+
+.. doxygenstruct:: udho::activities::accessor
+   :members:
