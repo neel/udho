@@ -272,13 +272,18 @@ namespace activities{
         void operator()(const DependencyT&){}
     };
     
+    /**
+     * A combinator combines multiple activities and proceeds towards the next activity
+     */
     template <typename NextT, typename... DependenciesT>
     struct combinator: junction<typename DependenciesT::result_type>...{
         typedef std::shared_ptr<NextT> next_type;
+        typedef boost::signals2::signal<void (NextT&)> signal_type;
         
         next_type  _next;
         std::atomic<std::size_t> _counter;
         std::mutex  _mutex;
+        signal_type _signal;
         
         combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)){}
         template <typename U>
@@ -287,36 +292,52 @@ namespace activities{
             _counter--;
             if(!_counter){
                 _mutex.lock();
+                if(!_signal.empty()){
+                    _signal(*_next);
+                }
+                _signal.disconnect_all_slots();
                 (*_next)();
                 _mutex.unlock();
             }
         }
+        
+        template <typename PreparatorT>
+        void prepare(PreparatorT prep){
+            boost::function<void (NextT&)> fnc(prep);
+            _signal.connect(prep);
+        }
     };
     
     template <typename T, typename... DependenciesT>
-    struct task{
+    struct subtask{
         typedef T activity_type;
         typedef combinator<T, DependenciesT...> combinator_type;
-        typedef task<T, DependenciesT...> self_type;
+        typedef subtask<T, DependenciesT...> self_type;
         
         template <typename U, typename... DependenciesU>
-        friend class task;
+        friend class subtask;
         
-        task(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
+        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
                 
         std::shared_ptr<activity_type> activity() {
             return _activity;
         }
         
+        /**
+         * execute task next after the current one
+         */
         template <typename V, typename... DependenciesV>
-        self_type& done(task<V, DependenciesV...>& next){
+        self_type& done(subtask<V, DependenciesV...>& next){
             activity()->done(next._combinator);
             return *this;
         }
         
+        /**
+         * t2.after(t1) is equivalent to t1.done(t2)
+         */
         template <typename V, typename... DependenciesV>
-        self_type& after(task<V, DependenciesV...>& next){
-            next._activity->done(_combinator);
+        self_type& after(subtask<V, DependenciesV...>& previous){
+            previous._activity->done(_combinator);
             return *this;
         }
         
@@ -324,10 +345,16 @@ namespace activities{
         static self_type with(U&&... u){
             return self_type(0, u...);
         }
+        
+        template <typename PreparatorT>
+        self_type& prepare(PreparatorT prep){
+            _combinator->prepare(prep);
+            return *this;
+        }
                
         private:
             template <typename... U>
-            task(int, U&&... u){
+            subtask(int, U&&... u){
                 _activity = std::make_shared<activity_type>(u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
@@ -337,21 +364,21 @@ namespace activities{
     };
     
     template <typename T>
-    struct task<T>{
+    struct subtask<T>{
         typedef T activity_type;
-        typedef task<T> self_type;
+        typedef subtask<T> self_type;
         
         template <typename U, typename... DependenciesU>
-        friend class task;
+        friend class subtask;
         
-        task(const self_type& other): _activity(other._activity){}
+        subtask(const self_type& other): _activity(other._activity){}
                 
         std::shared_ptr<activity_type> activity() {
             return _activity;
         }
                 
         template <typename V, typename... DependenciesV>
-        self_type& done(task<V, DependenciesV...>& next){
+        self_type& done(subtask<V, DependenciesV...>& next){
             activity()->done(next._combinator);
             return *this;
         }
@@ -368,7 +395,7 @@ namespace activities{
         
         private:
             template <typename... U>
-            task(int, U&&... u){
+            subtask(int, U&&... u){
                 _activity = std::make_shared<activity_type>(u...);
             }
             
@@ -380,14 +407,14 @@ namespace activities{
         template <typename... DependenciesT>
         struct require{
             template <typename... U>
-            static task<T, DependenciesT...> with(U&&... u){
-                return task<T, DependenciesT...>::with(u...);
+            static subtask<T, DependenciesT...> with(U&&... u){
+                return subtask<T, DependenciesT...>::with(u...);
             }
         };
         
         template <typename... U>
-        static task<T> with(U&&... u){
-            return task<T>::with(u...);
+        static subtask<T> with(U&&... u){
+            return subtask<T>::with(u...);
         }
     };
     
@@ -475,8 +502,8 @@ namespace activities{
             final_intermediate(std::shared_ptr<CollectorT> collector): _collector(collector){}
             
             template <typename CallbackT>
-            task<joined<CollectorT, CallbackT>, DependenciesT...> exec(CallbackT callback){
-                return task<joined<CollectorT, CallbackT>, DependenciesT...>::with(_collector, callback);
+            subtask<joined<CollectorT, CallbackT>, DependenciesT...> exec(CallbackT callback){
+                return subtask<joined<CollectorT, CallbackT>, DependenciesT...>::with(_collector, callback);
             }
         };
     }

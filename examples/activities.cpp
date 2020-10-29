@@ -48,29 +48,57 @@ struct A2FData{
     int reason;
 };
 
-struct A2: udho::activities::activity<A2, A2SData, A2FData>{
-    typedef udho::activities::activity<A2, A2SData, A2FData> base;
+// struct A2: udho::activities::activity<A2, A2SData, A2FData>{
+//     typedef udho::activities::activity<A2, A2SData, A2FData> base;
+//     
+//     boost::asio::deadline_timer _timer;
+//     udho::activities::accessor<A1> _accessor;
+//     
+//     template <typename CollectorT>
+//     A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
+//     
+//     void operator()(){
+//         _timer.expires_from_now(boost::posix_time::seconds(10));
+//         _timer.async_wait(boost::bind(&A2::finished, self(), boost::asio::placeholders::error));
+//     }
+//     
+//     void finished(const boost::system::error_code& err){
+//         std::cout << "A2 begin" << std::endl;
+//         if(!err && !_accessor.failed<A1>()){
+//             A1SData pre = _accessor.success<A1>();
+//             A2SData data;
+//             data.value = pre.value + 2;
+//             success(data);
+//         }
+//         std::cout << "A2 end" << std::endl;
+//     }
+// };
+
+struct A2i: udho::activities::activity<A2i, A2SData, A2FData>{
+    typedef udho::activities::activity<A2i, A2SData, A2FData> base;
     
+    int prevalue;
     boost::asio::deadline_timer _timer;
-    udho::activities::accessor<A1> _accessor;
     
     template <typename CollectorT>
-    A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
+    A2i(CollectorT c, boost::asio::io_context& io, int p): base(c), prevalue(p), _timer(io){}
+    
+    template <typename CollectorT>
+    A2i(CollectorT c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
         _timer.expires_from_now(boost::posix_time::seconds(10));
-        _timer.async_wait(boost::bind(&A2::finished, self(), boost::asio::placeholders::error));
+        _timer.async_wait(boost::bind(&A2i::finished, self(), boost::asio::placeholders::error));
     }
     
     void finished(const boost::system::error_code& err){
-        std::cout << "A2 begin" << std::endl;
-        if(!err && !_accessor.failed<A1>()){
-            A1SData pre = _accessor.success<A1>();
+        std::cout << "A2i begin" << std::endl;
+        if(!err){
             A2SData data;
-            data.value = pre.value + 2;
+            data.value = prevalue + 2;
             success(data);
         }
-        std::cout << "A2 end" << std::endl;
+        std::cout << "A2i end" << std::endl;
     }
 };
 
@@ -83,61 +111,96 @@ struct A3FData{
 };
 
 
-struct A3: udho::activities::activity<A3, A3SData, A3FData>{
-    typedef udho::activities::activity<A3, A3SData, A3FData> base;
+// struct A3: udho::activities::activity<A3, A3SData, A3FData>{
+//     typedef udho::activities::activity<A3, A3SData, A3FData> base;
+//     
+//     boost::asio::deadline_timer _timer;
+//     udho::activities::accessor<A1> _accessor;
+//     
+//     template <typename CollectorT>
+//     A3(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
+//     
+//     void operator()(){
+//         _timer.expires_from_now(boost::posix_time::seconds(5));
+//         _timer.async_wait(boost::bind(&A3::finished, self(), boost::asio::placeholders::error));
+//     }
+//     
+//     void finished(const boost::system::error_code& err){
+//         std::cout << "A3 begin" << std::endl;
+//         if(!err && !_accessor.failed<A1>()){
+//             A1SData pre = _accessor.success<A1>();
+//             A3SData data;
+//             data.value = pre.value * 2;
+//             success(data);
+//         }
+//         std::cout << "A3 end" << std::endl;
+//     }
+// };
+
+struct A3i: udho::activities::activity<A3i, A3SData, A3FData>{
+    typedef udho::activities::activity<A3i, A3SData, A3FData> base;
     
     boost::asio::deadline_timer _timer;
-    udho::activities::accessor<A1> _accessor;
+    int prevalue;
     
     template <typename CollectorT>
-    A3(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
+    A3i(CollectorT c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
         _timer.expires_from_now(boost::posix_time::seconds(5));
-        _timer.async_wait(boost::bind(&A3::finished, self(), boost::asio::placeholders::error));
+        _timer.async_wait(boost::bind(&A3i::finished, self(), boost::asio::placeholders::error));
     }
     
     void finished(const boost::system::error_code& err){
-        std::cout << "A3 begin" << std::endl;
-        if(!err && !_accessor.failed<A1>()){
-            A1SData pre = _accessor.success<A1>();
+        std::cout << "A3i begin" << std::endl;
+        if(!err){
             A3SData data;
-            data.value = pre.value * 2;
+            data.value = prevalue * 2;
             success(data);
         }
-        std::cout << "A3 end" << std::endl;
+        std::cout << "A3i end" << std::endl;
     }
 };
 
 void planet(udho::contexts::stateless ctx, std::string name){
     auto& io = ctx.io();
     
-    auto data = udho::activities::collect<A1, A2, A3>(ctx, "A");
+    auto data = udho::activities::collect<A1, A2i, A3i>(ctx, "A");
     
     auto t1 = udho::activities::perform<A1>::with(data, io);
-    auto t2 = udho::activities::perform<A2>::require<A1>::with(data, io).after(t1);
-    auto t3 = udho::activities::perform<A3>::require<A1>::with(data, io).after(t1);
+    auto t2 = udho::activities::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
+        udho::activities::accessor<A1> a1_access(data);
+        A1SData pre = a1_access.success<A1>();
+        a2i.prevalue = pre.value;
+        std::cout << "preparing A2i" << std::endl;
+    });
+    auto t3 = udho::activities::perform<A3i>::require<A1>::with(data, io).after(t1).prepare([data](A3i& a3i){
+        udho::activities::accessor<A1> a1_access(data);
+        A1SData pre = a1_access.success<A1>();
+        a3i.prevalue = pre.value;
+        std::cout << "preparing A3i" << std::endl;
+    });
         
-    udho::activities::require<A2, A3>::with(data).exec([ctx, name](const udho::activities::accessor<A1, A2, A3>& d) mutable{
-        std::cout << "A4 begin" << std::endl;
+    udho::activities::require<A2i, A3i>::with(data).exec([ctx, name](const udho::activities::accessor<A1, A2i, A3i>& d) mutable{
+        std::cout << "Final begin" << std::endl;
         
         int sum = 0;
         
-        if(!d.failed<A2>()){
-            A2SData pre = d.success<A2>();
+        if(!d.failed<A2i>()){
+            A2SData pre = d.success<A2i>();
             sum += pre.value;
-            std::cout << "A2 " << pre.value << std::endl;
+            std::cout << "A2i " << pre.value << std::endl;
         }
         
-        if(!d.failed<A3>()){
-            A3SData pre = d.success<A3>();
+        if(!d.failed<A3i>()){
+            A3SData pre = d.success<A3i>();
             sum += pre.value;
-            std::cout << "A3 " << pre.value << std::endl;
+            std::cout << "A3i " << pre.value << std::endl;
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
         
-        std::cout << "A4 end" << std::endl;
+        std::cout << "Final end" << std::endl;
     }).after(t2).after(t3);
     
     t1();
