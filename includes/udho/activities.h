@@ -308,11 +308,18 @@ namespace activities{
         }
     };
     
-    template <typename T, typename... DependenciesT>
+    
+    /**
+     *  A `subtask` is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
+     * 
+     * \tparam ActivityT The  activity 
+     * \tparam DependenciesT The activities that has to be performed before performing ActivityT
+     */
+    template <typename ActivityT, typename... DependenciesT>
     struct subtask{
-        typedef T activity_type;
-        typedef combinator<T, DependenciesT...> combinator_type;
-        typedef subtask<T, DependenciesT...> self_type;
+        typedef ActivityT activity_type;
+        typedef combinator<ActivityT, DependenciesT...> combinator_type;
+        typedef subtask<ActivityT, DependenciesT...> self_type;
         
         template <typename U, typename... DependenciesU>
         friend class subtask;
@@ -325,6 +332,7 @@ namespace activities{
         
         /**
          * execute task next after the current one
+         * \param next the next subtask
          */
         template <typename V, typename... DependenciesV>
         self_type& done(subtask<V, DependenciesV...>& next){
@@ -334,6 +342,7 @@ namespace activities{
         
         /**
          * t2.after(t1) is equivalent to t1.done(t2)
+         * \param previous the previous subtask
          */
         template <typename V, typename... DependenciesV>
         self_type& after(subtask<V, DependenciesV...>& previous){
@@ -341,11 +350,17 @@ namespace activities{
             return *this;
         }
         
+        /**
+         * Arguments for the constructor of the Activity
+         */
         template <typename... U>
         static self_type with(U&&... u){
             return self_type(0, u...);
         }
         
+        /**
+         * attach a callback which will be called with a reference to the activity after it has been instantiated and all its dependencies have completed.
+         */
         template <typename PreparatorT>
         self_type& prepare(PreparatorT prep){
             _combinator->prepare(prep);
@@ -363,10 +378,15 @@ namespace activities{
             std::shared_ptr<combinator_type> _combinator;
     };
     
-    template <typename T>
-    struct subtask<T>{
-        typedef T activity_type;
-        typedef subtask<T> self_type;
+    /**
+     *  Spetialization for the root subtask in the task graph
+     * 
+     * \tparam ActivityT The  activity 
+     */
+    template <typename ActivityT>
+    struct subtask<ActivityT>{
+        typedef ActivityT activity_type;
+        typedef subtask<ActivityT> self_type;
         
         template <typename U, typename... DependenciesU>
         friend class subtask;
@@ -376,18 +396,28 @@ namespace activities{
         std::shared_ptr<activity_type> activity() {
             return _activity;
         }
-                
+        
+        /**
+         * execute task next after the current one
+         * \param next the next subtask
+         */
         template <typename V, typename... DependenciesV>
         self_type& done(subtask<V, DependenciesV...>& next){
             activity()->done(next._combinator);
             return *this;
         }
         
+        /**
+         * Arguments for the constructor of the Activity
+         */
         template <typename... U>
         static self_type with(U&&... u){
             return self_type(0, u...);
         }
         
+        /**
+         * calls the `operator()()` of the activity and starts executing the graph
+         */
         template <typename... U>
         void operator()(U&&... u){
             _activity->operator()(u...);
@@ -402,19 +432,33 @@ namespace activities{
             std::shared_ptr<activity_type> _activity;
     };
     
-    template <typename T>
+    /**
+     * create a subtask to perform activity ActivityT
+     * \tparam ActivityT the activity to perform
+     */
+    template <typename ActivityT>
     struct perform{
+        /**
+         * mention the activities that has to be performed before executing this subtask.
+         * \tparam DependenciesT dependencies
+         */
         template <typename... DependenciesT>
         struct require{
+            /**
+             * arguments for the activity constructor
+             */
             template <typename... U>
-            static subtask<T, DependenciesT...> with(U&&... u){
-                return subtask<T, DependenciesT...>::with(u...);
+            static subtask<ActivityT, DependenciesT...> with(U&&... u){
+                return subtask<ActivityT, DependenciesT...>::with(u...);
             }
         };
         
+       /**
+        * arguments for the activity constructor
+        */
         template <typename... U>
-        static subtask<T> with(U&&... u){
-            return subtask<T>::with(u...);
+        static subtask<ActivityT> with(U&&... u){
+            return subtask<ActivityT>::with(u...);
         }
     };
     
@@ -516,6 +560,17 @@ namespace activities{
         }
     };
     
+    /**
+     * An activity `A` must subclass from `activity<A, SuccessA, FailureA>` assuming `SuccessA` and `FailureA` are the types that contains the relevant information regarding its success or failure.
+     * The activity `A` must overload a no argument `operator()()` which initiates the activity. 
+     * After the activity is initiated either `success()` or `failure()` methods must be called in order to signal its completion.
+     * The activity `A` must take the collector as the first argument to its constructor, which is passed to the base class `activity<A, SuccessA, FailureA>`.
+     * Hence its prefered to take the first parameter to the constructor as template parameter.
+     * 
+     * \tparam DerivedT Activity Class 
+     * \tparam SuccessDataT data associated to the activity if the activity succeeds
+     * \tparam FailureDataT data associated to the activity if the activity fails
+     */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<SuccessDataT, FailureDataT>{
         typedef std::shared_ptr<DerivedT> derived_ptr_type;
