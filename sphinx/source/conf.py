@@ -30,7 +30,7 @@ author = 'Neel Basu (Sunanda Bose)'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["breathe", "exhale", "sphinx.ext.autosectionlabel"]
+extensions = ["breathe", "exhale", "sphinx.ext.autosectionlabel", 'sphinx.ext.graphviz']
 breathe_projects = {}
 breathe_default_project = "udho"
 autosectionlabel_prefix_document = True
@@ -61,9 +61,18 @@ highlight_language = 'cpp'
 
 breathe_projects_source = {
     "udho" : ( "../includes/udho", [
-        "access.h", "bridge.h", "configuration.h", "contexts.h", "form.h", "page.h", "scope.h", "sse.h", "visitor.h"
-        "application.h", "cache.h", "connection.h", "cookie.h", "listener.h", "parser.h", "server.h", "watcher.h"
-        "attachment.h", "compositors.h", "context.h", "defs.h", "logging.h", "router.h", "session.h", "util.h"
+        "access.h", "activities.h", "application.h", "attachment.h", 
+        "bridge.h", 
+        "cache.h", "client.h", "compositors.h", "configuration.h", "connection.h", "context.h", "contexts.h", "cookie.h", 
+        "defs.h", 
+        "form.h", 
+        "listener.h", "logging.h", 
+        "page.h", "parser.h", 
+        "router.h", 
+        "scope.h", "server.h", "session.h", "sse.h", 
+        "url.h", "util.h",
+        "visitor.h",
+        "watcher.h"
     ])
 }
 

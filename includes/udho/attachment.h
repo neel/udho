@@ -56,6 +56,9 @@ struct attachment: AuxT, CacheT, LoggerT{
     AuxT& aux(){
         return *this;
     }
+    boost::asio::io_service& io() {
+        return _io;
+    }
 };
 
 /**
@@ -84,6 +87,9 @@ struct attachment<AuxT, void, CacheT>: AuxT, CacheT{
     AuxT& aux(){
         return *this;
     }
+    boost::asio::io_service& io() {
+        return _io;
+    }
 };
 
 /**
@@ -106,6 +112,9 @@ struct attachment<AuxT, LoggerT, void>: AuxT, LoggerT{
     }
     AuxT& aux(){
         return *this;
+    }
+    boost::asio::io_service& io() {
+        return _io;
     }
 };
 
@@ -134,6 +143,9 @@ struct attachment<AuxT, void, void>: AuxT{
     }
     AuxT& aux(){
         return *this;
+    }
+    boost::asio::io_service& io() {
+        return _io;
     }
 };
 

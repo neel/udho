@@ -19,6 +19,7 @@ Welcome to udho's documentation!
    pages/form
    pages/session
    pages/logging
+   pages/activities
  
 .. include:: pages/index.rst
 

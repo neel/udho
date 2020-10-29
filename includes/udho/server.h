@@ -111,7 +111,7 @@ struct server<AuxT, void, CacheT>{
     boost::asio::io_service& _io;
     attachment_type _attachment;
     
-    server(boost::asio::io_service& io): _io(io){}
+    server(boost::asio::io_service& io): _io(io), _attachment(io){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
