@@ -89,6 +89,7 @@ udho depend on boost. As boost-beast is only available on boost >= 1.66, udho re
 
 
 * boost > 1.66
+* pugixml
 * icu [optional]
 
 Features:
