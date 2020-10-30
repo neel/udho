@@ -85,20 +85,102 @@ In the above mentioned task graph, Both A2 and A3 depends on A1. Hence A2 and A3
 
 .. code-block:: cpp
 
+    auto data = udho::activities::collect<A1, A2i, A3i>(ctx, "A");
+    
     auto t1 = udho::activities::perform<A1>::with(data, io);
     auto t2 = udho::activities::perform<A2>::require<A1>::with(data, io).after(t1);
     auto t3 = udho::activities::perform<A3>::require<A1>::with(data, io).after(t1);
     auto t4 = udho::activities::perform<A4>::require<A2, A3>::with(data, io).after(t2).after(t3);
 
+The above statements using ``perform`` are equivalent to the following.
+
+.. code-block:: cpp
+
+    auto data = udho::activities::collect<A1, A2i, A3i>(ctx, "A");
+
+    auto t1 = udho::activities::subtask<A1>::with(data, io);
+    auto t2 = udho::activities::subtask<A2, A1>::with(data, io).after(t1);
+    auto t3 = udho::activities::subtask<A3, A1>::with(data, io).after(t1);
+    auto t4 = udho::activities::subtask<A4, A2, A3>::with(data, io).after(t2).after(t3);
+    
+With this arrangement Success/Failure data of A1 is available to A2 and A3 before it starts execution. To access that data the constructors on A2 and A3 may create an accessor as shown below.
+
+.. code-block:: cpp
+
+    struct A2: udho::activities::activity<A2, A2SData, A2FData>{
+        typedef udho::activities::activity<A2, A2SData, A2FData> base;
+        
+        boost::asio::deadline_timer _timer;
+        udho::activities::accessor<A1> _accessor;       // An accessor to access success/failure data of A1
+        
+        template <typename CollectorT>
+        A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
+        
+        void operator()(){
+            _timer.expires_from_now(boost::posix_time::seconds(10));
+            _timer.async_wait(boost::bind(&A2::finished, self(), boost::asio::placeholders::error));
+        }
+        
+        void finished(const boost::system::error_code& err){
+            if(!err && !_accessor.failed<A1>()){        // check whether A1 has failed or not
+                A1SData pre = _accessor.success<A1>();  // access the success data collected from A1
+                A2SData data;
+                data.value = pre.value + 2;             // creates its own success data
+                success(data);                          // signal completion with success
+            }
+        }
+    };
+    
+However in the above mentioned implementation A2 always depends on A1. In an use case where A2 depends on some other activity or even executed independently won't be feasible because A2 will still have an accessor to A1 and it will try to extract the success data of A1 irrespective of the graph. On the other hand, A2 may still need some data that has to be set in order to perform the activity. that data may be derived from A1 or from some other activity or through some constructor argument.
+
+.. code-block:: cpp
+
+    struct A2i: udho::activities::activity<A2i, A2SData, A2FData>{
+        typedef udho::activities::activity<A2i, A2SData, A2FData> base;
+        
+        int prevalue;
+        boost::asio::deadline_timer _timer;
+        
+        template <typename CollectorT>
+        A2i(CollectorT c, boost::asio::io_context& io, int p): base(c), prevalue(p), _timer(io){}
+        
+        template <typename CollectorT>
+        A2i(CollectorT c, boost::asio::io_context& io): base(c), _timer(io){}
+        
+        void operator()(){
+            _timer.expires_from_now(boost::posix_time::seconds(10));
+            _timer.async_wait(boost::bind(&A2i::finished, self(), boost::asio::placeholders::error));
+        }
+        
+        void finished(const boost::system::error_code& err){
+            if(!err){
+                A2SData data;
+                data.value = prevalue + 2;
+                success(data);
+            }
+        }
+    };
+    
+In the above example ``prevalue`` is that piece of information that is required by ``A2i`` in order to perform its activity. It doesn't care who provides that information, whether its A1, or some other activity. ``A2i`` has a constructor that takes that ``prevalue`` as an argument which can be used when ``prevalue`` is known at the time of construction, or when ``A2i`` is the starting activity in the graph. 
+
+.. code-block:: cpp
+
+    auto t2 = udho::activities::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
+        udho::activities::accessor<A1> a1_access(data);
+        A1SData pre = a1_access.success<A1>();
+        a2i.prevalue = pre.value;
+    });
+    
+In the above code block that activity ``A2`` is prepared through its reference passed as the argument right after all its dependencies (only A1 in this case) completes by the callback provided in the ``prepare`` function. The collected ``data`` is captured inside the lambda function from which the ``A1`` success data is accessed.
+    
 Example
-#######
+-------
 
 API
-###
+---
 
 .. doxygenstruct:: udho::activities::activity
    :members:
-   :inherited-members:
 
 .. doxygenstruct:: udho::activities::subtask
    :members:
