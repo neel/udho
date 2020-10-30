@@ -173,14 +173,70 @@ In the above example ``prevalue`` is that piece of information that is required 
     
 In the above code block that activity ``A2`` is prepared through its reference passed as the argument right after all its dependencies (only A1 in this case) completes by the callback provided in the ``prepare`` function. The collected ``data`` is captured inside the lambda function from which the ``A1`` success data is accessed.
     
+Final
+-----
+
+Finally we would like do something once the entire subtask graph has completed in a similar fasion. In the following example we do not perform ``A4``. Instead we execute the following piece of code once both ``A2i`` and ``A3i`` completes.
+
+.. code-block:: cpp
+
+    udho::activities::require<A2i, A3i>::with(data).exec([ctx, name](const udho::activities::accessor<A1, A2i, A3i>& d) mutable{
+        std::cout << "Final begin" << std::endl;
+        
+        int sum = 0;
+        
+        if(!d.failed<A2i>()){
+            A2SData pre = d.success<A2i>();
+            sum += pre.value;
+            std::cout << "A2i " << pre.value << std::endl;
+        }
+        
+        if(!d.failed<A3i>()){
+            A3SData pre = d.success<A3i>();
+            sum += pre.value;
+            std::cout << "A3i " << pre.value << std::endl;
+        }
+        
+        ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
+        
+        std::cout << "Final end" << std::endl;
+    }).after(t2).after(t3);
+    
+Once everything is set up we start the initial task ``t1()``
+
+.. code-block:: cpp
+
+    t1();
+    
 Example
 -------
 
 API
 ---
 
+Data
+****
+
+.. doxygenstruct:: udho::activities::collector
+   :members:
+
+.. doxygenstruct:: udho::activities::accessor
+   :members:
+   
+Activity 
+********
+
 .. doxygenstruct:: udho::activities::activity
    :members:
+
+.. doxygenstruct:: udho::activities::result
+   :members:
+   
+.. doxygenstruct:: udho::activities::result_data
+   :members:
+   
+Subtask
+*******
 
 .. doxygenstruct:: udho::activities::subtask
    :members:
@@ -188,8 +244,3 @@ API
 .. doxygenstruct:: udho::activities::perform
    :members:
 
-.. doxygenstruct:: udho::activities::collector
-   :members:
-
-.. doxygenstruct:: udho::activities::accessor
-   :members:

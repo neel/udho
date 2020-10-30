@@ -71,6 +71,9 @@ namespace activities{
     template <typename... T>
     struct accessor;
     
+    /**
+     * Collects data associated with all activities involved in the subtask graph
+     */
     template <typename... T>
     struct collector: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>, std::enable_shared_from_this<collector<T...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;
@@ -88,6 +91,9 @@ namespace activities{
         const shadow_type& shadow() const { return _shadow; }
     };
     
+    /**
+     * Access a subset of data from the collector
+     */
     template <typename... T>
     struct accessor: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;
@@ -101,14 +107,27 @@ namespace activities{
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
         
+        /**
+         * Whether there exists any data for activity V
+         * \tparam V Activity Type
+         */
         template <typename V>
         bool exists() const{
             return base_type::template exists<typename V::result_type>();
         }
+        /**
+         * get data associated with activity V
+         * 
+         * \tparam V activity type
+         */
         template <typename V>
         const typename V::result_type& get() const{
             return base_type::template get<typename V::result_type>();
         }
+        /**
+         * Check whether activity V has failed (only the failure data of V is valid).
+         * \tparam V activity type
+         */
         template <typename V>
         bool failed() const{
             if(base_type::template exists<typename V::result_type>()){
@@ -117,6 +136,10 @@ namespace activities{
             }
             return true;
         }
+        /**
+         * get success data for activity V
+         * \tparam V activity type
+         */
         template <typename V>
         typename V::result_type::success_type success() const{
             if(base_type::template exists<typename V::result_type>()){
@@ -125,6 +148,10 @@ namespace activities{
             }
             return typename V::result_type::success_type();
         }
+        /**
+         * get failure data for activity V
+         * \tparam V activity type
+         */
         template <typename V>
         typename V::result_type::failure_type failure() const{
             if(base_type::template exists<typename V::result_type>()){
@@ -167,6 +194,11 @@ namespace activities{
         return h;
     }
     
+    /**
+     * Contains **Copiable** Success or Failure data for an activity.
+     * \tparam SuccessT success data type
+     * \tparam FailureT failure data type
+     */
     template <typename SuccessT, typename FailureT>
     struct result_data{
         typedef SuccessT success_type;
@@ -179,24 +211,42 @@ namespace activities{
         success_type _sdata;
         failure_type _fdata;
         
+        /**
+         * either success or failure data set
+         */
         bool ready() const{
             return _ready;
         }
+        /**
+         * whether the activity has failed
+         */
         bool failed() const{
             return !_success;
         }
+        /**
+         * Success data 
+         */
         const success_type& success_data() const{
             return _sdata;
         }
+        /**
+         * Failure data
+         */
         const failure_type& failure_data() const{
             return _fdata;
         }
         protected:
+            /**
+             * Set Success Data
+             */
             void success(const success_type& data){
                 _sdata   = data;
                 _success = true;
                 _ready = true;
             }
+            /**
+             * Set Failure Data
+             */
             void failure(const failure_type& data){
                 _fdata   = data;
                 _success = false;
@@ -205,29 +255,9 @@ namespace activities{
     };
     
     /**
-     * \begin
-     * struct SomeActivitySuccessData{
-     *      int status;
-     *      std::string result;
-     * };
-     * 
-     * struct SomeActivityFailureData{
-     *      int code;
-     *      std::string reason;
-     * };
-     * 
-     * template <typename CollectorT>
-     * struct SomeActivity: udho::result<SomeActivitySuccessData, SomeActivityFailureData>{
-     *      typedef udho::result<SomeActivitySuccessData, SomeActivityFailureata> base;
-     * 
-     *      SomeActivity(CollectorT& c): base(c){};
-     *      
-     *      void operator()(){
-     *          SomeActivitySuccessData data;
-     *          success(data);
-     *      }
-     * };
-     * \end
+     * Completion handler for an activity.
+     * \tparam SuccessT success data associated with the activity 
+     * \tparam FailureT failure data associated with teh activity
      */
     template <typename SuccessT, typename FailureT>
     struct result: result_data<SuccessT, FailureT>{
@@ -240,9 +270,16 @@ namespace activities{
         accessor_type _shadow;
         signal_type   _signal;
         
+        /**
+         * \param store collector
+         */
         template <typename StoreT>
         result(StoreT& store): _shadow(store){}
         
+        /**
+         * attach another subtask as done callback which will be executed once this subtask finishes
+         * \param cmb next subtask
+         */
         template <typename CombinatorT>
         void done(CombinatorT cmb){
             boost::function<void (const data_type&)> fnc([cmb](const data_type& data){
@@ -251,10 +288,18 @@ namespace activities{
             _signal.connect(fnc);
         }
         protected:
+            /**
+             * signal successful completion of the activity with success data of type SuccessT
+             * \param data success data
+             */
             void success(const success_type& data){
                 data_type::success(data);
                 completed();
             }
+            /**
+             * signal failed completion of the activity with failure data of type FailureT
+             * \param data failure data
+             */
             void failure(const failure_type& data){
                 data_type::failure(data);
                 completed();
@@ -274,6 +319,8 @@ namespace activities{
     
     /**
      * A combinator combines multiple activities and proceeds towards the next activity
+     * \tparam NextT next activity
+     * \tparam DependenciesT dependencies
      */
     template <typename NextT, typename... DependenciesT>
     struct combinator: junction<typename DependenciesT::result_type>...{
@@ -286,6 +333,11 @@ namespace activities{
         signal_type _signal;
         
         combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)){}
+        
+        /**
+         * whenever a subtask finishes the `operator()` of the combinator is called. which doesn't start the next subtask untill all the dependencies have completed.
+         * Before starting the next activity the next activity is prepared if any preparator is passed through the `prepare()` function
+         */
         template <typename U>
         void operator()(const U& u){
             junction<U>::operator()(u);
@@ -301,6 +353,9 @@ namespace activities{
             }
         }
         
+        /**
+         *set a preparator callback which will be called with a reference to teh next activity. The preparator callback is supposed to prepare the next activity by using the data callected till that time.
+         */
         template <typename PreparatorT>
         void prepare(PreparatorT prep){
             boost::function<void (NextT&)> fnc(prep);
@@ -310,7 +365,9 @@ namespace activities{
     
     
     /**
-     *  A `subtask` is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
+     * A `subtask` is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
+     * A subtask contains two shared pointers, one to the activity and another one to the combinator.
+     * The subtask cannot be instantiated directly by calling the subtask constructor. Instead call the static `with` method to instantiate.
      * 
      * \tparam ActivityT The  activity 
      * \tparam DependenciesT The activities that has to be performed before performing ActivityT
@@ -325,7 +382,10 @@ namespace activities{
         friend class subtask;
         
         subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
-                
+        
+        /**
+         * shared pointer to the activity
+         */
         std::shared_ptr<activity_type> activity() {
             return _activity;
         }
@@ -379,7 +439,7 @@ namespace activities{
     };
     
     /**
-     *  Spetialization for the root subtask in the task graph
+     * Spetialization for the root subtask in the task graph
      * 
      * \tparam ActivityT The  activity 
      */
@@ -578,6 +638,9 @@ namespace activities{
         template <typename StoreT>
         activity(StoreT& store): udho::activities::result<SuccessDataT, FailureDataT>(store){}
         
+        /**
+         * shared_ptr to this
+         */
         derived_ptr_type self() {
             return std::enable_shared_from_this<DerivedT>::shared_from_this();
         }
