@@ -61,7 +61,7 @@ udho is a minimalistic featureful HTTP framework based on `Boost.Beast <https://
        auto urls = udho::router() | "/world"          >> udho::get(&world).json() 
                                   | "/planet/(\\w+)"  >> udho::get(&planet).plain();
 
-       server.serve(urls, 9198, "/path/to/static/files");
+       server.serve(urls, 9198);
 
        io.run();
        return 0;
@@ -107,11 +107,12 @@ Features:
 * [x] serving static content from disk document root if no rule matched
 * [x] urlencoded/multipart form parsing
 * [x] form field validation
-* [x] on memory session for stateful web applications (no globals) and no session for stateless applications
-* [x] strictly typed on memory session storage
+* [x] on memory / on disk session for stateful web applications (no globals) and no session for stateless applications
+* [x] strictly typed on memory / on disk session storage
 * [x] compile time pluggable & customizable logging
 * [ ] server-sent events
 * [x] deferred response and long polling
+* [x] aync task graph
 * [x] xml based template parsing (working but need refactoring)
 * [x] arithmatic and logical expression evaluation in xml template (working but need refactoring)
 
