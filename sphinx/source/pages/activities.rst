@@ -91,13 +91,14 @@ In the above mentioned task graph, Both A2 and A3 depends on A1. Hence A2 and A3
     auto t4 = udho::activities::perform<A4>::require<A2, A3>::with(data, io).after(t2).after(t3);
 
 Example
-###
+#######
 
 API
 ###
 
 .. doxygenstruct:: udho::activities::activity
    :members:
+   :inherited-members:
 
 .. doxygenstruct:: udho::activities::subtask
    :members:
