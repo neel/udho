@@ -254,6 +254,9 @@ namespace activities{
             }
     };
     
+    template <typename NextT, typename... DependenciesT>
+    struct combinator;
+    
     /**
      * Completion handler for an activity.
      * \tparam SuccessT success data associated with the activity 
@@ -266,15 +269,21 @@ namespace activities{
         typedef typename data_type::success_type success_type;
         typedef typename data_type::failure_type failure_type;
         typedef boost::signals2::signal<void (const data_type&)> signal_type;
+        typedef boost::signals2::signal<void ()> cancelation_signal_type;
+        
+        template <typename NextT, typename... DependenciesT>
+        friend struct combinator;
         
         accessor_type _shadow;
         signal_type   _signal;
+        bool          _required;
+        cancelation_signal_type _cancelation_signals;
         
         /**
          * \param store collector
          */
         template <typename StoreT>
-        result(StoreT& store): _shadow(store){}
+        result(StoreT& store): _shadow(store), _required(true){}
         
         /**
          * attach another subtask as done callback which will be executed once this subtask finishes
@@ -286,6 +295,14 @@ namespace activities{
                 cmb->operator()(data);
             });
             _signal.connect(fnc);
+            boost::function<void ()> canceler([cmb](){
+                cmb->cancel();
+            });
+            _cancelation_signals.connect(canceler);
+        }
+        
+        void required(bool flag){
+            _required = flag;
         }
         protected:
             /**
@@ -305,10 +322,17 @@ namespace activities{
                 completed();
             }
         private:
+            void cancel(){
+                _cancelation_signals();
+            }
             void completed(){
                 data_type self = static_cast<const data_type&>(*this);
                 _shadow << self;
-                _signal(self);
+                if(data_type::failed() && _required){
+                    cancel();
+                }else{
+                    _signal(self);
+                }
             }
     };
 
@@ -346,9 +370,18 @@ namespace activities{
                 _mutex.lock();
                 if(!_signal.empty()){
                     _signal(*_next);
+                    _signal.disconnect_all_slots();
                 }
-                _signal.disconnect_all_slots();
                 (*_next)();
+                _mutex.unlock();
+            }
+        }
+        
+        void cancel(){
+            _counter--;
+            if(!_counter){
+                _mutex.lock();
+                _next->cancel();
                 _mutex.unlock();
             }
         }
@@ -426,7 +459,14 @@ namespace activities{
             _combinator->prepare(prep);
             return *this;
         }
-               
+
+        /**
+         * Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
+         */
+        self_type& required(bool flag){
+            _activity->required(flag);
+            return *this;
+        }
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -483,6 +523,13 @@ namespace activities{
             _activity->operator()(u...);
         }
         
+        /**
+         * Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
+         */
+        self_type& required(bool flag){
+            _activity->required(flag);
+            return *this;
+        }
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -587,6 +634,9 @@ namespace activities{
         void operator()(){
             accessor_type accessor(_collector);
             _callback(accessor);
+        }
+        void cancel(){
+            operator()();
         }
         private:
             std::shared_ptr<collector_type> _collector;

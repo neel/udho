@@ -31,11 +31,13 @@ struct A1: udho::activities::activity<A1, A1SData, A1FData>{
     }
     
     void finished(const boost::system::error_code& e){
-        std::cout << e.message() << std::endl;
         std::cout << "A1 begin" << std::endl;
         A1SData data;
         data.value = 42;
         success(data);
+//         A1FData data;
+//         data.reason = 42;
+//         failure(data);
         std::cout << "A1 end" << std::endl;
     }
 };
@@ -167,7 +169,7 @@ void planet(udho::contexts::stateless ctx, std::string name){
     
     auto data = udho::activities::collect<A1, A2i, A3i>(ctx, "A");
     
-    auto t1 = udho::activities::perform<A1>::with(data, io);
+    auto t1 = udho::activities::perform<A1>::with(data, io).required(false);
     auto t2 = udho::activities::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
         udho::activities::accessor<A1> a1_access(data);
         A1SData pre = a1_access.success<A1>();
