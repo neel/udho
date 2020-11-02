@@ -355,8 +355,9 @@ namespace activities{
         std::atomic<std::size_t> _counter;
         std::mutex  _mutex;
         signal_type _signal;
+        std::atomic<bool> _canceled;
         
-        combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)){}
+        combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)), _canceled(false){}
         
         /**
          * whenever a subtask finishes the `operator()` of the combinator is called. which doesn't start the next subtask untill all the dependencies have completed.
@@ -365,23 +366,27 @@ namespace activities{
         template <typename U>
         void operator()(const U& u){
             junction<U>::operator()(u);
-            _counter--;
-            if(!_counter){
-                _mutex.lock();
-                if(!_signal.empty()){
-                    _signal(*_next);
-                    _signal.disconnect_all_slots();
-                }
-                (*_next)();
-                _mutex.unlock();
-            }
+            propagate();
         }
         
         void cancel(){
+            _canceled = true;
+            propagate();
+        }
+        
+        void propagate(){
             _counter--;
             if(!_counter){
                 _mutex.lock();
-                _next->cancel();
+                if(_canceled){
+                    _next->cancel();
+                }else{
+                    if(!_signal.empty()){
+                        _signal(*_next);
+                        _signal.disconnect_all_slots();
+                    }
+                    (*_next)();
+                }
                 _mutex.unlock();
             }
         }
