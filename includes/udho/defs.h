@@ -53,4 +53,40 @@ typedef boost::uuids::uuid session_key_type;
 }
 }
 
+/**
+ * \defgroup activities
+ * 
+ * Async Activities
+ */
+
+/**
+ * \defgroup routing
+ * 
+ * URL Routing
+ */
+
+/**
+ * \defgroup context
+ * 
+ * Request Context
+ */
+
+/**
+ * \defgroup server
+ * 
+ * HTTP Server
+ */
+
+/**
+ * \defgroup session
+ * 
+ * Session
+ */
+
+/**
+ * \defgroup view
+ * 
+ * View Engine
+ */
+
 #endif // DEFS_H
