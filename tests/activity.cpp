@@ -22,8 +22,8 @@ struct A1FData{
     int reason;
 };
 
-struct A1: udho::activities::activity<A1, A1SData, A1FData>{
-    typedef udho::activities::activity<A1, A1SData, A1FData> base;
+struct A1: udho::activity<A1, A1SData, A1FData>{
+    typedef udho::activity<A1, A1SData, A1FData> base;
     
     boost::asio::deadline_timer _timer;
     
@@ -50,11 +50,11 @@ struct A2FData{
     int reason;
 };
 
-struct A2: udho::activities::activity<A2, A2SData, A2FData>{
-    typedef udho::activities::activity<A2, A2SData, A2FData> base;
+struct A2: udho::activity<A2, A2SData, A2FData>{
+    typedef udho::activity<A2, A2SData, A2FData> base;
     
     boost::asio::deadline_timer _timer;
-    udho::activities::accessor<A1> _accessor;
+    udho::accessor<A1> _accessor;
     
     template <typename CollectorT>
     A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
@@ -83,11 +83,11 @@ struct A3FData{
 };
 
 
-struct A3: udho::activities::activity<A3, A3SData, A3FData>{
-    typedef udho::activities::activity<A3, A3SData, A3FData> base;
+struct A3: udho::activity<A3, A3SData, A3FData>{
+    typedef udho::activity<A3, A3SData, A3FData> base;
     
     boost::asio::deadline_timer _timer;
-    udho::activities::accessor<A1> _accessor;
+    udho::accessor<A1> _accessor;
     
     template <typename CollectorT>
     A3(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
@@ -110,13 +110,13 @@ struct A3: udho::activities::activity<A3, A3SData, A3FData>{
 void hello(udho::contexts::stateless ctx){
     auto& io = ctx.aux()._io;
     
-    auto data = udho::activities::collect<A1, A2, A3>(ctx, "A");
+    auto data = udho::collect<A1, A2, A3>(ctx, "A");
     
-    auto t1 = udho::activities::perform<A1>::with(data, io);
-    auto t2 = udho::activities::perform<A2>::require<A1>::with(data, io).after(t1);
-    auto t3 = udho::activities::perform<A3>::require<A1>::with(data, io).after(t1);
+    auto t1 = udho::perform<A1>::with(data, io);
+    auto t2 = udho::perform<A2>::require<A1>::with(data, io).after(t1);
+    auto t3 = udho::perform<A3>::require<A1>::with(data, io).after(t1);
         
-    udho::activities::require<A2, A3>::with(data).exec([ctx](const udho::activities::accessor<A1, A2, A3>& d) mutable{
+    udho::require<A2, A3>::with(data).exec([ctx](const udho::accessor<A1, A2, A3>& d) mutable{
         int sum = 0;
         
         if(!d.failed<A2>()){

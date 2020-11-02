@@ -17,8 +17,8 @@ struct A1FData{
     int reason;
 };
 
-struct A1: udho::activities::activity<A1, A1SData, A1FData>{
-    typedef udho::activities::activity<A1, A1SData, A1FData> base;
+struct A1: udho::activity<A1, A1SData, A1FData>{
+    typedef udho::activity<A1, A1SData, A1FData> base;
     
     boost::asio::deadline_timer _timer;
     
@@ -50,11 +50,11 @@ struct A2FData{
     int reason;
 };
 
-// struct A2: udho::activities::activity<A2, A2SData, A2FData>{
-//     typedef udho::activities::activity<A2, A2SData, A2FData> base;
+// struct A2: udho::activity<A2, A2SData, A2FData>{
+//     typedef udho::activity<A2, A2SData, A2FData> base;
 //     
 //     boost::asio::deadline_timer _timer;
-//     udho::activities::accessor<A1> _accessor;
+//     udho::accessor<A1> _accessor;
 //     
 //     template <typename CollectorT>
 //     A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
@@ -76,8 +76,8 @@ struct A2FData{
 //     }
 // };
 
-struct A2i: udho::activities::activity<A2i, A2SData, A2FData>{
-    typedef udho::activities::activity<A2i, A2SData, A2FData> base;
+struct A2i: udho::activity<A2i, A2SData, A2FData>{
+    typedef udho::activity<A2i, A2SData, A2FData> base;
     
     int prevalue;
     boost::asio::deadline_timer _timer;
@@ -113,11 +113,11 @@ struct A3FData{
 };
 
 
-// struct A3: udho::activities::activity<A3, A3SData, A3FData>{
-//     typedef udho::activities::activity<A3, A3SData, A3FData> base;
+// struct A3: udho::activity<A3, A3SData, A3FData>{
+//     typedef udho::activity<A3, A3SData, A3FData> base;
 //     
 //     boost::asio::deadline_timer _timer;
-//     udho::activities::accessor<A1> _accessor;
+//     udho::accessor<A1> _accessor;
 //     
 //     template <typename CollectorT>
 //     A3(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
@@ -139,8 +139,8 @@ struct A3FData{
 //     }
 // };
 
-struct A3i: udho::activities::activity<A3i, A3SData, A3FData>{
-    typedef udho::activities::activity<A3i, A3SData, A3FData> base;
+struct A3i: udho::activity<A3i, A3SData, A3FData>{
+    typedef udho::activity<A3i, A3SData, A3FData> base;
     
     boost::asio::deadline_timer _timer;
     int prevalue;
@@ -167,23 +167,23 @@ struct A3i: udho::activities::activity<A3i, A3SData, A3FData>{
 void planet(udho::contexts::stateless ctx, std::string name){
     auto& io = ctx.io();
     
-    auto data = udho::activities::collect<A1, A2i, A3i>(ctx, "A");
+    auto data = udho::collect<A1, A2i, A3i>(ctx, "A");
     
-    auto t1 = udho::activities::perform<A1>::with(data, io).required(false);
-    auto t2 = udho::activities::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
-        udho::activities::accessor<A1> a1_access(data);
+    auto t1 = udho::perform<A1>::with(data, io).required(false);
+    auto t2 = udho::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
+        udho::accessor<A1> a1_access(data);
         A1SData pre = a1_access.success<A1>();
         a2i.prevalue = pre.value;
         std::cout << "preparing A2i" << std::endl;
     });
-    auto t3 = udho::activities::perform<A3i>::require<A1>::with(data, io).after(t1).prepare([data](A3i& a3i){
-        udho::activities::accessor<A1> a1_access(data);
+    auto t3 = udho::perform<A3i>::require<A1>::with(data, io).after(t1).prepare([data](A3i& a3i){
+        udho::accessor<A1> a1_access(data);
         A1SData pre = a1_access.success<A1>();
         a3i.prevalue = pre.value;
         std::cout << "preparing A3i" << std::endl;
     });
         
-    udho::activities::require<A2i, A3i>::with(data).exec([ctx, name](const udho::activities::accessor<A1, A2i, A3i>& d) mutable{
+    udho::require<A2i, A3i>::with(data).exec([ctx, name](const udho::accessor<A1, A2i, A3i>& d) mutable{
         std::cout << "Final begin" << std::endl;
         
         int sum = 0;

@@ -217,6 +217,9 @@ Once everything is set up we start the initial task ``t1()``
               
           In the above example all other subtasks will execute even if ``t1`` fails.
     
+.. note:: The following shorthands may be used for conveniance. :cpp:type:`udho::collect` :cpp:type:`udho::accessor` :cpp:type:`udho::activity` :cpp:type:`udho::perform` :cpp:type:`udho::require`
+
+
 Example
 -------
 

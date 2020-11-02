@@ -701,6 +701,43 @@ namespace activities{
         }
     };
 }
+
+/**
+ * shorthand for udho::activities::collect
+ */
+template <typename... T, typename ContextT>
+std::shared_ptr<activities::collector<T...>> collect(ContextT& ctx, const std::string& name){
+    return activities::collect<T...>(ctx, name);
+}
+
+/**
+ * shorthand for udho::activities::accessor
+ * \see udho::activities::accessor
+ */
+template <typename... T>
+using accessor = activities::accessor<T...>;
+
+/**
+ * shorthand for udho::activities::activity
+ * \see udho::activities::activity
+ */
+template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
+using activity = activities::activity<DerivedT, SuccessDataT, FailureDataT>;
+
+/**
+ * shorthand for udho::activities::require
+ * \see udho::activities::require
+ */
+template <typename... DependenciesT>
+using require = activities::require<DependenciesT...>;
+
+/**
+ * shorthand for udho::activities::perform
+ * \see udho::activities::perform
+ */
+template <typename ActivityT>
+using perform = activities::perform<ActivityT>;
+
 }
 
 #endif // ACTIVITIES_H
