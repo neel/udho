@@ -1,6 +1,6 @@
-
+*****************
 Async Task Graph
-================
+*****************
 
 Execution of Asynchronous Tasks may be required for executing SQL or any other data queries including HTTP queries to fetch external data. udho does not including a database library with itself.
 However any asynchronous database library using boost asio may benifit from an async activity framework. ``udho::activities`` provides an way to describe a task graph that gather data into an heterogenous collector.
@@ -207,6 +207,15 @@ Once everything is set up we start the initial task ``t1()``
 .. code-block:: cpp
 
     t1();
+    
+.. note:: By default if one subtask fails then all subtasks that depend on it will be cancelled and the final callback will be called immediately.
+          However the sibling subtasks of the failing subtask will continue executing. To change this behavior use ``required(false)`` on the subtask.
+          
+          .. code-block:: cpp
+
+              auto t1 = udho::activities::perform<A1>::with(data, io).required(false);
+              
+          In the above example all other subtasks will execute even if ``t1`` fails.
     
 Example
 -------
