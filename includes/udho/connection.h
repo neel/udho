@@ -92,7 +92,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
           _time(boost::posix_time::second_clock::local_time())
           {}
     ~connection(){
-        std::cout << "destructing connection" << std::endl;
+        // std::cout << "destructing connection" << std::endl;
     }
     /**
      * start the read loop

@@ -125,6 +125,18 @@ namespace activities{
             return base_type::template get<typename V::result_type>();
         }
         /**
+         * Check whether activity V has completed.
+         * \tparam V activity type
+         */
+        template <typename V>
+        bool completed() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.completed();
+            }
+            return true;
+        }
+        /**
          * Check whether activity V has failed (only the failure data of V is valid).
          * \tparam V activity type
          */
@@ -206,16 +218,18 @@ namespace activities{
         typedef result_data<SuccessT, FailureT> self_type;
         typedef self_type result_type;
         
-        bool _ready;
+        bool _completed;
         bool _success;
         success_type _sdata;
         failure_type _fdata;
         
+        result_data(): _completed(false), _success(false){}
+        
         /**
          * either success or failure data set
          */
-        bool ready() const{
-            return _ready;
+        bool completed() const{
+            return _completed;
         }
         /**
          * whether the activity has failed
@@ -240,17 +254,17 @@ namespace activities{
              * Set Success Data
              */
             void success(const success_type& data){
-                _sdata   = data;
-                _success = true;
-                _ready = true;
+                _sdata     = data;
+                _success   = true;
+                _completed = true;
             }
             /**
              * Set Failure Data
              */
             void failure(const failure_type& data){
-                _fdata   = data;
-                _success = false;
-                _ready = true;
+                _fdata     = data;
+                _success   = false;
+                _completed = true;
             }
     };
     
@@ -354,7 +368,7 @@ namespace activities{
         next_type  _next;
         std::atomic<std::size_t> _counter;
         std::mutex  _mutex;
-        signal_type _signal;
+        signal_type _preparators;
         std::atomic<bool> _canceled;
         
         combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)), _canceled(false){}
@@ -381,9 +395,9 @@ namespace activities{
                 if(_canceled){
                     _next->cancel();
                 }else{
-                    if(!_signal.empty()){
-                        _signal(*_next);
-                        _signal.disconnect_all_slots();
+                    if(!_preparators.empty()){
+                        _preparators(*_next);
+                        _preparators.disconnect_all_slots();
                     }
                     (*_next)();
                 }
@@ -397,7 +411,7 @@ namespace activities{
         template <typename PreparatorT>
         void prepare(PreparatorT prep){
             boost::function<void (NextT&)> fnc(prep);
-            _signal.connect(prep);
+            _preparators.connect(prep);
         }
     };
     
