@@ -134,7 +134,7 @@ namespace activities{
                 typename V::result_type res = base_type::template get<typename V::result_type>();
                 return res.completed();
             }
-            return true;
+            return false;
         }
         /**
          * Check whether activity V has failed (only the failure data of V is valid).

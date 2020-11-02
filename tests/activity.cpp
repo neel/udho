@@ -14,6 +14,9 @@
 #include <udho/configuration.h>
 #include <udho/activities.h>
 
+#define SMALL_TIMEOUT 2
+#define LARGE_TIMEOUT 4
+
 struct A1SData{
     int value;
     
@@ -34,7 +37,7 @@ struct A1: udho::activity<A1, A1SData, A1FData>{
     A1(CollectorT c, boost::asio::io_context& io, bool succeed = true): base(c), _timer(io), _succeed(succeed){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(5));
+        _timer.expires_from_now(boost::posix_time::seconds(SMALL_TIMEOUT));
         _timer.async_wait(boost::bind(&A1::finished, self(), boost::asio::placeholders::error));
     }
     
@@ -69,7 +72,7 @@ struct A2: udho::activity<A2, A2SData, A2FData>{
     A2(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(10));
+        _timer.expires_from_now(boost::posix_time::seconds(LARGE_TIMEOUT));
         _timer.async_wait(boost::bind(&A2::finished, self(), boost::asio::placeholders::error));
     }
     
@@ -96,7 +99,7 @@ struct A2i: udho::activity<A2i, A2SData, A2FData>{
     A2i(CollectorT c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(10));
+        _timer.expires_from_now(boost::posix_time::seconds(LARGE_TIMEOUT));
         _timer.async_wait(boost::bind(&A2i::finished, self(), boost::asio::placeholders::error));
     }
     
@@ -128,7 +131,7 @@ struct A3: udho::activity<A3, A3SData, A3FData>{
     A3(CollectorT c, boost::asio::io_context& io): base(c), _timer(io), _accessor(c){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(5));
+        _timer.expires_from_now(boost::posix_time::seconds(SMALL_TIMEOUT));
         _timer.async_wait(boost::bind(&A3::finished, self(), boost::asio::placeholders::error));
     }
     
@@ -152,7 +155,7 @@ struct A3i: udho::activity<A3i, A3SData, A3FData>{
     A3i(CollectorT c, boost::asio::io_context& io): base(c), _timer(io){}
     
     void operator()(){
-        _timer.expires_from_now(boost::posix_time::seconds(5));
+        _timer.expires_from_now(boost::posix_time::seconds(SMALL_TIMEOUT));
         _timer.async_wait(boost::bind(&A3i::finished, self(), boost::asio::placeholders::error));
     }
     
@@ -175,6 +178,13 @@ void unprepared(udho::contexts::stateless ctx){
     auto t3 = udho::perform<A3>::require<A1>::with(data, io).after(t1);
         
     udho::require<A2, A3>::with(data).exec([ctx](const udho::accessor<A1, A2, A3>& d) mutable{
+        BOOST_CHECK(d.completed<A1>());
+        BOOST_CHECK(d.completed<A2>());
+        BOOST_CHECK(d.completed<A3>());
+        BOOST_CHECK(!d.failed<A1>());
+        BOOST_CHECK(!d.failed<A2>());
+        BOOST_CHECK(!d.failed<A3>());
+        
         int sum = 0;
         
         if(!d.failed<A2>()){
@@ -211,6 +221,13 @@ void prepared(udho::contexts::stateless ctx){
     });
         
     udho::require<A2i, A3i>::with(data).exec([ctx](const udho::accessor<A1, A2i, A3i>& d) mutable{
+        BOOST_CHECK(d.completed<A1>());
+        BOOST_CHECK(d.completed<A2i>());
+        BOOST_CHECK(d.completed<A3i>());
+        BOOST_CHECK(!d.failed<A1>());
+        BOOST_CHECK(!d.failed<A2i>());
+        BOOST_CHECK(!d.failed<A3i>());
+        
         int sum = 0;
         
         if(!d.failed<A2i>()){
