@@ -154,7 +154,7 @@ struct memory{
         boost::mutex::scoped_lock lock(_mutex);
         _storage.insert(std::make_pair(key, content));
     }
-    const content_type& retrieve(const key_type& key) const{
+    content_type retrieve(const key_type& key) const{
         boost::mutex::scoped_lock lock(_mutex);
         return _storage.at(key);
     }
@@ -453,7 +453,7 @@ struct registry: public driver<KeyT, T>{
     registry(const self_type&) = delete;
     registry(self_type&&) = default;
     
-    const value_type& at(const key_type& key) const{
+    value_type at(const key_type& key) const{
         return driver<KeyT, T>::retrieve(key).value();
     }
         
@@ -494,7 +494,7 @@ struct store: private engine<StorageT<KeyT, void>>, private engine<StorageT<KeyT
         return master_type::issued(key) && registry<KeyT, V>::exists(key);
     }
     template <typename V>
-    const V& get(const key_type& key, const V& def=V()) const{
+    V get(const key_type& key, const V& def=V()) const{
         if(master_type::issued(key)){
             return registry<KeyT, V>::at(key);
         }else{
@@ -502,7 +502,7 @@ struct store: private engine<StorageT<KeyT, void>>, private engine<StorageT<KeyT
         }
     }
     template <typename V>
-    V& at(const key_type& key){
+    V at(const key_type& key){
         return registry<KeyT, V>::at(key);
     }
     template <typename V>
@@ -563,7 +563,7 @@ struct flake{
     bool exists(const key_type& key) const{
         return _registry.exists(key);
     }
-    const value_type& at(const key_type& key) const{
+    value_type at(const key_type& key) const{
         return _registry.at(key);
     }
     void insert(const key_type& key, const value_type& value){
@@ -647,11 +647,11 @@ struct shadow: flake<KeyT, T>...{
         return issued(key) && flake<key_type, V>::exists(key);
     }
     template <typename V>
-    const V& at(const key_type& key) const{
+    V at(const key_type& key) const{
         return flake<key_type, V>::at(key);
     }
     template <typename V>
-    const V& get(const key_type& key, const V& def=V()) const{
+    V get(const key_type& key, const V& def=V()) const{
         if(issued(key)){
             return at<V>(key);
         }

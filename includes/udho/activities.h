@@ -52,11 +52,11 @@ namespace activities{
             return _shadow.template exists<V>(key());
         }
         template <typename V>
-        const V& get() const{
+        V get() const{
             return _shadow.template get<V>(key());
         }
         template <typename V>
-        V& at(){
+        V at(){
             return _shadow.template at<V>(key());
         }
         template <typename V>

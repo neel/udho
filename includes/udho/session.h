@@ -93,11 +93,11 @@ struct session_{
         return _shadow.template exists<V>(_id);
     }
     template <typename V>
-    const V& get() const{
+    V get() const{
         return _shadow.template get<V>(_id);
     }
     template <typename V>
-    V& at(){
+    V at(){
         return _shadow.template at<V>(_id);
     }
     template <typename V>
