@@ -49,12 +49,33 @@ SET(INCLUDE_DIRS
 )
 
 SET(UDHO_HEADERS 
-    includes/udho/connection.h 
-    includes/udho/listener.h 
-    includes/udho/router.h 
-    includes/udho/util.h 
-    includes/udho/page.h
+    includes/udho/access.h
+    includes/udho/attachment.h
+    includes/udho/client.h
+    includes/udho/connection.h
+    includes/udho/cookie.h
+    includes/udho/listener.h
+    includes/udho/parser.h
+    includes/udho/server.h
+    includes/udho/url.h
+    includes/udho/watcher.h
+    includes/udho/activities.h
+    includes/udho/bridge.h
+    includes/udho/compositors.h
+    includes/udho/context.h
+    includes/udho/defs.h
+    includes/udho/logging.h
+    includes/udho/router.h
+    includes/udho/session.h
+    includes/udho/util.h
     includes/udho/application.h
+    includes/udho/cache.h
+    includes/udho/configuration.h
+    includes/udho/contexts.h
+    includes/udho/form.h
+    includes/udho/page.h
+    includes/udho/scope.h
+    includes/udho/visitor.h
 )
 SET(UDHO_SOURCES 
     page.cpp
