@@ -54,6 +54,8 @@
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <udho/configuration.h>
+#include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 namespace udho{
 namespace cache{
