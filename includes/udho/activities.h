@@ -113,6 +113,8 @@ namespace activities{
         
         template <typename... U>
         accessor(std::shared_ptr<collector<U...>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
+        template <typename... U>
+        accessor(accessor<U...>& accessor): base_type(_shadow, accessor.name()), _shadow(accessor.shadow()){}
         std::string name() const{ return base_type::key(); }
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
@@ -406,6 +408,22 @@ namespace activities{
             }
     };
     
+    enum class state{
+        unknown,
+        incomplete,
+        failure,
+        success,
+        canceled,
+        error
+    };
+    
+    inline std::ostream& operator<<(std::ostream& os, const state& s){
+        static const char* state_labels[] = {"unknown", "incomplete", "failure", "success", "canceled", "error"};
+        std::uint32_t state_idx = static_cast<std::uint32_t>(s);
+        os << "(" << state_idx << ") " << state_labels[state_idx];
+        return os;
+    }
+    
     /**
      * \code
      * const udho::accessor<A1, A2i, A3i>& d;
@@ -426,7 +444,7 @@ namespace activities{
      * \endcode
      */
     template <typename ActivityT>
-    struct analyzer{
+    class analyzer{
         typedef ActivityT activity_type;
         typedef typename activity_type::success_type success_type;
         typedef typename activity_type::failure_type failure_type;
@@ -435,49 +453,129 @@ namespace activities{
         typedef boost::function<void (const failure_type&)> failure_ftor_type;
         typedef boost::function<void (const success_type&)> success_ftor_type;
         typedef analyzer<ActivityT> self_type;
+        typedef state activity_state;
         
+//        template <bool invocable, typename FunctorT, typename... TargetsT>
+//        friend struct detail::apply_helper_;
+
+//        template <typename F, typename... Args>
+//        friend struct udho::util::is_invocable;
+
+        friend struct result_data<success_type, failure_type>;
+        
+        accessor<ActivityT>   _accessor;
         incomplete_ftor_type  _incomplete;
         cancelation_ftor_type _canceled;
         failure_ftor_type     _failure;
         success_ftor_type     _success;
-        
+        success_ftor_type     _error;
+        activity_state        _state;
+
+     public:
         void operator()(){
-            if(!_incomplete.empty()){
+            // either there is no error callback and there is an incomplete callback
+            // or there is an error callback but the task has not been canceled
+            if((_error.empty() && !_incomplete.empty()) || (!_error.empty() && !_accessor.template canceled<ActivityT>())){
                 _incomplete();
+                _state = state::incomplete;
             }
         }
         void operator()(const success_type& s, const failure_type& f){
-            if(!_canceled.empty()){
-                _canceled(s, f);
+            // there is no error callback and there is a cancel callback set
+            if(_error.empty()){
+                if(!_canceled.empty()){
+                    _canceled(s, f);
+                    _state = state::canceled;
+                }
+            }else{
+                if(!_accessor.template failed<ActivityT>()){ // succeeded but canceled, hence error 
+                    _error(s);
+                    _state = state::error;
+                }else if(_accessor.template completed<ActivityT>()){ // failed then canceled, hence call failure callback instead
+                    _failure(f);
+                    _state = state::failure;
+                }else{ // incomplete, never invoked, skipped possibly because at least one of its dependency canceled
+                    _incomplete();
+                    _state = state::incomplete;
+                }
             }
         }
         void operator()(const failure_type& f){
-            if(!_failure.empty()){
+            // either there is no error callback and there is a failure callback set
+            // or there is an error callback but the task has not been canceled
+            if((_error.empty() && !_failure.empty()) || (!_error.empty() && !_accessor.template canceled<ActivityT>())){
                 _failure(f);
+                _state = state::failure;
             }
         }
         void operator()(const success_type& s){
             if(!_success.empty()){
                 _success(s);
+                _state = state::success;
             }
         }
         
-        self_type& incomplete(incomplete_ftor_type ftor){
-            _incomplete = ftor;
-            return *this;
-        }
-        self_type& canceled(cancelation_ftor_type ftor){
-            _canceled = ftor;
-            return *this;
-        }
-        self_type& failure(failure_ftor_type ftor){
-            _failure = ftor;
-            return *this;
-        }
-        self_type& success(success_ftor_type ftor){
-            _success = ftor;
-            return *this;
-        }
+        public:
+            /**
+             * construct an analyzer
+             */
+            template <typename AccessorT>
+            analyzer(AccessorT accessor): _accessor(accessor), _state(state::unknown){}
+            
+            /**
+             * If the activity is incomplete and an incomplete callback is set then the incomplete callback is invoked if any of the following holds
+             * 
+             * - there is no error callback 
+             * - there is an error callback but the task has not been canceled
+             * - there is an error callback and the task has been canceled (\see operator()(const success_type&, const failure_type&))
+             */
+            self_type& incomplete(incomplete_ftor_type ftor){
+                _incomplete = ftor;
+                return *this;
+            }
+            /**
+             * If the activity is canceled and a canceled callback is set then the canceled callback is invoked if the following holds
+             * 
+             * - there is no error callback 
+             */
+            self_type& canceled(cancelation_ftor_type ftor){
+                _canceled = ftor;
+                return *this;
+            }
+            /**
+             * The error callback is called if the subtask has not failed but has been canceled (through cancel_if)
+             * Once the error callback is set failure and incomplete callbacks are invoked differently
+             * The error callback is called if the following holds
+             * 
+             * - there is an error callback set and the activity is canceled and the activity has not failed
+             */
+            self_type& error(success_ftor_type ftor){
+                _error = ftor;
+                return *this;
+            }
+            /**
+             * If the activity has failed and afailure callback is set then the failure callback is called if any of the following holds
+             * 
+             * - there is no error callback
+             * - there is an error callback set and the activity is canceled 
+             * - there is an error callback set and the activity is not canceled 
+             */
+            self_type& failure(failure_ftor_type ftor){
+                _failure = ftor;
+                return *this;
+            }
+            /**
+             * If the activity is complete and neither failed nor canceled then the success callback is called if a a success callback is set
+             */
+            self_type& success(success_ftor_type ftor){
+                _success = ftor;
+                return *this;
+            }
+            
+            activity_state apply(){
+                _accessor.template apply<ActivityT>(std::ref(*this));
+                return _state;
+            }
     };
     
     template <typename NextT, typename... DependenciesT>
@@ -1036,6 +1134,11 @@ using require = activities::require<DependenciesT...>;
  */
 template <typename ActivityT>
 using perform = activities::perform<ActivityT>;
+
+template <typename ActivityT, typename AccessorT>
+udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
+    return udho::activities::analyzer<ActivityT>(accessor);
+}
 
 }
 
