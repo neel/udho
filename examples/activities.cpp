@@ -192,7 +192,7 @@ void planet(udho::contexts::stateless ctx, std::string name){
         
         std::cout << "A1 canceled " << d.canceled<A1>() << std::endl;
         
-        auto analyzer = udho::analyze<A1>(d)
+        udho::activities::state state = udho::analyze<A1>(d)
             .canceled([](const A1SData& s, const A1FData& f){
                 std::cout << "CANCELED" << std::endl;
             })
@@ -207,8 +207,7 @@ void planet(udho::contexts::stateless ctx, std::string name){
             })
             .success([](const A1SData& s){
                 std::cout << "SUCCESS" << std::endl;
-            });
-        udho::activities::state state = analyzer.apply();
+            }).apply();
         std::cout << state << std::endl;
         
         if(!d.failed<A2i>()){
