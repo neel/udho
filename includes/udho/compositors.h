@@ -34,7 +34,15 @@
 
 namespace udho{
     
+/**
+ * \ingroup routing.content
+ * compositors for content
+ */
 namespace compositors{
+    /**
+     * \ingroup routing.content
+     * raw boost::beast HTTP response content
+     */
     template <typename OutputT>
     struct transparent{
         typedef OutputT response_type;
@@ -47,6 +55,11 @@ namespace compositors{
             return "UNSPECIFIED";
         }
     };
+    /**
+     * \ingroup routing.content
+     * No output will be returned. `ctx.respond(...)` will be used instead
+     * \see udho::context::respond
+     */
     template <typename OutputT>
     struct deferred{
         typedef OutputT response_type;
@@ -58,6 +71,10 @@ namespace compositors{
         }
     };
 
+    /**
+     * \ingroup routing.content
+     * mimed content. The returned output will be sent with the given mime type 
+     */
     template <typename OutputT>
     struct mimed{
         typedef boost::beast::http::response<boost::beast::http::string_body> response_type;

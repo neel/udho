@@ -59,6 +59,9 @@ namespace udho{
 
 namespace detail{
  
+/**
+ * \ingroup context
+ */
 template <typename RequestT>
 struct context_impl{
     typedef RequestT                                     request_type;
@@ -212,6 +215,7 @@ struct context_impl{
  * \tparam ShadowT the session data structure
  * 
  * \note instead of instantiating this template directly use \ref udho::contexts::stateful
+ * \ingroup context
  */
 template <typename AuxT, typename RequestT, typename ShadowT>
 struct context{
@@ -432,6 +436,7 @@ struct context{
  * \tparam RequestT HTTP request type
  * 
  * \note instead of instantiating this template directly use \ref udho::contexts::stateless
+ * \ingroup context
  */
 template <typename AuxT, typename RequestT>
 struct context<AuxT, RequestT, void>{
@@ -631,6 +636,9 @@ struct context<AuxT, RequestT, void>{
     }
 };
 
+/**
+ * \ingroup context
+ */
 template <typename AuxT, typename RequestT, typename ShadowT, udho::logging::status Status>
 const context<AuxT, RequestT, ShadowT>& operator<<(const context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);

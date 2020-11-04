@@ -35,17 +35,21 @@
 namespace udho{
 /**
  * conveniance typedefs for stateful and stateless contexts using default bridge and the default HTTP request type.
+ * \defgroup shorthands
+ * \ingroup context
  */
 namespace contexts{
     /**
      * A stateless context for stateless callable using the default bridge and the default HTTP request type.
      * \see udho::context
+     * \ingroup shorthands
      */
     using stateless = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, void>;
     /**
      * A stateful context for stateful callable using the default bridge and the default HTTP request type.
      * \tparam T... Session states
      * \see udho::context< AuxT, RequestT, void >
+     * \ingroup shorthands
      */
     template <typename... T>
     using stateful = context<udho::bridge<udho::configuration_type>, udho::defs::request_type, udho::cache::shadow<udho::defs::session_key_type, T...>>;

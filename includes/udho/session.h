@@ -35,6 +35,9 @@
 
 namespace udho{
     
+/**
+ * \ingroup session
+ */
 template <typename RequestT, typename ShadowT>
 struct session_{
     typedef RequestT request_type;
@@ -147,18 +150,27 @@ struct session_{
     }
 };
 
+/**
+ * \ingroup session
+ */
 template <typename RequestT>
 struct session_<RequestT, void>{
     template <typename... U>
     session_(U...){}
 };
 
+/**
+ * \ingroup session
+ */
 template <typename RequestT, typename ShadowT, typename T>
 session_<RequestT, ShadowT>& operator<<(session_<RequestT, ShadowT>& session, const T& data){
     session.template set<T>(data);
     return session;
 }
 
+/**
+ * \ingroup session
+ */
 template <typename RequestT, typename ShadowT, typename T>
 const session_<RequestT, ShadowT>& operator>>(const session_<RequestT, ShadowT>& session, T& data){
     data = session.template get<T>();

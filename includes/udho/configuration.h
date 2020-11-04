@@ -37,6 +37,9 @@
 
 namespace udho{
 
+/**
+ * \ingroup configuration
+ */
 template <typename K, typename C>
 struct proxy{
     typedef K key_type;
@@ -60,6 +63,9 @@ struct proxy{
     }
 };
 
+/**
+ * \ingroup configuration
+ */
 template <typename T>
 struct config: T{
     typedef config<T> self_type;    
@@ -74,6 +80,9 @@ struct config: T{
     }
 };
 
+/**
+ * \ingroup configuration
+ */
 template <typename K, typename C>
 std::ostream& operator<<(std::ostream& stream, const proxy<K, C>& p){
     stream << p.value();
@@ -84,6 +93,7 @@ std::ostream& operator<<(std::ostream& stream, const proxy<K, C>& p){
  * typedef udho::configuration<udho::config::server, udho::config::router, udho::config::logging, udho::config::view> configuration;
  * configuration config;
  * config[udho::configs::server::document_root] = "/path/to/document/root";
+ * \ingroup configuration
  */
 template <typename... T>
 struct configuration: udho::config<T>...{
@@ -97,7 +107,13 @@ struct configuration: udho::config<T>...{
     }
 };
 
+/**
+ * \ingroup configuration
+ */
 namespace configs{
+/**
+ * \ingroup configuration
+ */
 template <typename T = void>
 struct server_{
     typedef std::map<std::string, std::string> mime_map;
@@ -170,10 +186,16 @@ template <typename T> const typename server_<T>::template_root_t server_<T>::tem
 template <typename T> const typename server_<T>::mime_default_t  server_<T>::mime_default;
 template <typename T> const typename server_<T>::mimes_t         server_<T>::mimes;
 
+/**
+ * \ingroup configuration
+ */
 typedef server_<> server;
 
 }
 
+/**
+ * \ingroup configuration
+ */
 template <>
 struct config<configs::server_<>>: configs::server_<>{
     typedef config<configs::server_<>> self_type;    
@@ -191,6 +213,9 @@ struct config<configs::server_<>>: configs::server_<>{
     }
 };
 
+/**
+ * \ingroup configuration
+ */
 template <>
 struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
     typedef configs::server_<>::mimes_t key_type;
@@ -227,7 +252,11 @@ struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
     }
 };
 
+
 namespace configs{
+/**
+ * \ingroup configuration
+ */
 template <typename T = void>
 struct session_{
     enum class format{
@@ -272,36 +301,58 @@ template <typename T> const typename session_<T>::serialization_t session_<T>::s
 template <typename T> const typename session_<T>::path_t session_<T>::path;
 template <typename T> const typename session_<T>::id_t session_<T>::id;
 
+/**
+ * \ingroup configuration
+ */
 typedef session_<> session;
 }
 
+
 namespace configs{
+/**
+ * \ingroup configuration
+ */
 template <typename T = void>
 struct router_{
 
 };
-
+/**
+ * \ingroup configuration
+ */
 typedef router_<> router;
 }
 
 namespace configs{
+/**
+ * \ingroup configuration
+ */
 template <typename T = void>
 struct logger_{
 
 };
-
+/**
+ * \ingroup configuration
+ */
 typedef logger_<> logger;
 }
 
 namespace configs{
+/**
+ * \ingroup configuration
+ */
 template <typename T = void>
 struct form_{
 
 };
-
+/**
+ * \ingroup configuration
+ */
 typedef form_<> form;
 }
 
+/**
+ * \ingroup configuration
+ */
 typedef udho::configuration<udho::configs::server, udho::configs::session, udho::configs::router, udho::configs::logger, udho::configs::form> configuration_type;
 
 }

@@ -36,6 +36,7 @@ namespace udho{
     
 /**
  * logged stateful
+ * \ingroup server
  */
 template <typename AuxT, typename LoggerT=void, typename CacheT=void>
 struct attachment: AuxT, CacheT, LoggerT{
@@ -63,6 +64,7 @@ struct attachment: AuxT, CacheT, LoggerT{
 
 /**
  * quiet stateful
+ * \ingroup server
  */
 template <typename AuxT, typename CacheT>
 struct attachment<AuxT, void, CacheT>: AuxT, CacheT{
@@ -94,6 +96,7 @@ struct attachment<AuxT, void, CacheT>: AuxT, CacheT{
 
 /**
  * logged stateless
+ * \ingroup server
  */
 template <typename AuxT, typename LoggerT>
 struct attachment<AuxT, LoggerT, void>: AuxT, LoggerT{
@@ -120,6 +123,7 @@ struct attachment<AuxT, LoggerT, void>: AuxT, LoggerT{
 
 /**
  * quiet stateless
+ * \ingroup server
  */
 template <typename AuxT>
 struct attachment<AuxT, void, void>: AuxT{
@@ -149,6 +153,9 @@ struct attachment<AuxT, void, void>: AuxT{
     }
 };
 
+/**
+ * \ingroup server
+ */
 template <typename AuxT, typename LoggerT, typename CacheT, udho::logging::status Status>
 attachment<AuxT, LoggerT, CacheT>& operator<<(attachment<AuxT, LoggerT, CacheT>& attachment, const udho::logging::message<Status>& msg){
     attachment(msg);

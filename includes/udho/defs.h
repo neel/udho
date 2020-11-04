@@ -54,6 +54,12 @@ typedef boost::uuids::uuid session_key_type;
 }
 
 /**
+ * \defgroup configuration
+ * 
+ * Configuration
+ */
+
+/**
  * \defgroup activities
  * 
  * Async Activities
@@ -66,6 +72,13 @@ typedef boost::uuids::uuid session_key_type;
  */
 
 /**
+ * \defgroup overload
+ * \ingroup routing
+ * 
+ * URL overload
+ */
+
+/**
  * \defgroup context
  * 
  * Request Context
@@ -75,6 +88,12 @@ typedef boost::uuids::uuid session_key_type;
  * \defgroup server
  * 
  * HTTP Server
+ */
+
+/**
+ * \defgroup cache
+ * 
+ * Cache
  */
 
 /**

@@ -47,6 +47,7 @@ namespace udho{
  * };
  * @endcode
  * @tparam DerivedT The derived application class
+ * \ingroup routing
  */
 template <typename DerivedT>
 class application{
@@ -103,6 +104,9 @@ class application{
     }
 };
 
+/**
+ * \ingroup routing
+ */
 template <typename AppT, bool Ref=false>
 struct app_{
     typedef app_<AppT, Ref> self_type;
@@ -147,6 +151,9 @@ struct app_{
     }
 };
 
+/**
+ * \ingroup routing
+ */
 template <typename AppT>
 struct app_<AppT, true>{
     typedef app_<AppT, true> self_type;
@@ -190,6 +197,9 @@ struct app_<AppT, true>{
     }
 };
 
+/**
+ * \ingroup routing.overload
+ */
 template <typename U, typename V, bool Ref>
 struct overload_group<U, app_<V, Ref>>{
     typedef overload_group<U, app_<V, Ref>>  self_type;
@@ -239,11 +249,17 @@ struct overload_group<U, app_<V, Ref>>{
     }
 };
 
+/**
+ * \ingroup routing
+ */
 template <typename AppT, typename... T>
 app_<AppT, false> app(T... args){
     return app_<AppT, false>(args...);
 }
 
+/**
+ * \ingroup routing
+ */
 template <typename AppT>
 app_<AppT, true> app(AppT& a){
     return app_<AppT, true>(a);

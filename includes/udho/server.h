@@ -44,6 +44,7 @@ namespace http = boost::beast::http;
     
 /**
  * @todo write docs
+ * \ingroup server
  */
 template <typename AuxT, typename LoggerT=void, typename CacheT=void>
 struct server{
@@ -94,6 +95,9 @@ struct server{
     }
 };
 
+/**
+ * \ingroup server
+ */
 template <typename AuxT, typename CacheT>
 struct server<AuxT, void, CacheT>{
     typedef CacheT cache_type;
@@ -143,39 +147,84 @@ struct server<AuxT, void, CacheT>{
     }
 };
 
+/**
+ * \defgroup shorthands
+ * \ingroup server
+ */
 namespace servers{
     
+/**
+ * \ingroup shorthands
+ */
 namespace stateless{
+    /**
+     * \ingroup shorthands
+     */
     template <typename LoggerT>
     using logged = server<udho::bridge<udho::configuration_type>, LoggerT, void>;
+    /**
+     * \ingroup shorthands
+     */
     using quiet  = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
+/**
+ * \ingroup shorthands
+ */
 template <template <typename, typename> class StorageT, typename... T>
 struct stateful{
     typedef udho::cache::store<StorageT, boost::uuids::uuid, T...> cache_type;
     
+    /**
+     * \ingroup shorthands
+     */
     template <typename LoggerT>
     using logged    = server<udho::bridge<udho::configuration_type>, LoggerT, cache_type>;
+    /**
+     * \ingroup shorthands
+     */
     using ostreamed = logged<udho::loggers::ostream>;
+    /**
+     * \ingroup shorthands
+     */
     using quiet     = server<udho::bridge<udho::configuration_type>, void, cache_type>;
 };
 
+/**
+ * \ingroup shorthands
+ */
 namespace quiet{
+    /**
+     * \ingroup shorthands
+     */
     template <template <typename, typename> class StorageT, typename... T>
     using stateful  = server<udho::bridge<udho::configuration_type>, void, udho::cache::store<StorageT, boost::uuids::uuid, T...>>;
+    /**
+     * \ingroup shorthands
+     */
     using stateless = server<udho::bridge<udho::configuration_type>, void, void>;
 }
 
+/**
+ * \ingroup shorthands
+ */
 template <typename T>
 struct logged{
     typedef T logger_type;
-    
+    /**
+     * \ingroup shorthands
+     */
     template <template <typename, typename> class StorageT, typename... U>
     using stateful  = server<udho::bridge<udho::configuration_type>, logger_type, udho::cache::store<StorageT, boost::uuids::uuid, U...>>;
+    /**
+     * \ingroup shorthands
+     */
     using stateless = server<udho::bridge<udho::configuration_type>, logger_type, void>;
 };
 
+/**
+ * \ingroup shorthands
+ */
 namespace ostreamed{
     template <typename CacheT>
     struct ostreamed_helper{
@@ -213,8 +262,14 @@ namespace ostreamed{
         }
     };
     
+    /**
+     * \ingroup shorthands
+     */
     template <template <typename, typename> class StorageT, typename... U>
     using stateful  = ostreamed_helper<udho::cache::store<StorageT, boost::uuids::uuid, U...>>;
+    /**
+     * \ingroup shorthands
+     */
     using stateless = ostreamed_helper<void>;
 }
     

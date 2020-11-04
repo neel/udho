@@ -105,6 +105,10 @@ namespace internal{
     }
 }
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename Function, template <typename> class CompositorT=compositors::transparent>
 struct module_overload{    
     typedef Function                                                           function_type;
@@ -207,6 +211,10 @@ struct module_overload{
         }
 };
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename Function>
 struct module_overload<Function, compositors::deferred>{    
     typedef Function                                                           function_type;
@@ -309,12 +317,20 @@ struct module_overload<Function, compositors::deferred>{
         }
 };
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename Function, template <typename> class CompositorT, int N>
 module_overload<Function, CompositorT> operator<<(module_overload<Function, CompositorT> overload, const char (&expr)[N]){
     overload = expr;
     return overload;
 }
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename Function, template <typename> class CompositorT, int N>
 module_overload<Function, CompositorT> operator>>(const char (&expr)[N], module_overload<Function, CompositorT> overload){
     overload = expr;
@@ -344,11 +360,19 @@ struct callable1<A1, R (*)(A1&, V...)>{
 };
 }
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename F, template <typename> class CompositorT=compositors::transparent>
 module_overload<F, CompositorT> overload(boost::beast::http::verb request_method, F ftor, CompositorT<typename internal::function_signature<F>::return_type> compositor=CompositorT<typename internal::function_signature<F>::return_type>()){
     return module_overload<F, CompositorT>(request_method, ftor, compositor);
 }
 
+/**
+ * \ingroup routing
+ * \ingroup overload
+ */
 template <typename F, typename A1, template <typename> class CompositorT=compositors::transparent>
 auto overload(boost::beast::http::verb request_method, F ftor, A1& a1, CompositorT<typename internal::function_signature<F>::return_type> compositor=CompositorT<typename internal::function_signature<F>::return_type>()){
     typedef internal::callable1<A1, F> callable_type;
@@ -605,6 +629,9 @@ auto del(F ftor, A1& a1){
     return content_wrapper1<F, A1>(boost::beast::http::verb::delete_, ftor, a1);
 }
 
+/**
+ * \ingroup overload
+ */
 template <typename AuxT = void>
 struct overload_terminal: AuxT{
     typedef AuxT aux_type;
@@ -612,6 +639,9 @@ struct overload_terminal: AuxT{
     using aux_type::aux_type;
 };
 
+/**
+ * \ingroup overload
+ */
 template <>
 struct overload_terminal<void>{
     typedef void aux_type;
@@ -620,6 +650,9 @@ struct overload_terminal<void>{
     overload_terminal(Args...){}
 };
 
+/**
+ * \ingroup overload
+ */
 template <typename OverloadT, typename ResponseT = typename OverloadT::response_type>
 struct overload_group_helper{
     typedef OverloadT overload_type;
@@ -642,6 +675,9 @@ struct overload_group_helper{
     }
 };
 
+/**
+ * \ingroup overload
+ */
 template <typename OverloadT>
 struct overload_group_helper<OverloadT, void>{
     typedef OverloadT overload_type;
@@ -661,7 +697,7 @@ struct overload_group_helper<OverloadT, void>{
  * compile time chain of url mappings 
  * @see content_wrapper0
  * @see content_wrapper1
- * @ingroup routing
+ * \ingroup overload
  */
 template <typename U, typename V>
 struct overload_group{
@@ -738,7 +774,7 @@ struct overload_group{
  * terminal node of the compile time chain of url mappings 
  * @see content_wrapper0
  * @see content_wrapper1
- * @ingroup routing
+ * \ingroup overload
  */
 template <typename U, typename V>
 struct overload_group<U, overload_terminal<V>>{
@@ -790,6 +826,9 @@ struct overload_group<U, overload_terminal<V>>{
     }
 };
 
+/**
+ * \ingroup overload
+ */
 template <typename U>
 struct overload_group<U, overload_terminal<void>>{
     typedef overload_group<U, overload_terminal<void>> self_type;        ///< type of this overload
@@ -853,17 +892,24 @@ typedef basic_router<> router;
  * @param group the overload group (which is actually the router or router attached with some url mappings)
  * @param method url mapping
  * @ingroup routing
+ * \ingroup overload
  */
 template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
 }
 
+/**
+ * @ingroup routing
+ * \ingroup overload
+ */
 template <typename U, typename V, typename F>
 overload_group<overload_group<U, V>, F> operator<<(const overload_group<U, V>& group, const F& method){
     return overload_group<overload_group<U, V>, F>(group, method);
 }
-
+/**
+ * \ingroup routing
+ */
 struct reroute{
     typedef boost::function<boost::beast::http::response<boost::beast::http::string_body> (udho::contexts::stateless)> function_type;
     
@@ -881,6 +927,9 @@ struct reroute{
     }
 };
 
+/**
+ * \ingroup routing
+ */
 template <typename StreamT, typename U, typename V>
 StreamT& operator<<(StreamT& stream, const overload_group<U, V>& router){
     std::vector<udho::module_info> summary;

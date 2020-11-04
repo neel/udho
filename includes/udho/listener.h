@@ -11,6 +11,7 @@ namespace udho{
 
 /**
  * listener runs accept loop for HTTP sockets
+ * \ingroup server
  */
 template <typename RouterT, typename AttachmentT>
 class listener : public std::enable_shared_from_this<listener<RouterT, AttachmentT>>{

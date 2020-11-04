@@ -35,6 +35,7 @@ namespace http = boost::beast::http;
 
 /**
  * Stateful HTTP Session
+ * \ingroup server
  */
 template <typename RouterT, typename AttachmentT>
 class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{

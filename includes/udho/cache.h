@@ -60,6 +60,9 @@
 namespace udho{
 namespace cache{
   
+/**
+ * \ingroup cache
+ */
 template <typename T = void>
 struct content{
     typedef T value_type;
@@ -96,6 +99,9 @@ struct content{
         friend class boost::serialization::access;
 };
 
+/**
+ * \ingroup cache
+ */
 template <>
 struct content<void>{
     typedef void value_type;
@@ -126,8 +132,15 @@ struct content<void>{
         friend class boost::serialization::access;
 };
 
+/**
+ * \defgroup storage
+ * \ingroup cache
+ */
 namespace storage{
-   
+
+/**
+ * \ingroup storage
+ */
 template <typename KeyT, typename ValueT = void>
 struct memory{
     typedef KeyT key_type;
@@ -182,6 +195,9 @@ struct memory{
         mutable boost::mutex _mutex;
 };
 
+/**
+ * \ingroup storage
+ */
 template <typename KeyT, typename ValueT = void>
 struct disk{
     typedef KeyT key_type;
@@ -309,10 +325,16 @@ struct disk{
         }
 };
 
+/**
+ * \ingroup storage
+ */
 struct redis{};
    
 }
 
+/**
+ * \ingroup storage
+ */
 template <typename KeyT, typename ValueT = void>
 struct abstract_engine{
     typedef KeyT key_type;
@@ -358,6 +380,10 @@ struct abstract_engine{
     }
 };
 
+/**
+ * \ingroup storage
+ * \ingroup cache
+ */
 template <typename StorageT>
 struct engine: private StorageT, public abstract_engine<typename StorageT::key_type, typename StorageT::value_type>{
     typedef StorageT storage_type;
@@ -392,6 +418,10 @@ struct engine: private StorageT, public abstract_engine<typename StorageT::key_t
     using abstract_engine_type::update;
 };
 
+/**
+ * \ingroup storage
+ * \ingroup cache
+ */
 template <typename KeyT, typename ValueT = void>
 struct driver{
     typedef KeyT key_type;
@@ -421,6 +451,9 @@ struct driver{
     boost::posix_time::time_duration idle(const key_type& key) const{ return _engine.idle(key); }
 };
     
+/**
+ * \ingroup cache
+ */
 template <typename KeyT>
 struct master: public driver<KeyT>{
     typedef KeyT key_type;
@@ -441,6 +474,9 @@ struct master: public driver<KeyT>{
     }
 };
 
+/**
+ * \ingroup cache
+ */
 template <typename KeyT, typename T>
 struct registry: public driver<KeyT, T>{
     typedef registry<KeyT, T> self_type;
@@ -475,6 +511,8 @@ struct shadow;
  * store.insert("x", a);
  * store.exists<user>();
  * \endcode
+ * 
+ * \ingroup cache
  */
 template <template <typename, typename> class StorageT, typename KeyT, typename... T>
 struct store: private engine<StorageT<KeyT, void>>, private engine<StorageT<KeyT, T>>..., protected master<KeyT>, public registry<KeyT, T>...{
@@ -548,6 +586,7 @@ struct store: private engine<StorageT<KeyT, void>>, private engine<StorageT<KeyT
 
 /**
  * copiable flake containes a reference to the actual registry object
+ * \ingroup cache
  */
 template <typename KeyT, typename T>
 struct flake{
@@ -618,6 +657,7 @@ private:
  * std::cout << shadow_a.get<appearence>("x").color << std::endl; // red
  * udho::cache::shadow<std::string> shadow_none(shadow_ua);
  * \endcode
+ * \ingroup cache
  */
 template <typename KeyT, typename... T>
 struct shadow: flake<KeyT, T>...{
@@ -727,6 +767,9 @@ struct shadow: flake<KeyT, T>...{
 template <typename KeyT>
 struct generator;
 
+/**
+ * \ingroup cache
+ */
 template <>
 struct generator<boost::uuids::uuid>{
     boost::uuids::uuid parse(const std::string& key){

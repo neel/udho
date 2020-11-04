@@ -36,7 +36,14 @@
 #include <boost/bind.hpp>
 
 namespace udho{
+/**
+ * \ingroup activities
+ */
 namespace activities{
+    /**
+     * \defgroup data
+     * \ingroup activities
+     */    
     template <typename StoreT>
     struct fixed_key_accessor{
         typedef typename StoreT::key_type key_type;
@@ -73,6 +80,7 @@ namespace activities{
     
     /**
      * Collects data associated with all activities involved in the subtask graph
+     * \ingroup data
      */
     template <typename... T>
     struct collector: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>, std::enable_shared_from_this<collector<T...>>{
@@ -93,6 +101,7 @@ namespace activities{
     
     /**
      * Access a subset of data from the collector
+     * \ingroup data
      */
     template <typename... T>
     struct accessor: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>{
@@ -178,6 +187,9 @@ namespace activities{
         }
     };
     
+    /**
+     * \ingroup data
+     */
     template <typename U, typename... T>
     collector<T...>& operator<<(collector<T...>& h, const U& data){
         auto& shadow = h.shadow();
@@ -185,6 +197,9 @@ namespace activities{
         return h;
     }
 
+    /**
+     * \ingroup data
+     */
     template <typename U, typename... T>
     const collector<T...>& operator>>(const collector<T...>& h, U& data){
         const auto& shadow = h.shadow();
@@ -192,6 +207,9 @@ namespace activities{
         return h;
     }
     
+    /**
+     * \ingroup data
+     */
     template <typename U, typename... T>
     accessor<T...>& operator<<(accessor<T...>& h, const U& data){
         auto& shadow = h.shadow();
@@ -199,6 +217,9 @@ namespace activities{
         return h;
     }
 
+    /**
+     * \ingroup data
+     */
     template <typename U, typename... T>
     const accessor<T...>& operator>>(const accessor<T...>& h, U& data){
         auto& shadow = h.shadow();
@@ -210,6 +231,9 @@ namespace activities{
      * Contains **Copiable** Success or Failure data for an activity.
      * \tparam SuccessT success data type
      * \tparam FailureT failure data type
+     * 
+     * \ingroup activities
+     * \ingroup data
      */
     template <typename SuccessT, typename FailureT>
     struct result_data{
@@ -220,10 +244,11 @@ namespace activities{
         
         bool _completed;
         bool _success;
+        bool _canceled;
         success_type _sdata;
         failure_type _fdata;
         
-        result_data(): _completed(false), _success(false){}
+        result_data(): _completed(false), _success(false), _canceled(false){}
         
         /**
          * either success or failure data set
@@ -236,6 +261,12 @@ namespace activities{
          */
         bool failed() const{
             return !_success;
+        }
+        /**
+         * check whether the activity has been canceled
+         */
+        bool canceled() const{
+            return _canceled;
         }
         /**
          * Success data 
@@ -266,6 +297,12 @@ namespace activities{
                 _success   = false;
                 _completed = true;
             }
+            /**
+             * mark as cnceled
+             */
+            void cancel(){
+                _canceled = true;
+            }
     };
     
     template <typename NextT, typename... DependenciesT>
@@ -274,7 +311,9 @@ namespace activities{
     /**
      * Completion handler for an activity.
      * \tparam SuccessT success data associated with the activity 
-     * \tparam FailureT failure data associated with teh activity
+     * \tparam FailureT failure data associated with the activity
+     * 
+     * \ingroup activities
      */
     template <typename SuccessT, typename FailureT>
     struct result: result_data<SuccessT, FailureT>{
@@ -284,6 +323,7 @@ namespace activities{
         typedef typename data_type::failure_type failure_type;
         typedef boost::signals2::signal<void (const data_type&)> signal_type;
         typedef boost::signals2::signal<void ()> cancelation_signal_type;
+        typedef boost::function<bool (const success_type&)> cancel_if_ftor;
         
         template <typename NextT, typename... DependenciesT>
         friend struct combinator;
@@ -292,6 +332,7 @@ namespace activities{
         signal_type   _signal;
         bool          _required;
         cancelation_signal_type _cancelation_signals;
+        cancel_if_ftor _cancel_if;
         
         /**
          * \param store collector
@@ -315,8 +356,20 @@ namespace activities{
             _cancelation_signals.connect(canceler);
         }
         
+        /**
+         * mark the activity as required or optional
+         * \param flag 
+         */
         void required(bool flag){
             _required = flag;
+        }
+        
+        /**
+         * Force cancelation of the activity even after it is successful to stop propagating to the next activities
+         * \param f callback which should return true to signal cancelation
+         */
+        void cancel_if(cancel_if_ftor f){
+            _cancel_if = f;
         }
         protected:
             /**
@@ -337,12 +390,23 @@ namespace activities{
             }
         private:
             void cancel(){
+                data_type::cancel();
                 _cancelation_signals();
             }
             void completed(){
                 data_type self = static_cast<const data_type&>(*this);
                 _shadow << self;
-                if(data_type::failed() && _required){
+                
+                bool should_cancel = false;
+                if(!data_type::failed()){
+                    if(!_cancel_if.empty()){
+                        should_cancel = _cancel_if(data_type::success_data());
+                    }
+                }else{
+                    should_cancel = data_type::failed() && _required;
+                }
+                
+                if(should_cancel){
                     cancel();
                 }else{
                     _signal(self);
@@ -350,6 +414,9 @@ namespace activities{
             }
     };
 
+    /**
+     * \internal 
+     */
     template <typename DependencyT>
     struct junction{
         void operator()(const DependencyT&){}
@@ -359,6 +426,7 @@ namespace activities{
      * A combinator combines multiple activities and proceeds towards the next activity
      * \tparam NextT next activity
      * \tparam DependenciesT dependencies
+     * \ingroup activities
      */
     template <typename NextT, typename... DependenciesT>
     struct combinator: junction<typename DependenciesT::result_type>...{
@@ -423,6 +491,7 @@ namespace activities{
      * 
      * \tparam ActivityT The  activity 
      * \tparam DependenciesT The activities that has to be performed before performing ActivityT
+     * \ingroup activities
      */
     template <typename ActivityT, typename... DependenciesT>
     struct subtask{
@@ -486,6 +555,15 @@ namespace activities{
             _activity->required(flag);
             return *this;
         }
+        
+        /**
+         * Force cancelation of the activity even after it is successful to stop propagating to the next activities
+         * \param f callback which should return true to signal cancelation
+         */
+        self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
+            _activity->cancel_if(cancelor);
+            return *this;
+        }
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -501,6 +579,7 @@ namespace activities{
      * Spetialization for the root subtask in the task graph
      * 
      * \tparam ActivityT The  activity 
+     * \ingroup activities
      */
     template <typename ActivityT>
     struct subtask<ActivityT>{
@@ -549,6 +628,15 @@ namespace activities{
             _activity->required(flag);
             return *this;
         }
+        
+        /**
+         * Force cancelation of the activity even after it is successful to stop propagating to the next activities
+         * \param f callback which should return true to signal cancelation
+         */
+        self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
+            _activity->cancel_if(cancelor);
+            return *this;
+        }
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -561,6 +649,7 @@ namespace activities{
     /**
      * create a subtask to perform activity ActivityT
      * \tparam ActivityT the activity to perform
+     * \ingroup activities
      */
     template <typename ActivityT>
     struct perform{
@@ -588,66 +677,73 @@ namespace activities{
         }
     };
     
-    template <typename DerivedT, typename... T>
-    struct aggregated: std::enable_shared_from_this<DerivedT>{
-        typedef collector<T...> collector_type;
-        typedef accessor<T...> accessor_type;
-        
-        template <typename ContextT>
-        aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)), _accessor(_collector){}
-        
-        std::shared_ptr<collector_type> data() { return _collector; }
-        accessor_type& access() { return _accessor; }
-        std::shared_ptr<DerivedT> self() { return std::enable_shared_from_this<DerivedT>::shared_from_this(); }
-        
-        template <typename V>
-        bool exists() const{
-            return _accessor.template exists<typename V::result_type>();
-        }
-        template <typename V>
-        const typename V::result_type& get() const{
-            return _accessor.template get<typename V::result_type>();
-        }
-        template <typename V>
-        bool failed() const{
-            if(_accessor.template exists<typename V::result_type>()){
-                typename V::result_type res = _accessor.template get<typename V::result_type>();
-                return res.failed();
-            }
-            return true;
-        }
-        template <typename V>
-        typename V::result_type::success_type success() const{
-            if(_accessor.template exists<typename V::result_type>()){
-                typename V::result_type res = _accessor.template get<typename V::result_type>();
-                return res.success_data();
-            }
-            return typename V::result_type::success_type();
-        }
-        template <typename V>
-        typename V::result_type::failure_type failure() const{
-            if(_accessor.template exists<typename V::result_type>()){
-                typename V::result_type res = _accessor.template get<typename V::result_type>();
-                return res.failure_data();
-            }
-            return typename V::result_type::failure_type();
-        }
-        private:
-            std::shared_ptr<collector_type> _collector;
-            accessor_type _accessor;
-    };
+//     template <typename DerivedT, typename... T>
+//     struct aggregated: std::enable_shared_from_this<DerivedT>{
+//         typedef collector<T...> collector_type;
+//         typedef accessor<T...> accessor_type;
+//         
+//         template <typename ContextT>
+//         aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)), _accessor(_collector){}
+//         
+//         std::shared_ptr<collector_type> data() { return _collector; }
+//         accessor_type& access() { return _accessor; }
+//         std::shared_ptr<DerivedT> self() { return std::enable_shared_from_this<DerivedT>::shared_from_this(); }
+//         
+//         template <typename V>
+//         bool exists() const{
+//             return _accessor.template exists<typename V::result_type>();
+//         }
+//         template <typename V>
+//         const typename V::result_type& get() const{
+//             return _accessor.template get<typename V::result_type>();
+//         }
+//         template <typename V>
+//         bool failed() const{
+//             if(_accessor.template exists<typename V::result_type>()){
+//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
+//                 return res.failed();
+//             }
+//             return true;
+//         }
+//         template <typename V>
+//         typename V::result_type::success_type success() const{
+//             if(_accessor.template exists<typename V::result_type>()){
+//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
+//                 return res.success_data();
+//             }
+//             return typename V::result_type::success_type();
+//         }
+//         template <typename V>
+//         typename V::result_type::failure_type failure() const{
+//             if(_accessor.template exists<typename V::result_type>()){
+//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
+//                 return res.failure_data();
+//             }
+//             return typename V::result_type::failure_type();
+//         }
+//         private:
+//             std::shared_ptr<collector_type> _collector;
+//             accessor_type _accessor;
+//     };
     
+    /**
+     * \ingroup data
+     */
     template <typename... T, typename ContextT>
     std::shared_ptr<collector<T...>> collect(ContextT& ctx, const std::string& name){
         return std::make_shared<collector<T...>>(ctx.aux().config(), name);
     }
     
+    /**
+     * \ingroup activities
+     */
     template <typename CollectorT, typename CallbackT>
     struct joined{
         typedef CollectorT collector_type;
         typedef typename collector_type::accessor_type accessor_type;
         typedef CallbackT callback_type;
         typedef joined<CollectorT, CallbackT> self_type;
+        typedef int cancel_if_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
         void operator()(){
@@ -657,6 +753,8 @@ namespace activities{
         void cancel(){
             operator()();
         }
+        template <typename U>
+        void cancel_if(U&){}
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;
@@ -681,6 +779,9 @@ namespace activities{
         };
     }
     
+    /**
+     * \ingroup activities
+     */
     template <typename... DependenciesT>
     struct require{
         template <typename CollectorT>
@@ -699,6 +800,8 @@ namespace activities{
      * \tparam DerivedT Activity Class 
      * \tparam SuccessDataT data associated to the activity if the activity succeeds
      * \tparam FailureDataT data associated to the activity if the activity fails
+     * 
+     * \ingroup activities
      */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<SuccessDataT, FailureDataT>{
@@ -718,6 +821,7 @@ namespace activities{
 
 /**
  * shorthand for udho::activities::collect
+ * \ingroup data
  */
 template <typename... T, typename ContextT>
 std::shared_ptr<activities::collector<T...>> collect(ContextT& ctx, const std::string& name){
@@ -727,6 +831,7 @@ std::shared_ptr<activities::collector<T...>> collect(ContextT& ctx, const std::s
 /**
  * shorthand for udho::activities::accessor
  * \see udho::activities::accessor
+ * \ingroup data
  */
 template <typename... T>
 using accessor = activities::accessor<T...>;
@@ -734,6 +839,7 @@ using accessor = activities::accessor<T...>;
 /**
  * shorthand for udho::activities::activity
  * \see udho::activities::activity
+ * \ingroup activities
  */
 template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
 using activity = activities::activity<DerivedT, SuccessDataT, FailureDataT>;
@@ -741,6 +847,7 @@ using activity = activities::activity<DerivedT, SuccessDataT, FailureDataT>;
 /**
  * shorthand for udho::activities::require
  * \see udho::activities::require
+ * \ingroup activities
  */
 template <typename... DependenciesT>
 using require = activities::require<DependenciesT...>;
@@ -748,6 +855,7 @@ using require = activities::require<DependenciesT...>;
 /**
  * shorthand for udho::activities::perform
  * \see udho::activities::perform
+ * \ingroup activities
  */
 template <typename ActivityT>
 using perform = activities::perform<ActivityT>;

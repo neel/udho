@@ -47,6 +47,7 @@ namespace udho{
     
 /**
  * @todo write docs
+ * \ingroup server
  */
 template <typename ConfigT>
 struct bridge{

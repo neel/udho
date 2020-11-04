@@ -169,7 +169,9 @@ void planet(udho::contexts::stateless ctx, std::string name){
     
     auto data = udho::collect<A1, A2i, A3i>(ctx, "A");
     
-    auto t1 = udho::perform<A1>::with(data, io).required(false);
+    auto t1 = udho::perform<A1>::with(data, io).cancel_if([](const A1SData& d){
+        return true;
+    });
     auto t2 = udho::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
         udho::accessor<A1> a1_access(data);
         A1SData pre = a1_access.success<A1>();
