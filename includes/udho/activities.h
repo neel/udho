@@ -34,6 +34,7 @@
 #include <boost/signals2.hpp>
 #include <udho/cache.h>
 #include <boost/bind.hpp>
+#include <udho/util.h>
 
 namespace udho{
 /**
@@ -146,6 +147,18 @@ namespace activities{
             return false;
         }
         /**
+         * Check whether activity V has been canceled.
+         * \tparam V activity type
+         */
+        template <typename V>
+        bool canceled() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.canceled();
+            }
+            return false;
+        }
+        /**
          * Check whether activity V has failed (only the failure data of V is valid).
          * \tparam V activity type
          */
@@ -154,6 +167,18 @@ namespace activities{
             if(base_type::template exists<typename V::result_type>()){
                 typename V::result_type res = base_type::template get<typename V::result_type>();
                 return res.failed();
+            }
+            return true;
+        }
+        /**
+         * Check whether activity V is okay.
+         * \tparam V activity type
+         */
+        template <typename V>
+        bool okay() const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                return res.okay();
             }
             return true;
         }
@@ -184,6 +209,18 @@ namespace activities{
         template <typename V>
         void set(const typename V::result_type& value){
             base_type::template set<typename V::result_type>(value);
+        }
+        /**
+         * Apply a callback on result of V
+         * \tparam V activity type
+         * \param f callback
+         */
+        template <typename V, typename F>
+        void apply(F f) const{
+            if(base_type::template exists<typename V::result_type>()){
+                typename V::result_type res = base_type::template get<typename V::result_type>();
+                res.template apply<F>(f);
+            }
         }
     };
     
@@ -227,6 +264,40 @@ namespace activities{
         return h;
     }
     
+    namespace detail{
+        template <bool invocable, typename FunctorT, typename... TargetsT>
+        struct apply_helper_{
+            void operator()(FunctorT& f, const TargetsT&... t){f(t...);}
+        };
+        template <typename FunctorT, typename... TargetsT>
+        struct apply_helper_<false, FunctorT, TargetsT...>{
+            void operator()(FunctorT&, const TargetsT&...){}
+        };
+        template <typename FunctorT, typename... TargetsT>
+        using apply_helper = apply_helper_<udho::util::is_invocable<FunctorT, TargetsT...>::value, FunctorT, TargetsT... >;
+    }
+    
+    template <typename FunctorT, typename SuccessT, typename FailureT>
+    struct apply_helper: detail::apply_helper<FunctorT>, detail::apply_helper<FunctorT, SuccessT>, detail::apply_helper<FunctorT, FailureT>, detail::apply_helper<FunctorT, SuccessT, FailureT>{
+        FunctorT& _ftor;
+        
+        apply_helper(FunctorT& f): _ftor(f){}
+        
+        void operator()(){
+            detail::apply_helper<FunctorT>::operator()(_ftor);
+        }
+        void operator()(const SuccessT& s){
+            detail::apply_helper<FunctorT, SuccessT>::operator()(_ftor, s);
+        }
+        void operator()(const FailureT& f){
+            detail::apply_helper<FunctorT, FailureT>::operator()(_ftor, f);
+        }
+        void operator()(const SuccessT& s, const FailureT& f){
+            detail::apply_helper<FunctorT, SuccessT, FailureT>::operator()(_ftor, s, f);
+        }
+        
+    };
+    
     /**
      * Contains **Copiable** Success or Failure data for an activity.
      * \tparam SuccessT success data type
@@ -249,36 +320,66 @@ namespace activities{
         failure_type _fdata;
         
         result_data(): _completed(false), _success(false), _canceled(false){}
-        
+
         /**
          * either success or failure data set
          */
-        bool completed() const{
+        inline bool completed() const{
             return _completed;
         }
         /**
          * whether the activity has failed
          */
-        bool failed() const{
+        inline bool failed() const{
             return !_success;
         }
         /**
          * check whether the activity has been canceled
          */
-        bool canceled() const{
+        inline bool canceled() const{
             return _canceled;
+        }
+        
+        inline bool okay() const{
+            return completed() && !failed() && !canceled();
         }
         /**
          * Success data 
          */
-        const success_type& success_data() const{
+        inline const success_type& success_data() const{
             return _sdata;
         }
         /**
          * Failure data
          */
-        const failure_type& failure_data() const{
+        inline const failure_type& failure_data() const{
             return _fdata;
+        }
+        
+        /**
+         * Apply a callable to the result data which will be invoked exactly once with appropriate arguments. 
+         * The invocation of the callback depends on the state as shown below.
+         * 
+         * - Incomplete: callback()
+         * - Canceled: callback(const SuccessT&, const FailureT&)
+         * - Failed: callback(const FailureT&)
+         * - Successful: callback(const SuccessT&)
+         * 
+         * The callback may not have all the overloads. 
+         * 
+         * \param callback 
+         */
+        template <typename CallableT>
+        void apply(CallableT callback){
+            apply_helper<CallableT, success_type, failure_type> helper(callback);
+            if(!completed()){ // Never completed hence success or failure does not matter
+                helper();
+            }else if(canceled()){ // cancelation may occur after failure or after success (forced by cancel_if) hence passed both success and failure data as callback
+                helper(success_data(), failure_data());
+            }else{
+                if(!failed()) helper(success_data()); // complete and successful 
+                if(failed())  helper(failure_data()); // complete and failed
+            }
         }
         protected:
             /**
@@ -298,11 +399,85 @@ namespace activities{
                 _completed = true;
             }
             /**
-             * mark as cnceled
+             * mark as canceled
              */
             void cancel(){
                 _canceled = true;
             }
+    };
+    
+    /**
+     * \code
+     * const udho::accessor<A1, A2i, A3i>& d;
+     * d.apply<A1>(udho::activities::analyzer<A1>()
+     *      .canceled([](const A1SData& s, const A1FData& f){
+     *          std::cout << "CANCELED" << std::endl;
+     *      })
+     *      .incomplete([](){
+     *          std::cout << "INCOMPLETE" << std::endl;
+     *      })
+     *      .failure([](const A1FData& f){
+     *          std::cout << "FAILED" << std::endl;
+     *      })
+     *      .success([](const A1SData& s){
+     *          std::cout << "SUCCESS" << std::endl;
+     *      })
+     * );
+     * \endcode
+     */
+    template <typename ActivityT>
+    struct analyzer{
+        typedef ActivityT activity_type;
+        typedef typename activity_type::success_type success_type;
+        typedef typename activity_type::failure_type failure_type;
+        typedef boost::function<void ()> incomplete_ftor_type;
+        typedef boost::function<void (const success_type&, const failure_type&)> cancelation_ftor_type;
+        typedef boost::function<void (const failure_type&)> failure_ftor_type;
+        typedef boost::function<void (const success_type&)> success_ftor_type;
+        typedef analyzer<ActivityT> self_type;
+        
+        incomplete_ftor_type  _incomplete;
+        cancelation_ftor_type _canceled;
+        failure_ftor_type     _failure;
+        success_ftor_type     _success;
+        
+        void operator()(){
+            if(!_incomplete.empty()){
+                _incomplete();
+            }
+        }
+        void operator()(const success_type& s, const failure_type& f){
+            if(!_canceled.empty()){
+                _canceled(s, f);
+            }
+        }
+        void operator()(const failure_type& f){
+            if(!_failure.empty()){
+                _failure(f);
+            }
+        }
+        void operator()(const success_type& s){
+            if(!_success.empty()){
+                _success(s);
+            }
+        }
+        
+        self_type& incomplete(incomplete_ftor_type ftor){
+            _incomplete = ftor;
+            return *this;
+        }
+        self_type& canceled(cancelation_ftor_type ftor){
+            _canceled = ftor;
+            return *this;
+        }
+        self_type& failure(failure_ftor_type ftor){
+            _failure = ftor;
+            return *this;
+        }
+        self_type& success(success_ftor_type ftor){
+            _success = ftor;
+            return *this;
+        }
     };
     
     template <typename NextT, typename... DependenciesT>
@@ -393,10 +568,7 @@ namespace activities{
                 data_type::cancel();
                 _cancelation_signals();
             }
-            void completed(){
-                data_type self = static_cast<const data_type&>(*this);
-                _shadow << self;
-                
+            void completed(){                
                 bool should_cancel = false;
                 if(!data_type::failed()){
                     if(!_cancel_if.empty()){
@@ -405,6 +577,11 @@ namespace activities{
                 }else{
                     should_cancel = data_type::failed() && _required;
                 }
+
+                if(should_cancel) data_type::cancel();
+
+                data_type self = static_cast<const data_type&>(*this);
+                _shadow << self;
                 
                 if(should_cancel){
                     cancel();

@@ -170,7 +170,7 @@ void planet(udho::contexts::stateless ctx, std::string name){
     auto data = udho::collect<A1, A2i, A3i>(ctx, "A");
     
     auto t1 = udho::perform<A1>::with(data, io).cancel_if([](const A1SData& d){
-        return true;
+        return false;
     });
     auto t2 = udho::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
         udho::accessor<A1> a1_access(data);
@@ -189,6 +189,23 @@ void planet(udho::contexts::stateless ctx, std::string name){
         std::cout << "Final begin" << std::endl;
         
         int sum = 0;
+        
+        std::cout << "A1 canceled" << d.canceled<A1>() << std::endl;
+        
+        d.apply<A1>(udho::activities::analyzer<A1>()
+            .canceled([](const A1SData& s, const A1FData& f){
+                std::cout << "CANCELED" << std::endl;
+            })
+            .incomplete([](){
+                std::cout << "INCOMPLETE" << std::endl;
+            })
+            .failure([](const A1FData& f){
+                std::cout << "FAILED" << std::endl;
+            })
+            .success([](const A1SData& s){
+                std::cout << "SUCCESS" << std::endl;
+            })
+        );
         
         if(!d.failed<A2i>()){
             A2SData pre = d.success<A2i>();

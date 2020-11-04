@@ -343,6 +343,15 @@ namespace util{
         return result;
     }
 
+    // https://stackoverflow.com/questions/51187974/can-stdis-invocable-be-emulated-within-c11/51188325#51188325
+    template <typename F, typename... Args>
+    struct is_invocable :
+        std::is_constructible<
+            std::function<void(Args ...)>,
+            std::reference_wrapper<typename std::remove_reference<F>::type>
+        >
+    {
+    };
 }
 
 namespace detail{
