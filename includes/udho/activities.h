@@ -408,12 +408,33 @@ namespace activities{
             }
     };
     
+    /**
+     * activity result states
+     * \ingroup activities
+     * \ingroup data
+     */
     enum class state{
         unknown,
+        /**
+         * The activity is incomplete
+         */
         incomplete,
+        /**
+         * The activity has failed
+         */
         failure,
+        /**
+         * The activity completed successfully
+         */
         success,
+        /**
+         * The activity is canceled
+         */
         canceled,
+        /**
+         * The activity is canceled but has not failed.
+         * The error state is only used when an error callback is passed to the analyzer
+         */
         error
     };
     
@@ -442,6 +463,10 @@ namespace activities{
      *      })
      * );
      * \endcode
+     * An analyzer can be applied on an activity to analyze its result data. The analyzer can be equipped with callbackss to handle different result states.
+     * \ingroup activities
+     * \ingroup data
+     * \see state
      */
     template <typename ActivityT>
     class analyzer{
@@ -1135,6 +1160,11 @@ using require = activities::require<DependenciesT...>;
 template <typename ActivityT>
 using perform = activities::perform<ActivityT>;
 
+/**
+ * \see udho::activities::analyzer
+ * \ingroup activities
+ * \ingroup data
+ */
 template <typename ActivityT, typename AccessorT>
 udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
     return udho::activities::analyzer<ActivityT>(accessor);
