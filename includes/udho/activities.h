@@ -598,7 +598,7 @@ namespace activities{
                 return _state;
             }
             
-            bool is_success(){
+            bool successful(){
                 activity_state state = apply();
                 return state == udho::activities::state::success;
             }
