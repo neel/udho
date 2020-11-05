@@ -500,27 +500,25 @@ namespace activities{
         void operator()(){
             // either there is no error callback and there is an incomplete callback
             // or there is an error callback but the task has not been canceled
-            if((_error.empty() && !_incomplete.empty()) || (!_error.empty() && !_accessor.template canceled<ActivityT>())){
-                _incomplete();
+            if(_error.empty() || !_accessor.template canceled<ActivityT>()){
+                if(!_incomplete.empty()) _incomplete();
                 _state = state::incomplete;
             }
         }
         void operator()(const success_type& s, const failure_type& f){
             // there is no error callback and there is a cancel callback set
             if(_error.empty()){
-                if(!_canceled.empty()){
-                    _canceled(s, f);
-                    _state = state::canceled;
-                }
+                if(!_canceled.empty()) _canceled(s, f);
+                _state = state::canceled;
             }else{
                 if(!_accessor.template failed<ActivityT>()){ // succeeded but canceled, hence error 
                     _error(s);
                     _state = state::error;
                 }else if(_accessor.template completed<ActivityT>()){ // failed then canceled, hence call failure callback instead
-                    _failure(f);
+                    if(!_failure.empty()) _failure(f);
                     _state = state::failure;
                 }else{ // incomplete, never invoked, skipped possibly because at least one of its dependency canceled
-                    _incomplete();
+                    if(!_incomplete.empty()) _incomplete();
                     _state = state::incomplete;
                 }
             }
@@ -528,16 +526,14 @@ namespace activities{
         void operator()(const failure_type& f){
             // either there is no error callback and there is a failure callback set
             // or there is an error callback but the task has not been canceled
-            if((_error.empty() && !_failure.empty()) || (!_error.empty() && !_accessor.template canceled<ActivityT>())){
-                _failure(f);
+            if(_error.empty() || !_accessor.template canceled<ActivityT>()){
+                if(!_failure.empty()) _failure(f);
                 _state = state::failure;
             }
         }
         void operator()(const success_type& s){
-            if(!_success.empty()){
-                _success(s);
-                _state = state::success;
-            }
+            if(!_success.empty()) _success(s);
+            _state = state::success;
         }
         
         public:
