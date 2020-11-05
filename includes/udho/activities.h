@@ -597,6 +597,11 @@ namespace activities{
                 _accessor.template apply<ActivityT>(std::ref(*this));
                 return _state;
             }
+            
+            bool is_success(){
+                activity_state state = apply();
+                return state == udho::activities::state::success;
+            }
     };
     
     template <typename NextT, typename... DependenciesT>
