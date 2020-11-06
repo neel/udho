@@ -865,6 +865,14 @@ namespace activities{
             _activity->cancel_if(cancelor);
             return *this;
         }
+        
+        /**
+         * returns the shared pointer to the actiivity
+         */
+        std::shared_ptr<activity_type> operator->(){
+            return _activity;
+        }
+        
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -938,6 +946,14 @@ namespace activities{
             _activity->cancel_if(cancelor);
             return *this;
         }
+        
+        /**
+         * returns the shared pointer to the actiivity
+         */
+        std::shared_ptr<activity_type> operator->(){
+            return _activity;
+        }
+        
         private:
             template <typename... U>
             subtask(int, U&&... u){
