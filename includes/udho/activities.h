@@ -822,7 +822,7 @@ namespace activities{
         typedef subtask<ActivityT, DependenciesT...> self_type;
         
         template <typename U, typename... DependenciesU>
-        friend class subtask;
+        friend struct subtask;
         
         subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
         
@@ -917,7 +917,7 @@ namespace activities{
         typedef subtask<ActivityT> self_type;
         
         template <typename U, typename... DependenciesU>
-        friend class subtask;
+        friend struct subtask;
         
         subtask(const self_type& other): _activity(other._activity){}
                 
@@ -1241,9 +1241,9 @@ namespace activities{
         
         template <typename ActivityT, typename... DependenciesT>
         struct after<subtask<ActivityT, DependenciesT...>>{
-            subtask<ActivityT, DependenciesT...> _before;
+            subtask<ActivityT, DependenciesT...>& _before;
             
-            after(subtask<ActivityT, DependenciesT...> before): _before(before){}
+            after(subtask<ActivityT, DependenciesT...>& before): _before(before){}
             
             template <typename OtherActivityT, typename... OtherDependenciesT>
             void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
@@ -1255,7 +1255,7 @@ namespace activities{
     
     template <typename HeadT, typename... TailT>
     struct after: detail::after<HeadT>, after<TailT...>{
-        after(HeadT head, TailT... tail): detail::after<HeadT>(head), after<TailT...>(tail...){}
+        after(HeadT& head, TailT&... tail): detail::after<HeadT>(head), after<TailT...>(tail...){}
         
         template <typename ActivityT, typename... Args>
         subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
@@ -1273,7 +1273,7 @@ namespace activities{
     
     template <typename HeadT>
     struct after<HeadT>: detail::after<HeadT>{
-        after(HeadT head): detail::after<HeadT>(head){}
+        after(HeadT& head): detail::after<HeadT>(head){}
         
         template <typename ActivityT, typename... Args>
         subtask<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
@@ -1348,7 +1348,7 @@ udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
 }
 
 template <typename... T>
-udho::activities::after<T...> after(T... dependencies){
+udho::activities::after<T...> after(T&... dependencies){
     return udho::activities::after<T...>(dependencies...);
 }
 
@@ -1364,10 +1364,28 @@ struct start: activities::subtask<activities::start>{
     collector_ptr _collector;
     
     template <typename ContextT>
-    start(ContextT ctx, const std::string& name = "activity"): _collector(activities::collect<T...>(ctx, name)), activities::subtask<activities::start>(_collector){}
+    start(ContextT ctx, const std::string& name = "activity"): _collector(activities::collect<T...>(ctx, name)), activities::subtask<activities::start>(0, _collector){}
     
     collector_ptr data() const { return _collector; }
 };
+
+namespace activities{
+    namespace detail{
+        
+        template <typename... T>
+        struct after<udho::start<T...>>{
+            udho::start<T...>& _before;
+            
+            after(udho::start<T...>& before): _before(before){}
+            
+            template <typename OtherActivityT, typename... OtherDependenciesT>
+            void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
+                sub.after(_before);
+            }
+        };
+        
+    }
+}
 
 }
 
