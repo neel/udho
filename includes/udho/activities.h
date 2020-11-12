@@ -715,27 +715,27 @@ namespace activities{
             }
     };
     
-//     template <>
-//     struct result<void, void>{
-//         typedef boost::signals2::signal<void ()> signal_type;
-//         
-//         signal_type   _signal;
-//         
-//         template <typename StoreT>
-//         result(StoreT&){}
-//         
-//         template <typename CombinatorT>
-//         void done(CombinatorT cmb){
-//             boost::function<void ()> fnc([cmb](){
-//                 cmb->operator()();
-//             });
-//             _signal.connect(fnc);
-//         }
-//         
-//         void success(){                
-//             _signal();
-//         }
-//     };
+    template <>
+    struct result<void, void>{
+        typedef boost::signals2::signal<void ()> signal_type;
+        
+        signal_type   _signal;
+        
+        template <typename StoreT>
+        result(StoreT&){}
+        
+        template <typename CombinatorT>
+        void done(CombinatorT cmb){
+            boost::function<void ()> fnc([cmb](){
+                cmb->operator()();
+            });
+            _signal.connect(fnc);
+        }
+        
+        void success(){                
+            _signal();
+        }
+    };
 
     /**
      * \internal 
@@ -984,6 +984,7 @@ namespace activities{
             std::shared_ptr<activity_type> _activity;
     };
     
+    
     /**
      * create a subtask to perform activity ActivityT
      * \tparam ActivityT the activity to perform
@@ -1155,36 +1156,83 @@ namespace activities{
             return std::enable_shared_from_this<DerivedT>::shared_from_this();
         }
     };
+
+    struct start: activity<start>{
+        template <typename StoreT>
+        start(StoreT& store): activity<start>(store){}
+        
+        inline void operator()(){
+            activity<start>::success();
+        }
+    };
+    template <typename NextT>
+    struct combinator<NextT, start>{
+        typedef std::shared_ptr<NextT> next_type;
+        next_type  _next;
+
+        combinator(next_type& next): _next(next){}
+        void operator()(){
+            propagate();
+        }
+        void propagate(){
+            (*_next)();
+        }
+    };
     
-//     template <typename NextT>
-//     struct combinator<NextT>{
-//         typedef std::shared_ptr<NextT> next_type;
-//         
-//         next_type  _next;
-//         
-//         combinator(next_type& next): _next(next){}
-//         
-//         /**
-//          * whenever a subtask finishes the `operator()` of the combinator is called. which doesn't start the next subtask untill all the dependencies have completed.
-//          * Before starting the next activity the next activity is prepared if any preparator is passed through the `prepare()` function
-//          */
-//         void operator()(){
-//             propagate();
-//         }
-//         
-//         void propagate(){
-//             (*_next)();
-//         }
-//     };
-    
-//     struct start: activity<start>{
-//         template <typename StoreT>
-//         start(StoreT& store): activity<start>(store){}
-//         
-//         inline void operator()(){
-//             activity<start>::success();
-//         }
-//     };
+    template <>
+    struct subtask<start>{
+        typedef start activity_type;
+        typedef subtask<start> self_type;
+        
+        template <typename U, typename... DependenciesU>
+        friend struct subtask;
+        
+        subtask(const self_type& other): _activity(other._activity){}
+                
+        std::shared_ptr<activity_type> activity() {
+            return _activity;
+        }
+        
+        /**
+         * execute task next after the current one
+         * \param next the next subtask
+         */
+        template <typename V, typename... DependenciesV>
+        self_type& done(subtask<V, DependenciesV...>& next){
+            activity()->done(next._combinator);
+            return *this;
+        }
+        
+        /**
+         * Arguments for the constructor of the Activity
+         */
+        template <typename... U>
+        static self_type with(U&&... u){
+            return self_type(0, u...);
+        }
+        
+        /**
+         * calls the `operator()()` of the activity and starts executing the graph
+         */
+        void operator()(){
+            _activity->operator()();
+        }
+        
+        /**
+         * returns the shared pointer to the actiivity
+         */
+        std::shared_ptr<activity_type> operator->(){
+            return _activity;
+        }
+        
+        protected:
+            template <typename... U>
+            subtask(int, U&&... u){
+                _activity = std::make_shared<activity_type>(u...);
+            }
+            
+            std::shared_ptr<activity_type> _activity;
+    };
     
     namespace detail{
         
@@ -1307,6 +1355,19 @@ udho::activities::after<T...> after(T... dependencies){
 inline udho::activities::after_none after(){
     return udho::activities::after_none();
 }
+
+template <typename... T>
+struct start: activities::subtask<activities::start>{
+    typedef activities::collector<T...> collector_type;
+    typedef std::shared_ptr<collector_type> collector_ptr;
+    
+    collector_ptr _collector;
+    
+    template <typename ContextT>
+    start(ContextT ctx, const std::string& name = "activity"): _collector(activities::collect<T...>(ctx, name)), activities::subtask<activities::start>(_collector){}
+    
+    collector_ptr data() const { return _collector; }
+};
 
 }
 
