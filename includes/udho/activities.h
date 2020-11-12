@@ -614,7 +614,7 @@ namespace activities{
      * 
      * \ingroup activities
      */
-    template <typename SuccessT, typename FailureT>
+    template <typename SuccessT = void, typename FailureT = void>
     struct result: result_data<SuccessT, FailureT>{
         typedef result_data<SuccessT, FailureT> data_type;
         typedef accessor<data_type> accessor_type;
@@ -714,6 +714,28 @@ namespace activities{
                 }
             }
     };
+    
+//     template <>
+//     struct result<void, void>{
+//         typedef boost::signals2::signal<void ()> signal_type;
+//         
+//         signal_type   _signal;
+//         
+//         template <typename StoreT>
+//         result(StoreT&){}
+//         
+//         template <typename CombinatorT>
+//         void done(CombinatorT cmb){
+//             boost::function<void ()> fnc([cmb](){
+//                 cmb->operator()();
+//             });
+//             _signal.connect(fnc);
+//         }
+//         
+//         void success(){                
+//             _signal();
+//         }
+//     };
 
     /**
      * \internal 
@@ -783,8 +805,7 @@ namespace activities{
             _preparators.connect(prep);
         }
     };
-    
-    
+       
     /**
      * A `subtask` is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
      * A subtask contains two shared pointers, one to the activity and another one to the combinator.
@@ -1120,7 +1141,7 @@ namespace activities{
      * 
      * \ingroup activities
      */
-    template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
+    template <typename DerivedT, typename SuccessDataT = void, typename FailureDataT = void>
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<SuccessDataT, FailureDataT>{
         typedef std::shared_ptr<DerivedT> derived_ptr_type;
         
@@ -1132,6 +1153,97 @@ namespace activities{
          */
         derived_ptr_type self() {
             return std::enable_shared_from_this<DerivedT>::shared_from_this();
+        }
+    };
+    
+//     template <typename NextT>
+//     struct combinator<NextT>{
+//         typedef std::shared_ptr<NextT> next_type;
+//         
+//         next_type  _next;
+//         
+//         combinator(next_type& next): _next(next){}
+//         
+//         /**
+//          * whenever a subtask finishes the `operator()` of the combinator is called. which doesn't start the next subtask untill all the dependencies have completed.
+//          * Before starting the next activity the next activity is prepared if any preparator is passed through the `prepare()` function
+//          */
+//         void operator()(){
+//             propagate();
+//         }
+//         
+//         void propagate(){
+//             (*_next)();
+//         }
+//     };
+    
+//     struct start: activity<start>{
+//         template <typename StoreT>
+//         start(StoreT& store): activity<start>(store){}
+//         
+//         inline void operator()(){
+//             activity<start>::success();
+//         }
+//     };
+    
+    namespace detail{
+        
+        template <typename T>
+        struct after;
+        
+        template <typename ActivityT, typename... DependenciesT>
+        struct after<subtask<ActivityT, DependenciesT...>>{
+            subtask<ActivityT, DependenciesT...> _before;
+            
+            after(subtask<ActivityT, DependenciesT...> before): _before(before){}
+            
+            template <typename OtherActivityT, typename... OtherDependenciesT>
+            void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
+                sub.after(_before);
+            }
+        };
+        
+    }
+    
+    template <typename HeadT, typename... TailT>
+    struct after: detail::after<HeadT>, after<TailT...>{
+        after(HeadT head, TailT... tail): detail::after<HeadT>(head), after<TailT...>(tail...){}
+        
+        template <typename ActivityT, typename... Args>
+        subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
+            subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...>::with(args...);
+            attach(sub);
+            return sub;
+        }
+        
+        template <typename ActivityT, typename... DependenciesT>
+        void attach(subtask<ActivityT, DependenciesT...>& sub){
+            detail::after<HeadT>::attach(sub);
+            after<TailT...>::attach(sub);
+        }
+    };
+    
+    template <typename HeadT>
+    struct after<HeadT>: detail::after<HeadT>{
+        after(HeadT head): detail::after<HeadT>(head){}
+        
+        template <typename ActivityT, typename... Args>
+        subtask<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
+            subtask<ActivityT, typename HeadT::activity_type> sub = subtask<ActivityT, typename HeadT::activity_type>::with(args...);
+            attach(sub);
+            return sub;
+        }
+        
+        template <typename ActivityT, typename... DependenciesT>
+        void attach(subtask<ActivityT, DependenciesT...>& sub){
+            detail::after<HeadT>::attach(sub);
+        }
+    };
+    
+    struct after_none{
+        template <typename ActivityT, typename... Args>
+        subtask<ActivityT> perform(Args&&... args){
+            return subtask<ActivityT>::with(args...);
         }
     };
 }
@@ -1185,6 +1297,15 @@ using perform = activities::perform<ActivityT>;
 template <typename ActivityT, typename AccessorT>
 udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
     return udho::activities::analyzer<ActivityT>(accessor);
+}
+
+template <typename... T>
+udho::activities::after<T...> after(T... dependencies){
+    return udho::activities::after<T...>(dependencies...);
+}
+
+inline udho::activities::after_none after(){
+    return udho::activities::after_none();
 }
 
 }
