@@ -1269,6 +1269,13 @@ namespace activities{
             detail::after<HeadT>::attach(sub);
             after<TailT...>::attach(sub);
         }
+        
+        template <typename CollectorT, typename CallbackT>
+        subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...> finish(std::shared_ptr<CollectorT> collector, CallbackT callback){
+            subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...>::with(collector, callback);
+            attach(sub);
+            return sub;
+        }
     };
     
     template <typename HeadT>
@@ -1285,6 +1292,13 @@ namespace activities{
         template <typename ActivityT, typename... DependenciesT>
         void attach(subtask<ActivityT, DependenciesT...>& sub){
             detail::after<HeadT>::attach(sub);
+        }
+        
+        template <typename CollectorT, typename CallbackT>
+        subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type> finish(std::shared_ptr<CollectorT> collector, CallbackT callback){
+            subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type> sub = subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type>::with(collector, callback);
+            attach(sub);
+            return sub;
         }
     };
     
