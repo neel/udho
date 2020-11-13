@@ -499,7 +499,7 @@ struct field<T, true>: field_common, field_value_extractor<T>{
     std::string _message_required;
     
     template <typename... U>
-    field(const std::string& name, const std::string& message, U... args): extractor_type(args...), common_type(name), _message_required(message){}
+    field(const std::string& name, const std::string& message, U... args): common_type(name), extractor_type(args...), _message_required(message){}
     T value() const{
         return _value;
     }
@@ -582,7 +582,7 @@ struct field<T, false>: field_common, field_value_extractor<T>{
     validators_collection_type _validators;
     
     template <typename... U>
-    field(const std::string& name, U... args): extractor_type(args...), common_type(name){}
+    field(const std::string& name, U... args): common_type(name), extractor_type(args...){}
     T value() const{
         return _value;
     }
