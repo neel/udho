@@ -614,7 +614,7 @@ namespace activities{
      * 
      * \ingroup activities
      */
-    template <typename SuccessT = void, typename FailureT = void>
+    template <typename SuccessT, typename FailureT>
     struct result: result_data<SuccessT, FailureT>{
         typedef result_data<SuccessT, FailureT> data_type;
         typedef accessor<data_type> accessor_type;
@@ -714,28 +714,6 @@ namespace activities{
                 }
             }
     };
-    
-//     template <>
-//     struct result<void, void>{
-//         typedef boost::signals2::signal<void ()> signal_type;
-//         
-//         signal_type   _signal;
-//         
-//         template <typename StoreT>
-//         result(StoreT&){}
-//         
-//         template <typename CombinatorT>
-//         void done(CombinatorT cmb){
-//             boost::function<void ()> fnc([cmb](){
-//                 cmb->operator()();
-//             });
-//             _signal.connect(fnc);
-//         }
-//         
-//         void success(){                
-//             _signal();
-//         }
-//     };
 
     /**
      * \internal 
@@ -1016,55 +994,6 @@ namespace activities{
         }
     };
     
-//     template <typename DerivedT, typename... T>
-//     struct aggregated: std::enable_shared_from_this<DerivedT>{
-//         typedef collector<T...> collector_type;
-//         typedef accessor<T...> accessor_type;
-//         
-//         template <typename ContextT>
-//         aggregated(ContextT ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx.aux().config(), name)), _accessor(_collector){}
-//         
-//         std::shared_ptr<collector_type> data() { return _collector; }
-//         accessor_type& access() { return _accessor; }
-//         std::shared_ptr<DerivedT> self() { return std::enable_shared_from_this<DerivedT>::shared_from_this(); }
-//         
-//         template <typename V>
-//         bool exists() const{
-//             return _accessor.template exists<typename V::result_type>();
-//         }
-//         template <typename V>
-//         const typename V::result_type& get() const{
-//             return _accessor.template get<typename V::result_type>();
-//         }
-//         template <typename V>
-//         bool failed() const{
-//             if(_accessor.template exists<typename V::result_type>()){
-//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
-//                 return res.failed();
-//             }
-//             return true;
-//         }
-//         template <typename V>
-//         typename V::result_type::success_type success() const{
-//             if(_accessor.template exists<typename V::result_type>()){
-//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
-//                 return res.success_data();
-//             }
-//             return typename V::result_type::success_type();
-//         }
-//         template <typename V>
-//         typename V::result_type::failure_type failure() const{
-//             if(_accessor.template exists<typename V::result_type>()){
-//                 typename V::result_type res = _accessor.template get<typename V::result_type>();
-//                 return res.failure_data();
-//             }
-//             return typename V::result_type::failure_type();
-//         }
-//         private:
-//             std::shared_ptr<collector_type> _collector;
-//             accessor_type _accessor;
-//     };
-    
     /**
      * \ingroup data
      */
@@ -1101,32 +1030,6 @@ namespace activities{
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;
     };
-    
-    template <typename CallbackT, typename... T>
-    struct joined<CallbackT, activities::accessor<T...>>{
-        typedef activities::accessor<T...> accessor_type;
-        typedef CallbackT callback_type;
-        typedef joined<callback_type, accessor_type> self_type;
-        typedef int cancel_if_ftor;
-        
-        joined(accessor_type accessor, CallbackT callback): _accessor(accessor), _callback(callback){}
-        void operator()(){
-            _callback(_accessor);
-        }
-        void cancel(){
-            operator()();
-        }
-        template <typename U>
-        void cancel_if(U&){}
-        private:
-            accessor_type _accessor;
-            callback_type _callback;
-    };
-    
-//     template <typename... DependenciesT, typename CollectorT, typename CallbackT>
-//     task<joined<CollectorT, CallbackT>, DependenciesT...> exec(std::shared_ptr<CollectorT> collector, CallbackT callback){
-//         return task<joined<CollectorT, CallbackT>, DependenciesT...>::with(collector, callback);
-//     }
     
     namespace detail{
         template <typename CollectorT, typename... DependenciesT>
@@ -1320,9 +1223,9 @@ namespace activities{
             after<TailT...>::attach(sub);
         }
         
-        template <typename AccessorT, typename CallbackT>
-        subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...> finish(AccessorT accessor, CallbackT callback){
-            subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...>::with(accessor, callback);
+        template <typename CallbackT, typename StartT>
+        subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(StartT& starter, CallbackT callback){
+            subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...>::with(starter.collector(), callback);
             attach(sub);
             return sub;
         }
@@ -1344,9 +1247,9 @@ namespace activities{
             detail::after<HeadT>::attach(sub);
         }
         
-        template <typename AccessorT, typename CallbackT>
-        subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type> finish(AccessorT accessor, CallbackT callback){
-            subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type> sub = subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type>::with(accessor, callback);
+        template <typename CallbackT, typename StartT>
+        subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> finish(StartT& starter, CallbackT callback){
+            subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> sub = subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type>::with(starter.collector(), callback);
             attach(sub);
             return sub;
         }
@@ -1424,10 +1327,13 @@ template <typename... T>
 struct start: activities::subtask<activities::start<T...>>{
     typedef activities::start<T...> activity_type;
     typedef activities::subtask<activity_type> base;
+    typedef typename activity_type::collector_type collector_type;
+    typedef typename activity_type::accessor_type accessor_type;
     
     template <typename ContextT>
     start(ContextT ctx, const std::string& name = "activity"): base(0, ctx, name){}
     
+    auto collector() { return base::_activity->collector(); }
     auto data() const { return base::_activity->accessor(); }
     auto data() { return base::_activity->accessor(); }
 };
