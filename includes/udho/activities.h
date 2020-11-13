@@ -715,27 +715,27 @@ namespace activities{
             }
     };
     
-    template <>
-    struct result<void, void>{
-        typedef boost::signals2::signal<void ()> signal_type;
-        
-        signal_type   _signal;
-        
-        template <typename StoreT>
-        result(StoreT&){}
-        
-        template <typename CombinatorT>
-        void done(CombinatorT cmb){
-            boost::function<void ()> fnc([cmb](){
-                cmb->operator()();
-            });
-            _signal.connect(fnc);
-        }
-        
-        void success(){                
-            _signal();
-        }
-    };
+//     template <>
+//     struct result<void, void>{
+//         typedef boost::signals2::signal<void ()> signal_type;
+//         
+//         signal_type   _signal;
+//         
+//         template <typename StoreT>
+//         result(StoreT&){}
+//         
+//         template <typename CombinatorT>
+//         void done(CombinatorT cmb){
+//             boost::function<void ()> fnc([cmb](){
+//                 cmb->operator()();
+//             });
+//             _signal.connect(fnc);
+//         }
+//         
+//         void success(){                
+//             _signal();
+//         }
+//     };
 
     /**
      * \internal 
@@ -1157,16 +1157,38 @@ namespace activities{
         }
     };
 
-    struct start: activity<start>{
-        template <typename StoreT>
-        start(StoreT& store): activity<start>(store){}
+    template <typename... T>
+    struct start{
+        typedef activities::collector<T...> collector_type;
+        typedef std::shared_ptr<collector_type> collector_ptr;
+        typedef boost::signals2::signal<void ()> signal_type;
         
-        inline void operator()(){
-            activity<start>::success();
+        signal_type   _signal;
+        collector_ptr _collector;
+        
+        template <typename ContextT>
+        start(ContextT& ctx, const std::string& name): _collector(activities::collect<T...>(ctx, name)){}
+        
+        collector_ptr data() const { return _collector; }
+        
+        void operator()(){
+            success();
+        }
+        
+        template <typename CombinatorT>
+        void done(CombinatorT cmb){
+            boost::function<void ()> fnc([cmb](){
+                cmb->operator()();
+            });
+            _signal.connect(fnc);
+        }
+        
+        void success(){                
+            _signal();
         }
     };
-    template <typename NextT>
-    struct combinator<NextT, start>{
+    template <typename NextT, typename... T>
+    struct combinator<NextT, start<T...>>{
         typedef std::shared_ptr<NextT> next_type;
         next_type  _next;
 
@@ -1179,10 +1201,10 @@ namespace activities{
         }
     };
     
-    template <>
-    struct subtask<start>{
-        typedef start activity_type;
-        typedef subtask<start> self_type;
+    template <typename... T>
+    struct subtask<start<T...>>{
+        typedef start<T...> activity_type;
+        typedef subtask<start<T...>> self_type;
         
         template <typename U, typename... DependenciesU>
         friend struct subtask;
@@ -1371,16 +1393,14 @@ inline udho::activities::after_none after(){
 }
 
 template <typename... T>
-struct start: activities::subtask<activities::start>{
-    typedef activities::collector<T...> collector_type;
-    typedef std::shared_ptr<collector_type> collector_ptr;
-    
-    collector_ptr _collector;
+struct start: activities::subtask<activities::start<T...>>{
+    typedef activities::start<T...> activity_type;
+    typedef activities::subtask<activity_type> base;
     
     template <typename ContextT>
-    start(ContextT ctx, const std::string& name = "activity"): _collector(activities::collect<T...>(ctx, name)), activities::subtask<activities::start>(0, _collector){}
+    start(ContextT ctx, const std::string& name = "activity"): base(0, ctx, name){}
     
-    collector_ptr data() const { return _collector; }
+    typename activity_type::collector_ptr data() const { return base::_activity->data(); }
 };
 
 namespace activities{
