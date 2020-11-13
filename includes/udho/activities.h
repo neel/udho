@@ -114,7 +114,7 @@ namespace activities{
         template <typename... U>
         accessor(std::shared_ptr<collector<U...>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
         template <typename... U>
-        accessor(accessor<U...>& accessor): base_type(_shadow, accessor.name()), _shadow(accessor.shadow()){}
+        accessor(accessor<U...> accessor): base_type(_shadow, accessor.name()), _shadow(accessor.shadow()){}
         std::string name() const{ return base_type::key(); }
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
@@ -1073,15 +1073,18 @@ namespace activities{
         return std::make_shared<collector<T...>>(ctx.aux().config(), name);
     }
     
+    template <typename CallbackT, typename CollectorT>
+    struct joined;
+    
     /**
      * \ingroup activities
      */
-    template <typename CollectorT, typename CallbackT>
-    struct joined{
-        typedef CollectorT collector_type;
+    template <typename CallbackT, typename... T>
+    struct joined<CallbackT, activities::collector<T...>>{
+        typedef activities::collector<T...> collector_type;
         typedef typename collector_type::accessor_type accessor_type;
         typedef CallbackT callback_type;
-        typedef joined<CollectorT, CallbackT> self_type;
+        typedef joined<callback_type, activities::collector<T...>> self_type;
         typedef int cancel_if_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
@@ -1099,6 +1102,27 @@ namespace activities{
             callback_type _callback;
     };
     
+    template <typename CallbackT, typename... T>
+    struct joined<CallbackT, activities::accessor<T...>>{
+        typedef activities::accessor<T...> accessor_type;
+        typedef CallbackT callback_type;
+        typedef joined<callback_type, accessor_type> self_type;
+        typedef int cancel_if_ftor;
+        
+        joined(accessor_type accessor, CallbackT callback): _accessor(accessor), _callback(callback){}
+        void operator()(){
+            _callback(_accessor);
+        }
+        void cancel(){
+            operator()();
+        }
+        template <typename U>
+        void cancel_if(U&){}
+        private:
+            accessor_type _accessor;
+            callback_type _callback;
+    };
+    
 //     template <typename... DependenciesT, typename CollectorT, typename CallbackT>
 //     task<joined<CollectorT, CallbackT>, DependenciesT...> exec(std::shared_ptr<CollectorT> collector, CallbackT callback){
 //         return task<joined<CollectorT, CallbackT>, DependenciesT...>::with(collector, callback);
@@ -1112,8 +1136,8 @@ namespace activities{
             final_intermediate(std::shared_ptr<CollectorT> collector): _collector(collector){}
             
             template <typename CallbackT>
-            subtask<joined<CollectorT, CallbackT>, DependenciesT...> exec(CallbackT callback){
-                return subtask<joined<CollectorT, CallbackT>, DependenciesT...>::with(_collector, callback);
+            subtask<joined<CallbackT, CollectorT>, DependenciesT...> exec(CallbackT callback){
+                return subtask<joined<CallbackT, CollectorT>, DependenciesT...>::with(_collector, callback);
             }
         };
     }
@@ -1160,16 +1184,20 @@ namespace activities{
     template <typename... T>
     struct start{
         typedef activities::collector<T...> collector_type;
+        typedef activities::accessor<T...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;
         
         signal_type   _signal;
         collector_ptr _collector;
+        accessor_type _accessor;
         
         template <typename ContextT>
-        start(ContextT& ctx, const std::string& name): _collector(activities::collect<T...>(ctx, name)){}
+        start(ContextT& ctx, const std::string& name): _collector(activities::collect<T...>(ctx, name)), _accessor(_collector){}
         
-        collector_ptr data() const { return _collector; }
+        collector_ptr collector() const { return _collector; }
+        const accessor_type& accessor() const { return _accessor; }
+        accessor_type& accessor() { return _accessor; }
         
         void operator()(){
             success();
@@ -1292,9 +1320,9 @@ namespace activities{
             after<TailT...>::attach(sub);
         }
         
-        template <typename CollectorT, typename CallbackT>
-        subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...> finish(std::shared_ptr<CollectorT> collector, CallbackT callback){
-            subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type, typename TailT::activity_type...>::with(collector, callback);
+        template <typename AccessorT, typename CallbackT>
+        subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...> finish(AccessorT accessor, CallbackT callback){
+            subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type, typename TailT::activity_type...>::with(accessor, callback);
             attach(sub);
             return sub;
         }
@@ -1316,9 +1344,9 @@ namespace activities{
             detail::after<HeadT>::attach(sub);
         }
         
-        template <typename CollectorT, typename CallbackT>
-        subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type> finish(std::shared_ptr<CollectorT> collector, CallbackT callback){
-            subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type> sub = subtask<joined<CollectorT, CallbackT>, typename HeadT::activity_type>::with(collector, callback);
+        template <typename AccessorT, typename CallbackT>
+        subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type> finish(AccessorT accessor, CallbackT callback){
+            subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type> sub = subtask<joined<CallbackT, AccessorT>, typename HeadT::activity_type>::with(accessor, callback);
             attach(sub);
             return sub;
         }
@@ -1400,7 +1428,8 @@ struct start: activities::subtask<activities::start<T...>>{
     template <typename ContextT>
     start(ContextT ctx, const std::string& name = "activity"): base(0, ctx, name){}
     
-    typename activity_type::collector_ptr data() const { return base::_activity->data(); }
+    auto data() const { return base::_activity->accessor(); }
+    auto data() { return base::_activity->accessor(); }
 };
 
 namespace activities{
