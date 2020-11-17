@@ -28,3 +28,6 @@ TARGET_LINK_LIBRARIES(udho-example-view udho)
 
 ADD_EXECUTABLE(udho-example-activities activities.cpp)
 TARGET_LINK_LIBRARIES(udho-example-activities udho)
+
+ADD_EXECUTABLE(udho-example-form form)
+TARGET_LINK_LIBRARIES(udho-example-form udho)
