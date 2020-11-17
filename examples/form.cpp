@@ -24,21 +24,27 @@ int main(){
                 .unparsable("k1 not parsable")
                 .constrain<gte>(3, "k1.size < 3 not allowed")
                 .constrain<lte>(4, "k1.size > 4 not allowed");
-    
+                    
+    auto k2 = udho::forms::required<unsigned>("k2");
+                
     auto k3 = udho::forms::required<double>("k3")
                 .absent("k3 Missing")
                 .unparsable("k3 not parsable")
                 .constrain<gte>(3.0, "k3 < 3.0 not allowed")
                 .constrain<lte>(4.0, "k3 > 4.0 not allowed");
                 
-    form >> k1 >> k3;
+    form >> k1 >> k2 >> k3;
     
     std::cout << "----------k1-----------------" << std::endl;
-    std::cout << std::boolalpha << k1.valid() << std::endl;
+    std::cout << std::boolalpha << !k1 << std::endl;
     std::cout << *k1 << std::endl;
     std::cout << k1.message() << std::endl;
+    std::cout << "----------k2-----------------" << std::endl;
+    std::cout << std::boolalpha << !k2 << std::endl;
+    std::cout << *k2 << std::endl;
+    std::cout << k2.message() << std::endl;
     std::cout << "----------k3-----------------" << std::endl;
-    std::cout << std::boolalpha << k3.valid() << std::endl;
+    std::cout << std::boolalpha << !k3 << std::endl;
     std::cout << *k3 << std::endl;
     std::cout << k3.message() << std::endl;
     std::cout << "-----------------------------" << std::endl;
