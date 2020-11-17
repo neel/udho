@@ -79,11 +79,7 @@ namespace drivers{
         
         header_map_type _fields;
         std::string _query;
-        
-        inline explicit urlencoded(const std::string& query): _query(query){
-            parse(_query.begin(), _query.end());
-        }
-        
+               
         inline void parse(iterator_type begin, iterator_type end){
             iterator_type last  = begin;
             while(true){
@@ -344,9 +340,9 @@ namespace drivers{
 };
 
 template <typename DriverT>
-struct form: private DriverT{
-    template <typename... ArgT>
-    form(ArgT&&... args): DriverT(args...){}
+struct form: public DriverT{
+    
+    using DriverT::DriverT;
     
     bool has(const std::string& name) const {
         return DriverT::exists(name);

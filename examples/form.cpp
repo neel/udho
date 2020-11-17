@@ -11,7 +11,10 @@
 int main(){
     using namespace udho::forms::constraints;
     
-    udho::forms::form<udho::forms::drivers::urlencoded> form("&k1=v11&k2=2&k3=2.28");
+    std::string query = "&k1=v11&k2=2&k3=2.28";
+    
+    udho::forms::form<udho::forms::drivers::urlencoded> form;
+    form.parse(query.begin(), query.end());
     std::cout << "k1: " << form.field<std::string>("k1") << std::endl;
     std::cout << "k2: " << form.field<std::size_t>("k2") << std::endl;
     std::cout << "k3: " << form.field<double>("k3") << std::endl;
