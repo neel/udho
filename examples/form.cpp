@@ -11,16 +11,14 @@
 int main(){
     using namespace udho::forms::constraints;
     
-    std::string query = "&k1=v1&k2=4&k3=5";
+    std::string query = "&k1=v1&k2=6&k3=5";
     
     udho::forms::form<udho::forms::drivers::urlencoded_> form;
     form.parse(query.begin(), query.end());
     std::cout << "k1: " << form.field<std::string>("k1") << std::endl;
     std::cout << "k2: " << form.field<std::size_t>("k2") << std::endl;
     std::cout << "k3: " << form.field<double>("k3") << std::endl;
-    
-    std::vector<unsigned> accepted_values = {2, 3, 4};
-    
+      
     auto k1 = udho::forms::required<std::string>("k1")
                 .absent("k1 Missing")
                 .unparsable("k1 not parsable")
@@ -32,7 +30,9 @@ int main(){
                 .unparsable("k2 not parsable")
                 .constrain<gte>(1, "k2 < 1 not allowed")
                 .constrain<lte>(10, "k2 > 10 not allowed")
-                .constrain<in>("k2 must be in [2, 3, 4]", 2, 3, 4);
+                .constrain<in>(2, 3, 4);
+                
+    k2.constrain<3>().error("k2 must be in [2, 3, 4]");
                 
     auto k3 = udho::forms::required<double>("k3")
                 .absent("k3 Missing")
