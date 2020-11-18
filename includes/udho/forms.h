@@ -30,6 +30,7 @@
 
 #include <string>
 #include <udho/util.h>
+#include <udho/access.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
@@ -64,12 +65,36 @@ struct parser{
         return deserializer<T, U>::deserialize(input);
     }
 };
+
+namespace drivers{
     
-namespace drivers{    
+namespace detail{
+    template <typename RequestT>
+    struct extract_multipart_boundary{
+        typedef RequestT request_type;
+        
+        request_type _request;
+        std::string  _boundary;
+        
+        extract_multipart_boundary(const request_type& request): _request(request){}
+        const std::string& boundary() const { return _boundary; }
+        bool extract(const std::string& boundary_key = "boundary="){
+            std::string content_type(_request[boost::beast::http::field::content_type]);
+            std::string::size_type index = content_type.find(boundary_key);
+            if(index == std::string::npos){
+                return false;
+            }else{
+                _boundary = "--"+content_type.substr(index+boundary_key.size());
+                return true;
+            }
+        }
+    };
+}
+    
     /**
      * Form driver for urlencoded forms
      */
-    struct urlencoded{
+    struct urlencoded_{
         typedef std::string::const_iterator iterator_type;
         typedef typename std::iterator_traits<iterator_type>::value_type value_type;
         typedef std::basic_string<value_type> string_type;
@@ -142,11 +167,10 @@ namespace drivers{
             return T();
         }
     };
-    
     /**
     * Form accessor for multipart forms
     */
-    struct multipart_form{
+    struct multipart_{
         typedef std::string::const_iterator iterator_type;
         typedef typename std::iterator_traits<iterator_type>::value_type value_type;
         typedef std::basic_string<value_type> string_type;
@@ -237,7 +261,9 @@ namespace drivers{
             bool parsable() const{
                 return ParserT::parsable(str());
             }
-            
+            bool empty() const{
+                return _body.size() == 0;
+            }
             /**
             * returns the value of the field with the name provided lexically casted to type T
             */
@@ -310,6 +336,12 @@ namespace drivers{
         bool exists(const std::string name) const{
             return _parts.find(name) != _parts.end();
         }
+        bool empty(const std::string name) const{
+            if(exists(name)){
+                return part(name).empty();
+            }
+            return true;
+        }
         /**
         * returns the part associated with the given name
         */
@@ -336,7 +368,147 @@ namespace drivers{
             return T();
         }
     };
-
+    
+    template <typename RequestT>
+    struct urlencoded: urlencoded_{
+        typedef RequestT request_type;
+        typedef typename request_type::body_type::value_type body_type;
+        typedef urlencoded_ urlencoded_type;
+        
+        const request_type& _request;
+        
+        urlencoded(const request_type& request): _request(request){
+            urlencoded_type::parse(_request.body().begin(), _request.body().end());
+        }
+    };
+    
+    template <typename RequestT>
+    struct multipart: multipart_{
+        typedef RequestT request_type;
+        typedef typename request_type::body_type::value_type body_type;
+        typedef multipart_ multipart_type;
+        
+        const request_type& _request;
+        multipart(const request_type& request): _request(request){
+            detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
+            if(!boundary_extractor.extract()){
+                std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
+                return;
+            }else{
+                std::string boundary = boundary_extractor.boundary();
+                // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+                multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
+            }
+        }
+    };
+    
+    template <typename RequestT>
+    struct combo: private urlencoded_, private multipart_{
+        enum class types{
+            unparsed,
+            urlencoded,
+            multipart
+        };
+        
+        typedef RequestT request_type;
+        typedef urlencoded_ urlencoded_type;
+        typedef multipart_ multipart_type;
+        typedef typename request_type::body_type::value_type body_type;
+        
+        const request_type& _request;
+        types _type;
+        
+        combo(const request_type& request): _request(request), _type(types::unparsed){
+            if(_request[boost::beast::http::field::content_type].find("application/x-www-form-urlencoded") != std::string::npos){
+                parse_urlencoded();
+            }else if(_request[boost::beast::http::field::content_type].find("multipart/form-data") != std::string::npos){
+                parse_multipart();
+            }
+        }
+        /**
+         * parse the beast request body as urlencoded form data
+         */
+        void parse_urlencoded(){
+            urlencoded_type::parse(_request.body().begin(), _request.body().end());
+            _type = types::urlencoded;
+        }
+        /**
+         * parse the beast request body as multipart form data
+         */
+        void parse_multipart(){
+            detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
+            if(!boundary_extractor.extract()){
+                std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
+                return;
+            }else{
+                std::string boundary = boundary_extractor.boundary();
+                // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+                multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
+            }
+        }
+        /**
+         * check whether the submitted form is urlencoded
+         */
+        bool is_urlencoded() const{
+            return _type == types::urlencoded;
+        }
+        /**
+         * check whether the submitted form is multipart
+         */
+        bool is_multipart() const{
+            return _type == types::multipart;
+        }
+        /**
+         * checks whether the value for the field is empty
+         */
+        inline bool empty(const std::string name) const{
+            if(_type == types::urlencoded){
+                return urlencoded_type::empty(name);
+            }else if(_type == types::multipart){
+                return multipart_type::empty(name);
+            }else{
+                return true;
+            }
+        }
+        
+        /**
+        * checks whether there exists any field with the name provided
+        */
+        inline bool exists(const std::string name) const{
+            if(_type == types::urlencoded){
+                return urlencoded_type::exists(name);
+            }else if(_type == types::multipart){
+                return multipart_type::exists(name);
+            }else{
+                return false;
+            }
+        }
+        
+        template <typename T, typename ParserT = udho::forms::parser<T>>
+        bool parsable(const std::string& name) const{
+            if(_type == types::urlencoded){
+                return urlencoded_type::template parsable<T, ParserT>(name);
+            }else if(_type == types::multipart){
+                return multipart_type::template parsable<T, ParserT>(name);
+            }else{
+                return false;
+            }
+        }
+        
+        /**
+         * returns the value of the field with the name provided lexically casted to type T
+         */
+        template <typename T, typename ParserT = udho::forms::parser<T>>
+        const T parsed(const std::string& name) const{
+            if(_type == types::urlencoded){
+                return urlencoded_type::template parsed<T, ParserT>(name);
+            }else if(_type == types::multipart){
+                return multipart_type::template parsed<T, ParserT>(name);
+            }else{
+                return false;
+            }
+        }
+    };
 };
 
 template <typename DriverT>
@@ -400,7 +572,7 @@ namespace detail{
         
         template <template<typename> class ValidatorU, typename... ArgsT>
         detail::constrained_field<ValidatorU<value_type>, self_type> constrain(ArgsT&&... args){
-            return detail::constrained_field<ValidatorU<value_type>, self_type>(ValidatorU<value_type>(args...), *this);
+            return constrain<ValidatorU<value_type>>(ValidatorU<value_type>(args...));
         }
     };
     
@@ -410,7 +582,7 @@ namespace detail{
         typedef typename head_type::field_type field_type;
         typedef typename field_type::value_type value_type;
         typedef ValidatorT validator_type;
-        typedef constrained_field<validator_type, field_type> self_type;
+        typedef constrained_field<validator_type, head_type> self_type;
         
         validator_type _validator;
         head_type _head;
@@ -441,153 +613,163 @@ namespace detail{
         
         template <template<typename> class ValidatorU, typename... ArgsT>
         detail::constrained_field<ValidatorU<value_type>, self_type> constrain(ArgsT&&... args){
-            return detail::constrained_field<ValidatorU<value_type>, self_type>(ValidatorU<value_type>(args...), *this);
+            ValidatorU<value_type> validator(args...);
+            return constrain<ValidatorU<value_type>>(validator);
         }
     };
 }
 
-template <typename T>
-struct field<T, true>{
-    typedef T value_type;
-    typedef field<T, true> self_type;
-    enum { is_required = true };
+namespace detail{
+
+template <typename ValueT>
+struct field_data: udho::prepare<field_data<ValueT>>{
+    typedef ValueT value_type;
+    typedef field_data<ValueT> self_type;
     
-    field(const std::string& name): _name(name), _absent(true), _unparsable(true), _fetched(false), _valid(true){}
-    self_type& absent(const std::string& message) { _message_absent = message; return *this; }
-    self_type& unparsable(const std::string& message) { _message_unparsable = message; return *this; }
-    
-    template <typename FormT>
-    bool fetch(const FormT& form){
-        if(_fetched) return valid();
-        _absent  = !form.has(_name);
-        if(!_absent){
-            bool okay = true;
-            _value = form.template field<value_type>(_name, &okay);
-            _unparsable = !okay;
-            if(_unparsable){
-                _message = _message_unparsable.empty() ? _message_absent : _message_unparsable;
-            }
-        }else{
-            _message = _message_absent;
-        }
-        _valid = !_absent && !_unparsable;
-        _fetched = true;
-        return valid();
-    }
-    value_type value() const {
-        return _value;
-    }
-    inline value_type operator*() const { return value(); }
+    field_data(const std::string& name): _name(name), _absent(true), _unparsable(true), _fetched(false), _valid(true){}
+    bool absent() const { return _absent; }
+    bool unparsable() const { return _unparsable; }
+    bool fetched() const { return _fetched; }
+    const std::string& name() const { return _name; }
+    const value_type& value() const { return _value; }
+    bool valid() const{ return _valid; }
+    const std::string& message() const { return _message; }
+    const std::string& error() const { return _message; }
+    inline const value_type& operator*() const { return value(); }
     inline bool operator!() const { return !valid(); }
-    template <typename FormT, typename ValidatorT>
-    bool validate(const FormT& form, const ValidatorT& validator){
-        fetch(form);
-        if(valid()){
-            _valid = _valid && validator(value());
-            if(!_valid){
-                _message = validator.message();
-            }
-            return _valid;
-        }
-        return false;
+    
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | fn("fetched", &self_type::fetched)
+                     | fn("name",    &self_type::name)
+                     | fn("value",   &self_type::value)
+                     | fn("valid",   &self_type::valid)
+                     | fn("error",   &self_type::error);
     }
-    bool valid() const{
-        return _valid;
-    }
-    std::string message() const {
-        return _message;
-    }
+    
+    protected:
+        std::string _name;
+        value_type  _value;
+        std::string _message;
+        bool _absent;
+        bool _unparsable;
+        bool _fetched;
+        bool _valid;
+};
+    
+template <typename ValueT, typename DerivedT>
+struct basic_field: field_data<ValueT>{
+    typedef ValueT value_type;
+    typedef DerivedT derived_type;
+    typedef field_data<ValueT> data_type;
+    
+    basic_field(const std::string& name): data_type(name){}
+    derived_type& absent(const std::string& message) { _message_absent = message; return self(); }
+    derived_type& unparsable(const std::string& message) { _message_unparsable = message; return self(); }
+    data_type& data() { return static_cast<data_type&>(*this);}
+    const data_type& data() const { return static_cast<const data_type&>(*this);}
     
     template <typename ValidatorT>
-    detail::constrained_field<ValidatorT, self_type> constrain(const ValidatorT& validator){
-        return detail::constrained_field<ValidatorT, self_type>(validator, *this);
+    detail::constrained_field<ValidatorT, derived_type> constrain(const ValidatorT& validator){
+        return detail::constrained_field<ValidatorT, derived_type>(validator, self());
     }
     
     template <template<typename> class ValidatorT, typename... ArgsT>
-    detail::constrained_field<ValidatorT<value_type>, self_type> constrain(ArgsT&&... args){
-        return detail::constrained_field<ValidatorT<value_type>, self_type>(ValidatorT<value_type>(args...), *this);
+    detail::constrained_field<ValidatorT<value_type>, derived_type> constrain(ArgsT&&... args){
+        return detail::constrained_field<ValidatorT<value_type>, derived_type>(ValidatorT<value_type>(args...), self());
     }
     
-    std::string _name;
-    std::string _message_absent;
-    std::string _message_unparsable;
-    value_type  _value;
-    bool _absent;
-    bool _unparsable;
-    bool _fetched;
-    bool _valid;
-    std::string _message;
+    protected:
+        template <typename ValidatorT>
+        bool validate(const ValidatorT& validator){
+            if(data_type::valid() && !data_type::absent()){
+                data_type::_valid = data_type::_valid && validator(data_type::value());
+                if(!data_type::_valid){
+                    data_type::_message = validator.message();
+                }
+                return data_type::_valid;
+            }
+            return false;
+        }
+        
+        derived_type& self() { return static_cast<derived_type&>(*this); }
+        const derived_type& self() const { return static_cast<const derived_type&>(*this); }
+        
+        std::string _message_absent;
+        std::string _message_unparsable;
+};
+
+}
+
+template <typename T>
+struct field<T, true>: detail::basic_field<T, field<T, true>>{
+    typedef T value_type;
+    typedef field<T, true> self_type;
+    typedef detail::basic_field<T, field<T, true>> base;
+    enum { is_required = true };
+    
+    field(const std::string& name): base(name){}
+    template <typename FormT>
+    bool fetch(const FormT& form){
+        if(base::_fetched) return base::valid();
+        base::_absent  = !form.has(base::_name);
+        if(!base::_absent){
+            bool okay = true;
+            base::_value = form.template field<value_type>(base::_name, &okay);
+            base::_unparsable = !okay;
+            if(base::_unparsable){
+                base::_message = base::_message_unparsable.empty() ? base::_message_absent : base::_message_unparsable;
+            }
+        }else{
+            base::_message = base::_message_absent;
+        }
+        base::_valid = !base::_absent && !base::_unparsable;
+        base::_fetched = true;
+        return base::valid();
+    }
+    template <typename FormT, typename ValidatorT>
+    bool validate(const FormT& form, const ValidatorT& validator){
+        fetch(form);
+        return base::template validate<ValidatorT>(validator);
+    }
 };
 
 template <typename T>
-struct field<T, false>{
+struct field<T, false>: detail::basic_field<T, field<T, false>>{
     typedef T value_type;
     typedef field<T, false> self_type;
+    typedef detail::basic_field<T, field<T, false>> base;
     enum { is_required = false };
     
-    field(const std::string& name): _name(name), _absent(true), _unparsable(true), _valid(true), _fetched(false){}
-    self_type& absent(const std::string& message) { _message_absent = message; return *this; }
-    self_type& unparsable(const std::string& message) { _message_unparsable = message; return *this; }
-    
+    field(const std::string& name, const value_type& def = value_type()): base(name), _def(def){}
+    const value_type& def() const { return _def; }
     template <typename FormT>
     bool fetch(const FormT& form){
-        if(!_fetched) return valid();
-        _absent  = !form.has(_name);
-        if(!_absent){
+        if(base::_fetched) return base::valid();
+        base::_absent  = !form.has(base::_name);
+        if(!base::_absent){
             bool okay = true;
-            _value = form.template field<value_type>(_name, &okay);
-            _unparsable = !okay;
-            _valid = _unparsable;
-            if(_unparsable){
-                _message = _message_unparsable.empty() ? _message_absent : _message_unparsable;
+            base::_value = form.template field<value_type>(base::_name, &okay);
+            base::_unparsable = !okay;
+            base::_valid = !base::_unparsable;
+            if(base::_unparsable){
+                base::_message = base::_message_unparsable.empty() ? base::_message_absent : base::_message_unparsable;
             }
         }else{
-            _valid = true;
+            base::_valid = true;
+            base::_value = _def;
         }
-        _fetched = true;
-        return valid();
-    }
-    value_type value() const {
-        return _value;
+        base::_fetched = true;
+        return base::valid();
     }
     template <typename FormT, typename ValidatorT>
     bool validate(const FormT& form, const ValidatorT& validator){
         fetch(form);
-        if(valid()){
-            bool valid = validator(value());
-            if(!valid){
-                _message = validator.message();
-            }
-            return valid;
-        }
-        return false;
-    }
-    bool valid() const{
-        return _valid;
-    }
-    std::string message() const {
-        return _message;
+        return base::template validate<ValidatorT>(validator);
     }
     
-    template <typename ValidatorT>
-    detail::constrained_field<ValidatorT, self_type> constrain(const ValidatorT& validator){
-        return detail::constrained_field<ValidatorT, self_type>(validator, *this);
-    }
-    
-    template <template<typename> class ValidatorT, typename... ArgsT>
-    detail::constrained_field<ValidatorT<value_type>, self_type> constrain(ArgsT&&... args){
-        return detail::constrained_field<ValidatorT<value_type>, self_type>(ValidatorT<value_type>(args...), *this);
-    }
-    
-    std::string _name;
-    std::string _message_absent;
-    std::string _message_unparsable;
-    value_type  _value;
-    bool _fetched;
-    bool _absent;
-    bool _unparsable;
-    bool _valid;
-    std::string _message;
+    protected:
+        value_type _def;
 };
     
 template <typename DriverT, typename ValidatorT, typename FieldT>
@@ -610,94 +792,129 @@ using optional = field<T, false>;
 
 namespace constraints{
     
-template <typename T>
-struct gte{
-    T _value;
-    std::string _message;
+template <typename DerivedT>
+struct basic_constrain{
+    typedef DerivedT derived_type;
     
-    gte(const T& value, const std::string& message): _value(value), _message(message){}
+    basic_constrain(const std::string& message): _message(message){}
+    derived_type& self() { return static_cast<derived_type&>(*this); }
+    derived_type& otherwise(const std::string& message) { _message = message; return self(); }
     const std::string& message() const { return _message; }
-    bool operator()(const T& input) const{
-        return input >= _value;
-    }
+    private:
+        std::string _message;
+};
+    
+template <typename T>
+struct gte: basic_constrain<gte<T>>{
+    typedef basic_constrain<gte<T>> base;
+    
+    T _value;
+    
+    gte(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input >= _value; }
 };
 template <typename T>
-struct gt{
-    T _value;
-    std::string _message;
+struct gt: basic_constrain<gt<T>>{
+    typedef basic_constrain<gt<T>> base;
     
-    gt(const T& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const T& input) const{
-        return input > _value;
-    }
+    T _value;
+    
+    gt(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input > _value; }
 };
 template <typename T>
-struct lte{
-    T _value;
-    std::string _message;
+struct lte: basic_constrain<lte<T>>{
+    typedef basic_constrain<lte<T>> base;
     
-    lte(const T& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const T& input) const{
-        return input <= _value;
-    }
+    T _value;
+    
+    lte(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input <= _value; }
 };
 template <typename T>
-struct lt{
-    T _value;
-    std::string _message;
+struct lt: basic_constrain<lt<T>>{
+    typedef basic_constrain<lt<T>> base;
     
-    lt(const T& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
+    T _value;
+    
+    lt(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input < _value; }
+};
+template <typename T>
+struct eq: basic_constrain<eq<T>>{
+    typedef basic_constrain<eq<T>> base;
+    
+    T _value;
+    
+    eq(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input == _value; }
+};
+
+template <typename T>
+struct neq: basic_constrain<neq<T>>{
+    typedef basic_constrain<neq<T>> base;
+    
+    T _value;
+    
+    neq(const T& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const T& input) const{ return input != _value; }
+};
+
+template <typename T>
+struct in: basic_constrain<in<T>>{
+    typedef basic_constrain<in<T>> base;
+    
+    std::set<T> _values;
+    
+    template <typename It>
+    in(const std::string& message, It begin, It end): base(message){
+        std::copy(begin, end, std::inserter(_values, _values.begin()));
+    }
+    template <typename... U>
+    in(const std::string& message, const U&... args): base(message){
+        std::initializer_list<T> values{static_cast<T>(args)...};
+        std::copy(values.begin(), values.end(), std::inserter(_values, _values.begin()));
+    }
     bool operator()(const T& input) const{
-        return input < _value;
+        return _values.count(input);
     }
 };
 
 template <>
-struct gte<std::string>{
-    std::size_t _value;
-    std::string _message;
+struct gte<std::string>: basic_constrain<gte<std::string>>{
+    typedef basic_constrain<gte<std::string>> base;
     
-    gte(const std::size_t& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const std::string& input) const{
-        return input.size() >= _value;
-    }
+    std::size_t _value;
+    
+    gte(const std::size_t& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const std::string& input) const{ return input.size() >= _value; }
 };
 template <>
-struct gt<std::string>{
-    std::size_t _value;
-    std::string _message;
+struct gt<std::string>: basic_constrain<gt<std::string>>{
+    typedef basic_constrain<gt<std::string>> base;
     
-    gt(const std::size_t& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const std::string& input) const{
-        return input.size() > _value;
-    }
+    std::size_t _value;
+    
+    gt(const std::size_t& value, const std::string& message = ""): base(message), _value(value) {}
+    bool operator()(const std::string& input) const{ return input.size() > _value; }
 };
 template <>
-struct lte<std::string>{
-    std::size_t _value;
-    std::string _message;
+struct lte<std::string>: basic_constrain<lte<std::string>>{
+    typedef basic_constrain<lte<std::string>> base;
     
-    lte(const std::size_t& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const std::string& input) const{
-        return input.size() <= _value;
-    }
+    std::size_t _value;
+    
+    lte(const std::size_t& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const std::string& input) const{ return input.size() <= _value; }
 };
 template <>
-struct lt<std::string>{
-    std::size_t _value;
-    std::string _message;
+struct lt<std::string>: basic_constrain<lt<std::string>>{
+    typedef basic_constrain<lt<std::string>> base;
     
-    lt(const std::size_t& value, const std::string& message): _value(value), _message(message){}
-    const std::string& message() const { return _message; }
-    bool operator()(const std::string& input) const{
-        return input.size() < _value;
-    }
+    std::size_t _value;
+    
+    lt(const std::size_t& value, const std::string& message = ""): base(message), _value(value){}
+    bool operator()(const std::string& input) const{ return input.size() < _value; }
 };
     
 }
