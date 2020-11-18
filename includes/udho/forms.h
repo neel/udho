@@ -53,6 +53,39 @@ struct deserializer<V, std::string>{
         return value;
     }
 };
+
+template <typename U>
+struct deserializer<std::string, U>{
+    static bool check(const U& input){
+        std::string value;
+        return boost::conversion::try_lexical_convert<std::string>(input, value);
+    }
+    static std::string deserialize(const U& input){
+        std::string value;
+        boost::conversion::try_lexical_convert<std::string>(input, value);
+        return value;
+    }
+};
+
+template <typename U>
+struct deserializer<U, U>{
+    static bool check(const U&){
+        return true;
+    }
+    static std::string deserialize(const U& input){
+        return input;
+    }
+};
+
+template <>
+struct deserializer<std::string, std::string>{
+    static bool check(const std::string&){
+        return true;
+    }
+    static std::string deserialize(const std::string& input){
+        return input;
+    }
+};
     
 template <typename T>
 struct parser{
@@ -545,6 +578,8 @@ namespace detail{
         typedef ValidatorT validator_type;
         typedef constrained_field<validator_type, field_type> self_type;
         
+        enum {depth = 1};
+        
         validator_type _validator;
         FieldT _field;
         
@@ -584,6 +619,8 @@ namespace detail{
         typedef ValidatorT validator_type;
         typedef constrained_field<validator_type, head_type> self_type;
         
+        enum {depth = head_type::depth +1};
+        
         validator_type _validator;
         head_type _head;
         
@@ -621,40 +658,52 @@ namespace detail{
 
 namespace detail{
 
-template <typename ValueT>
-struct field_data: udho::prepare<field_data<ValueT>>{
-    typedef ValueT value_type;
-    typedef field_data<ValueT> self_type;
-    
-    field_data(const std::string& name): _name(name), _absent(true), _unparsable(true), _fetched(false), _valid(true){}
+struct field_common: udho::prepare<field_common>{
+    field_common(const std::string& name): _name(name), _absent(true), _unparsable(true), _fetched(false), _valid(true){}
     bool absent() const { return _absent; }
     bool unparsable() const { return _unparsable; }
     bool fetched() const { return _fetched; }
     const std::string& name() const { return _name; }
-    const value_type& value() const { return _value; }
+    std::string value_serialized() const { return _value_str; }
     bool valid() const{ return _valid; }
     const std::string& message() const { return _message; }
     const std::string& error() const { return _message; }
-    inline const value_type& operator*() const { return value(); }
     inline bool operator!() const { return !valid(); }
     
     template <typename DictT>
     auto dict(DictT assoc) const{
-        return assoc | fn("fetched", &self_type::fetched)
-                     | fn("name",    &self_type::name)
-                     | fn("value",   &self_type::value)
-                     | fn("valid",   &self_type::valid)
-                     | fn("error",   &self_type::error);
+        return assoc | fn("fetched", &field_common::fetched)
+                     | fn("name",    &field_common::name)
+                     | fn("value",   &field_common::value_serialized)
+                     | fn("valid",   &field_common::valid)
+                     | fn("error",   &field_common::error)
+                     | fn("message", &field_common::error);
     }
     
     protected:
         std::string _name;
-        value_type  _value;
         std::string _message;
         bool _absent;
         bool _unparsable;
         bool _fetched;
         bool _valid;
+        std::string _value_str;
+};
+    
+template <typename ValueT>
+struct field_data: field_common{
+    typedef ValueT value_type;
+    typedef field_data<ValueT> self_type;
+    
+    using field_common::field_common;
+    
+    inline const value_type& value() const { return _value; }
+    inline const value_type& operator*() const { return value(); }
+    void value(const value_type& v) { _value = v; field_common::_value_str = boost::lexical_cast<std::string>(v); }
+    field_common& common() { return static_cast<field_common&>(*this); }
+    const field_common& common() const { return static_cast<const field_common&>(*this); }
+    private:    
+        value_type  _value;
 };
     
 template <typename ValueT, typename DerivedT>
@@ -715,7 +764,7 @@ struct field<T, true>: detail::basic_field<T, field<T, true>>{
         base::_absent  = !form.has(base::_name);
         if(!base::_absent){
             bool okay = true;
-            base::_value = form.template field<value_type>(base::_name, &okay);
+            base::value(form.template field<value_type>(base::_name, &okay));
             base::_unparsable = !okay;
             if(base::_unparsable){
                 base::_message = base::_message_unparsable.empty() ? base::_message_absent : base::_message_unparsable;
@@ -749,7 +798,7 @@ struct field<T, false>: detail::basic_field<T, field<T, false>>{
         base::_absent  = !form.has(base::_name);
         if(!base::_absent){
             bool okay = true;
-            base::_value = form.template field<value_type>(base::_name, &okay);
+            base::value(form.template field<value_type>(base::_name, &okay));
             base::_unparsable = !okay;
             base::_valid = !base::_unparsable;
             if(base::_unparsable){
@@ -757,7 +806,7 @@ struct field<T, false>: detail::basic_field<T, field<T, false>>{
             }
         }else{
             base::_valid = true;
-            base::_value = _def;
+            base::value(_def);
         }
         base::_fetched = true;
         return base::valid();
@@ -789,6 +838,229 @@ using required = field<T, true>;
 
 template <typename T>
 using optional = field<T, false>;
+
+
+struct accumulated: udho::prepare<accumulated>{
+    typedef udho::prepare<accumulated> base;
+    typedef accumulated self_type;
+    
+    inline accumulated(): _valid(true){}
+    
+    template <typename ValidatorT, typename TailT>
+    self_type& add(const detail::constrained_field<ValidatorT, TailT>& cf){
+        return add(cf.field().common());
+    }
+    inline self_type& add(const detail::field_common& common){
+        bool valid = common.valid();
+        _valid = _valid && valid;
+        if(!valid){
+            _errors.push_back(common.message());
+        }
+        _fields.insert(std::make_pair(common.name(), common));
+        return *this;
+    }
+    
+    inline bool valid() const { return _valid; }
+    
+    template <typename DictT>
+    auto dict(DictT assoc) const{
+        return assoc | base::var("valid",     &self_type::_valid)
+                     | base::var("errors",    &self_type::_errors)
+                     | base::var("fields",    &self_type::_fields);
+    }
+    
+    private:
+        bool _valid;
+        std::vector<std::string> _errors;
+        std::map<std::string, detail::field_common> _fields;
+};
+
+template <typename ValidatorT, typename FieldT>
+accumulated& operator<<(accumulated& acc, detail::constrained_field<ValidatorT, FieldT>& field){
+    return acc.add(field);
+}
+
+template <typename T, bool Required>
+accumulated& operator<<(accumulated& acc, field<T, Required>& field){
+    return acc.add(field);
+}
+
+template <typename FormT>
+struct validated;
+
+template <typename DriverT>
+struct validated<form<DriverT>>: accumulated{
+    typedef form<DriverT> form_type;
+    typedef validated<form<DriverT>> self_type;
+    
+    validated(form_type& f): _form(f){}
+    template <typename ValidatorT, typename TailT>
+    self_type& add(detail::constrained_field<ValidatorT, TailT>& cf){
+        _form >> cf;
+        self() << cf;
+        return *this;
+    }
+    template <typename T, bool Required>
+    self_type& add(field<T, Required>& f){
+        _form >> f;
+        self() << f;
+        return *this;
+    }
+    
+    private:
+        accumulated& self() { return static_cast<accumulated&>(*this); }
+        form_type& _form;
+};
+
+template <typename DriverT>
+validated<form<DriverT>> validate(form<DriverT>& f){
+    return validated<form<DriverT>>(f);
+}
+
+template <typename DriverT, typename ValidatorT, typename FieldT>
+validated<form<DriverT>>& operator>>(validated<form<DriverT>>& vf, detail::constrained_field<ValidatorT, FieldT>& field){
+    return vf.add(field);
+}
+
+template <typename DriverT, typename T, bool Required>
+validated<form<DriverT>>& operator>>(validated<form<DriverT>>& vf, field<T, Required>& field){
+    return vf.add(field);
+}
+
+namespace detail{
+    
+// struct accumulator: udho::prepare<accumulator>{
+//     typedef udho::prepare<accumulator> base;
+//     typedef accumulator self_type;
+//     
+//     inline accumulator(): _valid(true){}
+//     
+//     template <typename ValidatorT, typename TailT>
+//     self_type& add(const detail::constrained_field<ValidatorT, TailT>& cf){
+//         return add(cf.field().common());
+//     }
+//     inline self_type& add(const detail::field_common& common){
+//         bool valid = common.valid();
+//         _valid = _valid && valid;
+//         if(!valid){
+//             _errors.push_back(common.message());
+//         }
+//         _fields.insert(std::make_pair(common.name(), common));
+//         return *this;
+//     }
+//     
+//     inline bool valid() const { return _valid; }
+//     
+//     template <typename DictT>
+//     auto dict(DictT assoc) const{
+//         return assoc | base::var("valid",     &self_type::_valid)
+//                      | base::var("errors",    &self_type::_errors)
+//                      | base::var("fields",    &self_type::_fields);
+//     }
+//     
+//     private:
+//         bool _valid;
+//         std::vector<std::string> _errors;
+//         std::map<std::string, detail::field_common> _fields;
+// };
+    
+// template <typename L, typename R>
+// struct accumulated;
+//     
+// template <typename ValidatorLT, typename FieldLT, typename ValidatorRT, typename FieldRT>
+// struct accumulated<detail::constrained_field<ValidatorLT, FieldLT>, detail::constrained_field<ValidatorRT, FieldRT>>: accumulator{
+//     typedef detail::constrained_field<ValidatorLT, FieldLT> left_type;
+//     typedef detail::constrained_field<ValidatorRT, FieldRT> right_type;
+//     
+//     const left_type& _left;
+//     const right_type& _right;
+//     
+//     accumulated(const left_type& left, const right_type& right): _left(left), _right(right){
+//         accumulator::add(left);
+//         accumulator::add(right);
+//     }
+// };
+// 
+// template <typename T, bool Required, typename ValidatorRT, typename FieldRT>
+// struct accumulated<field<T, Required>, detail::constrained_field<ValidatorRT, FieldRT>>: accumulator{
+//     typedef field<T, Required> left_type;
+//     typedef detail::constrained_field<ValidatorRT, FieldRT> right_type;
+//     
+//     const left_type& _left;
+//     const right_type& _right;
+//     
+//     accumulated(const left_type& left, const right_type& right): _left(left), _right(right){
+//         accumulator::add(left);
+//         accumulator::add(right);
+//     }
+// };
+// 
+// template <typename ValidatorLT, typename FieldLT, typename T, bool Required>
+// struct accumulated<detail::constrained_field<ValidatorLT, FieldLT>, field<T, Required>>: accumulator{
+//     typedef detail::constrained_field<ValidatorLT, FieldLT> left_type;
+//     typedef field<T, Required> right_type;
+//     
+//     const left_type& _left;
+//     const right_type& _right;
+//     
+//     accumulated(const left_type& left, const right_type& right): _left(left), _right(right){
+//         accumulator::add(left);
+//         accumulator::add(right);
+//     }
+// };
+// 
+// template <typename LeftT, typename RightT, typename ValidatorRT, typename FieldRT>
+// struct accumulated<accumulated<LeftT, RightT>, detail::constrained_field<ValidatorRT, FieldRT>>: accumulator{
+//     typedef accumulated<LeftT, RightT> left_type;
+//     typedef detail::constrained_field<ValidatorRT, FieldRT> right_type;
+//     
+//     left_type _left;
+//     const right_type& _right;
+//     
+//     accumulated(const left_type& left, const right_type& right): _left(left), _right(right){
+//         accumulator::add(right);
+//     }
+// };
+// 
+// template <typename LeftT, typename RightT, typename T, bool Required>
+// struct accumulated<accumulated<LeftT, RightT>, field<T, Required>>: accumulator{
+//     typedef accumulated<LeftT, RightT> left_type;
+//     typedef field<T, Required> right_type;
+//     
+//     left_type _left;
+//     const right_type& _right;
+//     
+//     accumulated(const left_type& left, const right_type& right): _left(left), _right(right){
+//         accumulator::add(right);
+//     }
+// };
+    
+}
+
+// template <typename ValidatorLT, typename FieldLT, typename ValidatorRT, typename FieldRT>
+// detail::accumulated<detail::constrained_field<ValidatorLT, FieldLT>, detail::constrained_field<ValidatorRT, FieldRT>> operator,(const detail::constrained_field<ValidatorLT, FieldLT>& left, const detail::constrained_field<ValidatorRT, FieldRT>& right){
+//     return detail::accumulated<detail::constrained_field<ValidatorLT, FieldLT>, detail::constrained_field<ValidatorRT, FieldRT>>(left, right);
+// }
+// 
+// template <typename T, bool Required, typename ValidatorRT, typename FieldRT>
+// detail::accumulated<field<T, Required>, detail::constrained_field<ValidatorRT, FieldRT>> operator,(const field<T, Required>& left, const detail::constrained_field<ValidatorRT, FieldRT>& right){
+//     return detail::accumulated<field<T, Required>, detail::constrained_field<ValidatorRT, FieldRT>>(left, right);
+// }
+// 
+// template <typename ValidatorLT, typename FieldLT, typename T, bool Required>
+// detail::accumulated<detail::constrained_field<ValidatorLT, FieldLT>, field<T, Required>> operator,(const detail::constrained_field<ValidatorLT, FieldLT>& left, const field<T, Required>& right){
+//     return detail::accumulated<detail::constrained_field<ValidatorLT, FieldLT>, field<T, Required>>(left, right);
+// }
+// 
+// template <typename LeftT, typename RightT, typename ValidatorRT, typename FieldRT>
+// detail::accumulated<detail::accumulated<LeftT, RightT>, detail::constrained_field<ValidatorRT, FieldRT>> operator,(const detail::accumulated<LeftT, RightT>& left, const detail::constrained_field<ValidatorRT, FieldRT>& right){
+//     return detail::accumulated<detail::accumulated<LeftT, RightT>, detail::constrained_field<ValidatorRT, FieldRT>>(left, right);
+// }
+// 
+// template <typename LeftT, typename RightT, typename T, bool Required>
+// detail::accumulated<detail::accumulated<LeftT, RightT>, field<T, Required>> operator,(const detail::accumulated<LeftT, RightT>& left, const field<T, Required>& right){
+//     return detail::accumulated<detail::accumulated<LeftT, RightT>, field<T, Required>>(left, right);
+// }
 
 namespace constraints{
     

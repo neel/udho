@@ -11,7 +11,7 @@
 int main(){
     using namespace udho::forms::constraints;
     
-    std::string query = "&k1=v11&k2=8&k3=2.28";
+    std::string query = "&k1=v1&k2=4&k3=5";
     
     udho::forms::form<udho::forms::drivers::urlencoded_> form;
     form.parse(query.begin(), query.end());
@@ -40,7 +40,29 @@ int main(){
                 .constrain<gte>(3.0, "k3 < 3.0 not allowed")
                 .constrain<lte>(4.0, "k3 > 4.0 not allowed");
                 
+    std::cout << "k1.depth " << k1.depth << std::endl;
+    std::cout << "k2.depth " << k2.depth << std::endl;
+                           
+    udho::forms::accumulated acc;
     form >> k1 >> k2 >> k3;
+    acc << k1 << k2 << k3;
+                
+    auto validated = udho::forms::validate(form);
+    validated >> k1 >> k2 >> k3;
+    
+    udho::prepared<udho::forms::accumulated> prepared(validated);
+    
+    std::cout << "accumulated.valid() " << validated.valid() << std::endl;
+    std::cout << "valid " << prepared["valid"] << std::endl;
+    std::cout << "fields:k1.valid " << prepared["fields:k1.valid"] << std::endl;
+    std::cout << "fields:k1.value " << prepared["fields:k1.value"] << std::endl;
+    std::cout << "fields:k1.error " << prepared["fields:k1.error"] << std::endl;
+    std::cout << "fields:k2.valid " << prepared["fields:k2.valid"] << std::endl;
+    std::cout << "fields:k2.value " << prepared["fields:k2.value"] << std::endl;
+    std::cout << "fields:k2.error " << prepared["fields:k2.error"] << std::endl;
+    std::cout << "fields:k3.valid " << prepared["fields:k3.valid"] << std::endl;
+    std::cout << "fields:k3.value " << prepared["fields:k3.value"] << std::endl;
+    std::cout << "fields:k3.error " << prepared["fields:k3.error"] << std::endl;
     
     std::cout << "----------k1-----------------" << std::endl;
     std::cout << std::boolalpha << !!k1 << std::endl;
