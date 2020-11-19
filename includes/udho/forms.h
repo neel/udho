@@ -876,10 +876,11 @@ struct accumulated: udho::prepare<accumulated>{
     typedef udho::prepare<accumulated> base;
     typedef accumulated self_type;
     
-    inline accumulated(): _valid(true){}
+    inline accumulated(): _valid(true), _submitted(false){}
     
     template <typename ValidatorT, typename TailT>
     self_type& add(const detail::constrained_field<ValidatorT, TailT>& cf){
+        _submitted = _submitted || cf.field().fetched();
         return add(cf.field().common());
     }
     inline self_type& add(const detail::field_common& common){
@@ -896,13 +897,15 @@ struct accumulated: udho::prepare<accumulated>{
     
     template <typename DictT>
     auto dict(DictT assoc) const{
-        return assoc | base::var("valid",     &self_type::_valid)
+        return assoc | base::var("submitted", &self_type::_submitted)
+                     | base::var("valid",     &self_type::_valid)
                      | base::var("errors",    &self_type::_errors)
                      | base::var("fields",    &self_type::_fields);
     }
     
     private:
         bool _valid;
+        bool _submitted;
         std::vector<std::string> _errors;
         std::map<std::string, detail::field_common> _fields;
 };
