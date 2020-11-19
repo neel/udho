@@ -8,14 +8,16 @@
 #include <udho/configuration.h>
 #include <udho/forms.h>
 
-typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> datetime_type;
+// "%Y-%m-%dT%H:%M:%S"
+
+typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> datetime_type;
 
 int main(){
     using namespace udho::forms::constraints;
     
     std::string query = "&k1=v1&k2=6&k3=5&k4=2011-02-18T23:12:34";
 
-    udho::forms::form<udho::forms::drivers::urlencoded_> form;
+    udho::forms::form<udho::forms::drivers::urlencoded_raw> form;
     form.parse(query.begin(), query.end());
     std::cout << "k1: " << form.field<std::string>("k1") << std::endl;
     std::cout << "k2: " << form.field<std::size_t>("k2") << std::endl;

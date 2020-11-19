@@ -35,7 +35,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/io_service.hpp>
 #include <udho/configuration.h>
-#include <udho/form.h>
+#include <udho/forms.h>
 #include <udho/url.h>
 #include <udho/defs.h>
 #include <udho/logging.h>

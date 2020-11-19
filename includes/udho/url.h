@@ -30,7 +30,7 @@
 
 #include <string>
 #include <udho/configuration.h>
-#include <udho/form.h>
+#include <udho/forms.h>
 #include <functional>
 #include <memory>
 #include <boost/algorithm/string/join.hpp>
@@ -98,7 +98,10 @@ typedef url_data_<> url_data;
       
 }
 
-struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::string::const_iterator>{
+struct url: udho::configuration<detail::url_data>, udho::forms::drivers::urlencoded_raw{
+    
+    typedef udho::forms::drivers::urlencoded_raw urlencoded_type;
+    
     class param{
       std::string _key;
       std::string _value;
@@ -124,7 +127,7 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
     }
     
     url() = delete;
-    url(const url& other): udho::configuration<detail::url_data>(other), udho::urlencoded_form<std::string::const_iterator>(other){}
+    url(const url& other): udho::configuration<detail::url_data>(other), urlencoded_type(other){}
     
     std::string stringify() const{
         return to_string();
@@ -167,7 +170,7 @@ struct url: udho::configuration<detail::url_data>, udho::urlencoded_form<std::st
             
             const std::string& qstr_ref = (*this)[query];
             
-            udho::urlencoded_form<std::string::const_iterator>::parse(qstr_ref.begin(), qstr_ref.end());
+            urlencoded_type::parse(qstr_ref.begin(), qstr_ref.end());
         }
         inline std::string to_string() const{
             return (boost::format("%1%://%2%:%3%%4%") % (*this)[protocol] % (*this)[host] % (*this)[port] % (*this)[target]).str();

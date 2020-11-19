@@ -47,7 +47,7 @@
 #include <udho/cache.h>
 #include <udho/logging.h>
 #include <udho/defs.h>
-#include <udho/form.h>
+#include <udho/forms.h>
 #include <udho/cookie.h>
 #include <udho/session.h>
 #include <udho/attachment.h>
@@ -66,10 +66,10 @@ template <typename RequestT>
 struct context_impl{
     typedef RequestT                                     request_type;
     typedef context_impl<request_type>                   self_type;
-    typedef udho::form_<request_type>                    form_type;
+    typedef udho::forms::form_<request_type>             form_type;
     typedef udho::cookies_<request_type>                 cookies_type;
     typedef boost::beast::http::header<true>             headers_type;
-    typedef urlencoded_form<std::string::const_iterator> query_parser_type;
+    typedef udho::forms::query_                          query_parser_type;
     typedef std::stack<udho::detail::route>              route_stack_type;
     
     const request_type& _request;
@@ -225,10 +225,10 @@ struct context{
     typedef context<AuxT, request_type, shadow_type>        self_type;
     typedef detail::context_impl<request_type>              impl_type;
     typedef boost::shared_ptr<impl_type>                    pimple_type;
-    typedef udho::form_<RequestT>                           form_type;
+    typedef udho::forms::form_<RequestT>                    form_type;
     typedef udho::cookies_<RequestT>                        cookies_type;
     typedef udho::session_<request_type, shadow_type>       session_type;
-    typedef urlencoded_form<std::string::const_iterator>    query_parser_type;
+    typedef udho::forms::query_                             query_parser_type;
     
     pimple_type  _pimpl;
     session_type _session;
@@ -445,9 +445,9 @@ struct context<AuxT, RequestT, void>{
     typedef context<AuxT, request_type, void>               self_type;
     typedef detail::context_impl<request_type>              impl_type;
     typedef boost::shared_ptr<impl_type>                    pimple_type;
-    typedef udho::form_<RequestT>                           form_type;
+    typedef udho::forms::form_<RequestT>                    form_type;
     typedef udho::cookies_<RequestT>                        cookies_type;
-    typedef urlencoded_form<std::string::const_iterator>    query_parser_type;
+    typedef udho::forms::query_                             query_parser_type;
     
     pimple_type _pimpl;
     AuxT&       _aux;

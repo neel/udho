@@ -37,6 +37,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
+#include <boost/beast/http/message.hpp>
 
 namespace udho{
 namespace forms{
@@ -171,8 +172,9 @@ namespace detail{
 /**
  * Form driver for urlencoded forms
  */
+template <typename Iterator = std::string::const_iterator>
 struct urlencoded_{
-    typedef std::string::const_iterator iterator_type;
+    typedef Iterator iterator_type;
     typedef typename std::iterator_traits<iterator_type>::value_type value_type;
     typedef std::basic_string<value_type> string_type;
     typedef bounded_str<iterator_type> bounded_string_type;
@@ -206,7 +208,7 @@ struct urlencoded_{
     /**
         * checks whether the value for the field is empty
         */
-    inline bool empty(const std::string name) const{
+    inline bool empty(const std::string& name) const{
         auto it = _fields.find(name);
         if(it != _fields.end()){
             return it->second.size() == 0;
@@ -217,7 +219,7 @@ struct urlencoded_{
     /**
     * checks whether there exists any field with the name provided
     */
-    inline bool exists(const std::string name) const{
+    inline bool exists(const std::string& name) const{
         return _fields.find(name) != _fields.end();
     }
     
@@ -225,7 +227,7 @@ struct urlencoded_{
     bool parsable(const std::string& name, const ArgsT&... args) const{
         auto it = _fields.find(name);
         if(it != _fields.end()){
-            std::string raw = it->second.copied<std::string>();
+            std::string raw = it->second.template copied<std::string>();
             return ParserT::parsable(raw, args...);
         }
         return false;
@@ -238,17 +240,20 @@ struct urlencoded_{
     const T parsed(const std::string& name, const ArgsT&... args) const{
         auto it = _fields.find(name);
         if(it != _fields.end()){
-            std::string raw = it->second.copied<std::string>();
+            std::string raw = it->second.template copied<std::string>();
             return ParserT::parse(raw, args...);
         }
         return T();
     }
 };
+typedef urlencoded_<std::string::const_iterator> urlencoded_raw;
+
 /**
  * Form accessor for multipart forms
  */
+template <typename Iterator = std::string::const_iterator>
 struct multipart_{
-    typedef std::string::const_iterator iterator_type;
+    typedef Iterator iterator_type;
     typedef typename std::iterator_traits<iterator_type>::value_type value_type;
     typedef std::basic_string<value_type> string_type;
     typedef bounded_str<iterator_type> bounded_string_type;
@@ -446,11 +451,13 @@ struct multipart_{
     }
 };
 
+typedef multipart_<std::string::const_iterator> multipart_raw;
+
 template <typename RequestT>
-struct urlencoded: urlencoded_{
+struct urlencoded: urlencoded_<typename RequestT::body_type::value_type::const_iterator>{
     typedef RequestT request_type;
     typedef typename request_type::body_type::value_type body_type;
-    typedef urlencoded_ urlencoded_type;
+    typedef urlencoded_<typename request_type::body_type::value_type::const_iterator> urlencoded_type;
     
     const request_type& _request;
     
@@ -460,10 +467,10 @@ struct urlencoded: urlencoded_{
 };
 
 template <typename RequestT>
-struct multipart: multipart_{
+struct multipart: multipart_<typename RequestT::body_type::value_type::const_iterator>{
     typedef RequestT request_type;
     typedef typename request_type::body_type::value_type body_type;
-    typedef multipart_ multipart_type;
+    typedef multipart_<typename request_type::body_type::value_type::const_iterator> multipart_type;
     
     const request_type& _request;
     multipart(const request_type& request): _request(request){
@@ -480,7 +487,7 @@ struct multipart: multipart_{
 };
 
 template <typename RequestT>
-struct combo: private urlencoded_, private multipart_{
+struct combo: private urlencoded_<typename RequestT::body_type::value_type::const_iterator>, private multipart_<typename RequestT::body_type::value_type::const_iterator>{
     enum class types{
         unparsed,
         urlencoded,
@@ -488,8 +495,8 @@ struct combo: private urlencoded_, private multipart_{
     };
     
     typedef RequestT request_type;
-    typedef urlencoded_ urlencoded_type;
-    typedef multipart_ multipart_type;
+    typedef urlencoded_<typename request_type::body_type::value_type::const_iterator> urlencoded_type;
+    typedef multipart_<typename request_type::body_type::value_type::const_iterator> multipart_type;
     typedef typename request_type::body_type::value_type body_type;
     
     const request_type& _request;
@@ -534,6 +541,15 @@ struct combo: private urlencoded_, private multipart_{
         */
     bool is_multipart() const{
         return _type == types::multipart;
+    }
+    const urlencoded_type& urlencoded() const{
+        return static_cast<const urlencoded_type&>(*this);
+    }
+    /**
+     * return the multipart specific form accessor
+     */
+    const multipart_type& multipart() const{
+        return static_cast<const multipart_type&>(*this);
     }
     /**
         * checks whether the value for the field is empty
@@ -630,6 +646,11 @@ struct form: public DriverT{
         return field<T, ParserT, ArgsT...>(name, &okay, args...);
     }
 };
+
+
+using query_ = form<drivers::urlencoded_raw>;
+template <typename RequestT>
+using form_ = form<drivers::combo<RequestT>>;
 
 template <typename T, bool Required = false>
 struct field;
