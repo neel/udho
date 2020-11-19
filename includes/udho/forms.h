@@ -29,6 +29,9 @@
 #define UDHO_FORMS_H
 
 #include <string>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 #include <udho/util.h>
 #include <udho/access.h>
 #include <boost/lexical_cast.hpp>
@@ -37,6 +40,8 @@
 
 namespace udho{
 namespace forms{
+    
+static constexpr const char* default_datetime_format = "%Y-%m-%d %H:%M:%S";
     
 template <typename V, typename U>
 struct deserializer;
@@ -86,16 +91,55 @@ struct deserializer<std::string, std::string>{
         return input;
     }
 };
+
+template <typename DurationT>
+struct deserializer<std::chrono::time_point<std::chrono::system_clock, DurationT>, std::string>{
+    typedef std::chrono::time_point<std::chrono::system_clock, DurationT> time_type;
+    
+    static bool check(const std::string& input, const std::string& format = default_datetime_format){
+        std::tm tm = {};
+        std::istringstream ss(input);
+        ss >> std::get_time(&tm, format.c_str());
+        return !ss.fail();
+    }
+    static time_type deserialize(const std::string& input, const std::string& format = default_datetime_format){
+        std::tm tm = {};
+        std::istringstream ss(input);
+        ss >> std::get_time(&tm, format.c_str());
+        if(ss.fail()){
+            return time_type();
+        }
+        std::time_t tt = std::mktime(&tm);
+        std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt);
+        
+        return std::chrono::time_point_cast<DurationT>(tp);
+    }
+};
+
+template <typename DurationT>
+struct deserializer<std::string, std::chrono::time_point<std::chrono::system_clock, DurationT>>{
+    typedef std::chrono::time_point<std::chrono::system_clock, DurationT> time_type;
+    
+    static bool check(const std::chrono::time_point<std::chrono::system_clock, DurationT>& input, const std::string& format = default_datetime_format){
+        return true;
+    }
+    static std::string deserialize(const std::chrono::time_point<std::chrono::system_clock, DurationT>& input, const std::string& format = default_datetime_format){
+        auto tt = std::chrono::system_clock::to_time_t(input);
+        std::stringstream ss;
+        ss << std::put_time(std::localtime(&tt), format.c_str());
+        return ss.str();
+    }
+};
     
 template <typename T>
 struct parser{
-    template <typename U>
-    static bool parsable(const U& input){
-        return deserializer<T, U>::check(input);
+    template <typename U, typename... ArgsT>
+    static bool parsable(const U& input, const ArgsT&... args){
+        return deserializer<T, U>::check(input, args...);
     }
-    template <typename U>
-    static T parse(const U& input){
-        return deserializer<T, U>::deserialize(input);
+    template <typename U, typename... ArgsT>
+    static T parse(const U& input, const ArgsT&... args){
+        return deserializer<T, U>::deserialize(input, args...);
     }
 };
 
@@ -124,425 +168,427 @@ namespace detail{
     };
 }
     
-    /**
-     * Form driver for urlencoded forms
-     */
-    struct urlencoded_{
-        typedef std::string::const_iterator iterator_type;
-        typedef typename std::iterator_traits<iterator_type>::value_type value_type;
-        typedef std::basic_string<value_type> string_type;
-        typedef bounded_str<iterator_type> bounded_string_type;
-        typedef std::map<string_type, bounded_string_type> header_map_type;
-        typedef bounded_string_type bounded_string;
-        
-        header_map_type _fields;
-        std::string _query;
-               
-        inline void parse(iterator_type begin, iterator_type end){
-            iterator_type last  = begin;
-            while(true){
-                iterator_type it     = std::find(last, end, '&');
-                iterator_type assign = std::find(last, it, '=');
-                bounded_string_type key(last, assign);
-                bounded_string_type value(assign+1, it);
-                
-                std::string key_str = key.template copied<std::string>();
-                
+/**
+ * Form driver for urlencoded forms
+ */
+struct urlencoded_{
+    typedef std::string::const_iterator iterator_type;
+    typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+    typedef std::basic_string<value_type> string_type;
+    typedef bounded_str<iterator_type> bounded_string_type;
+    typedef std::map<string_type, bounded_string_type> header_map_type;
+    typedef bounded_string_type bounded_string;
+    
+    header_map_type _fields;
+    std::string _query;
+            
+    inline void parse(iterator_type begin, iterator_type end){
+        iterator_type last  = begin;
+        while(true){
+            iterator_type it     = std::find(last, end, '&');
+            iterator_type assign = std::find(last, it, '=');
+            bounded_string_type key(last, assign);
+            bounded_string_type value(assign+1, it);
+            
+            std::string key_str = key.template copied<std::string>();
+            
 //                 std::cout << "Key ^"   << key.  template copied<std::string>() << "$" << std::endl;
 //                 std::cout << "value ^" << value.template copied<std::string>() << "$" << std::endl;
-                
-                _fields.insert(std::make_pair(key_str, value));
-                if(it == end){
-                    break;
-                }else{
-                    last = it+1;
-                }
+            
+            _fields.insert(std::make_pair(key_str, value));
+            if(it == end){
+                break;
+            }else{
+                last = it+1;
             }
         }
-        /**
-         * checks whether the value for the field is empty
-         */
-        inline bool empty(const std::string name) const{
-            auto it = _fields.find(name);
-            if(it != _fields.end()){
-                return it->second.size() == 0;
-            }
-            return true;
-        }
-        
-        /**
-        * checks whether there exists any field with the name provided
-        */
-        inline bool exists(const std::string name) const{
-            return _fields.find(name) != _fields.end();
-        }
-        
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        bool parsable(const std::string& name) const{
-            auto it = _fields.find(name);
-            if(it != _fields.end()){
-                std::string raw = it->second.copied<std::string>();
-                return ParserT::parsable(raw);
-            }
-            return false;
-        }
-        
-        /**
-         * returns the value of the field with the name provided lexically casted to type T
-         */
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        const T parsed(const std::string& name) const{
-            auto it = _fields.find(name);
-            if(it != _fields.end()){
-                std::string raw = it->second.copied<std::string>();
-                return ParserT::parse(raw);
-            }
-            return T();
-        }
-    };
+    }
     /**
-    * Form accessor for multipart forms
+        * checks whether the value for the field is empty
+        */
+    inline bool empty(const std::string name) const{
+        auto it = _fields.find(name);
+        if(it != _fields.end()){
+            return it->second.size() == 0;
+        }
+        return true;
+    }
+    
+    /**
+    * checks whether there exists any field with the name provided
     */
-    struct multipart_{
-        typedef std::string::const_iterator iterator_type;
-        typedef typename std::iterator_traits<iterator_type>::value_type value_type;
-        typedef std::basic_string<value_type> string_type;
-        typedef bounded_str<iterator_type> bounded_string_type;
-        typedef std::map<string_type, bounded_string_type> header_map_type;
-        typedef bounded_string_type bounded_string;
-        
-        /**
-        * A part in the multipart form data
-        */
-        struct form_part{
-            header_map_type _headers;
-            bounded_string_type _body;
-            
-            form_part(iterator_type begin, iterator_type end): _body(begin, end){}
-            
-            void set_header(const header_map_type& headers){
-                _headers = headers;
-            }
-            /**
-            * returns the value associated with the key in the header of the part
-            * \code
-            * header("Content-Disposition").copied<std::string>();
-            * \endcode
-            */
-            const bounded_string_type& header(const std::string& key) const{
-                return _headers.at(key);
-            }
-            /**
-            * returns the value associated with the key and sub key in the header of the part
-            * \code
-            * header("Content-Disposition", "name").copied<std::string>();
-            * \endcode
-            */
-            bounded_string_type header(const std::string& key, const std::string& sub) const{
-                bounded_string_type value = header(key);
-                std::string subfield = sub+"=";
-                iterator_type sub_begin = _search(value.begin(), value.end(), subfield.begin(), subfield.end());
-                iterator_type sub_end = std::find(sub_begin, value.end(), ';');
-                if(sub_begin != sub_end){
-                    auto it = std::find(sub_begin, sub_end, '"');
-                    if(it != sub_end){
-                        sub_begin = it+1;
-                        sub_end   = std::find(sub_begin, sub_end, '"');
-                    }
-                }
-                return bounded_string_type(sub_begin, sub_end);
-            }
-            /**
-            * name of the part
-            * \code
-            * name().copied<std::string>();
-            * \endcode
-            */
-            bounded_string_type name() const{
-                return header("Content-Disposition", "name");
-            }
-            /**
-            * filename of the part
-            * \code
-            * name().copied<std::string>();
-            * \endcode
-            */
-            bounded_string_type filename() const{
-                return header("Content-Disposition", "filename");
-            }
-            /**
-            * body of the part returned as a pair of string iterators
-            * \code
-            * body().copied<std::string>();
-            * \endcode
-            */
-            const bounded_string_type& body() const{
-                return _body;
-            }
-            template <typename StrT>
-            StrT copied() const{
-                return body().template copied<StrT>();
-            }
-            /**
-            * returns the body of the part as string
-            */
-            std::string str() const{
-                return boost::trim_copy(copied<std::string>());
-            }
-            
-            template <typename T, typename ParserT = udho::forms::parser<T>>
-            bool parsable() const{
-                return ParserT::parsable(str());
-            }
-            bool empty() const{
-                return _body.size() == 0;
-            }
-            /**
-            * returns the value of the field with the name provided lexically casted to type T
-            */
-            template <typename T, typename ParserT = udho::forms::parser<T>>
-            const T parsed() const{
-                if(parsable<T, ParserT>()){
-                    return ParserT::parse(str());
-                }
-                return T();
-            }
-        };
-        
-        std::string _boundary;
-        std::map<string_type, form_part> _parts;
-
-        void parse(const std::string& boundary, iterator_type begin, iterator_type end){
-            _boundary = boundary;
-            iterator_type last  = begin;
-            iterator_type index = _search(last, end,_boundary.begin(), _boundary.end());
-            while(true){
-                last = index;
-                index = _search(last+_boundary.size(), end, _boundary.begin(), _boundary.end());
-                if(index == end){
-                    break;
-                }
-                
-                // std::cout << "NEXT PART ^" << bounded_string(last+_boundary.size()+2, index).template copied<string_type>() << "$" << std::endl;
-
-                parse_part(last+_boundary.size()+2, index);
-            }
+    inline bool exists(const std::string name) const{
+        return _fields.find(name) != _fields.end();
+    }
+    
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    bool parsable(const std::string& name, const ArgsT&... args) const{
+        auto it = _fields.find(name);
+        if(it != _fields.end()){
+            std::string raw = it->second.copied<std::string>();
+            return ParserT::parsable(raw, args...);
         }
-        void parse_part(iterator_type begin, iterator_type end){
-            string_type crlf("\r\n");
-            iterator_type last  = begin;
-            iterator_type index = _search(last, end, crlf.begin(), crlf.end());
-            
-            header_map_type headers;
-            
-            while(true){
-                // std::cout << "Header ^" << bounded_string(last, index).template copied<string_type>() << "$" << std::endl;
-                iterator_type colon = std::find(last, index, ':');
-                if(colon != index){
-                    std::string key = bounded_string(last, colon).template copied<std::string>();
-                    // std::cout << "Key ^" << key << "$" << std::endl;
-                    iterator_type vbegin = std::find_if_not(colon+1, index, [](char ch){return std::isspace(ch);});
-                    // std::cout << "Value ^" << bounded_string(vbegin, index).template copied<string_type>() << "$" << std::endl;
-                    headers.insert(std::make_pair(key, bounded_string(vbegin, index)));
-                }
-                last = index+2;
-                index = _search(last, end, crlf.begin(), crlf.end());
-                if(index == last){
-                    break;
-                }
-            }
-            // std::cout << "BODY ^" << bounded_string(index+2, end-2).template copied<string_type>() << "$" << std::endl;
-            
-            form_part f(index+2, end-2);
-            f.set_header(headers);
-            _parts.insert(std::make_pair(f.name().template copied<std::string>(), f));
+        return false;
+    }
+    
+    /**
+        * returns the value of the field with the name provided lexically casted to type T
+        */
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    const T parsed(const std::string& name, const ArgsT&... args) const{
+        auto it = _fields.find(name);
+        if(it != _fields.end()){
+            std::string raw = it->second.copied<std::string>();
+            return ParserT::parse(raw, args...);
+        }
+        return T();
+    }
+};
+/**
+ * Form accessor for multipart forms
+ */
+struct multipart_{
+    typedef std::string::const_iterator iterator_type;
+    typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+    typedef std::basic_string<value_type> string_type;
+    typedef bounded_str<iterator_type> bounded_string_type;
+    typedef std::map<string_type, bounded_string_type> header_map_type;
+    typedef bounded_string_type bounded_string;
+    
+    /**
+    * A part in the multipart form data
+    */
+    struct form_part{
+        header_map_type _headers;
+        bounded_string_type _body;
+        
+        form_part(iterator_type begin, iterator_type end): _body(begin, end){}
+        
+        void set_header(const header_map_type& headers){
+            _headers = headers;
         }
         /**
-        * number of fields in the form
+        * returns the value associated with the key in the header of the part
+        * \code
+        * header("Content-Disposition").copied<std::string>();
+        * \endcode
         */
-        std::size_t count() const{
-            return _parts.size();
+        const bounded_string_type& header(const std::string& key) const{
+            return _headers.at(key);
         }
         /**
-        * checks whether the form has any field with the given name
+        * returns the value associated with the key and sub key in the header of the part
+        * \code
+        * header("Content-Disposition", "name").copied<std::string>();
+        * \endcode
         */
-        bool exists(const std::string name) const{
-            return _parts.find(name) != _parts.end();
-        }
-        bool empty(const std::string name) const{
-            if(exists(name)){
-                return part(name).empty();
+        bounded_string_type header(const std::string& key, const std::string& sub) const{
+            bounded_string_type value = header(key);
+            std::string subfield = sub+"=";
+            iterator_type sub_begin = _search(value.begin(), value.end(), subfield.begin(), subfield.end());
+            iterator_type sub_end = std::find(sub_begin, value.end(), ';');
+            if(sub_begin != sub_end){
+                auto it = std::find(sub_begin, sub_end, '"');
+                if(it != sub_end){
+                    sub_begin = it+1;
+                    sub_end   = std::find(sub_begin, sub_end, '"');
+                }
             }
-            return true;
+            return bounded_string_type(sub_begin, sub_end);
         }
         /**
-        * returns the part associated with the given name
+        * name of the part
+        * \code
+        * name().copied<std::string>();
+        * \endcode
         */
-        const form_part& part(const std::string& name) const{
-            return _parts.at(name);
+        bounded_string_type name() const{
+            return header("Content-Disposition", "name");
+        }
+        /**
+        * filename of the part
+        * \code
+        * name().copied<std::string>();
+        * \endcode
+        */
+        bounded_string_type filename() const{
+            return header("Content-Disposition", "filename");
+        }
+        /**
+        * body of the part returned as a pair of string iterators
+        * \code
+        * body().copied<std::string>();
+        * \endcode
+        */
+        const bounded_string_type& body() const{
+            return _body;
+        }
+        template <typename StrT>
+        StrT copied() const{
+            return body().template copied<StrT>();
+        }
+        /**
+        * returns the body of the part as string
+        */
+        std::string str() const{
+            return boost::trim_copy(copied<std::string>());
         }
         
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        bool parsable(const std::string& name) const{
-            if(exists(name)){
-                return part(name).template parsable<T, ParserT>();
-            }
-            return false;
+        template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+        bool parsable(const ArgsT&... args) const{
+            return ParserT::parsable(str(), args...);
         }
-        
+        bool empty() const{
+            return _body.size() == 0;
+        }
         /**
         * returns the value of the field with the name provided lexically casted to type T
         */
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        const T parsed(const std::string& name) const{
-            if(exists(name)){
-                return part(name).template parsed<T, ParserT>();
+        template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+        const T parsed(const ArgsT&... args) const{
+            if(parsable<T, ParserT>()){
+                return ParserT::parse(str(), args...);
             }
             return T();
         }
     };
     
-    template <typename RequestT>
-    struct urlencoded: urlencoded_{
-        typedef RequestT request_type;
-        typedef typename request_type::body_type::value_type body_type;
-        typedef urlencoded_ urlencoded_type;
-        
-        const request_type& _request;
-        
-        urlencoded(const request_type& request): _request(request){
-            urlencoded_type::parse(_request.body().begin(), _request.body().end());
+    std::string _boundary;
+    std::map<string_type, form_part> _parts;
+
+    void parse(const std::string& boundary, iterator_type begin, iterator_type end){
+        _boundary = boundary;
+        iterator_type last  = begin;
+        iterator_type index = _search(last, end,_boundary.begin(), _boundary.end());
+        while(true){
+            last = index;
+            index = _search(last+_boundary.size(), end, _boundary.begin(), _boundary.end());
+            if(index == end){
+                break;
+            }
+            
+            // std::cout << "NEXT PART ^" << bounded_string(last+_boundary.size()+2, index).template copied<string_type>() << "$" << std::endl;
+
+            parse_part(last+_boundary.size()+2, index);
         }
-    };
+    }
+    void parse_part(iterator_type begin, iterator_type end){
+        string_type crlf("\r\n");
+        iterator_type last  = begin;
+        iterator_type index = _search(last, end, crlf.begin(), crlf.end());
+        
+        header_map_type headers;
+        
+        while(true){
+            // std::cout << "Header ^" << bounded_string(last, index).template copied<string_type>() << "$" << std::endl;
+            iterator_type colon = std::find(last, index, ':');
+            if(colon != index){
+                std::string key = bounded_string(last, colon).template copied<std::string>();
+                // std::cout << "Key ^" << key << "$" << std::endl;
+                iterator_type vbegin = std::find_if_not(colon+1, index, [](char ch){return std::isspace(ch);});
+                // std::cout << "Value ^" << bounded_string(vbegin, index).template copied<string_type>() << "$" << std::endl;
+                headers.insert(std::make_pair(key, bounded_string(vbegin, index)));
+            }
+            last = index+2;
+            index = _search(last, end, crlf.begin(), crlf.end());
+            if(index == last){
+                break;
+            }
+        }
+        // std::cout << "BODY ^" << bounded_string(index+2, end-2).template copied<string_type>() << "$" << std::endl;
+        
+        form_part f(index+2, end-2);
+        f.set_header(headers);
+        _parts.insert(std::make_pair(f.name().template copied<std::string>(), f));
+    }
+    /**
+    * number of fields in the form
+    */
+    std::size_t count() const{
+        return _parts.size();
+    }
+    /**
+    * checks whether the form has any field with the given name
+    */
+    bool exists(const std::string name) const{
+        return _parts.find(name) != _parts.end();
+    }
+    bool empty(const std::string name) const{
+        if(exists(name)){
+            return part(name).empty();
+        }
+        return true;
+    }
+    /**
+    * returns the part associated with the given name
+    */
+    const form_part& part(const std::string& name) const{
+        return _parts.at(name);
+    }
     
-    template <typename RequestT>
-    struct multipart: multipart_{
-        typedef RequestT request_type;
-        typedef typename request_type::body_type::value_type body_type;
-        typedef multipart_ multipart_type;
-        
-        const request_type& _request;
-        multipart(const request_type& request): _request(request){
-            detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
-            if(!boundary_extractor.extract()){
-                std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
-                return;
-            }else{
-                std::string boundary = boundary_extractor.boundary();
-                // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
-                multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
-            }
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    bool parsable(const std::string& name, const ArgsT&... args) const{
+        if(exists(name)){
+            return part(name).template parsable<T, ParserT>(args...);
         }
-    };
+        return false;
+    }
     
-    template <typename RequestT>
-    struct combo: private urlencoded_, private multipart_{
-        enum class types{
-            unparsed,
-            urlencoded,
-            multipart
-        };
-        
-        typedef RequestT request_type;
-        typedef urlencoded_ urlencoded_type;
-        typedef multipart_ multipart_type;
-        typedef typename request_type::body_type::value_type body_type;
-        
-        const request_type& _request;
-        types _type;
-        
-        combo(const request_type& request): _request(request), _type(types::unparsed){
-            if(_request[boost::beast::http::field::content_type].find("application/x-www-form-urlencoded") != std::string::npos){
-                parse_urlencoded();
-            }else if(_request[boost::beast::http::field::content_type].find("multipart/form-data") != std::string::npos){
-                parse_multipart();
-            }
+    /**
+    * returns the value of the field with the name provided lexically casted to type T
+    */
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    const T parsed(const std::string& name, const ArgsT&... args) const{
+        if(exists(name)){
+            return part(name).template parsed<T, ParserT>(args...);
         }
-        /**
-         * parse the beast request body as urlencoded form data
-         */
-        void parse_urlencoded(){
-            urlencoded_type::parse(_request.body().begin(), _request.body().end());
-            _type = types::urlencoded;
-        }
-        /**
-         * parse the beast request body as multipart form data
-         */
-        void parse_multipart(){
-            detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
-            if(!boundary_extractor.extract()){
-                std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
-                return;
-            }else{
-                std::string boundary = boundary_extractor.boundary();
-                // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
-                multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
-            }
-        }
-        /**
-         * check whether the submitted form is urlencoded
-         */
-        bool is_urlencoded() const{
-            return _type == types::urlencoded;
-        }
-        /**
-         * check whether the submitted form is multipart
-         */
-        bool is_multipart() const{
-            return _type == types::multipart;
-        }
-        /**
-         * checks whether the value for the field is empty
-         */
-        inline bool empty(const std::string name) const{
-            if(_type == types::urlencoded){
-                return urlencoded_type::empty(name);
-            }else if(_type == types::multipart){
-                return multipart_type::empty(name);
-            }else{
-                return true;
-            }
-        }
-        
-        /**
-        * checks whether there exists any field with the name provided
-        */
-        inline bool exists(const std::string name) const{
-            if(_type == types::urlencoded){
-                return urlencoded_type::exists(name);
-            }else if(_type == types::multipart){
-                return multipart_type::exists(name);
-            }else{
-                return false;
-            }
-        }
-        
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        bool parsable(const std::string& name) const{
-            if(_type == types::urlencoded){
-                return urlencoded_type::template parsable<T, ParserT>(name);
-            }else if(_type == types::multipart){
-                return multipart_type::template parsable<T, ParserT>(name);
-            }else{
-                return false;
-            }
-        }
-        
-        /**
-         * returns the value of the field with the name provided lexically casted to type T
-         */
-        template <typename T, typename ParserT = udho::forms::parser<T>>
-        const T parsed(const std::string& name) const{
-            if(_type == types::urlencoded){
-                return urlencoded_type::template parsed<T, ParserT>(name);
-            }else if(_type == types::multipart){
-                return multipart_type::template parsed<T, ParserT>(name);
-            }else{
-                return false;
-            }
-        }
-    };
+        return T();
+    }
 };
+
+template <typename RequestT>
+struct urlencoded: urlencoded_{
+    typedef RequestT request_type;
+    typedef typename request_type::body_type::value_type body_type;
+    typedef urlencoded_ urlencoded_type;
+    
+    const request_type& _request;
+    
+    urlencoded(const request_type& request): _request(request){
+        urlencoded_type::parse(_request.body().begin(), _request.body().end());
+    }
+};
+
+template <typename RequestT>
+struct multipart: multipart_{
+    typedef RequestT request_type;
+    typedef typename request_type::body_type::value_type body_type;
+    typedef multipart_ multipart_type;
+    
+    const request_type& _request;
+    multipart(const request_type& request): _request(request){
+        detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
+        if(!boundary_extractor.extract()){
+            std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
+            return;
+        }else{
+            std::string boundary = boundary_extractor.boundary();
+            // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+            multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
+        }
+    }
+};
+
+template <typename RequestT>
+struct combo: private urlencoded_, private multipart_{
+    enum class types{
+        unparsed,
+        urlencoded,
+        multipart
+    };
+    
+    typedef RequestT request_type;
+    typedef urlencoded_ urlencoded_type;
+    typedef multipart_ multipart_type;
+    typedef typename request_type::body_type::value_type body_type;
+    
+    const request_type& _request;
+    types _type;
+    
+    combo(const request_type& request): _request(request), _type(types::unparsed){
+        if(_request[boost::beast::http::field::content_type].find("application/x-www-form-urlencoded") != std::string::npos){
+            parse_urlencoded();
+        }else if(_request[boost::beast::http::field::content_type].find("multipart/form-data") != std::string::npos){
+            parse_multipart();
+        }
+    }
+    /**
+        * parse the beast request body as urlencoded form data
+        */
+    void parse_urlencoded(){
+        urlencoded_type::parse(_request.body().begin(), _request.body().end());
+        _type = types::urlencoded;
+    }
+    /**
+        * parse the beast request body as multipart form data
+        */
+    void parse_multipart(){
+        detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
+        if(!boundary_extractor.extract()){
+            std::cout << "multipart boundary not found in Content-Type: " << _request[boost::beast::http::field::content_type] << std::endl;
+            return;
+        }else{
+            std::string boundary = boundary_extractor.boundary();
+            // std::cout << _request << std::endl << "#################### " << std::endl << "BOUNDARY =(" << boundary << ")" << std::endl;
+            multipart_type::parse(boundary, _request.body().begin(), _request.body().end());
+        }
+    }
+    /**
+        * check whether the submitted form is urlencoded
+        */
+    bool is_urlencoded() const{
+        return _type == types::urlencoded;
+    }
+    /**
+        * check whether the submitted form is multipart
+        */
+    bool is_multipart() const{
+        return _type == types::multipart;
+    }
+    /**
+        * checks whether the value for the field is empty
+        */
+    inline bool empty(const std::string name) const{
+        if(_type == types::urlencoded){
+            return urlencoded_type::empty(name);
+        }else if(_type == types::multipart){
+            return multipart_type::empty(name);
+        }else{
+            return true;
+        }
+    }
+    
+    /**
+    * checks whether there exists any field with the name provided
+    */
+    inline bool exists(const std::string name) const{
+        if(_type == types::urlencoded){
+            return urlencoded_type::exists(name);
+        }else if(_type == types::multipart){
+            return multipart_type::exists(name);
+        }else{
+            return false;
+        }
+    }
+    
+    template <typename T, typename ParserT = udho::forms::parser<T>>
+    bool parsable(const std::string& name) const{
+        if(_type == types::urlencoded){
+            return urlencoded_type::template parsable<T, ParserT>(name);
+        }else if(_type == types::multipart){
+            return multipart_type::template parsable<T, ParserT>(name);
+        }else{
+            return false;
+        }
+    }
+    
+    /**
+        * returns the value of the field with the name provided lexically casted to type T
+        */
+    template <typename T, typename ParserT = udho::forms::parser<T>>
+    const T parsed(const std::string& name) const{
+        if(_type == types::urlencoded){
+            return urlencoded_type::template parsed<T, ParserT>(name);
+        }else if(_type == types::multipart){
+            return multipart_type::template parsed<T, ParserT>(name);
+        }else{
+            return false;
+        }
+    }
+};
+
+    
+}
 
 template <typename DriverT>
 struct form: public DriverT{
@@ -564,6 +610,24 @@ struct form: public DriverT{
             *ok = true;
         }
         return DriverT::template parsed<T, ParserT>(name);
+    }
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    T field(const std::string& name, bool* ok, const ArgsT&... args) const {
+        if(!DriverT::template parsable<T, ParserT>(name, args...) || DriverT::empty(name)){
+            if(ok){
+                *ok = false;
+            }
+            return T();
+        }
+        if(ok){
+            *ok = true;
+        }
+        return DriverT::template parsed<T, ParserT>(name, args...);
+    }
+    template <typename T, typename ParserT = udho::forms::parser<T>, typename... ArgsT>
+    T field(const std::string& name, const ArgsT&... args) const {
+        bool okay;
+        return field<T, ParserT, ArgsT...>(name, &okay, args...);
     }
 };
 
@@ -731,7 +795,8 @@ struct field_data: field_common{
     
     inline const value_type& value() const { return _value; }
     inline const value_type& operator*() const { return value(); }
-    void value(const value_type& v) { _value = v; field_common::_value_str = boost::lexical_cast<std::string>(v); }
+    template <typename... ArgsT>
+    void value(const value_type& v, const ArgsT&... args) { _value = v; field_common::_value_str = parser<std::string>::parse(v, args...); }
     field_common& common() { return static_cast<field_common&>(*this); }
     const field_common& common() const { return static_cast<const field_common&>(*this); }
     private:    
@@ -831,6 +896,81 @@ struct field<T, false>: detail::basic_field<T, field<T, false>>{
         if(!base::_absent){
             bool okay = true;
             base::value(form.template field<value_type>(base::_name, &okay));
+            base::_unparsable = !okay;
+            base::_valid = !base::_unparsable;
+            if(base::_unparsable){
+                base::_message = base::_message_unparsable.empty() ? base::_message_absent : base::_message_unparsable;
+            }
+        }else{
+            base::_valid = true;
+            base::value(_def);
+        }
+        base::_fetched = true;
+        return base::valid();
+    }
+    template <typename FormT, typename ValidatorT>
+    bool validate(const FormT& form, const ValidatorT& validator){
+        fetch(form);
+        return base::template validate<ValidatorT>(validator);
+    }
+    
+    protected:
+        value_type _def;
+};
+
+template <typename DurationT>
+struct field<std::chrono::time_point<std::chrono::system_clock, DurationT>, true>: detail::basic_field<std::chrono::time_point<std::chrono::system_clock, DurationT>, field<std::chrono::time_point<std::chrono::system_clock, DurationT>, true>>{
+    typedef std::chrono::time_point<std::chrono::system_clock, DurationT> value_type;
+    typedef field<std::chrono::time_point<std::chrono::system_clock, DurationT>, true> self_type;
+    typedef detail::basic_field<std::chrono::time_point<std::chrono::system_clock, DurationT>, field<std::chrono::time_point<std::chrono::system_clock, DurationT>, true>> base;
+    enum { is_required = true };
+    
+    std::string _format;
+    
+    field(const std::string& name, const std::string& format = default_datetime_format): base(name), _format(format){}
+    template <typename FormT>
+    bool fetch(const FormT& form){
+        if(base::_fetched) return base::valid();
+        base::_absent  = !form.has(base::_name);
+        if(!base::_absent){
+            bool okay = true;
+            base::value(form.template field<value_type>(base::_name, &okay, _format), _format);
+            base::_unparsable = !okay;
+            if(base::_unparsable){
+                base::_message = base::_message_unparsable.empty() ? base::_message_absent : base::_message_unparsable;
+            }
+        }else{
+            base::_message = base::_message_absent;
+        }
+        base::_valid = !base::_absent && !base::_unparsable;
+        base::_fetched = true;
+        return base::valid();
+    }
+    template <typename FormT, typename ValidatorT>
+    bool validate(const FormT& form, const ValidatorT& validator){
+        fetch(form);
+        return base::template validate<ValidatorT>(validator);
+    }
+};
+
+template <typename DurationT>
+struct field<std::chrono::time_point<std::chrono::system_clock, DurationT>, false>: detail::basic_field<std::chrono::time_point<std::chrono::system_clock, DurationT>, field<std::chrono::time_point<std::chrono::system_clock, DurationT>, false>>{
+    typedef std::chrono::time_point<std::chrono::system_clock, DurationT> value_type;
+    typedef field<std::chrono::time_point<std::chrono::system_clock, DurationT>, false> self_type;
+    typedef detail::basic_field<std::chrono::time_point<std::chrono::system_clock, DurationT>, field<std::chrono::time_point<std::chrono::system_clock, DurationT>, false>> base;
+    enum { is_required = false };
+    
+    std::string _format;
+    
+    field(const std::string& name, const std::string& format = default_datetime_format, const value_type& def = value_type()): base(name), _format(format), _def(def){}
+    const value_type& def() const { return _def; }
+    template <typename FormT>
+    bool fetch(const FormT& form){
+        if(base::_fetched) return base::valid();
+        base::_absent  = !form.has(base::_name);
+        if(!base::_absent){
+            bool okay = true;
+            base::value(form.template field<value_type>(base::_name, &okay, _format), _format);
             base::_unparsable = !okay;
             base::_valid = !base::_unparsable;
             if(base::_unparsable){
@@ -1095,6 +1235,21 @@ struct lt<std::string>: basic_constrain<lt<std::string>>{
     bool operator()(const std::string& input) const{ return input.size() < _value; }
 };
     
+struct all_digits: basic_constrain<all_digits>{
+    typedef basic_constrain<all_digits> base;
+    
+    all_digits(std::string message = ""): base(message){}
+    inline bool operator()(const std::string& value) const{
+        for(auto it = value.begin(); it != value.end(); ++it){
+            char c = *it;
+            if(!std::isdigit(c)){
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
 }
 
 }
