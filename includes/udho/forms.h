@@ -38,6 +38,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/beast/http/message.hpp>
+#include <boost/format.hpp>
 
 namespace udho{
 namespace forms{
@@ -510,15 +511,15 @@ struct combo: private urlencoded_<typename RequestT::body_type::value_type::cons
         }
     }
     /**
-        * parse the beast request body as urlencoded form data
-        */
+     * parse the beast request body as urlencoded form data
+     */
     void parse_urlencoded(){
         urlencoded_type::parse(_request.body().begin(), _request.body().end());
         _type = types::urlencoded;
     }
     /**
-        * parse the beast request body as multipart form data
-        */
+     * parse the beast request body as multipart form data
+     */
     void parse_multipart(){
         detail::extract_multipart_boundary<request_type> boundary_extractor(_request);
         if(!boundary_extractor.extract()){
@@ -531,14 +532,14 @@ struct combo: private urlencoded_<typename RequestT::body_type::value_type::cons
         }
     }
     /**
-        * check whether the submitted form is urlencoded
-        */
+     * check whether the submitted form is urlencoded
+     */
     bool is_urlencoded() const{
         return _type == types::urlencoded;
     }
     /**
-        * check whether the submitted form is multipart
-        */
+     * check whether the submitted form is multipart
+     */
     bool is_multipart() const{
         return _type == types::multipart;
     }
@@ -598,7 +599,7 @@ struct combo: private urlencoded_<typename RequestT::body_type::value_type::cons
         }else if(_type == types::multipart){
             return multipart_type::template parsed<T, ParserT>(name);
         }else{
-            return false;
+            return T();
         }
     }
 };
@@ -830,7 +831,7 @@ struct basic_field: field_data<ValueT>{
     typedef DerivedT derived_type;
     typedef field_data<ValueT> data_type;
     
-    basic_field(const std::string& name): data_type(name){}
+    basic_field(const std::string& name): data_type(name), _message_absent((boost::format("%1% absent") % name).str()), _message_unparsable((boost::format("%1% malformed") % name).str()) {}
     derived_type& absent(const std::string& message) { _message_absent = message; return self(); }
     derived_type& unparsable(const std::string& message) { _message_unparsable = message; return self(); }
     data_type& data() { return static_cast<data_type&>(*this);}
@@ -1056,6 +1057,18 @@ struct accumulated: udho::prepare<accumulated>{
     
     inline bool valid() const { return _valid; }
     
+    inline void add_error(const std::string& err){
+        _errors.push_back(err);
+    }
+    
+    const std::vector<std::string>& errors() const{
+        return _errors;
+    }
+    
+    const detail::field_common& operator[](const std::string& name) const{
+        return _fields.at(name);
+    }
+    
     template <typename DictT>
     auto dict(DictT assoc) const{
         return assoc | base::var("submitted", &self_type::_submitted)
@@ -1228,6 +1241,7 @@ struct gte<std::string>: basic_constrain<gte<std::string>>{
     gte(const std::size_t& value, const std::string& message = ""): base(message), _value(value){}
     bool operator()(const std::string& input) const{ return input.size() >= _value; }
 };
+
 template <>
 struct gt<std::string>: basic_constrain<gt<std::string>>{
     typedef basic_constrain<gt<std::string>> base;
@@ -1268,6 +1282,44 @@ struct all_digits: basic_constrain<all_digits>{
             }
         }
         return true;
+    }
+};
+
+struct no_space: basic_constrain<no_space>{
+    typedef basic_constrain<no_space> base;
+    
+    no_space(std::string message = ""): base(message){}
+    inline bool operator()(const std::string& value) const{
+        for(auto it = value.begin(); it != value.end(); ++it){
+            char c = *it;
+            if(std::isspace(c)){
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+template <typename T>
+using min = gte<T>;
+template <typename T>
+using max = lte<T>;
+
+typedef gte<std::string>    length_gte;
+typedef gt<std::string>     length_gt;
+typedef lte<std::string>    length_lte;
+typedef lt<std::string>     length_lt;
+typedef length_gte          length_min;
+typedef length_lte          length_max;
+
+struct length_eq: basic_constrain<length_eq>{
+    typedef basic_constrain<length_eq> base;
+    
+    std::size_t _length;
+    
+    length_eq(std::size_t length, std::string message = ""): base(message), _length(length){}
+    inline bool operator()(const std::string& value) const{
+        return value.length() == _length;
     }
 };
 

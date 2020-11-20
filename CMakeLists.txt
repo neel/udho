@@ -72,7 +72,7 @@ SET(UDHO_HEADERS
     includes/udho/cache.h
     includes/udho/configuration.h
     includes/udho/contexts.h
-    includes/udho/form.h
+    includes/udho/forms.h
     includes/udho/page.h
     includes/udho/scope.h
     includes/udho/visitor.h
