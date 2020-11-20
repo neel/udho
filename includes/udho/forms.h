@@ -652,6 +652,13 @@ struct form: public DriverT{
 using query_ = form<drivers::urlencoded_raw>;
 template <typename RequestT>
 using form_ = form<drivers::combo<RequestT>>;
+template <typename RequestT>
+using form_multipart_ = form<drivers::multipart<RequestT>>;
+
+template <typename RequestT>
+form_multipart_<RequestT> form_multipart(const RequestT& req){
+    return form_multipart_<RequestT>(req);
+}
 
 template <typename T, bool Required = false>
 struct field;
