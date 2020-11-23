@@ -506,13 +506,13 @@ namespace activities{
             }
         }
         void operator()(const success_type& s, const failure_type& f){
-            // there is no error callback and there is a cancel callback set
-            if(_error.empty()){
-                if(!_canceled.empty()) _canceled(s, f);
+            // there is a cancel callback then call that ignoring what other callback is set
+            if(!_canceled.empty()){
+                _canceled(s, f);
                 _state = state::canceled;
             }else{
                 if(!_accessor.template failed<ActivityT>()){ // succeeded but canceled, hence error 
-                    _error(s);
+                    if(!_error.empty()) _error(s);
                     _state = state::error;
                 }else if(_accessor.template completed<ActivityT>()){ // failed then canceled, hence call failure callback instead
                     if(!_failure.empty()) _failure(f);
