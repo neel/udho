@@ -714,6 +714,7 @@ namespace detail{
         inline std::string message() const { return field().message(); }
         inline value_type operator*() const { return value(); }
         inline bool operator!() const { return !valid(); }
+        inline std::string name() const { return field().name(); }
         
         template <typename ValidatorU>
         detail::constrained_field<ValidatorU, self_type> constrain(const ValidatorU& validator){
@@ -762,6 +763,7 @@ namespace detail{
         inline std::string message() const { return field().message(); }
         inline value_type operator*() const { return value(); }
         inline bool operator!() const { return !valid(); }
+        inline std::string name() const { return field().name(); }
         
         template <typename ValidatorU>
         detail::constrained_field<ValidatorU, self_type> constrain(const ValidatorU& validator){
