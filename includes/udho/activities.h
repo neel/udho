@@ -1336,6 +1336,15 @@ struct start: activities::subtask<activities::start<T...>>{
     auto collector() { return base::_activity->collector(); }
     auto data() const { return base::_activity->accessor(); }
     auto data() { return base::_activity->accessor(); }
+    
+    template <typename ActivityT>
+    auto success() const {
+        return udho::accessor<ActivityT>(data()).template success<ActivityT>();
+    }
+    template <typename ActivityT>
+    auto failure() const {
+        return udho::accessor<ActivityT>(data()).template failure<ActivityT>();
+    }
 };
 
 namespace activities{
