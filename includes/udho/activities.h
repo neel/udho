@@ -623,6 +623,8 @@ namespace activities{
         typedef boost::signals2::signal<void (const data_type&)> signal_type;
         typedef boost::signals2::signal<void ()> cancelation_signal_type;
         typedef boost::function<bool (const success_type&)> cancel_if_ftor;
+        typedef boost::function<bool (const success_type&)> abort_error_ftor;
+        typedef boost::function<bool (const failure_type&)> abort_failure_ftor;
         
         template <typename NextT, typename... DependenciesT>
         friend struct combinator;
@@ -632,6 +634,8 @@ namespace activities{
         bool          _required;
         cancelation_signal_type _cancelation_signals;
         cancel_if_ftor _cancel_if;
+        abort_error_ftor _abort_error;
+        abort_failure_ftor _abort_failure;
         
         /**
          * \param store collector
@@ -670,6 +674,12 @@ namespace activities{
         void cancel_if(cancel_if_ftor f){
             _cancel_if = f;
         }
+        void if_errored(abort_error_ftor ftor){
+            _abort_error = ftor;
+        }
+        void if_failed(abort_failure_ftor ftor){
+            _abort_failure = ftor;
+        }
         protected:
             /**
              * signal successful completion of the activity with success data of type SuccessT
@@ -690,7 +700,13 @@ namespace activities{
         private:
             void cancel(){
                 data_type::cancel();
-                _cancelation_signals();
+                bool propagate = true;
+                if(data_type::failed() && !_abort_failure.empty()){
+                    propagate = _abort_failure(data_type::failure_data());
+                }else if(!_abort_error.empty()){
+                    propagate = _abort_error(data_type::success_data());
+                }
+                if(propagate) _cancelation_signals();
             }
             void completed(){                
                 bool should_cancel = false;
@@ -872,6 +888,24 @@ namespace activities{
             return _activity;
         }
         
+        /**
+         * abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+         */
+        template <typename FunctionT>        
+        self_type& if_errored(FunctionT ftor){
+            _activity->if_errored(ftor);
+            return *this;
+        }
+        
+        /**
+         * abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+         */
+        template <typename FunctionT>
+        self_type& if_failed(FunctionT ftor){
+            _activity->if_failed(ftor);
+            return *this;
+        }
+        
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -951,6 +985,24 @@ namespace activities{
          */
         std::shared_ptr<activity_type> operator->(){
             return _activity;
+        }
+        
+        /**
+         * abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+         */
+        template <typename FunctionT>        
+        self_type& if_errored(FunctionT ftor){
+            _activity->if_errored(ftor);
+            return *this;
+        }
+        
+        /**
+         * abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+         */
+        template <typename FunctionT>
+        self_type& if_failed(FunctionT ftor){
+            _activity->if_failed(ftor);
+            return *this;
         }
         
         private:

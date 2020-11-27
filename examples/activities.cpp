@@ -171,6 +171,10 @@ void planet(udho::contexts::stateless ctx, std::string name){
     
     auto t1 = udho::perform<A1>::with(data, io).cancel_if([](const A1SData& d){
         return true;
+    }).if_errored([ctx](const A1SData& d) mutable {
+        ctx.respond("Aborted", "text/plain");
+        std::cout << "Aborted" << std::endl;
+        return false;
     });
     auto t2 = udho::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
         udho::accessor<A1> a1_access(data);
