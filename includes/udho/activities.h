@@ -908,8 +908,13 @@ namespace activities{
         
         template <typename FunctionT>
         self_type& if_canceled(FunctionT ftor){
-            typename activity_type::abort_error_ftor   ef = ftor;
-            typename activity_type::abort_failure_ftor ff = ftor;
+            typename activity_type::abort_error_ftor ef = [ftor](const typename activity_type::success_type& s) mutable{
+                return ftor(s);
+            };
+            
+            typename activity_type::abort_failure_ftor ff = [ftor](const typename activity_type::failure_type& f) mutable{
+                return ftor(f);
+            };
             if_errored(ef);
             if_failed(ff);
             return *this;
