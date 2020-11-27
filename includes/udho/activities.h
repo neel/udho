@@ -906,6 +906,15 @@ namespace activities{
             return *this;
         }
         
+        template <typename FunctionT>
+        self_type& if_canceled(FunctionT ftor){
+            typename activity_type::abort_error_ftor   ef = ftor;
+            typename activity_type::abort_failure_ftor ff = ftor;
+            if_errored(ef);
+            if_failed(ff);
+            return *this;
+        }
+        
         private:
             template <typename... U>
             subtask(int, U&&... u){
@@ -1002,6 +1011,15 @@ namespace activities{
         template <typename FunctionT>
         self_type& if_failed(FunctionT ftor){
             _activity->if_failed(ftor);
+            return *this;
+        }
+        
+        template <typename FunctionT>
+        self_type& if_canceled(FunctionT ftor){
+            typename activity_type::abort_error_ftor   ef = ftor;
+            typename activity_type::abort_failure_ftor ff = ftor;
+            if_errored(ef);
+            if_failed(ff);
             return *this;
         }
         
