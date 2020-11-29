@@ -59,11 +59,48 @@ namespace udho{
 
 namespace detail{
  
+struct interaction{
+    boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
+    boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
+    boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
+    boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
+    boost::signals2::signal<void (udho::defs::response_type&)>              _respond;
+    
+    template <typename AuxT, typename LoggerT, typename CacheT>
+    void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
+        boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
+        boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
+        
+        _error.connect(errorf);
+        _warning.connect(warningf);
+        _info.connect(infof);
+        _debug.connect(debugf);
+    }
+    
+    void log(const udho::logging::messages::error& msg) const{
+        _error(msg);
+    }
+    void log(const udho::logging::messages::warning& msg) const{
+        _warning(msg);
+    }
+    void log(const udho::logging::messages::info& msg) const{
+        _info(msg);
+    }
+    void log(const udho::logging::messages::debug& msg) const{
+        _debug(msg);
+    }
+    void respond(udho::defs::response_type& response){
+        _respond(response);
+    }
+};
+    
 /**
  * \ingroup context
  */
 template <typename RequestT>
-struct context_impl{
+struct context_impl: interaction{
     typedef RequestT                                     request_type;
     typedef context_impl<request_type>                   self_type;
     typedef udho::forms::form_<request_type>             form_type;
@@ -82,11 +119,11 @@ struct context_impl{
     
     boost::beast::http::status _status;
     
-    boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
-    boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
-    boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
-    boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
-    boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
+//     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
+//     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
+//     boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
+//     boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
+//     boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
     
     context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers), _status(boost::beast::http::status::ok){
         _query_string = query_string();
@@ -112,33 +149,33 @@ struct context_impl{
             }
         }
     }
-    void log(const udho::logging::messages::error& msg) const{
-        _error(msg);
-    }
-    void log(const udho::logging::messages::warning& msg) const{
-        _warning(msg);
-    }
-    void log(const udho::logging::messages::info& msg) const{
-        _info(msg);
-    }
-    void log(const udho::logging::messages::debug& msg) const{
-        _debug(msg);
-    }
-    template <typename AuxT, typename LoggerT, typename CacheT>
-    void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
-        boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
-        boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
-        boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
-        boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
-        
-        _error.connect(errorf);
-        _warning.connect(warningf);
-        _info.connect(infof);
-        _debug.connect(debugf);
-    }
-    void respond(udho::defs::response_type& response){
-        _respond(response);
-    }
+//     void log(const udho::logging::messages::error& msg) const{
+//         _error(msg);
+//     }
+//     void log(const udho::logging::messages::warning& msg) const{
+//         _warning(msg);
+//     }
+//     void log(const udho::logging::messages::info& msg) const{
+//         _info(msg);
+//     }
+//     void log(const udho::logging::messages::debug& msg) const{
+//         _debug(msg);
+//     }
+//     template <typename AuxT, typename LoggerT, typename CacheT>
+//     void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
+//         boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
+//         boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
+//         boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
+//         boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
+//         
+//         _error.connect(errorf);
+//         _warning.connect(warningf);
+//         _info.connect(infof);
+//         _debug.connect(debugf);
+//     }
+//     void respond(udho::defs::response_type& response){
+//         _respond(response);
+//     }
     void status(boost::beast::http::status status){
         _status = status;
     }
