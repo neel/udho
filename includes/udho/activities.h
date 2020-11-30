@@ -1092,7 +1092,8 @@ namespace activities{
      */
     template <typename... T, typename ContextT>
     std::shared_ptr<collector<ContextT, dataset<T...>>> collect(ContextT& ctx, const std::string& name){
-        return std::make_shared<collector<ContextT, dataset<T...>>>(ctx, name);
+        typedef collector<ContextT, dataset<T...>> collector_type;
+        return std::make_shared<collector_type>(ctx, name);
     }
     
     template <typename CallbackT, typename CollectorT>
@@ -1358,8 +1359,8 @@ namespace activities{
  * \ingroup data
  */
 template <typename... T, typename ContextT>
-std::shared_ptr<activities::collector<ContextT, activities::dataset<T...>>> collect(ContextT& ctx, const std::string& name){
-    return activities::collect<T..., ContextT>(ctx, name);
+auto collect(ContextT& ctx, const std::string& name){
+    return activities::collect<T...>(ctx, name);
 }
 
 /**
