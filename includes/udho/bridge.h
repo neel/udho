@@ -106,24 +106,24 @@ struct bridge{
         return res;
     }
     
-    template <typename RequestT, typename ShadowT, typename GroupT>
-    std::string render(const std::string& path, const udho::context<self_type, RequestT, ShadowT>& ctx, ::udho::lookup_table<GroupT>& scope) const{
+    template <typename RequestT, typename GroupT>
+    std::string render(const std::string& path, const udho::detail::context_common<self_type, RequestT>& ctx, ::udho::lookup_table<GroupT>& scope) const{
         std::string template_contents = render(path);
         auto processor = ::udho::view::processor(scope, ctx);
         return processor.process(template_contents);
     }
-    template <typename RequestT, typename ShadowT, typename DataT>
-    std::string render(const std::string& path, const udho::context<self_type, RequestT, ShadowT>& ctx, ::udho::prepared<DataT>& data) const{
+    template <typename RequestT, typename DataT>
+    std::string render(const std::string& path, const udho::detail::context_common<self_type, RequestT>& ctx, ::udho::prepared<DataT>& data) const{
         auto scope = ::udho::scope(data);
         return render(path, ctx, scope);
     }
-    template <typename RequestT, typename ShadowT, typename U, typename V>
-    std::string render(const std::string& path, const udho::context<self_type, RequestT, ShadowT>& ctx, ::udho::prepared_group<U, V>& group) const{
+    template <typename RequestT, typename U, typename V>
+    std::string render(const std::string& path, const udho::detail::context_common<self_type, RequestT>& ctx, ::udho::prepared_group<U, V>& group) const{
         auto scope = ::udho::scope(group);
         return render(path, ctx, scope);
     }
-    template <typename RequestT, typename ShadowT, typename... DataT>
-    std::string render(const std::string& path, const udho::context<self_type, RequestT, ShadowT>& ctx, const DataT&... data) const{
+    template <typename RequestT, typename... DataT>
+    std::string render(const std::string& path, const udho::detail::context_common<self_type, RequestT>& ctx, const DataT&... data) const{
         auto prepared = udho::data(data...);
         auto scope = ::udho::scope(prepared);
         return render(path, ctx, scope);

@@ -59,7 +59,7 @@ namespace udho{
 
 namespace detail{
  
-struct interaction{
+struct interaction_{
     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
     boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
@@ -100,7 +100,7 @@ struct interaction{
  * \ingroup context
  */
 template <typename RequestT>
-struct context_impl: interaction{
+struct context_impl: interaction_{
     typedef RequestT                                     request_type;
     typedef context_impl<request_type>                   self_type;
     typedef udho::forms::form_<request_type>             form_type;
@@ -119,17 +119,12 @@ struct context_impl: interaction{
     
     boost::beast::http::status _status;
     
-//     boost::signals2::signal<void (const udho::logging::messages::error&)>   _error;
-//     boost::signals2::signal<void (const udho::logging::messages::warning&)> _warning;
-//     boost::signals2::signal<void (const udho::logging::messages::info&)>    _info;
-//     boost::signals2::signal<void (const udho::logging::messages::debug&)>   _debug;
-//     boost::signals2::signal<void (udho::defs::response_type&)>              _respond;    
-    
     context_impl(const request_type& request): _request(request), _form(request), _cookies(request, _headers), _status(boost::beast::http::status::ok){
         _query_string = query_string();
         _query.parse(_query_string.begin(), _query_string.end());
     }
     context_impl(const self_type& other) = delete;
+    interaction_& interaction() { return static_cast<interaction_&>(*this); }
     const request_type& request() const{return _request;}
     cookies_type& cookies(){
         return _cookies;
@@ -149,33 +144,6 @@ struct context_impl: interaction{
             }
         }
     }
-//     void log(const udho::logging::messages::error& msg) const{
-//         _error(msg);
-//     }
-//     void log(const udho::logging::messages::warning& msg) const{
-//         _warning(msg);
-//     }
-//     void log(const udho::logging::messages::info& msg) const{
-//         _info(msg);
-//     }
-//     void log(const udho::logging::messages::debug& msg) const{
-//         _debug(msg);
-//     }
-//     template <typename AuxT, typename LoggerT, typename CacheT>
-//     void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
-//         boost::function<void (const udho::logging::messages::error&)> errorf(boost::ref(attachment));
-//         boost::function<void (const udho::logging::messages::warning&)> warningf(boost::ref(attachment));
-//         boost::function<void (const udho::logging::messages::info&)> infof(boost::ref(attachment));
-//         boost::function<void (const udho::logging::messages::debug&)> debugf(boost::ref(attachment));
-//         
-//         _error.connect(errorf);
-//         _warning.connect(warningf);
-//         _info.connect(infof);
-//         _debug.connect(debugf);
-//     }
-//     void respond(udho::defs::response_type& response){
-//         _respond(response);
-//     }
     void status(boost::beast::http::status status){
         _status = status;
     }
@@ -239,247 +207,11 @@ struct context_impl: interaction{
         return _routes.size();
     }
 };
- 
-}
 
-/**
- * A Stateful context passed to all callables along with the arguments. 
- * The context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
- * A stateful context should be used in callables that need to use session states.
- * 
- * \tparam AuxT bridge between the server and the callable
- * \tparam RequestT HTTP request type
- * \tparam ShadowT the session data structure
- * 
- * \note instead of instantiating this template directly use \ref udho::contexts::stateful
- * \ingroup context
- */
-template <typename AuxT, typename RequestT, typename ShadowT>
-struct context{
-    typedef RequestT                                        request_type;
-    typedef ShadowT                                         shadow_type;
-    typedef typename shadow_type::key_type                  key_type;
-    typedef context<AuxT, request_type, shadow_type>        self_type;
-    typedef detail::context_impl<request_type>              impl_type;
-    typedef boost::shared_ptr<impl_type>                    pimple_type;
-    typedef udho::forms::form_<RequestT>                    form_type;
-    typedef udho::cookies_<RequestT>                        cookies_type;
-    typedef udho::session_<request_type, shadow_type>       session_type;
-    typedef udho::forms::query_                             query_parser_type;
-    
-    pimple_type  _pimpl;
-    session_type _session;
-    AuxT&        _aux;
-        
-//     template <typename... V>
-//     context(AuxT& aux, udho::cache::store<key_type, V...>& store): _pimpl(new impl_type(request_type())), _session(_pimpl->cookies(), store), _aux(aux){}
-    template <typename... V>
-    context(AuxT& aux, const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): _pimpl(new impl_type(request)), _session(_pimpl->cookies(), shadow, aux.config()), _aux(aux){}
-    template <typename OtherShadowT>
-    context(context<AuxT, RequestT, OtherShadowT>& other): _pimpl(other._pimpl), _session(other._session), _aux(other._aux){}
-    
-    const request_type& request() const{return _pimpl->request();}
-    
-    /**
-     * patches a HTTP response with the headers added to the context
-     */
-    template<class Body, class Fields>
-    void patch(boost::beast::http::message<false, Body, Fields>& res) const{
-        _pimpl->patch(res);
-    }
-    /**
-     * The form may be url enocded or multipart
-     * \see udho::form_
-     * \see udho::urlencoded_form
-     * \see udho::multipart_form
-     */
-    form_type& form(){
-        return _pimpl->_form;
-    }
-    /**
-     * access the HTTP Session
-     * \see udho::session_
-     */
-    session_type& session(){
-        return _session;
-    }
-    /**
-     * accesses the HTTP cookies
-     * \see udho::cookies_
-     */
-    cookies_type& cookies(){
-        return _pimpl->_cookies;
-    }
-    
-    /**
-     * conversion operator to convert to the corresponding beast request type
-     */
-    operator request_type() const{
-        return _pimpl->request();
-    }
-    
-    /**
-     * Logs a message to the logger attached with the server. A logging message can be passed to the `log` method or the `operator<<` can be used to log a message.
-     * \code
-     * ctx << udho::logging::messages::formatted::debug("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
-     * ctx << udho::logging::messages::formatted::info("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
-     * ctx << udho::logging::messages::formatted::warning("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
-     * ctx << udho::logging::messages::formatted::error("data", "testing log functionality of %1% Hi %2%") % "Neel Basu" % 42;
-     * \endcode
-     * \see udho::logging::message
-     */
-    template <udho::logging::status Status>
-    void log(const udho::logging::message<Status>& msg) const{
-        _pimpl->log(msg);
-    }
-    /**
-     * attaches a context with its server counter part 
-     * \internal
-     */
-    template <typename LoggerT, typename CacheT>
-    void attach(udho::attachment<AuxT, LoggerT, CacheT>& attachment){
-        _pimpl->attach(attachment);
-    }
-    /**
-     * returns a reference to the bridge between the callable and the server
-     */
-    AuxT& aux(){
-        return _aux;
-    }
-    /**
-     * respond with a raw Beast HTTP response.
-     */
-    void respond(udho::defs::response_type& response){
-        _pimpl->respond(response);
-    }
-   /**
-     * the responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
-     */
-    template <typename OutputT>
-    void respond(const OutputT& output, const std::string& mime){
-        udho::compositors::mimed<OutputT> compositor(mime);
-        udho::defs::response_type response = compositor(*this, output);
-        respond(response);
-    }
-    /**
-     * respond with a http status. The responded output will be put inside a beast HTTP response object and a content type header of type mime will be attached
-     */
-    template <typename OutputT>
-    void respond(boost::beast::http::status s, const OutputT& output, const std::string& mime){
-        status(s);
-        respond<OutputT>(output, mime);
-    }
-    /**
-     * set a status code for the HTTP response
-     */
-    void status(boost::beast::http::status s){
-        _pimpl->status(s);
-    }
-    /**
-     * target of the HTTP request including the `?` if the request includes get parameters
-     * \code
-     * // https://localhost/user/profile?id=245
-     * ctx.target() // /user/profile?id=245
-     * \endcode
-     */
-    std::string target() const{
-        return _pimpl->target();
-    }
-    /**
-     * path of the HTTP request before `?` if any
-     * \code
-     * // https://localhost/user/profile?id=245
-     * ctx.path() // /user/profile
-     * \endcode
-     */
-    std::string path() const{
-        return _pimpl->path();
-    }
-    /**
-     * The get query of the HTTP request.
-     * \code
-     * if(!ctx.query().has("type") || ctx.query().field<std::string>("type") == "json"){
-     *     // respond with JSON content
-     * }else if(ctx.query().field<std::string>("type") == "xml")
-     *     // respond with xml content
-     * }
-     * \endcode
-     * \see udho::urlencoded_form
-     */
-    const query_parser_type& query() const{
-        return _pimpl->query();
-    }
-    
-    void clear(){
-        _pimpl->clear();
-    }
-    /**
-     * Internally reroute an HTTP request to another request
-     */
-    void reroute(const std::string& path){
-        _pimpl->reroute(path);
-    }
-    /**
-     * check whether this is a rerouted request or not
-     */
-    bool rerouted() const{
-        return _pimpl->rerouted();
-    }
-    std::string alt_path() const{
-        return _pimpl->alt_path();
-    }
-    /**
-     * render a file in path
-     */
-    std::string render(const std::string& path) const{
-        return _aux.render(path);
-    }
-    /**
-     * render a template in path
-     */
-    template <typename... DataT>
-    std::string render(const std::string& path, const DataT&... data) const{
-        return _aux.render(path, *this, data...);
-    }
-    
-    void push(const udho::detail::route& r){
-        _pimpl->push(r);
-    }
-    udho::detail::route top() const{
-        return _pimpl->top();
-    }
-    udho::detail::route pop(){
-        return _pimpl->pop();
-    }
-    std::size_t reroutes() const{
-        return _pimpl->reroutes();
-    }
-    
-    detail::client_connection_wrapper<self_type> client(udho::config<udho::client_options> options = udho::config<udho::client_options>()){
-        return _aux.client(*this, options);
-    }
-    
-    boost::asio::io_service& io() {
-        return _aux._io;
-    }
-};
-
-/**
- * A Stateless context passed to all callables along with the arguments. 
- * he context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
- * A stateless context should be used in callables that need not to use session states.
- * 
- * \tparam AuxT bridge between the server and the callable
- * \tparam RequestT HTTP request type
- * 
- * \note instead of instantiating this template directly use \ref udho::contexts::stateless
- * \ingroup context
- */
 template <typename AuxT, typename RequestT>
-struct context<AuxT, RequestT, void>{
+struct context_common{
     typedef RequestT                                        request_type;
-    typedef void                                            shadow_type;
-    typedef context<AuxT, request_type, void>               self_type;
+    typedef context_common<AuxT, request_type>              self_type;
     typedef detail::context_impl<request_type>              impl_type;
     typedef boost::shared_ptr<impl_type>                    pimple_type;
     typedef udho::forms::form_<RequestT>                    form_type;
@@ -490,10 +222,10 @@ struct context<AuxT, RequestT, void>{
     AuxT&       _aux;
     
     template <typename C>
-    context(AuxT& aux, const RequestT& request, const C&): _pimpl(new impl_type(request)), _aux(aux){}
+    context_common(AuxT& aux, const RequestT& request, const C&): _pimpl(new impl_type(request)), _aux(aux){}
     template <typename ShadowT>
-    context(context<AuxT, RequestT, ShadowT>& other): _pimpl(other._pimpl), _aux(other._aux){}
-    
+    context_common(self_type& other): _pimpl(other._pimpl), _aux(other._aux){}
+    interaction_& interaction() { return _pimpl->interaction(); }
     /**
      * returns the boost beast HTTP request
      */
@@ -672,12 +404,73 @@ struct context<AuxT, RequestT, void>{
         return _aux._io;
     }
 };
+ 
+}
+
+/**
+ * A Stateful context passed to all callables along with the arguments. 
+ * The context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
+ * A stateful context should be used in callables that need to use session states.
+ * 
+ * \tparam AuxT bridge between the server and the callable
+ * \tparam RequestT HTTP request type
+ * \tparam ShadowT the session data structure
+ * 
+ * \note instead of instantiating this template directly use \ref udho::contexts::stateful
+ * \ingroup context
+ */
+template <typename AuxT, typename RequestT, typename ShadowT>
+struct context: detail::context_common<AuxT, RequestT>{
+    typedef detail::context_common<AuxT, RequestT>          base_type;
+    typedef RequestT                                        request_type;
+    typedef ShadowT                                         shadow_type;
+    typedef typename shadow_type::key_type                  key_type;
+    typedef context<AuxT, request_type, shadow_type>        self_type;
+    typedef udho::session_<request_type, shadow_type>       session_type;
+
+    session_type _session;
+    
+    template <typename... V>
+    context(AuxT& aux, const RequestT& request, udho::cache::shadow<key_type, V...>& shadow): base_type(aux, request, shadow), _session(base_type::cookies(), shadow, aux.config()){}
+    template <typename OtherShadowT>
+    context(context<AuxT, RequestT, OtherShadowT>& other): base_type(other), _session(other._session){}
+    
+    /**
+     * access the HTTP Session
+     * \see udho::session_
+     */
+    session_type& session(){
+        return _session;
+    }
+};
+
+/**
+ * A Stateless context passed to all callables along with the arguments. 
+ * he context is always the first argument to the callable. Even if the callable takes no arguments, it must take the context as the first argument. 
+ * A stateless context should be used in callables that need not to use session states.
+ * 
+ * \tparam AuxT bridge between the server and the callable
+ * \tparam RequestT HTTP request type
+ * 
+ * \note instead of instantiating this template directly use \ref udho::contexts::stateless
+ * \ingroup context
+ */
+template <typename AuxT, typename RequestT>
+struct context<AuxT, RequestT, void>: detail::context_common<AuxT, RequestT>{
+    typedef void                                        shadow_type;
+    typedef context<AuxT, RequestT, void>               self_type;
+    typedef detail::context_common<AuxT, RequestT>      base_type;
+
+    using base_type::base_type;
+    template <typename OtherShadowT>
+    context(context<AuxT, RequestT, OtherShadowT>& other): base_type(other) {}
+};
 
 /**
  * \ingroup context
  */
-template <typename AuxT, typename RequestT, typename ShadowT, udho::logging::status Status>
-const context<AuxT, RequestT, ShadowT>& operator<<(const context<AuxT, RequestT, ShadowT>& ctx, const udho::logging::message<Status>& msg){
+template <typename AuxT, typename RequestT, udho::logging::status Status>
+const detail::context_common<AuxT, RequestT>& operator<<(const detail::context_common<AuxT, RequestT>& ctx, const udho::logging::message<Status>& msg){
     ctx.log(msg);
     return ctx;
 }

@@ -35,6 +35,7 @@
 #include <udho/cache.h>
 #include <boost/bind.hpp>
 #include <udho/util.h>
+#include <udho/context.h>
 
 namespace udho{
 /**
@@ -79,25 +80,40 @@ namespace activities{
     template <typename... T>
     struct accessor;
     
-    /**
-     * Collects data associated with all activities involved in the subtask graph
-     * \ingroup data
-     */
     template <typename... T>
-    struct collector: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>, std::enable_shared_from_this<collector<T...>>{
+    struct dataset: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;
         typedef udho::cache::store<udho::cache::storage::memory, std::string, typename T::result_type...> store_type;
         typedef typename store_type::shadow_type shadow_type;
         typedef accessor<T...> accessor_type;
         
-        store_type  _store;
-        shadow_type _shadow;
-        std::string _name;
+        store_type   _store;
+        shadow_type  _shadow;
+        std::string  _name;
         
-        collector(const udho::configuration_type& config, const std::string& name): base_type(_shadow, name), _store(config), _shadow(_store), _name(name){}
+        dataset(const udho::configuration_type& config, const std::string& name): base_type(_shadow, name), _store(config), _shadow(_store), _name(name){}
         std::string name() const{ return _name; }
         shadow_type& shadow() { return _shadow; }
         const shadow_type& shadow() const { return _shadow; }
+    };
+    
+    template <typename ContextT, typename DatasetT>
+    struct collector;
+    
+    /**
+     * Collects data associated with all activities involved in the subtask graph
+     * \ingroup data
+     */
+    template <typename ContextT, typename... T>
+    struct collector<ContextT, dataset<T...>>: dataset<T...>, std::enable_shared_from_this<collector<ContextT, dataset<T...>>>{
+        typedef dataset<T...> base_type;
+        typedef ContextT context_type;
+        
+        context_type _context;
+        
+        collector(context_type ctx, const std::string& name): base_type(ctx.aux().config(), name), _context(ctx) {}
+        context_type& context() { return _context; }
+        const context_type& context() const { return _context; }
     };
     
     /**
@@ -111,8 +127,8 @@ namespace activities{
         
         shadow_type _shadow;
         
-        template <typename... U>
-        accessor(std::shared_ptr<collector<U...>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
+        template <typename ContextT, typename... U>
+        accessor(std::shared_ptr<collector<ContextT, dataset<U...>>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
         template <typename... U>
         accessor(accessor<U...> accessor): base_type(_shadow, accessor.name()), _shadow(accessor.shadow()){}
         std::string name() const{ return base_type::key(); }
@@ -229,8 +245,8 @@ namespace activities{
     /**
      * \ingroup data
      */
-    template <typename U, typename... T>
-    collector<T...>& operator<<(collector<T...>& h, const U& data){
+    template <typename U, typename ContextT, typename... T>
+    collector<ContextT, dataset<T...>>& operator<<(collector<ContextT, dataset<T...>>& h, const U& data){
         auto& shadow = h.shadow();
         shadow.template set<U>(h.name(), data);
         return h;
@@ -239,8 +255,8 @@ namespace activities{
     /**
      * \ingroup data
      */
-    template <typename U, typename... T>
-    const collector<T...>& operator>>(const collector<T...>& h, U& data){
+    template <typename U, typename ContextT, typename... T>
+    const collector<ContextT, dataset<T...>>& operator>>(const collector<ContextT, dataset<T...>>& h, U& data){
         const auto& shadow = h.shadow();
         data = shadow.template get<U>(h.name());
         return h;
@@ -818,7 +834,7 @@ namespace activities{
         template <typename U, typename... DependenciesU>
         friend struct subtask;
         
-        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator){}
+        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
         
         /**
          * shared pointer to the activity
@@ -850,9 +866,9 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename... U>
-        static self_type with(U&&... u){
-            return self_type(0, u...);
+        template <typename CollectorT, typename... U>
+        static self_type with(CollectorT collector, U&&... u){
+            return self_type(0, collector, u...);
         }
         
         /**
@@ -921,14 +937,15 @@ namespace activities{
         }
         
         private:
-            template <typename... U>
-            subtask(int, U&&... u){
-                _activity = std::make_shared<activity_type>(u...);
+            template <typename CollectorT, typename... U>
+            subtask(int, CollectorT collector, U&&... u): _interaction(collector->context().interaction()){
+                _activity = std::make_shared<activity_type>(collector, u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
             
             std::shared_ptr<activity_type> _activity;
             std::shared_ptr<combinator_type> _combinator;
+            udho::detail::interaction_& _interaction;
     };
     
     /**
@@ -945,7 +962,7 @@ namespace activities{
         template <typename U, typename... DependenciesU>
         friend struct subtask;
         
-        subtask(const self_type& other): _activity(other._activity){}
+        subtask(const self_type& other): _activity(other._activity), _interaction(other._interaction){}
                 
         std::shared_ptr<activity_type> activity() {
             return _activity;
@@ -964,9 +981,9 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename... U>
-        static self_type with(U&&... u){
-            return self_type(0, u...);
+        template <typename CollectorT, typename... U>
+        static self_type with(CollectorT collector, U&&... u){
+            return self_type(0, collector, u...);
         }
         
         /**
@@ -1029,12 +1046,13 @@ namespace activities{
         }
         
         private:
-            template <typename... U>
-            subtask(int, U&&... u){
-                _activity = std::make_shared<activity_type>(u...);
+            template <typename CollectorT, typename... U>
+            subtask(int, CollectorT collector, U&&... u): _interaction(collector->context().interaction()){
+                _activity = std::make_shared<activity_type>(collector, u...);
             }
             
             std::shared_ptr<activity_type> _activity;
+            udho::detail::interaction_& _interaction;
     };
     
     
@@ -1073,8 +1091,8 @@ namespace activities{
      * \ingroup data
      */
     template <typename... T, typename ContextT>
-    std::shared_ptr<collector<T...>> collect(ContextT& ctx, const std::string& name){
-        return std::make_shared<collector<T...>>(ctx.aux().config(), name);
+    std::shared_ptr<collector<ContextT, dataset<T...>>> collect(ContextT& ctx, const std::string& name){
+        return std::make_shared<collector<ContextT, dataset<T...>>>(ctx, name);
     }
     
     template <typename CallbackT, typename CollectorT>
@@ -1083,12 +1101,12 @@ namespace activities{
     /**
      * \ingroup activities
      */
-    template <typename CallbackT, typename... T>
-    struct joined<CallbackT, activities::collector<T...>>{
-        typedef activities::collector<T...> collector_type;
+    template <typename CallbackT, typename... T, typename ContextT>
+    struct joined<CallbackT, activities::collector<ContextT, dataset<T...>>>{
+        typedef activities::collector<ContextT, dataset<T...>> collector_type;
         typedef typename collector_type::accessor_type accessor_type;
         typedef CallbackT callback_type;
-        typedef joined<callback_type, activities::collector<T...>> self_type;
+        typedef joined<callback_type, activities::collector<ContextT, dataset<T...>>> self_type;
         typedef int cancel_if_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
@@ -1159,9 +1177,9 @@ namespace activities{
         }
     };
 
-    template <typename... T>
+    template <typename ContextT, typename... T>
     struct start{
-        typedef activities::collector<T...> collector_type;
+        typedef activities::collector<ContextT, activities::dataset<T...>> collector_type;
         typedef activities::accessor<T...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;
@@ -1170,8 +1188,7 @@ namespace activities{
         collector_ptr _collector;
         accessor_type _accessor;
         
-        template <typename ContextT>
-        start(ContextT& ctx, const std::string& name): _collector(activities::collect<T...>(ctx, name)), _accessor(_collector){}
+        start(ContextT& ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx, name)), _accessor(_collector){}
         
         collector_ptr collector() const { return _collector; }
         const accessor_type& accessor() const { return _accessor; }
@@ -1193,8 +1210,8 @@ namespace activities{
             _signal();
         }
     };
-    template <typename NextT, typename... T>
-    struct combinator<NextT, start<T...>>{
+    template <typename NextT, typename ContextT, typename... T>
+    struct combinator<NextT, start<ContextT, T...>>{
         typedef std::shared_ptr<NextT> next_type;
         next_type  _next;
 
@@ -1207,10 +1224,10 @@ namespace activities{
         }
     };
     
-    template <typename... T>
-    struct subtask<start<T...>>{
-        typedef start<T...> activity_type;
-        typedef subtask<start<T...>> self_type;
+    template <typename ContextT, typename... T>
+    struct subtask<start<ContextT, T...>>{
+        typedef start<ContextT, T...> activity_type;
+        typedef subtask<start<ContextT, T...>> self_type;
         
         template <typename U, typename... DependenciesU>
         friend struct subtask;
@@ -1234,9 +1251,8 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename... U>
-        static self_type with(U&&... u){
-            return self_type(0, u...);
+        static self_type with(ContextT ctx, const std::string& name = ""){
+            return self_type(ctx, name);
         }
         
         /**
@@ -1254,9 +1270,8 @@ namespace activities{
         }
         
         protected:
-            template <typename... U>
-            subtask(int, U&&... u){
-                _activity = std::make_shared<activity_type>(u...);
+            subtask(ContextT ctx, const std::string& name = ""){
+                _activity = std::shared_ptr<activity_type>(new activity_type(ctx, name));
             }
             
             std::shared_ptr<activity_type> _activity;
@@ -1343,8 +1358,8 @@ namespace activities{
  * \ingroup data
  */
 template <typename... T, typename ContextT>
-std::shared_ptr<activities::collector<T...>> collect(ContextT& ctx, const std::string& name){
-    return activities::collect<T...>(ctx, name);
+std::shared_ptr<activities::collector<ContextT, activities::dataset<T...>>> collect(ContextT& ctx, const std::string& name){
+    return activities::collect<T..., ContextT>(ctx, name);
 }
 
 /**
@@ -1398,19 +1413,18 @@ inline udho::activities::after_none after(){
     return udho::activities::after_none();
 }
 
-template <typename... T>
-struct start: activities::subtask<activities::start<T...>>{
-    typedef activities::start<T...> activity_type;
+template <typename ContextT, typename... T>
+struct start_: activities::subtask<activities::start<ContextT, T...>>{
+    typedef activities::start<ContextT, T...> activity_type;
     typedef activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
     
-    template <typename ContextT>
-    start(ContextT ctx, const std::string& name = "activity"): base(0, ctx, name){}
+    start_(ContextT ctx, const std::string& name = "activity"): base(ctx, name){}
     
     auto collector() { return base::_activity->collector(); }
-    auto data() const { return base::_activity->accessor(); }
-    auto data() { return base::_activity->accessor(); }
+    auto data() const { return base::_activity->collector(); }
+    auto data() { return base::_activity->collector(); }
     
     template <typename ActivityT>
     auto success() const {
@@ -1422,14 +1436,25 @@ struct start: activities::subtask<activities::start<T...>>{
     }
 };
 
+template <typename... T>
+struct start{
+    template <typename ContextT>
+    static start_<ContextT, T...> with(ContextT ctx, const std::string& name = "activity"){
+        return start_<ContextT, T...>(ctx, name);
+    }
+    
+    start() = delete;
+    start(const start<T...>&) = delete;
+};
+
 namespace activities{
     namespace detail{
         
-        template <typename... T>
-        struct after<udho::start<T...>>{
-            udho::start<T...>& _before;
+        template <typename ContextT, typename... T>
+        struct after<udho::start_<ContextT, T...>>{
+            udho::start_<ContextT, T...>& _before;
             
-            after(udho::start<T...>& before): _before(before){}
+            after(udho::start_<ContextT, T...>& before): _before(before){}
             
             template <typename OtherActivityT, typename... OtherDependenciesT>
             void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
