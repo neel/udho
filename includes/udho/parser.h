@@ -278,7 +278,7 @@ struct expression{
     }
     template <typename T>
     T fetch(const token& t){
-        T value;
+        T value = T();
         if(t.is(token::type::real)){
             boost::conversion::try_lexical_convert<T>(t.value(), value);
         }else if(t.is(token::type::id)){
