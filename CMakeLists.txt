@@ -76,11 +76,10 @@ SET(UDHO_HEADERS
     includes/udho/page.h
     includes/udho/scope.h
     includes/udho/visitor.h
+    includes/udho/folding.h
 )
 SET(UDHO_SOURCES 
     page.cpp
-    client.cpp
-    url.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)

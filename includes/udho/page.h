@@ -94,6 +94,7 @@ namespace exceptions{
 
 template <typename AuxT, typename RequestT, typename ShadowT>
 udho::context<AuxT, RequestT, ShadowT>& operator<<(udho::context<AuxT, RequestT, ShadowT>& context, const exceptions::http_error& error){
+    std::cout << "ERROR" << error._message << std::endl;
     auto response = error.response(context);
     context.respond(response);
     return context;
