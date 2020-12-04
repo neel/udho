@@ -28,6 +28,8 @@
 #ifndef UDHO_UTIL_FOLDING_H
 #define UDHO_UTIL_FOLDING_H
 
+#include <type_traits>
+
 namespace udho{
 namespace util{
 namespace detail{
@@ -39,10 +41,11 @@ struct stem{
     
     head_type _head;
     
-    stem() = default;
+    stem(): _head(head_type()){};
     stem(const stem<HeadT>&) = default;
     stem(const head_type& h): _head(h){}
     const head_type& head() const { return _head; }
+    head_type& head() { return _head; }
     void set(const head_type& value) { _head = value; }
     template <typename FunctionT>
     auto call(FunctionT f) const {
@@ -53,7 +56,38 @@ struct stem{
         return f(_head);
     }
 };
+
+template <typename T>
+struct proxy;
+
+template <typename HeadT>
+struct proxy<stem<HeadT>>{
+    typedef HeadT value_type;
+    typedef stem<HeadT> stem_type;
+    typedef proxy<stem<HeadT>> self_type;
     
+    stem_type& _stem;
+    
+    proxy(stem_type& st): _stem(st){}
+    proxy(const self_type& other) = default;
+    self_type& operator=(const value_type& v){
+        _stem.set(v);
+        return *this;
+    }
+    value_type& get(){
+        return _stem.head();
+    }
+    const value_type& get() const{
+        return _stem.head();
+    }
+    operator value_type() const {
+        return get();
+    }
+    const value_type& operator*() const{
+        return get();
+    }
+};
+
 /**
  * level<A, level<B, level<C>, level<D, void>>>
  */
@@ -115,6 +149,23 @@ struct level: level<typename TailT::value_type, typename TailT::tail_type>{
     template <int N, typename = typename std::enable_if<N != 0, value_type>::type>
     const auto& get() const {
         return tail_type::template get<N-1>();
+    }
+    
+    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    proxy<stem_type> at(){
+        return proxy<stem_type>(_stem);
+    }
+    template <int N, typename = typename std::enable_if<N != 0, value_type>::type>
+    auto at(){
+        return tail_type::template at<N-1>();
+    }
+    template <typename T, typename = typename std::enable_if<std::is_same<T, value_type>::value, proxy<stem_type>>::type>
+    proxy<stem_type> at(){
+        return proxy<stem_type>(_stem);
+    }
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, value_type>::value, proxy<stem_type>>::type>
+    auto at(){
+        return tail_type::template at<T>();
     }
     
     template <typename FunctionT>
@@ -181,6 +232,15 @@ struct level<HeadT, void>{
         return value();
     }
     
+    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    proxy<stem_type> at(){
+        return proxy<stem_type>(_stem);
+    }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, value_type>::value, proxy<stem_type>>::type at(){
+        return proxy<stem_type>(_stem);
+    }
+
     template <typename FunctionT>
     void visit(FunctionT& f) const{
         _stem.call(f);
