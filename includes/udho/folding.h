@@ -28,13 +28,16 @@
 #ifndef UDHO_UTIL_FOLDING_H
 #define UDHO_UTIL_FOLDING_H
 
-// #define BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#ifndef BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#define BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#endif
 
 #include <utility>
 #include <iostream>
 #include <type_traits>
 #include <boost/hana.hpp>
 
+#include <cassert>
 #include <sstream>
 
 namespace udho{
@@ -181,40 +184,6 @@ std::ostream& operator<<(std::ostream& stream, const capsule<std::basic_string<C
     return stream;
 }
 
-template <typename T>
-struct proxy;
-
-/**
- * proxies a capsule that is not an element
- */
-template <typename HeadT, bool IsElement>
-struct proxy<capsule<HeadT, IsElement>>{
-    typedef typename capsule<HeadT, IsElement>::value_type value_type;
-    typedef capsule<HeadT, IsElement> capsule_type;
-    typedef proxy<capsule<HeadT, IsElement>> self_type;
-    
-    capsule_type& _capsule;
-    
-    proxy(capsule_type& st): _capsule(st){}
-    proxy(const self_type& other) = default;
-    self_type& operator=(const value_type& v){ _capsule.set(v); return *this; }
-    value_type& get(){ return _capsule.data(); }
-    const value_type& get() const{ return _capsule.data(); }
-    operator value_type() const { return get(); }
-    const value_type& operator*() const{ return get(); }
-    bool operator==(const capsule_type& capsule) const { return _capsule == capsule; }
-    bool operator!=(const capsule_type& capsule) const { return !operator==(_capsule, capsule); }
-    bool operator==(const typename capsule_type::data_type& data) const { return _capsule == data; }
-    bool operator!=(const typename capsule_type::data_type& data) const { return !operator==(_capsule, data); }
-};
-
-template <typename LevelT, std::size_t Index>
-struct value{
-    static auto apply(const LevelT& node){
-        return node.template get<Index>();
-    }
-};
-
 // http://loungecpp.wikidot.com/tips-and-tricks%3aindices
 template <std::size_t... Is>
 struct indices {};
@@ -227,9 +196,6 @@ template <std::size_t... Is>
 struct build_indices<0, Is...> : indices<Is...> {
     typedef indices<Is...> indices_type;
 };
-
-template <typename LevelT, typename Indecies>
-struct call_helper;
 
 /**
  * node<A, node<B, node<C>, node<D, void>>>
@@ -245,23 +211,24 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     
     enum { depth = tail_type::depth +1 };
     
-    node(const data_type& h): _capsule(h) {}
-    template <typename... T>
-    node(const data_type& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
+    template <typename ArgT>
+    node(const ArgT& h): _capsule(h) {}
+    template <typename ArgT, typename... T>
+    node(const ArgT& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
     using tail_type::tail_type;
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
     tail_type& tail() { return static_cast<tail_type&>(*this); }
     const tail_type& tail() const { return static_cast<const tail_type&>(*this); }
-    const data_type& value() const { return _capsule.data(); }
-    data_type& value() { return _capsule.data(); }
-    self_type& operator=(const self_type& other) { 
-        _capsule = other._capsule; 
-        tail_type::operator=(other.tail());
-        return *this;
-    }
     
+    const data_type& data() const { return _capsule.data(); }
+    data_type& data() { return _capsule.data(); }
+    const value_type& value() const { return _capsule.value(); }
+    value_type& value() { return _capsule.value(); }
+    
+    template <typename T>
+    bool exists() const{ return std::is_same<data_type, T>::value || tail_type::template exists<T>(); }
     template <typename LevelT>
     constexpr typename std::enable_if<LevelT::depth != depth || !std::is_same<typename LevelT::data_type, data_type>::value, bool>::type operator==(const LevelT&) const { return false; }
     template <typename LevelT>
@@ -269,9 +236,7 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
         return _capsule == other._capsule && tail_type::operator==(other.tail());
     }
     template <typename LevelT>
-    constexpr bool operator!=(const LevelT& other) const{
-        return !(*this == other);
-    }
+    constexpr bool operator!=(const LevelT& other) const{ return !(*this == other); }
     template <typename LevelT>
     constexpr typename std::enable_if<LevelT::depth != depth || !std::is_same<typename LevelT::data_type, data_type>::value, bool>::type less(const LevelT&) const { return false; }
     template <typename LevelT>
@@ -279,11 +244,11 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
         return _capsule < other._capsule && tail_type::less(other.tail());
     }
     
-    template <typename T>
-    bool exists() const{
-        return std::is_same<data_type, T>::value || tail_type::template exists<T>();
+    self_type& operator=(const self_type& other) { 
+        _capsule = other._capsule; 
+        tail_type::operator=(other.tail());
+        return *this;
     }
-    
     template <typename T>
     bool set(const T& v, bool all = false){
         bool success = false;
@@ -308,39 +273,36 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     }
     
     template <typename T>
-    const typename std::enable_if<std::is_same<T, data_type>::value, T>::type& get() const{
-        return value();
-    }
+    const typename std::enable_if<std::is_same<T, data_type>::value, T>::type& data() const{ return data(); }
     template <typename T>
-    const typename std::enable_if<!std::is_same<T, data_type>::value, T>::type& get() const{
-        return tail_type::template get<T>();
-    }
+    const typename std::enable_if<!std::is_same<T, data_type>::value, T>::type& data() const{ return tail_type::template data<T>(); }
     
-    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
-    const data_type& get() const {
-        return value();
-    }
-    template <int N, typename = typename std::enable_if<N != 0, data_type>::type>
-    const auto& get() const {
-        return tail_type::template get<N-1>();
-    }
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    const data_type& data() const { return data(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    const auto& data() const { return tail_type::template data<N-1>();  }
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    data_type& data() { return data(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    auto& data() { return tail_type::template data<N-1>();  }
     
-    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
-    proxy<capsule_type> at(){
-        return proxy<capsule_type>(_capsule);
-    }
-    template <int N, typename = typename std::enable_if<N != 0, data_type>::type>
-    auto at(){
-        return tail_type::template at<N-1>();
-    }
-    template <typename T, typename = typename std::enable_if<std::is_same<T, data_type>::value, proxy<capsule_type>>::type>
-    proxy<capsule_type> at(){
-        return proxy<capsule_type>(_capsule);
-    }
-    template <typename T, typename = typename std::enable_if<!std::is_same<T, data_type>::value, proxy<capsule_type>>::type>
-    auto at(){
-        return tail_type::template at<T>();
-    }
+    template <typename T, typename = typename std::enable_if<std::is_same<T, data_type>::value, value_type>::type>
+    const value_type& value() const{ return value(); }
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, data_type>::value, value_type>::type >
+    const auto& value() const{ return tail_type::template value<T>(); }
+    template <typename T, typename = typename std::enable_if<std::is_same<T, data_type>::value, value_type>::type>
+    value_type& value() { return value(); }
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, data_type>::value, value_type>::type >
+    auto& value() { return tail_type::template value<T>(); }
+    
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    const value_type& value() const { return value(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    const auto& value() const { return tail_type::template value<N-1>();  }
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    value_type& value() { return value(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    auto& value() { return tail_type::template value<N-1>();  }
     
     template <int N, typename = typename std::enable_if<N == 0, tail_type>::type>
     tail_type& tail_at() { return tail(); }
@@ -352,13 +314,44 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     auto& tail_at() const { return tail_type::template tail_at<N>(); }
         
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
-    proxy<capsule_type> operator[](const KeyT&){
-        return proxy<capsule_type>(_capsule);
-    }
+    data_type& data(const KeyT&){ return data(); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
-    auto operator[](const KeyT& k){
-        return tail_type::template operator[]<KeyT>(k);
-    }
+    auto& data(const KeyT& k){ return tail_type::template data<KeyT>(k); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const data_type& data(const KeyT&) const { return data(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    const auto& data(const KeyT& k) const { return tail_type::template data<KeyT>(k); }
+    
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    value_type& value(const KeyT&){ return value(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    auto& value(const KeyT& k){ return tail_type::template value<KeyT>(k); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const value_type& value(const KeyT&) const { return value(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    const auto& value(const KeyT& k) const { return tail_type::template value<KeyT>(k); }
+    
+    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    data_type& element(const HandleT&) { return data(); }
+    template <typename HandleT, typename = typename std::enable_if<!std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    decltype(auto) element(const HandleT& h) { return tail().template element<HandleT>(h); }
+    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    const data_type& element(const HandleT&) const { return data(); }
+    template <typename HandleT, typename = typename std::enable_if<!std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    decltype(auto) element(const HandleT& h) const { return tail().template element<HandleT>(h); }
+    
+    template <typename HandleT>
+    typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h){ return element<HandleT>(h); }
+    template <typename KeyT>
+    typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_same<typename K::actual_type, data_type>::value && !std::is_same<K, key_type>::value>::type>
+    decltype(auto) operator[](const K& k){ return tail().template operator[]<K>(k); }
+    template <typename HandleT>
+    const typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h) const { return element<HandleT>(h); }
+    template <typename KeyT>
+    const typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_same<K, key_type>::value>::type>
+    decltype(auto) operator[](const K& k) const { return tail().template operator[]<K>(k); }
         
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -379,7 +372,7 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
        
     template <typename FunctionT, typename InitialT>
     auto fold(FunctionT f, InitialT initial) const {
-        return f(value(), tail_type::fold(f, initial));
+        return f(data(), tail_type::fold(f, initial));
     }
     
     capsule_type _capsule;
@@ -400,16 +393,15 @@ struct node<HeadT, void>{
     enum { depth = 0 };
     
     node(): _capsule(){}
-    node(const data_type& h): _capsule(h) {}
+    template <typename ArgT>
+    node(const ArgT& h): _capsule(h) {}
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
-    const data_type& value() const { return _capsule.data(); }
-    data_type& value() { return _capsule.data(); }
-    self_type& operator=(const self_type& other) { 
-        _capsule = other._capsule;
-        return *this;
-    }
+    const data_type& data() const { return _capsule.data(); }
+    data_type& data() { return _capsule.data(); }
+    const value_type& value() const { return _capsule.value(); }
+    value_type& value() { return _capsule.value(); }
     
     template <typename LevelT>
     constexpr typename std::enable_if<LevelT::depth != depth || !std::is_same<typename LevelT::data_type, data_type>::value, bool>::type operator==(const LevelT&) const { return false; }
@@ -429,10 +421,12 @@ struct node<HeadT, void>{
     }
     
     template <typename T>
-    bool exists() const{
-        return std::is_same<HeadT, T>::value;
-    }
+    bool exists() const{ return std::is_same<HeadT, T>::value; }
     
+    self_type& operator=(const self_type& other) { 
+        _capsule = other._capsule;
+        return *this;
+    }
     template <typename T>
     bool set(const T& v, bool){
         if(std::is_same<HeadT, T>::value){
@@ -449,27 +443,48 @@ struct node<HeadT, void>{
     }
     
     template <typename T>
-    const typename std::enable_if<std::is_same<T, data_type>::value, T>::type& get() const{
-        return value();
-    }
-    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
-    const data_type& get() const {
-        return value();
-    }
+    const typename std::enable_if<std::is_same<T, data_type>::value, T>::type& data() const{ return data(); }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, data_type>::value, T>::type& data() { return data(); }
     
     template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
-    proxy<capsule_type> at(){
-        return proxy<capsule_type>(_capsule);
-    }
+    const data_type& data() const { return data(); }
+    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
+    data_type& data() { return data(); }
+    
     template <typename T>
-    typename std::enable_if<std::is_same<T, data_type>::value, proxy<capsule_type>>::type at(){
-        return proxy<capsule_type>(_capsule);
-    }
+    const typename std::enable_if<std::is_same<T, data_type>::value, value_type>::type& value() const{ return value(); }
+    template <typename T>
+    typename std::enable_if<std::is_same<T, value_type>::value, T>::type& value(){ return value(); }
+    
+    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    const value_type& value() const { return value(); }
+    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    value_type& value() { return value(); }
+
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const data_type& data(const KeyT&) const{ return data(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& data(const KeyT&){ return data(); }
     
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
-    proxy<capsule_type> operator[](const KeyT&){
-        return proxy<capsule_type>(_capsule);
-    }
+    const value_type& value(const KeyT&) const{ return value(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    value_type& value(const KeyT&){ return value(); }
+    
+    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    data_type& element(const HandleT&) { return data();  }
+    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
+    const data_type& element(const HandleT&) const { return data();  }
+    
+    template <typename HandleT>
+    typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h){ return element<HandleT>(h); }
+    template <typename KeyT>
+    typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    template <typename HandleT>
+    const typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h) const { return element<HandleT>(h); }
+    template <typename KeyT>
+    const typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -486,54 +501,98 @@ struct node<HeadT, void>{
     }
     template <typename FunctionT>
     void operator()(FunctionT&& f){
-        f(value());
+        f(data());
     }
     template <typename FunctionT, typename InitialT>
     auto fold(FunctionT f, InitialT initial) const {
-        return f(value(), initial);
+        return f(data(), initial);
     }
     
     capsule_type _capsule;
 };
 
-template <typename LevelT, std::size_t N>
-struct node_at_proxy_helper{
-    template <typename NodeT>
-    auto operator()(NodeT& node){
-        return node.template at<N>();
-    }
-    template <typename NodeT>
-    auto operator()(const NodeT& node) const {
-        return node.template get<N>();
+struct by_data{};
+struct by_value{};
+
+template <typename Policy, typename LevelT, std::size_t N>
+struct extraction_helper;
+
+template <typename LevelT, std::size_t Index>
+struct extraction_helper<by_data, LevelT, Index>{
+    static auto& apply(LevelT& node){
+        return node.template data<Index>();
     }
 };
 
-template <typename LevelT, std::size_t N>
-struct node_at_proxy_through_helper{
-    template <typename NodeT>
-    auto& operator()(NodeT& node){
-        return node.template at<N>().get();
-    }
-    template <typename NodeT>
-    const auto& operator()(const NodeT& node) const{
-        return node.template get<N>().value();
+template <typename LevelT, std::size_t Index>
+struct extraction_helper<by_value, LevelT, Index>{
+    static auto& apply(LevelT& node){
+        return node.template value<Index>();
     }
 };
 
-template <typename HeadT, typename TailT, std::size_t... Is>
-struct call_helper<node<HeadT, TailT>, indices<Is...>>{
+template <typename Policy, typename LevelT, std::size_t N>
+struct const_extraction_helper;
+
+template <typename LevelT, std::size_t Index>
+struct const_extraction_helper<by_data, LevelT, Index>{
+    static const auto& apply(const LevelT& node){
+        return node.template data<Index>();
+    }
+};
+
+template <typename LevelT, std::size_t Index>
+struct const_extraction_helper<by_value, LevelT, Index>{
+    static const auto& apply(const LevelT& node){
+        return node.template value<Index>();
+    }
+};
+
+template <typename Policy, typename LevelT, std::size_t N>
+struct at_helper{
+    template <typename NodeT>
+    decltype(auto) operator()(NodeT& node){
+        return extraction_helper<Policy, NodeT, N>::apply(node);
+    }
+    template <typename NodeT>
+    decltype(auto) operator()(const NodeT& node) const{
+        return const_extraction_helper<Policy, NodeT, N>::apply(node);
+    }
+};
+
+template <typename Policy, typename LevelT, typename Indecies>
+struct const_call_helper;
+
+template <typename Policy, typename HeadT, typename TailT, std::size_t... Is>
+struct const_call_helper<Policy, node<HeadT, TailT>, indices<Is...>>{
     typedef node<HeadT, TailT> node_type;
     
     const node_type& _node;
-    call_helper(const node_type& l): _node(l){}
+    const_call_helper(const node_type& l): _node(l){}
     
     template <typename FunctionT>
-    auto apply(FunctionT&& f){
-        return f(value<node_type, Is>::apply(_node)...);
+    decltype(auto) apply(FunctionT&& f){
+        return f(const_extraction_helper<Policy, node_type, Is>::apply(_node)...);
     }
 };
 
-template <int N>
+template <typename Policy, typename LevelT, typename Indecies>
+struct call_helper;
+
+template <typename Policy, typename HeadT, typename TailT, std::size_t... Is>
+struct call_helper<Policy, node<HeadT, TailT>, indices<Is...>>{
+    typedef node<HeadT, TailT> node_type;
+    
+    node_type& _node;
+    call_helper(node_type& l): _node(l){}
+    
+    template <typename FunctionT>
+    decltype(auto) apply(FunctionT&& f){
+        return std::forward<FunctionT>(f)(extraction_helper<Policy, node_type, Is>::apply(_node)...);
+    }
+};
+
+template <typename Policy, int N>
 struct udho_folding_seq_tag{};
 
 /**
@@ -565,47 +624,72 @@ struct udho_folding_seq_tag{};
     std::cout << vec.get<3>() << std::endl;
  * \endcode
  */
-template <typename H, typename T = void, typename... X>
-struct seq: node<H, seq<T, X...>>{
-    typedef node<H, seq<T, X...>> node_type;
+template <typename Policy, typename H, typename T = void, typename... X>
+struct seq: node<H, seq<Policy, T, X...>>{
+    typedef node<H, seq<Policy, T, X...>> node_type;
     
-    using hana_tag = udho_folding_seq_tag<2+sizeof...(X)>;
+    using hana_tag = udho_folding_seq_tag<Policy, 2+sizeof...(X)>;
     
     using node_type::node_type;
-    seq(const H& h, const T& t, const X&... xs): node<H, seq<T, X...>>(h, t, xs...){}
+//     seq(const H& h, const T& t, const X&... xs): node<H, seq<Policy, T, X...>>(h, t, xs...){}
     template <typename FunctionT>
-    auto unpack(FunctionT&& f) const{
-        call_helper<node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+    decltype(auto) unpack(FunctionT&& f) const{
+        const_call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f){
+        call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
 };
 
-template <typename H>
-struct seq<H, void>: node<H, void>{
+template <typename Policy, typename H>
+struct seq<Policy, H, void>: node<H, void>{
     typedef node<H, void> node_type;
     
-    using hana_tag = udho_folding_seq_tag<1>;
+    using hana_tag = udho_folding_seq_tag<Policy, 1>;
     
     using node_type::node_type;
-    seq(const H& h): node<H, void>(h){}
+//     seq(const H& h): node<H, void>(h){}
     template <typename FunctionT>
-    auto unpack(FunctionT&& f) const{
-        call_helper<node_type, typename build_indices<1>::indices_type> helper(*this);
+    decltype(auto) unpack(FunctionT&& f) const{
+        const_call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f){
+        call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
 };
 
 template <typename... X>
-std::ostream& operator<<(std::ostream& stream, const seq<X...>& s){
+using seq_d = seq<by_data, X...>;
+template <typename... X>
+using seq_v = seq<by_value, X...>;
+
+template <typename Policy, typename... X>
+std::ostream& operator<<(std::ostream& stream, const seq<Policy, X...>& s){
     stream << "(";
     s.write(stream);
     stream << ")";
     return stream;
 }
 
+template <typename Policy, typename... X>
+seq<Policy, X...> make_seq(const X&... xs){
+    return seq<Policy, X...>(xs...);
+}
+
 template <typename... X>
-seq<X...> make_seq(const X&... xs){
-    return seq<X...>(xs...);
+seq_d<X...> make_seq_d(const X&... xs){
+    return seq_d<X...>(xs...);
+}
+
+template <typename... X>
+seq_v<X...> make_seq_v(const X&... xs){
+    return seq_v<X...>(xs...);
 }
 
 }
@@ -615,97 +699,56 @@ seq<X...> make_seq(const X&... xs){
 
 namespace boost {
 namespace hana {
-    template <typename DataT>
-    struct equal_impl<udho::util::folding::capsule<DataT>, udho::util::folding::proxy<udho::util::folding::capsule<DataT>>>{
-        static constexpr auto apply(const udho::util::folding::capsule<DataT>& capsule, const udho::util::folding::proxy<udho::util::folding::capsule<DataT>>& proxy){
-            return capsule == proxy;
-        }
-    };
-    template <typename DataT>
-    struct equal_impl<udho::util::folding::proxy<udho::util::folding::capsule<DataT>>, udho::util::folding::capsule<DataT>>{
-        static constexpr auto apply(const udho::util::folding::proxy<udho::util::folding::capsule<DataT>>& proxy, const udho::util::folding::capsule<DataT>& capsule){
-            return capsule == proxy;
+    template <typename Policy, int N>
+    struct at_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
+        template <typename SeqT, typename I>
+        static constexpr decltype(auto) apply(SeqT&& xs, I const&) {
+            return udho::util::folding::extraction_helper<Policy, SeqT, I::value>::apply(std::forward<SeqT>(xs));
         }
     };
     
-    template <typename DataT>
-    struct equal_impl<udho::util::folding::proxy<udho::util::folding::capsule<DataT>>, DataT>{
-        static constexpr auto apply(const udho::util::folding::proxy<udho::util::folding::capsule<DataT>>& proxy, const DataT& data){
-            return data == proxy;
-        }
-    };
-    
-    template <typename DataT>
-    struct equal_impl<DataT, udho::util::folding::proxy<udho::util::folding::capsule<DataT>>>{
-        static constexpr auto apply(const DataT& data, const udho::util::folding::proxy<udho::util::folding::capsule<DataT>>& proxy){
-            return data == proxy;
-        }
-    };
-    
-    template <typename DataT>
-    struct equal_impl<udho::util::folding::capsule<DataT>, DataT>{
-        static constexpr auto apply(const udho::util::folding::capsule<DataT>& capsule, const DataT& data){
-            return data == capsule;
-        }
-    };
-    
-    template <typename DataT>
-    struct equal_impl<DataT, udho::util::folding::capsule<DataT>>{
-        static constexpr auto apply(const DataT& data, const udho::util::folding::capsule<DataT>& capsule){
-            return data == capsule;
-        }
-    };
-    
-    template <int N>
-    struct at_impl<udho::util::folding::udho_folding_seq_tag<N>> {
+    template <typename Policy, int N>
+    struct drop_front_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
         template <typename Xs, typename I>
         static constexpr decltype(auto) apply(Xs&& xs, I const&) {
-            return xs.template at<I::value>();
-        }
-    };
-    
-    template <int N>
-    struct drop_front_impl<udho::util::folding::udho_folding_seq_tag<N>> {
-        template <typename Xs, typename I>
-        static constexpr auto apply(Xs&& xs, I const&) {
             return xs.template tail_at<I::value>();
         }
     };
 
-    template <int N>
-    struct is_empty_impl<udho::util::folding::udho_folding_seq_tag<N>> {
+    template <typename Policy, int N>
+    struct is_empty_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
         template <typename Xs>
         static constexpr auto apply(Xs const& xs) {
             return xs.depth == 1;
         }
     };
     
-    template <int N>
-    struct unpack_impl<udho::util::folding::udho_folding_seq_tag<N>> {
+    template <typename Policy, int N>
+    struct unpack_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
         template <typename Xs, typename F>
-        static constexpr auto apply(Xs&& xs, F&& f) {
-            return xs.unpack(std::forward<F>(f));
+        static constexpr decltype(auto) apply(Xs&& xs, F&& f) {
+            return std::forward<Xs>(xs).unpack(std::forward<F>(f));
         }
     };
     
-    template <int N>
-    struct make_impl<udho::util::folding::udho_folding_seq_tag<N>> {
+    template <typename Policy, int N>
+    struct make_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
         template <typename ...Args>
         static constexpr auto apply(Args&& ...args) {
-            return udho::util::folding::seq<Args...>(std::forward<Args>(args)...);
+            return udho::util::folding::seq<Policy, Args...>(std::forward<Args>(args)...);
         }
     };
     
-    template <int N>
-    struct length_impl<udho::util::folding::udho_folding_seq_tag<N>> {
+    template <typename Policy, int N>
+    struct length_impl<udho::util::folding::udho_folding_seq_tag<Policy, N>> {
         template <typename ...Xn>
         static constexpr auto apply(udho::util::folding::seq<Xn...> const&) {
             return hana::size_t<sizeof...(Xn)>{};
         }
     };
         
-    template <int N>
-    struct Sequence<udho::util::folding::udho_folding_seq_tag<N>> : std::true_type { };
+    template <typename Policy, int N>
+    struct Sequence<udho::util::folding::udho_folding_seq_tag<Policy, N>> : std::true_type { };
 }
 }
 
@@ -722,9 +765,16 @@ struct element: Mixins<DerivedT, ValueT>...{
     
     value_type _value;
     
-    element(const value_type& v): _value(v), Mixins<DerivedT, ValueT>(*this)...{}
+    struct handle{
+        typedef DerivedT actual_type;
+    };
+    
+    const static constexpr handle val = handle();
+    
+    element(const value_type& v): Mixins<DerivedT, ValueT>(*this)..., _value(v){}
     element(): _value(value_type()), Mixins<DerivedT, ValueT>(*this)...{}
     static constexpr auto key() { return DerivedT::key(); }
+    std::string name() const { return std::string(key().c_str()); }
     self_type& operator=(const value_type& v) { 
         _value = v; 
         return *this; 
@@ -737,7 +787,18 @@ struct element: Mixins<DerivedT, ValueT>...{
     const value_type& value() const { return _value; }
     bool operator==(const self_type& other) const { return _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
+    template<typename V>
+    typename std::enable_if<std::is_convertible<V, value_type>::value, void>::type set(const std::string& n, const V& v){
+        if(n == name()){
+            _value = v;
+        }
+    }
+    template<typename V>
+    typename std::enable_if<!std::is_convertible<V, value_type>::value, void>::type set(const std::string&, const V&){}
 };
+
+template <typename DerivedT, typename ValueT, template<class, typename> typename... Mixins>
+const typename element<DerivedT, ValueT, Mixins...>::handle element<DerivedT, ValueT, Mixins...>::val;
 
 template < class T >
 class HasMemberType_element_type{
@@ -872,116 +933,128 @@ std::ostream& operator<<(std::ostream& stream, const element<DerivedT, ValueT, M
     return stream;
 }
 
-namespace detail{
-    template <typename CapsuleT, bool IsElement = !std::is_same<typename CapsuleT::data_type, typename CapsuleT::value_type>::value>
-    struct proxy{
-        typedef typename CapsuleT::value_type value_type;
-        typedef typename CapsuleT::data_type data_type;
-        typedef CapsuleT capsule_type;
-        typedef proxy<CapsuleT> self_type;
-        
-        capsule_type& _capsule;
-        
-        proxy(capsule_type& st): _capsule(st){}
-        proxy(const self_type& other): _capsule(other._capsule){};
-        self_type& operator=(const value_type& v){ _capsule.set(v); return *this; }
-        value_type& get(){ return _capsule.value(); }
-        const value_type& get() const{ return _capsule.value(); }
-        operator capsule_type() const { return _capsule; }
-        operator data_type() const { return _capsule.data(); }
-        const value_type& operator*() const{ return get(); }
-        bool operator==(const capsule_type& capsule) const { return _capsule == capsule; }
-        bool operator!=(const capsule_type& capsule) const { return !operator==(_capsule, capsule); }
-        bool operator==(const typename capsule_type::data_type& data) const { return _capsule == data; }
-        bool operator!=(const typename capsule_type::data_type& data) const { return !operator==(_capsule, data); }
-    };
-    
-    template <typename CapsuleT>
-    struct proxy<CapsuleT, true>{
-        typedef typename CapsuleT::value_type value_type;
-        typedef typename CapsuleT::data_type data_type;
-        typedef CapsuleT capsule_type;
-        typedef proxy<CapsuleT> self_type;
-        
-        capsule_type& _capsule;
-        
-        proxy(capsule_type& st): _capsule(st){}
-        proxy(const self_type& other): _capsule(other._capsule){};
-        self_type& operator=(const value_type& v){ _capsule.set(v); return *this; }
-        value_type& get(){ return _capsule.value(); }
-        const value_type& get() const{ return _capsule.value(); }
-        operator capsule_type() const { return _capsule; }
-        operator data_type() const { return _capsule.data(); }
-        operator value_type() const { return _capsule.value(); }
-        const value_type& operator*() const{ return get(); }
-        bool operator==(const capsule_type& capsule) const { return _capsule == capsule; }
-        bool operator!=(const capsule_type& capsule) const { return !operator==(_capsule, capsule); }
-        bool operator==(const typename capsule_type::data_type& data) const { return _capsule == data; }
-        bool operator!=(const typename capsule_type::data_type& data) const { return !operator==(_capsule, data); }
-    };
-}
-
-template <typename HeadT>
-struct proxy<capsule<HeadT, true>>: detail::proxy<capsule<HeadT, true>>{
-    typedef detail::proxy<capsule<HeadT, true>> detail_type;
-    using detail_type::detail_type;
-};
-
-template <typename... T>
+template <typename Policy, typename... T>
 struct udho_folding_map_tag{};
 
-template <typename LevelT, typename Indecies>
+template <typename Policy, typename LevelT, typename Indecies>
 struct access_helper;
 
-template <typename HeadT, typename TailT, std::size_t... Is>
-struct access_helper<node<HeadT, TailT>, indices<Is...>>{
+template <typename Policy, typename HeadT, typename TailT, std::size_t... Is>
+struct access_helper<Policy, node<HeadT, TailT>, indices<Is...>>{
     typedef node<HeadT, TailT> node_type;
     
     constexpr auto apply(){
         node<HeadT, TailT> xs;
         return boost::hana::make_tuple(
-            boost::hana::make_pair(xs.template at<Is>()._capsule.key(), node_at_proxy_through_helper<node_type, Is>{})...
+            boost::hana::make_pair(xs.template data<Is>().key(), at_helper<Policy, node_type, Is>{})...
         );
     }
 };
 
-template <typename H, typename T = void, typename... X>
-struct map: node<H, map<T, X...>>{
-    typedef node<H, map<T, X...>> node_type;
-    
-    using hana_tag = udho_folding_map_tag<H, T, X...>;
-    
-    using node_type::node_type;
-    map(const H& h, const T& t, const X&... xs): node<H, map<T, X...>>(h, t, xs...){}
-    template <typename FunctionT>
-    auto unpack(FunctionT&& f) const{
-        call_helper<node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
+template <typename Policy>
+struct map_by_key_helper;
+
+template <>
+struct map_by_key_helper<by_data>{
+    template <typename DataT>
+    static DataT& apply(DataT& d){
+        return d;
+    }
+    template <typename DataT>
+    static const DataT& apply(const DataT& d){
+        return d;
+    }
+};
+template <>
+struct map_by_key_helper<by_value>{
+    template <typename DataT>
+    static typename DataT::value_type& apply(DataT& d){
+        return d.value();
+    }
+    template <typename DataT>
+    static const typename DataT::value_type& apply(const DataT& d){
+        return d.value();
     }
 };
 
-template <typename H>
-struct map<H, void>: node<H, void>{
+template <typename Policy, typename H, typename T = void, typename... X>
+struct map: node<H, map<Policy, T, X...>>{
+    typedef node<H, map<Policy, T, X...>> node_type;
+    
+    using hana_tag = udho_folding_map_tag<Policy, H, T, X...>;
+    
+    using node_type::node_type;
+    map(const H& h, const T& t, const X&... xs): node<H, map<Policy, T, X...>>(h, t, xs...){}
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f) const{
+        call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f){
+        const_call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& key){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& key) const{
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    }
+};
+
+template <typename Policy, typename H>
+struct map<Policy, H, void>: node<H, void>{
     typedef node<H, void> node_type;
     
-    using hana_tag = udho_folding_map_tag<H>;
+    using hana_tag = udho_folding_map_tag<Policy, H>;
     
     using node_type::node_type;
     map(const H& h): node<H, void>(h){}
     template <typename FunctionT>
-    auto unpack(FunctionT&& f) const{
-        call_helper<node_type, typename build_indices<1>::indices_type> helper(*this);
+    decltype(auto) unpack(FunctionT&& f) const{
+        call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f) {
+        call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& key){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& key) const{
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
     }
 };
 
 template <typename... X>
-map<X...> make_map(const X&... xs){
-    return map<X...>(xs...);
+using map_d = map<by_data, X...>;
+template <typename... X>
+using map_v = map<by_value, X...>;
+
+template <typename Policy, typename... X>
+map<Policy, X...> make_map(const X&... xs){
+    return map<Policy, X...>(xs...);
 }
 
 template <typename... X>
-std::ostream& operator<<(std::ostream& stream, const map<X...>& s){
+map_d<X...> make_map_v(const X&... xs){
+    return map_d<X...>(xs...);
+}
+
+template <typename... X>
+map_v<X...> make_map_v(const X&... xs){
+    return map_v<X...>(xs...);
+}
+
+template <typename Policy, typename... X>
+std::ostream& operator<<(std::ostream& stream, const map<Policy, X...>& s){
     stream << "(";
     s.write(stream);
     stream << ")";
@@ -994,8 +1067,8 @@ std::ostream& operator<<(std::ostream& stream, const map<X...>& s){
 
 namespace boost {
 namespace hana {
-    template <typename... X>
-    struct accessors_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct accessors_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename K>
         struct get_member {
             template <typename MapT>
@@ -1004,48 +1077,48 @@ namespace hana {
             }
         };
 
-        static auto apply() {
-            udho::util::folding::access_helper<typename udho::util::folding::map<X...>::node_type, typename udho::util::folding::build_indices<sizeof...(X)>::indices_type> helper;
+        static decltype(auto) apply() {
+            udho::util::folding::access_helper<Policy, typename udho::util::folding::map<Policy, X...>::node_type, typename udho::util::folding::build_indices<sizeof...(X)>::indices_type> helper;
             return helper.apply();
         }
     };
 
-    template <typename... X>
-    struct drop_front_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct drop_front_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename Xs, typename N>
-        static constexpr auto apply(Xs&& xs, N const&) {
+        static constexpr decltype(auto) apply(Xs&& xs, N const&) {
             return xs.template tail_at<N::value>();
         }
     };
 
-    template <typename... X>
-    struct is_empty_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct is_empty_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename Xs>
         static constexpr auto apply(Xs const& xs) {
             return xs.depth == 1;
         }
     };
     
-    template <typename... X>
-    struct unpack_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct unpack_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename Xs, typename F>
-        static constexpr auto apply(Xs&& xs, F&& f) {
+        static constexpr decltype(auto) apply(Xs&& xs, F&& f) {
             return xs.unpack(std::forward<F>(f));
         }
     };
     
-    template <typename... X>
-    struct make_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct make_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename ...Args>
         static constexpr auto apply(Args&& ...args) {
-            return udho::util::folding::map<Args...>(std::forward<Args>(args)...);
+            return udho::util::folding::map<Policy, Args...>(std::forward<Args>(args)...);
         }
     };
     
-    template <typename... X>
-    struct length_impl<udho::util::folding::udho_folding_map_tag<X...>> {
+    template <typename Policy, typename... X>
+    struct length_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename ...Xn>
-        static constexpr auto apply(udho::util::folding::map<Xn...> const&) {
+        static constexpr auto apply(udho::util::folding::map<Policy, Xn...> const&) {
             return hana::size_t<sizeof...(Xn)>{};
         }
     };
