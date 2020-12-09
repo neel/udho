@@ -197,6 +197,11 @@ struct build_indices<0, Is...> : indices<Is...> {
     typedef indices<Is...> indices_type;
 };
 
+template <typename DerivedT>
+struct element_t{
+    typedef DerivedT element_type;
+};
+
 /**
  * node<A, node<B, node<C>, node<D, void>>>
  */
@@ -219,13 +224,15 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
+    
     tail_type& tail() { return static_cast<tail_type&>(*this); }
     const tail_type& tail() const { return static_cast<const tail_type&>(*this); }
     
-    const data_type& data() const { return _capsule.data(); }
     data_type& data() { return _capsule.data(); }
-    const value_type& value() const { return _capsule.value(); }
+    const data_type& data() const { return _capsule.data(); }
+    
     value_type& value() { return _capsule.value(); }
+    const value_type& value() const { return _capsule.value(); }
     
     template <typename T>
     bool exists() const{ return std::is_same<data_type, T>::value || tail_type::template exists<T>(); }
@@ -277,81 +284,98 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename T>
     const typename std::enable_if<!std::is_same<T, data_type>::value, T>::type& data() const{ return tail_type::template data<T>(); }
     
-    template <int N, typename = typename std::enable_if<N == 0>::type>
-    const data_type& data() const { return data(); }
-    template <int N, typename = typename std::enable_if<N != 0>::type>
-    const auto& data() const { return tail_type::template data<N-1>();  }
+    
     template <int N, typename = typename std::enable_if<N == 0>::type>
     data_type& data() { return data(); }
     template <int N, typename = typename std::enable_if<N != 0>::type>
     auto& data() { return tail_type::template data<N-1>();  }
     
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    const data_type& data() const { return data(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    const auto& data() const { return tail_type::template data<N-1>();  }
+    
+    
     template <typename T, typename = typename std::enable_if<std::is_same<T, data_type>::value, value_type>::type>
     const value_type& value() const{ return value(); }
     template <typename T, typename = typename std::enable_if<!std::is_same<T, data_type>::value, value_type>::type >
     const auto& value() const{ return tail_type::template value<T>(); }
+    
     template <typename T, typename = typename std::enable_if<std::is_same<T, data_type>::value, value_type>::type>
     value_type& value() { return value(); }
     template <typename T, typename = typename std::enable_if<!std::is_same<T, data_type>::value, value_type>::type >
     auto& value() { return tail_type::template value<T>(); }
     
+    
     template <int N, typename = typename std::enable_if<N == 0>::type>
     const value_type& value() const { return value(); }
     template <int N, typename = typename std::enable_if<N != 0>::type>
     const auto& value() const { return tail_type::template value<N-1>();  }
+    
     template <int N, typename = typename std::enable_if<N == 0>::type>
     value_type& value() { return value(); }
     template <int N, typename = typename std::enable_if<N != 0>::type>
     auto& value() { return tail_type::template value<N-1>();  }
     
+    
     template <int N, typename = typename std::enable_if<N == 0, tail_type>::type>
     tail_type& tail_at() { return tail(); }
     template <int N, typename = typename std::enable_if<N != 0>::type>
     auto& tail_at() { return tail_type::template tail_at<N>(); }
+    
     template <int N, typename = typename std::enable_if<N == 0, tail_type>::type>
     const tail_type& tail_at() const { return tail(); }
     template <int N, typename = typename std::enable_if<N != 0>::type>
     auto& tail_at() const { return tail_type::template tail_at<N>(); }
         
+        
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     data_type& data(const KeyT&){ return data(); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
     auto& data(const KeyT& k){ return tail_type::template data<KeyT>(k); }
+    
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     const data_type& data(const KeyT&) const { return data(); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
     const auto& data(const KeyT& k) const { return tail_type::template data<KeyT>(k); }
     
+    
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     value_type& value(const KeyT&){ return value(); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
     auto& value(const KeyT& k){ return tail_type::template value<KeyT>(k); }
+    
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     const value_type& value(const KeyT&) const { return value(); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
     const auto& value(const KeyT& k) const { return tail_type::template value<KeyT>(k); }
     
-    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    data_type& element(const HandleT&) { return data(); }
-    template <typename HandleT, typename = typename std::enable_if<!std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    decltype(auto) element(const HandleT& h) { return tail().template element<HandleT>(h); }
-    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    const data_type& element(const HandleT&) const { return data(); }
-    template <typename HandleT, typename = typename std::enable_if<!std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    decltype(auto) element(const HandleT& h) const { return tail().template element<HandleT>(h); }
     
-    template <typename HandleT>
-    typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h){ return element<HandleT>(h); }
-    template <typename KeyT>
-    typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k){ return data<KeyT>(k); }
-    template <typename K, typename = typename std::enable_if<!std::is_same<typename K::actual_type, data_type>::value && !std::is_same<K, key_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    data_type& element(const element_t<ElementT>&) { return data(); }
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    decltype(auto) element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
+    
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    const data_type& element(const element_t<ElementT>&) const { return data(); }
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    decltype(auto) element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
+    
+    
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
     decltype(auto) operator[](const K& k){ return tail().template operator[]<K>(k); }
-    template <typename HandleT>
-    const typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h) const { return element<HandleT>(h); }
-    template <typename KeyT>
-    const typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k) const { return data<KeyT>(k); }
-    template <typename K, typename = typename std::enable_if<!std::is_same<K, key_type>::value>::type>
+    
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
     decltype(auto) operator[](const K& k) const { return tail().template operator[]<K>(k); }
+        
         
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -371,7 +395,7 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     }
        
     template <typename FunctionT, typename InitialT>
-    auto fold(FunctionT f, InitialT initial) const {
+    auto accumulate(FunctionT f, InitialT initial) const {
         return f(data(), tail_type::fold(f, initial));
     }
     
@@ -472,19 +496,20 @@ struct node<HeadT, void>{
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     value_type& value(const KeyT&){ return value(); }
     
-    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    data_type& element(const HandleT&) { return data();  }
-    template <typename HandleT, typename = typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value>::type>
-    const data_type& element(const HandleT&) const { return data();  }
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    data_type& element(const element_t<ElementT>&) { return data(); }
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    const data_type& element(const element_t<ElementT>&) const { return data(); }
     
-    template <typename HandleT>
-    typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h){ return element<HandleT>(h); }
-    template <typename KeyT>
-    typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k){ return data<KeyT>(k); }
-    template <typename HandleT>
-    const typename std::enable_if<std::is_same<typename HandleT::actual_type, data_type>::value && !std::is_same<HandleT, key_type>::value, data_type>::type& operator[](const HandleT& h) const { return element<HandleT>(h); }
-    template <typename KeyT>
-    const typename std::enable_if<std::is_same<KeyT, key_type>::value, data_type>::type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    template <typename ElementT>
+    data_type& operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    
+    template <typename ElementT>
+    const data_type& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -504,7 +529,7 @@ struct node<HeadT, void>{
         f(data());
     }
     template <typename FunctionT, typename InitialT>
-    auto fold(FunctionT f, InitialT initial) const {
+    auto accumulate(FunctionT f, InitialT initial) const {
         return f(data(), initial);
     }
     
@@ -765,11 +790,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     
     value_type _value;
     
-    struct handle{
-        typedef DerivedT actual_type;
-    };
-    
-    const static constexpr handle val = handle();
+    const static constexpr element_t<derived_type> val = element_t<derived_type>();
     
     element(const value_type& v): Mixins<DerivedT, ValueT>(*this)..., _value(v){}
     element(): _value(value_type()), Mixins<DerivedT, ValueT>(*this)...{}
@@ -798,7 +819,7 @@ struct element: Mixins<DerivedT, ValueT>...{
 };
 
 template <typename DerivedT, typename ValueT, template<class, typename> typename... Mixins>
-const typename element<DerivedT, ValueT, Mixins...>::handle element<DerivedT, ValueT, Mixins...>::val;
+const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
 template < class T >
 class HasMemberType_element_type{
@@ -995,14 +1016,24 @@ struct map: node<H, map<Policy, T, X...>>{
         const_call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
-    template <typename KeyT>
-    decltype(auto) operator[](const KeyT& key){
-        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
     template <typename KeyT>
-    decltype(auto) operator[](const KeyT& key) const{
-        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    decltype(auto) operator[](const KeyT& k){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e) const {
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& k) const {
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
+    }
+
 };
 
 template <typename Policy, typename H>
@@ -1023,13 +1054,21 @@ struct map<Policy, H, void>: node<H, void>{
         call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
-    template <typename KeyT>
-    decltype(auto) operator[](const KeyT& key){
-        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
     template <typename KeyT>
-    decltype(auto) operator[](const KeyT& key) const{
-        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(key));
+    decltype(auto) operator[](const KeyT& k){
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
+    }
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e) const {
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
+    }
+    template <typename KeyT>
+    decltype(auto) operator[](const KeyT& k) const {
+        return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
 };
 
@@ -1053,8 +1092,8 @@ map_v<X...> make_map_v(const X&... xs){
     return map_v<X...>(xs...);
 }
 
-template <typename Policy, typename... X>
-std::ostream& operator<<(std::ostream& stream, const map<Policy, X...>& s){
+template <typename... X>
+std::ostream& operator<<(std::ostream& stream, const map<X...>& s){
     stream << "(";
     s.write(stream);
     stream << ")";
@@ -1118,7 +1157,7 @@ namespace hana {
     template <typename Policy, typename... X>
     struct length_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename ...Xn>
-        static constexpr auto apply(udho::util::folding::map<Policy, Xn...> const&) {
+        static constexpr auto apply(udho::util::folding::map<Xn...> const&) {
             return hana::size_t<sizeof...(Xn)>{};
         }
     };
