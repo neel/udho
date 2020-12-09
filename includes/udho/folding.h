@@ -396,7 +396,11 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
        
     template <typename FunctionT, typename InitialT>
     auto accumulate(FunctionT f, InitialT initial) const {
-        return f(data(), tail_type::fold(f, initial));
+        return f(data(), tail_type::accumulate(f, initial));
+    }
+    template <typename FunctionT>
+    auto accumulate(FunctionT f) const {
+        return f(data(), tail_type::accumulate(f));
     }
     
     capsule_type _capsule;
@@ -531,6 +535,10 @@ struct node<HeadT, void>{
     template <typename FunctionT, typename InitialT>
     auto accumulate(FunctionT f, InitialT initial) const {
         return f(data(), initial);
+    }
+    template <typename FunctionT>
+    auto accumulate(FunctionT f) const {
+        return f(data());
     }
     
     capsule_type _capsule;
