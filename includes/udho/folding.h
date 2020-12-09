@@ -402,6 +402,14 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     auto accumulate(FunctionT f) const {
         return f(data(), tail_type::accumulate(f));
     }
+    template <typename FunctionT, typename InitialT>
+    auto decorate(FunctionT f, InitialT initial) const {
+        return f.finish(accumulate(f, initial));
+    }
+    template <typename FunctionT>
+    auto decorate(FunctionT f) const{
+        return f.finish(accumulate(f));
+    }
     
     capsule_type _capsule;
 };
@@ -539,6 +547,14 @@ struct node<HeadT, void>{
     template <typename FunctionT>
     auto accumulate(FunctionT f) const {
         return f(data());
+    }
+    template <typename FunctionT, typename InitialT>
+    auto decorate(FunctionT f, InitialT initial) const {
+        return f.finish(accumulate(f, initial));
+    }
+    template <typename FunctionT>
+    auto decorate(FunctionT f) const{
+        return f.finish(accumulate(f));
     }
     
     capsule_type _capsule;
