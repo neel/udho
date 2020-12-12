@@ -1,3 +1,4 @@
 sphinx_rtd_theme
 breathe
 exhale
+doxygen

@@ -35,7 +35,9 @@ Following is an example use case describing how the activities API is supposed t
 
         // ... generate response
         ctx.respond(...);
-    })
+    });
+
+    start();
 
 Collector
 ---------
