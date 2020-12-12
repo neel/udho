@@ -176,7 +176,7 @@ void long_poll(udho::contexts::stateful<appearence> ctx){
     response_type res{boost::beast::http::status::ok, ctx.request().version()};
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type,   "text/plain");
-    res.set(boost::beast::http::field::content_length, content.size());
+    res.content_length(content.size());
     res.keep_alive(ctx.request().keep_alive());
     res.body() = content;
     res.prepare_payload();

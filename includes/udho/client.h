@@ -212,6 +212,12 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     typedef udho::config<udho::client_options> options_type;
     typedef boost::function<void (const std::string&)> redirector_type;
     
+#if BOOST_VERSION >= 107400
+    using executor_type = boost::asio::any_io_executor;
+#else
+    using executor_type = boost::asio::executor;
+#endif
+    
     udho::url _url;
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::ssl::context& _ssl_ctx;
@@ -220,7 +226,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
     
-    explicit https_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx){}
+    explicit https_client_connection(ContextT context, const udho::url& u, executor_type ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);
@@ -343,7 +349,13 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
     
-    explicit http_client_connection(ContextT context, const udho::url& u, boost::asio::executor ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex){}
+#if BOOST_VERSION >= 107400
+    using executor_type = boost::asio::any_io_executor;
+#else
+    using executor_type = boost::asio::executor;
+#endif
+    
+    explicit http_client_connection(ContextT context, const udho::url& u, executor_type ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
         std::string host   = _url[url::host];
         std::string port   = std::to_string(_url[url::port]);

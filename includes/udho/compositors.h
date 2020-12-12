@@ -87,7 +87,11 @@ namespace compositors{
             response_type res{boost::beast::http::status::ok, ctx.request().version()};
             res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type,   _mime);
+#if BOOST_VERSION >= 107400
+            res.content_length(content.size());
+#else
             res.set(boost::beast::http::field::content_length, content.size());
+#endif
             res.keep_alive(ctx.request().keep_alive());
             res.body() = content;
             res.prepare_payload();
