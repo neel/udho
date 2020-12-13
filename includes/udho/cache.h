@@ -134,6 +134,7 @@ struct content<void>{
 
 /**
  * \defgroup storage
+ * cache storage driver
  * \ingroup cache
  */
 namespace storage{

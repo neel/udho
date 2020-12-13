@@ -44,6 +44,7 @@ namespace udho{
 namespace activities{
     /**
      * \defgroup data
+     * data collected by activities
      * \ingroup activities
      */    
     template <typename StoreT>
@@ -80,6 +81,10 @@ namespace activities{
     template <typename... T>
     struct accessor;
     
+    /**
+     * dataset
+     * \ingroup data
+     */
     template <typename... T>
     struct dataset: fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>>{
         typedef fixed_key_accessor<udho::cache::shadow<std::string, typename T::result_type...>> base_type;

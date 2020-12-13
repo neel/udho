@@ -34,8 +34,8 @@
 
 namespace udho{
 /**
- * conveniance typedefs for stateful and stateless contexts using default bridge and the default HTTP request type.
  * \defgroup shorthands
+ * conveniance typedefs for stateful and stateless contexts using default bridge and the default HTTP request type.
  * \ingroup context
  */
 namespace contexts{
