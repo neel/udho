@@ -1,6 +1,20 @@
 stages:
+  - docs
   - build
   - test
+  
+docs:
+    image: alpine
+    pages:
+    script:
+    - apk update && apk add doxygen graphviz ttf-freefont
+    - doxygen Doxyfile
+    - mv docs/html/ public/
+    artifacts:
+        paths:
+        - public
+    only:
+    - feature/add-gitlab-pages-support
 
 build:arch:
   image: archlinux/base
@@ -70,3 +84,5 @@ test:ubuntu:focal:
     - ctest
   dependencies:
     - build:ubuntu:focal
+
+    
