@@ -39,8 +39,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/gregorian/greg_serialize.hpp>
-#include <boost/date_time/posix_time/time_serialize.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/filesystem/path.hpp>
@@ -56,6 +54,8 @@
 #include <udho/configuration.h>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/date_time/gregorian/greg_serialize.hpp>
+#include <boost/date_time/posix_time/time_serialize.hpp>
 
 namespace udho{
 namespace cache{
