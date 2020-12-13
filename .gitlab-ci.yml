@@ -1,20 +1,17 @@
 stages:
-  - docs
+  - pages
   - build
   - test
-  
-docs:
+
+pages:
     image: alpine
-    pages:
     script:
-    - apk update && apk add doxygen graphviz ttf-freefont
-    - doxygen Doxyfile
-    - mv docs/html/ public/
+        - apk update && apk add doxygen graphviz ttf-freefont
+        - doxygen Doxyfile
+        - mv docs/html/ public/
     artifacts:
         paths:
         - public
-    only:
-    - feature/add-gitlab-pages-support
 
 build:arch:
   image: archlinux/base
