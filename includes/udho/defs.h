@@ -56,7 +56,31 @@ typedef boost::uuids::uuid session_key_type;
 /**
  * \defgroup configuration
  * 
- * Configuration
+ * udho is configured via heterogenous configurations modules. A configuration class exposes its 
+ * configurable parameters, and getter and setters for each of these parameters. and example of 
+ * an configuration module x is shown below.
+ * \code
+ * template <typename T = void>
+ * struct x_{
+ *      const static struct param_t{                    // The parameter declaration
+ *          typedef x_<T> component;                    // There has to be a typedef component to reach the parent config
+ *      } param;                                        // the parameter will be identifies with X::param (see the end of this example);
+ * 
+ *      int param_v;                                    // The parameter value
+ * 
+ *      void set(param_t, int v) { param_v = v; }       // The setter
+ *      int get(param_t) const { return param_v; }      // The setter
+ * };
+ * 
+ * template <typename T> const typename x_<T>::param_t x_<T>::param;
+ * 
+ * typedef x_<> x;                                      // typedef x as x<>
+ * \endcode
+ * 
+ * multiple such config modules are passed to the udho::configuration template. 
+ * Each of the passed config modules are wrapped inside udho::config which provides operator[] overload 
+ * for getter and setters which calls the actual get and set functions shown in the example above. Hence
+ * the configuration<x, y> can be used with parameters of both x and y module.
  */
 
 /**

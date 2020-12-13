@@ -38,6 +38,7 @@
 namespace udho{
 
 /**
+ * proxies a config module
  * \ingroup configuration
  */
 template <typename K, typename C>
@@ -64,6 +65,7 @@ struct proxy{
 };
 
 /**
+ * Wraps a config module T. provides operator[] overloads that calls getter and setter of the corresponding corresponding config module.
  * \ingroup configuration
  */
 template <typename T>
@@ -108,28 +110,30 @@ struct configuration: udho::config<T>...{
 };
 
 /**
+ * All config modules are in the configs namespace
  * \ingroup configuration
  */
 namespace configs{
 /**
+ * The server config module
  * \ingroup configuration
  */
 template <typename T = void>
 struct server_{
     typedef std::map<std::string, std::string> mime_map;
     
-    const static struct document_root_t{
+    const static struct document_root_t{    
         typedef server_<T> component;
-    } document_root;
-    const static struct template_root_t{
+    } document_root;                        ///< document root used for serving static content
+    const static struct template_root_t{    
         typedef server_<T> component;
-    } template_root;
-    const static struct mime_default_t{
+    } template_root;                        ///< template root to search for templates
+    const static struct mime_default_t{     
         typedef server_<T> component;
-    } mime_default;
-    const static struct mimes_t{
+    } mime_default;                         ///< default mime type to use when no mime is associated with the response
+    const static struct mimes_t{            
         typedef server_<T> component;
-    } mimes;
+    } mimes;                                ///< mime type table that associates extension with a mime type. use server_<T>::mime instead of directly accessing
     
     boost::filesystem::path _document_root;
     boost::filesystem::path _template_root;
@@ -193,9 +197,7 @@ typedef server_<> server;
 
 }
 
-/**
- * \ingroup configuration
- */
+
 template <>
 struct config<configs::server_<>>: configs::server_<>{
     typedef config<configs::server_<>> self_type;    
@@ -213,9 +215,6 @@ struct config<configs::server_<>>: configs::server_<>{
     }
 };
 
-/**
- * \ingroup configuration
- */
 template <>
 struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
     typedef configs::server_<>::mimes_t key_type;
@@ -255,6 +254,7 @@ struct proxy<configs::server_<>::mimes_t, config<configs::server_<>>>{
 
 namespace configs{
 /**
+ * session config module
  * \ingroup configuration
  */
 template <typename T = void>
@@ -263,18 +263,18 @@ struct session_{
         text, binary, xml
     };
     
-    const static struct extension_t{
+    const static struct extension_t{        
         typedef session_<T> component;
-    } extension;
-    const static struct serialization_t{
+    } extension;                            ///< extension for the session file. The default extension is defined by UDHO_SESSION_FILE_EXTENSION 
+    const static struct serialization_t{    
         typedef session_<T> component;
-    } serialization;
+    } serialization;                        ///< serialization format. text, binary or xml
     const static struct path_t{
         typedef session_<T> component;
-    } path;
+    } path;                                 ///< path to session files
     const static struct id_t{
         typedef session_<T> component;
-    } id;
+    } id;                                   ///< session id UDHO_SESSION_COOKIE_NAME
     
     std::string _extension;
     format      _serialization;
@@ -302,6 +302,7 @@ template <typename T> const typename session_<T>::path_t session_<T>::path;
 template <typename T> const typename session_<T>::id_t session_<T>::id;
 
 /**
+ * session config module. see session_<T> for parameters
  * \ingroup configuration
  */
 typedef session_<> session;
@@ -310,6 +311,7 @@ typedef session_<> session;
 
 namespace configs{
 /**
+ * router config module
  * \ingroup configuration
  */
 template <typename T = void>
@@ -317,6 +319,7 @@ struct router_{
 
 };
 /**
+ * router config module. see router_<T> for details
  * \ingroup configuration
  */
 typedef router_<> router;
@@ -324,6 +327,7 @@ typedef router_<> router;
 
 namespace configs{
 /**
+ * logger config module
  * \ingroup configuration
  */
 template <typename T = void>
@@ -331,6 +335,7 @@ struct logger_{
 
 };
 /**
+ * logger config module. see logger_<T> for detail
  * \ingroup configuration
  */
 typedef logger_<> logger;
@@ -338,6 +343,7 @@ typedef logger_<> logger;
 
 namespace configs{
 /**
+ * form config module
  * \ingroup configuration
  */
 template <typename T = void>
@@ -345,6 +351,7 @@ struct form_{
 
 };
 /**
+ * form config module. see form_<T> for detail
  * \ingroup configuration
  */
 typedef form_<> form;
@@ -352,6 +359,7 @@ typedef form_<> form;
 
 /**
  * \ingroup configuration
+ * The default configuration object used in udho
  */
 typedef udho::configuration<udho::configs::server, udho::configs::session, udho::configs::router, udho::configs::logger, udho::configs::form> configuration_type;
 
