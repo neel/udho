@@ -1,14 +1,15 @@
 stages:
-  - pages
+  - dox
   - build
   - test
 
 pages:
     image: alpine
+    stage: dox
     script:
         - apk update && apk add doxygen graphviz ttf-freefont
         - doxygen Doxyfile
-        - mv docs/html/ public/
+        - mv dox/html/ public/
     artifacts:
         paths:
         - public
