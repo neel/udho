@@ -318,7 +318,6 @@ struct module_overload<Function, compositors::deferred>{
 };
 
 /**
- * \ingroup routing
  * \ingroup overload
  */
 template <typename Function, template <typename> class CompositorT, int N>
@@ -328,7 +327,6 @@ module_overload<Function, CompositorT> operator<<(module_overload<Function, Comp
 }
 
 /**
- * \ingroup routing
  * \ingroup overload
  */
 template <typename Function, template <typename> class CompositorT, int N>
@@ -361,7 +359,6 @@ struct callable1<A1, R (*)(A1&, V...)>{
 }
 
 /**
- * \ingroup routing
  * \ingroup overload
  */
 template <typename F, template <typename> class CompositorT=compositors::transparent>
@@ -370,7 +367,6 @@ module_overload<F, CompositorT> overload(boost::beast::http::verb request_method
 }
 
 /**
- * \ingroup routing
  * \ingroup overload
  */
 template <typename F, typename A1, template <typename> class CompositorT=compositors::transparent>
@@ -382,7 +378,7 @@ auto overload(boost::beast::http::verb request_method, F ftor, A1& a1, Composito
 }
 
 /**
- * \defgroup routing
+ * \defgroup routing routing
  * conjugating the routing table with multiple url mapped callbacks
  */
 
@@ -880,18 +876,20 @@ udho::overload_group<U, V>& operator/=(udho::overload_group<U, V>& group, F fixt
     return group;
 }
 
+/**
+ * router
+ */
 typedef basic_router<> router;
 
 /**
  * adds a callback url mapping to the router by conjugating an overload in the overload meta-chain.
  * The url mapping is provided by content wrappers like \ref content_wrapper0 \ref content_wrapper1 
  * which attaches feasibility criteria like http resource path, http verb with a callback function. 
- * The url mapping can be built using \ref get \ref post \ref put \ref head etc.. See \ref router for
+ * The url mapping can be built using \ref get() \ref post() \ref put() \ref head() etc.. See \ref router for
  * an example
  * 
  * @param group the overload group (which is actually the router or router attached with some url mappings)
  * @param method url mapping
- * @ingroup routing
  * \ingroup overload
  */
 template <typename U, typename V, typename F>
@@ -900,7 +898,6 @@ overload_group<overload_group<U, V>, F> operator|(const overload_group<U, V>& gr
 }
 
 /**
- * @ingroup routing
  * \ingroup overload
  */
 template <typename U, typename V, typename F>

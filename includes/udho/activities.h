@@ -43,7 +43,7 @@ namespace udho{
  */
 namespace activities{
     /**
-     * \defgroup data
+     * \defgroup data data
      * data collected by activities
      * \ingroup activities
      */    
@@ -432,7 +432,6 @@ namespace activities{
     /**
      * activity result states
      * \ingroup activities
-     * \ingroup data
      */
     enum class state{
         unknown,
@@ -1403,7 +1402,6 @@ using perform = activities::perform<ActivityT>;
 /**
  * \see udho::activities::analyzer
  * \ingroup activities
- * \ingroup data
  */
 template <typename ActivityT, typename AccessorT>
 udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){

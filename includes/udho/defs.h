@@ -54,7 +54,7 @@ typedef boost::uuids::uuid session_key_type;
 }
 
 /**
- * \defgroup configuration
+ * \defgroup configuration configuration
  * Configuration
  * 
  * udho is configured via heterogenous configurations modules. A configuration class exposes its 
@@ -86,7 +86,8 @@ typedef boost::uuids::uuid session_key_type;
 
 /*!
 
-\defgroup activities
+\defgroup activities activities
+
 Async Task Graph
 ================
 
@@ -407,44 +408,44 @@ t1();
 */
 
 /**
- * \defgroup routing
+ * \defgroup routing routing
  * 
  * URL Routing
  */
 
 /**
- * \defgroup overload
+ * \defgroup overload overload
  * \ingroup routing
  * 
  * URL overload
  */
 
 /**
- * \defgroup context
+ * \defgroup context context
  * 
  * Request Context
  */
 
 /**
- * \defgroup server
+ * \defgroup server server
  * 
  * HTTP Server
  */
 
 /**
- * \defgroup cache
+ * \defgroup cache cache
  * 
  * Cache
  */
 
 /**
- * \defgroup session
+ * \defgroup session session
  * 
  * Session
  */
 
 /**
- * \defgroup view
+ * \defgroup view view
  * 
  * View Engine
  */

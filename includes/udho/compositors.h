@@ -35,12 +35,12 @@
 namespace udho{
     
 /**
- * \ingroup routing.content
+ * \ingroup routing::content
  * compositors for content
  */
 namespace compositors{
     /**
-     * \ingroup routing.content
+     * \ingroup routing::content
      * raw boost::beast HTTP response content
      */
     template <typename OutputT>
@@ -56,7 +56,7 @@ namespace compositors{
         }
     };
     /**
-     * \ingroup routing.content
+     * \ingroup routing::content
      * No output will be returned. `ctx.respond(...)` will be used instead
      * \see udho::context::respond
      */
@@ -72,7 +72,7 @@ namespace compositors{
     };
 
     /**
-     * \ingroup routing.content
+     * \ingroup routing::content
      * mimed content. The returned output will be sent with the given mime type 
      */
     template <typename OutputT>

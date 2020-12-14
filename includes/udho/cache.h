@@ -133,7 +133,7 @@ struct content<void>{
 };
 
 /**
- * \defgroup storage
+ * \defgroup storage storage
  * cache storage driver
  * \ingroup cache
  */

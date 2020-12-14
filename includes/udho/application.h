@@ -198,7 +198,7 @@ struct app_<AppT, true>{
 };
 
 /**
- * \ingroup routing.overload
+ * \ingroup routing::overload
  */
 template <typename U, typename V, bool Ref>
 struct overload_group<U, app_<V, Ref>>{

@@ -82,6 +82,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     /**
      * session constructor
      * @param router router
+     * @param attachment attachment
      * @param socket TCP socket
      */
     explicit connection(RouterT& router, attachment_type& attachment, socket_type socket)

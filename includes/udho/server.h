@@ -148,7 +148,7 @@ struct server<AuxT, void, CacheT>{
 };
 
 /**
- * \defgroup shorthands
+ * \defgroup shorthands shorthands
  * \ingroup server
  */
 namespace servers{
