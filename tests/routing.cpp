@@ -8,7 +8,6 @@
 #include <boost/algorithm/string_regex.hpp>
 #include <udho/router.h>
 #include <boost/lexical_cast.hpp>
-#include <boost/bind.hpp>
 #include <udho/server.h>
 #include <iostream>
 

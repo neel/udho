@@ -9,7 +9,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/beast/core.hpp>

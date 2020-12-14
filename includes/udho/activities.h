@@ -33,7 +33,6 @@
 #include <atomic>
 #include <boost/signals2.hpp>
 #include <udho/cache.h>
-#include <boost/bind.hpp>
 #include <udho/util.h>
 #include <udho/context.h>
 
