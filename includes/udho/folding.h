@@ -216,11 +216,13 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     enum { depth = tail_type::depth +1 };
     
-    template <typename ArgT>
-    node(const ArgT& h): _capsule(h) {}
-    template <typename ArgT, typename... T>
-    node(const ArgT& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
     using tail_type::tail_type;
+    template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
+    node(const ArgT& h): _capsule(h) {}
+    template <typename ArgT, typename... T, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
+    node(const ArgT& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
+    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<node<HeadT, TailT>, node<OtherHeadT, OtherTailT>>::value>::type>
+    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<data_type>()); }
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
@@ -376,8 +378,9 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
     decltype(auto) operator[](const K& k) const { return tail().template operator[]<K>(k); }
         
-    template <typename T, typename = typename std::enable_if<std::is_convertible<HeadT, T>::value, T>::type>
-    const tail_type& next(T& var){ var = value(); return tail(); } 
+    const tail_type& next(data_type& var) const { var = data(); return tail(); } 
+    template <typename T, typename = typename std::enable_if<!std::is_same<data_type, value_type>::value && std::is_convertible<value_type, T>::value, T>::type>
+    const tail_type& next(T& var) const { var = value(); return tail(); } 
         
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -431,8 +434,10 @@ struct node<HeadT, void>{
     enum { depth = 0 };
     
     node(): _capsule(){}
-    template <typename ArgT>
+    template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
     node(const ArgT& h): _capsule(h) {}
+    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<node<HeadT, void>, node<OtherHeadT, OtherTailT>>::value>::type>
+    node(const node<OtherHeadT, OtherTailT>& other) { _capsule.set(other.template data<HeadT>()); }
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
@@ -525,8 +530,9 @@ struct node<HeadT, void>{
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     
-    template <typename T, typename = typename std::enable_if<std::is_convertible<HeadT, T>::value, T>::type>
-    void next(T& var){ var = value(); } 
+    void next(data_type& var) const { var = data(); } 
+    template <typename T, typename = typename std::enable_if<!std::is_same<data_type, value_type>::value && std::is_convertible<value_type, T>::value, T>::type>
+    void next(T& var) const { var = value(); } 
     
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -564,6 +570,15 @@ struct node<HeadT, void>{
     
     capsule_type _capsule;
 };
+
+template <typename HeadT, typename TailT>
+decltype(auto) operator>>(const node<HeadT, TailT>& node, HeadT& var){
+    return node.next(var);
+}
+template <typename... T, typename V, typename = typename std::enable_if<!std::is_same<typename node<T...>::data_type, typename node<T...>::value_type>::value && std::is_convertible<typename node<T...>::value_type, V>::value>::type>
+decltype(auto) operator>>(const node<T...>& node, V& var){
+    return node.next(var);
+}
 
 struct by_data{};
 struct by_value{};
@@ -810,7 +825,7 @@ namespace udho{
 namespace util{
 namespace folding{
     
-template <typename DerivedT, typename ValueT, template<class, typename> typename... Mixins>
+template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 struct element: Mixins<DerivedT, ValueT>...{
     typedef DerivedT derived_type;
     typedef ValueT value_type;
@@ -847,7 +862,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     typename std::enable_if<!std::is_convertible<V, value_type>::value, void>::type set(const std::string&, const V&){}
 };
 
-template <typename DerivedT, typename ValueT, template<class, typename> typename... Mixins>
+template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
 template < class T >
@@ -977,7 +992,7 @@ std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
     return stream;
 }
 
-template <typename DerivedT, typename ValueT, template<class, typename> typename... Mixins>
+template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 std::ostream& operator<<(std::ostream& stream, const element<DerivedT, ValueT, Mixins...>& elem){
     stream << "< " << elem.key().c_str() << ": " << elem.value() << ">";
     return stream;
@@ -1035,6 +1050,8 @@ struct map: node<H, map<Policy, T, X...>>{
     
     using node_type::node_type;
     map(const H& h, const T& t, const X&... xs): node<H, map<Policy, T, X...>>(h, t, xs...){}
+    template <typename... Y, typename = typename std::enable_if<!std::is_same<map<Policy, H, T, X...>, map<Policy, Y...>>::value>::type>
+    map(const map<Policy, Y...>& other): node_type(static_cast<const typename map<Policy, Y...>::node_type&>(other)) {}
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
         call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
@@ -1073,6 +1090,8 @@ struct map<Policy, H, void>: node<H, void>{
     
     using node_type::node_type;
     map(const H& h): node<H, void>(h){}
+    template <typename... Y, typename = typename std::enable_if<!std::is_same<map<Policy, H>, map<Policy, Y...>>::value>::type>
+    map(const map<Policy, Y...>& other): node_type(static_cast<const typename map<Policy, Y...>::node_type&>(other)) {}
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
         call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
@@ -1100,6 +1119,11 @@ struct map<Policy, H, void>: node<H, void>{
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
 };
+
+template <typename P, typename... T, typename V>
+decltype(auto) operator>>(const map<P, T...>& node, V& var){
+    return operator>>(static_cast<const typename map<P, T...>::node_type&>(node), var);
+}
 
 template <typename... X>
 using map_d = map<by_data, X...>;
@@ -1193,11 +1217,13 @@ namespace hana {
 }
 }
 
+#define HANA_LITERAL(TEXT) TEXT ## _s
 #define DEFINE_ELEMENT(Name, Type, mixins...)                               \
 struct Name: udho::util::folding::element<Name , Type , ## mixins>{         \
     using element::element;                                                 \
     static constexpr auto key() {                                           \
-        return BOOST_HANA_STRING(#Name);                                    \
+        using namespace boost::hana::literals;                              \
+        return HANA_LITERAL(#Name);                                         \
     }                                                                       \
 };
 
