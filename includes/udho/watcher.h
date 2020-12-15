@@ -40,6 +40,19 @@ namespace udho{
 template <typename WatchT>
 struct watcher;
     
+/**
+ * \ingroup watch 
+ * 
+ * Construct an watch of type DerivedT
+ * The DerivedT must have an `operator()(const boost::system::error_code& e)` overloaded, which will be called
+ * under two circumstances. Either the watch has expired, or it has been notified. The watch must be identifiable
+ * by a key of KeyT.
+ * 
+ * \tparam DerivedT The watch
+ * \tparam KeyT Key type to identify an watch
+ * 
+ * \see watcher 
+ */
 template <typename DerivedT, typename KeyT>
 struct watch{
     typedef KeyT                             key_type;
@@ -74,6 +87,17 @@ struct watch{
     }
 };
    
+/**
+ * \ingroup watch
+ * 
+ * An watcher is constructed with a fixed timeout duration. Watcher maintains a list of watches (\ref watch). 
+ * Every is identified by a key of type key_type. Watch should have an expiry time calculated by adding the 
+ * timeout with the start time (time when the watch was inserted to the watcher). A watch is released by 
+ * calling it's `operator()` under two circumstances. Either the watch has expired, or it has been notified.
+ * A specific watch can be notified by its key, or all watches can be notified.
+ * 
+ * \tparam WatchT The watch type
+ */
 template <typename WatchT>
 struct watcher{
     typedef WatchT                                  watch_type;
