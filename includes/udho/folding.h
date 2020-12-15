@@ -206,7 +206,7 @@ struct element_t{
  * node<A, node<B, node<C>, node<D, void>>>
  */
 template <typename HeadT, typename TailT = void>
-struct node: node<typename TailT::data_type, typename TailT::tail_type>{
+struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     typedef node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     typedef capsule<HeadT> capsule_type;
     typedef typename capsule_type::key_type key_type;
@@ -376,6 +376,8 @@ struct node: node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
     decltype(auto) operator[](const K& k) const { return tail().template operator[]<K>(k); }
         
+    template <typename T, typename = typename std::enable_if<std::is_convertible<HeadT, T>::value, T>::type>
+    const tail_type& next(T& var){ var = value(); return tail(); } 
         
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -522,6 +524,9 @@ struct node<HeadT, void>{
     const data_type& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    
+    template <typename T, typename = typename std::enable_if<std::is_convertible<HeadT, T>::value, T>::type>
+    void next(T& var){ var = value(); } 
     
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
