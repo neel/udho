@@ -25,9 +25,57 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_H
-#define UDHO_ACTIVITIES_H
+#ifndef UDHO_ACTIVITIES_STATES_H
+#define UDHO_ACTIVITIES_STATES_H
 
-#include <udho/activities/activities.h>
+#include <cstdint>
+#include <ostream>
 
-#endif // UDHO_ACTIVITIES_H
+namespace udho{
+/**
+ * \ingroup activities
+ */
+namespace activities{
+    
+    /**
+     * activity result states
+     * \ingroup activities
+     */
+    enum class state{
+        unknown,
+        /**
+         * The activity is incomplete
+         */
+        incomplete,
+        /**
+         * The activity has failed
+         */
+        failure,
+        /**
+         * The activity completed successfully
+         */
+        success,
+        /**
+         * The activity is canceled
+         */
+        canceled,
+        /**
+         * The activity is canceled but has not failed.
+         * The error state is only used when an error callback is passed to the analyzer
+         */
+        error
+    };
+    
+    inline std::ostream& operator<<(std::ostream& os, const state& s){
+        static const char* state_labels[] = {"unknown", "incomplete", "failure", "success", "canceled", "error"};
+        std::uint32_t state_idx = static_cast<std::uint32_t>(s);
+        os << "(" << state_idx << ") " << state_labels[state_idx];
+        return os;
+    }
+    
+}
+
+}
+
+#endif // UDHO_ACTIVITIES_STATES_H
+

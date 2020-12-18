@@ -25,9 +25,53 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_H
-#define UDHO_ACTIVITIES_H
+#ifndef UDHO_ACTIVITIES_PERFORM_H
+#define UDHO_ACTIVITIES_PERFORM_H
 
-#include <udho/activities/activities.h>
+#include <cstdint>
+#include <ostream>
+#include <udho/activities/subtask.h>
 
-#endif // UDHO_ACTIVITIES_H
+namespace udho{
+/**
+ * \ingroup activities
+ */
+namespace activities{
+    
+    /**
+     * create a subtask to perform activity ActivityT
+     * \tparam ActivityT the activity to perform
+     * \ingroup activities
+     */
+    template <typename ActivityT>
+    struct perform{
+        /**
+         * mention the activities that has to be performed before executing this subtask.
+         * \tparam DependenciesT dependencies
+         */
+        template <typename... DependenciesT>
+        struct require{
+            /**
+             * arguments for the activity constructor
+             */
+            template <typename... U>
+            static subtask<ActivityT, DependenciesT...> with(U&&... u){
+                return subtask<ActivityT, DependenciesT...>::with(u...);
+            }
+        };
+        
+       /**
+        * arguments for the activity constructor
+        */
+        template <typename... U>
+        static subtask<ActivityT> with(U&&... u){
+            return subtask<ActivityT>::with(u...);
+        }
+    };
+    
+}
+
+}
+
+#endif // UDHO_ACTIVITIES_PERFORM_H
+

@@ -25,9 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_H
-#define UDHO_ACTIVITIES_H
+#ifndef UDHO_ACTIVITIES_ACTIVITIES_H
+#define UDHO_ACTIVITIES_ACTIVITIES_H
 
-#include <udho/activities/activities.h>
+#include <udho/activities/conveniance.h>
 
-#endif // UDHO_ACTIVITIES_H
+#endif // UDHO_ACTIVITIES_ACTIVITIES_H

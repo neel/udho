@@ -25,9 +25,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_H
-#define UDHO_ACTIVITIES_H
+#ifndef UDHO_ACTIVITIES_FWD_H
+#define UDHO_ACTIVITIES_FWD_H
 
-#include <udho/activities/activities.h>
+#include <memory>
+#include <udho/activities/joined.h>
 
-#endif // UDHO_ACTIVITIES_H
+namespace udho{
+/**
+ * \ingroup activities
+ */
+namespace activities{
+    
+    template <typename NextT, typename... DependenciesT>
+    struct combinator;
+    
+    template <typename ActivityT, typename... DependenciesT>
+    struct subtask;
+    
+    namespace detail{
+        
+        template <typename T>
+        struct after;
+        
+    }
+    
+}
+
+}
+
+#endif // UDHO_ACTIVITIES_FWD_H
+

@@ -25,9 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_H
-#define UDHO_ACTIVITIES_H
+#ifndef UDHO_ACTIVITIES_REQUIRE_H
+#define UDHO_ACTIVITIES_REQUIRE_H
 
-#include <udho/activities/activities.h>
+#include <memory>
+#include <udho/activities/joined.h>
 
-#endif // UDHO_ACTIVITIES_H
+namespace udho{
+/**
+ * \ingroup activities
+ */
+namespace activities{
+    
+    /**
+     * \ingroup activities
+     */
+    template <typename... DependenciesT>
+    struct require{
+        template <typename CollectorT>
+        static detail::final_intermediate<CollectorT, DependenciesT...> with(std::shared_ptr<CollectorT> collector){
+            return detail::final_intermediate<CollectorT, DependenciesT...>(collector);
+        }
+    };
+    
+}
+
+}
+
+#endif // UDHO_ACTIVITIES_REQUIRE_H
+
