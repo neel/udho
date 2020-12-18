@@ -28,6 +28,7 @@
 #ifndef UDHO_ACTIVITIES_ACTIVITIES_H
 #define UDHO_ACTIVITIES_ACTIVITIES_H
 
+#include <udho/activities/start.h>
 #include <udho/activities/conveniance.h>
 
 #endif // UDHO_ACTIVITIES_ACTIVITIES_H
