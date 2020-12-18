@@ -29,7 +29,7 @@
 #define UDHO_UTIL_FOLDING_H
 
 #include <udho/folding/node.h>
-#include <udho/folding/seq.h>
-#include <udho/folding/map.h>
+#include <udho/folding/map.h> // Order matters map has to be before seq because
+#include <udho/folding/seq.h> // hana must be included with UDL macro. seq includes hana without that macro
 
 #endif // UDHO_UTIL_FOLDING_H

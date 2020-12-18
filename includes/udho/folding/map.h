@@ -30,6 +30,7 @@
 
 #include <udho/folding/node.h>
 #include <udho/folding/map/capsule.h>
+#include <udho/folding/map/element.h>
 #include <udho/folding/map/map.h>
 #include <udho/folding/map/io.h>
 #include <udho/folding/map/hana.h>

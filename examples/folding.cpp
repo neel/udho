@@ -1,5 +1,8 @@
 #include <iostream>
 #include <udho/folding.h>
+#include <boost/hana.hpp>
+#include <sstream>
+#include <cassert>
 
 DEFINE_ELEMENT(first_name, std::string)
 DEFINE_ELEMENT(last_name, std::string)

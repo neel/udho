@@ -28,14 +28,14 @@
 #ifndef UDHO_FOLDING_MAP_ELEMENT_H
 #define UDHO_FOLDING_MAP_ELEMENT_H
 
+#ifndef BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#define BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#endif
+
 #include <utility>
 #include <type_traits>
 #include <boost/hana.hpp>
 #include <udho/folding/node/tag.h>
-
-#ifndef BOOST_HANA_CONFIG_ENABLE_STRING_UDL
-#define BOOST_HANA_CONFIG_ENABLE_STRING_UDL
-#endif
 
 namespace udho{
 namespace util{
@@ -66,6 +66,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     }
     value_type& value() { return _value; }
     const value_type& value() const { return _value; }
+    bool operator==(const value_type& v) const { return _value == v; }
     bool operator==(const self_type& other) const { return _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
     template<typename V>
