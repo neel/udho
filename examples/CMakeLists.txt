@@ -8,9 +8,6 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 FIND_PACKAGE(Boost COMPONENTS thread REQUIRED) 
 FIND_PACKAGE(Threads REQUIRED)
 
-ADD_EXECUTABLE(udho-example-folding folding)
-TARGET_LINK_LIBRARIES(udho-example-folding udho)
-
 ADD_EXECUTABLE(udho-example-hello hello.cpp)
 TARGET_LINK_LIBRARIES(udho-example-hello udho)
 

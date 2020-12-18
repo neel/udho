@@ -6,6 +6,7 @@
 #include <udho/folding.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/hana.hpp>
+#include <boost/format.hpp>
 
 DEFINE_ELEMENT(first_name, std::string)
 DEFINE_ELEMENT(last_name, std::string)
@@ -195,6 +196,16 @@ BOOST_AUTO_TEST_CASE(map_value_by_data){
     BOOST_CHECK(m1.data<first_name>() == first_name("Neel"));
     BOOST_CHECK(m1.data<last_name>() == last_name("Basu"));
     BOOST_CHECK(m1.data<age>() == age(32));
+    
+    BOOST_CHECK(m1.data("first_name"_s) == "Neel");
+    BOOST_CHECK(m1.data("last_name"_s) == "Basu");
+    BOOST_CHECK(m1.data("age"_s) == 32);
+    BOOST_CHECK(m1.data<0>() == "Neel");
+    BOOST_CHECK(m1.data<1>() == "Basu");
+    BOOST_CHECK(m1.data<2>() == 32);
+    BOOST_CHECK(m1.data<first_name>() == "Neel");
+    BOOST_CHECK(m1.data<last_name>() == "Basu");
+    BOOST_CHECK(m1.data<age>() == 32);
 }
 
 BOOST_AUTO_TEST_CASE(map_data_by_value){
@@ -227,6 +238,102 @@ BOOST_AUTO_TEST_CASE(map_data_by_data){
     BOOST_CHECK(m1.data<first_name>() == first_name("Neel"));
     BOOST_CHECK(m1.data<last_name>() == last_name("Basu"));
     BOOST_CHECK(m1.data<age>() == age(32));
+    
+    BOOST_CHECK(m1.data("first_name"_s) == "Neel");
+    BOOST_CHECK(m1.data("last_name"_s) == "Basu");
+    BOOST_CHECK(m1.data("age"_s) == 32);
+    BOOST_CHECK(m1.data<0>() == "Neel");
+    BOOST_CHECK(m1.data<1>() == "Basu");
+    BOOST_CHECK(m1.data<2>() == 32);
+    BOOST_CHECK(m1.data<first_name>() == "Neel");
+    BOOST_CHECK(m1.data<last_name>() == "Basu");
+    BOOST_CHECK(m1.data<age>() == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_value_by_element){
+    typedef map_v<first_name, last_name, age> map_type;
+    
+    map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+    
+    BOOST_CHECK(m1.element(first_name::val) == first_name("Neel"));
+    BOOST_CHECK(m1.element(last_name::val) == last_name("Basu"));
+    BOOST_CHECK(m1.element(age::val) == age(32));
+    BOOST_CHECK(m1.element(first_name::val) == "Neel");
+    BOOST_CHECK(m1.element(last_name::val) == "Basu");
+    BOOST_CHECK(m1.element(age::val) == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_data_by_element){
+    typedef map_d<first_name, last_name, age> map_type;
+    
+    map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+    
+    BOOST_CHECK(m1.element(first_name::val) == first_name("Neel"));
+    BOOST_CHECK(m1.element(last_name::val) == last_name("Basu"));
+    BOOST_CHECK(m1.element(age::val) == age(32));
+    BOOST_CHECK(m1.element(first_name::val) == "Neel");
+    BOOST_CHECK(m1.element(last_name::val) == "Basu");
+    BOOST_CHECK(m1.element(age::val) == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_value_by_subscript){
+    typedef map_v<first_name, last_name, age> map_type;
+    
+    map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+    
+    BOOST_CHECK(m1["first_name"_s] == "Neel");
+    BOOST_CHECK(m1["last_name"_s] == "Basu");
+    BOOST_CHECK(m1["age"_s] == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_data_by_subscript){
+    typedef map_d<first_name, last_name, age> map_type;
+    
+    map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+    
+    BOOST_CHECK(m1["first_name"_s] == first_name("Neel"));
+    BOOST_CHECK(m1["last_name"_s] == last_name("Basu"));
+    BOOST_CHECK(m1["age"_s] == age(32));
+    BOOST_CHECK(m1["first_name"_s] == "Neel");
+    BOOST_CHECK(m1["last_name"_s] == "Basu");
+    BOOST_CHECK(m1["age"_s] == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_hana){
+    typedef map_d<first_name, last_name, age> map_d_type;
+    typedef map_v<first_name, last_name, age> map_v_type;
+    
+    map_d_type md1(first_name("Neel"), last_name("Basu"), age(32));
+    map_v_type mv1(first_name("Neel"), last_name("Basu"), age(32));
+    
+    BOOST_CHECK((hana::Comparable<map_d_type>::value));
+    BOOST_CHECK((hana::Foldable<map_d_type>::value));
+    BOOST_CHECK((hana::Struct<map_d_type>::value));
+    BOOST_CHECK((hana::Searchable<map_d_type>::value));
+    BOOST_CHECK((hana::Comparable<map_v_type>::value));
+    BOOST_CHECK((hana::Foldable<map_v_type>::value));
+    BOOST_CHECK((hana::Struct<map_v_type>::value));
+    BOOST_CHECK((hana::Searchable<map_v_type>::value));
+    
+    {
+        std::ostringstream ss_v;
+        auto accessors_v = hana::accessors<map_v_type::hana_tag>();
+        hana::for_each(accessors_v, [&mv1, &ss_v](const auto& k) mutable{
+            ss_v << hana::first(k).c_str() << ": " << hana::second(k)(mv1) << ", ";
+        });
+        BOOST_CHECK(ss_v.str() == "first_name: Neel, last_name: Basu, age: 32, ");
+        BOOST_CHECK(hana::find(mv1, "last_name"_s) == hana::just("Basu"));
+    }
+    
+    {
+        std::ostringstream ss_d;
+        auto accessors_d = hana::accessors<map_d_type::hana_tag>();
+        hana::for_each(accessors_d, [&md1, &ss_d](const auto& k) mutable{
+            ss_d << hana::first(k).c_str() << ": " << hana::second(k)(md1) << ", ";
+        });
+        BOOST_CHECK(ss_d.str() == (boost::format("first_name: %1%, last_name: %2%, age: %3%, ") % first_name("Neel") % last_name("Basu") % age(32)).str());
+        BOOST_CHECK(hana::find(md1, "last_name"_s) == hana::just(last_name("Basu")));
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
