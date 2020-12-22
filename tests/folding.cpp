@@ -60,6 +60,7 @@ BOOST_AUTO_TEST_CASE(seq_by_data_value){
     BOOST_CHECK(vec.value<int>() == 42);
     BOOST_CHECK(vec.value<std::string>() == "Hello");
     BOOST_CHECK(vec.value<double>() == 3.14);
+    BOOST_CHECK((vec.value<int, 1>() == 84));
 
     BOOST_CHECK(vec.value<0>() == 42);
     BOOST_CHECK(vec.value<1>() == "Hello");
