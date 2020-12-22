@@ -30,9 +30,8 @@
 
 #include <utility>
 #include <type_traits>
+#include <udho/folding/node/fwd.h>
 #include <udho/folding/node/capsule.h>
-#include <udho/folding/node/tag.h>
-#include <udho/folding/node/node.h>
 #include <ctti/type_id.hpp>
 
 namespace udho{
@@ -78,6 +77,11 @@ struct group{
     typedef T type;
     enum {index = N};
     
+    template <typename HeadT, typename TailT>
+    group(node<HeadT, TailT>& n): _capsule(n.template capsule_at<T, N-1>()){}
+    
+    capsule<T>& _capsule;
+    
     template <typename StreamT>
     void print(StreamT& stream){
         stream << ctti::nameof<T>() << ", " << N << std::endl;
@@ -110,7 +114,7 @@ struct group{
  *                      >
  */
 template <typename BeforeT, typename H = void, typename... Rest>
-struct sanitize_: sanitize_<before<BeforeT, H>, Rest...> {
+struct sanitize_: private sanitize_<before<BeforeT, H>, Rest...> {
     typedef H head_type;
     typedef sanitize_<before<BeforeT, H>, Rest...> base_type;
     typedef group<H, before<BeforeT, H>::template count<H>::value> group_type;
@@ -120,8 +124,8 @@ struct sanitize_: sanitize_<before<BeforeT, H>, Rest...> {
     template <typename T>
     using count = typename sanitize_<before<BeforeT, H>, Rest...>::template count<T>;
     
-    template <typename... ArgT>
-    sanitize_(ArgT&... args): base_type(args...), _group(args...){}
+    template <typename HeadT, typename TailT>
+    sanitize_(node<HeadT, TailT>& n): base_type(n), _group(n){}
     
     template <typename StreamT>
     void print(StreamT& stream){
@@ -137,8 +141,8 @@ struct sanitize_<BeforeT, void>{
     template <typename T>
     using count = typename BeforeT::template count<T>;
     
-    template <typename... ArgT>
-    sanitize_(ArgT&... args){}
+    template <typename HeadT, typename TailT>
+    sanitize_(node<HeadT, TailT>&){}
     
     template <typename StreamT>
     void print(StreamT&){}
