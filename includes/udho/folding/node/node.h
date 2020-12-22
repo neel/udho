@@ -116,6 +116,24 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
         return tail_type::template set<N-1, T>(v);
     }
     
+    // { capsule<T, N>() const
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    const capsule_type& capsule_at() const{ return _capsule; }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& capsule_at() const{ return tail_type::template capsule_at<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) capsule_at() const{ return tail_type::template capsule_at<T, N-1>(); }
+    // }
+    
+    // { capsule<T, N>() 
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    capsule_type& capsule_at() { return _capsule; }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    auto& capsule_at() { return tail_type::template capsule_at<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
+    // }
+    
     // { data<T, N>() const
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
     const data_type& data() const{ return data(); }
@@ -338,6 +356,13 @@ struct node<HeadT, void>{
         _capsule.set(v);
         return true;
     }
+    
+    // { capsule<T, N>() const
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    const capsule_type& capsule_at() const{ return _capsule; }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    capsule_type& capsule_at() { return _capsule; }
+    // }
     
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
     const data_type& data() const{ return data(); }
