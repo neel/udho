@@ -84,9 +84,9 @@ namespace hana {
     
     template <typename Policy, typename... X>
     struct length_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
-        template <typename ...Xn>
-        static constexpr auto apply(udho::util::folding::map<Xn...> const&) {
-            return hana::size_t<sizeof...(Xn)>{};
+        template <typename Xs>
+        static constexpr auto apply(Xs const&) {
+            return Xs::depth +1;
         }
     };
 }

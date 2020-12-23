@@ -26,73 +26,49 @@
  */
 
 
-#ifndef UDHO_FOLDING_MAP_HELPERS_H
-#define UDHO_FOLDING_MAP_HELPERS_H
+#ifndef UDHO_FOLDING_SEQ_PROXY_H
+#define UDHO_FOLDING_SEQ_PROXY_H
 
-#include <udho/folding/node/tag.h>
-#include <udho/folding/detail/extraction_helper.h>
-#include <udho/folding/detail/call_helper.h>
+#include <udho/folding/node/proxy.h>
+#include <udho/folding/seq/tag.h>
+#include <udho/folding/seq/helpers.h>
+#include <udho/folding/seq/seq.h>
 
 namespace udho{
 namespace util{
 namespace folding{
-
-template <typename Policy>
-struct map_by_key_helper;
-
-template <>
-struct map_by_key_helper<by_data>{
-    template <typename DataT>
-    static DataT& apply(DataT& d){
-        return d;
-    }
-    template <typename DataT>
-    static const DataT& apply(const DataT& d){
-        return d;
-    }
-};
-template <>
-struct map_by_key_helper<by_value>{
-    template <typename DataT>
-    static typename DataT::value_type& apply(DataT& d){
-        return d.value();
-    }
-    template <typename DataT>
-    static const typename DataT::value_type& apply(const DataT& d){
-        return d.value();
-    }
-};
-
-template <typename Policy, typename LevelT, std::size_t N>
-struct at_helper{
-    template <typename NodeT>
-    decltype(auto) operator()(NodeT& node){
-        return extraction_helper<Policy, NodeT, N>::apply(node);
-    }
-    template <typename NodeT>
-    decltype(auto) operator()(const NodeT& node) const{
-        return const_extraction_helper<Policy, NodeT, N>::apply(node);
-    }
-};
-
-template <typename Policy, typename LevelT, typename Indecies>
-struct access_helper;
-
-template <typename Policy, typename LevelT, std::size_t... Is>
-struct access_helper<Policy, LevelT, indices<Is...>>{
-    typedef LevelT node_type;
     
-    constexpr auto apply(){
-        LevelT xs;
-        return boost::hana::make_tuple(
-            boost::hana::make_pair(xs.template data<Is>().key(), at_helper<Policy, node_type, Is>{})...
-        );
+template <typename Policy, typename... X>
+struct seq_proxy: proxy<X...>{
+    typedef proxy<X...> node_type;
+    typedef seq_proxy<Policy, X...> self_type;
+    
+    using hana_tag = udho_folding_seq_tag<Policy, sizeof...(X)>;
+    
+    seq_proxy() = delete;
+    seq_proxy(const self_type&) = default;
+    template <typename OtherPolicy, typename... Rest>
+    seq_proxy(seq<OtherPolicy, Rest...>& actual): node_type(static_cast<typename seq<OtherPolicy, Rest...>::node_type&>(actual)){}
+    
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f) const{
+        const_call_helper<Policy, node_type, typename build_indices<sizeof...(X)>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    decltype(auto) unpack(FunctionT&& f){
+        call_helper<Policy, node_type, typename build_indices<sizeof...(X)>::indices_type> helper(*this);
+        return helper.apply(std::forward<FunctionT>(f));
     }
 };
 
+template <typename... X>
+using seq_proxy_d = seq_proxy<by_data, X...>;
+template <typename... X>
+using seq_proxy_v = seq_proxy<by_value, X...>;
+    
 }
 }
 }
 
-#endif // UDHO_FOLDING_MAP_HELPERS_H
-
+#endif // UDHO_FOLDING_SEQ_PROXY_H

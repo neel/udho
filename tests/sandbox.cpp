@@ -1,6 +1,8 @@
 #include <iostream>
-#include <udho/folding/node/proxy.h>
+#include <udho/folding/seq/proxy.h>
 #include <udho/folding/seq.h>
+
+#include <boost/hana.hpp>
 
 struct A{};
 struct B{};
@@ -13,21 +15,20 @@ int main(){
     
     typedef seq_v<int, std::string, double, int> seq_v_type;
     seq_v_type vec(42, "Hello", 3.14, 84);
-    seq_v_type::node_type& n = vec; 
+    seq_proxy_v<int, int> proxy(vec);
     
-    typedef proxy<int, int> sanitizer;
-
 //     std::cout << sanitizer::template count<A>::value << std::endl;
 //     std::cout << sanitizer::template count<B>::value << std::endl;
 //     std::cout << sanitizer::template count<C>::value << std::endl;
 //     std::cout << sanitizer::template count<D>::value << std::endl;
 //     std::cout << sanitizer::template count<E>::value << std::endl;
     
-    sanitizer s(n);
-    std::cout << vec.data<int, 0>() << std::endl;
-    std::cout << vec.data<int, 1>() << std::endl;
-    std::cout << s.data<int, 0>() << std::endl;
-    std::cout << s.data<int, 1>() << std::endl;
+    proxy.data<1>() = 93;
+    
+    std::cout << vec.data<0>() << std::endl;
+    std::cout << vec.data<3>() << std::endl;
+    std::cout << proxy.data<0>() << std::endl;
+    std::cout << proxy.data<1>() << std::endl;
     return 0;
 }
 

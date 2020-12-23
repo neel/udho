@@ -41,25 +41,25 @@ namespace folding{
 template <typename Policy, typename LevelT, typename Indecies>
 struct const_call_helper;
 
-template <typename Policy, typename HeadT, typename TailT, std::size_t... Is>
-struct const_call_helper<Policy, node<HeadT, TailT>, indices<Is...>>{
-    typedef node<HeadT, TailT> node_type;
+template <typename Policy, typename LevelT, std::size_t... Is>
+struct const_call_helper<Policy, LevelT, indices<Is...>>{
+    typedef LevelT node_type;
     
     const node_type& _node;
     const_call_helper(const node_type& l): _node(l){}
     
     template <typename FunctionT>
     decltype(auto) apply(FunctionT&& f){
-        return f(const_extraction_helper<Policy, node_type, Is>::apply(_node)...);
+        return std::forward<FunctionT>(f)(const_extraction_helper<Policy, node_type, Is>::apply(_node)...);
     }
 };
 
 template <typename Policy, typename LevelT, typename Indecies>
 struct call_helper;
 
-template <typename Policy, typename HeadT, typename TailT, std::size_t... Is>
-struct call_helper<Policy, node<HeadT, TailT>, indices<Is...>>{
-    typedef node<HeadT, TailT> node_type;
+template <typename Policy, typename LevelT, std::size_t... Is>
+struct call_helper<Policy, LevelT, indices<Is...>>{
+    typedef LevelT node_type;
     
     node_type& _node;
     call_helper(node_type& l): _node(l){}

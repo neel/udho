@@ -33,7 +33,6 @@
 #include <udho/folding/node/fwd.h>
 #include <udho/folding/node/tag.h>
 #include <udho/folding/node/capsule.h>
-#include <ctti/type_id.hpp>
 
 namespace udho{
 namespace util{
@@ -103,11 +102,6 @@ struct group{
         stream << _capsule << ", " ;
         return stream;
     }
-    
-    template <typename StreamT>
-    void print(StreamT& stream){
-        stream << ctti::nameof<type>() << ", " << Index << std::endl;
-    }
 };
 
 }
@@ -146,6 +140,8 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     typedef typename group_type::key_type key_type;
     typedef typename group_type::data_type data_type;
     typedef typename group_type::value_type value_type;
+    
+    enum {depth = tail_type::depth +1};
     
     group_type _group;
     
@@ -318,7 +314,7 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
 template <typename BeforeT>
 struct node_proxy<BeforeT, void>{
     typedef BeforeT before_type;
-    
+    enum {depth = 0};
     template <typename T>
     using count = typename BeforeT::template count<T>;
     
