@@ -25,36 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_FOLDING_NODE_IO_H
-#define UDHO_UTIL_FOLDING_NODE_IO_H
 
-#include <string>
-#include <ostream>
-#include <udho/folding/node/capsule.h>
-#include <udho/folding/node/proxy.h>
+#ifndef UDHO_FOLDING_SEQ_TAG_H
+#define UDHO_FOLDING_SEQ_TAG_H
 
 namespace udho{
 namespace util{
 namespace folding{
-    
-template <typename CharT, typename Traits, typename Alloc>
-std::ostream& operator<<(std::ostream& stream, const capsule<std::basic_string<CharT, Traits, Alloc>, true>& c){
-    stream << c.value();
-    return stream;
+
+template <typename Policy, int N>
+struct udho_folding_seq_tag{};
+
 }
-template <typename ValueT>
-std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
-    stream << c.key().c_str() << " -> " << c.value();
-    return stream;
-}
-template <typename ValueT>
-std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
-    stream << c.value();
-    return stream;
-}
-    
-}    
 }
 }
 
-#endif // UDHO_UTIL_FOLDING_NODE_IO_H
+#endif // UDHO_FOLDING_SEQ_TAG_H

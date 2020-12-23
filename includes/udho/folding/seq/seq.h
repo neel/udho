@@ -32,15 +32,14 @@
 #include <utility>
 #include <type_traits>
 #include <udho/folding/node/node.h>
+#include <udho/folding/seq/tag.h>
 #include <udho/folding/seq/helpers.h>
 #include <udho/folding/detail/indices.h>
 
 namespace udho{
 namespace util{
 namespace folding{
-    
-template <typename Policy, int N>
-struct udho_folding_seq_tag{};
+
 
 /**
  * seq<A, B, C, D>: node<A, seq<B, C, D>>                                                        -> node<A, node<B, node<C, node<D, void>>>>     -> capsule<A>  depth 3

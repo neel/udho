@@ -29,7 +29,7 @@
 #define UDHO_FOLDING_SEQ_HANA_H
 
 #include <boost/hana.hpp>
-#include <udho/folding/seq/seq.h>
+#include <udho/folding/seq/tag.h>
 #include <udho/folding/detail/extraction_helper.h>
 
 namespace boost {

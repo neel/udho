@@ -32,16 +32,15 @@
 #include <type_traits>
 #include <udho/folding/node/node.h>
 #include <udho/folding/map/helpers.h>
+#include <udho/folding/map/tag.h>
+#include <udho/folding/map/fwd.h>
 #include <udho/folding/detail/indices.h>
 
 namespace udho{
 namespace util{
 namespace folding{
 
-template <typename Policy, typename... T>
-struct udho_folding_map_tag{};
-
-template <typename Policy, typename H, typename T = void, typename... X>
+template <typename Policy, typename H, typename T, typename... X>
 struct map: node<H, map<Policy, T, X...>>{
     typedef node<H, map<Policy, T, X...>> node_type;
     

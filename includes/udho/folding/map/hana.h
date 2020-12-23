@@ -29,7 +29,8 @@
 #define UDHO_FOLDING_MAP_HANA_H
 
 #include <boost/hana.hpp>
-#include <udho/folding/map/map.h>
+#include <udho/folding/map/tag.h>
+#include <udho/folding/map/fwd.h>
 
 namespace boost {
 namespace hana {

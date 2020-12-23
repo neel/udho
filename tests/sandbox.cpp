@@ -15,7 +15,7 @@ int main(){
     seq_v_type vec(42, "Hello", 3.14, 84);
     seq_v_type::node_type& n = vec; 
     
-    typedef sanitize<int, double, int> sanitizer;
+    typedef proxy<int, int> sanitizer;
 
 //     std::cout << sanitizer::template count<A>::value << std::endl;
 //     std::cout << sanitizer::template count<B>::value << std::endl;
@@ -24,9 +24,10 @@ int main(){
 //     std::cout << sanitizer::template count<E>::value << std::endl;
     
     sanitizer s(n);
-    
-    s.print(std::cout);
-    
+    std::cout << vec.data<int, 0>() << std::endl;
+    std::cout << vec.data<int, 1>() << std::endl;
+    std::cout << s.data<int, 0>() << std::endl;
+    std::cout << s.data<int, 1>() << std::endl;
     return 0;
 }
 
