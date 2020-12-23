@@ -92,6 +92,14 @@ struct Name: udho::util::folding::element<Name , Type , ## mixins>{         \
     }                                                                       \
 };
 
+#define DEFINE_ELEMENT_SIMPLE(Name, Type, mixins...)                        \
+struct Name: udho::util::folding::element<Name , Type , ## mixins>{         \
+    using element::element;                                                 \
+    static constexpr auto key() {                                           \
+        return val;                                                         \
+    }                                                                       \
+};
+
 template < class T >
 class HasMemberType_element_type{
     private:

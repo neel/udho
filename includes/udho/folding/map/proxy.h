@@ -32,6 +32,7 @@
 #include <udho/folding/node/proxy.h>
 #include <udho/folding/map/tag.h>
 #include <udho/folding/map/helpers.h>
+#include <udho/folding/map/map.h>
 
 namespace udho{
 namespace util{
@@ -40,10 +41,14 @@ namespace folding{
 template <typename Policy, typename... X>
 struct map_proxy: proxy<X...>{
     typedef proxy<X...> node_type;
+    typedef map_proxy<Policy, X...> self_type;
     
     using hana_tag = udho_folding_map_tag<Policy, X...>;
     
-    using node_type::node_type;
+    map_proxy() = delete;
+    map_proxy(const self_type&) = default;
+    template <typename OtherPolicy, typename... Rest>
+    map_proxy(map<OtherPolicy, Rest...>& actual): node_type(static_cast<typename map<OtherPolicy, Rest...>::node_type&>(actual)){}
 
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{

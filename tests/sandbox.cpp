@@ -1,14 +1,14 @@
 #include <iostream>
 #include <udho/folding/seq/proxy.h>
 #include <udho/folding/seq.h>
+#include <udho/folding/map.h>
 
 #include <boost/hana.hpp>
+using namespace boost;
 
-struct A{};
-struct B{};
-struct C{};
-struct D{};
-struct E{};
+DEFINE_ELEMENT_SIMPLE(first_name, std::string)
+DEFINE_ELEMENT_SIMPLE(last_name, std::string)
+DEFINE_ELEMENT_SIMPLE(age, std::size_t)
 
 int main(){
     using namespace udho::util::folding;
@@ -17,18 +17,24 @@ int main(){
     seq_v_type vec(42, "Hello", 3.14, 84);
     seq_proxy_v<int, int> proxy(vec);
     
-//     std::cout << sanitizer::template count<A>::value << std::endl;
-//     std::cout << sanitizer::template count<B>::value << std::endl;
-//     std::cout << sanitizer::template count<C>::value << std::endl;
-//     std::cout << sanitizer::template count<D>::value << std::endl;
-//     std::cout << sanitizer::template count<E>::value << std::endl;
-    
     proxy.data<1>() = 93;
     
     std::cout << vec.data<0>() << std::endl;
     std::cout << vec.data<3>() << std::endl;
     std::cout << proxy.data<0>() << std::endl;
     std::cout << proxy.data<1>() << std::endl;
+    
+    
+    typedef map_v<first_name, last_name, age, first_name> map_v_type;
+    map_v_type map("Neel", "Basu", 32, "Sunanda");
+    
+    std::cout << map[first_name::val] << std::endl;
+    
+    auto accessors_d = hana::accessors<map_v_type::hana_tag>();
+    hana::for_each(accessors_d, [&map](const auto& k) mutable{
+        std::cout << ": " << hana::second(k)(map) << ", ";
+    });
+    
     return 0;
 }
 

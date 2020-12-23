@@ -31,9 +31,26 @@
 #include <boost/hana.hpp>
 #include <udho/folding/map/tag.h>
 #include <udho/folding/map/fwd.h>
+#include <udho/folding/detail/indices.h>
+#include <udho/folding/map/helpers.h>
 
 namespace boost {
 namespace hana {
+    template <typename Policy, typename LevelT, typename Indecies>
+    struct access_helper;
+
+    template <typename Policy, typename LevelT, std::size_t... Is>
+    struct access_helper<Policy, LevelT, udho::util::folding::indices<Is...>>{
+        typedef LevelT node_type;
+        
+        constexpr auto apply(){
+            LevelT xs;
+            return boost::hana::make_tuple(
+                boost::hana::make_pair(xs.template data<Is>().key(), udho::util::folding::at_helper<Policy, node_type, Is>{})...
+            );
+        }
+    };
+    
     template <typename Policy, typename... X>
     struct accessors_impl<udho::util::folding::udho_folding_map_tag<Policy, X...>> {
         template <typename K>
@@ -45,7 +62,7 @@ namespace hana {
         };
 
         static decltype(auto) apply() {
-            udho::util::folding::access_helper<Policy, typename udho::util::folding::map<Policy, X...>::node_type, typename udho::util::folding::build_indices<sizeof...(X)>::indices_type> helper;
+            access_helper<Policy, typename udho::util::folding::map<Policy, X...>::node_type, typename udho::util::folding::build_indices<sizeof...(X)>::indices_type> helper;
             return helper.apply();
         }
     };

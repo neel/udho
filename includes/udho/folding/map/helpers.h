@@ -75,21 +75,6 @@ struct at_helper{
     }
 };
 
-template <typename Policy, typename LevelT, typename Indecies>
-struct access_helper;
-
-template <typename Policy, typename LevelT, std::size_t... Is>
-struct access_helper<Policy, LevelT, indices<Is...>>{
-    typedef LevelT node_type;
-    
-    constexpr auto apply(){
-        LevelT xs;
-        return boost::hana::make_tuple(
-            boost::hana::make_pair(xs.template data<Is>().key(), at_helper<Policy, node_type, Is>{})...
-        );
-    }
-};
-
 }
 }
 }
