@@ -25,13 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_FOLDING_MAP_H
-#define UDHO_UTIL_FOLDING_MAP_H
+#ifndef UDHO_UTIL_FOLDING_HANA_H
+#define UDHO_UTIL_FOLDING_HANA_H
 
-#include <udho/folding/node.h>
-#include <udho/folding/map/capsule.h>
-#include <udho/folding/map/element.h>
-#include <udho/folding/map/map.h>
-#include <udho/folding/map/io.h>
+#include <udho/folding/map/hana.h>
+#include <udho/folding/seq/hana.h>
 
-#endif // UDHO_UTIL_FOLDING_MAP_H
+#endif // UDHO_UTIL_FOLDING_HANA_H

@@ -5,93 +5,787 @@ digraph "source tree" {
     fontsize="16";
     fontname="Helvetica";
 	clusterrank="local";
-	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
-	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nhana.h"
-	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
-	"includes/\nudho/\nfolding/\nseq/\nio.h" -> "includes/\nudho/\nfolding/\nseq/\nseq.h"
-	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "/\nusr/\ninclude/\nboost/\nhana.hpp"
-	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
-	"includes/\nudho/\nfolding/\nfolding.h" -> "includes/\nudho/\nfolding/\nseq.h"
-	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nio.h"
-	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nio.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nio.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nfolding.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nfolding.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nio.h";
+}
+subgraph "clusterincludes/udho/folding" {
+	label="includes/udho/folding";
+	"includes/\nudho/\nfolding/\nmap.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h";
+}
+subgraph "cluster/usr/include/boost" {
+	label="/usr/include/boost";
+	"/\nusr/\ninclude/\nboost/\nhana.hpp";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhana.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nostream";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nseq.h";
+}
+subgraph "clusterincludes/udho/folding/seq" {
+	label="includes/udho/folding/seq";
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nstring";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nio.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nostream";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nio.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ncstdint";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nencapsulation.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h";
+}
+subgraph "cluster/usr/include/boost" {
+	label="/usr/include/boost";
+	"/\nusr/\ninclude/\nboost/\nhana.hpp";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhana.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nstring";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nio.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nostream";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nio.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nio.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nelement.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\nutility";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "cluster/usr/include/c++/10.2.0" {
+	label="/usr/include/c++/10.2.0";
+	"/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nnode.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nfwd.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/detail" {
+	label="includes/udho/folding/detail";
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/node" {
+	label="includes/udho/folding/node";
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\ntag.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nmap.h";
+}
+subgraph "clusterincludes/udho/folding/map" {
+	label="includes/udho/folding/map";
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h";
+}
 	"includes/\nudho/\nfolding/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\nnode.h"
-	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
-	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
-	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
-	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nnode/\nnode.h"
-	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
-	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nnode/\nnode.h"
-	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nhana.h" -> "includes/\nudho/\nfolding/\nseq/\nhana.h"
 	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nseq.h"
-	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
-	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nhana.h"
-	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nhelpers.h"
-	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\nfwd.h"
-	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
-	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nio.h"
-	"includes/\nudho/\nfolding/\nseq/\nhana.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
-	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "/\nusr/\ninclude/\nboost/\nhana.hpp"
-	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
-	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\ncapsule.h"
-	"includes/\nudho/\nfolding/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\nio.h"
-	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nstring"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
-	"includes/\nudho/\nfolding/\nseq/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nostream"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nmap/\nencapsulation.h"
-	"includes/\nudho/\nfolding/\nseq/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\ncall_helper.h"
-	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\ncall_helper.h"
-	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
-	"includes/\nudho/\nfolding/\nnode/\nfwd.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nostream"
-	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
-	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
-	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
-	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nstring"
-	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nfwd.h"
-	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
-	"includes/\nudho/\nfolding/\nseq/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
 	"includes/\nudho/\nfolding/\nseq/\nhana.h" -> "/\nusr/\ninclude/\nboost/\nhana.hpp"
-	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\nhelpers.h"
-	"includes/\nudho/\nfolding/\nseq/\nhana.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
-	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
 	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
-	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\ncall_helper.h"
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
+	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\nhelpers.h"
+	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nostream"
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nseq/\nhana.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\nseq.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nfwd.h"
 	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nostream"
-	"includes/\nudho/\nfolding/\ndetail/\nindices.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ncstdint"
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\nhelpers.h"
+	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nio.h"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nfolding.h" -> "includes/\nudho/\nfolding/\nseq.h"
+	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
+	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
+	"includes/\nudho/\nfolding/\nseq/\nio.h" -> "includes/\nudho/\nfolding/\nseq/\nseq.h"
+	"includes/\nudho/\nfolding/\nseq/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nostream"
+	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\nhelpers.h"
+	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nnode/\nnode.h"
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
+	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\nseq/\ntag.h"
+	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
+	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
 	"includes/\nudho/\nfolding/\nmap/\nelement.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
 	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nnode.h"
-	"includes/\nudho/\nfolding/\nnode/\ncapsule.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nnode.h"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
+	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nfwd.h"
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
+	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nmap/\nelement.h"
+	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nmap.h"
+	"includes/\nudho/\nfolding/\nseq/\nhana.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nmap/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h"
+	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\nio.h"
 	"includes/\nudho/\nfolding/\ndetail/\ncall_helper.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
-	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nseq/\nseq.h"
-	"includes/\nudho/\nfolding/\nfolding.h" -> "includes/\nudho/\nfolding/\nnode.h"
-	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
-	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "/\nusr/\ninclude/\nboost/\nhana.hpp"
+	"includes/\nudho/\nfolding/\nmap/\ncapsule.h" -> "includes/\nudho/\nfolding/\nmap/\nencapsulation.h"
+	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nstring"
+	"includes/\nudho/\nfolding/\nseq/\nhelpers.h" -> "includes/\nudho/\nfolding/\ndetail/\ncall_helper.h"
+	"includes/\nudho/\nfolding/\nmap/\nproxy.h" -> "includes/\nudho/\nfolding/\nmap/\ntag.h"
+	"includes/\nudho/\nfolding/\ndetail/\nindices.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ncstdint"
+	"includes/\nudho/\nfolding/\nmap.h" -> "includes/\nudho/\nfolding/\nmap/\ncapsule.h"
 	"includes/\nudho/\nfolding/\nfolding.h" -> "includes/\nudho/\nfolding/\nmap.h"
-	"includes/\nudho/\nfolding/\nseq/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
+	"includes/\nudho/\nfolding/\nmap/\nio.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nstring"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nmap/\nmap.h" -> "includes/\nudho/\nfolding/\nnode/\nnode.h"
+	"includes/\nudho/\nfolding/\nnode/\nnode.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\nutility"
+	"includes/\nudho/\nfolding/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\nhana.h"
+	"includes/\nudho/\nfolding/\nseq.h" -> "includes/\nudho/\nfolding/\nnode.h"
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
+	"includes/\nudho/\nfolding/\nnode/\nproxy.h" -> "includes/\nudho/\nfolding/\nnode/\ntag.h"
+	"includes/\nudho/\nfolding/\nmap/\nhana.h" -> "includes/\nudho/\nfolding/\nmap/\nfwd.h"
+	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "includes/\nudho/\nfolding/\nnode/\nproxy.h"
+	"includes/\nudho/\nfolding/\ndetail/\nextraction_helper.h" -> "includes/\nudho/\nfolding/\ndetail/\nindices.h"
+	"includes/\nudho/\nfolding/\nnode/\nfwd.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\nseq/\nseq.h" -> "/\nusr/\ninclude/\nc++/\n10.2.0/\ntype_traits"
+	"includes/\nudho/\nfolding/\nnode.h" -> "includes/\nudho/\nfolding/\nnode/\nio.h"
+	"includes/\nudho/\nfolding/\nnode/\nio.h" -> "includes/\nudho/\nfolding/\nnode/\ncapsule.h"
 }

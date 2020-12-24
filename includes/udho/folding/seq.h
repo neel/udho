@@ -31,6 +31,5 @@
 #include <udho/folding/node.h>
 #include <udho/folding/seq/seq.h>
 #include <udho/folding/seq/io.h>
-#include <udho/folding/seq/hana.h>
 
 #endif // UDHO_UTIL_FOLDING_SEQ_H

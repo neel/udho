@@ -2,6 +2,7 @@
 #include <udho/folding/seq/proxy.h>
 #include <udho/folding/seq.h>
 #include <udho/folding/map.h>
+#include <udho/folding/map/hana.h>
 
 #include <boost/hana.hpp>
 using namespace boost;

@@ -28,11 +28,25 @@
 #ifndef UDHO_FOLDING_MAP_HANA_H
 #define UDHO_FOLDING_MAP_HANA_H
 
+#ifndef BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#define BOOST_HANA_CONFIG_ENABLE_STRING_UDL
+#endif
+
 #include <boost/hana.hpp>
 #include <udho/folding/map/tag.h>
 #include <udho/folding/map/fwd.h>
 #include <udho/folding/detail/indices.h>
 #include <udho/folding/map/helpers.h>
+
+#define HANA_LITERAL(TEXT) TEXT ## _s
+#define DEFINE_ELEMENT(Name, Type, mixins...)                               \
+struct Name: udho::util::folding::element<Name , Type , ## mixins>{         \
+    using element::element;                                                 \
+    static constexpr auto key() {                                           \
+        using namespace boost::hana::literals;                              \
+        return HANA_LITERAL(#Name);                                         \
+    }                                                                       \
+};
 
 namespace boost {
 namespace hana {
