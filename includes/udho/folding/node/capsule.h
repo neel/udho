@@ -28,6 +28,7 @@
 #ifndef UDHO_FOLDING_CAPSULE_H
 #define UDHO_FOLDING_CAPSULE_H
 
+#include <string>
 #include <utility>
 #include <type_traits>
 #include <udho/folding/node/fwd.h>

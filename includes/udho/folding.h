@@ -29,5 +29,6 @@
 #define UDHO_FOLDING_H
 
 #include <udho/folding/folding.h>
+#include <udho/folding/hana.h>
 
 #endif // UDHO_UTIL_FOLDING_H

@@ -1,13 +1,11 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE "udho Unit Test (udho::folding)"
 
+#include <udho/folding.h>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
-#include <udho/folding.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
-#include <udho/folding/hana.h>
-#include <boost/hana.hpp>
 
 DEFINE_ELEMENT(first_name, std::string)
 DEFINE_ELEMENT(last_name, std::string)
