@@ -1,8 +1,8 @@
 #include <iostream>
-#include <udho/folding/seq/proxy.h>
-#include <udho/folding/seq.h>
-#include <udho/folding/map.h>
-#include <udho/folding/map/hana.h>
+#include <udho/hazo/seq/proxy.h>
+#include <udho/hazo/seq.h>
+#include <udho/hazo/map.h>
+#include <udho/hazo/map/hana.h>
 
 #include <boost/hana.hpp>
 using namespace boost;
@@ -12,7 +12,7 @@ DEFINE_ELEMENT_SIMPLE(last_name, std::string)
 DEFINE_ELEMENT_SIMPLE(age, std::size_t)
 
 int main(){
-    using namespace udho::util::folding;
+    using namespace udho::util::hazo;
     
     typedef seq_v<int, std::string, double, int> seq_v_type;
     seq_v_type vec(42, "Hello", 3.14, 84);

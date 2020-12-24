@@ -76,7 +76,7 @@ SET(UDHO_HEADERS
     includes/udho/page.h
     includes/udho/scope.h
     includes/udho/visitor.h
-    includes/udho/folding.h
+    includes/udho/hazo.h
 )
 SET(UDHO_SOURCES 
     page.cpp

@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE "udho Unit Test (udho::folding)"
+#define BOOST_TEST_MODULE "udho Unit Test (udho::hazo)"
 
-#include <udho/folding.h>
+#include <udho/hazo.h>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -13,9 +13,9 @@ DEFINE_ELEMENT(age, std::size_t)
 
 using namespace boost;
 using namespace boost::hana::literals;
-using namespace udho::util::folding;
+using namespace udho::util::hazo;
 
-BOOST_AUTO_TEST_SUITE(folding)
+BOOST_AUTO_TEST_SUITE(hazo)
 
 BOOST_AUTO_TEST_CASE(element){
     first_name f("Neel");

@@ -1,0 +1,342 @@
+/*
+ * Copyright (c) 2020, <copyright holder> <email>
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *     names of its contributors may be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY <copyright holder> <email> ''AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <copyright holder> <email> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef UDHO_HAZO_NODE_PROXY_H
+#define UDHO_HAZO_NODE_PROXY_H
+
+#include <utility>
+#include <type_traits>
+#include <udho/hazo/node/fwd.h>
+#include <udho/hazo/node/tag.h>
+#include <udho/hazo/node/capsule.h>
+
+namespace udho{
+namespace util{
+namespace hazo{
+    
+namespace detail{
+template <typename BeforeT, typename ExpectedT, typename NextT>
+struct counter{
+    enum {value = BeforeT::template count<NextT>::value + std::is_same<ExpectedT, NextT>::value};
+};
+  
+template <typename PreviousT = void, typename NextT = void>
+struct before{
+    typedef NextT next_type;
+    
+    template <typename T>
+    using count = counter<PreviousT, NextT, T>;
+};
+
+template <typename ExpectedT, typename NextT>
+struct counter<before<>, ExpectedT, NextT>{
+    enum {value = std::is_same<ExpectedT, NextT>::value};
+};
+
+template <>
+struct before<void, void>{
+    typedef void next_type;
+    
+    template <typename T>
+    using count = counter<before<>, void, T>;
+};
+
+template <typename NextT>
+struct before<before<>, NextT>{
+    typedef NextT next_type;
+    
+    template <typename T>
+    using count = counter<before<>, NextT, T>;
+};
+
+template <typename ValueT, int Index>
+struct group{
+    enum {index = Index};
+    typedef ValueT type;
+    typedef capsule<type> capsule_type;
+    typedef typename capsule_type::key_type key_type;
+    typedef typename capsule_type::data_type data_type;
+    typedef typename capsule_type::value_type value_type;
+    
+    template <typename HeadT, typename TailT>
+    group(node<HeadT, TailT>& n): _capsule(n.template capsule_at<type, Index-1>()){}
+    
+    capsule_type& _capsule;
+    
+    data_type& data() { return _capsule.data(); }
+    const data_type& data() const { return _capsule.data(); }
+    value_type& value() { return _capsule.value(); }
+    const value_type& value() const { return _capsule.value(); }
+    
+    template <typename FunctionT>
+    void call(FunctionT& f) const{
+        _capsule.call(f);
+    }
+    
+    template <typename StreamT>
+    StreamT& write(StreamT& stream) const{
+        stream << _capsule << ", " ;
+        return stream;
+    }
+};
+
+}
+/**
+ * \code
+ * node_proxy<
+ *      before<>, 
+ *      A, B, C, D, E
+ *  >
+ *  : node_proxy<
+ *          before<before<>, A>, 
+ *          B, C, D, E
+ *      >
+ *      : node_proxy<
+ *              before<before<before<>, A>, B>, 
+ *              C, D, E
+ *          >
+ *          : node_proxy<
+ *                  before<before<before<before<>, A>, B>, C>, 
+ *                  D, E
+ *              >
+ *              : node_proxy<
+ *                      before<before<before<before<before<>, A>, B>, C>, D>, 
+ *                      E
+ *                  >
+ *                  : node_proxy<
+ *                          before<before<before<before<before<before<>, A>, B>, C>, D>, E>
+ *                      >
+ * \endcode
+ */
+template <typename BeforeT, typename H = void, typename... Rest>
+struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
+    typedef H head_type;
+    typedef node_proxy<detail::before<BeforeT, H>, Rest...> tail_type;
+    typedef detail::group<H, detail::before<BeforeT, H>::template count<H>::value> group_type;
+    typedef typename group_type::key_type key_type;
+    typedef typename group_type::data_type data_type;
+    typedef typename group_type::value_type value_type;
+    
+    enum {depth = tail_type::depth +1};
+    
+    group_type _group;
+    
+    template <typename T>
+    using count = typename node_proxy<detail::before<BeforeT, H>, Rest...>::template count<T>;
+    
+    template <typename HeadT, typename TailT>
+    node_proxy(node<HeadT, TailT>& n): tail_type(n), _group(n){}
+    
+    data_type& data() { return _group.data(); }
+    const data_type& data() const { return _group.data(); }
+    value_type& value() { return _group.value(); }
+    const value_type& value() const { return _group.value(); }
+    
+    tail_type& tail() { return static_cast<tail_type&>(*this); }
+    const tail_type& tail() const { return static_cast<const tail_type&>(*this); }
+    
+    // { data<T, N>() const
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    const data_type& data() const{ return data(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& data() const{ return tail_type::template data<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) data() const{ return tail_type::template data<T, N-1>(); }
+    // }
+    
+    // { data<T, N>()
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    data_type& data() { return data(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    auto& data() { return tail_type::template data<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) data() { return tail_type::template data<T, N-1>(); }
+    // }
+    
+    // { value<T, N>() const
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    const value_type& value() const{ return value(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& value() const{ return tail_type::template value<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) value() const{ return tail_type::template value<T, N-1>(); }
+    // }
+    
+    // { value<T, N>()
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    value_type& value() { return value(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    auto& value() { return tail_type::template value<T, N>(); }
+    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
+    decltype(auto) value() { return tail_type::template value<T, N-1>(); }
+    // }
+    
+    // { data<N>()
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    data_type& data() { return data(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    auto& data() { return tail_type::template data<N-1>();  }
+    // }
+    
+    // { data<N>() const
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    const data_type& data() const { return data(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    const auto& data() const { return tail_type::template data<N-1>();  }
+    // }
+    
+    // { value<N>()
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    value_type& value() { return value(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    auto& value() { return tail_type::template value<N-1>();  }
+    // }
+    
+    // { value<N>() const
+    template <int N, typename = typename std::enable_if<N == 0>::type>
+    const value_type& value() const { return value(); }
+    template <int N, typename = typename std::enable_if<N != 0>::type>
+    const auto& value() const { return tail_type::template value<N-1>();  }
+    // }
+    // { data<KeyT>(const KeyT&)
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& data(const KeyT&){ return data(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    auto& data(const KeyT& k){ return tail_type::template data<KeyT>(k); }
+    // }
+    
+    // { data<KeyT>(const KeyT&) const
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const data_type& data(const KeyT&) const { return data(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    const auto& data(const KeyT& k) const { return tail_type::template data<KeyT>(k); }
+    // }
+    
+    // { value<KeyT>(const KeyT&)
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    value_type& value(const KeyT&){ return value(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    auto& value(const KeyT& k){ return tail_type::template value<KeyT>(k); }
+    // }
+    
+    // { value<KeyT>(const KeyT&) const
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    const value_type& value(const KeyT&) const { return value(); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value>::type>
+    const auto& value(const KeyT& k) const { return tail_type::template value<KeyT>(k); }
+    // }
+    
+    // { element<ElementT>(const element_t<ElementT>&)
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    data_type& element(const element_t<ElementT>&) { return data(); }
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    decltype(auto) element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
+    // }
+    
+    // { element<ElementT>(const element_t<ElementT>&) const
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    const data_type& element(const element_t<ElementT>&) const { return data(); }
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    decltype(auto) element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
+    // }
+    
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
+    decltype(auto) operator[](const K& k){ return tail().template operator[]<K>(k); }
+    
+    template <typename ElementT>
+    decltype(auto) operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
+    template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
+    data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
+    decltype(auto) operator[](const K& k) const { return tail().template operator[]<K>(k); }
+    
+    const tail_type& next(data_type& var) const { var = data(); return tail(); } 
+    template <typename T, typename = typename std::enable_if<!std::is_same<data_type, value_type>::value && std::is_convertible<value_type, T>::value, T>::type>
+    const tail_type& next(T& var) const { var = value(); return tail(); } 
+    
+    template <typename FunctionT>
+    void visit(FunctionT& f) const{
+        _group.call(f);
+        tail_type::visit(f);
+    }
+    template <typename FunctionT>
+    void visit(FunctionT& f){
+        _group.call(f);
+        tail_type::visit(f);
+    }
+       
+    template <typename FunctionT, typename InitialT>
+    auto accumulate(FunctionT f, InitialT initial) const {
+        return f(data(), tail_type::accumulate(f, initial));
+    }
+    template <typename FunctionT>
+    auto accumulate(FunctionT f) const {
+        return f(data(), tail_type::accumulate(f));
+    }
+    template <typename FunctionT, typename InitialT>
+    auto decorate(FunctionT f, InitialT initial) const {
+        return f.finish(accumulate(f, initial));
+    }
+    template <typename FunctionT>
+    auto decorate(FunctionT f) const{
+        return f.finish(accumulate(f));
+    }
+};
+
+template <typename BeforeT>
+struct node_proxy<BeforeT, void>{
+    typedef BeforeT before_type;
+    enum {depth = 0};
+    template <typename T>
+    using count = typename BeforeT::template count<T>;
+    
+    template <typename HeadT, typename TailT>
+    node_proxy(node<HeadT, TailT>&){}
+};
+
+template <typename... T>
+decltype(auto) operator>>(const node_proxy<T...>& proxy, typename node_proxy<T...>::head_type& var){
+    return proxy.next(var);
+}
+
+template <typename... T, typename V, typename = typename std::enable_if<!std::is_same<typename node_proxy<T...>::data_type, typename node_proxy<T...>::value_type>::value && std::is_convertible<typename node_proxy<T...>::value_type, V>::value>::type>
+decltype(auto) operator>>(const node_proxy<T...>& proxy, V& var){
+    return proxy.next(var);
+}
+
+template <typename... T>
+using proxy = node_proxy<detail::before<>, T...>;
+    
+}
+}
+}
+
+#endif // UDHO_HAZO_NODE_PROXY_H
