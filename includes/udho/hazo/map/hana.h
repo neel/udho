@@ -39,8 +39,8 @@
 #include <udho/hazo/map/helpers.h>
 
 #define HANA_LITERAL(TEXT) TEXT ## _s
-#define DEFINE_ELEMENT(Name, Type, mixins...)                               \
-struct Name: udho::util::hazo::element<Name , Type , ## mixins>{         \
+#define HAZO_ELEMENT_HANA(Name, Type, mixins...)                            \
+struct Name: udho::util::hazo::element<Name , Type , ## mixins>{            \
     using element::element;                                                 \
     static constexpr auto key() {                                           \
         using namespace boost::hana::literals;                              \

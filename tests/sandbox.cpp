@@ -7,9 +7,9 @@
 #include <boost/hana.hpp>
 using namespace boost;
 
-DEFINE_ELEMENT_SIMPLE(first_name, std::string)
-DEFINE_ELEMENT_SIMPLE(last_name, std::string)
-DEFINE_ELEMENT_SIMPLE(age, std::size_t)
+HAZO_ELEMENT(first_name, std::string)
+HAZO_ELEMENT(last_name, std::string)
+HAZO_ELEMENT(age, std::size_t)
 
 int main(){
     using namespace udho::util::hazo;

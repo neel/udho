@@ -7,9 +7,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-DEFINE_ELEMENT(first_name, std::string)
-DEFINE_ELEMENT(last_name, std::string)
-DEFINE_ELEMENT(age, std::size_t)
+HAZO_ELEMENT_HANA(first_name, std::string)
+HAZO_ELEMENT_HANA(last_name, std::string)
+HAZO_ELEMENT_HANA(age, std::size_t)
 
 using namespace boost;
 using namespace boost::hana::literals;

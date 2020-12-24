@@ -77,12 +77,12 @@ struct element: Mixins<DerivedT, ValueT>...{
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
-#define DEFINE_ELEMENT_SIMPLE(Name, Type, mixins...)                        \
+#define HAZO_ELEMENT(Name, Type, mixins...)                              \
 struct Name: udho::util::hazo::element<Name , Type , ## mixins>{         \
-    using element::element;                                                 \
-    static constexpr auto key() {                                           \
-        return val;                                                         \
-    }                                                                       \
+    using element::element;                                              \
+    static constexpr auto key() {                                        \
+        return val;                                                      \
+    }                                                                    \
 };
 
 template < class T >
