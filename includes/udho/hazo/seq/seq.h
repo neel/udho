@@ -40,6 +40,23 @@ namespace udho{
 namespace util{
 namespace hazo{
 
+template <typename Policy, typename H, typename T = void, typename... X>
+struct seq;
+    
+template <typename H>
+struct seq_monoid_helper{
+    template <typename Policy, typename T, typename... X>
+    using monoid = node<H, seq<Policy, T, X...>>;
+    using terminal = node<H, void>;
+};
+
+template <typename Policy, typename H, typename... T>
+struct seq_monoid_helper<seq<Policy, H, T...>>{
+    template <typename OtherPolicy, typename... X>
+    using monoid = node<H, seq<Policy, T..., X...>>;
+    using terminal = node<H, seq<Policy, T...>>;
+};
+
 
 /**
  * seq<A, B, C, D>: node<A, seq<B, C, D>>                                                        -> node<A, node<B, node<C, node<D, void>>>>     -> capsule<A>  depth 3
@@ -70,9 +87,9 @@ namespace hazo{
     std::cout << vec.get<3>() << std::endl;
  * \endcode
  */
-template <typename Policy, typename H, typename T = void, typename... X>
-struct seq: node<H, seq<Policy, T, X...>>{
-    typedef node<H, seq<Policy, T, X...>> node_type;
+template <typename Policy, typename H, typename T, typename... X>
+struct seq: seq_monoid_helper<H>::template monoid<Policy, T, X...>{
+    typedef typename seq_monoid_helper<H>::template monoid<Policy, T, X...> node_type;
     
     using hana_tag = udho_hazo_seq_tag<Policy, 2+sizeof...(X)>;
     
@@ -90,8 +107,8 @@ struct seq: node<H, seq<Policy, T, X...>>{
 };
 
 template <typename Policy, typename H>
-struct seq<Policy, H, void>: node<H, void>{
-    typedef node<H, void> node_type;
+struct seq<Policy, H, void>: seq_monoid_helper<H>::terminal{
+    typedef typename seq_monoid_helper<H>::terminal node_type;
     
     using hana_tag = udho_hazo_seq_tag<Policy, 1>;
     

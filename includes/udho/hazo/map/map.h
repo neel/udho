@@ -41,8 +41,25 @@ namespace util{
 namespace hazo{
 
 template <typename Policy, typename H, typename T, typename... X>
-struct map: node<H, map<Policy, T, X...>>{
-    typedef node<H, map<Policy, T, X...>> node_type;
+struct map;
+
+template <typename H>
+struct map_monoid_helper{
+    template <typename Policy, typename T, typename... X>
+    using monoid = node<H, map<Policy, T, X...>>;
+    using terminal = node<H, void>;
+};
+
+template <typename Policy, typename H, typename... T>
+struct map_monoid_helper<map<Policy, H, T...>>{
+    template <typename OtherPolicy, typename... X>
+    using monoid = node<H, map<Policy, T..., X...>>;
+    using terminal = node<H, map<Policy, T...>>;
+};
+    
+template <typename Policy, typename H, typename T, typename... X>
+struct map: map_monoid_helper<H>::template monoid<Policy, T, X...>{
+    typedef typename map_monoid_helper<H>::template monoid<Policy, T, X...> node_type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H, T, X...>;
     
@@ -81,8 +98,8 @@ struct map: node<H, map<Policy, T, X...>>{
 };
 
 template <typename Policy, typename H>
-struct map<Policy, H, void>: node<H, void>{
-    typedef node<H, void> node_type;
+struct map<Policy, H, void>: map_monoid_helper<H>::terminal{
+    typedef typename map_monoid_helper<H>::terminal node_type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H>;
     

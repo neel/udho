@@ -121,8 +121,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     const capsule_type& capsule_at() const{ return _capsule; }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     const auto& capsule_at() const{ return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) capsule_at() const{ return tail_type::template capsule_at<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& capsule_at() const { return tail_type::template capsule_at<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    const auto& capsule_at() const { return tail_type::template capsule_at<T, N-1>(); }
     // }
     
     // { capsule<T, N>() 
@@ -130,8 +132,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     capsule_type& capsule_at() { return _capsule; }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     auto& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    auto& capsule_at() { return tail_type::template capsule_at<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    auto& capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
     // }
     
     // { data<T, N>() const
@@ -139,8 +143,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     const data_type& data() const{ return data(); }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     const auto& data() const{ return tail_type::template data<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) data() const{ return tail_type::template data<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& data() const { return tail_type::template data<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    const auto& data() const { return tail_type::template data<T, N-1>(); }
     // }
     
     // { data<T, N>()
@@ -148,8 +154,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     data_type& data() { return data(); }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     auto& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) data() { return tail_type::template data<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    auto& data() { return tail_type::template data<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    auto& data() { return tail_type::template data<T, N-1>(); }
     // }
     
     // { value<T, N>() const
@@ -157,8 +165,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     const value_type& value() const{ return value(); }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     const auto& value() const{ return tail_type::template value<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) value() const{ return tail_type::template value<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    const auto& value() const { return tail_type::template value<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    const auto& value() const { return tail_type::template value<T, N-1>(); }
     // }
     
     // { value<T, N>()
@@ -166,8 +176,10 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     value_type& value() { return value(); }
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
     auto& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, typename = typename std::enable_if<N != 0>::type>
-    decltype(auto) value() { return tail_type::template value<T, N-1>(); }
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    auto& value() { return tail_type::template value<T, N>(); }
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    auto& value() { return tail_type::template value<T, N-1>(); }
     // }
        
     // { data<N>()
