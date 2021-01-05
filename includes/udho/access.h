@@ -80,7 +80,7 @@ struct association: responder<F, typename F::result_type>{
     
     std::string   _key;
     
-    association(const std::string& key, callback_type callback): _key(key), responder_type(callback){}
+    association(const std::string& key, callback_type callback): responder_type(callback), _key(key){}
     bool matched(const std::string& key) const{
         auto colon = key.find_first_of(':');
         if(colon != std::string::npos){
