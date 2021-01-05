@@ -51,11 +51,11 @@ namespace activities{
      * \ingroup activities
      */
     template <typename DerivedT, typename SuccessDataT = void, typename FailureDataT = void>
-    struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<SuccessDataT, FailureDataT>{
+    struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<DerivedT, SuccessDataT, FailureDataT>{
         typedef std::shared_ptr<DerivedT> derived_ptr_type;
         
         template <typename StoreT>
-        activity(StoreT& store): udho::activities::result<SuccessDataT, FailureDataT>(store){}
+        activity(StoreT& store): udho::activities::result<DerivedT, SuccessDataT, FailureDataT>(store){}
         
         /**
          * shared_ptr to this

@@ -47,10 +47,10 @@ namespace activities{
      * 
      * \ingroup activities
      */
-    template <typename SuccessT, typename FailureT>
+    template <typename DerivedT, typename SuccessT, typename FailureT>
     struct result: result_data<SuccessT, FailureT>{
         typedef result_data<SuccessT, FailureT> data_type;
-        typedef accessor<data_type> accessor_type;
+        typedef accessor<detail::labeled<DerivedT, data_type>> accessor_type;
         typedef typename data_type::success_type success_type;
         typedef typename data_type::failure_type failure_type;
         typedef boost::signals2::signal<void (const data_type&)> signal_type;
@@ -154,7 +154,8 @@ namespace activities{
                 if(should_cancel) data_type::cancel();
 
                 data_type self = static_cast<const data_type&>(*this);
-                _shadow << self;
+                detail::labeled<DerivedT, data_type> labeled(self);
+                _shadow << labeled;
                 
                 if(should_cancel){
                     cancel();
