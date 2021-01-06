@@ -468,7 +468,7 @@ struct block{
     
     block(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
-    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& /*ctx*/){
         _table.down();
         _ctrl.travarse(node, target);
         _table.up();
@@ -493,7 +493,7 @@ struct var{
     
     var(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
-    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, const ContextT& /*ctx*/){
         pugi::xml_attribute name = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("name");
         });
@@ -522,7 +522,7 @@ struct loop{
     
     loop(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
-    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& /*ctx*/){
         pugi::xml_attribute in = node.find_attribute([](const pugi::xml_attribute& attr){
             return attr.name() == std::string("in");
         });
@@ -689,7 +689,7 @@ struct skip{
     
     skip(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
-    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& ctx){
+    bool operator()(pugi::xml_node node, pugi::xml_node target, const ContextT& /*ctx*/){
         _ctrl.step_in(node, target);
         return true;
     }
@@ -888,7 +888,7 @@ struct add_class{
     
     add_class(parsing::xml<ContextT>& ctrl, table_type& table): _ctrl(ctrl), _table(table), _evaluator(table){}
     
-    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& ctx){
+    bool operator()(pugi::xml_node node, pugi::xml_node /*target*/, pugi::xml_attribute attr, const ContextT& /*ctx*/){
         std::string name = attr.name();
         std::size_t indx = name.find(prefix());
         std::string rest = (indx+prefix().size() != name.size()) ? name.substr(indx+prefix().size()+1) : std::string();

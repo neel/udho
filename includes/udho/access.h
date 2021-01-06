@@ -267,7 +267,7 @@ struct association_lexical_extractor{
         _success = true;
     }
     template <typename T>
-    typename std::enable_if<!std::is_same<ValueT, T>::value && !is_streamable<std::stringstream, T>::value>::type operator()(const T& value){}
+    typename std::enable_if<!std::is_same<ValueT, T>::value && !is_streamable<std::stringstream, T>::value>::type operator()(const T& /*value*/){}
     ValueT value() const{
         return _value;
     }

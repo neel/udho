@@ -122,7 +122,7 @@ template <typename DurationT>
 struct deserializer<std::string, std::chrono::time_point<std::chrono::system_clock, DurationT>>{
     typedef std::chrono::time_point<std::chrono::system_clock, DurationT> time_type;
     
-    static bool check(const std::chrono::time_point<std::chrono::system_clock, DurationT>& input, const std::string& format = default_datetime_format){
+    static bool check(const std::chrono::time_point<std::chrono::system_clock, DurationT>& /*input*/, const std::string& format = default_datetime_format){
         return true;
     }
     static std::string deserialize(const std::chrono::time_point<std::chrono::system_clock, DurationT>& input, const std::string& format = default_datetime_format){

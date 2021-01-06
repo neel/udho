@@ -90,7 +90,7 @@ struct content{
         _updated = boost::posix_time::second_clock::local_time();
     }
     template<class Archive>
-    void serialize(Archive & ar, const unsigned int version){
+    void serialize(Archive & ar, const unsigned int /*version*/){
         ar & BOOST_SERIALIZATION_NVP(_created);
         ar & BOOST_SERIALIZATION_NVP(_updated);
         ar & BOOST_SERIALIZATION_NVP(_value);
@@ -124,7 +124,7 @@ struct content<void>{
         update();
     }
     template<class Archive>
-    void serialize(Archive & ar, const unsigned int version){
+    void serialize(Archive & ar, const unsigned int /*version*/){
         ar & BOOST_SERIALIZATION_NVP(_created);
         ar & BOOST_SERIALIZATION_NVP(_updated);
     }

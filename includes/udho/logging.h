@@ -154,7 +154,7 @@ struct plain{
     
     plain(StreamT& stream): _stream(stream){}
     
-    void log(const std::chrono::system_clock::time_point& time, udho::logging::status status, const std::string& segment, int level, const std::string& message){
+    void log(const std::chrono::system_clock::time_point& /*time*/, udho::logging::status status, const std::string& segment, int /*level*/, const std::string& message){
         std::string status_str = "unknown";
         switch(status){
             case udho::logging::status::error:
