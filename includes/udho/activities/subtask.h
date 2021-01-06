@@ -62,8 +62,22 @@ namespace activities{
         /**
          * shared pointer to the activity
          */
-        std::shared_ptr<activity_type> activity() {
+        std::shared_ptr<activity_type> activity_ptr() {
             return _activity;
+        }
+        
+        /**
+         * reference to the underlying activity object
+         */
+        activity_type& activity(){
+            return *(_activity.get());
+        }
+        
+        /**
+         * reference to the underlying activity object through teh * operator
+         */
+        activity_type& operator*(){
+            return activity();
         }
         
         /**
@@ -72,7 +86,7 @@ namespace activities{
          */
         template <typename V, typename... DependenciesV>
         self_type& done(subtask<V, DependenciesV...>& next){
-            activity()->done(next._combinator);
+            activity_ptr()->done(next._combinator);
             return *this;
         }
         
@@ -186,9 +200,26 @@ namespace activities{
         friend struct subtask;
         
         subtask(const self_type& other): _activity(other._activity), _interaction(other._interaction){}
-                
-        std::shared_ptr<activity_type> activity() {
+            
+        /**
+         * shared pointer to the activity
+         */
+        std::shared_ptr<activity_type> activity_ptr() {
             return _activity;
+        }
+        
+        /**
+         * reference to the underlying activity object
+         */
+        activity_type& activity(){
+            return *(_activity.get());
+        }
+        
+        /**
+         * reference to the underlying activity object through teh * operator
+         */
+        activity_type& operator*(){
+            return activity();
         }
         
         /**
@@ -197,7 +228,7 @@ namespace activities{
          */
         template <typename V, typename... DependenciesV>
         self_type& done(subtask<V, DependenciesV...>& next){
-            activity()->done(next._combinator);
+            activity_ptr()->done(next._combinator);
             return *this;
         }
         
