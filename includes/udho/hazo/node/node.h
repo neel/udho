@@ -56,7 +56,8 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     node(const ArgT& h): _capsule(h) {}
     template <typename ArgT, typename... T, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
     node(const ArgT& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
-    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<node<HeadT, TailT>, node<OtherHeadT, OtherTailT>>::value>::type>
+    node(const self_type& other) = default;
+    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<self_type, node<OtherHeadT, OtherTailT>>::value>::type>
     node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<data_type>()); }
     
     capsule_type& front() { return _capsule; }
@@ -334,7 +335,8 @@ struct node<HeadT, void>{
     node(): _capsule(){}
     template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
     node(const ArgT& h): _capsule(h) {}
-    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<node<HeadT, void>, node<OtherHeadT, OtherTailT>>::value>::type>
+    node(const self_type& other) = default;
+    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<self_type, node<OtherHeadT, OtherTailT>>::value>::type>
     node(const node<OtherHeadT, OtherTailT>& other) { _capsule.set(other.template data<HeadT>()); }
     
     capsule_type& front() { return _capsule; }

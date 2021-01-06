@@ -268,7 +268,7 @@ namespace util{
     
     template <typename CharT>
     std::basic_string<CharT> urlencode(const std::basic_string<CharT>& src){
-        typedef std::basic_ostringstream<CharT> stream_type;
+//         typedef std::basic_ostringstream<CharT> stream_type;
         typedef std::basic_string<CharT> string_type;
         typedef typename string_type::const_iterator iterator;
         
@@ -308,11 +308,11 @@ namespace util{
     }
     template <typename CharT>
     std::basic_string<CharT> urldecode(const std::basic_string<CharT>& src){
-        typedef CharT character_type;
-        typedef std::basic_ostringstream<CharT> stream_type;
+//         typedef CharT character_type;
+//         typedef std::basic_ostringstream<CharT> stream_type;
         typedef std::basic_string<CharT> string_type;
         typedef typename string_type::const_iterator iterator;
-        typedef typename string_type::size_type size_type;
+//         typedef typename string_type::size_type size_type;
         
         string_type result;
         iterator iter;

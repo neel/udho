@@ -50,7 +50,7 @@ struct capsule<DataT, false>{
     
     data_type _data;
     
-    capsule(): _data(data_type()){};
+    capsule() = default;
     capsule(const self_type&) = default;
     capsule(const data_type& h): _data(h){}
     self_type& operator=(const self_type& other) {
@@ -90,7 +90,7 @@ struct capsule<char[N], false>{
     
     data_type _data;
     
-    capsule(): _data(data_type()){};
+    capsule() = default;
     capsule(const self_type&) = default;
     capsule(const char* h): _data(h){}
     capsule(const std::string& h): _data(h){}
@@ -132,7 +132,7 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     
     data_type _data;
     
-    capsule(): _data(data_type()){};
+    capsule() = default;
     capsule(const self_type&) = default;
     capsule(const std::basic_string<CharT, Traits, Alloc>& h): _data(h){}
     self_type& operator=(const self_type& other) {

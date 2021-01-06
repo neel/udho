@@ -47,18 +47,16 @@ struct element: Mixins<DerivedT, ValueT>...{
     
     const static constexpr element_t<derived_type> val = element_t<derived_type>();
     
-    element(const value_type& v): Mixins<DerivedT, ValueT>(*this)..., _value(v){}
     element(): _value(value_type()), Mixins<DerivedT, ValueT>(*this)...{}
+    element(const value_type& v): Mixins<DerivedT, ValueT>(*this)..., _value(v){}
+    element(const self_type& other) = default;
     static constexpr auto key() { return DerivedT::key(); }
     std::string name() const { return std::string(key().c_str()); }
     self_type& operator=(const value_type& v) { 
         _value = v; 
         return *this; 
     }
-    self_type& operator=(const self_type& other){
-        _value = other._value;
-        return *this;
-    }
+    self_type& operator=(const self_type& other) = default;
     value_type& value() { return _value; }
     const value_type& value() const { return _value; }
     bool operator==(const value_type& v) const { return _value == v; }
@@ -77,12 +75,12 @@ struct element: Mixins<DerivedT, ValueT>...{
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
-#define HAZO_ELEMENT(Name, Type, mixins...)                              \
-struct Name: udho::util::hazo::element<Name , Type , ## mixins>{         \
-    using element::element;                                              \
-    static constexpr auto key() {                                        \
-        return val;                                                      \
-    }                                                                    \
+#define HAZO_ELEMENT(Name, Type, ...)                                   \
+struct Name: udho::util::hazo::element<Name , Type , ##__VA_ARGS__>{    \
+    using element::element;                                             \
+    static constexpr auto key() {                                       \
+        return val;                                                     \
+    }                                                                   \
 };
 
 template < class T >
