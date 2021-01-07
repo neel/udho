@@ -32,6 +32,7 @@
 #include <udho/activities/combinator.h>
 #include <udho/context.h>
 #include <udho/activities/fwd.h>
+#include <udho/activities/data.h>
 
 namespace udho{
 /**
@@ -103,9 +104,9 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename CollectorT, typename... U>
-        static self_type with(CollectorT collector, U&&... u){
-            return self_type(0, collector, u...);
+        template <typename ContextT, typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+            return self_type(collector_ptr, u...);
         }
         
         /**
@@ -173,10 +174,10 @@ namespace activities{
             return *this;
         }
         
-        private:
-            template <typename CollectorT, typename... U>
-            subtask(int, CollectorT collector, U&&... u): _interaction(collector->context().interaction()){
-                _activity = std::make_shared<activity_type>(collector, u...);
+        protected:
+            template <typename ContextT, typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): _interaction(collector_ptr->context().interaction()){
+                _activity = std::make_shared<activity_type>(collector_ptr, u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
             
@@ -235,9 +236,9 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename CollectorT, typename... U>
-        static self_type with(CollectorT collector, U&&... u){
-            return self_type(0, collector, u...);
+        template <typename ContextT, typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+            return self_type(collector_ptr, std::forward<U>(u)...);
         }
         
         /**
@@ -299,10 +300,10 @@ namespace activities{
             return *this;
         }
         
-        private:
-            template <typename CollectorT, typename... U>
-            subtask(int, CollectorT collector, U&&... u): _interaction(collector->context().interaction()){
-                _activity = std::make_shared<activity_type>(collector, u...);
+        protected:
+            template <typename ContextT, typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): _interaction(collector_ptr->context().interaction()){
+                _activity = std::make_shared<activity_type>(collector_ptr, std::forward<U>(u)...);
             }
             
             std::shared_ptr<activity_type> _activity;

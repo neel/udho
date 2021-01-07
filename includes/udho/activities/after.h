@@ -41,68 +41,71 @@ namespace activities{
     
     namespace detail{
         
-        template <typename ActivityT, typename... DependenciesT>
-        struct after<subtask<ActivityT, DependenciesT...>>{
-            subtask<ActivityT, DependenciesT...>& _before;
+        template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
+        struct after<SubtaskT<ActivityT, DependenciesT...>>{
+            SubtaskT<ActivityT, DependenciesT...>& _before;
             
-            after(subtask<ActivityT, DependenciesT...>& before): _before(before){}
+            after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}
             
             template <typename OtherActivityT, typename... OtherDependenciesT>
-            void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
+            void attach(SubtaskT<OtherActivityT, OtherDependenciesT...>& sub){
                 sub.after(_before);
             }
         };
         
     }
     
-    template <typename HeadT, typename... TailT>
-    struct after: detail::after<HeadT>, after<TailT...>{
-        after(HeadT& head, TailT&... tail): detail::after<HeadT>(head), after<TailT...>(tail...){}
+    template <template <typename, typename...> class SubtaskT, typename HeadT, typename... TailT>
+    struct basic_after: detail::after<HeadT>, basic_after<SubtaskT, TailT...>{
+        basic_after(HeadT& head, TailT&... tail): detail::after<HeadT>(head), basic_after<SubtaskT, TailT...>(tail...){}
         
         template <typename ActivityT, typename... Args>
-        subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
-            subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...>::with(args...);
+        SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
+            SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...>::with(args...);
             attach(sub);
             return sub;
         }
         
         template <typename ActivityT, typename... DependenciesT>
-        void attach(subtask<ActivityT, DependenciesT...>& sub){
+        void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
             detail::after<HeadT>::attach(sub);
-            after<TailT...>::attach(sub);
+            basic_after<SubtaskT, TailT...>::attach(sub);
         }
         
         template <typename CallbackT, typename StartT>
-        subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(StartT& starter, CallbackT callback){
-            subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> sub = subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...>::with(starter.collector(), callback);
+        SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(StartT& starter, CallbackT callback){
+            SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...>::with(starter.collector(), callback);
             attach(sub);
             return sub;
         }
     };
     
-    template <typename HeadT>
-    struct after<HeadT>: detail::after<HeadT>{
-        after(HeadT& head): detail::after<HeadT>(head){}
+    template <template <typename, typename...> class SubtaskT, typename HeadT>
+    struct basic_after<SubtaskT, HeadT>: detail::after<HeadT>{
+        basic_after(HeadT& head): detail::after<HeadT>(head){}
         
         template <typename ActivityT, typename... Args>
-        subtask<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
-            subtask<ActivityT, typename HeadT::activity_type> sub = subtask<ActivityT, typename HeadT::activity_type>::with(args...);
+        SubtaskT<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
+            SubtaskT<ActivityT, typename HeadT::activity_type> sub = SubtaskT<ActivityT, typename HeadT::activity_type>::with(args...);
             attach(sub);
             return sub;
         }
         
         template <typename ActivityT, typename... DependenciesT>
-        void attach(subtask<ActivityT, DependenciesT...>& sub){
+        void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
             detail::after<HeadT>::attach(sub);
         }
         
         template <typename CallbackT, typename StartT>
-        subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> finish(StartT& starter, CallbackT callback){
-            subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> sub = subtask<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type>::with(starter.collector(), callback);
+        SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> finish(StartT& starter, CallbackT callback){
+            SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type>::with(starter.collector(), callback);
             attach(sub);
             return sub;
         }
     };
+    
+    template <typename... T>
+    using after = basic_after<subtask, T...>;
     
     struct after_none{
         template <typename ActivityT, typename... Args>
