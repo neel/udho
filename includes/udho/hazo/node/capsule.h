@@ -68,12 +68,12 @@ struct capsule<DataT, false>{
     void set(const data_type& value) { _data = value; }
     operator data_type() const { return _data; }
     template <typename FunctionT>
-    auto call(FunctionT f) const {
-        return f(_data);
+    auto call(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(_data);
     }
     template <typename FunctionT>
-    auto call(FunctionT f) {
-        return f(_data);
+    auto call(FunctionT&& f) {
+        return std::forward<FunctionT>(f)(_data);
     }
 };
 
@@ -111,12 +111,12 @@ struct capsule<char[N], false>{
     void set(const data_type& value) { _data = value; }
     operator data_type() const { return _data; }
     template <typename FunctionT>
-    auto call(FunctionT f) const {
-        return f(_data);
+    auto call(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(_data);
     }
     template <typename FunctionT>
-    auto call(FunctionT f) {
-        return f(_data);
+    auto call(FunctionT&& f) {
+        return std::forward<FunctionT>(f)(_data);
     }
 };
 
@@ -152,12 +152,12 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     void set(const data_type& value) { _data = value; }
     operator data_type() const { return _data; }
     template <typename FunctionT>
-    auto call(FunctionT f) const {
-        return f(_data);
+    auto call(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(_data);
     }
     template <typename FunctionT>
-    auto call(FunctionT f) {
-        return f(_data);
+    auto call(FunctionT&& f) {
+        return std::forward<FunctionT>(f)(_data);
     }
 };
     

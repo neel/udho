@@ -283,31 +283,31 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     const tail_type& next(T& var) const { var = value(); return tail(); } 
     
     template <typename FunctionT>
-    void visit(FunctionT& f) const{
-        _group.call(f);
-        tail_type::visit(f);
+    void visit(FunctionT&& f) const{
+        _group.call(std::forward<FunctionT>(f));
+        tail_type::visit(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
-    void visit(FunctionT& f){
-        _group.call(f);
-        tail_type::visit(f);
+    void visit(FunctionT&& f){
+        _group.call(std::forward<FunctionT>(f));
+        tail_type::visit(std::forward<FunctionT>(f));
     }
        
     template <typename FunctionT, typename InitialT>
-    auto accumulate(FunctionT f, InitialT initial) const {
-        return f(data(), tail_type::accumulate(f, initial));
+    auto accumulate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
     }
     template <typename FunctionT>
-    auto accumulate(FunctionT f) const {
-        return f(data(), tail_type::accumulate(f));
+    auto accumulate(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f)));
     }
     template <typename FunctionT, typename InitialT>
-    auto decorate(FunctionT f, InitialT initial) const {
-        return f.finish(accumulate(f, initial));
+    auto decorate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
     }
     template <typename FunctionT>
-    auto decorate(FunctionT f) const{
-        return f.finish(accumulate(f));
+    auto decorate(FunctionT&& f) const{
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f)));
     }
 };
 

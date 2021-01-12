@@ -36,6 +36,57 @@
 namespace udho{
 namespace util{
 namespace hazo{
+    
+template <typename HeadT, typename TailT>
+struct basic_node: private basic_node<typename TailT::data_type, typename TailT::tail_type>{
+    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    typedef capsule<HeadT> capsule_type;
+    typedef typename capsule_type::key_type key_type;
+    typedef typename capsule_type::data_type data_type;
+    typedef typename capsule_type::value_type value_type;
+    
+    struct types{
+        template <int N>
+        using capsule_at = typename std::conditional<N == 0, capsule_type, typename tail_type::template capsule_at<N-1>>::type;
+        template <int N>
+        using data_at = typename capsule_at<N>::data_type;
+        template <int N>
+        using value_at = typename capsule_at<N>::value_type;
+        template <typename T, int N = 0>
+        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, 
+                capsule_type, 
+                typename tail_type::template capsule_of<T, N - std::is_same<T, data_type>::value>
+            >::type;
+        template <typename T, int N = 0>
+        using data_of = typename capsule_of<T, N>::data_type;
+        template <typename T, int N = 0>
+        using value_of = typename capsule_of<T, N>::value_type;
+    };
+};
+
+template <typename HeadT>
+struct basic_node<HeadT, void>{
+    typedef void tail_type;
+    typedef capsule<HeadT> capsule_type;
+    typedef typename capsule_type::key_type key_type;
+    typedef typename capsule_type::data_type data_type;
+    typedef typename capsule_type::value_type value_type;
+    
+    struct types{
+        template <int N>
+        using capsule_at = typename std::conditional<N == 0, capsule_type, void>::type;
+        template <int N>
+        using data_at = typename capsule_at<N>::data_type;
+        template <int N>
+        using value_at = typename capsule_at<N>::value_type;
+        template <typename T, int N = 0>
+        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, capsule_type, void>::type;
+        template <typename T, int N = 0>
+        using data_of = typename capsule_of<T, N>::data_type;
+        template <typename T, int N = 0>
+        using value_of = typename capsule_of<T, N>::value_type;
+    };
+};
 
 /**
  * node<A, node<B, node<C>, node<D, void>>>
@@ -288,31 +339,31 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
         return stream;
     }
     template <typename FunctionT>
-    void visit(FunctionT& f) const{
-        _capsule.call(f);
-        tail_type::visit(f);
+    void visit(FunctionT&& f) const{
+        _capsule.call(std::forward<FunctionT>(f));
+        tail_type::visit(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
-    void visit(FunctionT& f){
-        _capsule.call(f);
-        tail_type::visit(f);
+    void visit(FunctionT&& f){
+        _capsule.call(std::forward<FunctionT>(f));
+        tail_type::visit(std::forward<FunctionT>(f));
     }
        
     template <typename FunctionT, typename InitialT>
-    auto accumulate(FunctionT f, InitialT initial) const {
-        return f(data(), tail_type::accumulate(f, initial));
+    auto accumulate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
     }
     template <typename FunctionT>
-    auto accumulate(FunctionT f) const {
-        return f(data(), tail_type::accumulate(f));
+    auto accumulate(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f)));
     }
     template <typename FunctionT, typename InitialT>
-    auto decorate(FunctionT f, InitialT initial) const {
-        return f.finish(accumulate(f, initial));
+    auto decorate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
     }
     template <typename FunctionT>
-    auto decorate(FunctionT f) const{
-        return f.finish(accumulate(f));
+    auto decorate(FunctionT&& f) const{
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f)));
     }
     
     capsule_type _capsule;
@@ -446,32 +497,32 @@ struct node<HeadT, void>{
         return stream;
     }
     template <typename FunctionT>
-    void visit(FunctionT& f) const{
-        _capsule.call(f);
+    void visit(FunctionT&& f) const{
+        _capsule.call(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
-    void visit(FunctionT& f){
-        _capsule.call(f);
+    void visit(FunctionT&& f){
+        _capsule.call(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
     void operator()(FunctionT&& f){
-        f(data());
+        std::forward<FunctionT>(f)(data());
     }
     template <typename FunctionT, typename InitialT>
-    auto accumulate(FunctionT f, InitialT initial) const {
-        return f(data(), initial);
+    auto accumulate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f)(data(), std::forward<InitialT>(initial));
     }
     template <typename FunctionT>
-    auto accumulate(FunctionT f) const {
-        return f(data());
+    auto accumulate(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(data());
     }
     template <typename FunctionT, typename InitialT>
-    auto decorate(FunctionT f, InitialT initial) const {
-        return f.finish(accumulate(f, initial));
+    auto decorate(FunctionT&& f, InitialT&& initial) const {
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
     }
     template <typename FunctionT>
-    auto decorate(FunctionT f) const{
-        return f.finish(accumulate(f));
+    auto decorate(FunctionT&& f) const{
+        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f)));
     }
     
     capsule_type _capsule;
