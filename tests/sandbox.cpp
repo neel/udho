@@ -20,6 +20,11 @@ int main(){
     
     std::cout << seq1.value<int, 2>() << std::endl;
     
+    std::cout << seq1.accumulate([](auto val, int res = 0){
+        std::cout << "("<< val << ")" << " " << res << std::endl;
+        return res +1;
+    }) << std::endl;
+    
     return 0;
 }
 
