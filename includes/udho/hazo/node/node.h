@@ -25,92 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_NODE_H
-#define UDHO_HAZO_NODE_H
+#ifndef UDHO_HAZO_NODE_NODE_H
+#define UDHO_HAZO_NODE_NODE_H
 
 #include <utility>
 #include <type_traits>
 #include <udho/hazo/node/capsule.h>
+#include <udho/hazo/node/basic.h>
 #include <udho/hazo/node/tag.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
-    
-template <typename HeadT, typename TailT>
-struct basic_node{
-    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
-    typedef capsule<HeadT> capsule_type;
-    typedef typename capsule_type::key_type key_type;
-    typedef typename capsule_type::data_type data_type;
-    typedef typename capsule_type::value_type value_type;
-    
-    struct types{
-        template <int N>
-        using tail_at = typename std::conditional<N == 0, tail_type, typename tail_type::types::template tail_at<N-1>>;
-        template <int N>
-        using capsule_at = typename std::conditional<N == 0, capsule_type, typename tail_type::types::template capsule_at<N-1>>::type;
-        template <int N>
-        using data_at = typename capsule_at<N>::data_type;
-        template <int N>
-        using value_at = typename capsule_at<N>::value_type;
-        template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, 
-                capsule_type, 
-                typename tail_type::types::template capsule_of<T, N - std::is_same<T, data_type>::value>
-            >::type;
-        template <typename T, int N = 0>
-        using data_of = typename capsule_of<T, N>::data_type;
-        template <typename T, int N = 0>
-        using value_of = typename capsule_of<T, N>::value_type;
-        template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
-                data_type,
-                typename tail_type::types::template data_for<KeyT>
-            >::type;
-        template <typename KeyT>
-        using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
-                value_type,
-                typename tail_type::types::template value_for<KeyT>
-            >::type;
-    };
-};
-
-template <typename HeadT>
-struct basic_node<HeadT, void>{
-    typedef void tail_type;
-    typedef capsule<HeadT> capsule_type;
-    typedef typename capsule_type::key_type key_type;
-    typedef typename capsule_type::data_type data_type;
-    typedef typename capsule_type::value_type value_type;
-    
-    struct types{
-        template <int N>
-        using tail_at = void;
-        template <int N>
-        using capsule_at = typename std::conditional<N == 0, capsule_type, void>::type;
-        template <int N>
-        using data_at = typename capsule_at<N>::data_type;
-        template <int N>
-        using value_at = typename capsule_at<N>::value_type;
-        template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, capsule_type, void>::type;
-        template <typename T, int N = 0>
-        using data_of = typename capsule_of<T, N>::data_type;
-        template <typename T, int N = 0>
-        using value_of = typename capsule_of<T, N>::value_type;
-        template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
-            data_type,
-            void
-            >::type;
-        template <typename KeyT>
-        using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
-            value_type,
-            void
-            >::type;
-    };
-};
 
 /**
  * node<A, node<B, node<C>, node<D, void>>>
@@ -554,11 +480,11 @@ struct node<HeadT, void>{
 };
 
 template <typename HeadT, typename TailT>
-decltype(auto) operator>>(const node<HeadT, TailT>& node, HeadT& var){
+const auto& operator>>(const node<HeadT, TailT>& node, HeadT& var){
     return node.next(var);
 }
 template <typename... T, typename V, typename = typename std::enable_if<!std::is_same<typename node<T...>::data_type, typename node<T...>::value_type>::value && std::is_convertible<typename node<T...>::value_type, V>::value>::type>
-decltype(auto) operator>>(const node<T...>& node, V& var){
+const auto& operator>>(const node<T...>& node, V& var){
     return node.next(var);
 }
     
@@ -566,4 +492,4 @@ decltype(auto) operator>>(const node<T...>& node, V& var){
 }
 }
 
-#endif // UDHO_HAZO_NODE_H
+#endif // UDHO_HAZO_NODE_NODE_H

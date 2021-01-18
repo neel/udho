@@ -25,14 +25,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_HAZO_MAP_H
-#define UDHO_UTIL_HAZO_MAP_H
 
-#include <udho/hazo/node.h>
-#include <udho/hazo/map/capsule.h>
-#include <udho/hazo/map/element.h>
-#include <udho/hazo/map/map.h>
-#include <udho/hazo/map/proxy.h>
-#include <udho/hazo/map/io.h>
+#ifndef UDHO_HAZO_DETAIL_MONOID_H
+#define UDHO_HAZO_DETAIL_MONOID_H
 
-#endif // UDHO_UTIL_HAZO_MAP_H
+namespace udho{
+namespace util{
+namespace hazo{
+namespace detail{
+
+/**
+ * seq<seq<A, B, C>, D, E>
+ *  : node<monoid<seq<A, B, C>>::head, seq<monoid<seq<A, B, C>>::rest, D, E>>
+ * -> node<A, seq<seq<B, C>, D, E>>
+ * 
+ * seq<seq<B, C>, D, E>
+ *  : node<monoid<seq<B, C>>::head, seq<monoid<seq<B, C>>::rest, D, E>>
+ * -> node<B, seq<C, D, E>>
+ */
+template <template <typename, typename...> class ContainerT, typename H>
+struct monoid{
+    using head = H;
+    template <typename Policy, typename... V>
+    using extend = ContainerT<Policy, V...>;
+    using rest = void;
+};
+
+template <template <typename, typename...> class ContainerT, typename Policy, typename H, typename... T>
+struct monoid<ContainerT, ContainerT<Policy, H, T...>>{
+    using head = typename monoid<ContainerT, H>::head;
+    template <typename OtherPolicy, typename... V>
+    using extend = typename monoid<ContainerT, H>::template extend<OtherPolicy, T..., V...>;
+    using rest = extend<Policy>;
+};
+
+}    
+}
+}
+}
+
+#endif // UDHO_HAZO_DETAIL_MONOID_H

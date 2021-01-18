@@ -32,31 +32,18 @@
 #include <utility>
 #include <type_traits>
 #include <udho/hazo/node/node.h>
+#include <udho/hazo/seq/fwd.h>
 #include <udho/hazo/seq/tag.h>
 #include <udho/hazo/seq/helpers.h>
 #include <udho/hazo/detail/indices.h>
+#include <udho/hazo/detail/monoid.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename Policy, typename H, typename T = void, typename... X>
-struct seq;
-    
 template <typename H>
-struct seq_monoid_helper{
-    template <typename Policy, typename T, typename... X>
-    using monoid = node<H, seq<Policy, T, X...>>;
-    using terminal = node<H, void>;
-};
-
-template <typename Policy, typename H, typename... T>
-struct seq_monoid_helper<seq<Policy, H, T...>>{
-    template <typename OtherPolicy, typename... X>
-    using monoid = node<H, seq<Policy, T..., X...>>;
-    using terminal = node<H, seq<Policy, T...>>;
-};
-
+using monoid_seq = detail::monoid<seq, H>;
 
 /**
  * seq<A, B, C, D>: node<A, seq<B, C, D>>                                                        -> node<A, node<B, node<C, node<D, void>>>>     -> capsule<A>  depth 3
@@ -88,8 +75,10 @@ struct seq_monoid_helper<seq<Policy, H, T...>>{
  * \endcode
  */
 template <typename Policy, typename H, typename T, typename... X>
-struct seq: seq_monoid_helper<H>::template monoid<Policy, T, X...>{
-    typedef typename seq_monoid_helper<H>::template monoid<Policy, T, X...> node_type;
+struct seq: node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, T, X...>>{
+    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, T, X...>> node_type;
+    
+    typedef seq_proxy<Policy, H, T, X...> proxy;
     
     using hana_tag = udho_hazo_seq_tag<Policy, 2+sizeof...(X)>;
     
@@ -107,8 +96,10 @@ struct seq: seq_monoid_helper<H>::template monoid<Policy, T, X...>{
 };
 
 template <typename Policy, typename H>
-struct seq<Policy, H, void>: seq_monoid_helper<H>::terminal{
-    typedef typename seq_monoid_helper<H>::terminal node_type;
+struct seq<Policy, H, void>: node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest>{
+    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest> node_type;
+    
+    typedef seq_proxy<Policy, H> proxy;
     
     using hana_tag = udho_hazo_seq_tag<Policy, 1>;
     

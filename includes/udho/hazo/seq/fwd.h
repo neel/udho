@@ -25,14 +25,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_HAZO_MAP_H
-#define UDHO_UTIL_HAZO_MAP_H
+#ifndef UDHO_HAZO_SEQ_FWD_H
+#define UDHO_HAZO_SEQ_FWD_H
 
-#include <udho/hazo/node.h>
-#include <udho/hazo/map/capsule.h>
-#include <udho/hazo/map/element.h>
-#include <udho/hazo/map/map.h>
-#include <udho/hazo/map/proxy.h>
-#include <udho/hazo/map/io.h>
+#include <type_traits>
 
-#endif // UDHO_UTIL_HAZO_MAP_H
+namespace udho{
+namespace util{
+namespace hazo{
+
+template <typename Policy, typename H, typename T = void, typename... X>
+struct seq;
+    
+template <typename Policy, typename... X>
+struct seq_proxy;
+
+}
+}
+}
+
+#endif // UDHO_HAZO_SEQ_FWD_H
+

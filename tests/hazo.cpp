@@ -340,4 +340,63 @@ BOOST_AUTO_TEST_CASE(map_hana){
     }
 }
 
+BOOST_AUTO_TEST_CASE(seq_by_data_monoid){
+    typedef seq_v<unsigned, double> seq_type1;
+    typedef seq_v<seq_type1, int> seq_type2;
+    typedef seq_v<seq_type2, seq_type2> seq_type3;
+    typedef seq_v<seq_type3> seq_type4;
+    
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<0>, unsigned>::value));
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<1>, double>::value));
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<2>, int>::value));
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<3>, unsigned>::value));
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<4>, double>::value));
+    BOOST_CHECK((std::is_same<seq_type4::types::data_at<5>, int>::value));
+    
+    double res = 0.0f;
+    seq_type4 seq4(42, 2.4f, 24, 84, 4.8f, 48);
+    
+    BOOST_CHECK(seq4.data<0>() == 42);
+    BOOST_CHECK(seq4.data<1>() == 2.4f);
+    BOOST_CHECK(seq4.data<2>() == 24);
+    BOOST_CHECK(seq4.data<3>() == 84);
+    BOOST_CHECK(seq4.data<4>() == 4.8f);
+    BOOST_CHECK(seq4.data<5>() == 48);
+    
+    seq4.visit([&res](auto val){
+        res += (double)val;
+    });
+    BOOST_CHECK(unsigned(res*10) == 2052);
+    
+    double out = seq4.accumulate([](auto val, double out = 0){
+        out += (double)val;
+        return out;
+    });
+    BOOST_CHECK(unsigned(out*10) == 2052);
+}
+
+BOOST_AUTO_TEST_CASE(seq_by_data_proxy){
+    seq_d<int, std::string, double, int> vec(42, "Hello", 3.14, 84);
+    seq_d<int, double, int>::proxy proxy(vec);
+    
+    BOOST_CHECK(proxy.data<0>() == vec.data<0>());
+    BOOST_CHECK(proxy.data<1>() == vec.data<2>());
+    BOOST_CHECK(proxy.data<2>() == vec.data<3>());
+    
+    BOOST_CHECK((proxy.data<int, 0>() == vec.data<0>()));
+    BOOST_CHECK((proxy.data<double, 0>() == vec.data<2>()));
+    BOOST_CHECK((proxy.data<int, 1>() == vec.data<3>()));
+}
+
+BOOST_AUTO_TEST_CASE(map_by_data_proxy){
+    map_d<first_name, last_name, age> map(first_name("Neel"), last_name("Basu"), age(32));
+    map_d<first_name, age>::proxy proxy(map);
+    
+    BOOST_CHECK(proxy.data<0>() == map.data<0>());
+    BOOST_CHECK(proxy.data<1>() == map.data<2>());
+    
+    BOOST_CHECK((proxy.data<first_name>() == map.data<0>()));
+    BOOST_CHECK((proxy.data<age>() == map.data<2>()));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

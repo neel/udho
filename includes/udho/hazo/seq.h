@@ -30,6 +30,7 @@
 
 #include <udho/hazo/node.h>
 #include <udho/hazo/seq/seq.h>
+#include <udho/hazo/seq/proxy.h>
 #include <udho/hazo/seq/io.h>
 
 #endif // UDHO_UTIL_HAZO_SEQ_H
