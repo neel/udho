@@ -480,11 +480,11 @@ struct node<HeadT, void>{
 };
 
 template <typename HeadT, typename TailT>
-const auto& operator>>(const node<HeadT, TailT>& node, HeadT& var){
+decltype(auto) operator>>(const node<HeadT, TailT>& node, HeadT& var){
     return node.next(var);
 }
 template <typename... T, typename V, typename = typename std::enable_if<!std::is_same<typename node<T...>::data_type, typename node<T...>::value_type>::value && std::is_convertible<typename node<T...>::value_type, V>::value>::type>
-const auto& operator>>(const node<T...>& node, V& var){
+decltype(auto) operator>>(const node<T...>& node, V& var){
     return node.next(var);
 }
     
