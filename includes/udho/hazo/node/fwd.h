@@ -30,15 +30,17 @@
 
 #include <type_traits>
 #include <udho/hazo/detail/has_member.h>
+#include <udho/hazo/detail/has_member_type.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
 namespace detail{
-    
 GENERATE_HAS_MEMBER(key);
-
+GENERATE_HAS_MEMBER(value);
+GENERATE_HAS_MEMBER_TYPE(index_type);
+GENERATE_HAS_MEMBER_TYPE(value_type);
 }
     
 template <typename HeadT, typename TailT = void>
@@ -53,7 +55,12 @@ struct node;
 template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
 struct capsule;
 
-template <typename DataT, bool HasKey = detail::has_member_key<DataT>::value>
+template <
+    typename DataT, 
+    bool HasKey = detail::has_member_key<DataT>::value, 
+    bool HasValue = detail::has_member_value<DataT>::value && detail::has_member_type_value_type<DataT>::value,
+    bool HasIndex = detail::has_member_type_index_type<DataT>::value
+>
 struct encapsulate;
 
 }

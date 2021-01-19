@@ -31,23 +31,58 @@
 #include <type_traits>
 #include <udho/hazo/node/fwd.h>
 
+
 namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename DataT>
-struct encapsulate<DataT, true>{
-    typedef decltype(DataT::key()) key_type;
-    typedef typename DataT::value_type value_type;
+namespace detail{
+namespace encapsulate{
     
+// { key
+template <typename DataT, bool HasKey = false>
+struct key_{
+    typedef decltype(DataT::key()) key_type;
     static constexpr key_type key() { return DataT::key(); }
 };
-
 template <typename DataT>
-struct encapsulate<DataT, false>{
+struct key_<DataT, false>{
     typedef void key_type;
+};
+// }
+
+
+// { value
+template <typename DataT, bool HasValue = false>
+struct value_{
+    typedef typename DataT::value_type value_type;
+};
+template <typename DataT>
+struct value_<DataT, false>{
     typedef DataT value_type;
 };
+// }
+
+// { index
+template <typename DataT, bool HasIndex = false>
+struct index_{
+    typedef typename DataT::index_type index_type;
+};
+template <typename DataT>
+struct index_<DataT, false>{
+    typedef DataT index_type;
+};
+// }
+   
+}
+}
+    
+template <typename DataT, bool HasKey, bool HasValue, bool HasIndex>
+struct encapsulate
+    : detail::encapsulate::key_  <DataT, HasKey>,
+      detail::encapsulate::value_<DataT, HasValue>,
+      detail::encapsulate::index_<DataT, HasIndex>
+{};
 
 }
 }
