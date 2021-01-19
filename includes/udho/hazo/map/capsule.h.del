@@ -36,15 +36,10 @@ namespace udho{
 namespace util{
 namespace hazo{
     
-template <typename ValueT>
-struct capsule<ValueT, true>: encapsulation<ValueT, has_member_type_element_type<ValueT>::value>{
-    typedef encapsulation<ValueT, has_member_type_element_type<ValueT>::value> encapsulation_type;
-    
-    using encapsulation_type::encapsulation_type;
-    using encapsulation_type::operator==;
-    using encapsulation_type::operator!=;
-    using encapsulation_type::operator=;
-};
+// template <typename ValueT, typename = typename std::enable_if<has_member_type_element_type<ValueT>::value>::type>
+// struct capsule<ValueT, true>{
+// 
+// };
 
 }
 }

@@ -32,10 +32,52 @@
 #include <ostream>
 #include <udho/hazo/node/capsule.h>
 #include <udho/hazo/node/proxy.h>
+#include <udho/hazo/detail/has_member.h>
+#include <udho/hazo/detail/is_streamable.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
+    
+namespace detail{
+    template <typename ValueT, bool HasKey = detail::has_member_key<ValueT>::value>
+    struct print_capsule_key;
+    
+    template <typename ValueT>
+    struct print_capsule_key<ValueT, true>{
+        static std::ostream& apply(std::ostream& stream, const capsule<ValueT, true>& cap){
+            stream << cap.key().c_str();
+            return stream;
+        }
+    };
+
+    template <typename ValueT>
+    struct print_capsule_key<ValueT, false>{
+        static std::ostream& apply(std::ostream& stream, const capsule<ValueT, true>&){
+            stream << "[object]";
+            return stream;
+        }
+    };
+    
+    template <typename ValueT, typename StreamT = std::ostream, bool IsStreamable = detail::is_streamable<StreamT, ValueT>::value>
+    struct print_capsule_value;
+    
+    template <typename ValueT, typename StreamT>
+    struct print_capsule_value<ValueT, StreamT, true>{
+        static StreamT& apply(StreamT& stream, const capsule<ValueT, true>& cap){
+            stream << cap.value();
+            return stream;
+        }
+    };
+    
+    template <typename ValueT, typename StreamT>
+    struct print_capsule_value<ValueT, StreamT, false>{
+        static StreamT& apply(StreamT& stream, const capsule<ValueT, true>&){
+            stream << "UNSTREAMABLE";
+            return stream;
+        }
+    };
+}
     
 template <typename CharT, typename Traits, typename Alloc>
 std::ostream& operator<<(std::ostream& stream, const capsule<std::basic_string<CharT, Traits, Alloc>, true>& c){
@@ -44,7 +86,9 @@ std::ostream& operator<<(std::ostream& stream, const capsule<std::basic_string<C
 }
 template <typename ValueT>
 std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
-    stream << c.key().c_str() << " -> " << c.value();
+    detail::print_capsule_key<ValueT>::apply(stream, c);
+    stream << " -> ";
+    detail::print_capsule_value<ValueT>::apply(stream, c);
     return stream;
 }
 template <typename ValueT>

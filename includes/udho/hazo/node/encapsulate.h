@@ -25,13 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_HAZO_MAP_H
-#define UDHO_UTIL_HAZO_MAP_H
+#ifndef UDHO_HAZO_NODE_ENCAPSULATE_H
+#define UDHO_HAZO_NODE_ENCAPSULATE_H
 
-#include <udho/hazo/node.h>
-#include <udho/hazo/map/element.h>
-#include <udho/hazo/map/map.h>
-#include <udho/hazo/map/proxy.h>
-#include <udho/hazo/map/io.h>
+#include <type_traits>
+#include <udho/hazo/node/fwd.h>
 
-#endif // UDHO_UTIL_HAZO_MAP_H
+namespace udho{
+namespace util{
+namespace hazo{
+
+template <typename DataT>
+struct encapsulate<DataT, true>{
+    typedef decltype(DataT::key()) key_type;
+    typedef typename DataT::value_type value_type;
+    
+    static constexpr key_type key() { return DataT::key(); }
+};
+
+template <typename DataT>
+struct encapsulate<DataT, false>{
+    typedef void key_type;
+    typedef DataT value_type;
+};
+
+}
+}
+}
+
+#endif // UDHO_HAZO_NODE_ENCAPSULATE_H

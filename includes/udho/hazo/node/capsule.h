@@ -32,6 +32,7 @@
 #include <utility>
 #include <type_traits>
 #include <udho/hazo/node/fwd.h>
+#include <udho/hazo/node/encapsulate.h>
 
 namespace udho{
 namespace util{
@@ -147,6 +148,42 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     bool operator==(const capsule<ValueT>& other) const { return _data == other._data; }
     template <typename ValueT, typename = typename std::enable_if<std::is_convertible<ValueT, data_type>::value>>
     bool operator!=(const capsule<ValueT>& other) const { return !operator==(other); }
+    bool operator==(const data_type& other) const { return _data == other; }
+    bool operator!=(const data_type& other) const { return !operator==(_data, other); }
+    void set(const data_type& value) { _data = value; }
+    operator data_type() const { return _data; }
+    template <typename FunctionT>
+    auto call(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(_data);
+    }
+    template <typename FunctionT>
+    auto call(FunctionT&& f) {
+        return std::forward<FunctionT>(f)(_data);
+    }
+};
+
+/**
+ * encapsulate a class which is not an element
+ */
+template <typename DataT>
+struct capsule<DataT, true>: encapsulate<DataT>{
+    typedef DataT data_type;
+    typedef typename encapsulate<DataT>::key_type key_type;
+    typedef typename encapsulate<DataT>::value_type value_type;
+    typedef capsule<DataT, true> self_type;
+    
+    data_type _data;
+    
+    capsule(): _data(value_type()){};
+    capsule(const self_type&) = default;
+    capsule(const data_type& h): _data(h){}
+    self_type& operator=(const self_type& other) = default;
+    const data_type& data() const { return _data; }
+    data_type& data() { return _data; }
+    const value_type& value() const { return data().value(); }
+    value_type& value() { return data().value(); }
+    bool operator==(const self_type& other) const { return _data == other._head; }
+    bool operator!=(const self_type& other) const { return !operator==(other); }
     bool operator==(const data_type& other) const { return _data == other; }
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     void set(const data_type& value) { _data = value; }

@@ -25,13 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTIL_HAZO_MAP_H
-#define UDHO_UTIL_HAZO_MAP_H
+#ifndef UDHO_UTIL_HAZO_DETAIL_IS_STREAMABLE_H
+#define UDHO_UTIL_HAZO_DETAIL_IS_STREAMABLE_H
 
-#include <udho/hazo/node.h>
-#include <udho/hazo/map/element.h>
-#include <udho/hazo/map/map.h>
-#include <udho/hazo/map/proxy.h>
-#include <udho/hazo/map/io.h>
+#include <utility>
 
-#endif // UDHO_UTIL_HAZO_MAP_H
+namespace udho{
+namespace util{
+namespace hazo{
+    
+namespace detail{
+
+// is_streamable<std::stringstream, C>::value 
+template<typename S, typename T>
+class is_streamable{
+    template<typename SS, typename TT>
+    static auto test(int) -> decltype( std::declval<SS&>() << std::declval<TT>(), std::true_type() );
+    template<typename, typename>
+    static auto test(...) -> std::false_type;
+  public:
+    static const bool value = decltype(test<S,T>(0))::value;
+};
+    
+}
+    
+}
+}
+}
+
+#endif // UDHO_UTIL_HAZO_DETAIL_IS_STREAMABLE_H

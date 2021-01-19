@@ -29,10 +29,20 @@
 #define UDHO_HAZO_NODE_FWD_H
 
 #include <type_traits>
+#include <udho/hazo/detail/has_member.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
+
+namespace detail{
+    
+GENERATE_HAS_MEMBER(key);
+
+}
+    
+template <typename HeadT, typename TailT = void>
+struct node;
 
 /**
  * capsule holds data of type data_type inside 
@@ -43,8 +53,8 @@ namespace hazo{
 template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
 struct capsule;
 
-template <typename HeadT, typename TailT = void>
-struct node;
+template <typename DataT, bool HasKey = detail::has_member_key<DataT>::value>
+struct encapsulate;
 
 }
 }
