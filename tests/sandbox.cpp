@@ -45,14 +45,14 @@ using namespace udho::util::hazo;
 // HAZO_ELEMENT(last_name, std::string)
 // HAZO_ELEMENT(age, std::size_t)
 
-struct X{};
+struct X{
+    typedef int index_type;
+};
 typedef capsule<X> XT;
 
 int main(){
-    XT xt;
-    xt.data();
     
-    typedef seq_v<int, std::string, seq_v<double, int>, double, int, XT> seq_v_type;
+    typedef seq_v<int, std::string, seq_v<double, int>, double, int> seq_v_type;
     
     seq_v_type seq1(1, "Neel", 3.14, 4, 12.45, 5);
     

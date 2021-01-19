@@ -48,6 +48,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     typedef capsule<HeadT> capsule_type;
     typedef typename capsule_type::key_type key_type;
     typedef typename capsule_type::data_type data_type;
+    typedef typename capsule_type::index_type index_type;
     typedef typename capsule_type::value_type value_type;
     typedef node<HeadT, TailT> self_type;
     
@@ -60,7 +61,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     node(const ArgT& h, const T&... ts):  tail_type(ts...), _capsule(h) {}
     node(const self_type& other) = default;
     template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<self_type, node<OtherHeadT, OtherTailT>>::value>::type>
-    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<data_type>()); }
+    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
     
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
@@ -75,7 +76,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     const value_type& value() const { return _capsule.value(); }
     
     template <typename T>
-    bool exists() const{ return std::is_same<data_type, T>::value || tail_type::template exists<T>(); }
+    bool exists() const{ return std::is_same<index_type, T>::value || tail_type::template exists<T>(); }
     template <typename LevelT>
     constexpr typename std::enable_if<LevelT::depth != depth || !std::is_same<typename LevelT::data_type, data_type>::value, bool>::type operator==(const LevelT&) const { return false; }
     template <typename LevelT>
@@ -99,7 +100,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename T>
     bool set(const T& v, bool all = false){
         bool success = false;
-        if(std::is_same<data_type, T>::value){
+        if(std::is_same<index_type, T>::value){
             _capsule.set(v);
             success = true;
         }
@@ -120,68 +121,68 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     }
     
     // { capsule<T, N>() const
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     const capsule_type& capsule_at() const{ return _capsule; }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template capsule_of<T, N>& capsule_at() const{ return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N-1>(); }
     // }
     
     // { capsule<T, N>() 
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     capsule_type& capsule_at() { return _capsule; }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
     // }
     
     // { data<T, N>() const
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
-    const data_type& data() const{ return data(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
+    const index_type& data() const{ return data(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template data_of<T, N>& data() const{ return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N-1>(); }
     // }
     
     // { data<T, N>()
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
-    data_type& data() { return data(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
+    index_type& data() { return data(); }
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N-1>(); }
     // }
     
     // { value<T, N>() const
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     const value_type& value() const{ return value(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template value_of<T, N>& value() const{ return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N-1>(); }
     // }
     
     // { value<T, N>()
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     value_type& value() { return value(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, typename = typename std::enable_if<N != 0 && !std::is_same<T, index_type>::value>::type>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, data_type>::value>::type>
+    template <typename T, int N, int = 0, char = 0, typename = typename std::enable_if<N != 0 && std::is_same<T, index_type>::value>::type>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N-1>(); }
     // }
        
@@ -330,6 +331,7 @@ struct node<HeadT, void>{
     typedef typename capsule_type::key_type key_type;
     typedef typename capsule_type::data_type data_type;
     typedef typename capsule_type::value_type value_type;
+    typedef typename capsule_type::index_type index_type;
     typedef node<HeadT, void> self_type;
     
     enum { depth = 0 };
@@ -388,19 +390,19 @@ struct node<HeadT, void>{
     }
     
     // { capsule<T, N>() const
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     const capsule_type& capsule_at() const{ return _capsule; }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     capsule_type& capsule_at() { return _capsule; }
     // }
     
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     const data_type& data() const{ return data(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     data_type& data() { return data(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     const value_type& value() const{ return value(); }
-    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, data_type>::value>::type>
+    template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     value_type& value() { return value(); }
     
     template <int N, typename = typename std::enable_if<N == 0, data_type>::type>

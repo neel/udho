@@ -43,6 +43,7 @@ struct basic_node{
     typedef typename capsule_type::key_type key_type;
     typedef typename capsule_type::data_type data_type;
     typedef typename capsule_type::value_type value_type;
+    typedef typename capsule_type::index_type index_type;
     
     struct types{
         template <int N>
@@ -54,9 +55,9 @@ struct basic_node{
         template <int N>
         using value_at = typename capsule_at<N>::value_type;
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, 
+        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, 
                 capsule_type, 
-                typename tail_type::types::template capsule_of<T, N - std::is_same<T, data_type>::value>
+                typename tail_type::types::template capsule_of<T, N - std::is_same<T, index_type>::value>
             >::type;
         template <typename T, int N = 0>
         using data_of = typename capsule_of<T, N>::data_type;
@@ -82,6 +83,7 @@ struct basic_node<HeadT, void>{
     typedef typename capsule_type::key_type key_type;
     typedef typename capsule_type::data_type data_type;
     typedef typename capsule_type::value_type value_type;
+    typedef typename capsule_type::index_type index_type;
     
     struct types{
         template <int N>
@@ -93,7 +95,7 @@ struct basic_node<HeadT, void>{
         template <int N>
         using value_at = typename capsule_at<N>::value_type;
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, data_type>::value && N == 0, capsule_type, void>::type;
+        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, capsule_type, void>::type;
         template <typename T, int N = 0>
         using data_of = typename capsule_of<T, N>::data_type;
         template <typename T, int N = 0>

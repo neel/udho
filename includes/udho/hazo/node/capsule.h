@@ -47,6 +47,7 @@ struct capsule<DataT, false>{
     typedef void key_type;
     typedef DataT value_type;
     typedef DataT data_type;
+    typedef data_type index_type;
     typedef capsule<DataT, false> self_type;
     
     data_type _data;
@@ -87,6 +88,7 @@ struct capsule<char[N], false>{
     typedef void key_type;
     typedef std::string value_type;
     typedef std::string data_type;
+    typedef data_type index_type;
     typedef capsule<char[N], false> self_type;
     
     data_type _data;
@@ -129,6 +131,7 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     typedef void key_type;
     typedef std::basic_string<CharT, Traits, Alloc> value_type;
     typedef std::basic_string<CharT, Traits, Alloc> data_type;
+    typedef data_type index_type;
     typedef capsule<std::basic_string<CharT, Traits, Alloc>, true> self_type;
     
     data_type _data;
@@ -170,6 +173,7 @@ struct capsule<DataT, true>: encapsulate<DataT>{
     typedef DataT data_type;
     typedef typename encapsulate<DataT>::key_type key_type;
     typedef typename encapsulate<DataT>::value_type value_type;
+    typedef typename encapsulate<DataT>::index_type index_type;
     typedef capsule<DataT, true> self_type;
     
     data_type _data;

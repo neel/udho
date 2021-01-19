@@ -399,4 +399,28 @@ BOOST_AUTO_TEST_CASE(map_by_data_proxy){
     BOOST_CHECK((proxy.data<age>() == map.data<2>()));
 }
 
+struct T1{
+    typedef char index_type;
+};
+struct T2{
+    typedef double index_type;
+};
+struct T3{
+    typedef std::string index_type;
+};
+struct T4{
+    typedef unsigned index_type;
+};
+struct T5{};
+
+BOOST_AUTO_TEST_CASE(seq_by_index){
+    typedef seq_d<T1, T2, T3, T4, T5> seq_type;
+    
+    BOOST_CHECK((std::is_same<seq_type::types::data_of<char>, T1>::value));
+    BOOST_CHECK((std::is_same<seq_type::types::data_of<double>, T2>::value));
+    BOOST_CHECK((std::is_same<seq_type::types::data_of<std::string>, T3>::value));
+    BOOST_CHECK((std::is_same<seq_type::types::data_of<unsigned>, T4>::value));
+    BOOST_CHECK((std::is_same<seq_type::types::data_of<T5>, T5>::value));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
