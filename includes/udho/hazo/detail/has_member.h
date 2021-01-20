@@ -56,8 +56,7 @@ public:                                                                         
 template < class T >                                                              \
 struct has_member_##member                                                        \
 : public std::integral_constant<bool, HasMember_##member<T>::RESULT>              \
-{                                                                                 \
-};
+{}
 
 
 #endif // UDHO_HAZO_NODE_HAS_MEMBER_H
