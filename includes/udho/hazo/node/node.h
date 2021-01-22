@@ -253,16 +253,16 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     // }
     
     // { element<ElementT>(const element_t<ElementT>&)
-    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     data_type& element(const element_t<ElementT>&) { return data(); }
-    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, index_type>::value>::type>
     ElementT& element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
     // }
     
     // { element<ElementT>(const element_t<ElementT>&) const
-    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     const data_type& element(const element_t<ElementT>&) const { return data(); }
-    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, index_type>::value>::type>
     const ElementT& element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
     // }
     
@@ -405,9 +405,9 @@ struct node<HeadT, void>{
     template <typename T, int N = 0, typename = typename std::enable_if<N == 0 &&  std::is_same<T, index_type>::value>::type>
     value_type& value() { return value(); }
     
-    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
+    template <int N, typename = typename std::enable_if<N == 0, index_type>::type>
     const data_type& data() const { return data(); }
-    template <int N, typename = typename std::enable_if<N == 0, data_type>::type>
+    template <int N, typename = typename std::enable_if<N == 0, index_type>::type>
     data_type& data() { return data(); }
     
     template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
@@ -425,9 +425,9 @@ struct node<HeadT, void>{
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     value_type& value(const KeyT&){ return value(); }
     
-    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     data_type& element(const element_t<ElementT>&) { return data(); }
-    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, data_type>::value>::type>
+    template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     const data_type& element(const element_t<ElementT>&) const { return data(); }
     
     template <typename ElementT>
