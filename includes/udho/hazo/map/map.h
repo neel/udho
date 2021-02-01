@@ -71,18 +71,23 @@ struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template 
     }
     
     template <typename ElementT>
+    using contains = typename node_type::types::template exists<ElementT>;
+    template <typename KeyT>
+    using has = typename node_type::types::template has<KeyT>;
+    
+    template <typename ElementT, typename = typename std::enable_if<contains<ElementT>::value && !has<ElementT>::value>::type>
     decltype(auto) operator[](const element_t<ElementT>& e){
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
-    template <typename KeyT>
+    template <typename KeyT, typename = typename std::enable_if<!contains<KeyT>::value && has<KeyT>::value>::type>
     decltype(auto) operator[](const KeyT& k){
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
-    template <typename ElementT>
+    template <typename ElementT, typename = typename std::enable_if<contains<ElementT>::value && !has<ElementT>::value>::type>
     decltype(auto) operator[](const element_t<ElementT>& e) const {
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
-    template <typename KeyT>
+    template <typename KeyT, typename = typename std::enable_if<!contains<KeyT>::value && has<KeyT>::value>::type>
     decltype(auto) operator[](const KeyT& k) const {
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
@@ -101,6 +106,12 @@ struct map<Policy, H, void>: node<typename monoid_map<H>::head, typename monoid_
     map(const H& h): node<H, void>(h){}
     template <typename... Y, typename = typename std::enable_if<!std::is_same<map<Policy, H>, map<Policy, Y...>>::value>::type>
     map(const map<Policy, Y...>& other): node_type(static_cast<const typename map<Policy, Y...>::node_type&>(other)) {}
+    
+    template <typename ElementT>
+    using contains = typename node_type::types::template exists<ElementT>;
+    template <typename KeyT>
+    using has = typename node_type::types::template has<KeyT>;
+    
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
         call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
@@ -111,19 +122,19 @@ struct map<Policy, H, void>: node<typename monoid_map<H>::head, typename monoid_
         call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
-    template <typename ElementT>
+    template <typename ElementT, typename = typename std::enable_if<contains<ElementT>::value && !has<ElementT>::value>::type>
     decltype(auto) operator[](const element_t<ElementT>& e){
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
-    template <typename KeyT>
+    template <typename KeyT, typename = typename std::enable_if<!contains<KeyT>::value && has<KeyT>::value>::type>
     decltype(auto) operator[](const KeyT& k){
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }
-    template <typename ElementT>
+    template <typename ElementT, typename = typename std::enable_if<contains<ElementT>::value && !has<ElementT>::value>::type>
     decltype(auto) operator[](const element_t<ElementT>& e) const {
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<ElementT>(e));
     }
-    template <typename KeyT>
+    template <typename KeyT, typename = typename std::enable_if<!contains<KeyT>::value && has<KeyT>::value>::type>
     decltype(auto) operator[](const KeyT& k) const {
         return map_by_key_helper<Policy>::apply(node_type::template operator[]<KeyT>(k));
     }

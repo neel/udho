@@ -327,6 +327,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
 template <typename HeadT>
 struct node<HeadT, void>{
     typedef void tail_type;
+    typedef typename basic_node<HeadT>::types types;
     typedef capsule<HeadT> capsule_type;
     typedef typename capsule_type::key_type key_type;
     typedef typename capsule_type::data_type data_type;

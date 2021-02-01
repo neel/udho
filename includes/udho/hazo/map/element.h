@@ -52,7 +52,9 @@ struct element: Mixins<DerivedT, ValueT>...{
     element(const self_type& other) = default;
     static constexpr auto key() { return DerivedT::key(); }
     std::string name() const { return std::string(key().c_str()); }
-    self_type& operator=(const value_type& v) { 
+    
+    template <typename V, typename = typename std::enable_if<std::is_convertible<V, value_type>::value>::type>
+    self_type& operator=(const V& v) { 
         _value = v; 
         return *this; 
     }

@@ -36,7 +36,7 @@ namespace udho{
 namespace util{
 namespace hazo{
     
-template <typename HeadT, typename TailT>
+template <typename HeadT, typename TailT = void>
 struct basic_node{
     typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     typedef capsule<HeadT> capsule_type;
@@ -73,6 +73,15 @@ struct basic_node{
                 value_type,
                 typename tail_type::types::template value_for<KeyT>
             >::type;
+            
+        template <typename T>
+        struct exists{
+            enum { value = std::is_same<T, index_type>::value || tail_type::types::template exists<T>::value };
+        };
+        template <typename KeyT>
+        struct has{
+            enum { value = (!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value) || tail_type::types::template has<KeyT>::value };
+        };
     };
 };
 
@@ -110,6 +119,15 @@ struct basic_node<HeadT, void>{
             value_type,
             void
             >::type;
+            
+        template <typename T>
+        struct exists{
+            enum { value = std::is_same<T, index_type>::value };
+        };
+        template <typename KeyT>
+        struct has{
+            enum { value = !std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value};
+        };
     };
 };
 
