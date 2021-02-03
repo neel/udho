@@ -169,19 +169,34 @@ BOOST_AUTO_TEST_CASE(seq_hana){
 }
 
 BOOST_AUTO_TEST_CASE(map_value_by_value){
-    typedef map_v<first_name, last_name, age> map_type;
+    typedef map_v<first_name, last_name, age> map_type3;
     
-    map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+    map_type3 m3(first_name("Neel"), last_name("Basu"), age(32));
     
+    BOOST_CHECK(m3.value("first_name"_s) == "Neel");
+    BOOST_CHECK(m3.value("last_name"_s) == "Basu");
+    BOOST_CHECK(m3.value("age"_s) == 32);
+    BOOST_CHECK(m3.value<0>() == "Neel");
+    BOOST_CHECK(m3.value<1>() == "Basu");
+    BOOST_CHECK(m3.value<2>() == 32);
+    BOOST_CHECK(m3.value<first_name>() == "Neel");
+    BOOST_CHECK(m3.value<last_name>() == "Basu");
+    BOOST_CHECK(m3.value<age>() == 32);
+    
+    typedef map_v<first_name, last_name> map_type2;
+    map_type2 m2(first_name("Neel"), last_name("Basu"));
+    BOOST_CHECK(m2.value("first_name"_s) == "Neel");
+    BOOST_CHECK(m2.value("last_name"_s) == "Basu");
+    BOOST_CHECK(m2.value<0>() == "Neel");
+    BOOST_CHECK(m2.value<1>() == "Basu");
+    BOOST_CHECK(m2.value<first_name>() == "Neel");
+    BOOST_CHECK(m2.value<last_name>() == "Basu");
+    
+    typedef map_v<first_name> map_type1;
+    map_type1 m1(first_name("Neel"));
     BOOST_CHECK(m1.value("first_name"_s) == "Neel");
-    BOOST_CHECK(m1.value("last_name"_s) == "Basu");
-    BOOST_CHECK(m1.value("age"_s) == 32);
     BOOST_CHECK(m1.value<0>() == "Neel");
-    BOOST_CHECK(m1.value<1>() == "Basu");
-    BOOST_CHECK(m1.value<2>() == 32);
     BOOST_CHECK(m1.value<first_name>() == "Neel");
-    BOOST_CHECK(m1.value<last_name>() == "Basu");
-    BOOST_CHECK(m1.value<age>() == 32);
 }
 
 BOOST_AUTO_TEST_CASE(map_value_by_data){
@@ -276,6 +291,29 @@ BOOST_AUTO_TEST_CASE(map_data_by_element){
     BOOST_CHECK(m1.element(first_name::val) == "Neel");
     BOOST_CHECK(m1.element(last_name::val) == "Basu");
     BOOST_CHECK(m1.element(age::val) == 32);
+}
+
+BOOST_AUTO_TEST_CASE(map_exclude){
+    typedef map_d<first_name, last_name, age> map_type3;
+
+    BOOST_CHECK((std::is_same<typename map_type3::exclude<first_name>, map_d<last_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename map_type3::exclude<last_name>, map_d<first_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename map_type3::exclude<age>, map_d<first_name, last_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type3::exclude<int>, map_d<first_name, last_name, age>>::value));
+    
+    typedef map_d<first_name, last_name> map_type2;
+
+    BOOST_CHECK((std::is_same<typename map_type2::exclude<first_name>, map_d<last_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type2::exclude<last_name>, map_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type2::exclude<age>, map_d<first_name, last_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type2::exclude<int>, map_d<first_name, last_name>>::value));
+    
+    typedef map_d<first_name> map_type1;
+
+    BOOST_CHECK((std::is_same<typename map_type1::exclude<first_name>, map_d<void>>::value));
+    BOOST_CHECK((std::is_same<typename map_type1::exclude<last_name>, map_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type1::exclude<age>, map_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename map_type1::exclude<int>, map_d<first_name>>::value));
 }
 
 BOOST_AUTO_TEST_CASE(map_value_by_subscript){
