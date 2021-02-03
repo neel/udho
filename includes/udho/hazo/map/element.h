@@ -28,6 +28,7 @@
 #ifndef UDHO_HAZO_MAP_ELEMENT_H
 #define UDHO_HAZO_MAP_ELEMENT_H
 
+#include <string>
 #include <utility>
 #include <type_traits>
 #include <udho/hazo/node/tag.h>
@@ -42,6 +43,8 @@ struct element: Mixins<DerivedT, ValueT>...{
     typedef ValueT value_type;
     typedef element<DerivedT, ValueT, Mixins...> self_type;
     typedef self_type element_type;
+    template <typename AltValueT>
+    using alter = element<DerivedT, AltValueT, Mixins...>;
     
     value_type _value;
     
