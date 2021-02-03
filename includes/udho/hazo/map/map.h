@@ -36,67 +36,77 @@
 #include <udho/hazo/map/fwd.h>
 #include <udho/hazo/detail/indices.h>
 #include <udho/hazo/detail/monoid.h>
+#include <udho/hazo/detail/fwd.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
 namespace detail{
-    
-template <typename U, typename MapT>
-struct exclude;
 
-template <typename U, typename Policy, typename H, typename T, typename... X>
-struct exclude<U, map<Policy, H, T, X...>>{
-    using tail = map<Policy, T, X...>;
-    using type = typename std::conditional<std::is_same<H, U>::value, 
-        map<Policy, T, X...>,
-        typename std::conditional<std::is_same<T, U>::value,
-            map<Policy, H, X...>,
-            map<Policy, H, T, typename exclude<U, map<Policy, H, X...>>::type>
-        >::type
+template <typename U, typename Policy, typename... X>
+struct extend<U, map<Policy, X...>>{
+    using type = map<Policy, U, X...>;
+};
+
+template <typename U, typename Policy>
+struct extend<U, map<Policy, void>>{
+    using type = map<Policy, U>;
+};
+
+template <typename U, typename Policy, typename H, typename... X>
+struct exclude<U, map<Policy, H, X...>>{
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using tail = map<Policy, X...>;
+    using type = typename std::conditional<matched, 
+        tail,
+        typename extend<H, typename exclude<U, tail>::type>::type
     >::type;
 };
 
 template <typename U, typename Policy, typename H>
 struct exclude<U, map<Policy, H>>{
-    using type = typename std::conditional<std::is_same<H, U>::value, 
-        void,
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using type = typename std::conditional<matched, 
+        map<Policy, void>,
         map<Policy, H>
     >::type;
 };
-    
+
 }
-    
-template <typename Policy, typename H, typename T, typename... X>
-struct map;
 
 template <typename H>
 using monoid_map = detail::monoid<map, H>;
     
-template <typename Policy, typename H, typename T, typename... X>
-struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template extend<Policy, T, X...>>{
-    typedef node<typename monoid_map<H>::head, typename monoid_map<H>::template extend<Policy, T, X...>> node_type;
+template <typename Policy, typename H, typename... X>
+struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template extend<Policy, X...>>{
+    typedef node<typename monoid_map<H>::head, typename monoid_map<H>::template extend<Policy, X...>> node_type;
     
-    typedef map_proxy<Policy, H, T, X...> proxy;
+    typedef map_proxy<Policy, H, X...> proxy;
     
     template <typename U>
-    using exclude = typename detail::exclude<U, map<Policy, H, T, X...>>::type;
+    using exclude = typename detail::exclude<U, map<Policy, H, X...>>::type;
+    template <typename U>
+    using extend = typename detail::extend<U, map<Policy, H, X...>>::type;
     
-    using hana_tag = udho_hazo_map_tag<Policy, H, T, X...>;
+    using hana_tag = udho_hazo_map_tag<Policy, H, X...>;
     
     using node_type::node_type;
-    map(const H& h, const T& t, const X&... xs): node<H, map<Policy, T, X...>>(h, t, xs...){}
-    template <typename... Y, typename = typename std::enable_if<!std::is_same<map<Policy, H, T, X...>, map<Policy, Y...>>::value>::type>
+    map(const H& h, const X&... xs): node<H, map<Policy, X...>>(h, xs...){}
+    template <typename... Y, typename = typename std::enable_if<!std::is_same<map<Policy, H, X...>, map<Policy, Y...>>::value>::type>
     map(const map<Policy, Y...>& other): node_type(static_cast<const typename map<Policy, Y...>::node_type&>(other)) {}
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
-        call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f){
-        const_call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        const_call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
     
@@ -125,12 +135,17 @@ struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template 
 };
 
 template <typename Policy, typename H>
-struct map<Policy, H, void>: node<typename monoid_map<H>::head, typename monoid_map<H>::rest>{
+struct map<Policy, H>: node<typename monoid_map<H>::head, typename monoid_map<H>::rest>{
     typedef node<typename monoid_map<H>::head, typename monoid_map<H>::rest> node_type;
     
     typedef map_proxy<Policy, H> proxy;
     
     using hana_tag = udho_hazo_map_tag<Policy, H>;
+    
+    template <typename U>
+    using exclude = typename detail::exclude<U, map<Policy, H>>::type;
+    template <typename U>
+    using extend = typename detail::extend<U, map<Policy, H>>::type;
     
     using node_type::node_type;
     map(const H& h): node<H, void>(h){}
