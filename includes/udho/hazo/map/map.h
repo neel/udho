@@ -41,6 +41,33 @@ namespace udho{
 namespace util{
 namespace hazo{
 
+namespace detail{
+    
+template <typename U, typename MapT>
+struct exclude;
+
+template <typename U, typename Policy, typename H, typename T, typename... X>
+struct exclude<U, map<Policy, H, T, X...>>{
+    using tail = map<Policy, T, X...>;
+    using type = typename std::conditional<std::is_same<H, U>::value, 
+        map<Policy, T, X...>,
+        typename std::conditional<std::is_same<T, U>::value,
+            map<Policy, H, X...>,
+            map<Policy, H, T, typename exclude<U, map<Policy, H, X...>>::type>
+        >::type
+    >::type;
+};
+
+template <typename U, typename Policy, typename H>
+struct exclude<U, map<Policy, H>>{
+    using type = typename std::conditional<std::is_same<H, U>::value, 
+        void,
+        map<Policy, H>
+    >::type;
+};
+    
+}
+    
 template <typename Policy, typename H, typename T, typename... X>
 struct map;
 
@@ -52,6 +79,9 @@ struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template 
     typedef node<typename monoid_map<H>::head, typename monoid_map<H>::template extend<Policy, T, X...>> node_type;
     
     typedef map_proxy<Policy, H, T, X...> proxy;
+    
+    template <typename U>
+    using exclude = typename detail::exclude<U, map<Policy, H, T, X...>>::type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H, T, X...>;
     

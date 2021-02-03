@@ -278,6 +278,14 @@ BOOST_AUTO_TEST_CASE(map_data_by_element){
     BOOST_CHECK(m1.element(age::val) == 32);
 }
 
+BOOST_AUTO_TEST_CASE(map_exclude){
+    typedef map_d<first_name, last_name, age> map_type;
+        
+    BOOST_CHECK((std::is_same<typename map_type::exclude<first_name>, map_d<last_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename map_type::exclude<last_name>, map_d<first_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename map_type::exclude<age>, map_d<first_name, last_name>>::value));
+}
+
 BOOST_AUTO_TEST_CASE(map_value_by_subscript){
     typedef map_v<first_name, last_name, age> map_type;
     
