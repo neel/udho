@@ -37,12 +37,11 @@
 #include <udho/hazo/detail/indices.h>
 #include <udho/hazo/detail/monoid.h>
 #include <udho/hazo/detail/fwd.h>
+#include <udho/hazo/detail/operations.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
-
-namespace detail{
 
 template <typename Policy, typename... X, typename... T>
 struct extend<map<Policy, X...>, T...>{
@@ -77,21 +76,6 @@ struct remove<map<Policy, H>, U>{
     >::type;
 };
 
-template <typename MapT, typename T, typename... Rest>
-struct exclude{
-    using type = typename exclude<
-        typename remove<MapT, T>::type, 
-        Rest...
-    >::type;
-};
-
-template <typename MapT, typename T>
-struct exclude<MapT, T>{
-    using type = typename remove<MapT, T>::type;
-};
-
-}
-
 template <typename H>
 using monoid_map = detail::monoid<map, H>;
     
@@ -102,9 +86,9 @@ struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template 
     typedef map_proxy<Policy, H, X...> proxy;
     
     template <typename... U>
-    using exclude = typename detail::exclude<map<Policy, H, X...>, U...>::type;
+    using exclude = typename exclude<map<Policy, H, X...>, U...>::type;
     template <typename... U>
-    using extend = typename detail::extend<map<Policy, H, X...>, U...>::type;
+    using extend = typename extend<map<Policy, H, X...>, U...>::type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H, X...>;
     
@@ -156,9 +140,9 @@ struct map<Policy, H>: node<typename monoid_map<H>::head, typename monoid_map<H>
     using hana_tag = udho_hazo_map_tag<Policy, H>;
     
     template <typename... U>
-    using exclude = typename detail::exclude<map<Policy, H>, U...>::type;
+    using exclude = typename exclude<map<Policy, H>, U...>::type;
     template <typename... U>
-    using extend = typename detail::extend<map<Policy, H>, U...>::type;
+    using extend = typename extend<map<Policy, H>, U...>::type;
     
     using node_type::node_type;
     map(const H& h): node<H, void>(h){}

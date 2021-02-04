@@ -25,21 +25,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_MAP_DETAIL_FWD_H
-#define UDHO_HAZO_MAP_DETAIL_FWD_H
+#ifndef UDHO_HAZO_MAP_DETAIL_OPERATIONS_H
+#define UDHO_HAZO_MAP_DETAIL_OPERATIONS_H
+
+#include <udho/hazo/detail/fwd.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename ContainerT, typename... T>
-struct extend;
-    
-template <typename ContainerT, typename U>
-struct remove;
+template <typename ContainerT, typename T, typename... Rest>
+struct exclude{
+    using type = typename exclude<
+        typename remove<ContainerT, T>::type, 
+        Rest...
+    >::type;
+};
+
+template <typename ContainerT, typename T>
+struct exclude<ContainerT, T>{
+    using type = typename remove<ContainerT, T>::type;
+};
     
 }
 }
 }
     
-#endif // UDHO_HAZO_MAP_DETAIL_FWD_H
+#endif // UDHO_HAZO_MAP_DETAIL_OPERATIONS_H
+

@@ -37,11 +37,46 @@
 #include <udho/hazo/seq/helpers.h>
 #include <udho/hazo/detail/indices.h>
 #include <udho/hazo/detail/monoid.h>
+#include <udho/hazo/detail/fwd.h>
+#include <udho/hazo/detail/operations.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
+template <typename Policy, typename... X, typename... T>
+struct extend<seq<Policy, X...>, T...>{
+    using type = seq<Policy, T..., X...>;
+};
+
+template <typename Policy, typename... T>
+struct extend<seq<Policy, void>, T...>{
+    using type = seq<Policy, T...>;
+};
+
+template <typename Policy, typename H, typename... X, typename U>
+struct remove<seq<Policy, H, X...>, U>{
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using tail = seq<Policy, X...>;
+    using type = typename std::conditional<matched, 
+        tail,
+        typename extend<typename remove<tail, U>::type, H>::type
+    >::type;
+};
+
+template <typename Policy, typename H, typename U>
+struct remove<seq<Policy, H>, U>{
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using type = typename std::conditional<matched, 
+        seq<Policy, void>,
+        seq<Policy, H>
+    >::type;
+};
+    
 template <typename H>
 using monoid_seq = detail::monoid<seq, H>;
 
@@ -82,6 +117,11 @@ struct seq: node<typename monoid_seq<H>::head, typename monoid_seq<H>::template 
     
     using hana_tag = udho_hazo_seq_tag<Policy, 1+sizeof...(X)>;
     
+    template <typename... U>
+    using exclude = typename exclude<seq<Policy, H, X...>, U...>::type;
+    template <typename... U>
+    using extend = typename extend<seq<Policy, H, X...>, U...>::type;
+    
     using node_type::node_type;
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
@@ -102,6 +142,11 @@ struct seq<Policy, H>: node<typename monoid_seq<H>::head, typename monoid_seq<H>
     typedef seq_proxy<Policy, H> proxy;
     
     using hana_tag = udho_hazo_seq_tag<Policy, 1>;
+    
+    template <typename... U>
+    using exclude = typename exclude<seq<Policy, H>, U...>::type;
+    template <typename... U>
+    using extend = typename extend<seq<Policy, H>, U...>::type;
     
     using node_type::node_type;
     template <typename FunctionT>

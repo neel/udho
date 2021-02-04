@@ -317,6 +317,30 @@ BOOST_AUTO_TEST_CASE(map_exclude){
     BOOST_CHECK((std::is_same<typename map_type1::exclude<int>, map_d<first_name>>::value));
 }
 
+BOOST_AUTO_TEST_CASE(seq_exclude){
+    typedef seq_d<first_name, last_name, age> seq_type3;
+
+    BOOST_CHECK((std::is_same<typename seq_type3::exclude<first_name>, seq_d<last_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type3::exclude<last_name>, seq_d<first_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type3::exclude<age>, seq_d<first_name, last_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type3::exclude<int>, seq_d<first_name, last_name, age>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type3::exclude<first_name, age>, seq_d<last_name>>::value));
+    
+    typedef seq_d<first_name, last_name> seq_type2;
+
+    BOOST_CHECK((std::is_same<typename seq_type2::exclude<first_name>, seq_d<last_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type2::exclude<last_name>, seq_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type2::exclude<age>, seq_d<first_name, last_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type2::exclude<int>, seq_d<first_name, last_name>>::value));
+    
+    typedef seq_d<first_name> seq_type1;
+
+    BOOST_CHECK((std::is_same<typename seq_type1::exclude<first_name>, seq_d<void>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type1::exclude<last_name>, seq_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type1::exclude<age>, seq_d<first_name>>::value));
+    BOOST_CHECK((std::is_same<typename seq_type1::exclude<int>, seq_d<first_name>>::value));
+}
+
 BOOST_AUTO_TEST_CASE(map_value_by_subscript){
     typedef map_v<first_name, last_name, age> map_type;
     
