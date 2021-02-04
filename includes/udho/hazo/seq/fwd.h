@@ -34,7 +34,7 @@ namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename Policy, typename H, typename T = void, typename... X>
+template <typename Policy, typename H, typename... X>
 struct seq;
     
 template <typename Policy, typename... X>

@@ -74,29 +74,29 @@ using monoid_seq = detail::monoid<seq, H>;
     std::cout << vec.get<3>() << std::endl;
  * \endcode
  */
-template <typename Policy, typename H, typename T, typename... X>
-struct seq: node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, T, X...>>{
-    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, T, X...>> node_type;
+template <typename Policy, typename H, typename... X>
+struct seq: node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, X...>>{
+    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, X...>> node_type;
     
-    typedef seq_proxy<Policy, H, T, X...> proxy;
+    typedef seq_proxy<Policy, H, X...> proxy;
     
-    using hana_tag = udho_hazo_seq_tag<Policy, 2+sizeof...(X)>;
+    using hana_tag = udho_hazo_seq_tag<Policy, 1+sizeof...(X)>;
     
     using node_type::node_type;
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
-        const_call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        const_call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f){
-        call_helper<Policy, node_type, typename build_indices<2+sizeof...(X)>::indices_type> helper(*this);
+        call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
 };
 
 template <typename Policy, typename H>
-struct seq<Policy, H, void>: node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest>{
+struct seq<Policy, H>: node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest>{
     typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest> node_type;
     
     typedef seq_proxy<Policy, H> proxy;

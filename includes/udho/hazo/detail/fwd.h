@@ -34,10 +34,13 @@ namespace hazo{
 
 namespace detail{
     
-template <typename U, typename MapT>
+template <typename ContainerT, typename U>
+struct remove;
+
+template <typename ContainerT, typename T, typename... Rest>
 struct exclude;
 
-template <typename U, typename MapT>
+template <typename ContainerT, typename... T>
 struct extend;
 
 }

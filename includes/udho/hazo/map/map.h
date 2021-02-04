@@ -44,30 +44,30 @@ namespace hazo{
 
 namespace detail{
 
-template <typename U, typename Policy, typename... X>
-struct extend<U, map<Policy, X...>>{
-    using type = map<Policy, U, X...>;
+template <typename Policy, typename... X, typename... T>
+struct extend<map<Policy, X...>, T...>{
+    using type = map<Policy, T..., X...>;
 };
 
-template <typename U, typename Policy>
-struct extend<U, map<Policy, void>>{
-    using type = map<Policy, U>;
+template <typename Policy, typename... T>
+struct extend<map<Policy, void>, T...>{
+    using type = map<Policy, T...>;
 };
 
-template <typename U, typename Policy, typename H, typename... X>
-struct exclude<U, map<Policy, H, X...>>{
+template <typename Policy, typename H, typename... X, typename U>
+struct remove<map<Policy, H, X...>, U>{
     enum { 
         matched = std::is_same<H, U>::value
     };
     using tail = map<Policy, X...>;
     using type = typename std::conditional<matched, 
         tail,
-        typename extend<H, typename exclude<U, tail>::type>::type
+        typename extend<typename remove<tail, U>::type, H>::type
     >::type;
 };
 
-template <typename U, typename Policy, typename H>
-struct exclude<U, map<Policy, H>>{
+template <typename Policy, typename H, typename U>
+struct remove<map<Policy, H>, U>{
     enum { 
         matched = std::is_same<H, U>::value
     };
@@ -75,6 +75,19 @@ struct exclude<U, map<Policy, H>>{
         map<Policy, void>,
         map<Policy, H>
     >::type;
+};
+
+template <typename MapT, typename T, typename... Rest>
+struct exclude{
+    using type = typename exclude<
+        typename remove<MapT, T>::type, 
+        Rest...
+    >::type;
+};
+
+template <typename MapT, typename T>
+struct exclude<MapT, T>{
+    using type = typename remove<MapT, T>::type;
 };
 
 }
@@ -88,10 +101,10 @@ struct map: node<typename monoid_map<H>::head, typename monoid_map<H>::template 
     
     typedef map_proxy<Policy, H, X...> proxy;
     
-    template <typename U>
-    using exclude = typename detail::exclude<U, map<Policy, H, X...>>::type;
-    template <typename U>
-    using extend = typename detail::extend<U, map<Policy, H, X...>>::type;
+    template <typename... U>
+    using exclude = typename detail::exclude<map<Policy, H, X...>, U...>::type;
+    template <typename... U>
+    using extend = typename detail::extend<map<Policy, H, X...>, U...>::type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H, X...>;
     
@@ -142,10 +155,10 @@ struct map<Policy, H>: node<typename monoid_map<H>::head, typename monoid_map<H>
     
     using hana_tag = udho_hazo_map_tag<Policy, H>;
     
-    template <typename U>
-    using exclude = typename detail::exclude<U, map<Policy, H>>::type;
-    template <typename U>
-    using extend = typename detail::extend<U, map<Policy, H>>::type;
+    template <typename... U>
+    using exclude = typename detail::exclude<map<Policy, H>, U...>::type;
+    template <typename... U>
+    using extend = typename detail::extend<map<Policy, H>, U...>::type;
     
     using node_type::node_type;
     map(const H& h): node<H, void>(h){}
