@@ -256,25 +256,25 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     data_type& element(const element_t<ElementT>&) { return data(); }
     template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, index_type>::value>::type>
-    ElementT& element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
+    typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
     // }
     
     // { element<ElementT>(const element_t<ElementT>&) const
     template <typename ElementT, typename = typename std::enable_if<std::is_same<ElementT, index_type>::value>::type>
     const data_type& element(const element_t<ElementT>&) const { return data(); }
     template <typename ElementT, typename = typename std::enable_if<!std::is_same<ElementT, index_type>::value>::type>
-    const ElementT& element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
+    const typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
     // }
     
     template <typename ElementT>
-    ElementT& operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
+    typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
     template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
     auto& operator[](const K& k){ return tail().template operator[]<K>(k); }
     
     template <typename ElementT>
-    const ElementT& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
+    const typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
     template <typename KeyT, typename = typename std::enable_if<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value>::type>
     data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     template <typename K, typename = typename std::enable_if<!std::is_void<key_type>::value && !std::is_same<K, key_type>::value>::type>
