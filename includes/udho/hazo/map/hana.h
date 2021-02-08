@@ -76,7 +76,7 @@ namespace hana {
         };
 
         static decltype(auto) apply() {
-            access_helper<Policy, typename udho::util::hazo::map<Policy, X...>::node_type, typename udho::util::hazo::build_indices<udho::util::hazo::map<Policy, X...>::depth>::indices_type> helper;
+            access_helper<Policy, typename udho::util::hazo::map<Policy, X...>::node_type, typename udho::util::hazo::build_indices<udho::util::hazo::map<Policy, X...>::depth+1>::indices_type> helper;
             return helper.apply();
         }
     };
