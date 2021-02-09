@@ -34,6 +34,16 @@ namespace util{
 namespace hazo{
 namespace detail{
 
+template <template <typename, typename...> class ContainerT, typename Policy, typename... V>
+struct monoid_extender{
+    using type = ContainerT<Policy, V...>;
+};
+
+template <template <typename, typename...> class ContainerT, typename Policy>
+struct monoid_extender<ContainerT, Policy>{
+    using type = void;
+};
+    
 /**
  * seq<seq<A, B, C>, D, E>
  *  : node<monoid<seq<A, B, C>>::head, seq<monoid<seq<A, B, C>>::rest, D, E>>
@@ -47,7 +57,7 @@ template <template <typename, typename...> class ContainerT, typename H>
 struct monoid{
     using head = H;
     template <typename Policy, typename... V>
-    using extend = ContainerT<Policy, V...>;
+    using extend = typename monoid_extender<ContainerT, Policy, V...>::type;
     using rest = void;
 };
 
