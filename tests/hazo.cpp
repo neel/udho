@@ -302,6 +302,8 @@ BOOST_AUTO_TEST_CASE(map_exclude){
     BOOST_CHECK((std::is_same<typename map_type3::exclude<int>, map_d<first_name, last_name, age>>::value));
     BOOST_CHECK((std::is_same<typename map_type3::exclude<first_name, age>, map_d<last_name>>::value));
     
+    BOOST_CHECK((std::is_same<typename map_d<map_d<first_name, last_name>, age>::exclude<first_name>, map_d<last_name, age>>::value));
+    
     typedef map_d<first_name, last_name> map_type2;
 
     BOOST_CHECK((std::is_same<typename map_type2::exclude<first_name>, map_d<last_name>>::value));
