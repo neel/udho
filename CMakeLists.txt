@@ -107,3 +107,4 @@ endif()
 
 
 add_executable(monoid monoid.cpp)
+add_executable(flatten flatten.cpp)

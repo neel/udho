@@ -25,24 +25,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_MAP_FWD_H
-#define UDHO_HAZO_MAP_FWD_H
+#ifndef UDHO_HAZO_OPERATIONS_FLATTEN_H
+#define UDHO_HAZO_OPERATIONS_FLATTEN_H
+
+#include <udho/hazo/operations/fwd.h>
+#include <udho/hazo/operations/append.h>
+#include <udho/hazo/operations/first_of.h>
+#include <udho/hazo/operations/rest_of.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
-
-template <typename Policy, typename H = void, typename... X>
-struct basic_map;
     
-template <typename Policy, typename H, typename... X>
-struct map;
+namespace operations{
 
-template <typename Policy, typename... X>
-struct map_proxy;
+template <template <typename...> class ContainerT, typename InitialT, typename... X>
+struct basic_flatten{
+    using initial = typename append<InitialT, typename first_of<ContainerT, X...>::type>::type;
+    using rest = typename rest_of<ContainerT, X...>::type;
+    using type = typename basic_flatten<ContainerT, initial, rest>::type;
+};
 
+template <template <typename...> class ContainerT, typename InitialT>
+struct basic_flatten<ContainerT, InitialT, ContainerT<void>>{
+    using initial = InitialT;
+    using rest = void;
+    using type = initial;
+};
+
+template <template <typename...> class ContainerT, typename... X>
+struct flatten{
+    using type = typename basic_flatten<ContainerT, ContainerT<>, X...>::type;
+};
+
+}
+    
 }
 }
 }
 
-#endif // UDHO_HAZO_MAP_FWD_H
+#endif // UDHO_HAZO_OPERATIONS_FLATTEN_H
+

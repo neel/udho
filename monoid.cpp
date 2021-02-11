@@ -4,8 +4,11 @@
 template <typename H, typename... T>
 struct container;
 
+template <typename ContainerT, typename U>
+struct eliminate;
 
-// monoid {
+template <typename ContainerT, typename... T>
+struct extend;
 
 template <typename H, typename... T>
 struct first_of{
@@ -21,6 +24,8 @@ template <template <typename...> class ContainerT, typename... H, typename... T>
 struct rest_of<ContainerT, ContainerT<H...>, T...>{
     using type = typename rest_of<ContainerT, H..., T...>::type;
 };
+
+// monoid {
 
 template <template <typename...> class ContainerT, typename... X>
 struct monoid{
@@ -58,6 +63,10 @@ struct container{
     using head = typename mono::first;
     using tail = typename mono::rest;
     using base = node<head, tail>;
+    
+    static const char* pretty(){
+        return __PRETTY_FUNCTION__;
+    }
 };
 
 // monoid {{
@@ -73,15 +82,9 @@ struct first_of<container<H...>, T...>{
 
 // { operations
 
-template <typename ContainerT, typename U>
-struct eliminate;
-
-template <typename ContainerT, typename... T>
-struct extend;
-
 template <typename... X, typename... T>
 struct extend<container<X...>, T...>{
-    using type = container<T..., X...>;
+    using type = container<X..., T...>;
 };
 
 template <typename... T>
@@ -130,30 +133,30 @@ struct T13{};
 
 int main(){
     typedef container<container<container<container<T1, T2>, T3>, T4>, T5, T6, T7, container<T8, T9, T10>, T11, container<T12, T13>> c;
-    
-    std::cout << c::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
-    
-    std::cout << std::endl;
-    
-    std::cout << eliminate<c, T1>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T2>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T3>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T4>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T5>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T6>::type::base::pretty() << std::endl;
-    std::cout << eliminate<c, T7>::type::base::pretty() << std::endl;
+//     
+//     std::cout << c::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     std::cout << c::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::tail::base::pretty() << std::endl;
+//     
+//     std::cout << std::endl;
+//     
+//     std::cout << eliminate<c, T1>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T2>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T3>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T4>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T5>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T6>::type::base::pretty() << std::endl;
+//     std::cout << eliminate<c, T7>::type::base::pretty() << std::endl;
     
     return 0;
 }

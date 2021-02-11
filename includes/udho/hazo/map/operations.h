@@ -25,24 +25,70 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_MAP_FWD_H
-#define UDHO_HAZO_MAP_FWD_H
+#ifndef UDHO_HAZO_MAP_OPERATIONS_H
+#define UDHO_HAZO_MAP_OPERATIONS_H
+
+#include <type_traits>
+#include <udho/hazo/map/fwd.h>
+#include <udho/hazo/map/basic.h>
+#include <udho/hazo/operations/fwd.h>
+#include <udho/hazo/operations/append.h>
+#include <udho/hazo/operations/prepend.h>
+#include <udho/hazo/operations/eliminate.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename Policy, typename H = void, typename... X>
-struct basic_map;
+namespace operations{
     
-template <typename Policy, typename H, typename... X>
-struct map;
+template <typename Policy, typename... X, typename... T>
+struct append<basic_map<Policy, X...>, T...>{
+    using type = basic_map<Policy, X..., T...>;
+};
 
-template <typename Policy, typename... X>
-struct map_proxy;
+template <typename Policy, typename... T>
+struct append<basic_map<Policy, void>, T...>{
+    using type = basic_map<Policy, T...>;
+};
+
+template <typename Policy, typename... X, typename... T>
+struct prepend<basic_map<Policy, X...>, T...>{
+    using type = basic_map<Policy, T..., X...>;
+};
+
+template <typename Policy, typename... T>
+struct prepend<basic_map<Policy, void>, T...>{
+    using type = basic_map<Policy, T...>;
+};
+
+template <typename Policy, typename H, typename... X, typename U>
+struct eliminate<basic_map<Policy, H, X...>, U>{
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using tail = basic_map<Policy, X...>;
+    using type = typename std::conditional<matched, 
+        tail,
+        typename prepend<Policy, typename eliminate<tail, U>::type, H>::type
+    >::type;
+};
+
+template <typename Policy, typename H, typename U>
+struct eliminate<basic_map<Policy, H>, U>{
+    enum { 
+        matched = std::is_same<H, U>::value
+    };
+    using type = typename std::conditional<matched, 
+        basic_map<Policy, void>,
+        basic_map<Policy, H>
+    >::type;
+};
+    
+}
 
 }
 }
 }
 
-#endif // UDHO_HAZO_MAP_FWD_H
+#endif // UDHO_HAZO_MAP_OPERATIONS_H

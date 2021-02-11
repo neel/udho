@@ -25,24 +25,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_MAP_FWD_H
-#define UDHO_HAZO_MAP_FWD_H
+#ifndef UDHO_HAZO_OPERATIONS_FWD_H
+#define UDHO_HAZO_OPERATIONS_FWD_H
 
 namespace udho{
 namespace util{
 namespace hazo{
-
-template <typename Policy, typename H = void, typename... X>
-struct basic_map;
     
-template <typename Policy, typename H, typename... X>
-struct map;
+namespace operations{
 
-template <typename Policy, typename... X>
-struct map_proxy;
+template <typename ContainerT, typename U>
+struct eliminate;
 
+template <typename ContainerT, typename T, typename... Rest>
+struct eliminate_all;
+
+template <typename ContainerT, typename... T>
+struct append;
+
+template <typename ContainerT, typename... T>
+struct prepend;
+
+}
+    
 }
 }
 }
 
-#endif // UDHO_HAZO_MAP_FWD_H
+#endif // UDHO_HAZO_OPERATIONS_FWD_H
