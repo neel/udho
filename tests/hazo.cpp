@@ -34,7 +34,6 @@ typedef basic_map_d<first_name, last_name, age> person_map;
 
 // first_type::xyz();
 
-
 // typename operations::flatten<basic_map_d, first_name, last_name, age>::type flattened_person_map;
 
 BOOST_AUTO_TEST_CASE(element){

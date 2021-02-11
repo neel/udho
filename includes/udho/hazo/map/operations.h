@@ -48,7 +48,7 @@ struct append<basic_map<Policy, X...>, T...>{
 };
 
 template <typename Policy, typename... T>
-struct append<basic_map<Policy, void>, T...>{
+struct append<basic_map<Policy>, T...>{
     using type = basic_map<Policy, T...>;
 };
 
@@ -58,7 +58,7 @@ struct prepend<basic_map<Policy, X...>, T...>{
 };
 
 template <typename Policy, typename... T>
-struct prepend<basic_map<Policy, void>, T...>{
+struct prepend<basic_map<Policy>, T...>{
     using type = basic_map<Policy, T...>;
 };
 
