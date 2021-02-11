@@ -41,11 +41,6 @@ struct first_of{
     using type = H;
 };
 
-template <template <typename...> class ContainerT, typename... H, typename... T>
-struct first_of<ContainerT, ContainerT<H...>, T...>{
-    using type = typename first_of<ContainerT, H...>::type;
-};
-
 }
     
 }

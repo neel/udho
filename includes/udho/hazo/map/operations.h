@@ -42,6 +42,40 @@ namespace hazo{
 
 namespace operations{
     
+template <typename... H, typename... T>
+struct first_of<basic_map_d, basic_map_d<H...>, T...>{
+    using type = typename first_of<basic_map_d, H...>::type;
+};
+
+template <typename... H, typename... T>
+struct first_of<basic_map_v, basic_map_v<H...>, T...>{
+    using type = typename first_of<basic_map_v, H...>::type;
+};
+
+template <typename... H, typename... T>
+struct rest_of<basic_map_d, basic_map_d<H...>, T...>{
+    using type = typename rest_of<basic_map_d, H..., T...>::type;
+};
+
+template <typename... H, typename... T>
+struct rest_of<basic_map_v, basic_map_v<H...>, T...>{
+    using type = typename rest_of<basic_map_v, H..., T...>::type;
+};
+
+template <typename InitialT>
+struct basic_flatten<basic_map_d, InitialT, basic_map_d<>>{
+    using initial = InitialT;
+    using rest = void;
+    using type = initial;
+};
+
+template <typename InitialT>
+struct basic_flatten<basic_map_v, InitialT, basic_map_v<>>{
+    using initial = InitialT;
+    using rest = void;
+    using type = initial;
+};
+    
 template <typename Policy, typename... X, typename... T>
 struct append<basic_map<Policy, X...>, T...>{
     using type = basic_map<Policy, X..., T...>;
@@ -70,7 +104,7 @@ struct eliminate<basic_map<Policy, H, X...>, U>{
     using tail = basic_map<Policy, X...>;
     using type = typename std::conditional<matched, 
         tail,
-        typename prepend<Policy, typename eliminate<tail, U>::type, H>::type
+        typename prepend<typename eliminate<tail, U>::type, H>::type
     >::type;
 };
 

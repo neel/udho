@@ -41,21 +41,15 @@ namespace operations{
 
 template <template <typename...> class ContainerT, typename InitialT, typename... X>
 struct basic_flatten{
-    using initial = typename append<InitialT, typename first_of<ContainerT, X...>::type>::type;
+    using head = typename first_of<ContainerT, X...>::type;
+    using initial = typename append<InitialT, head>::type;
     using rest = typename rest_of<ContainerT, X...>::type;
-//     using type = typename basic_flatten<ContainerT, initial, rest>::type;
-};
-
-template <template <typename...> class ContainerT, typename InitialT>
-struct basic_flatten<ContainerT, InitialT, InitialT>{
-    using initial = InitialT;
-    using rest = void;
-//     using type = initial;
+    using type = typename basic_flatten<ContainerT, initial, rest>::type;
 };
 
 template <template <typename...> class ContainerT, typename... X>
 struct flatten{
-//     using type = typename basic_flatten<ContainerT, ContainerT<>, X...>::type;
+    using type = typename basic_flatten<ContainerT, ContainerT<>, X...>::type;
 };
 
 }

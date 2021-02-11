@@ -148,7 +148,6 @@ decltype(auto) operator>>(const basic_map<P, T...>& node, V& var){
 }
 
 
-
 template <typename... X>
 using basic_map_d = basic_map<by_data, X...>;
 template <typename... X>

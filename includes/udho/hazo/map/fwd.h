@@ -35,8 +35,8 @@ namespace hazo{
 template <typename Policy, typename H = void, typename... X>
 struct basic_map;
     
-template <typename Policy, typename H, typename... X>
-struct map;
+// template <typename Policy, typename H, typename... X>
+// struct map;
 
 template <typename Policy, typename... X>
 struct map_proxy;

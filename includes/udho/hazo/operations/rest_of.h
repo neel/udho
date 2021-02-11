@@ -41,11 +41,6 @@ struct rest_of{
     using type = ContainerT<T...>;
 };
 
-template <template <typename...> class ContainerT, typename... H, typename... T>
-struct rest_of<ContainerT, ContainerT<H...>, T...>{
-    using type = typename rest_of<ContainerT, H..., T...>::type;
-};
-
 }
     
 }
