@@ -36,9 +36,7 @@
 #include <udho/hazo/seq/tag.h>
 #include <udho/hazo/seq/helpers.h>
 #include <udho/hazo/detail/indices.h>
-#include <udho/hazo/detail/monoid.h>
 #include <udho/hazo/detail/fwd.h>
-#include <udho/hazo/detail/operations.h>
 #include <udho/hazo/seq/basic.h>
 #include <udho/hazo/seq/operations.h>
 

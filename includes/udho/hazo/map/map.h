@@ -35,9 +35,7 @@
 #include <udho/hazo/map/tag.h>
 #include <udho/hazo/map/fwd.h>
 #include <udho/hazo/detail/indices.h>
-#include <udho/hazo/detail/monoid.h>
 #include <udho/hazo/detail/fwd.h>
-#include <udho/hazo/detail/operations.h>
 #include <udho/hazo/map/basic.h>
 #include <udho/hazo/map/operations.h>
 

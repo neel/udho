@@ -37,7 +37,6 @@
 #include <udho/hazo/seq/helpers.h>
 #include <udho/hazo/detail/indices.h>
 #include <udho/hazo/detail/fwd.h>
-#include <udho/hazo/detail/operations.h>
 #include <udho/hazo/operations/flatten.h>
 
 namespace udho{
