@@ -47,7 +47,7 @@ struct basic_flatten{
 };
 
 template <template <typename...> class ContainerT, typename InitialT>
-struct basic_flatten<ContainerT, InitialT, ContainerT<void>>{
+struct basic_flatten<ContainerT, InitialT, InitialT>{
     using initial = InitialT;
     using rest = void;
     using type = initial;

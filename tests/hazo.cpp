@@ -8,6 +8,7 @@
 #include <boost/format.hpp>
 #include <udho/hazo/map/operations.h>
 #include <udho/hazo/map/basic.h>
+#include <udho/hazo/operations/flatten.h>
 
 HAZO_ELEMENT_HANA(first_name, std::string)
 HAZO_ELEMENT_HANA(last_name, std::string)
@@ -21,6 +22,18 @@ BOOST_AUTO_TEST_SUITE(hazo)
 
 typedef basic_map_d<> empty_map;
 typedef basic_map_d<first_name, last_name, age> person_map;
+
+// // typedef typename udho::util::hazo::operations::basic_flatten<
+// //     udho::util::hazo::basic_map_d, 
+// //     udho::util::hazo::basic_map_d<>, 
+// //     first_name, last_name, age
+// // >::initial initial_type;
+
+// typedef typename operations::first_of<udho::util::hazo::basic_map_d, udho::util::hazo::basic_map_d<last_name, age>>::type first_type;
+// typedef typename operations::append<udho::util::hazo::basic_map_d<>, first_type>::type apended_type;
+
+// first_type::xyz();
+
 
 // typename operations::flatten<basic_map_d, first_name, last_name, age>::type flattened_person_map;
 
