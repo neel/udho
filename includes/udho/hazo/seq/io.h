@@ -36,7 +36,7 @@ namespace util{
 namespace hazo{
     
 template <typename Policy, typename... X>
-std::ostream& operator<<(std::ostream& stream, const seq<Policy, X...>& s){
+std::ostream& operator<<(std::ostream& stream, const basic_seq<Policy, X...>& s){
     stream << "(";
     s.write(stream);
     stream << ")";

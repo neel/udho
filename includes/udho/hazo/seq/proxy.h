@@ -48,7 +48,7 @@ struct seq_proxy: proxy<X...>{
     seq_proxy() = delete;
     seq_proxy(const self_type&) = default;
     template <typename OtherPolicy, typename... Rest>
-    seq_proxy(seq<OtherPolicy, Rest...>& actual): node_type(static_cast<typename seq<OtherPolicy, Rest...>::node_type&>(actual)){}
+    seq_proxy(basic_seq<OtherPolicy, Rest...>& actual): node_type(static_cast<typename basic_seq<OtherPolicy, Rest...>::node_type&>(actual)){}
     
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
