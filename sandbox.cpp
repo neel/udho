@@ -2,28 +2,31 @@
 #include <udho/hazo/map/operations.h>
 #include <udho/hazo/map/basic.h>
 #include <udho/hazo/operations/flatten.h>
+#include <ctti/nameof.hpp>
+#include <iostream>
 
-HAZO_ELEMENT_HANA(first_name, std::string)
-HAZO_ELEMENT_HANA(last_name, std::string)
-HAZO_ELEMENT_HANA(age, std::size_t)
+struct T1{};
+struct T2{};
+struct T3{};
+struct T4{};
+struct T5{};
+struct T6{};
+struct T7{};
+struct T8{};
+struct T9{};
+struct T10{};
+struct T11{};
+struct T12{};
+struct T13{};
 
 using namespace udho::util::hazo;
 
 int main(){
-    typedef basic_map_d<> empty_map;
-    typedef basic_map_d<first_name, last_name, age> person_map;
+    typedef basic_map_d<basic_map_d<basic_map_d<basic_map_d<T1, T2>, T3>, T4>, T5, T6, T7, basic_map_d<T8, T9, T10>, T11, basic_map_d<T12, T13>> map_type;
     
-    // operations::first_of<basic_map_d, basic_map_d<basic_map_d<age, last_name>, first_name>>::type::xyz();
-    
-//     udho::util::hazo::operations::append<udho::util::hazo::basic_map_d<>, first_name>::type::xyz();
-    
-    typedef typename udho::util::hazo::operations::basic_flatten<
-        udho::util::hazo::basic_map_d, 
-        udho::util::hazo::basic_map_d<>, 
-        first_name, last_name, age
-    >::rest initial_type;
-    
-    initial_type::xyz();
+    std::cout << ctti::nameof<map_type>() << std::endl;
+    std::cout << std::endl;
+    std::cout << ctti::nameof<typename operations::flatten<basic_map_d, map_type>::type>() << std::endl;
     
     return 0;
 }

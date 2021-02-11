@@ -20,22 +20,6 @@ using namespace udho::util::hazo;
 
 BOOST_AUTO_TEST_SUITE(hazo)
 
-typedef basic_map_d<> empty_map;
-typedef basic_map_d<first_name, last_name, age> person_map;
-
-// // typedef typename udho::util::hazo::operations::basic_flatten<
-// //     udho::util::hazo::basic_map_d, 
-// //     udho::util::hazo::basic_map_d<>, 
-// //     first_name, last_name, age
-// // >::initial initial_type;
-
-// typedef typename operations::first_of<udho::util::hazo::basic_map_d, udho::util::hazo::basic_map_d<last_name, age>>::type first_type;
-// typedef typename operations::append<udho::util::hazo::basic_map_d<>, first_type>::type apended_type;
-
-// first_type::xyz();
-
-// typename operations::flatten<basic_map_d, first_name, last_name, age>::type flattened_person_map;
-
 BOOST_AUTO_TEST_CASE(element){
     first_name f("Neel");
     last_name l("Basu");
@@ -472,16 +456,16 @@ BOOST_AUTO_TEST_CASE(seq_by_data_proxy){
     BOOST_CHECK((proxy.data<int, 1>() == vec.data<3>()));
 }
 
-// BOOST_AUTO_TEST_CASE(map_by_data_proxy){
-//     map_d<first_name, last_name, age> map(first_name("Neel"), last_name("Basu"), age(32));
-//     map_d<first_name, age>::proxy proxy(map);
-//     
-//     BOOST_CHECK(proxy.data<0>() == map.data<0>());
-//     BOOST_CHECK(proxy.data<1>() == map.data<2>());
-//     
-//     BOOST_CHECK((proxy.data<first_name>() == map.data<0>()));
-//     BOOST_CHECK((proxy.data<age>() == map.data<2>()));
-// }
+BOOST_AUTO_TEST_CASE(map_by_data_proxy){
+    map_d<first_name, last_name, age> map(first_name("Neel"), last_name("Basu"), age(32));
+    map_d<first_name, age>::proxy proxy(map);
+    
+    BOOST_CHECK(proxy.data<0>() == map.data<0>());
+    BOOST_CHECK(proxy.data<1>() == map.data<2>());
+    
+    BOOST_CHECK((proxy.data<first_name>() == map.data<0>()));
+    BOOST_CHECK((proxy.data<age>() == map.data<2>()));
+}
 
 struct T1{
     typedef char index_type;
