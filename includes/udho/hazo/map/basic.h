@@ -60,7 +60,9 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H, X...>, U...>::type;
     template <template <typename...> class ContainerT>
-    using transform = ContainerT<H, X...>;
+    using translate = ContainerT<H, X...>;
+    template <template <typename> class F>
+    using transform = basic_map<Policy, F<H>, F<X>...>;
     
     using node_type::node_type;
     basic_map(const H& h, const X&... xs): node<H, basic_map<Policy, X...>>(h, xs...){}
@@ -115,7 +117,9 @@ struct basic_map<Policy, H>: node<H, void>{
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H>, U...>::type;
     template <template <typename...> class ContainerT>
-    using transform = ContainerT<H>;
+    using translate = ContainerT<H>;
+    template <template <typename> class F>
+    using transform = basic_map<Policy, F<H>>;
     
     using node_type::node_type;
     basic_map(const H& h): node<H, void>(h){}

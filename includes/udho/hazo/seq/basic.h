@@ -55,11 +55,13 @@ struct basic_seq: node<H, basic_seq<Policy, X...>>{
     template <typename... U>
     using extend = typename operations::append<basic_seq<Policy, H, X...>, U...>::type;
     template <template <typename...> class ContainerT>
-    using transform = ContainerT<H, X...>;
+    using translate = ContainerT<H, X...>;
     template <typename T>
     using contains = typename node_type::types::template exists<T>;
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class F>
+    using transform = basic_seq<Policy, F<H>, F<X>...>;
     
     using node_type::node_type;
     template <typename FunctionT>
@@ -87,11 +89,13 @@ struct basic_seq<Policy, H>: node<H, void>{
     template <typename... U>
     using extend = typename operations::append<basic_seq<Policy, H>, U...>::type;
     template <template <typename...> class ContainerT>
-    using transform = ContainerT<H>;
+    using translate = ContainerT<H>;
     template <typename T>
     using contains = typename node_type::types::template exists<T>;
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class F>
+    using transform = basic_seq<Policy, F<H>>;
     
     using node_type::node_type;
     template <typename FunctionT>
