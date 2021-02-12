@@ -35,6 +35,8 @@
 #include <udho/hazo/operations/append.h>
 #include <udho/hazo/operations/prepend.h>
 #include <udho/hazo/operations/eliminate.h>
+#include <udho/hazo/operations/first_of.h>
+#include <udho/hazo/operations/rest_of.h>
 
 namespace udho{
 namespace util{

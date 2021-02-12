@@ -53,6 +53,8 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     using exclude = typename operations::eliminate_all<basic_map<Policy, H, X...>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H, X...>, U...>::type;
+    template <template <typename...> class ContainerT>
+    using transform = ContainerT<H, X...>;
     
     using node_type::node_type;
     basic_map(const H& h, const X&... xs): node<H, basic_map<Policy, X...>>(h, xs...){}
@@ -105,6 +107,8 @@ struct basic_map<Policy, H>: node<H, void>{
     using exclude = typename operations::eliminate_all<basic_map<Policy, H>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H>, U...>::type;
+    template <template <typename...> class ContainerT>
+    using transform = ContainerT<H>;
     
     using node_type::node_type;
     basic_map(const H& h): node<H, void>(h){}
