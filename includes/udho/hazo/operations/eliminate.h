@@ -36,19 +36,18 @@ namespace hazo{
     
 namespace operations{
 
-template <typename ContainerT, template <typename> class ConditionT, typename T, typename... Rest>
-struct exclude_if{
-    using type = typename exclude_if<
-        typename eliminate_if<ContainerT, ConditionT, T>::type,
-        ConditionT,
-        Rest...
-    >::type;
-};
+// template <typename ContainerT, template <typename> class ConditionT>
+// struct exclude_if{
+//     using type = typename exclude_if<
+//         typename eliminate_if<ContainerT, ConditionT>::type,
+//         ConditionT
+//     >::type;
+// };
 
-template <typename ContainerT, template <typename> class ConditionT, typename T>
-struct exclude_if<ContainerT, ConditionT, T>{
-    using type = typename eliminate_if<ContainerT, ConditionT, T>::type;
-};
+// template <typename ContainerT, template <typename> class ConditionT>
+// struct exclude_if<ContainerT, ConditionT>{
+//     using type = typename eliminate_if<ContainerT, ConditionT>::type;
+// };
     
 template <typename ContainerT, typename T, typename... Rest>
 struct exclude{
