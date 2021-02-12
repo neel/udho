@@ -50,7 +50,7 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     typedef map_proxy<Policy, H, X...> proxy;
     
     template <typename... U>
-    using exclude = typename operations::eliminate_all<basic_map<Policy, H, X...>, U...>::type;
+    using exclude = typename operations::exclude<basic_map<Policy, H, X...>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H, X...>, U...>::type;
     template <template <typename...> class ContainerT>
@@ -104,7 +104,7 @@ struct basic_map<Policy, H>: node<H, void>{
     typedef map_proxy<Policy, H> proxy;
     
     template <typename... U>
-    using exclude = typename operations::eliminate_all<basic_map<Policy, H>, U...>::type;
+    using exclude = typename operations::exclude<basic_map<Policy, H>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_map<Policy, H>, U...>::type;
     template <template <typename...> class ContainerT>

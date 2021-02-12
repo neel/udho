@@ -38,7 +38,7 @@ template <typename ContainerT, typename U>
 struct eliminate;
 
 template <typename ContainerT, typename T, typename... Rest>
-struct eliminate_all;
+struct exclude;
 
 template <typename ContainerT, typename... T>
 struct append;

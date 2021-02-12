@@ -51,7 +51,7 @@ struct basic_seq: node<H, basic_seq<Policy, X...>>{
     using hana_tag = udho_hazo_seq_tag<Policy, 1+sizeof...(X)>;
     
     template <typename... U>
-    using exclude = typename operations::eliminate_all<basic_seq<Policy, H, X...>, U...>::type;
+    using exclude = typename operations::exclude<basic_seq<Policy, H, X...>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_seq<Policy, H, X...>, U...>::type;
     template <template <typename...> class ContainerT>
@@ -83,7 +83,7 @@ struct basic_seq<Policy, H>: node<H, void>{
     using hana_tag = udho_hazo_seq_tag<Policy, 1>;
     
     template <typename... U>
-    using exclude = typename operations::eliminate_all<basic_seq<Policy, H>, U...>::type;
+    using exclude = typename operations::exclude<basic_seq<Policy, H>, U...>::type;
     template <typename... U>
     using extend = typename operations::append<basic_seq<Policy, H>, U...>::type;
     template <template <typename...> class ContainerT>

@@ -37,15 +37,15 @@ namespace hazo{
 namespace operations{
 
 template <typename ContainerT, typename T, typename... Rest>
-struct eliminate_all{
-    using type = typename eliminate_all<
+struct exclude{
+    using type = typename exclude<
         typename eliminate<ContainerT, T>::type, 
         Rest...
     >::type;
 };
 
 template <typename ContainerT, typename T>
-struct eliminate_all<ContainerT, T>{
+struct exclude<ContainerT, T>{
     using type = typename eliminate<ContainerT, T>::type;
 };
 
