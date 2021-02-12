@@ -6,6 +6,9 @@
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <udho/hazo/map/operations.h>
+#include <udho/hazo/map/basic.h>
+#include <udho/hazo/operations/flatten.h>
 
 HAZO_ELEMENT_HANA(first_name, std::string)
 HAZO_ELEMENT_HANA(last_name, std::string)

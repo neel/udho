@@ -482,6 +482,7 @@ struct node<HeadT, void>{
     capsule_type _capsule;
 };
 
+
 template <typename HeadT, typename TailT>
 decltype(auto) operator>>(const node<HeadT, TailT>& node, HeadT& var){
     return node.next(var);

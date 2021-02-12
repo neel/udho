@@ -107,3 +107,6 @@ endif()
 
 
 add_executable(monoid monoid.cpp)
+add_executable(flatten flatten.cpp)
+add_executable(flaten-sandbox sandbox.cpp)
+TARGET_LINK_LIBRARIES(flaten-sandbox udho ctti)

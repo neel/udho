@@ -36,139 +36,22 @@
 #include <udho/hazo/seq/tag.h>
 #include <udho/hazo/seq/helpers.h>
 #include <udho/hazo/detail/indices.h>
-#include <udho/hazo/detail/monoid.h>
-#include <udho/hazo/detail/fwd.h>
-#include <udho/hazo/detail/operations.h>
+#include <udho/hazo/seq/basic.h>
+#include <udho/hazo/seq/operations.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
 
-template <typename Policy, typename... X, typename... T>
-struct extend<seq<Policy, X...>, T...>{
-    using type = seq<Policy, T..., X...>;
-};
+template <typename... T>
+using seq_d = typename operations::flatten<basic_seq_d, T...>::type;
 
-template <typename Policy, typename... T>
-struct extend<seq<Policy, void>, T...>{
-    using type = seq<Policy, T...>;
-};
-
-template <typename Policy, typename H, typename... X, typename U>
-struct remove<seq<Policy, H, X...>, U>{
-    enum { 
-        matched = std::is_same<H, U>::value
-    };
-    using tail = seq<Policy, X...>;
-    using type = typename std::conditional<matched, 
-        tail,
-        typename extend<typename remove<tail, U>::type, H>::type
-    >::type;
-};
-
-template <typename Policy, typename H, typename U>
-struct remove<seq<Policy, H>, U>{
-    enum { 
-        matched = std::is_same<H, U>::value
-    };
-    using type = typename std::conditional<matched, 
-        seq<Policy, void>,
-        seq<Policy, H>
-    >::type;
-};
+template <typename... T>
+using seq_v = typename operations::flatten<basic_seq_v, T...>::type;
     
-template <typename H>
-using monoid_seq = detail::monoid<seq, H>;
-
-/**
- * seq<A, B, C, D>: node<A, seq<B, C, D>>                                                        -> node<A, node<B, node<C, node<D, void>>>>     -> capsule<A>  depth 3
- *                          seq<B, C, D> : node<B, seq<C, D>>                                    -> node<B, node<C, node<D, void>>>              -> capsule<B>  depth 2
- *                                                 seq<C, D>: node<C, seq<D>>                    -> node<C, node<D, void>>                       -> capsule<C>  depth 1
- *                                                                     seq<D>: node<D, void>     -> node<D, void>                                -> capsule<D>  depth 0
- * 
- * \code
-    seq<int, std::string, double, int> vec(42, "Hello", 3.14, 84);
-    
-    std::cout << vec.get<int>() << std::endl;
-    std::cout << vec.get<std::string>() << std::endl;
-    std::cout << vec.get<double>() << std::endl;
-    std::cout << "-----" << std::endl;
-    std::cout << vec.get<0>() << std::endl;
-    std::cout << vec.get<1>() << std::endl;
-    std::cout << vec.get<2>() << std::endl;
-    std::cout << vec.get<3>() << std::endl;
-    std::cout << "-----" << std::endl;
-    std::cout << vec.set<0>(43) << std::endl;
-    std::cout << vec.set<1>("World") << std::endl;
-    std::cout << vec.set<2>(6.28) << std::endl;
-    std::cout << vec.set<3>(42) << std::endl;
-    std::cout << "-----" << std::endl;
-    std::cout << vec.get<0>() << std::endl;
-    std::cout << vec.get<1>() << std::endl;
-    std::cout << vec.get<2>() << std::endl;
-    std::cout << vec.get<3>() << std::endl;
- * \endcode
- */
-template <typename Policy, typename H, typename... X>
-struct seq: node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, X...>>{
-    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::template extend<Policy, X...>> node_type;
-    
-    typedef seq_proxy<Policy, H, X...> proxy;
-    
-    using hana_tag = udho_hazo_seq_tag<Policy, 1+sizeof...(X)>;
-    
-    template <typename... U>
-    using exclude = typename exclude<seq<Policy, H, X...>, U...>::type;
-    template <typename... U>
-    using extend = typename extend<seq<Policy, H, X...>, U...>::type;
-    
-    using node_type::node_type;
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f) const{
-        const_call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f){
-        call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-};
-
-template <typename Policy, typename H>
-struct seq<Policy, H>: node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest>{
-    typedef node<typename monoid_seq<H>::head, typename monoid_seq<H>::rest> node_type;
-    
-    typedef seq_proxy<Policy, H> proxy;
-    
-    using hana_tag = udho_hazo_seq_tag<Policy, 1>;
-    
-    template <typename... U>
-    using exclude = typename exclude<seq<Policy, H>, U...>::type;
-    template <typename... U>
-    using extend = typename extend<seq<Policy, H>, U...>::type;
-    
-    using node_type::node_type;
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f) const{
-        const_call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f){
-        call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-};
-
-template <typename... X>
-using seq_d = seq<by_data, X...>;
-template <typename... X>
-using seq_v = seq<by_value, X...>;
-
 template <typename Policy, typename... X>
-seq<Policy, X...> make_seq(const X&... xs){
-    return seq<Policy, X...>(xs...);
+basic_seq<Policy, X...> make_seq(const X&... xs){
+    return basic_seq<Policy, X...>(xs...);
 }
 
 template <typename... X>

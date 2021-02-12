@@ -48,7 +48,7 @@ struct map_proxy: proxy<X...>{
     map_proxy() = delete;
     map_proxy(const self_type&) = default;
     template <typename OtherPolicy, typename... Rest>
-    map_proxy(map<OtherPolicy, Rest...>& actual): node_type(static_cast<typename map<OtherPolicy, Rest...>::node_type&>(actual)){}
+    map_proxy(basic_map<OtherPolicy, Rest...>& actual): node_type(static_cast<typename basic_map<OtherPolicy, Rest...>::node_type&>(actual)){}
 
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{

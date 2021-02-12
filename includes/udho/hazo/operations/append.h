@@ -25,50 +25,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef UDHO_HAZO_OPERATIONS_APPEND_H
+#define UDHO_HAZO_OPERATIONS_APPEND_H
 
-#ifndef UDHO_HAZO_SEQ_PROXY_H
-#define UDHO_HAZO_SEQ_PROXY_H
-
-#include <udho/hazo/node/proxy.h>
-#include <udho/hazo/seq/tag.h>
-#include <udho/hazo/seq/helpers.h>
-#include <udho/hazo/seq/seq.h>
+#include <udho/hazo/operations/fwd.h>
 
 namespace udho{
 namespace util{
 namespace hazo{
     
-template <typename Policy, typename... X>
-struct seq_proxy: proxy<X...>{
-    typedef proxy<X...> node_type;
-    typedef seq_proxy<Policy, X...> self_type;
-    
-    using hana_tag = udho_hazo_seq_tag<Policy, sizeof...(X)>;
-    
-    seq_proxy() = delete;
-    seq_proxy(const self_type&) = default;
-    template <typename OtherPolicy, typename... Rest>
-    seq_proxy(basic_seq<OtherPolicy, Rest...>& actual): node_type(static_cast<typename basic_seq<OtherPolicy, Rest...>::node_type&>(actual)){}
-    
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f) const{
-        const_call_helper<Policy, node_type, typename build_indices<sizeof...(X)>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-    template <typename FunctionT>
-    decltype(auto) unpack(FunctionT&& f){
-        call_helper<Policy, node_type, typename build_indices<sizeof...(X)>::indices_type> helper(*this);
-        return helper.apply(std::forward<FunctionT>(f));
-    }
-};
+namespace operations{
 
-template <typename... X>
-using seq_proxy_d = seq_proxy<by_data, X...>;
-template <typename... X>
-using seq_proxy_v = seq_proxy<by_value, X...>;
+// No default implementation
+// specialize for each container
+
+}
     
 }
 }
 }
 
-#endif // UDHO_HAZO_SEQ_PROXY_H
+#endif // UDHO_HAZO_OPERATIONS_APPEND_H

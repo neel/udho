@@ -44,7 +44,7 @@ std::ostream& operator<<(std::ostream& stream, const element<DerivedT, ValueT, M
 }
 
 template <typename Policy, typename... X>
-std::ostream& operator<<(std::ostream& stream, const map<Policy, X...>& s){
+std::ostream& operator<<(std::ostream& stream, const basic_map<Policy, X...>& s){
     stream << "(";
     s.write(stream);
     stream << ")";

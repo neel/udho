@@ -70,7 +70,7 @@ namespace hana {
     struct make_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename ...Args>
         static constexpr auto apply(Args&& ...args) {
-            return udho::util::hazo::seq<Policy, Args...>(std::forward<Args>(args)...);
+            return udho::util::hazo::basic_seq<Policy, Args...>(std::forward<Args>(args)...);
         }
     };
     

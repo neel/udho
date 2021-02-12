@@ -76,7 +76,7 @@ namespace hana {
         };
 
         static decltype(auto) apply() {
-            access_helper<Policy, typename udho::util::hazo::map<Policy, X...>::node_type, typename udho::util::hazo::build_indices<udho::util::hazo::map<Policy, X...>::depth+1>::indices_type> helper;
+            access_helper<Policy, typename udho::util::hazo::basic_map<Policy, X...>::node_type, typename udho::util::hazo::build_indices<udho::util::hazo::basic_map<Policy, X...>::depth+1>::indices_type> helper;
             return helper.apply();
         }
     };
@@ -109,7 +109,7 @@ namespace hana {
     struct make_impl<udho::util::hazo::udho_hazo_map_tag<Policy, X...>> {
         template <typename ...Args>
         static constexpr auto apply(Args&& ...args) {
-            return udho::util::hazo::map<Policy, Args...>(std::forward<Args>(args)...);
+            return udho::util::hazo::basic_map<Policy, Args...>(std::forward<Args>(args)...);
         }
     };
     
