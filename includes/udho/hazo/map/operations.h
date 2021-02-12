@@ -98,6 +98,29 @@ struct prepend<basic_map<Policy>, T...>{
     using type = basic_map<Policy, T...>;
 };
 
+template <typename Policy, typename H, typename... X, template <typename> class ConditionT, typename U>
+struct eliminate_if<basic_map<Policy, H, X...>, ConditionT, U>{
+    enum { 
+        matched = ConditionT<H>::value
+    };
+    using tail = basic_map<Policy, X...>;
+    using type = typename std::conditional<matched, 
+        tail,
+        typename prepend<typename eliminate_if<tail, ConditionT, U>::type, H>::type
+    >::type;
+};
+
+template <typename Policy, typename H, template <typename> class ConditionT, typename U>
+struct eliminate_if<basic_map<Policy, H>, ConditionT, U>{
+    enum { 
+        matched = ConditionT<H>::value
+    };
+    using type = typename std::conditional<matched, 
+        basic_map<Policy, void>,
+        basic_map<Policy, H>
+    >::type;
+};
+
 template <typename Policy, typename H, typename... X, typename U>
 struct eliminate<basic_map<Policy, H, X...>, U>{
     enum { 

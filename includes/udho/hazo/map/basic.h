@@ -49,6 +49,12 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     
     typedef map_proxy<Policy, H, X...> proxy;
     
+    template <typename ElementT>
+    using contains = typename node_type::types::template exists<ElementT>;
+    template <typename KeyT>
+    using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class ConditionT, typename... U>
+    using exclude_if = typename operations::exclude_if<basic_map<Policy, H, X...>, ConditionT, U...>::type;
     template <typename... U>
     using exclude = typename operations::exclude<basic_map<Policy, H, X...>, U...>::type;
     template <typename... U>
@@ -70,11 +76,6 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
         const_call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
     }
-    
-    template <typename ElementT>
-    using contains = typename node_type::types::template exists<ElementT>;
-    template <typename KeyT>
-    using has = typename node_type::types::template has<KeyT>;
     
     template <typename ElementT, typename = typename std::enable_if<contains<ElementT>::value && !has<ElementT>::value>::type>
     decltype(auto) operator[](const element_t<ElementT>& e){
@@ -103,6 +104,12 @@ struct basic_map<Policy, H>: node<H, void>{
     
     typedef map_proxy<Policy, H> proxy;
     
+    template <typename ElementT>
+    using contains = typename node_type::types::template exists<ElementT>;
+    template <typename KeyT>
+    using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class ConditionT, typename... U>
+    using exclude_if = typename operations::exclude_if<basic_map<Policy, H>, ConditionT, U...>::type;
     template <typename... U>
     using exclude = typename operations::exclude<basic_map<Policy, H>, U...>::type;
     template <typename... U>
@@ -114,11 +121,6 @@ struct basic_map<Policy, H>: node<H, void>{
     basic_map(const H& h): node<H, void>(h){}
     template <typename... Y, typename = typename std::enable_if<!std::is_same<basic_map<Policy, H>, basic_map<Policy, Y...>>::value>::type>
     basic_map(const basic_map<Policy, Y...>& other): node_type(static_cast<const typename basic_map<Policy, Y...>::node_type&>(other)) {}
-    
-    template <typename ElementT>
-    using contains = typename node_type::types::template exists<ElementT>;
-    template <typename KeyT>
-    using has = typename node_type::types::template has<KeyT>;
     
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{

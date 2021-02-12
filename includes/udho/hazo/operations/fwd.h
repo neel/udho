@@ -37,8 +37,14 @@ namespace operations{
 template <typename ContainerT, typename U>
 struct eliminate;
 
+template <typename ContainerT, template <typename> class ConditionT, typename U>
+struct eliminate_if;
+
 template <typename ContainerT, typename T, typename... Rest>
 struct exclude;
+
+template <typename ContainerT, template <typename> class ConditionT, typename T, typename... Rest>
+struct exclude_if;
 
 template <typename ContainerT, typename... T>
 struct append;
