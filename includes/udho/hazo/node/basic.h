@@ -74,6 +74,9 @@ struct basic_node{
                 typename tail_type::types::template value_for<KeyT>
             >::type;
             
+        using indices = basic_node<index_type, typename tail_type::types::indices>;
+        using keys = basic_node<key_type, typename tail_type::types::keys>;
+            
         template <typename T>
         struct exists{
             enum { value = std::is_same<T, index_type>::value || tail_type::types::template exists<T>::value };
@@ -119,6 +122,9 @@ struct basic_node<HeadT, void>{
             value_type,
             void
             >::type;
+            
+        using indices = basic_node<index_type, void>;
+        using keys = basic_node<key_type, void>;
             
         template <typename T>
         struct exists{
