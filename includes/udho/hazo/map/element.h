@@ -56,7 +56,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     static constexpr auto key() { return DerivedT::key(); }
     std::string name() const { return std::string(key().c_str()); }
     
-    template <typename V, typename = typename std::enable_if<std::is_convertible<V, value_type>::value>::type>
+    template <typename V, typename = typename std::enable_if<std::is_assignable<value_type, V>::value>::type>
     self_type& operator=(const V& v) { 
         _value = v; 
         return *this; 
@@ -68,13 +68,13 @@ struct element: Mixins<DerivedT, ValueT>...{
     bool operator==(const self_type& other) const { return _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
     template<typename V>
-    typename std::enable_if<std::is_convertible<V, value_type>::value, void>::type set(const std::string& n, const V& v){
+    typename std::enable_if<std::is_assignable<value_type, V>::value, void>::type set(const std::string& n, const V& v){
         if(n == name()){
             _value = v;
         }
     }
     template<typename V>
-    typename std::enable_if<!std::is_convertible<V, value_type>::value, void>::type set(const std::string&, const V&){}
+    typename std::enable_if<!std::is_assignable<value_type, V>::value, void>::type set(const std::string&, const V&){}
 };
 
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
