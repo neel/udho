@@ -46,12 +46,10 @@ struct element: Mixins<DerivedT, ValueT>...{
     template <typename AltValueT>
     using alter = element<DerivedT, AltValueT, Mixins...>;
     
-    value_type _value;
-    
     const static constexpr element_t<derived_type> val = element_t<derived_type>();
     
-    element(): _value(value_type()), Mixins<DerivedT, ValueT>(*this)...{}
-    element(const value_type& v): Mixins<DerivedT, ValueT>(*this)..., _value(v){}
+    element(): _value(value_type()), _initialized(false){}
+    element(const value_type& v): _value(v), _initialized(true){}
     element(const self_type& other) = default;
     static constexpr auto key() { return DerivedT::key(); }
     std::string name() const { return std::string(key().c_str()); }
@@ -59,22 +57,35 @@ struct element: Mixins<DerivedT, ValueT>...{
     template <typename V, typename = typename std::enable_if<std::is_assignable<value_type, V>::value>::type>
     self_type& operator=(const V& v) { 
         _value = v; 
+        _initialized = true;
         return *this; 
     }
     self_type& operator=(const self_type& other) = default;
     value_type& value() { return _value; }
     const value_type& value() const { return _value; }
-    bool operator==(const value_type& v) const { return _value == v; }
-    bool operator==(const self_type& other) const { return _value == other._value; }
+    bool initialized() const { return _initialized; }
+    void uninitialize(bool flag = true) {
+        _initialized = flag;
+        if(flag){
+            _value = value_type();
+        }
+    }
+    bool operator==(const value_type& v) const { return _initialized && _value == v; }
+    bool operator==(const self_type& other) const { return _initialized == other._initialized && _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
     template<typename V>
     typename std::enable_if<std::is_assignable<value_type, V>::value, void>::type set(const std::string& n, const V& v){
         if(n == name()){
             _value = v;
+            _initialized = true;
         }
     }
     template<typename V>
     typename std::enable_if<!std::is_assignable<value_type, V>::value, void>::type set(const std::string&, const V&){}
+    
+    private:
+        value_type _value;
+        bool _initialized;
 };
 
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
