@@ -51,7 +51,9 @@ namespace activities{
         typedef typename collector_type::accessor_type accessor_type;
         typedef CallbackT callback_type;
         typedef joined<callback_type, activities::collector<ContextT, dataset<T...>>> self_type;
-        typedef int cancel_if_ftor;
+        typedef int success_type;
+        typedef boost::function<bool (const success_type&)> cancel_if_ftor;
+        typedef boost::function<bool (const success_type&)> abort_error_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
         void operator()(){
@@ -63,6 +65,12 @@ namespace activities{
         }
         template <typename U>
         void cancel_if(U&){}
+        template <typename U>
+        void if_failed(U&){}
+        template <typename U>
+        void if_errored(U&){}
+        template <typename U>
+        void if_canceled(U&){}
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;

@@ -229,7 +229,7 @@ struct accessor: fixed_key_accessor<udho::cache::shadow<std::string, typename st
             typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
             return res.okay();
         }
-        return true;
+        return false;
     }
     /**
      * get success data for activity V

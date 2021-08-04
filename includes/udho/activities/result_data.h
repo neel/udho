@@ -68,13 +68,13 @@ struct apply_helper: detail::apply_helper<FunctorT>, detail::apply_helper<Functo
 };
 
 /**
-    * Contains **Copiable** Success or Failure data for an activity.
-    * \tparam SuccessT success data type
-    * \tparam FailureT failure data type
-    * 
-    * \ingroup activities
-    * \ingroup data
-    */
+ * Contains **Copiable** Success or Failure data for an activity.
+ * \tparam SuccessT success data type
+ * \tparam FailureT failure data type
+ * 
+ * \ingroup activities
+ * \ingroup data
+ */
 template <typename SuccessT, typename FailureT>
 struct result_data{
     typedef SuccessT success_type;
@@ -91,20 +91,20 @@ struct result_data{
     result_data(): _completed(false), _success(false), _canceled(false){}
 
     /**
-        * either success or failure data set
-        */
+     * either success or failure data set
+     */
     inline bool completed() const{
         return _completed;
     }
     /**
-        * whether the activity has failed
-        */
+     * whether the activity has failed
+     */
     inline bool failed() const{
         return !_success;
     }
     /**
-        * check whether the activity has been canceled
-        */
+     * check whether the activity has been canceled
+     */
     inline bool canceled() const{
         return _canceled;
     }
@@ -113,31 +113,31 @@ struct result_data{
         return completed() && !failed() && !canceled();
     }
     /**
-        * Success data 
-        */
+     * Success data 
+     */
     inline const success_type& success_data() const{
         return _sdata;
     }
     /**
-        * Failure data
-        */
+     * Failure data
+     */
     inline const failure_type& failure_data() const{
         return _fdata;
     }
     
     /**
-        * Apply a callable to the result data which will be invoked exactly once with appropriate arguments. 
-        * The invocation of the callback depends on the state as shown below.
-        * 
-        * - Incomplete: callback()
-        * - Canceled: callback(const SuccessT&, const FailureT&)
-        * - Failed: callback(const FailureT&)
-        * - Successful: callback(const SuccessT&)
-        * 
-        * The callback may not have all the overloads. 
-        * 
-        * \param callback 
-        */
+     * Apply a callable to the result data which will be invoked exactly once with appropriate arguments. 
+     * The invocation of the callback depends on the state as shown below.
+     * 
+     * - Incomplete: callback()
+     * - Canceled: callback(const SuccessT&, const FailureT&)
+     * - Failed: callback(const FailureT&)
+     * - Successful: callback(const SuccessT&)
+     * 
+     * The callback may not have all the overloads. 
+     * 
+     * \param callback 
+     */
     template <typename CallableT>
     void apply(CallableT callback){
         apply_helper<CallableT, success_type, failure_type> helper(callback);
@@ -152,24 +152,24 @@ struct result_data{
     }
     protected:
         /**
-            * Set Success Data
-            */
+         * Set Success Data
+         */
         void success(const success_type& data){
             _sdata     = data;
             _success   = true;
             _completed = true;
         }
         /**
-            * Set Failure Data
-            */
+         * Set Failure Data
+         */
         void failure(const failure_type& data){
             _fdata     = data;
             _success   = false;
             _completed = true;
         }
         /**
-            * mark as canceled
-            */
+         * mark as canceled
+         */
         void cancel(){
             _canceled = true;
         }

@@ -131,6 +131,12 @@ namespace activities{
                 completed();
             }
         private:
+            /**
+             * Mark the data as cancelled then propagate the cancellation accross all child activities.
+             * If the current activity fails and there is an if_failed callback set then whether it propagates the cancellation or not is decided by the if_failed callback.
+             * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
+             * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
+             */
             void cancel(){
                 data_type::cancel();
                 bool propagate = true;
@@ -141,6 +147,13 @@ namespace activities{
                 }
                 if(propagate) _cancelation_signals();
             }
+            /**
+             * Called after success/failure to execute the child activities. 
+             * Stores the data of this activity.
+             * Cancels if the current activity is required and has failed.
+             * If there is a cancel_if callback set then this behavour is overridden by the boolean output of the provided callback.
+             * Otherwise it continues executing the activity tree 
+             */
             void completed(){                
                 bool should_cancel = false;
                 if(!data_type::failed()){
