@@ -39,7 +39,11 @@ namespace util{
 namespace hazo{
 
 /**
- * node<A, node<B, node<C>, node<D, void>>>
+ * \brief A non terminal node in the chain of nodes. 
+ * A node internally uses `capsule` to store the data inside the node.
+ * \tparam HeadT type of the value in a node
+ * \tparam TailT type of the tail (void for terminal  node)
+ * \ingroup node
  */
 template <typename HeadT, typename TailT>
 struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
@@ -55,6 +59,11 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     enum { depth = tail_type::depth +1 };
     
     using tail_type::tail_type;
+    
+    /**
+     * Construct a node with a value that is convertible to the value_type. 
+     * \param h value of the node
+     */
     template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
     node(const ArgT& h): _capsule(h) {}
     template <typename ArgT, typename... T, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
@@ -322,7 +331,9 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
 };
 
 /**
- * hazo_node<D, void>
+ * A terminal node in the chain of nodes
+ * \tparam HeadT type of the value in a node
+ * \ingroup node
  */
 template <typename HeadT>
 struct node<HeadT, void>{

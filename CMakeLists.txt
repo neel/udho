@@ -105,6 +105,7 @@ if(UDHO_BUILD_TESTS)
    add_subdirectory(tests/)
 endif()
 
+add_subdirectory(docs)
 
 add_executable(monoid monoid.cpp)
 add_executable(flatten flatten.cpp)
