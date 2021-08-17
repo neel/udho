@@ -47,3 +47,120 @@ if (DOXYGEN_FOUND)
 else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")
 endif (DOXYGEN_FOUND)
+
+
+#set(CLDOC /home/neel/.espressif/python_env/idf4.4_py3.9_env/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
+#if(CLDOC STREQUAL "")
+	#find_program(CLDOC cldoc)
+#elseif(NOT EXISTS ${CLDOC})
+	#message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
+#endif()
+
+#set(HEADERS
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/parser.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/watcher.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/session.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/server.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/context.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/defs.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/attachment.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/router.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/listener.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/client.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/compositors.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/url.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/scope.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/activities.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/states.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/activity.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/combinator.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/start.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/joined.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/result_data.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/after.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/require.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/result.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/conveniance.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/fwd.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/perform.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/data.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/subtask.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/activities/analyzer.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/logging.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/bridge.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/seq.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/operations.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/basic.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/helpers.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/hana.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/io.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/fwd.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/tag.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/seq/proxy.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/basic.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/capsule.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/node.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/encapsulate.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/io.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/fwd.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/tag.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node/proxy.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/node.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/has_member.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/has_member_type.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/indices.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/extraction_helper.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/call_helper.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/detail/is_streamable.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/hana.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/hazo.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/rest_of.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/append.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/first_of.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/flatten.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/eliminate.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/fwd.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/operations/prepend.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/operations.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/basic.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/helpers.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/hana.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/io.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/fwd.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/element.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/tag.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/map.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo/map/proxy.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/hazo.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/visitor.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/access.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/configuration.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/cache.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/util.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/cookie.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/page.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/contexts.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/application.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/forms.h
+    #${CMAKE_SOURCE_DIR}/includes/udho/connection.h
+#)
+
+#if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
+  #set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
+  #add_custom_target(cldoc COMMAND
+    #${CLDOC} generate ${CMAKE_CXX_FLAGS} -I${PROJECT_SOURCE_DIR} -- --output ${CLDOC_OUT} ${HEADERS}
+    #WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  #)
+
+  #add_custom_target(serve_cldoc COMMAND
+    #${CLDOC} serve -- ${CLDOC_OUT}
+    #WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  #)
+
+  #add_dependencies(serve_cldoc cldoc)
+#else()
+  #message(STATUS "cldoc Documentation will not be generated")
+#endif()

@@ -88,7 +88,9 @@ body, table, div, p, dl {
     background-color: var(--bg) !important;
     line-height: 1.25 !important;
     font-weight: 300 !important;
-    float: left !important;
+    float: none !important;
+    margin-right: 0px;
+    border-bottom: 0px none;
 }
 
 /* @group Heading Levels */
@@ -511,20 +513,17 @@ table.memberdecls tr:nth-last-child(2) .memItemRight {
 }
 
 .memproto, dl.reflist dt {
-  border-top: 1px solid var(--fg-light);
-  border-right: 1px solid var(--fg-light);
-  border-left: 1px solid var(--fg-light);
-  padding: 5px 10px;
-  color: var(--nav);
-  text-shadow: none;
-  background: none;
-  background-color: var(--bg);
-  box-shadow: none;
-  -moz-box-shadow: none;
-  -webkit-box-shadow: none;
-  -webkit-border-top-right-radius: 7px;
-  -moz-border-radius-topright: 7px;
-  border-top-right-radius: 7px;
+    border-top: 0px solid var(--fg-light);
+    border-right: 1px solid var(--fg-light);
+    border-left: 1px solid var(--fg-light);
+    padding: 5px 10px;
+    color: var(--nav);
+    text-shadow: none;
+    background: none;
+    background-color: var(--bg);
+    box-shadow: none;
+    -moz-box-shadow: none;
+    -webkit-box-shadow: none;
 }
 
 /* additional */

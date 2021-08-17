@@ -37,6 +37,13 @@ namespace udho{
 namespace util{
 namespace hazo{
     
+/**
+ * An element is an object identifiable by a key defined by DerivedT::key() and contains a value of type ValueT.
+ * It is expected that the DerivedT class must have a key() method which returns a key that is compile time distinguishable from other keys e.g. compile time string.
+ * \tparam DerivedT The class that provides the key() method
+ * \tparam ValueT The type of value the element intends to contain
+ * \tparam Mixins ... extend features of the element.
+ */
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 struct element: Mixins<DerivedT, ValueT>...{
     typedef DerivedT derived_type;

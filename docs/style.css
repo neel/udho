@@ -5,7 +5,9 @@ body, table, div, p, dl {
 }
 
 p.reference, p.definition {
-	font: 400 14px/22px Roboto,sans-serif;
+    font: 10px Roboto,sans-serif;
+    border-top: 1px dashed #d2d2d2;
+    padding-top: 5px;
 }
 
 /* @group Heading Levels */
