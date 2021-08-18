@@ -150,8 +150,11 @@ endif (DOXYGEN_FOUND)
 
 #if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
   #set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
+  
+  #message(STATUS "${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}")
+  
   #add_custom_target(cldoc COMMAND
-    #${CLDOC} generate ${CMAKE_CXX_FLAGS} -I${PROJECT_SOURCE_DIR} -- --output ${CLDOC_OUT} ${HEADERS}
+    #${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}
     #WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   #)
 
