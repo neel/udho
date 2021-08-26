@@ -65,7 +65,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     const value_type& value() const { return _value; }
     bool initialized() const { return _initialized; }
     void uninitialize(bool flag = true) {
-        _initialized = flag;
+        _initialized = !flag;
         if(flag){
             _value = value_type();
         }
