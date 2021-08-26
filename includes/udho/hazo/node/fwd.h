@@ -46,18 +46,25 @@ GENERATE_HAS_MEMBER_TYPE(value_type);
 template <typename HeadT, typename TailT = void>
 struct node;
 
-/**
- * capsule holds data of type data_type inside 
- * some special capsules have value_type which may refer to something  
- * other than data_type depending on what the capsule is encapsulating
- * otherwise data_type and value_type are same
- */
 template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
 struct capsule;
 
+/**
+ * \brief Forward declaration of an internal struct used to analyze the encapsulated type of the capsule.
+ * Given any type DataT detects three characteristics
+ * 
+ * * Whether DataT has a public member function named `key()`.
+ * * Whether DataT has a public member function named `value()` and a public typedef `value_type`.
+ * * Whether DataT has a public typedef `index_type`
+ * 
+ * based on these three characteristics different specializations of encapsulate is used.
+ * 
+ * \tparam DataT type of data to be encapsulated
+ * \ingroup encapsulate
+ */
 template <
     typename DataT, 
-    bool HasKey = detail::has_member_key<DataT>::value, 
+    bool HasKey   = detail::has_member_key<DataT>::value, 
     bool HasValue = detail::has_member_value<DataT>::value && detail::has_member_type_value_type<DataT>::value,
     bool HasIndex = detail::has_member_type_index_type<DataT>::value
 >

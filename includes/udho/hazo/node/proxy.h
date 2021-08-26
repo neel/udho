@@ -132,6 +132,7 @@ struct group{
  *                          before<before<before<before<before<before<>, A>, B>, C>, D>, E>
  *                      >
  * \endcode
+ * \ingroup node
  */
 template <typename BeforeT, typename H = void, typename... Rest>
 struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {

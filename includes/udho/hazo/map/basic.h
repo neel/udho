@@ -63,6 +63,8 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     using translate = ContainerT<H, X...>;
     template <template <typename> class F>
     using transform = basic_map<Policy, F<H>, F<X>...>;
+    using indices = typename node_type::types::indices;
+    using keys = typename node_type::types::keys;
     
     using node_type::node_type;
     basic_map(const H& h, const X&... xs): node<H, basic_map<Policy, X...>>(h, xs...){}
@@ -120,6 +122,8 @@ struct basic_map<Policy, H>: node<H, void>{
     using translate = ContainerT<H>;
     template <template <typename> class F>
     using transform = basic_map<Policy, F<H>>;
+    using indices = typename node_type::types::indices;
+    using keys = typename node_type::types::keys;
     
     using node_type::node_type;
     basic_map(const H& h): node<H, void>(h){}

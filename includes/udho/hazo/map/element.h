@@ -37,23 +37,64 @@ namespace udho{
 namespace util{
 namespace hazo{
     
+/**
+ * An element is an object identifiable by a key defined by DerivedT::key() and contains a value of type ValueT.
+ * It is expected that the DerivedT class must have a key() method which returns a key that is compile time distinguishable from other keys e.g. compile time string.
+ * \tparam DerivedT The class that provides the key() method
+ * \tparam ValueT The type of value the element intends to contain
+ * \tparam Mixins ... extend features of the element.
+ * \ingroup map
+ */
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 struct element: Mixins<DerivedT, ValueT>...{
+    /**
+     * Derived type
+     */
     typedef DerivedT derived_type;
+    /**
+     * Value type
+     */
     typedef ValueT value_type;
     typedef element<DerivedT, ValueT, Mixins...> self_type;
+    /**
+     * element type
+     */
     typedef self_type element_type;
+    /**
+     * alter the value type and produce a new element type 
+     */
     template <typename AltValueT>
     using alter = element<DerivedT, AltValueT, Mixins...>;
     
+    /**
+     * element handle
+     */
     const static constexpr element_t<derived_type> val = element_t<derived_type>();
     
+    /**
+     * Construct an element
+     * @{
+     */
     element(): _value(value_type()), _initialized(false){}
     element(const value_type& v): _value(v), _initialized(true){}
     element(const self_type& other) = default;
-    static constexpr auto key() { return DerivedT::key(); }
-    std::string name() const { return std::string(key().c_str()); }
+    /// @}
     
+    /**
+     * returns the key used to identify the element
+     * @{
+     */
+    static constexpr auto key() { return DerivedT::key(); }
+    /**
+     * returns the key as std::string for runtime usage
+     */
+    std::string name() const { return std::string(key().c_str()); }
+    /// @}
+    
+    /**
+     * Assign a value to the element
+     * @{
+     */
     template <typename V, typename = typename std::enable_if<std::is_assignable<value_type, V>::value>::type>
     self_type& operator=(const V& v) { 
         _value = v; 
@@ -61,8 +102,20 @@ struct element: Mixins<DerivedT, ValueT>...{
         return *this; 
     }
     self_type& operator=(const self_type& other) = default;
+    /// @}
+    
+    /**
+     * Get the value of the element
+     * @{
+     */
     value_type& value() { return _value; }
     const value_type& value() const { return _value; }
+    /// @}
+    
+    /**
+     * Checks whether the element has been initialized with a value or not 
+     * @{
+     */
     bool initialized() const { return _initialized; }
     void uninitialize(bool flag = true) {
         _initialized = !flag;
@@ -70,9 +123,28 @@ struct element: Mixins<DerivedT, ValueT>...{
             _value = value_type();
         }
     }
+    /// @}
+    
+    /**
+     * Compare with a value of value_type
+     * \param v value_type
+     * @{
+     */
     bool operator==(const value_type& v) const { return _initialized && _value == v; }
+    /**
+     * Compare with an element of same type
+     * \param other element_type
+     */
     bool operator==(const self_type& other) const { return _initialized == other._initialized && _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
+    /// @}
+    
+    /**
+     * Set value of the element only if the type of value matches with value type and name matches with the name of the element
+     * \param n name 
+     * \param v value
+     * @{
+     */
     template<typename V>
     typename std::enable_if<std::is_assignable<value_type, V>::value, void>::type set(const std::string& n, const V& v){
         if(n == name()){
@@ -82,6 +154,7 @@ struct element: Mixins<DerivedT, ValueT>...{
     }
     template<typename V>
     typename std::enable_if<!std::is_assignable<value_type, V>::value, void>::type set(const std::string&, const V&){}
+    /// @}
     
     private:
         value_type _value;

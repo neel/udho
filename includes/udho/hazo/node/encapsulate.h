@@ -77,6 +77,18 @@ struct index_<DataT, false>{
 }
 }
     
+/**
+ * \brief An internal struct used to analyze the encapsulated type of the capsule.
+ * \tparam DataT the type of data to be encapsulated
+ * 
+ * Depending on DataT the three datatypes `key_type`, `value_type` and `index_type` are defined as described below.
+ * 
+ * * If DataT has a public member function named `key()` then its return type is used to define `key_type`. Otherwise `key_type` is void.
+ * * If DataT has a public member function named `value()` and a public typedef `value_type` then that `value_type` is used to define `value_type`. Otherwise `value_type` is same as `DataT`
+ * * If DataT has a public typedef `index_type` then that is used to define `index_type`, otherwise `DataT` is used as `index_type`.
+ * 
+ * \ingroup encapsulate
+ */
 template <typename DataT, bool HasKey, bool HasValue, bool HasIndex>
 struct encapsulate
     : detail::encapsulate::key_  <DataT, HasKey>,

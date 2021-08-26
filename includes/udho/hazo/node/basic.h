@@ -36,103 +36,285 @@ namespace udho{
 namespace util{
 namespace hazo{
     
+/**
+ * \brief basic types for a non-terminal node 
+ * \tparam HeadT type of the data inside this node
+ * \tparam TailT tail of the current node
+ * basic_node provide type assistance for different operations on the node.
+ * \ingroup node
+ */
 template <typename HeadT, typename TailT = void>
 struct basic_node{
+    /**
+     * tail type
+     */
     typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    /**
+     * capsule type
+     */
     typedef capsule<HeadT> capsule_type;
+    /**
+     * key type
+     */
     typedef typename capsule_type::key_type key_type;
+    /**
+     * data type
+     */
     typedef typename capsule_type::data_type data_type;
+    /**
+     * value type
+     */
     typedef typename capsule_type::value_type value_type;
+    /**
+     * index type
+     */
     typedef typename capsule_type::index_type index_type;
     
+    /**
+     * types
+     */
     struct types{
+        /**
+         * type of the tail at N'th level of depth
+         * \tparam N level of depth
+         */
         template <int N>
         using tail_at = typename std::conditional<N == 0, tail_type, typename tail_type::types::template tail_at<N-1>>;
+        /**
+         * type of the capsule at N'th level of depth
+         * \tparam N level of depth
+         */
         template <int N>
         using capsule_at = typename std::conditional<N == 0, capsule_type, typename tail_type::types::template capsule_at<N-1>>::type;
+        /**
+         * type of the data inside the capsule at N'th level of depth 
+         * \tparam N level of depth
+         */
         template <int N>
         using data_at = typename capsule_at<N>::data_type;
+        /**
+         * value_type of the data inside the capsule at N'th level of depth
+         * \tparam N level of depth
+         */
         template <int N>
         using value_at = typename capsule_at<N>::value_type;
+        /**
+         * type of capsule used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, 
                 capsule_type, 
                 typename tail_type::types::template capsule_of<T, N - std::is_same<T, index_type>::value>
             >::type;
+        /**
+         * type of data used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using data_of = typename capsule_of<T, N>::data_type;
+        /**
+         * value_type of data used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using value_of = typename capsule_of<T, N>::value_type;
+        /**
+         * type of data used for the node identified by the key KeyT.
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
                 data_type,
                 typename tail_type::types::template data_for<KeyT>
             >::type;
+        /**
+         * value_type of data used for the node identified by the key KeyT.
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
                 value_type,
                 typename tail_type::types::template value_for<KeyT>
             >::type;
             
+        /**
+         * A chain of all index_types in the chain of nodes
+         */
         using indices = basic_node<index_type, typename tail_type::types::indices>;
+        /**
+         * A chain of all key_type's in the chain of nodes
+         */
         using keys = basic_node<key_type, typename tail_type::types::keys>;
             
+        /**
+         * Checks whether there exists a node encapsulating data with index_type T
+         * \tparam T index_type searched for
+         */
         template <typename T>
         struct exists{
-            enum { value = std::is_same<T, index_type>::value || tail_type::types::template exists<T>::value };
+            enum { 
+                /**
+                 * true if the chain of nodes contains a node with index_type T
+                 */
+                value = std::is_same<T, index_type>::value || tail_type::types::template exists<T>::value 
+            };
         };
+        
+        /**
+         * Checks whether there exists a node with key_type provided by the KeyT
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         struct has{
-            enum { value = (!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value) || tail_type::types::template has<KeyT>::value };
+            enum { 
+                /**
+                 * true if the chain of nodes contains a node with key_type KeyT
+                 */
+                value = (!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value) || tail_type::types::template has<KeyT>::value 
+            };
         };
     };
 };
 
+/**
+ * \brief basic types for the terminal node
+ * \tparam HeadT type of the data inside this node
+ * basic_node provide type assistance for different operations on the node.
+ * \ingroup node
+ */
 template <typename HeadT>
 struct basic_node<HeadT, void>{
+    /**
+     * The terminal node has no tail, hence set to void.
+     */
     typedef void tail_type;
+    /**
+     * type of capsule for the current node
+     */
     typedef capsule<HeadT> capsule_type;
+    /**
+     * key type for the current node
+     */
     typedef typename capsule_type::key_type key_type;
+    /**
+     * data type for the current node
+     */
     typedef typename capsule_type::data_type data_type;
+    /**
+     * value_type for the current node
+     */
     typedef typename capsule_type::value_type value_type;
+    /**
+     * index_type for the current node
+     */
     typedef typename capsule_type::index_type index_type;
     
+    /**
+     * types
+     */
     struct types{
+        /**
+         * type of the tail at N'th level of depth (void as thsi is the terminal node)
+         * \tparam N level of depth
+         */
         template <int N>
         using tail_at = void;
+        /**
+         * type of the capsule at N'th level of depth (void unless N is 0)
+         * \tparam N level of depth
+         */
         template <int N>
         using capsule_at = typename std::conditional<N == 0, capsule_type, void>::type;
+        /**
+         * type of the data inside the capsule at N'th level of depth 
+         * \tparam N level of depth
+         */
         template <int N>
         using data_at = typename capsule_at<N>::data_type;
+        /**
+         * value_type of the data inside the capsule at N'th level of depth
+         * \tparam N level of depth
+         */
         template <int N>
         using value_at = typename capsule_at<N>::value_type;
+        /**
+         * type of capsule used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, capsule_type, void>::type;
+        /**
+         * type of data used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using data_of = typename capsule_of<T, N>::data_type;
+        /**
+         * value_type of data used for N'th instance of index T in the chain of nodes.
+         * \tparam T index_type searched for
+         * \tparam N defaults to 0
+         */
         template <typename T, int N = 0>
         using value_of = typename capsule_of<T, N>::value_type;
+        /**
+         * type of data used for the node identified by the key KeyT.
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
             data_type,
             void
             >::type;
+        /**
+         * value_type of data used for the node identified by the key KeyT.
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
             value_type,
             void
             >::type;
             
+        /**
+         * A chain of all index_types in the chain of nodes
+         */
         using indices = basic_node<index_type, void>;
+        /**
+         * A chain of all key_type's in the chain of nodes
+         */
         using keys = basic_node<key_type, void>;
             
+        /**
+         * Checks whether there exists a node encapsulating data with index_type T
+         * \tparam T index_type searched for
+         */
         template <typename T>
         struct exists{
-            enum { value = std::is_same<T, index_type>::value };
+            enum { 
+                /**
+                 * true if the chain of nodes contains a node with index_type T
+                 */
+                value = std::is_same<T, index_type>::value 
+            };
         };
+        /**
+         * Checks whether there exists a node with key_type provided by the KeyT
+         * \tparam KeyT key_type searched for
+         */
         template <typename KeyT>
         struct has{
-            enum { value = !std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value};
+            enum { 
+                /**
+                 * true if the chain of nodes contains a node with key_type KeyT
+                 */
+                value = !std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value
+            };
         };
     };
 };
