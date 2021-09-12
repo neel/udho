@@ -2,6 +2,11 @@
 #define UDHO_PAGE_H
 
 #include "util.h"
+#include <sstream>
+#include <string>
+#include <sstream>
+#include <set>
+#include <vector>
 #include <stdexcept>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -22,6 +27,58 @@ namespace internal{
 }
     
 namespace exceptions{
+
+namespace visual{
+
+    /**
+     * @brief A block in the error page generated due to an exception
+     * 
+     */
+    class block{
+        std::string           _id;
+        std::set<std::string> _classes;
+        std::string           _content;
+
+        public:
+            inline explicit block(const std::string& id = ""): _id(id) {}
+            inline explicit block(const std::string& body, const std::string& id = ""): _id(id), _content(body) {}
+
+            inline void id(const std::string& id) { _id = id; }
+            inline std::string id() const { return _id; }
+
+            inline void add_class(const std::string& class_name) { _classes.insert(class_name); }
+            inline bool has_class(const std::string& class_name) const { return _classes.count(class_name) > 0; }
+
+            inline void content(const std::string& body) { _content = body; }
+            inline std::string content() const { return _content; }
+
+            std::string html() const;
+    };
+
+    /**
+     * @brief 
+     * 
+     */
+    class page{
+        boost::beast::http::status _status;
+        std::string                _heading;
+        std::vector<block>         _blocks;
+
+        public:
+            inline explicit page(const boost::beast::http::status& status): _status(status) {}
+            inline explicit page(const boost::beast::http::status& status, const std::string& heading): _status(status), _heading(heading) {}
+
+            inline void heading(const std::string& heading) { _heading = heading; }
+            inline std::string heading() const { return _heading; }
+
+            boost::beast::http::status status() const { return _status; }
+
+            inline void add_block(const block& blk) { _blocks.push_back(blk); }
+
+            std::string html() const;
+    };
+}
+
     /**
      * throw HTTP error exception in order to send a HTTP response other than 200 OK. Uncaught exceptions are presented as html page with routing sumary 
      * @code
@@ -31,6 +88,7 @@ namespace exceptions{
     struct http_error: public std::exception{
         typedef boost::beast::http::header<false> headers_type;
         
+        std::string _err_str;
         boost::beast::http::status _status;
         std::string _message;
         headers_type _headers;
@@ -115,7 +173,7 @@ namespace exceptions{
          * @param content 
          * @return std::string 
          */
-        std::string page(const std::string& target, std::string content="") const;
+        virtual std::string page(const std::string& target, std::string content="") const;
         /**
          * @brief Generates the HTML string with the summary of the URL router.
          * 
