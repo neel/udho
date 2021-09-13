@@ -4,19 +4,20 @@
 
 std::string udho::exceptions::visual::block::html() const {
     std::stringstream stream;
-    stream << "<div ";
-    if(!_id.empty()){
-        stream << "id = '" << _id << "' ";
-    }
-    if(!_classes.empty()){
-        stream << "class = '";
+    stream << "<div class='block ";
+    if(!_classes.empty())
         for(const std::string& class_name: _classes){
             stream << class_name << " ";
         }
-        stream << "'";
-    }
+    stream << "'";
+    if(!_id.empty())
+        stream << "id = '" << _id << "' ";
     stream << ">";
-    stream << _content;
+
+    stream <<   "<h4 class='name'>" << _name << "</h4>";
+    stream <<   "<div class='content'>";
+    stream <<       _content;
+    stream <<   "</div>";
     stream << "</div>";
     return stream.str();
 }
@@ -39,27 +40,49 @@ std::string udho::exceptions::visual::page::html() const {
             margin-left: auto;
             margin-right: auto;
             min-width: 500px;
-            width: 80%%;
+            width: 80%;
             max-width: 800px;
             font-family: monospace;
+            flex-direction: column;
+            display: flex;
+            flex-wrap: nowrap;
+            align-content: stretch;
+            justify-content: space-evenly;
+            align-items: stretch;
         }
-        .header{
+        .status{
             font-size: 40px;
-            width: 100%%;
-            float: left;
-            position: relative;
+            margin: 15px 0px 2px 0px;
+        }
+        .heading{
+            font-size: 15px;
+        }
+        .main{
+            margin-top: 10px;
+            border-top: 2px solid #888;
         }
         .block{
-            width: 100%%;
+            width: 100%;
             text-align: center;
             margin-top: 20px;
             margin-bottom: 20px;
         }
-        .main{
-            width: 100%%;
+        .block .name{
+            text-transform: capitalize;
+            text-align: left;
+        }
+        .block .content{
+            display: flex;
+            flex-direction: column;
+            align-content: stretch;
+            justify-content: space-evenly;
+            align-items: stretch;
         }
         .udho-module{
             display: table-row;
+        }
+        .routes{
+            display: table;
         }
         .column{
             display: table-cell;
@@ -89,21 +112,22 @@ std::string udho::exceptions::visual::page::html() const {
             
         }
         .udho-application{
-            display: table-caption;
-            position: relative;
-            float: left;
+            display: flex;
             padding: 4px 0px 10px 10px;
-            background: #FFFFFF;
-            -webkit-box-shadow: 2px 1px 11px 2px rgba(240,232,232,1);
+            -webkit-box-shadow: 2px 1px 11px 2px rgb(240 232 232);
             -moz-box-shadow: 2px 1px 11px 2px rgba(240,232,232,1);
-            box-shadow: 2px 1px 11px 2px rgba(240,232,232,1);
+            box-shadow: 2px 1px 11px 2px rgb(240 232 232);
             margin-top: 7px;
             -webkit-border-radius: 9px;
             -moz-border-radius: 9px;
             border-radius: 9px;
-            width: 100%%;
             padding-left: 8px;
             padding-right: 8px;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            align-content: stretch;
+            justify-content: space-evenly;
+            align-items: stretch;
         }
         .udho-application-heading{
             border-bottom: 2px solid #d28a93;
@@ -120,13 +144,14 @@ std::string udho::exceptions::visual::page::html() const {
            <<       "<style>" << css << "</style>"
            <<   "</head>"
            <<   "<body>"
-           <<       "<div class='status'>" << (int) _status << " " << _status << "</div>"
-           <<       "<div class='heading'>" << _heading << "</div>"
-           <<       "<div class='blocks'>";
-    for(const block& blk: _blocks){
-        stream << "<div class='block'>" << blk.html() << "</div>";
-    }
-    stream <<       "</div>"
+           <<       "<div class='wrapper'>"
+           <<           "<div class='status'>" << (int) _status << " " << _status << "</div>"
+           <<           "<div class='heading'>" << _heading << "</div>"
+           <<           "<div class='main'>";
+    for(const block& blk: _blocks)
+    stream <<               blk.html();
+    stream <<           "</div>"
+           <<       "</div>"
            <<   "</body>"
            << "</html>";
     return stream.str();
@@ -144,21 +169,19 @@ void udho::exceptions::http_error::redirect(const std::string& url){
     add_header(boost::beast::http::field::location, url);
 }
 
+
+void udho::exceptions::http_error::decorate(udho::exceptions::visual::page& p) const {}
+
 const char* udho::exceptions::http_error::what() const noexcept{
     return _err_str.c_str();
 }
 
-std::string udho::exceptions::http_error::page(const std::string& target, std::string content) const{
-    std::string message = (boost::format("%1% Error while accessing <span class='resource-path'>%2%</span>") % _status % target).str();
+udho::exceptions::visual::page udho::exceptions::http_error::page(const std::string& target) const{
+    std::string heading = (boost::format("%1% Error while accessing <span class='resource-path'>%2%</span>") % _status % target).str();
     if(!_message.empty()){
-        message += (boost::format("<div class='error-message'>%1%</div>") % _message).str();
+        heading += (boost::format("<div class='error-message'>%1%</div>") % _message).str();
     }
-    visual::page p(_status, message);
-    if(!content.empty()){
-        visual::block main(content, "main");
-        p.add_block(main);
-    }
-    return p.html();
+    return udho::exceptions::visual::page(_status, heading);
 }
 
 boost::beast::http::status udho::exceptions::http_error::result() const{

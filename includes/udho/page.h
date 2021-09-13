@@ -35,13 +35,14 @@ namespace visual{
      * 
      */
     class block{
+        std::string           _name;
         std::string           _id;
         std::set<std::string> _classes;
         std::string           _content;
 
         public:
-            inline explicit block(const std::string& id = ""): _id(id) {}
-            inline explicit block(const std::string& body, const std::string& id = ""): _id(id), _content(body) {}
+            inline explicit block(const std::string& name): _name(name) {}
+            inline explicit block(const std::string& name, const std::string& body): _name(name), _content(body) {}
 
             inline void id(const std::string& id) { _id = id; }
             inline std::string id() const { return _id; }
@@ -56,7 +57,7 @@ namespace visual{
     };
 
     /**
-     * @brief 
+     * @brief An error page consists of an HTTP status and a heading. It may also contain a set of blocks
      * 
      */
     class page{
@@ -105,6 +106,9 @@ namespace visual{
          */
         template <typename T>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request) const{
+            visual::page p = page(request.target().to_string());
+            decorate(p);
+
             boost::beast::http::response<boost::beast::http::string_body> res{_status, request.version()};
             for(const auto& header: _headers){
                 res.set(header.name(), header.value());
@@ -112,10 +116,11 @@ namespace visual{
             res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type, "text/html");
             res.keep_alive(request.keep_alive());
-            res.body() = page(request.target().to_string());
+            res.body() = p.html();
             res.prepare_payload();
             return res;
         }
+        
         /**
          * @brief Given a udho request context generates HTTP response with the HTTP request inside the context
          * 
@@ -140,6 +145,12 @@ namespace visual{
          */
         template <typename T, typename RouterT>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request, RouterT& router) const{
+            visual::page p = page(request.target().to_string());
+            std::string routes = "<div class='routes'>"+internal::html_summary(router)+"</div>";
+            visual::block routing("routes", routes);
+            p.add_block(routing);
+            decorate(p);
+
             boost::beast::http::response<boost::beast::http::string_body> res{_status, request.version()};
             for(const auto& header: _headers){
                 res.set(header.name(), header.value());
@@ -147,7 +158,7 @@ namespace visual{
             res.set(boost::beast::http::field::server, UDHO_VERSION_STRING);
             res.set(boost::beast::http::field::content_type, "text/html");
             res.keep_alive(request.keep_alive());
-            res.body() = page(request.target().to_string(), router);
+            res.body() = p.html();
             res.prepare_payload();
             return res;
         }
@@ -171,22 +182,15 @@ namespace visual{
          * 
          * @param target 
          * @param content 
-         * @return std::string 
+         * @return visual::page
          */
-        virtual std::string page(const std::string& target, std::string content="") const;
+        visual::page page(const std::string& target) const;
         /**
-         * @brief Generates the HTML string with the summary of the URL router.
+         * @brief Decorate a page by adding blocks
          * 
-         * @tparam RouterT 
-         * @param target 
-         * @param router 
-         * @return std::string 
+         * @param p 
          */
-        template <typename RouterT>
-        std::string page(const std::string& target, RouterT& router) const{
-            std::string buffer = internal::html_summary(router);
-            return page(target, buffer);
-        }
+        virtual void decorate(visual::page& p) const;
         /**
          * @brief Returns the exception as plain text
          * 
