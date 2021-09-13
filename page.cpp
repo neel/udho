@@ -70,6 +70,8 @@ std::string udho::exceptions::visual::page::html() const {
         .block .name{
             text-transform: capitalize;
             text-align: left;
+            margin-top: 2px;
+            margin-bottom: 10px;
         }
         .block .content{
             display: flex;
@@ -77,6 +79,8 @@ std::string udho::exceptions::visual::page::html() const {
             align-content: stretch;
             justify-content: space-evenly;
             align-items: stretch;
+            padding-left: 8px;
+            border-left: 10px solid #ededed;
         }
         .udho-module{
             display: table-row;
@@ -135,6 +139,25 @@ std::string udho::exceptions::visual::page::html() const {
         }
         .udho-application-overloads{
             margin-top: 2px;
+        }
+        .db-error{
+            display: block;
+            float: left;
+            width: 100%;
+            text-align: left;
+            background: #ededed;
+        }
+        .db-prop{
+            margin-bottom: 5px;
+            padding: 6px;
+        }
+        .prop > .db-key{
+
+        }
+        .prop > .db-value{
+            margin-top: 2px;
+            background: #fcfcfc;
+            padding: 4px;
         }
     )";
     std::stringstream stream;
