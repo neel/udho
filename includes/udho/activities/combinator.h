@@ -63,6 +63,7 @@ namespace activities{
         
         next_type  _next;
         std::atomic<std::size_t> _counter;
+        
         std::mutex  _mutex;
         signal_type _preparators;
         std::atomic<bool> _canceled;
