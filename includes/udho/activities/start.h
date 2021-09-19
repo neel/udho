@@ -80,51 +80,22 @@ namespace activities{
     template <typename NextT, typename ContextT, typename... T>
     struct combinator<NextT, start<ContextT, T...>>{
         typedef std::shared_ptr<NextT> next_type;
-        typedef boost::signals2::signal<void (NextT&)> signal_type;
-
         next_type  _next;
 
-        std::atomic<std::size_t> _counter;
-
-        std::mutex  _mutex;
-        signal_type _preparators;
-        std::atomic<bool> _canceled;
-
-        combinator(next_type& next): _next(next), _counter(1) {}
-
-        void cancel(){
-            _canceled = true;
-            propagate();
-        }
-        
-        void propagate(){
-            _counter--;
-            if(!_counter){
-                _mutex.lock();
-                if(_canceled){
-                    _next->cancel();
-                }else{
-                    if(!_preparators.empty()){
-                        _preparators(*_next);
-                        _preparators.disconnect_all_slots();
-                    }
-                    (*_next)();
-                }
-                _mutex.unlock();
-            }
-        }
-        
+        combinator(next_type& next): _next(next){}
         void operator()(){
             propagate();
+        }
+        void propagate(){
+            (*_next)();
         }
         
         /**
          *set a preparator callback which will be called with a reference to teh next activity. The preparator callback is supposed to prepare the next activity by using the data callected till that time.
          */
         template <typename PreparatorT>
-        void prepare(PreparatorT prep){
-            boost::function<void (NextT&)> fnc(prep);
-            _preparators.connect(prep);
+        void prepare(PreparatorT){
+            static_assert(true, "A subtask with no dependency cannot be prepared, because no other subtask has completed before it.");
         }
     };
     
