@@ -91,7 +91,7 @@ namespace activities{
         }
         
         /**
-         *set a preparator callback which will be called with a reference to teh next activity. The preparator callback is supposed to prepare the next activity by using the data callected till that time.
+         * A subtask with no dependency cannot be prepared, because no other subtask has completed before it.
          */
         template <typename PreparatorT>
         void prepare(PreparatorT){
