@@ -151,13 +151,18 @@ std::string udho::exceptions::visual::page::html() const {
             margin-bottom: 5px;
             padding: 6px;
         }
-        .prop > .db-key{
+        .db-prop > .db-key{
 
         }
-        .prop > .db-value{
+        .db-prop > .db-value{
             margin-top: 2px;
             background: #fcfcfc;
             padding: 4px;
+        }
+        .db-prop > .db-value code{
+            white-space: pre;
+            overflow-x: auto;
+            display: block;
         }
     )";
     std::stringstream stream;
