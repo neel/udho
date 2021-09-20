@@ -48,12 +48,12 @@ namespace activities{
      * \ingroup activities
      */
     template <typename DerivedT, typename SuccessT, typename FailureT>
-    struct result: result_data<SuccessT, FailureT>{
-        typedef result_data<SuccessT, FailureT> data_type;
-        typedef accessor<detail::labeled<DerivedT, data_type>> accessor_type;
-        typedef typename data_type::success_type success_type;
-        typedef typename data_type::failure_type failure_type;
-        typedef boost::signals2::signal<void (const data_type&)> signal_type;
+    struct result: udho::activities::result_data<SuccessT, FailureT>{
+        typedef udho::activities::result_data<SuccessT, FailureT> result_data_type;
+        typedef accessor<detail::labeled<DerivedT, result_data_type>> accessor_type;
+        typedef typename result_data_type::success_type success_type;
+        typedef typename result_data_type::failure_type failure_type;
+        typedef boost::signals2::signal<void (const result_data_type&)> signal_type;
         typedef boost::signals2::signal<void ()> cancelation_signal_type;
         typedef boost::function<bool (const success_type&)> cancel_if_ftor;
         typedef boost::function<bool (const success_type&)> abort_error_ftor;
@@ -82,7 +82,7 @@ namespace activities{
          */
         template <typename CombinatorT>
         void done(CombinatorT cmb){
-            boost::function<void (const data_type&)> fnc([cmb](const data_type& data){
+            boost::function<void (const result_data_type&)> fnc([cmb](const result_data_type& data){
                 cmb->operator()(data);
             });
             _signal.connect(fnc);
@@ -119,16 +119,16 @@ namespace activities{
              * \param data success data
              */
             void success(const success_type& data){
-                data_type::success(data);
-                completed();
+                result_data_type::success(data);
+                _finish();
             }
             /**
              * signal failed completion of the activity with failure data of type FailureT
              * \param data failure data
              */
             void failure(const failure_type& data){
-                data_type::failure(data);
-                completed();
+                result_data_type::failure(data);
+                _finish();
             }
         private:
             /**
@@ -137,13 +137,13 @@ namespace activities{
              * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
              * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
              */
-            void cancel(){
-                data_type::cancel();
+            void _cancel(){
+                result_data_type::cancel();
                 bool propagate = true;
-                if(data_type::failed() && !_abort_failure.empty()){
-                    propagate = _abort_failure(data_type::failure_data());
+                if(result_data_type::failed() && !_abort_failure.empty()){
+                    propagate = _abort_failure(result_data_type::failure_data());
                 }else if(!_abort_error.empty()){
-                    propagate = _abort_error(data_type::success_data());
+                    propagate = _abort_error(result_data_type::success_data());
                 }
                 if(propagate) _cancelation_signals();
             }
@@ -154,24 +154,24 @@ namespace activities{
              * If there is a cancel_if callback set then this behavour is overridden by the boolean output of the provided callback.
              * Otherwise it continues executing the activity tree 
              */
-            void completed(){                
+            void _finish(){                
                 bool should_cancel = false;
-                if(!data_type::failed()){
+                if(!result_data_type::failed()){
                     if(!_cancel_if.empty()){
-                        should_cancel = _cancel_if(data_type::success_data());
+                        should_cancel = _cancel_if(result_data_type::success_data());
                     }
                 }else{
-                    should_cancel = data_type::failed() && _required;
+                    should_cancel = result_data_type::failed() && _required;
                 }
 
-                if(should_cancel) data_type::cancel();
+                if(should_cancel) result_data_type::cancel();
 
-                data_type self = static_cast<const data_type&>(*this);
-                detail::labeled<DerivedT, data_type> labeled(self);
+                result_data_type self = static_cast<const result_data_type&>(*this);
+                detail::labeled<DerivedT, result_data_type> labeled(self);
                 _shadow << labeled;
                 
                 if(should_cancel){
-                    cancel();
+                    _cancel();
                 }else{
                     _signal(self);
                 }

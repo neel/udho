@@ -44,7 +44,7 @@ namespace udho{
  */
 template <typename... T, typename ContextT>
 auto collect(ContextT& ctx, const std::string& name){
-    return activities::collect<T...>(ctx, name);
+    return udho::activities::collect<T...>(ctx, name);
 }
 
 /**
@@ -53,7 +53,7 @@ auto collect(ContextT& ctx, const std::string& name){
  * \ingroup data
  */
 template <typename... T>
-using accessor = activities::accessor<T...>;
+using accessor = udho::activities::accessor<T...>;
 
 /**
  * shorthand for udho::activities::activity
@@ -61,7 +61,7 @@ using accessor = activities::accessor<T...>;
  * \ingroup activities
  */
 template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
-using activity = activities::activity<DerivedT, SuccessDataT, FailureDataT>;
+using activity = udho::activities::activity<DerivedT, SuccessDataT, FailureDataT>;
 
 /**
  * shorthand for udho::activities::require
@@ -69,7 +69,7 @@ using activity = activities::activity<DerivedT, SuccessDataT, FailureDataT>;
  * \ingroup activities
  */
 template <typename... DependenciesT>
-using require = activities::require<DependenciesT...>;
+using require = udho::activities::require<DependenciesT...>;
 
 /**
  * shorthand for udho::activities::perform
@@ -77,7 +77,7 @@ using require = activities::require<DependenciesT...>;
  * \ingroup activities
  */
 template <typename ActivityT>
-using perform = activities::perform<ActivityT>;
+using perform = udho::activities::perform<ActivityT>;
 
 /**
  * \see udho::activities::analyzer
