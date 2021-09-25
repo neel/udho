@@ -45,6 +45,7 @@ FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
 
 IF(UDHO_USE_NLOHMANN_JSON)
+    SET(JSON_BuildTests OFF CACHE INTERNAL "")
     FIND_PACKAGE(nlohmann_json)
     if(nlohmann_json_FOUND)
         add_definitions(-DWITH_JSON_NLOHMANN)
