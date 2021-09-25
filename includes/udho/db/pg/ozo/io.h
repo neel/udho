@@ -29,7 +29,6 @@
 #define UDHO_ACTIVITIES_DB_PG_IO_H
 
 #include <string>
-#include <nlohmann/json.hpp>
 #include <ozo/connection_pool.h>
 #include <ozo/connection_info.h>
 #include <udho/db/pg/schema/column.h>
@@ -37,7 +36,13 @@
 #include <system_error>
 #include <boost/format.hpp>
 
+#ifdef WITH_JSON_NLOHMANN
+#include <nlohmann/json.hpp>
+#endif 
+
 namespace ozo {
+
+#ifdef WITH_JSON_NLOHMANN
 
 template <>
 struct size_of_impl<nlohmann::json> {
@@ -65,6 +70,8 @@ struct recv_impl<nlohmann::json> {
         return res;
     }
 };
+
+#endif 
 
 } 
 
@@ -100,7 +107,10 @@ struct receive<udho::db::pg::basic_schema<Fields...>>{
     
 }}}}
 
+
+#ifdef WITH_JSON_NLOHMANN
 OZO_PG_BIND_TYPE(nlohmann::json, "json")
+#endif
 
 OZO_STRONG_TYPEDEF(std::string, varchar)
 OZO_PG_BIND_TYPE(varchar, "varchar")

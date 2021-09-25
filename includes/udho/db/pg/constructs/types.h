@@ -34,8 +34,11 @@
 #include <ozo/core/strong_typedef.h>
 #include <ozo/pg/types.h>
 #include <udho/db/pg/constructs/cast.h>
-#include <nlohmann/json.hpp>
 #include <ctti/nameof.hpp>
+
+#ifdef WITH_JSON_NLOHMANN
+#include <nlohmann/json.hpp>
+#endif 
 
 namespace udho{
 namespace db{
@@ -109,8 +112,13 @@ using varchar     = type<udho::db::pg::oz::varchar, names::varchar>;
 using boolean     = type<bool, names::boolean>;
 using text        = type<std::string, names::text>;
 using timestamp   = type<ozo::pg::timestamp, names::timestamp>;
-using json        = type<nlohmann::json, names::json>;
 using uuid        = type<ozo::pg::uuid, names::uuid>;
+
+#ifdef WITH_JSON_NLOHMANN
+using json        = type<nlohmann::json, names::json>;
+#else 
+using json        = type<ozo::pg::json, names::json>;
+#endif 
 
 }
  

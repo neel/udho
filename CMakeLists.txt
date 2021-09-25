@@ -25,6 +25,7 @@ option(UDHO_BUILD_TESTS "Build the unit tests" ON)
 option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
 option(UDHO_USE_ICU "Build with ICU" ON)
 option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
+option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
 
 if(UDHO_USE_ICU)
     add_definitions(-DWITH_ICU)
@@ -42,11 +43,13 @@ endif()
 FIND_PACKAGE(Threads REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
-FIND_PACKAGE(nlohmann_json)
 
-if(nlohmann_json_FOUND)
-    add_definitions(-DWITH_JSON_NLOHMANN)
-endif()
+IF(UDHO_USE_NLOHMANN_JSON)
+    FIND_PACKAGE(nlohmann_json)
+    if(nlohmann_json_FOUND)
+        add_definitions(-DWITH_JSON_NLOHMANN)
+    endif()
+ENDIF()
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
@@ -82,87 +85,87 @@ SET(UDHO_HEADERS
     includes/udho/scope.h
     includes/udho/visitor.h
     includes/udho/hazo.h
-    db/pretty/pretty.h
-    db/pretty/detail.h
-    db/pretty/type.h
-    db/pretty/printer.h
-    db/pretty/fwd.h
-    db/fieldset.h
-    db/pg.h
-    db/common.h
-    db/pg/pg.h
-    db/pg/schema.h
-    db/pg/constructs/operators.h
-    db/pg/constructs/cast.h
-    db/pg/constructs/concat.h
-    db/pg/constructs/strings.h
-    db/pg/constructs/fwd.h
-    db/pg/constructs/constructs.h
-    db/pg/constructs/alias.h
-    db/pg/constructs/types.h
-    db/pg/constructs/functions.h
-    db/pg/generators.h
-    db/pg/generators/operators.h
-    db/pg/generators/group.h
-    db/pg/generators/from.h
-    db/pg/generators/into.h
-    db/pg/generators/limit.h
-    db/pg/generators/generators.h
-    db/pg/generators/select.h
-    db/pg/generators/where.h
-    db/pg/generators/set.h
-    db/pg/generators/order.h
-    db/pg/generators/keys.h
-    db/pg/generators/values.h
-    db/pg/generators/returning.h
-    db/pg/generators/fwd.h
-    db/pg/generators/join.h
-    db/pg/crud/from.h
-    db/pg/crud/into.h
-    db/pg/crud/crud.h
-    db/pg/crud/remove.h
-    db/pg/crud/select.h
-    db/pg/crud/builder.h
-    db/pg/crud/insert.h
-    db/pg/crud/update.h
-    db/pg/crud/fwd.h
-    db/pg/crud/join.h
-    db/pg/activities/traits.h
-    db/pg/activities/activity.h
-    db/pg/activities/start.h
-    db/pg/activities/on.h
-    db/pg/activities/after.h
-    db/pg/activities/controller.h
-    db/pg/activities/failure.h
-    db/pg/activities/data.h
-    db/pg/activities/subtask.h
-    db/pg/features.h
-    db/pg/schema/operations.h
-    db/pg/schema/basic.h
-    db/pg/schema/readonly.h
-    db/pg/schema/detail.h
-    db/pg/schema/defs.h
-    db/pg/schema/schema.h
-    db/pg/schema/field.h
-    db/pg/schema/column.h
-    db/pg/schema/fwd.h
-    db/pg/schema/relation.h
-    db/pg/model.h
-    db/pg/decorators.h
-    db/pg/decorators/logical.h
-    db/pg/decorators/traits.h
-    db/pg/decorators/conjunctions.h
-    db/pg/decorators/conjugate.h
-    db/pg/decorators/comma.h
-    db/pg/decorators/assignments.h
-    db/pg/decorators/keys.h
-    db/pg/decorators/values.h
-    db/pg/decorators/conditions.h
-    db/pg/io/pretty.h
-    db/pg/io/json.h
-    db/pg/io/form.h
-    db/pg/ozo/io.h
-    db/pg/ozo/connection.h
+    includes/udho/db/pretty/pretty.h
+    includes/udho/db/pretty/detail.h
+    includes/udho/db/pretty/type.h
+    includes/udho/db/pretty/printer.h
+    includes/udho/db/pretty/fwd.h
+    includes/udho/db/fieldset.h
+    includes/udho/db/pg.h
+    includes/udho/db/common.h
+    includes/udho/db/pg/pg.h
+    includes/udho/db/pg/schema.h
+    includes/udho/db/pg/constructs/operators.h
+    includes/udho/db/pg/constructs/cast.h
+    includes/udho/db/pg/constructs/concat.h
+    includes/udho/db/pg/constructs/strings.h
+    includes/udho/db/pg/constructs/fwd.h
+    includes/udho/db/pg/constructs/constructs.h
+    includes/udho/db/pg/constructs/alias.h
+    includes/udho/db/pg/constructs/types.h
+    includes/udho/db/pg/constructs/functions.h
+    includes/udho/db/pg/generators.h
+    includes/udho/db/pg/generators/operators.h
+    includes/udho/db/pg/generators/group.h
+    includes/udho/db/pg/generators/from.h
+    includes/udho/db/pg/generators/into.h
+    includes/udho/db/pg/generators/limit.h
+    includes/udho/db/pg/generators/generators.h
+    includes/udho/db/pg/generators/select.h
+    includes/udho/db/pg/generators/where.h
+    includes/udho/db/pg/generators/set.h
+    includes/udho/db/pg/generators/order.h
+    includes/udho/db/pg/generators/keys.h
+    includes/udho/db/pg/generators/values.h
+    includes/udho/db/pg/generators/returning.h
+    includes/udho/db/pg/generators/fwd.h
+    includes/udho/db/pg/generators/join.h
+    includes/udho/db/pg/crud/from.h
+    includes/udho/db/pg/crud/into.h
+    includes/udho/db/pg/crud/crud.h
+    includes/udho/db/pg/crud/remove.h
+    includes/udho/db/pg/crud/select.h
+    includes/udho/db/pg/crud/builder.h
+    includes/udho/db/pg/crud/insert.h
+    includes/udho/db/pg/crud/update.h
+    includes/udho/db/pg/crud/fwd.h
+    includes/udho/db/pg/crud/join.h
+    includes/udho/db/pg/activities/traits.h
+    includes/udho/db/pg/activities/activity.h
+    includes/udho/db/pg/activities/start.h
+    includes/udho/db/pg/activities/on.h
+    includes/udho/db/pg/activities/after.h
+    includes/udho/db/pg/activities/controller.h
+    includes/udho/db/pg/activities/failure.h
+    includes/udho/db/pg/activities/data.h
+    includes/udho/db/pg/activities/subtask.h
+    includes/udho/db/pg/features.h
+    includes/udho/db/pg/schema/operations.h
+    includes/udho/db/pg/schema/basic.h
+    includes/udho/db/pg/schema/readonly.h
+    includes/udho/db/pg/schema/detail.h
+    includes/udho/db/pg/schema/defs.h
+    includes/udho/db/pg/schema/schema.h
+    includes/udho/db/pg/schema/field.h
+    includes/udho/db/pg/schema/column.h
+    includes/udho/db/pg/schema/fwd.h
+    includes/udho/db/pg/schema/relation.h
+    includes/udho/db/pg/model.h
+    includes/udho/db/pg/decorators.h
+    includes/udho/db/pg/decorators/logical.h
+    includes/udho/db/pg/decorators/traits.h
+    includes/udho/db/pg/decorators/conjunctions.h
+    includes/udho/db/pg/decorators/conjugate.h
+    includes/udho/db/pg/decorators/comma.h
+    includes/udho/db/pg/decorators/assignments.h
+    includes/udho/db/pg/decorators/keys.h
+    includes/udho/db/pg/decorators/values.h
+    includes/udho/db/pg/decorators/conditions.h
+    includes/udho/db/pg/io/pretty.h
+    includes/udho/db/pg/io/json.h
+    includes/udho/db/pg/io/form.h
+    includes/udho/db/pg/ozo/io.h
+    includes/udho/db/pg/ozo/connection.h
 )
 SET(UDHO_SOURCES 
     page.cpp

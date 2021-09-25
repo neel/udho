@@ -28,14 +28,16 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_IO_JSON_H
 #define UDHO_ACTIVITIES_DB_PG_IO_JSON_H
 
-#include <nlohmann/json.hpp>
 #include <udho/db/common.h>
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/pg/constructs/types.h>
 
-#include <iostream>
+#ifdef WITH_JSON_NLOHMANN
+#include <nlohmann/json.hpp>
+#endif 
 
+#ifdef WITH_JSON_NLOHMANN
 namespace nlohmann {
     template <>
     struct adl_serializer<ozo::pg::timestamp> {
@@ -55,22 +57,14 @@ namespace nlohmann {
         }
     };
 }
+#endif 
 
 namespace udho{
 namespace db{
 namespace pg{
-    
-template <typename... Fields>
-void to_json(nlohmann::json& json, const pg::basic_schema<Fields...>& schema);
-
-template <typename... Fields>
-void to_json(nlohmann::json& json, const udho::db::results<pg::basic_schema<Fields...>>& results);
-
-template <typename... Fields>
-void to_json(nlohmann::json& json, const udho::db::result<pg::basic_schema<Fields...>>& result);
 
 namespace io{
-    
+
 template <typename FieldT, bool Detached = FieldT::detached>
 struct extract_relation_name{
     static auto apply(){
@@ -91,7 +85,21 @@ struct extract_relation_name<FieldT, false>{
         return FieldT::relation_type::name();
     }
 };
+
+}
     
+#ifdef WITH_JSON_NLOHMANN
+
+template <typename... Fields>
+void to_json(nlohmann::json& json, const pg::basic_schema<Fields...>& schema);
+
+template <typename... Fields>
+void to_json(nlohmann::json& json, const udho::db::results<pg::basic_schema<Fields...>>& results);
+
+template <typename... Fields>
+void to_json(nlohmann::json& json, const udho::db::result<pg::basic_schema<Fields...>>& result);
+
+namespace io{
 namespace json{
 
 struct decorator{
@@ -191,6 +199,8 @@ void to_json(nlohmann::json& json, const udho::db::result<pg::basic_schema<Field
     udho::db::pg::io::json::result<pg::basic_schema<Fields...>> writer;
     json = writer(result);
 }
+
+#endif
 
 }
 }
