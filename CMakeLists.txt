@@ -82,6 +82,87 @@ SET(UDHO_HEADERS
     includes/udho/scope.h
     includes/udho/visitor.h
     includes/udho/hazo.h
+    db/pretty/pretty.h
+    db/pretty/detail.h
+    db/pretty/type.h
+    db/pretty/printer.h
+    db/pretty/fwd.h
+    db/fieldset.h
+    db/pg.h
+    db/common.h
+    db/pg/pg.h
+    db/pg/schema.h
+    db/pg/constructs/operators.h
+    db/pg/constructs/cast.h
+    db/pg/constructs/concat.h
+    db/pg/constructs/strings.h
+    db/pg/constructs/fwd.h
+    db/pg/constructs/constructs.h
+    db/pg/constructs/alias.h
+    db/pg/constructs/types.h
+    db/pg/constructs/functions.h
+    db/pg/generators.h
+    db/pg/generators/operators.h
+    db/pg/generators/group.h
+    db/pg/generators/from.h
+    db/pg/generators/into.h
+    db/pg/generators/limit.h
+    db/pg/generators/generators.h
+    db/pg/generators/select.h
+    db/pg/generators/where.h
+    db/pg/generators/set.h
+    db/pg/generators/order.h
+    db/pg/generators/keys.h
+    db/pg/generators/values.h
+    db/pg/generators/returning.h
+    db/pg/generators/fwd.h
+    db/pg/generators/join.h
+    db/pg/crud/from.h
+    db/pg/crud/into.h
+    db/pg/crud/crud.h
+    db/pg/crud/remove.h
+    db/pg/crud/select.h
+    db/pg/crud/builder.h
+    db/pg/crud/insert.h
+    db/pg/crud/update.h
+    db/pg/crud/fwd.h
+    db/pg/crud/join.h
+    db/pg/activities/traits.h
+    db/pg/activities/activity.h
+    db/pg/activities/start.h
+    db/pg/activities/on.h
+    db/pg/activities/after.h
+    db/pg/activities/controller.h
+    db/pg/activities/failure.h
+    db/pg/activities/data.h
+    db/pg/activities/subtask.h
+    db/pg/features.h
+    db/pg/schema/operations.h
+    db/pg/schema/basic.h
+    db/pg/schema/readonly.h
+    db/pg/schema/detail.h
+    db/pg/schema/defs.h
+    db/pg/schema/schema.h
+    db/pg/schema/field.h
+    db/pg/schema/column.h
+    db/pg/schema/fwd.h
+    db/pg/schema/relation.h
+    db/pg/model.h
+    db/pg/decorators.h
+    db/pg/decorators/logical.h
+    db/pg/decorators/traits.h
+    db/pg/decorators/conjunctions.h
+    db/pg/decorators/conjugate.h
+    db/pg/decorators/comma.h
+    db/pg/decorators/assignments.h
+    db/pg/decorators/keys.h
+    db/pg/decorators/values.h
+    db/pg/decorators/conditions.h
+    db/pg/io/pretty.h
+    db/pg/io/json.h
+    db/pg/io/form.h
+    db/pg/ozo/io.h
+    db/pg/ozo/connection.h
 )
 SET(UDHO_SOURCES 
     page.cpp
@@ -95,7 +176,7 @@ add_subdirectory(vendor)
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
 TARGET_LINK_LIBRARIES(udho PUBLIC ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-TARGET_LINK_LIBRARIES(udho PUBLIC OpenSSL::SSL certify::core ctti)
+TARGET_LINK_LIBRARIES(udho PUBLIC OpenSSL::SSL certify::core ctti ozo)
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
 if(UDHO_USE_ICU)

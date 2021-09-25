@@ -11,3 +11,4 @@ docs.sphinx/bin
 docs.sphinx/lib
 docs.sphinx/pyvenv.cfg
 docs/_build
+.cache
