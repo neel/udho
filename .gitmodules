@@ -1,6 +1,0 @@
-[submodule "deps/certify"]
-	path = deps/certify
-	url = https://github.com/djarek/certify.git
-[submodule "deps/ctti"]
-	path = deps/ctti
-	url = https://github.com/Manu343726/ctti.git
