@@ -1,0 +1,6 @@
+[submodule "vendor/certify"]
+	path = vendor/certify
+	url = https://github.com/djarek/certify.git
+[submodule "vendor/ctti"]
+	path = vendor/ctti
+	url = https://github.com/Manu343726/ctti.git
