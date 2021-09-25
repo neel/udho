@@ -13,7 +13,7 @@ MACRO(update_submodule submodule_dir)
   ENDIF()
 ENDMACRO()
 
-update_submodule(${PROJECT_SOURCE_DIR}/deps/)
+update_submodule(${PROJECT_SOURCE_DIR}/vendor/)
 
 SET(CMAKE_CXX_STANDARD 14)
 #SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
@@ -42,10 +42,15 @@ endif()
 FIND_PACKAGE(Threads REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
+FIND_PACKAGE(nlohmann_json)
+
+if(nlohmann_json_FOUND)
+    add_definitions(-DWITH_JSON_NLOHMANN)
+endif()
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
-  deps/certify/include
+  vendor/certify/include
 )
 
 SET(UDHO_HEADERS 
@@ -86,18 +91,23 @@ if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 endif()
 
-add_subdirectory(deps)
+add_subdirectory(vendor)
 
 ADD_LIBRARY(udho SHARED ${UDHO_SOURCES} ${UDHO_HEADERS})
-TARGET_LINK_LIBRARIES(udho ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} OpenSSL::SSL certify::core ctti)
+TARGET_LINK_LIBRARIES(udho PUBLIC ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+TARGET_LINK_LIBRARIES(udho PUBLIC OpenSSL::SSL certify::core ctti)
 TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${INCLUDE_DIRS})
 
 if(UDHO_USE_ICU)
-    TARGET_LINK_LIBRARIES(udho ICU::uc ICU::in)
+    TARGET_LINK_LIBRARIES(udho PUBLIC ICU::uc ICU::in)
 endif()
 
 if(UDHO_USE_PUGIXML)
-    TARGET_LINK_LIBRARIES(udho ${PUGIXML_LIBRARIES})
+    TARGET_LINK_LIBRARIES(udho PUBLIC ${PUGIXML_LIBRARIES})
+endif()
+
+if(nlohmann_json_FOUND)
+    TARGET_LINK_LIBRARIES(udho PUBLIC nlohmann_json::nlohmann_json)
 endif()
 
 if(UDHO_BUILD_TESTS)
@@ -106,8 +116,3 @@ if(UDHO_BUILD_TESTS)
 endif()
 
 add_subdirectory(docs)
-
-add_executable(monoid monoid.cpp)
-add_executable(flatten flatten.cpp)
-add_executable(flaten-sandbox sandbox.cpp)
-TARGET_LINK_LIBRARIES(flaten-sandbox udho ctti)

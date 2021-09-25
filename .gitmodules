@@ -4,3 +4,6 @@
 [submodule "vendor/ctti"]
 	path = vendor/ctti
 	url = https://github.com/Manu343726/ctti.git
+[submodule "vendor/ozo"]
+	path = vendor/ozo
+	url = https://github.com/yandex/ozo.git
