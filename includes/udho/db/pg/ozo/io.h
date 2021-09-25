@@ -112,7 +112,7 @@ struct receive<udho::db::pg::basic_schema<Fields...>>{
 OZO_PG_BIND_TYPE(nlohmann::json, "json")
 #endif
 
-OZO_STRONG_TYPEDEF(std::string, varchar)
-OZO_PG_BIND_TYPE(varchar, "varchar")
+// OZO_STRONG_TYPEDEF(std::string, varchar)
+// OZO_PG_BIND_TYPE(varchar, "varchar")
 
 #endif // UDHO_ACTIVITIES_DB_PG_IO_H
