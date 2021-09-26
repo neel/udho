@@ -11,6 +11,7 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
     set(DOXYGEN_XML_DIR ${CMAKE_CURRENT_BINARY_DIR}/xml)
     set(DOXYGEN_XML_INDEX ${DOXYGEN_XML_DIR}/index.xml)
+    get_target_property(UDHO_SOURCE_DIR udho SOURCE_DIR)
 
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 

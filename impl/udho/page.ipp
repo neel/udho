@@ -1,6 +1,8 @@
-#include "udho/page.h"
-#include <boost/format.hpp>
+#ifndef UDHO_PAGE_IPP_H
+#define UDHO_PAGE_IPP_H
 
+#include <boost/format.hpp>
+#include <udho/page.h>
 
 std::string udho::exceptions::visual::block::html() const {
     std::stringstream stream;
@@ -222,3 +224,4 @@ udho::exceptions::http_error udho::exceptions::http_redirection(const std::strin
     return error;
 }
 
+#endif // UDHO_PAGE_IPP_H

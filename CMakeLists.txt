@@ -26,6 +26,11 @@ option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
 option(UDHO_USE_ICU "Build with ICU" ON)
 option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
 option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
+option(UDHO_HEADER_ONLY "Use Udho as Header Only Library" ON)
+
+if(UDHO_HEADER_ONLY)
+    add_compile_definitions(UDHO_HEADER_ONLY)
+endif()
 
 if(UDHO_USE_ICU)
     add_definitions(-DWITH_ICU)
@@ -57,6 +62,7 @@ ENDIF()
 
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
+  ${CMAKE_CURRENT_SOURCE_DIR}/impl
   vendor/certify/include
 )
 
@@ -172,7 +178,7 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/ozo/connection.h
 )
 SET(UDHO_SOURCES 
-    page.cpp
+    sources/udho/page.cpp
 )
 
 if(UDHO_BUILD_EXAMPLES)

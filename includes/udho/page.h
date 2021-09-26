@@ -225,4 +225,8 @@ udho::context<AuxT, RequestT, ShadowT>& operator<<(udho::context<AuxT, RequestT,
     
 }
 
+#ifdef UDHO_HEADER_ONLY
+#include <udho/page.ipp>
+#endif
+
 #endif // UDHO_PAGE_H
