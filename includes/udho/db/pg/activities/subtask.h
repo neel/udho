@@ -38,6 +38,14 @@ namespace db{
 namespace pg{
 namespace activities{
     
+/**
+ * @brief A pg::subtask is the specialization of udho::activities::subtask that adds few features related to a postgresql activity 
+ * - The operator[] forwards to the operator[] of teh underlying pg::activity object
+ * - Automatically binds the default `if_failed`, `if_errored` and `cancel_if` callbacks
+ * 
+ * @tparam ActivityT 
+ * @tparam DependenciesT 
+ */
 template <typename ActivityT, typename... DependenciesT>
 struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     typedef udho::activities::subtask<ActivityT, DependenciesT...> subtask_base;
@@ -47,23 +55,54 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     subtask(const self_type& other) = default;
     
     /**
-     * Arguments for the constructor of the Activity
+     * @brief Construct a pg::subtask with a controller and additional optional arguments passed to the activity's constructor
+     * 
+     * @tparam ContextT 
+     * @tparam T... Activities
+     * @tparam U... Types of additional arguments
+     * @param controller 
+     * @param u... Additional parameters for the activity constructor
+     * @return self_type 
      */
     template <typename ContextT, typename... T, typename... U>
     static self_type with(pg::activities::controller<ContextT, T...> controller, U&&... u){
         return self_type(controller, std::forward<U>(u)...);
     }
     
+    /**
+     * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
+     * 
+     * @tparam ContextT 
+     * @tparam T... Activities
+     * @tparam U... Types of additional arguments
+     * @param collector_ptr 
+     * @param u... Additional parameters for the activity constructor
+     * @return self_type 
+     */
     template <typename ContextT, typename... T, typename... U>
     static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
         return self_type(collector_ptr, std::forward<U>(u)...);
     }
     
+    /**
+     * @brief Get or Set the value of a field of the pg::activity
+     * 
+     * @tparam FieldT 
+     * @param field 
+     * @return decltype(auto) 
+     */
     template <typename FieldT>
     decltype(auto) operator[](FieldT&& field){
         return subtask_base::activity()[std::forward<FieldT>(field)];
     }
     
+    /**
+     * @brief Get or Set the value of a field of the pg::activity
+     * 
+     * @tparam FieldT 
+     * @param field 
+     * @return decltype(auto) 
+     */
     template <typename FieldT>
     decltype(auto) operator[](FieldT&& field) const {
         return subtask_base::activity()[std::forward<FieldT>(field)];

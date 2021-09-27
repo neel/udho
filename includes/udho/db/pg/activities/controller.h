@@ -38,7 +38,7 @@ namespace pg{
 namespace activities{
     
 /**
- * @brief Controls one or more activities
+ * @brief Controls one or more pg activities
  * 
  * @tparam ContextT 
  * @tparam T... Activity types that are to be performed. 
