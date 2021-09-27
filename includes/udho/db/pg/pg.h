@@ -25,17 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEE_ACTIVITIES_DB_PG_PG_H
-#define WEE_ACTIVITIES_DB_PG_PG_H
+#ifndef UDHO_DB_PG_PG_H
+#define UDHO_DB_PG_PG_H
 
 #include <udho/db/common/common.h>
-#include <udho/db/pg/activities/activity.h>
-#include <udho/db/pg/decorators.h>
-#include <udho/db/pg/ozo/io.h>
-#include <udho/db/pg/crud/limit.h>
-#include <udho/db/pg/crud/order.h>
-#include <udho/db/pg/schema/schema.h>
-#include <udho/db/pg/schema/field.h>
+#include <udho/db/pg/activity.h>
+#include <udho/db/pg/schema.h>
 
-
-#endif // WEE_ACTIVITIES_DB_PG_PG_H
+#endif // UDHO_DB_PG_PG_H

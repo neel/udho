@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEE_ACTIVITIES_DB_PG_CONSTRUCTS_OPERATORS_H
-#define WEE_ACTIVITIES_DB_PG_CONSTRUCTS_OPERATORS_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_OPERATORS_H
+#define UDHO_DB_PG_CONSTRUCTS_OPERATORS_H
 
 #include <udho/hazo/node/tag.h>
 #include <ozo/query_builder.h>
@@ -213,4 +213,4 @@ const udho::util::hazo::element_t<in<FieldT>> in<FieldT>::val;
 }
 }
 
-#endif // WEE_ACTIVITIES_DB_PG_CONSTRUCTS_OPERATORS_H
+#endif // UDHO_DB_PG_CONSTRUCTS_OPERATORS_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEE_ACTIVITIES_DB_PG_SCHEMA_FIELD_H
-#define WEE_ACTIVITIES_DB_PG_SCHEMA_FIELD_H
+#ifndef UDHO_DB_PG_SCHEMA_FIELD_H
+#define UDHO_DB_PG_SCHEMA_FIELD_H
 
 #include <udho/hazo/node/tag.h>
 #include <ozo/query_builder.h>
@@ -38,4 +38,4 @@
 #include <udho/hazo/seq/seq.h>
 
 
-#endif // WEE_ACTIVITIES_DB_PG_SCHEMA_FIELD_H
+#endif // UDHO_DB_PG_SCHEMA_FIELD_H

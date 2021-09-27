@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEE_ACTIVITIES_DB_PG_SCHEMA_DEFS_H
-#define WEE_ACTIVITIES_DB_PG_SCHEMA_DEFS_H
+#ifndef UDHO_DB_PG_SCHEMA_DEFS_H
+#define UDHO_DB_PG_SCHEMA_DEFS_H
 
 #include <udho/hazo/node/tag.h>
 #include <ozo/query_builder.h>
@@ -200,4 +200,4 @@ struct Name: udho::util::hazo::element<Name, Type, udho::db::pg::detail::field_l
         return OZO_LITERAL(#Name);      \
     }
 
-#endif // WEE_ACTIVITIES_DB_PG_SCHEMA_DEFS_H
+#endif // UDHO_DB_PG_SCHEMA_DEFS_H
