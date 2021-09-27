@@ -87,7 +87,7 @@ struct on_cancel: private db::on_error<ContextT, SuccessT>, private on_failure<C
  * error then the activity fails and yields failure data (pg::failure) which consists of information related to that failure.
  * If the query runs successfully then first the result(s) are stored in an std::vector<RowT>. Which is then transformed into
  * 
- * 
+ * @see pg::activity
  * @tparam DerivedT The Derived activity class 
  * @tparam SuccessT Type of success result, defaults to db::none, If the provided SuccessT has a typedef `data_type` then that SuccessT is used to store the successful result(s) of the activity. Otherwise the type db::result<SuccessT> is used
  * @tparam RowT By default RowT is  same as SuccessT. However usercode may provide a custom RowT
@@ -201,6 +201,14 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
         ozo::result              _results;
 };
 
+/**
+ * @brief Basic activity for asynchronous postgresql queries specialized for queries that does not respond with any result set
+ * The derived class's operator() is supposed to construct an OZO query and pass that to the basic_activity::query() method.
+ * The provided query is invoked asynchronously. If that query invocation fails or if the query results into some postgresql 
+ * error then the activity fails and yields failure data (pg::failure) which consists of information related to that failure.
+ * @see pg::activity
+ * @tparam DerivedT 
+ */
 template <typename DerivedT>
 struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg::failure>{
     typedef udho::activity<DerivedT, db::none, pg::failure> base;
@@ -282,6 +290,17 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
         ozo::result              _result;
 };
     
+/**
+ * @brief PostgreSQL activity for asynchronous database queries
+ * - A PostgreSQL activity `X` must derive from `pg::activity<X>`
+ * - The derived class `X` must provide an operator() overload
+ * - The overloaded operator() must call `pg::activity<X>::query(SQL)` with an OZO query
+ * - If it is required to consider the activity as successful without querying then use the `pg::activity<X>::pass()`  method with an appropriate success result
+ * 
+ * @tparam DerivedT The Derived activity class 
+ * @tparam SuccessT Type of success result, defaults to db::none, If the provided SuccessT has a typedef `data_type` then that SuccessT is used to store the successful result(s) of the activity. Otherwise the type db::result<SuccessT> is used
+ * @tparam RowT By default RowT is  same as SuccessT. However usercode may provide a custom RowT
+ */
 template <typename DerivedT, typename SuccessT = db::none, typename RowT = typename std::conditional<db::detail::HasDataType<SuccessT>::value, SuccessT, db::result<SuccessT>>::type::data_type>
 struct activity: basic_activity<DerivedT, SuccessT, RowT>{
     typedef basic_activity<DerivedT, SuccessT, RowT> base;
