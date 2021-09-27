@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_READONLY_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_READONLY_H
+#ifndef UDHO_DB_PG_SCHEMA_READONLY_H
+#define UDHO_DB_PG_SCHEMA_READONLY_H
 
 #include <udho/hazo.h>
 #include <udho/db/pg/schema/detail.h>
@@ -63,4 +63,4 @@ struct readonly<>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_READONLY_H
+#endif // UDHO_DB_PG_SCHEMA_READONLY_H

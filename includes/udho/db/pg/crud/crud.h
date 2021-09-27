@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_CRUD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_CRUD_H
+#ifndef UDHO_DB_PG_CRUD_CRUD_H
+#define UDHO_DB_PG_CRUD_CRUD_H
 
 #include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/crud/builder.h>
@@ -42,4 +42,4 @@
 #include <udho/db/pg/crud/many.h>
 #include <udho/db/pg/crud/one.h>
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_CRUD_H
+#endif // UDHO_DB_PG_CRUD_CRUD_H

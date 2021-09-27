@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_ORDER_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_ORDER_H
+#ifndef UDHO_DB_PG_GENERATORS_PARTS_ORDER_H
+#define UDHO_DB_PG_GENERATORS_PARTS_ORDER_H
 
 #include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/crud/order.h>
@@ -78,4 +78,4 @@ struct order<pg::ascending<FieldT, false>>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_ORDER_H
+#endif // UDHO_DB_PG_GENERATORS_PARTS_ORDER_H

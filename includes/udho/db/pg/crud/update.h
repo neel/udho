@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_UPDATE_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_UPDATE_H
+#ifndef UDHO_DB_PG_CRUD_UPDATE_H
+#define UDHO_DB_PG_CRUD_UPDATE_H
 
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/common/result.h>
@@ -307,4 +307,4 @@ using update = basic_update<SchemaT>;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_UPDATE_H
+#endif // UDHO_DB_PG_CRUD_UPDATE_H

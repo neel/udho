@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H
-#define UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H
+#ifndef UDHO_DB_PG_COMMON_COMMON_H
+#define UDHO_DB_PG_COMMON_COMMON_H
 
 #include <udho/db/common/none.h>
 #include <udho/db/common/result.h>
@@ -34,4 +34,4 @@
 #include <udho/db/common/detail.h>
 #include <udho/db/common/on_error.h>
 
-#endif // UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H
+#endif // UDHO_DB_PG_COMMON_COMMON_H

@@ -26,8 +26,8 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONCAT_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONCAT_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_CONCAT_H
+#define UDHO_DB_PG_CONSTRUCTS_CONCAT_H
 
 #include <ozo/query_builder.h>
 #include <udho/hazo/node/tag.h>
@@ -149,4 +149,4 @@ struct concat: udho::util::hazo::element<concat<X...>, std::string>{
 }
 
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONCAT_H
+#endif // UDHO_DB_PG_CONSTRUCTS_CONCAT_H

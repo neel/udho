@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_IO_H
-#define UDHO_ACTIVITIES_DB_PG_IO_H
+#ifndef UDHO_DB_PG_IO_H
+#define UDHO_DB_PG_IO_H
 
 #include <string>
 #include <ozo/connection_pool.h>
@@ -115,4 +115,4 @@ OZO_PG_BIND_TYPE(nlohmann::json, "json")
 // OZO_STRONG_TYPEDEF(std::string, varchar)
 // OZO_PG_BIND_TYPE(varchar, "varchar")
 
-#endif // UDHO_ACTIVITIES_DB_PG_IO_H
+#endif // UDHO_DB_PG_IO_H

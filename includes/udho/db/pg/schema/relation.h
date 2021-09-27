@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_RELATION_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_RELATION_H
+#ifndef UDHO_DB_PG_SCHEMA_RELATION_H
+#define UDHO_DB_PG_SCHEMA_RELATION_H
 
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/schema/column.h>
@@ -105,4 +105,4 @@ struct relation{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_RELATION_H
+#endif // UDHO_DB_PG_SCHEMA_RELATION_H

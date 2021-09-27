@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FROM_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FROM_H
+#ifndef UDHO_DB_PG_CRUD_FROM_H
+#define UDHO_DB_PG_CRUD_FROM_H
 
 #include <ozo/query_builder.h>
 #include <udho/db/pg/schema/column.h>
@@ -165,4 +165,4 @@ struct from{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FROM_H
+#endif // UDHO_DB_PG_CRUD_FROM_H

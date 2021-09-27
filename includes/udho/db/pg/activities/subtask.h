@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SUBTASK_H
-#define UDHO_ACTIVITIES_DB_PG_SUBTASK_H
+#ifndef UDHO_DB_PG_SUBTASK_H
+#define UDHO_DB_PG_SUBTASK_H
 
 #include <udho/activities/subtask.h>
 #include <udho/activities/data.h>
@@ -92,4 +92,4 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SUBTASK_H
+#endif // UDHO_DB_PG_SUBTASK_H

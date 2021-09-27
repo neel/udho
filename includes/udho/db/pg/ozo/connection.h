@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONNECTION_H
-#define UDHO_ACTIVITIES_DB_PG_CONNECTION_H
+#ifndef UDHO_DB_PG_CONNECTION_H
+#define UDHO_DB_PG_CONNECTION_H
 
 #include <ozo/connection_info.h>
 #include <ozo/connection_pool.h>
@@ -47,4 +47,4 @@ typedef ozo::connection_pool<info> pool;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONNECTION_H
+#endif // UDHO_DB_PG_CONNECTION_H

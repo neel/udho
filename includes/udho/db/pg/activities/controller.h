@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONTROLLER_H
-#define UDHO_ACTIVITIES_DB_PG_CONTROLLER_H
+#ifndef UDHO_DB_PG_CONTROLLER_H
+#define UDHO_DB_PG_CONTROLLER_H
 
 #include <udho/db/pg/ozo/connection.h>
 #include <udho/db/pg/activities/subtask.h>
@@ -98,4 +98,4 @@ namespace activities{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONTROLLER_H
+#endif // UDHO_DB_PG_CONTROLLER_H

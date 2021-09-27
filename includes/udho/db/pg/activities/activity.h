@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_ACTIVITY_H
-#define UDHO_ACTIVITIES_DB_PG_ACTIVITY_H
+#ifndef UDHO_DB_PG_ACTIVITY_H
+#define UDHO_DB_PG_ACTIVITY_H
 
 #include <ozo/connection_info.h>
 #include <ozo/connection_pool.h>
@@ -311,5 +311,5 @@ struct activity: basic_activity<DerivedT, SuccessT, RowT>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_ACTIVITY_H
+#endif // UDHO_DB_PG_ACTIVITY_H
 

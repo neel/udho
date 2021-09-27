@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_BASIC_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_BASIC_H
+#ifndef UDHO_DB_PG_SCHEMA_BASIC_H
+#define UDHO_DB_PG_SCHEMA_BASIC_H
 
 #include <udho/hazo.h>
 #include <udho/db/pg/schema/fwd.h>
@@ -183,5 +183,5 @@ decltype(auto) operator>>(const basic_schema<Fields...>& sch, T& var){
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_BASIC_H
+#endif // UDHO_DB_PG_SCHEMA_BASIC_H
 

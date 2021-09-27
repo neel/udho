@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_ALIAS_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_ALIAS_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_ALIAS_H
+#define UDHO_DB_PG_CONSTRUCTS_ALIAS_H
 
 #include <ozo/query_builder.h>
 #include <udho/hazo/node/tag.h>
@@ -66,5 +66,5 @@ struct alias: AliasT{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_ALIAS_H
+#endif // UDHO_DB_PG_CONSTRUCTS_ALIAS_H
 

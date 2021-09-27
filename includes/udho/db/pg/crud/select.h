@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_SELECT_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_SELECT_H
+#ifndef UDHO_DB_PG_CRUD_SELECT_H
+#define UDHO_DB_PG_CRUD_SELECT_H
 
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/activities/activity.h>
@@ -716,4 +716,4 @@ struct select: basic_select<typename SuccessT::result_type, typename SuccessT::s
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_SELECT_H
+#endif // UDHO_DB_PG_CRUD_SELECT_H

@@ -25,9 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_GENERATORS_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_GENERATORS_H
+#ifndef UDHO_DB_PG_GENERATORS_GENERATORS_H
+#define UDHO_DB_PG_GENERATORS_GENERATORS_H
 
+#include <udho/db/pg/generators/fwd.h>
+#include <udho/db/pg/generators/join.h>
 #include <udho/db/pg/generators/select.h>
 #include <udho/db/pg/generators/where.h>
 #include <udho/db/pg/generators/set.h>
@@ -39,5 +41,6 @@
 #include <udho/db/pg/generators/order.h>
 #include <udho/db/pg/generators/limit.h>
 #include <udho/db/pg/generators/group.h>
+#include <udho/db/pg/generators/operators.h>
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_GENERATORS_H
+#endif // UDHO_DB_PG_GENERATORS_GENERATORS_H

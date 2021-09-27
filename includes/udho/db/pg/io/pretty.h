@@ -26,8 +26,8 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PG_IO_PRETTY_H
-#define UDHO_ACTIVITIES_DB_PG_IO_PRETTY_H
+#ifndef UDHO_DB_PG_IO_PRETTY_H
+#define UDHO_DB_PG_IO_PRETTY_H
 
 #include <udho/db/pretty/pretty.h>
 #include <udho/hazo/node/basic.h>
@@ -245,4 +245,4 @@ struct type<udho::db::pg::ascending<FieldT, false>, false>{
 }
 }
 }
-#endif // UDHO_ACTIVITIES_DB_PG_IO_PRETTY_H
+#endif // UDHO_DB_PG_IO_PRETTY_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_TRAITS_H
-#define UDHO_ACTIVITIES_DB_PG_TRAITS_H
+#ifndef UDHO_DB_PG_TRAITS_H
+#define UDHO_DB_PG_TRAITS_H
 
 #include <boost/beast/http/message.hpp>
 
@@ -62,4 +62,4 @@ namespace error{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_TRAITS_H
+#endif // UDHO_DB_PG_TRAITS_H

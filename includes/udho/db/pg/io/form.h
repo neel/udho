@@ -26,8 +26,8 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PG_IO_FORM_H
-#define UDHO_ACTIVITIES_DB_PG_IO_FORM_H
+#ifndef UDHO_DB_PG_IO_FORM_H
+#define UDHO_DB_PG_IO_FORM_H
 
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/activities/subtask.h>
@@ -75,4 +75,4 @@ activities::subtask<ActivityT, DependenciesT...>& operator<<(activities::subtask
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_IO_FORM_H
+#endif // UDHO_DB_PG_IO_FORM_H

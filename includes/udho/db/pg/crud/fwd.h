@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#ifndef UDHO_DB_PG_CRUD_FWD_H
+#define UDHO_DB_PG_CRUD_FWD_H
 
 
 namespace udho{
@@ -71,4 +71,4 @@ struct ascending;
 }
 
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // UDHO_DB_PG_CRUD_FWD_H

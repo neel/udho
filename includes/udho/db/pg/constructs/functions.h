@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_FUNCTIONS_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_FUNCTIONS_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_FUNCTIONS_H
+#define UDHO_DB_PG_CONSTRUCTS_FUNCTIONS_H
 
 #include <ozo/query_builder.h>
 #include <udho/hazo/node/tag.h>
@@ -163,4 +163,4 @@ using sum = fn::unary<FieldT, fn::sum_f, std::int64_t>;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_FUNCTIONS_H
+#endif // UDHO_DB_PG_CONSTRUCTS_FUNCTIONS_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_START_H
-#define UDHO_ACTIVITIES_DB_PG_START_H
+#ifndef UDHO_DB_PG_START_H
+#define UDHO_DB_PG_START_H
 
 #include <udho/contexts.h>
 #include <udho/db/pg/ozo/connection.h>
@@ -59,4 +59,4 @@ using start = pg::activities::start<T...>;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_START_H
+#endif // UDHO_DB_PG_START_H

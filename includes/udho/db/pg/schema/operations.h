@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_OPERATUIONS_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_OPERATUIONS_H
+#ifndef UDHO_DB_PG_SCHEMA_OPERATUIONS_H
+#define UDHO_DB_PG_SCHEMA_OPERATUIONS_H
 
 #include <type_traits>
 #include <udho/db/pg/schema/fwd.h>
@@ -111,5 +111,5 @@ struct eliminate<udho::db::pg::basic_schema<H>, U>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_OPERATUIONS_H
+#endif // UDHO_DB_PG_SCHEMA_OPERATUIONS_H
 

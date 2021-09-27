@@ -25,15 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_DECORATORS_H
-#define UDHO_ACTIVITIES_DB_PG_DECORATORS_H
+#ifndef UDHO_DB_PG_DECORATORS_H
+#define UDHO_DB_PG_DECORATORS_H
 
-#include <utility>
-#include <type_traits>
-#include <ozo/query_builder.h>
-#include <udho/db/pg/decorators/keys.h>
-#include <udho/db/pg/decorators/values.h>
-#include <udho/db/pg/decorators/assignments.h>
-#include <udho/db/pg/decorators/conditions.h>
+#include <udho/db/pg/decorators/decorators.h>
 
-#endif // UDHO_ACTIVITIES_DB_PG_DECORATORS_H
+#endif // UDHO_DB_PG_DECORATORS_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_AFTER_H
-#define UDHO_ACTIVITIES_DB_PG_AFTER_H
+#ifndef UDHO_DB_PG_AFTER_H
+#define UDHO_DB_PG_AFTER_H
 
 #include <udho/activities/after.h>
 #include <udho/db/pg/activities/controller.h>
@@ -72,4 +72,4 @@ pg::activities::subtask<ActivityT> perform(ContextT ctx, pg::connection::pool& p
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_AFTER_H
+#endif // UDHO_DB_PG_AFTER_H

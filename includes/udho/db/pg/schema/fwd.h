@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_FWD_H
+#ifndef UDHO_DB_PG_SCHEMA_FWD_H
+#define UDHO_DB_PG_SCHEMA_FWD_H
 
 namespace udho{
 namespace db{
@@ -42,4 +42,4 @@ struct column;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_FWD_H
+#endif // UDHO_DB_PG_SCHEMA_FWD_H

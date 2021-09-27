@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
+#ifndef UDHO_DB_PG_CRUD_ORDER_H
+#define UDHO_DB_PG_CRUD_ORDER_H
 
 #include <cstdint>
 #include <udho/db/pg/crud/fwd.h>
@@ -48,4 +48,4 @@ using descending = ascending<FieldT, false>;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
+#endif // UDHO_DB_PG_CRUD_ORDER_H

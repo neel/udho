@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_IO_JSON_H
-#define UDHO_ACTIVITIES_DB_PG_IO_JSON_H
+#ifndef UDHO_DB_PG_IO_JSON_H
+#define UDHO_DB_PG_IO_JSON_H
 
 #include <udho/db/common/results.h>
 #include <udho/db/common/result.h>
@@ -207,4 +207,4 @@ void to_json(nlohmann::json& json, const udho::db::result<pg::basic_schema<Field
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_IO_JSON_H
+#endif // UDHO_DB_PG_IO_JSON_H

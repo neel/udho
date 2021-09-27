@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONSTRUCTS_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONSTRUCTS_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_CONSTRUCTS_H
+#define UDHO_DB_PG_CONSTRUCTS_CONSTRUCTS_H
 
 #include <udho/db/pg/constructs/fwd.h>
 #include <udho/db/pg/constructs/alias.h>
@@ -37,4 +37,4 @@
 #include <udho/db/pg/constructs/strings.h>
 #include <udho/db/pg/constructs/types.h>
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CONSTRUCTS_H
+#endif // UDHO_DB_PG_CONSTRUCTS_CONSTRUCTS_H

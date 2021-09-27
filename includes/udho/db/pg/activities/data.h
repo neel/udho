@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_DATA_H
-#define UDHO_ACTIVITIES_DB_PG_DATA_H
+#ifndef UDHO_DB_PG_DATA_H
+#define UDHO_DB_PG_DATA_H
 
 #include <udho/activities/data.h>
 
@@ -41,4 +41,4 @@ namespace pg{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_DATA_H
+#endif // UDHO_DB_PG_DATA_H

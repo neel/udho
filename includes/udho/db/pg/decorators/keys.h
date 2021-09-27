@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_DECORATORS_KEYS_H
-#define UDHO_ACTIVITIES_DB_PG_DECORATORS_KEYS_H
+#ifndef UDHO_DB_PG_DECORATORS_KEYS_H
+#define UDHO_DB_PG_DECORATORS_KEYS_H
 
 #include <utility>
 #include <type_traits>
@@ -151,4 +151,4 @@ struct keys: basic_keys<traits::fields::transparent>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_DECORATORS_KEYS_H
+#endif // UDHO_DB_PG_DECORATORS_KEYS_H

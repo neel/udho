@@ -25,63 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_DECORATORS_TRAITS_H
-#define UDHO_DB_PG_DECORATORS_TRAITS_H
+#ifndef UDHO_DB_PG_ACTIVITIES_ACTIVITIES_H
+#define UDHO_DB_PG_ACTIVITIES_ACTIVITIES_H
 
-#include <utility>
+#include <udho/db/pg/activities/activity.h>
+#include <udho/db/pg/activities/after.h>
+#include <udho/db/pg/activities/controller.h>
+#include <udho/db/pg/activities/data.h>
+#include <udho/db/pg/activities/failure.h>
+#include <udho/db/pg/activities/on.h>
+#include <udho/db/pg/activities/start.h>
+#include <udho/db/pg/activities/subtask.h>
+#include <udho/db/pg/activities/traits.h>
 
-namespace udho{
-namespace db{
-namespace pg{
-
-namespace decorators{
-namespace traits{
-namespace fields{
-
-struct transparent{
-    template <typename FieldT>
-    auto apply(const FieldT&){
-        return FieldT::ozo_name();
-    }
-    template <typename FieldT>
-    auto operator()(const FieldT& f){
-        return apply(f);
-    }
-};
-
-struct unqualified{
-    template <typename FieldT>
-    auto apply(const FieldT&){
-        return FieldT::unqualified_name();
-    }
-    template <typename FieldT>
-    auto operator()(const FieldT& f){
-        return apply(f);
-    }
-};
-
-template <typename PrefixT>
-struct prefixed{
-    PrefixT _prefix;
-    
-    prefixed(PrefixT&& prefix): _prefix(std::move(prefix)){} 
-    
-    template <typename FieldT>
-    auto apply(const FieldT& /*f*/){
-        return FieldT::relate(_prefix);
-    }
-    template <typename FieldT>
-    auto operator()(const FieldT& f){
-        return apply(f);
-    }
-};
-    
-}
-}
-}
-
-}
-}
-}
-
-#endif // UDHO_DB_PG_DECORATORS_TRAITS_H
+#endif // UDHO_DB_PG_ACTIVITIES_ACTIVITIES_H

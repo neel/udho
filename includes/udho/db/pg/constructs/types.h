@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_TYPES_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_TYPES_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_TYPES_H
+#define UDHO_DB_PG_CONSTRUCTS_TYPES_H
 
 #include <string>
 #include <ozo/query_builder.h>
@@ -144,4 +144,4 @@ using uuid        = types::uuid;
 
 OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar")
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_TYPES_H
+#endif // UDHO_DB_PG_CONSTRUCTS_TYPES_H

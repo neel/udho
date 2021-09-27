@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_INTO_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_INTO_H
+#ifndef UDHO_DB_PG_GENERATORS_PARTS_INTO_H
+#define UDHO_DB_PG_GENERATORS_PARTS_INTO_H
 
 #include <ozo/query_builder.h>
 #include <udho/db/pg/generators/fwd.h>
@@ -65,5 +65,5 @@ struct into<pg::from<RelationT>>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_INTO_H
+#endif // UDHO_DB_PG_GENERATORS_PARTS_INTO_H
 

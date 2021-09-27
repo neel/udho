@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_JOIN_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_JOIN_H
+#ifndef UDHO_DB_PG_CRUD_JOIN_H
+#define UDHO_DB_PG_CRUD_JOIN_H
 
 #include <type_traits>
 #include <udho/db/pg/crud/fwd.h>
@@ -371,4 +371,4 @@ struct attached{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_JOIN_H
+#endif // UDHO_DB_PG_CRUD_JOIN_H

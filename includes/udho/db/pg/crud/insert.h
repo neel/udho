@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_INSERT_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_INSERT_H
+#ifndef UDHO_DB_PG_CRUD_INSERT_H
+#define UDHO_DB_PG_CRUD_INSERT_H
 
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/common/result.h>
@@ -140,4 +140,4 @@ using insert = basic_insert<SchemaT>;
 }
 
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_INSERT_H
+#endif // UDHO_DB_PG_CRUD_INSERT_H

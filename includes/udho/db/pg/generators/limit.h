@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
+#ifndef UDHO_DB_PG_GENERATORS_PARTS_LIMIT_H
+#define UDHO_DB_PG_GENERATORS_PARTS_LIMIT_H
 
 #include <udho/db/pg/crud/limit.h>
 #include <udho/db/pg/generators/fwd.h>
@@ -85,4 +85,4 @@ struct limit<pg::limited<-1, 0>>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
+#endif // UDHO_DB_PG_GENERATORS_PARTS_LIMIT_H

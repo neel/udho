@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_REMOVE_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_REMOVE_H
+#ifndef UDHO_DB_PG_CRUD_REMOVE_H
+#define UDHO_DB_PG_CRUD_REMOVE_H
 
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/common/none.h>
@@ -85,4 +85,4 @@ using remove = basic_remove<Fields...>;
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_REMOVE_H
+#endif // UDHO_DB_PG_CRUD_REMOVE_H

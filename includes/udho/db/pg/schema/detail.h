@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_DETAIL_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_DETAIL_H
+#ifndef UDHO_DB_PG_SCHEMA_DETAIL_H
+#define UDHO_DB_PG_SCHEMA_DETAIL_H
 
 #include <udho/hazo/node/fwd.h>
 
@@ -55,4 +55,4 @@ struct infer_index_type<FieldT, false>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_DETAIL_H
+#endif // UDHO_DB_PG_SCHEMA_DETAIL_H

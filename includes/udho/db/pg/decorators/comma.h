@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_DECORATORS_COMMA_H
-#define UDHO_ACTIVITIES_DB_PG_DECORATORS_COMMA_H
+#ifndef UDHO_DB_PG_DECORATORS_COMMA_H
+#define UDHO_DB_PG_DECORATORS_COMMA_H
 
 #include <utility>
 #include <type_traits>
@@ -66,4 +66,4 @@ constexpr decltype(auto) comma(InitialT initial, LeftT&& l, RightT&& r){
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_DECORATORS_COMMA_H
+#endif // UDHO_DB_PG_DECORATORS_COMMA_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_COLUMN_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_COLUMN_H
+#ifndef UDHO_DB_PG_SCHEMA_COLUMN_H
+#define UDHO_DB_PG_SCHEMA_COLUMN_H
 
 #include <ozo/query_builder.h>
 #include <udho/db/pg/schema/fwd.h>
@@ -85,4 +85,4 @@ struct is_equivalent<pg::column<L, RelationT>, pg::column<R, RelationT>>{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_COLUMN_H
+#endif // UDHO_DB_PG_SCHEMA_COLUMN_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CAST_H
-#define UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CAST_H
+#ifndef UDHO_DB_PG_CONSTRUCTS_CAST_H
+#define UDHO_DB_PG_CONSTRUCTS_CAST_H
 
 #include <string>
 #include <ozo/query_builder.h>
@@ -79,4 +79,4 @@ const udho::util::hazo::element_t<cast<typename FieldT::field_type, PgType>> cas
 
 
 
-#endif // UDHO_ACTIVITIES_DB_PG_CONSTRUCTS_CAST_H
+#endif // UDHO_DB_PG_CONSTRUCTS_CAST_H

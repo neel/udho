@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_JOIN_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_JOIN_H
+#ifndef UDHO_DB_PG_GENERATORS_PARTS_JOIN_H
+#define UDHO_DB_PG_GENERATORS_PARTS_JOIN_H
 
 #include <ozo/query_builder.h>
 #include <udho/db/pg/crud/fwd.h>
@@ -76,4 +76,4 @@ struct join<join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, 
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_JOIN_H
+#endif // UDHO_DB_PG_GENERATORS_PARTS_JOIN_H

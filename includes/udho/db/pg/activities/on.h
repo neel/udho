@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_ON_H
-#define UDHO_ACTIVITIES_DB_PG_ON_H
+#ifndef UDHO_DB_PG_ON_H
+#define UDHO_DB_PG_ON_H
 
 #include <boost/beast/http/message.hpp>
 #include <udho/contexts.h>
@@ -142,4 +142,4 @@ struct blank{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_ON_H
+#endif // UDHO_DB_PG_ON_H

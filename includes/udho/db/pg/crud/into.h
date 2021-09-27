@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_INTO_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_INTO_H
+#ifndef UDHO_DB_PG_CRUD_INTO_H
+#define UDHO_DB_PG_CRUD_INTO_H
 
 #include <ozo/query_builder.h>
 #include <udho/db/pg/crud/join.h>
@@ -108,5 +108,5 @@ struct into{
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_INTO_H
+#endif // UDHO_DB_PG_CRUD_INTO_H
 
