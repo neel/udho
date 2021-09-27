@@ -32,6 +32,8 @@
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/generators/fwd.h>
 #include <udho/db/pg/crud/fwd.h>
+#include <udho/db/pg/crud/limit.h>
+#include <udho/db/pg/crud/order.h>
 
 namespace udho{
 namespace db{
@@ -81,7 +83,7 @@ struct basic_select{
     
     template <int Limit, int Offset = 0>
     struct limit{
-        typedef pg::extra::limited<Limit, Offset> limited_type;
+        typedef pg::limited<Limit, Offset> limited_type;
         
         limit() = delete;
         ~limit() = delete;
@@ -165,7 +167,7 @@ struct basic_select{
         
         template <int Limit, int Offset = 0>
         struct limit{
-            typedef pg::extra::limited<Limit, Offset> limited_type;
+            typedef pg::limited<Limit, Offset> limited_type;
             
             template <typename RelationT>
             struct generators{
@@ -207,9 +209,9 @@ struct basic_select{
     };
     
     template <typename FieldT>
-    using descending = ordered<pg::extra::descending<FieldT>>;
+    using descending = ordered<pg::descending<FieldT>>;
     template <typename FieldT>
-    using ascending = ordered<pg::extra::ascending<FieldT>>;
+    using ascending = ordered<pg::ascending<FieldT>>;
     
     template <typename... Fields>
     struct with{
@@ -259,7 +261,7 @@ struct basic_select{
         
         template <int Limit, int Offset = 0>
         struct limit{
-            typedef pg::extra::limited<Limit, Offset> limited_type;
+            typedef pg::limited<Limit, Offset> limited_type;
             
             limit() = delete;
             ~limit() = delete;
@@ -351,7 +353,7 @@ struct basic_select{
             
             template <int Limit, int Offset = 0>
             struct limit{
-                typedef pg::extra::limited<Limit, Offset> limited_type;
+                typedef pg::limited<Limit, Offset> limited_type;
                 
                 limit() = delete;
                 ~limit() = delete;
@@ -402,9 +404,9 @@ struct basic_select{
         };
         
         template <typename FieldT>
-        using descending = ordered<pg::extra::descending<FieldT>>;
+        using descending = ordered<pg::descending<FieldT>>;
         template <typename FieldT>
-        using ascending = ordered<pg::extra::ascending<FieldT>>;
+        using ascending = ordered<pg::ascending<FieldT>>;
         
         template <typename... GroupColumn>
         struct group{
@@ -497,7 +499,7 @@ struct basic_select{
                 
                 template <int Limit, int Offset = 0>
                 struct limit{
-                    typedef pg::extra::limited<Limit, Offset> limited_type;
+                    typedef pg::limited<Limit, Offset> limited_type;
                     
                     limit() = delete;
                     ~limit() = delete;
@@ -635,7 +637,7 @@ struct basic_select{
             
             template <int Limit, int Offset = 0>
             struct limit{
-                typedef pg::extra::limited<Limit, Offset> limited_type;
+                typedef pg::limited<Limit, Offset> limited_type;
                 
                 limit() = delete;
                 ~limit() = delete;

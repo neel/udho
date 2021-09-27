@@ -25,16 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_FEATURES_H
-#define UDHO_ACTIVITIES_DB_PG_FEATURES_H
+#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
+#define UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
 
 #include <cstdint>
 
 namespace udho{
 namespace db{
 namespace pg{
-
-namespace extra{
     
 template <typename FieldT, bool IsAscending = true>
 struct ascending{};
@@ -45,34 +43,8 @@ struct ascending<FieldT, false>{};
 template <typename FieldT>
 using descending = ascending<FieldT, false>;
     
-template <int Limit = -1, int Offset=0>
-struct limited{
-    limited(): _limit(Limit), _offset(Offset){}
-    
-    void limit(const std::int64_t& limit) { _limit = limit; }
-    const std::int64_t& limit() const { return _limit; }
-    
-    void offset(const std::int64_t& offset) { _offset = offset; }
-    const std::int64_t& offset() const { return _offset; }
-    
-    private:
-        std::int64_t _limit;
-        std::int64_t _offset;
-};
-
-template <typename FieldT>
-struct ordered_by;
-
-template <typename FieldT, bool IsAscending>
-struct ordered_by<ascending<FieldT, IsAscending>>{};
-
-template <typename... FeaturesT>
-struct featuring: FeaturesT...{};
-
-}
-    
 }
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_FEATURES_H
+#endif // UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H

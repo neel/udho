@@ -147,7 +147,6 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/activities/failure.h
     includes/udho/db/pg/activities/data.h
     includes/udho/db/pg/activities/subtask.h
-    includes/udho/db/pg/features.h
     includes/udho/db/pg/schema/operations.h
     includes/udho/db/pg/schema/basic.h
     includes/udho/db/pg/schema/readonly.h

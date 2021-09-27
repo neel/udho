@@ -25,64 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
-#define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
+#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_LIMIT_H
+#define UDHO_ACTIVITIES_DB_PG_CRUD_LIMIT_H
 
-#include <udho/db/pg/crud/limit.h>
-#include <udho/db/pg/generators/fwd.h>
+#include <cstdint>
 
 namespace udho{
 namespace db{
 namespace pg{
     
-namespace generators{
+template <int Limit = -1, int Offset=0>
+struct limited{
+    limited(): _limit(Limit), _offset(Offset){}
     
-/**
- * limit N Offset M part of the select query
- */
-template <int Limit, int Offset>
-struct limit<pg::limited<Limit, Offset>>{
-    const pg::limited<Limit, Offset>& _limited;
+    void limit(const std::int64_t& limit) { _limit = limit; }
+    const std::int64_t& limit() const { return _limit; }
     
-    limit(const pg::limited<Limit, Offset>& limited): _limited(limited){}
+    void offset(const std::int64_t& offset) { _offset = offset; }
+    const std::int64_t& offset() const { return _offset; }
     
-    auto operator()(){
-        return clause();
-    }
-    
-    auto clause() const {
-        using namespace ozo::literals;
-        
-        return "limit "_SQL + _limited.limit() + " offset "_SQL + _limited.offset();
-    }
-};
-
-/**
- * limit all offset 0 part of the select query
- */
-template <>
-struct limit<pg::limited<-1, 0>>{
-    const pg::limited<-1, 0>& _limited;
-    
-    limit(const pg::limited<-1, 0>& limited): _limited(limited){}
-    
-    auto operator()(){
-        using namespace ozo::literals;
-        
-        return " limit ALL offset 0"_SQL;
-    }
-    
-    auto clause() const {
-        using namespace ozo::literals;
-        
-        return " limit ALL offset 0"_SQL;
-    }
+    private:
+        std::int64_t _limit;
+        std::int64_t _offset;
 };
     
 }
-
-}
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_LIMIT_H
+#endif // UDHO_ACTIVITIES_DB_PG_CRUD_LIMIT_H

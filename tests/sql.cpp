@@ -17,6 +17,7 @@
 #include <udho/db/pg/activities/start.h>
 #include <udho/db/pg/activities/after.h>
 #include <udho/db/pg/activities/data.h>
+#include <udho/db/pg/io/json.h>
 
 using namespace udho::db;
 using namespace ozo::literals;

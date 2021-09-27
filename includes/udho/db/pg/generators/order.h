@@ -30,7 +30,7 @@
 
 #include <udho/db/pg/schema.h>
 #include <udho/db/pg/crud/fwd.h>
-#include <udho/db/pg/features.h>
+#include <udho/db/pg/crud/order.h>
 #include <udho/db/pg/generators/fwd.h>
 
 namespace udho{
@@ -43,7 +43,7 @@ namespace generators{
  * order by field asc part of the select query
  */
 template <typename FieldT>
-struct order<pg::extra::ascending<FieldT, true>>{
+struct order<pg::ascending<FieldT, true>>{
     
     auto operator()(){
         return apply();
@@ -60,7 +60,7 @@ struct order<pg::extra::ascending<FieldT, true>>{
  * order by field desc part of the select query
  */
 template <typename FieldT>
-struct order<pg::extra::ascending<FieldT, false>>{
+struct order<pg::ascending<FieldT, false>>{
     
     auto operator()(){
         return apply();

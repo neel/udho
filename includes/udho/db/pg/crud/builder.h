@@ -33,7 +33,8 @@
 #include <udho/db/pg/crud/update.h>
 #include <udho/db/pg/crud/insert.h>
 #include <udho/db/pg/crud/remove.h>
-#include <udho/db/pg/features.h>
+#include <udho/db/pg/crud/limit.h>
+#include <udho/db/pg/crud/order.h>
 #include <udho/db/pg/io/pretty.h>
 
 namespace udho{
@@ -180,9 +181,9 @@ struct builder{
         };
         
         template <typename FieldT>
-        using descending = ordered<pg::extra::descending<FieldT>>;
+        using descending = ordered<pg::descending<FieldT>>;
         template <typename FieldT>
-        using ascending = ordered<pg::extra::ascending<FieldT>>;
+        using ascending = ordered<pg::ascending<FieldT>>;
         
         template <typename... GroupColumn>
         struct group{
@@ -292,9 +293,9 @@ struct builder{
             };
 
             template <typename FieldT>
-            using descending = ordered<pg::extra::descending<FieldT>>;
+            using descending = ordered<pg::descending<FieldT>>;
             template <typename FieldT>
-            using ascending = ordered<pg::extra::ascending<FieldT>>;
+            using ascending = ordered<pg::ascending<FieldT>>;
         };
         
         template <typename... Fields>
@@ -439,9 +440,9 @@ struct builder{
             };
 
             template <typename FieldT>
-            using descending = ordered<pg::extra::descending<FieldT>>;
+            using descending = ordered<pg::descending<FieldT>>;
             template <typename FieldT>
-            using ascending = ordered<pg::extra::ascending<FieldT>>;
+            using ascending = ordered<pg::ascending<FieldT>>;
             
             template <typename... GroupColumn>
             struct group{
@@ -551,9 +552,9 @@ struct builder{
                 };
 
                 template <typename FieldT>
-                using descending = ordered<pg::extra::descending<FieldT>>;
+                using descending = ordered<pg::descending<FieldT>>;
                 template <typename FieldT>
-                using ascending = ordered<pg::extra::ascending<FieldT>>;
+                using ascending = ordered<pg::ascending<FieldT>>;
             };
         };
     };

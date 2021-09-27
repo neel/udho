@@ -39,7 +39,8 @@
 #include <udho/db/pg/schema/detail.h>
 #include <udho/db/pg/schema.h>
 #include <udho/db/pg/schema/readonly.h>
-#include <udho/db/pg/features.h>
+#include <udho/db/pg/crud/limit.h>
+#include <udho/db/pg/crud/order.h>
 
 UDHO_DB_PRETTY(udho::db::pg::types::bigint);
 UDHO_DB_PRETTY(udho::db::pg::types::integer);
@@ -226,16 +227,16 @@ struct type<udho::db::pg::readonly<Fields...>, false>{
 };
 
 template <typename FieldT>
-struct type<udho::db::pg::extra::ascending<FieldT, true>, false>{
+struct type<udho::db::pg::ascending<FieldT, true>, false>{
     static std::string name(const udho::db::pretty::printer& p = printer()){
-        return "udho::db::pg::extra::ascending<" + udho::db::pretty::name<FieldT>() + ">";
+        return "udho::db::pg::ascending<" + udho::db::pretty::name<FieldT>() + ">";
     }
 };
 
 template <typename FieldT>
-struct type<udho::db::pg::extra::ascending<FieldT, false>, false>{
+struct type<udho::db::pg::ascending<FieldT, false>, false>{
     static std::string name(const udho::db::pretty::printer& p = printer()){
-        return "udho::db::pg::extra::descending<" + udho::db::pretty::name<FieldT>() + ">";
+        return "udho::db::pg::descending<" + udho::db::pretty::name<FieldT>() + ">";
     }
 };
 
