@@ -29,7 +29,7 @@
 #define UDHO_DB_PG_PG_H
 
 #include <udho/db/common/common.h>
-#include <udho/db/pg/activity.h>
+#include <udho/db/pg/activities.h>
 #include <udho/db/pg/schema.h>
 
 #endif // UDHO_DB_PG_PG_H
