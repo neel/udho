@@ -29,7 +29,6 @@
 #define UDHO_ACTIVITIES_DB_PG_CRUD_UPDATE_H
 
 #include <udho/db/pg/activities/activity.h>
-#include <udho/db/pg/generators.h>
 #include <udho/db/pg/schema.h>
 #include <udho/db/common.h>
 

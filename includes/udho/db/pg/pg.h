@@ -33,7 +33,6 @@
 #include <udho/db/pg/decorators.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/pg/features.h>
-#include <udho/db/pg/model.h>
 #include <udho/db/pg/schema.h>
 #include <udho/db/pg/schema/field.h>
 

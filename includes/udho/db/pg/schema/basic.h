@@ -32,7 +32,6 @@
 #include <udho/db/pg/schema/fwd.h>
 #include <udho/db/common.h>
 #include <udho/db/pg/decorators.h>
-#include <udho/db/pg/generators.h>
 
 namespace udho{
 namespace db{

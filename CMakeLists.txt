@@ -100,7 +100,6 @@ SET(UDHO_HEADERS
     includes/udho/db/pretty/type.h
     includes/udho/db/pretty/printer.h
     includes/udho/db/pretty/fwd.h
-    includes/udho/db/fieldset.h
     includes/udho/db/pg.h
     includes/udho/db/common.h
     includes/udho/db/pg/pg.h
@@ -114,7 +113,6 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/constructs/alias.h
     includes/udho/db/pg/constructs/types.h
     includes/udho/db/pg/constructs/functions.h
-    includes/udho/db/pg/generators.h
     includes/udho/db/pg/generators/operators.h
     includes/udho/db/pg/generators/group.h
     includes/udho/db/pg/generators/from.h
@@ -160,7 +158,6 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/schema/column.h
     includes/udho/db/pg/schema/fwd.h
     includes/udho/db/pg/schema/relation.h
-    includes/udho/db/pg/model.h
     includes/udho/db/pg/decorators.h
     includes/udho/db/pg/decorators/logical.h
     includes/udho/db/pg/decorators/traits.h

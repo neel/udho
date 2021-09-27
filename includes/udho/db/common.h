@@ -38,7 +38,6 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/hana/fold.hpp>
 #include <boost/hana/tuple.hpp>
-#include <udho/db/fieldset.h>
 
 namespace udho{
 namespace db{
@@ -291,35 +290,10 @@ struct on_error{
     boost::beast::http::status status() const { return _status; }
     
     void operator()(const SuccessT& /*result*/){
-//         if(result.empty()){
-            _ctx << udho::exceptions::http_error(_status);
-//         }
+        _ctx << udho::exceptions::http_error(_status);
     }
 };
 
-template <typename TagT, typename T>
-struct tag{
-    typedef T value_type;
-    typedef tag<TagT, T> self_type;
-    
-    value_type _value;
-    
-    tag() = default;
-    tag(const value_type& v): _value(v){}
-    self_type& operator=(const value_type& v){
-        _value = v;
-        return *this;
-    }
-    T get() const{
-        return _value;
-    }
-    operator T() const{
-        return get();
-    }
-    T operator*() const{
-        return get();
-    }
-};
 
 }
 }

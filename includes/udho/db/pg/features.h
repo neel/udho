@@ -33,52 +33,6 @@
 namespace udho{
 namespace db{
 namespace pg{
-    
-template <typename FeatureT>
-struct feature_;
-
-struct limit{};
-struct offset{};
-struct last{};
-
-template <>
-struct feature_<limit>{
-    feature_(const std::int64_t& limit = 0): _limit(limit){}
-    void limit(const std::int64_t& limit) { _limit = limit; }
-    std::int64_t limit() const { return _limit; }
-    
-    private:
-        std::int64_t _limit;
-};
-
-template <>
-struct feature_<offset>{
-    feature_(const std::int64_t& offset = 0): _offset(offset){}
-    void offset(const std::int64_t& offset) { _offset = offset; }
-    std::int64_t offset() const { return _offset; }
-    
-    private:
-        std::int64_t _offset;
-};
-
-template <>
-struct feature_<last>{
-    feature_(const std::int64_t& last = 0): _last(last) {}
-    void last(const std::int64_t& last) { _last = last; }
-    std::int64_t last() const { return _last; }
-    
-    private:
-        std::int64_t _last;
-};
-
-template <typename... Features>
-struct features: feature_<Features>...{
-    template <typename... Args>
-    features(const Args&... args): feature_<Features>(args)...{}
-};
-
-
-/// new API
 
 namespace extra{
     

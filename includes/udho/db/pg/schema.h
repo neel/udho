@@ -32,7 +32,6 @@
 #include <udho/db/common.h>
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/decorators.h>
-#include <udho/db/pg/generators.h>
 #include <udho/db/pg/schema/schema.h>
 
 namespace udho{
@@ -60,119 +59,6 @@ struct one{
     using include = typename schema_type::template extend<X...>::template translate<one>;
     template <typename RecordT>
     using record_type = db::result<RecordT>;
-};
-
-template <typename DerivedT, typename SuccessT>
-struct read: pg::activity<DerivedT, typename SuccessT::result_type, typename SuccessT::schema_type>{
-    typedef typename SuccessT::schema_type schema_type;
-    typedef pg::activity<DerivedT, typename SuccessT::result_type, typename SuccessT::schema_type> activity_type;
-    typedef pg::select_generator<schema_type, void> generator_type;
-    
-    template <typename CollectorT>
-    read(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): 
-        activity_type(collector, pool, io), 
-        generate(schema)
-        {}
-    using activity_type::operator();
-    
-    template <typename RecordT>
-    struct into: pg::activity<DerivedT, typename SuccessT::template record_type<RecordT>, schema_type>{
-        typedef pg::activity<DerivedT, typename SuccessT::template record_type<RecordT>, schema_type> into_activity_type;
-        
-        template <typename CollectorT>
-        into(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): into_activity_type(collector, pool, io), generate(schema){}
-        using into_activity_type::operator();
-        
-        template <typename... Fields>
-        struct with: into_activity_type, pg::schema<Fields...>{
-            typedef pg::schema<Fields...> with_type;
-            typedef pg::select_generator<schema_type, with_type> with_generator_type;
-            
-            template <typename CollectorT>
-            with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): 
-                into_activity_type(collector, pool, io), 
-                generate(schema, static_cast<with_type&>(*this))
-                {}
-            template <typename CollectorT, typename... Args>
-            with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): 
-                into_activity_type(collector, pool, io), 
-                with_type(args...), 
-                generate(schema, static_cast<with_type&>(*this))
-                {}
-            using into_activity_type::operator();
-            
-            protected:
-                schema_type schema;
-                with_generator_type generate;
-        };
-        
-        protected:
-            schema_type schema;
-            generator_type generate;
-    };
-    
-    template <typename... Fields>
-    struct with: activity_type, pg::schema<Fields...>{
-        typedef pg::schema<Fields...> with_type;
-        typedef pg::select_generator<schema_type, with_type> with_generator_type;
-        
-        template <typename CollectorT>
-        with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): 
-            activity_type(collector, pool, io), 
-            generate(schema, static_cast<with_type&>(*this))
-            {}
-        template <typename CollectorT, typename... Args>
-        with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): 
-            activity_type(collector, pool, io), 
-            with_type(args...),
-            generate(schema, static_cast<with_type&>(*this))
-            {}
-        using activity_type::operator();
-        
-        protected:
-            schema_type schema;
-            with_generator_type generate;
-    };
-    
-    protected:
-        schema_type schema;
-        generator_type generate;
-};
-
-template <typename DerivedT, typename... T>
-struct write: read<DerivedT, pg::one<T...>>{
-    typedef read<DerivedT, pg::one<T...>> base;
-    using base::base;
-    using base::operator();
-};
-
-template <typename DerivedT>
-struct write<DerivedT>: pg::activity<DerivedT, db::none>{
-    typedef pg::activity<DerivedT, db::none> activity_type;
-    using activity_type::activity_type;
-    using activity_type::operator();
-    
-    template <typename... Fields>
-    struct with: activity_type, pg::schema<Fields...>{
-        typedef pg::schema<Fields...> with_type;
-//         typedef pg::generator<void, with_type> with_generator_type;
-        
-        template <typename CollectorT>
-        with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): 
-            activity_type(collector, pool, io)/*, 
-            generate(static_cast<with_type&>(*this))*/
-            {}
-        template <typename CollectorT, typename... Args>
-        with(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): 
-            activity_type(collector, pool, io), 
-            with_type(args...)/*,
-            generate(static_cast<with_type&>(*this))*/
-            {}
-        using activity_type::operator();
-        
-//         protected:
-//             with_generator_type generate;
-    };
 };
     
 }
