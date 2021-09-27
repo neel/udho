@@ -28,6 +28,7 @@
 #ifndef UDHO_DB_PG_SUBTASK_H
 #define UDHO_DB_PG_SUBTASK_H
 
+#include <udho/db/pg/activities/fwd.h>
 #include <udho/activities/subtask.h>
 #include <udho/activities/data.h>
 #include <udho/db/pg/activities/on.h>
@@ -36,9 +37,6 @@ namespace udho{
 namespace db{
 namespace pg{
 namespace activities{
-
-template <typename ContextT, typename... T>
-struct controller;
     
 template <typename ActivityT, typename... DependenciesT>
 struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{

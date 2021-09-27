@@ -37,6 +37,12 @@ namespace db{
 namespace pg{
 namespace activities{
     
+/**
+ * @brief Controls one or more activities
+ * 
+ * @tparam ContextT 
+ * @tparam T... Activity types that are to be performed. 
+ */
 template <typename ContextT, typename... T>
 struct controller: udho::db::pg::activities::subtask<udho::activities::start<ContextT, T...>>{
     typedef udho::activities::start<ContextT, T...> activity_type;
@@ -44,20 +50,68 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::start<Con
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
     
+    /**
+     * @brief Construct a new controller object
+     * 
+     * @param ctx udho::context 
+     * @param pool udho::db::pg::connection::pool
+     */
     controller(ContextT ctx, pg::connection::pool& pool): base(ctx), _pool(pool), _io(ctx.io()), _ctx(ctx){}
     
+    /**
+     * @brief get the collector object
+     * 
+     * @return auto 
+     */
     auto collector() { return base::_activity->collector(); }
+    /**
+     * @brief get the collector object
+     * 
+     * @return auto 
+     */
     auto data() const { return base::_activity->collector(); }
+    /**
+     * @brief get the collector object
+     * 
+     * @return auto 
+     */
     auto data() { return base::_activity->collector(); }
     
+    /**
+     * @brief Gets the context with which it is associated to
+     * 
+     * @return ContextT 
+     */
     ContextT context() { return _ctx; }
+    /**
+     * @brief Get a reference to the postgresql connection pool
+     * 
+     * @return pg::connection::pool& 
+     */
     pg::connection::pool& pool() { return _pool; }
+    /**
+     * @brief Get a reference to the underlying boost asio IO Service
+     * 
+     * @return boost::asio::io_service& 
+     */
     boost::asio::io_service& io() { return _io; }
     
+    /**
+     * @brief Gets success value associated with an activity of type ActivityT
+     * 
+     * @tparam ActivityT 
+     * @return auto 
+     */
     template <typename ActivityT>
     auto success() const {
         return udho::activities::accessor<ActivityT>(data()).template success<ActivityT>();
     }
+    /**
+     * @brief Gets failure value associated with an activity of type ActivityT
+     * 
+     * @tparam ActivityT 
+     * @return auto 
+     */
     template <typename ActivityT>
     auto failure() const {
         return udho::activities::accessor<ActivityT>(data()).template failure<ActivityT>();
