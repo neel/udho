@@ -32,7 +32,8 @@
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/decorators.h>
 #include <udho/db/pg/ozo/io.h>
-#include <udho/db/pg/features.h>
+#include <udho/db/pg/crud/limit.h>
+#include <udho/db/pg/crud/order.h>
 #include <udho/db/pg/schema.h>
 #include <udho/db/pg/schema/field.h>
 
