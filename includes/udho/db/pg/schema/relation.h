@@ -28,11 +28,13 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_RELATION_H
 #define UDHO_ACTIVITIES_DB_PG_SCHEMA_RELATION_H
 
-#include <udho/db/pg/schema.h>
+#include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/schema/readonly.h>
 #include <udho/db/pg/crud/builder.h>
 #include <udho/db/pg/crud/from.h>
+#include <udho/db/pg/crud/many.h>
+#include <udho/db/pg/crud/one.h>
 
 namespace udho{
 namespace db{
@@ -91,8 +93,6 @@ struct relation{
     using many = pg::many<column<Fields>...>;
     using one = pg::one<column<Fields>...>;
     using all = schema;
-    // commented out fields because this name may conflict with a user created fields namespace
-    // using fields = pg::schema<Fields...>;
     
     static auto name(){
         return RelationT::name();

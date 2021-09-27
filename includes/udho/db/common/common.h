@@ -25,50 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#ifndef UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H
+#define UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H
 
+#include <udho/db/common/none.h>
+#include <udho/db/common/result.h>
+#include <udho/db/common/results.h>
+#include <udho/db/common/detail.h>
+#include <udho/db/common/on_error.h>
 
-namespace udho{
-namespace db{
-namespace pg{
-    
-template <typename FromRelationT>
-struct from;
-
-template <typename RelationT>
-struct into;
-       
-template <typename ResultT, typename SchemaT>
-struct basic_select;
-
-template <typename SchemaT>
-struct basic_insert;
-
-template <typename... Fields>
-struct basic_remove;
-
-template <typename FromRelationT, typename RelationT, typename PreviousJoin = void>
-struct basic_join;
-
-template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
-struct basic_join_on;
-
-template <typename FromRelationT>
-struct attached;
-
-template <typename RelationT>
-struct builder;
-
-template <int Limit = -1, int Offset=0>
-struct limited;
-
-template <typename FieldT, bool IsAscending = true>
-struct ascending;
-
-}
-}
-}
-
-
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // UDHO_ACTIVITIES_DB_PG_COMMON_COMMON_H

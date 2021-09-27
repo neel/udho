@@ -28,7 +28,8 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_IO_JSON_H
 #define UDHO_ACTIVITIES_DB_PG_IO_JSON_H
 
-#include <udho/db/common.h>
+#include <udho/db/common/results.h>
+#include <udho/db/common/result.h>
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/pg/constructs/types.h>

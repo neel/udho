@@ -28,7 +28,6 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_GROUP_H
 #define UDHO_ACTIVITIES_DB_PG_GENERATORS_PARTS_GROUP_H
 
-#include <udho/db/pg/schema.h>
 #include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/generators/fwd.h>
 

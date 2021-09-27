@@ -25,50 +25,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#ifndef WEE_ACTIVITY_DB_COMMON_ON_ERROR_H
+#define WEE_ACTIVITY_DB_COMMON_ON_ERROR_H
 
+#include <udho/page.h>
+#include <boost/beast/http/message.hpp>
 
 namespace udho{
 namespace db{
-namespace pg{
+
+template <typename ContextT, typename SuccessT, boost::beast::http::status StatusE = boost::beast::http::status::bad_request>
+struct on_error{
+    ContextT _ctx;
+    boost::beast::http::status _status;
     
-template <typename FromRelationT>
-struct from;
+    on_error(ContextT ctx, boost::beast::http::status status = StatusE): _ctx(ctx), _status(status){}
+    ContextT& context() { return _ctx; }
+    boost::beast::http::status status() const { return _status; }
+    
+    void operator()(const SuccessT& /*result*/){
+        _ctx << udho::exceptions::http_error(_status);
+    }
+};
 
-template <typename RelationT>
-struct into;
-       
-template <typename ResultT, typename SchemaT>
-struct basic_select;
-
-template <typename SchemaT>
-struct basic_insert;
-
-template <typename... Fields>
-struct basic_remove;
-
-template <typename FromRelationT, typename RelationT, typename PreviousJoin = void>
-struct basic_join;
-
-template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
-struct basic_join_on;
-
-template <typename FromRelationT>
-struct attached;
-
-template <typename RelationT>
-struct builder;
-
-template <int Limit = -1, int Offset=0>
-struct limited;
-
-template <typename FieldT, bool IsAscending = true>
-struct ascending;
 
 }
 }
-}
 
-
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // WEE_ACTIVITY_DB_COMMON_ON_ERROR_H

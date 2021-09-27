@@ -37,10 +37,11 @@
 #include <udho/db/pg/constructs/alias.h>
 #include <udho/db/pg/constructs/cast.h>
 #include <udho/db/pg/schema/detail.h>
-#include <udho/db/pg/schema.h>
 #include <udho/db/pg/schema/readonly.h>
 #include <udho/db/pg/crud/limit.h>
 #include <udho/db/pg/crud/order.h>
+#include <udho/db/pg/crud/many.h>
+#include <udho/db/pg/crud/one.h>
 
 UDHO_DB_PRETTY(udho::db::pg::types::bigint);
 UDHO_DB_PRETTY(udho::db::pg::types::integer);

@@ -28,10 +28,11 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_CRUD_JOIN_H
 #define UDHO_ACTIVITIES_DB_PG_CRUD_JOIN_H
 
-#include <udho/db/pg/crud/builder.h>
-#include <udho/db/pg/crud/fwd.h>
 #include <type_traits>
+#include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/io/pretty.h>
+#include <udho/db/pg/crud/many.h>
+#include <udho/db/pg/crud/one.h>
 
 namespace udho{
 namespace db{
@@ -341,6 +342,9 @@ struct basic_join{
 };
 
 /**
+ * @brief join attach 
+ *
+ * @code 
  *   join<post::full>::inner::on<author::id, post::author>
  * ::join<project::full>::outer::on<author::id, project::owner>
  * ::join<group::full>::outer::on<author::id, group::owner>
@@ -355,6 +359,7 @@ struct basic_join{
  *          >
  *      >
  * >
+ * @endcode 
  */
 template <typename FromRelationT>
 struct attached{

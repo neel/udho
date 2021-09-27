@@ -25,50 +25,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-
+#ifndef WEE_ACTIVITY_DB_COMMON_NONE_H
+#define WEE_ACTIVITY_DB_COMMON_NONE_H
 
 namespace udho{
 namespace db{
-namespace pg{
+
+struct none{
+    typedef void data_type;
     
-template <typename FromRelationT>
-struct from;
+    inline bool empty() const { return true; }
+};
 
-template <typename RelationT>
-struct into;
-       
-template <typename ResultT, typename SchemaT>
-struct basic_select;
-
-template <typename SchemaT>
-struct basic_insert;
-
-template <typename... Fields>
-struct basic_remove;
-
-template <typename FromRelationT, typename RelationT, typename PreviousJoin = void>
-struct basic_join;
-
-template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
-struct basic_join_on;
-
-template <typename FromRelationT>
-struct attached;
-
-template <typename RelationT>
-struct builder;
-
-template <int Limit = -1, int Offset=0>
-struct limited;
-
-template <typename FieldT, bool IsAscending = true>
-struct ascending;
+template <typename DataT>
+none& operator<<(none& res, const DataT&){
+    return res;
+}
 
 }
 }
-}
 
-
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // WEE_ACTIVITY_DB_COMMON_NONE_H

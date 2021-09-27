@@ -32,10 +32,14 @@
 #include <udho/db/pg/crud/builder.h>
 #include <udho/db/pg/crud/from.h>
 #include <udho/db/pg/crud/into.h>
-#include <udho/db/pg/crud/select.h>
+#include <udho/db/pg/crud/limit.h>
+#include <udho/db/pg/crud/order.h>
 #include <udho/db/pg/crud/join.h>
+#include <udho/db/pg/crud/select.h>
 #include <udho/db/pg/crud/insert.h>
 #include <udho/db/pg/crud/update.h>
 #include <udho/db/pg/crud/remove.h>
+#include <udho/db/pg/crud/many.h>
+#include <udho/db/pg/crud/one.h>
 
 #endif // UDHO_ACTIVITIES_DB_PG_CRUD_CRUD_H

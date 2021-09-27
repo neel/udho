@@ -101,9 +101,7 @@ SET(UDHO_HEADERS
     includes/udho/db/pretty/printer.h
     includes/udho/db/pretty/fwd.h
     includes/udho/db/pg.h
-    includes/udho/db/common.h
     includes/udho/db/pg/pg.h
-    includes/udho/db/pg/schema.h
     includes/udho/db/pg/constructs/operators.h
     includes/udho/db/pg/constructs/cast.h
     includes/udho/db/pg/constructs/concat.h
@@ -206,4 +204,4 @@ if(UDHO_BUILD_TESTS)
    add_subdirectory(tests/)
 endif()
 
-add_subdirectory(docs)
+# add_subdirectory(docs)

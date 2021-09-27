@@ -31,7 +31,8 @@
 #include <ozo/connection_info.h>
 #include <ozo/connection_pool.h>
 #include <ozo/request.h>
-#include <udho/db/common.h>
+#include <udho/activities/activities.h>
+#include <udho/db/common/common.h>
 #include <udho/db/pg/ozo/connection.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/pg/activities/failure.h>

@@ -29,10 +29,11 @@
 #define UDHO_ACTIVITIES_DB_PG_CRUD_FROM_H
 
 #include <ozo/query_builder.h>
-#include <udho/db/pg/crud/join.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/constructs/types.h>
 #include <udho/db/pg/constructs/functions.h>
+#include <udho/db/pg/crud/many.h>
+#include <udho/db/pg/crud/one.h>
 
 namespace udho{
 namespace db{

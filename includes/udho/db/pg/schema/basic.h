@@ -30,7 +30,6 @@
 
 #include <udho/hazo.h>
 #include <udho/db/pg/schema/fwd.h>
-#include <udho/db/common.h>
 #include <udho/db/pg/decorators.h>
 
 namespace udho{

@@ -29,12 +29,13 @@
 #define UDHO_ACTIVITIES_DB_PG_CRUD_LIMIT_H
 
 #include <cstdint>
+#include <udho/db/pg/crud/fwd.h>
 
 namespace udho{
 namespace db{
 namespace pg{
     
-template <int Limit = -1, int Offset=0>
+template <int Limit, int Offset>
 struct limited{
     limited(): _limit(Limit), _offset(Offset){}
     

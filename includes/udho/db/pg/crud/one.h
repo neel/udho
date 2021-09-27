@@ -25,50 +25,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#ifndef WEE_ACTIVITY_DB_PG_CRUD_ONE_H
+#define WEE_ACTIVITY_DB_PG_CRUD_ONE_H
 
+#include <udho/db/common/result.h>
+#include <udho/db/pg/schema/schema.h>
 
 namespace udho{
 namespace db{
 namespace pg{
-    
-template <typename FromRelationT>
-struct from;
-
-template <typename RelationT>
-struct into;
-       
-template <typename ResultT, typename SchemaT>
-struct basic_select;
-
-template <typename SchemaT>
-struct basic_insert;
 
 template <typename... Fields>
-struct basic_remove;
-
-template <typename FromRelationT, typename RelationT, typename PreviousJoin = void>
-struct basic_join;
-
-template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
-struct basic_join_on;
-
-template <typename FromRelationT>
-struct attached;
-
-template <typename RelationT>
-struct builder;
-
-template <int Limit = -1, int Offset=0>
-struct limited;
-
-template <typename FieldT, bool IsAscending = true>
-struct ascending;
+struct one{
+    typedef pg::schema<Fields...> schema_type;
+    typedef db::result<schema_type> result_type;
+    template <typename... X>
+    using exclude = typename schema_type::template exclude<X...>::template translate<one>;
+    template <typename... X>
+    using include = typename schema_type::template extend<X...>::template translate<one>;
+    template <typename RecordT>
+    using record_type = db::result<RecordT>;
+};
 
 }
 }
 }
 
-
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // WEE_ACTIVITY_DB_PG_CRUD_ONE_H

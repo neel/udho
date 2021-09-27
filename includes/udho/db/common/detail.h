@@ -25,115 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEE_ACTIVITY_DB_COMMON_H
-#define WEE_ACTIVITY_DB_COMMON_H
+#ifndef WEE_ACTIVITY_DB_COMMON_DETAIL_H
+#define WEE_ACTIVITY_DB_COMMON_DETAIL_H
 
-#include <chrono>
-#include <iterator>
-#include <sstream>
-#include <type_traits>
-#include <boost/iterator/transform_iterator.hpp>
-#include <udho/page.h>
-#include <udho/activities.h>
-#include <boost/beast/http/message.hpp>
-#include <boost/hana/fold.hpp>
-#include <boost/hana/tuple.hpp>
+#include <functional>
+#include <udho/db/common/results.h>
+#include <udho/db/common/result.h>
 
 namespace udho{
 namespace db{
-    
-template <typename DataT>
-struct results{
-    typedef DataT data_type;
-    typedef results<DataT> self_type;
-    typedef std::vector<data_type> collection_type;
-    typedef typename collection_type::const_iterator iterator;
-       
-    iterator begin() const { return _rows.cbegin(); }
-    iterator end() const { return _rows.cend(); }
-    std::size_t count() const { return _rows.size(); }
-    bool empty() const { return !std::distance(begin(), end()); }
-    const data_type& front() const { return _rows.front(); }
-    const data_type& back() const { return _rows.back(); }
-    template <typename T>
-    const auto& first(const T& col) const { return front()[col]; }
-    template <typename T>
-    const auto& last(const T& col) const { return back()[col]; }
-    
-    auto inserter() { return std::back_inserter(_rows); }
-    
-    struct blank{
-        bool operator()(const self_type& result) const{
-            return result.empty();
-        }
-    };
-    
-    struct never{
-        bool operator()(const self_type&) const{
-            return false;
-        }
-    };
-    
-    private:
-        collection_type _rows;
-};
-
-template <typename DataT>
-struct result{
-    typedef DataT data_type;
-    typedef result<DataT> self_type;
-       
-    result(): _empty(true){}
-
-    const data_type& get() const { return _result; }
-    const data_type* operator->() const { return &get(); }
-    const data_type& operator*() const  { return get(); }
-    bool empty() const { return _empty; }
-    
-    template <typename T>
-    const auto& operator[](const T& arg) const { return _result[arg]; }
-    
-    void operator()(const data_type& result){ _result = result; _empty = false; }
-    
-    struct blank{
-        bool operator()(const self_type& result) const{
-            return result.empty();
-        }
-    };
-    
-    struct never{
-        bool operator()(const self_type&) const{
-            return false;
-        }
-    };
-       
-    private:
-        data_type _result;
-        bool      _empty;
-};
-
-struct none{
-    typedef void data_type;
-    
-    inline bool empty() const { return true; }
-};
-
-template <typename DataT>
-result<DataT>& operator<<(result<DataT>& res, const DataT& data){
-    res(data);
-    return res;
-}
-
-template <typename DataT>
-results<DataT>& operator<<(results<DataT>& res, const DataT& data){
-    *res++ = data;
-    return res;
-}
-
-template <typename DataT>
-none& operator<<(none& res, const DataT&){
-    return res;
-}
 
 namespace detail{
 
@@ -232,7 +132,7 @@ struct processor{
     }
 };
 template <typename ThatT, typename DataT>
-struct processor<ThatT, results<DataT>>{
+struct processor<ThatT, db::results<DataT>>{
     typedef ThatT    that_type;
     typedef results<DataT> success_type;
     
@@ -248,7 +148,7 @@ struct processor<ThatT, results<DataT>>{
 };
 
 template <typename ThatT, typename DataT>
-struct processor<ThatT, result<DataT>>{
+struct processor<ThatT, db::result<DataT>>{
     typedef ThatT    that_type;
     typedef result<DataT> success_type;
     
@@ -280,22 +180,7 @@ struct HasDataType{
 
 }
 
-template <typename ContextT, typename SuccessT, boost::beast::http::status StatusE = boost::beast::http::status::bad_request>
-struct on_error{
-    ContextT _ctx;
-    boost::beast::http::status _status;
-    
-    on_error(ContextT ctx, boost::beast::http::status status = StatusE): _ctx(ctx), _status(status){}
-    ContextT& context() { return _ctx; }
-    boost::beast::http::status status() const { return _status; }
-    
-    void operator()(const SuccessT& /*result*/){
-        _ctx << udho::exceptions::http_error(_status);
-    }
-};
-
-
 }
 }
 
-#endif // WEE_ACTIVITY_DB_COMMON_H
+#endif // WEE_ACTIVITY_DB_COMMON_DETAIL_H

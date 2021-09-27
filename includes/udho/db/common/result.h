@@ -25,45 +25,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_SCHEMA_H
-#define UDHO_ACTIVITIES_DB_PG_SCHEMA_H
-
-#include <udho/hazo.h>
-#include <udho/db/common.h>
-#include <udho/db/pg/activities/activity.h>
-#include <udho/db/pg/decorators.h>
-#include <udho/db/pg/schema/schema.h>
+#ifndef WEE_ACTIVITY_DB_COMMON_RESULT_H
+#define WEE_ACTIVITY_DB_COMMON_RESULT_H
 
 namespace udho{
 namespace db{
-namespace pg{
 
-template <typename... Fields>
-struct many{
-    typedef pg::schema<Fields...> schema_type;
-    typedef db::results<schema_type> result_type;
-    template <typename... X>
-    using exclude = typename schema_type::template exclude<X...>::template translate<many>;
-    template <typename... X>
-    using include = typename schema_type::template extend<X...>::template translate<many>;
-    template <typename RecordT>
-    using record_type = db::results<RecordT>;
-};
-template <typename... Fields>
-struct one{
-    typedef pg::schema<Fields...> schema_type;
-    typedef db::result<schema_type> result_type;
-    template <typename... X>
-    using exclude = typename schema_type::template exclude<X...>::template translate<one>;
-    template <typename... X>
-    using include = typename schema_type::template extend<X...>::template translate<one>;
-    template <typename RecordT>
-    using record_type = db::result<RecordT>;
-};
+template <typename DataT>
+struct result{
+    typedef DataT data_type;
+       
+    result(): _empty(true){}
+
+    const data_type& get() const { return _result; }
+    const data_type* operator->() const { return &get(); }
+    const data_type& operator*() const  { return get(); }
+    bool empty() const { return _empty; }
     
+    template <typename T>
+    const auto& operator[](const T& arg) const { return _result[arg]; }
+    
+    void operator()(const data_type& result){ _result = result; _empty = false; }
+    
+    struct blank{
+        bool operator()(const result<DataT>& result) const{
+            return result.empty();
+        }
+    };
+    
+    struct never{
+        bool operator()(const result<DataT>&) const{
+            return false;
+        }
+    };
+       
+    private:
+        data_type _result;
+        bool      _empty;
+};
+
+template <typename DataT>
+result<DataT>& operator<<(result<DataT>& res, const DataT& data){
+    res(data);
+    return res;
 }
+
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PG_SCHEMA_H
-
+#endif // WEE_ACTIVITY_DB_COMMON_RESULT_H

@@ -29,8 +29,8 @@
 #define UDHO_ACTIVITIES_DB_PG_CRUD_UPDATE_H
 
 #include <udho/db/pg/activities/activity.h>
-#include <udho/db/pg/schema.h>
-#include <udho/db/common.h>
+#include <udho/db/common/result.h>
+#include <udho/db/common/none.h>
 
 namespace udho{
 namespace db{

@@ -29,12 +29,13 @@
 #define UDHO_ACTIVITIES_DB_PG_CRUD_ORDER_H
 
 #include <cstdint>
+#include <udho/db/pg/crud/fwd.h>
 
 namespace udho{
 namespace db{
 namespace pg{
     
-template <typename FieldT, bool IsAscending = true>
+template <typename FieldT, bool IsAscending>
 struct ascending{};
 
 template <typename FieldT>

@@ -28,7 +28,7 @@
 #ifndef UDHO_ACTIVITIES_DB_PG_CRUD_SELECT_H
 #define UDHO_ACTIVITIES_DB_PG_CRUD_SELECT_H
 
-#include <udho/db/pg/schema.h>
+#include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/generators/fwd.h>
 #include <udho/db/pg/crud/fwd.h>

@@ -25,50 +25,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
-#define UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#ifndef WEE_ACTIVITY_DB_COMMON_RESULTS_H
+#define WEE_ACTIVITY_DB_COMMON_RESULTS_H
 
+#include <vector>
 
 namespace udho{
 namespace db{
-namespace pg{
-    
-template <typename FromRelationT>
-struct from;
 
-template <typename RelationT>
-struct into;
+template <typename DataT>
+struct results{
+    typedef DataT data_type;
+    typedef std::vector<data_type> collection_type;
+    typedef typename collection_type::const_iterator iterator;
        
-template <typename ResultT, typename SchemaT>
-struct basic_select;
+    iterator begin() const { return _rows.cbegin(); }
+    iterator end() const { return _rows.cend(); }
+    std::size_t count() const { return _rows.size(); }
+    bool empty() const { return !std::distance(begin(), end()); }
+    const data_type& front() const { return _rows.front(); }
+    const data_type& back() const { return _rows.back(); }
+    template <typename T>
+    const auto& first(const T& col) const { return front()[col]; }
+    template <typename T>
+    const auto& last(const T& col) const { return back()[col]; }
+    
+    auto inserter() { return std::back_inserter(_rows); }
+    
+    struct blank{
+        bool operator()(const results<DataT>& result) const{
+            return result.empty();
+        }
+    };
+    
+    struct never{
+        bool operator()(const results<DataT>&) const{
+            return false;
+        }
+    };
+    
+    private:
+        collection_type _rows;
+};
 
-template <typename SchemaT>
-struct basic_insert;
-
-template <typename... Fields>
-struct basic_remove;
-
-template <typename FromRelationT, typename RelationT, typename PreviousJoin = void>
-struct basic_join;
-
-template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
-struct basic_join_on;
-
-template <typename FromRelationT>
-struct attached;
-
-template <typename RelationT>
-struct builder;
-
-template <int Limit = -1, int Offset=0>
-struct limited;
-
-template <typename FieldT, bool IsAscending = true>
-struct ascending;
+template <typename DataT>
+results<DataT>& operator<<(results<DataT>& res, const DataT& data){
+    *res++ = data;
+    return res;
+}
 
 }
 }
-}
 
-
-#endif // UDHO_ACTIVITIES_DB_PG_CRUD_FWD_H
+#endif // WEE_ACTIVITY_DB_COMMON_RESULTS_H
