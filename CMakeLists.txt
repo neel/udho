@@ -136,7 +136,6 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/crud/update.h
     includes/udho/db/pg/crud/fwd.h
     includes/udho/db/pg/crud/join.h
-    includes/udho/db/pg/activities/traits.h
     includes/udho/db/pg/activities/activity.h
     includes/udho/db/pg/activities/start.h
     includes/udho/db/pg/activities/on.h
