@@ -174,6 +174,9 @@ SET(UDHO_SOURCES
     sources/udho/page.cpp
 )
 
+ADD_EXECUTABLE(sandbox sandbox.cpp)
+TARGET_LINK_LIBRARIES(sandbox udho)
+
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 endif()

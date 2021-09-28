@@ -18,8 +18,8 @@ TARGET_LINK_LIBRARIES(client ${Boost_LIBRARIES} udho)
 ADD_EXECUTABLE(activity activity.cpp)
 TARGET_LINK_LIBRARIES(activity ${Boost_LIBRARIES} udho)
 
-ADD_EXECUTABLE(sandbox sandbox.cpp)
-TARGET_LINK_LIBRARIES(sandbox ${Boost_LIBRARIES} udho)
+# ADD_EXECUTABLE(sandbox sandbox.cpp)
+# TARGET_LINK_LIBRARIES(sandbox ${Boost_LIBRARIES} udho)
 
 ADD_EXECUTABLE(decorators decorators.cpp)
 TARGET_LINK_LIBRARIES(decorators ${Boost_LIBRARIES} udho)

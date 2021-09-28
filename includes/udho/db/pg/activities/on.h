@@ -43,38 +43,53 @@ namespace pg{
   
 namespace traits{
 
+namespace detail{
+    template <typename ResultT>
+    struct empty_allowed{ enum { value = true }; };
+    template <typename DataT>
+    struct empty_allowed<db::result<DataT>>{ enum { value = false }; };
+
+    /**
+    * @brief Default empty checker always returns false
+    * 
+    * @tparam ResultT 
+    */
+    template <typename ResultT>
+    struct check_empty{
+        bool operator()(const ResultT&) const { return false; }
+    };
+
+    template <typename DataT>
+    struct check_empty<db::result<DataT>>{
+        bool operator()(const db::result<DataT>& res) const { return res.empty(); }
+    };
+    template <typename DataT>
+    struct check_empty<db::results<DataT>>{
+        bool operator()(const db::results<DataT>& res) const { return res.empty(); }
+    };
+
+    template<typename TraitT, typename = void>
+    struct specified: std::false_type {};
+
+    template<typename TraitT>
+    struct specified<TraitT, std::void_t< decltype( trait(TraitT{}) ) >>: std::true_type {};
+
+    template <typename TraitT, std::enable_if_t<specified<TraitT>::value, bool> = true>
+    typename TraitT::value_type adl_trait(const TraitT& t){
+        return trait(t);
+    }
+
+    template <typename TraitT, std::enable_if_t<!specified<TraitT>::value, bool> = true>
+    typename TraitT::value_type adl_trait(const TraitT&){
+        return TraitT::value;
+    }
+}
+
 template <typename ActivityT>
 struct error_code{
     using value_type = boost::beast::http::status;
     constexpr static const boost::beast::http::status value = boost::beast::http::status::not_found;
 };
-
-namespace detail{
-template <typename ResultT>
-struct empty_allowed{ enum { value = true }; };
-template <typename DataT>
-struct empty_allowed<db::result<DataT>>{ enum { value = false }; };
-
-/**
- * @brief Default empty checker always returns false
- * 
- * @tparam ResultT 
- */
-template <typename ResultT>
-struct check_empty{
-    bool operator()(const ResultT&) const { return false; }
-};
-
-template <typename DataT>
-struct check_empty<db::result<DataT>>{
-    bool operator()(const db::result<DataT>& res) const { return res.empty(); }
-};
-template <typename DataT>
-struct check_empty<db::results<DataT>>{
-    bool operator()(const db::results<DataT>& res) const { return res.empty(); }
-};
-
-}
 
 template <typename ActivityT>
 struct allow_empty{
@@ -82,11 +97,6 @@ struct allow_empty{
     constexpr static const bool value = detail::empty_allowed<typename ActivityT::success_type>::value;
 };
 
-}
-
-template <typename TraitT>
-typename TraitT::value_type trait(const TraitT&){
-    return TraitT::value;
 }
 
 #define PG_ALLOW_EMPTY(ActivityT, Allowed) bool trait(const udho::db::pg::traits::allow_empty<ActivityT>&) { return Allowed; }
@@ -132,7 +142,7 @@ struct error{
      * The parenthesis operator is called to throw HTTP errors
      */
     bool operator()(const typename ActivityT::success_type& d){
-        boost::beast::http::status status = trait(traits::error_code<ActivityT>{});
+        boost::beast::http::status status = traits::detail::adl_trait(traits::error_code<ActivityT>{});
         _ctx << udho::exceptions::http_error(status);
         return false;
     }
@@ -149,7 +159,7 @@ struct validate{
      * disqualifies none
      */
     bool operator()(const typename ActivityT::success_type& res){
-        if(!trait(traits::allow_empty<ActivityT>{})){
+        if(traits::detail::adl_trait(traits::allow_empty<ActivityT>{})){
             traits::detail::check_empty<typename ActivityT::success_type> empty_checker;
             return empty_checker(res);
         }
