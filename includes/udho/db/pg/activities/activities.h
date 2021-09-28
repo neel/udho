@@ -36,6 +36,5 @@
 #include <udho/db/pg/activities/on.h>
 #include <udho/db/pg/activities/start.h>
 #include <udho/db/pg/activities/subtask.h>
-#include <udho/db/pg/activities/traits.h>
 
 #endif // UDHO_DB_PG_ACTIVITIES_ACTIVITIES_H
