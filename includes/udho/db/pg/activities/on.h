@@ -54,6 +54,26 @@ template <typename ResultT>
 struct empty_allowed{ enum { value = true }; };
 template <typename DataT>
 struct empty_allowed<db::result<DataT>>{ enum { value = false }; };
+
+/**
+ * @brief Default empty checker always returns false
+ * 
+ * @tparam ResultT 
+ */
+template <typename ResultT>
+struct check_empty{
+    bool operator()(const ResultT&) const { return false; }
+};
+
+template <typename DataT>
+struct check_empty<db::result<DataT>>{
+    bool operator()(const db::result<DataT>& res) const { return res.empty(); }
+};
+template <typename DataT>
+struct check_empty<db::results<DataT>>{
+    bool operator()(const db::results<DataT>& res) const { return res.empty(); }
+};
+
 }
 
 template <typename ActivityT>
@@ -132,7 +152,8 @@ struct validate{
      */
     bool operator()(const typename ActivityT::success_type& res){
         if(!trait(traits::allow_empty<ActivityT>{})){
-            return res.empty();
+            traits::detail::check_empty<typename ActivityT::success_type> empty_checker;
+            return empty_checker(res);
         }
         return false;
     }
