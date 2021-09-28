@@ -28,19 +28,53 @@
 #ifndef UDHO_DB_PG_ON_H
 #define UDHO_DB_PG_ON_H
 
+#include "udho/db/common/none.h"
 #include <boost/beast/http/message.hpp>
+#include <boost/beast/http/status.hpp>
 #include <udho/contexts.h>
 #include <udho/page.h>
+#include <udho/db/pg/activities/failure.h>
+#include <udho/db/common/results.h>
+#include <udho/db/common/result.h>
 
 namespace udho{
 namespace db{
 namespace pg{
-
-struct failure;
   
+namespace traits{
+
+template <typename ActivityT>
+struct error_code{
+    using value_type = boost::beast::http::status;
+    constexpr static const boost::beast::http::status value = boost::beast::http::status::not_found;
+};
+
+namespace detail{
+template <typename ResultT>
+struct empty_allowed{ enum { value = true }; };
+template <typename DataT>
+struct empty_allowed<db::result<DataT>>{ enum { value = false }; };
+}
+
+template <typename ActivityT>
+struct allow_empty{
+    using value_type = bool;
+    constexpr static const bool value = detail::empty_allowed<typename ActivityT::success_type>::value;
+};
+
+}
+
+template <typename TraitT>
+typename TraitT::value_type trait(const TraitT&){
+    return TraitT::value;
+}
+
+#define PG_ALLOW_EMPTY(ActivityT, Allowed) bool trait(const udho::db::pg::traits::allow_empty<ActivityT>&) { return Allowed; }
+#define PG_ERROR_CODE(ActivityT, ErrorC)   boost::beast::http::status trait(const udho::db::pg::traits::error_code<ActivityT>&) { return ErrorC; }
+
 namespace on{
     
-namespace http = boost::beast::http;
+// namespace http = boost::beast::http;
     
 /**
  * Specialize this template to customize error message on SQL failure
@@ -56,9 +90,9 @@ struct failure{
     /**
      * The parenthesis operator is called to throw HTTP errors
      */
-    bool operator()(const pg::failure& failure){
-        auto cb = ActivityT::on::failure(_ctx);
-        cb(failure);
+    bool operator()(const pg::failure& f){
+        std::string message = f.error.message() + f.reason;
+        _ctx << pg::exception(f, message);
         return false;
     }
     private:
@@ -80,8 +114,8 @@ struct error{
      * The parenthesis operator is called to throw HTTP errors
      */
     bool operator()(const typename ActivityT::success_type& d){
-        auto cb = ActivityT::on::error(_ctx);
-        cb(d);
+        boost::beast::http::status status = trait(traits::error_code<ActivityT>{});
+        _ctx << udho::exceptions::http_error(status);
         return false;
     }
     private:
@@ -90,52 +124,45 @@ struct error{
 
 /**
  * Sppecialize to implement custom validations on success result.
- * \code
- * namespace pg{namespace on{
- * 
- * template <>
- * struct validate<ActivityX>: unless::blank<ActivityX>{
- *     using blank::operator();
- * };
- * 
- * }}
- * \endcode
  */
 template <typename ActivityT>
 struct validate{
     /**
      * disqualifies none
      */
-    bool operator()(const typename ActivityT::success_type&){
+    bool operator()(const typename ActivityT::success_type& res){
+        if(!trait(traits::allow_empty<ActivityT>{})){
+            return res.empty();
+        }
         return false;
     }
 };
 
-#define PG_ACTIVITY_VALID_UNLESS_BLANK(ActivityX)                 \
-    namespace pg{namespace on{                                    \
-        template <>                                               \
-        struct validate<ActivityX>: unless::blank<ActivityX>{     \
-            using blank::operator();                              \
-        };                                                        \
-    }}                                                            \
+// #define PG_ACTIVITY_VALID_UNLESS_BLANK(ActivityX)                 \
+//     namespace pg{namespace on{                                    \
+//         template <>                                               \
+//         struct validate<ActivityX>: unless::blank<ActivityX>{     \
+//             using blank::operator();                              \
+//         };                                                        \
+//     }}                                                            \
         
 
-namespace unless{
+// namespace unless{
     
-/**
- * Expects at least one record in the resultset.
- */
-template <typename ActivityT>
-struct blank{
-    /**
-     * returns true (invalid) if empty.
-     */
-    bool operator()(const typename ActivityT::success_type& res){
-        return res.empty();
-    }
-};
+// /**
+//  * Expects at least one record in the resultset.
+//  */
+// template <typename ActivityT>
+// struct blank{
+//     /**
+//      * returns true (invalid) if empty.
+//      */
+//     bool operator()(const typename ActivityT::success_type& res){
+//         return res.empty();
+//     }
+// };
     
-}
+// }
     
 }
 }

@@ -38,12 +38,12 @@
 
 namespace udho{
 /**
- * \ingroup activities
+ * @ingroup activities
  */
 namespace activities{
     
     /**
-     * \internal 
+     * @internal 
      */
     template <typename DependencyT>
     struct junction{
@@ -51,28 +51,29 @@ namespace activities{
     };
     
     /**
-     * A combinator combines multiple activities and proceeds towards the next activity
-     * \tparam NextT next activity
-     * \tparam DependenciesT dependencies
-     * \ingroup activities
+     * @brief A combinator combines multiple activities and proceeds towards the next activity
+     * @tparam NextT next activity
+     * @tparam DependenciesT dependencies
+     * @ingroup activities
      */
     template <typename NextT, typename... DependenciesT>
     struct combinator: junction<typename DependenciesT::result_type>...{
         typedef std::shared_ptr<NextT> next_type;
         typedef boost::signals2::signal<void (NextT&)> signal_type;
         
-        next_type  _next;
-        std::atomic<std::size_t> _counter;
-        
-        std::mutex  _mutex;
-        signal_type _preparators;
-        std::atomic<bool> _canceled;
-        
+        /**
+         * @brief Construct a new combinator object
+         * 
+         * @param next 
+         */
         combinator(next_type& next): _next(next), _counter(sizeof...(DependenciesT)), _canceled(false){}
         
         /**
+         * @brief Signal finishing of one subtask connected to this combinator.
          * whenever a subtask finishes the `operator()` of the combinator is called. which doesn't start the next subtask untill all the dependencies have completed.
          * Before starting the next activity the next activity is prepared if any preparator is passed through the `prepare()` function
+         * @tparam U Result type of one of the subtasks connected to this combinator.
+         * @param u 
          */
         template <typename U>
         void operator()(const U& u){
@@ -80,36 +81,50 @@ namespace activities{
             propagate();
         }
         
+        /**
+         * @brief Cancel invocation of all child activities
+         */
         void cancel(){
             _canceled = true;
             propagate();
         }
         
-        void propagate(){
-            _counter--;
-            if(!_counter){
-                _mutex.lock();
-                if(_canceled){
-                    _next->cancel();
-                }else{
-                    if(!_preparators.empty()){
-                        _preparators(*_next);
-                        _preparators.disconnect_all_slots();
-                    }
-                    (*_next)();
-                }
-                _mutex.unlock();
-            }
-        }
-        
         /**
-         *set a preparator callback which will be called with a reference to teh next activity. The preparator callback is supposed to prepare the next activity by using the data callected till that time.
+         * @brief set a preparator callback which will be called with a reference to teh next activity. 
+         * The preparator callback is supposed to prepare the next activity by using the data collected till that time.
+         * @tparam PreparatorT 
+         * @param prep 
          */
         template <typename PreparatorT>
         void prepare(PreparatorT prep){
             boost::function<void (NextT&)> fnc(prep);
             _preparators.connect(prep);
         }
+
+        private:
+            void propagate(){
+                _counter--;
+                if(!_counter){
+                    _mutex.lock();
+                    if(_canceled){
+                        _next->cancel();
+                    }else{
+                        if(!_preparators.empty()){
+                            _preparators(*_next);
+                            _preparators.disconnect_all_slots();
+                        }
+                        (*_next)();
+                    }
+                    _mutex.unlock();
+                }
+            }
+
+        private:
+            next_type                _next;
+            std::atomic<std::size_t> _counter;
+            std::mutex               _mutex;
+            signal_type              _preparators;
+            std::atomic<bool>        _canceled;
     };
     
 

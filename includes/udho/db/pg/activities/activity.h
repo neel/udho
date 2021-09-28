@@ -47,38 +47,38 @@ namespace udho{
 namespace db{
 namespace pg{
 
-namespace http = boost::beast::http;
+// namespace http = boost::beast::http;
 
-template <typename ContextT, http::status StatusE = http::status::internal_server_error>
-struct on_failure{
-    ContextT _ctx;
-    http::status _status;
+// template <typename ContextT, http::status StatusE = http::status::internal_server_error>
+// struct on_failure{
+//     ContextT _ctx;
+//     http::status _status;
     
-    on_failure(ContextT ctx): _ctx(ctx), _status(StatusE){}
-    on_failure(ContextT ctx, http::status status): _ctx(ctx), _status(status){}
-    ContextT& context() { return _ctx; }
-    http::status status() const { return _status; }
+//     on_failure(ContextT ctx): _ctx(ctx), _status(StatusE){}
+//     on_failure(ContextT ctx, http::status status): _ctx(ctx), _status(status){}
+//     ContextT& context() { return _ctx; }
+//     http::status status() const { return _status; }
     
-    void operator()(const pg::failure& f){
-        std::string message = f.error.message() + f.reason;
-        _ctx << pg::exception(f, message);
-    }
-};
+//     void operator()(const pg::failure& f){
+//         std::string message = f.error.message() + f.reason;
+//         _ctx << pg::exception(f, message);
+//     }
+// };
 
-template <typename ContextT, typename SuccessT>
-struct on_cancel: private db::on_error<ContextT, SuccessT>, private on_failure<ContextT>{
-    on_cancel(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error)
-        : db::on_error<ContextT, SuccessT>(ctx, status_error), 
-            on_failure<ContextT>(ctx, status_failure){}
-    bool operator()(const SuccessT& result){
-        db::on_error<ContextT, SuccessT>::operator()(result);
-        return false;
-    }
-    bool operator()(const pg::failure& f){
-        on_failure<ContextT>::operator()(f);
-        return false;
-    }
-};
+// template <typename ContextT, typename SuccessT>
+// struct on_cancel: private db::on_error<ContextT, SuccessT>, private on_failure<ContextT>{
+//     on_cancel(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error)
+//         : db::on_error<ContextT, SuccessT>(ctx, status_error), 
+//             on_failure<ContextT>(ctx, status_failure){}
+//     bool operator()(const SuccessT& result){
+//         db::on_error<ContextT, SuccessT>::operator()(result);
+//         return false;
+//     }
+//     bool operator()(const pg::failure& f){
+//         on_failure<ContextT>::operator()(f);
+//         return false;
+//     }
+// };
 
 /**
  * @brief Basic activity for asynchronous postgresql queries
@@ -167,31 +167,31 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
         _rows.clear();
     }
     
-    template <typename ContextT>
-    using on_error = db::on_error<ContextT, success_type>;
+    // template <typename ContextT>
+    // using on_error = db::on_error<ContextT, success_type>;
     
-    template <typename ContextT>
-    using on_failure = pg::on_failure<ContextT>;
+    // template <typename ContextT>
+    // using on_failure = pg::on_failure<ContextT>;
     
-    template <typename ContextT>
-    using on_cancel = pg::on_cancel<ContextT, success_type>;
+    // template <typename ContextT>
+    // using on_cancel = pg::on_cancel<ContextT, success_type>;
     
-    struct on{
-        template <typename ContextT>
-        static on_error<ContextT> error(ContextT ctx, http::status status = http::status::bad_request){
-            return on_error<ContextT>(ctx, status);
-        }
+    // struct on{
+        // template <typename ContextT>
+        // static on_error<ContextT> error(ContextT ctx, http::status status = http::status::bad_request){
+        //     return on_error<ContextT>(ctx, status);
+        // }
         
-        template <typename ContextT>
-        static on_failure<ContextT> failure(ContextT ctx, http::status status = http::status::internal_server_error){
-            return on_failure<ContextT>(ctx, status);
-        }
-    };
+        // template <typename ContextT>
+        // static on_failure<ContextT> failure(ContextT ctx, http::status status = http::status::internal_server_error){
+        //     return on_failure<ContextT>(ctx, status);
+        // }
+    // };
     
-    template <typename ContextT>
-    static on_cancel<ContextT> abort(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error){
-        return on_cancel<ContextT>(ctx, status_error, status_failure);
-    }
+    // template <typename ContextT>
+    // static on_cancel<ContextT> abort(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error){
+    //     return on_cancel<ContextT>(ctx, status_error, status_failure);
+    // }
     
     private:
         pg::connection::pool&    _pool;
@@ -258,31 +258,31 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
     }
     void clear(){}
 
-    template <typename ContextT>
-    using on_error = db::on_error<ContextT, success_type>;
+    // template <typename ContextT>
+    // using on_error = db::on_error<ContextT, success_type>;
     
-    template <typename ContextT>
-    using on_failure = pg::on_failure<ContextT>;
+    // template <typename ContextT>
+    // using on_failure = pg::on_failure<ContextT>;
     
-    template <typename ContextT>
-    using on_cancel = pg::on_cancel<ContextT, success_type>;
+    // template <typename ContextT>
+    // using on_cancel = pg::on_cancel<ContextT, success_type>;
     
-    struct on{
-        template <typename ContextT>
-        static on_error<ContextT> error(ContextT ctx, http::status status = http::status::bad_request){
-            return on_error<ContextT>(ctx, status);
-        }
+    // struct on{
+        // template <typename ContextT>
+        // static on_error<ContextT> error(ContextT ctx, http::status status = http::status::bad_request){
+        //     return on_error<ContextT>(ctx, status);
+        // }
         
-        template <typename ContextT>
-        static on_failure<ContextT> failure(ContextT ctx, http::status status = http::status::internal_server_error){
-            return on_failure<ContextT>(ctx, status);
-        }
-    };
+        // template <typename ContextT>
+        // static on_failure<ContextT> failure(ContextT ctx, http::status status = http::status::internal_server_error){
+        //     return on_failure<ContextT>(ctx, status);
+        // }
+    // };
     
-    template <typename ContextT>
-    static on_cancel<ContextT> abort(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error){
-        return on_cancel<ContextT>(ctx, status_error, status_failure);
-    }
+    // template <typename ContextT>
+    // static on_cancel<ContextT> abort(ContextT ctx, http::status status_error = http::status::bad_request, http::status status_failure = http::status::internal_server_error){
+    //     return on_cancel<ContextT>(ctx, status_error, status_failure);
+    // }
     
     private:
         pg::connection::pool&    _pool;
