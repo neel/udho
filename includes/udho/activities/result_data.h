@@ -68,26 +68,24 @@ struct apply_helper: detail::apply_helper<FunctorT>, detail::apply_helper<Functo
 };
 
 /**
- * Contains **Copiable** Success or Failure data for an activity.
- * \tparam SuccessT success data type
- * \tparam FailureT failure data type
- * 
- * \ingroup activities
- * \ingroup data
+ * @brief Contains Copiable Success or Failure data for an activity.
+ * Contains one SuccessT and one FailureT values using their default constructors. 
+ * @note Both SuccessT and FailureT must be default constructible.
+ * @tparam SuccessT success data type
+ * @tparam FailureT failure data type
+ * @ingroup activities
+ * @ingroup data
  */
 template <typename SuccessT, typename FailureT>
 struct result_data{
     typedef SuccessT success_type;
     typedef FailureT failure_type;
     typedef result_data<SuccessT, FailureT> self_type;
-    typedef self_type result_type;
     
-    bool _completed;
-    bool _success;
-    bool _canceled;
-    success_type _sdata;
-    failure_type _fdata;
-    
+    /**
+     * @brief Construct a new result data object
+     * 
+     */
     result_data(): _completed(false), _success(false), _canceled(false){}
 
     /**
@@ -136,7 +134,7 @@ struct result_data{
      * 
      * The callback may not have all the overloads. 
      * 
-     * \param callback 
+     * @param callback 
      */
     template <typename CallableT>
     void apply(CallableT callback){
@@ -173,6 +171,12 @@ struct result_data{
         void cancel(){
             _canceled = true;
         }
+    private:
+        bool _completed;
+        bool _success;
+        bool _canceled;
+        success_type _sdata;
+        failure_type _fdata;
 };
     
 }

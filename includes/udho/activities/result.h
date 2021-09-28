@@ -36,24 +36,24 @@
 
 namespace udho{
 /**
- * \ingroup activities
+ * @ingroup activities
  */
 namespace activities{
     
     /**
-     * Completion handler for an activity.
-     * \tparam SuccessT success data associated with the activity 
-     * \tparam FailureT failure data associated with the activity
+     * @brief Completion handler for an activity.
+     * @tparam SuccessT success data associated with the activity (requires default constructible)
+     * @tparam FailureT failure data associated with the activity (requires default constructible)
      * 
-     * \ingroup activities
+     * @ingroup activities
      */
     template <typename DerivedT, typename SuccessT, typename FailureT>
-    struct result: udho::activities::result_data<SuccessT, FailureT>{
-        typedef udho::activities::result_data<SuccessT, FailureT> result_data_type;
-        typedef accessor<detail::labeled<DerivedT, result_data_type>> accessor_type;
-        typedef typename result_data_type::success_type success_type;
-        typedef typename result_data_type::failure_type failure_type;
-        typedef boost::signals2::signal<void (const result_data_type&)> signal_type;
+    struct result: private udho::activities::result_data<SuccessT, FailureT>{
+        typedef udho::activities::result_data<SuccessT, FailureT> result_type;
+        typedef accessor<detail::labeled<DerivedT, result_type>> accessor_type;
+        typedef typename result_type::success_type success_type;
+        typedef typename result_type::failure_type failure_type;
+        typedef boost::signals2::signal<void (const result_type&)> signal_type;
         typedef boost::signals2::signal<void ()> cancelation_signal_type;
         typedef boost::function<bool (const success_type&)> cancel_if_ftor;
         typedef boost::function<bool (const success_type&)> abort_error_ftor;
@@ -62,27 +62,19 @@ namespace activities{
         template <typename NextT, typename... DependenciesT>
         friend struct combinator;
         
-        accessor_type _shadow;
-        signal_type   _signal;
-        bool          _required;
-        cancelation_signal_type _cancelation_signals;
-        cancel_if_ftor _cancel_if;
-        abort_error_ftor _abort_error;
-        abort_failure_ftor _abort_failure;
-        
         /**
-         * \param store collector
+         * @param store collector
          */
         template <typename StoreT>
         result(StoreT& store): _shadow(store), _required(true){}
         
         /**
          * attach another subtask as done callback which will be executed once this subtask finishes
-         * \param cmb next subtask
+         * @param cmb next subtask
          */
         template <typename CombinatorT>
         void done(CombinatorT cmb){
-            boost::function<void (const result_data_type&)> fnc([cmb](const result_data_type& data){
+            boost::function<void (const result_type&)> fnc([cmb](const result_type& data){
                 cmb->operator()(data);
             });
             _signal.connect(fnc);
@@ -94,40 +86,48 @@ namespace activities{
         
         /**
          * mark the activity as required or optional
-         * \param flag 
+         * @param flag 
          */
         void required(bool flag){
             _required = flag;
         }
         
         /**
-         * Force cancelation of the activity even after it is successful to stop propagating to the next activities
-         * \param f callback which should return true to signal cancelation
+         * @brief Force cancelation of the activity even after it is successful to stop propagating to the next activities
+         * @param f callback of type `bool (const success_type&)` which should return true to cancel
          */
         void cancel_if(cancel_if_ftor f){
             _cancel_if = f;
         }
+        /**
+         * @brief Even if the activity runs successfully, it may be considered as error based on the response  
+         * @param ftor callback of type `bool (const success_type&)` which should return true in order to cancel all child activities
+         */
         void if_errored(abort_error_ftor ftor){
             _abort_error = ftor;
         }
+        /**
+         * @brief The supplied callback is called if the activity fails
+         * @param ftor callback of type `bool (const failure_type&)` which should return true in order to cancel all child activities
+         */
         void if_failed(abort_failure_ftor ftor){
             _abort_failure = ftor;
         }
         protected:
             /**
              * signal successful completion of the activity with success data of type SuccessT
-             * \param data success data
+             * @param data success data
              */
             void success(const success_type& data){
-                result_data_type::success(data);
+                result_type::success(data);
                 _finish();
             }
             /**
              * signal failed completion of the activity with failure data of type FailureT
-             * \param data failure data
+             * @param data failure data
              */
             void failure(const failure_type& data){
-                result_data_type::failure(data);
+                result_type::failure(data);
                 _finish();
             }
         private:
@@ -138,12 +138,12 @@ namespace activities{
              * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
              */
             void _cancel(){
-                result_data_type::cancel();
+                result_type::cancel();
                 bool propagate = true;
-                if(result_data_type::failed() && !_abort_failure.empty()){
-                    propagate = _abort_failure(result_data_type::failure_data());
+                if(result_type::failed() && !_abort_failure.empty()){
+                    propagate = _abort_failure(result_type::failure_data());
                 }else if(!_abort_error.empty()){
-                    propagate = _abort_error(result_data_type::success_data());
+                    propagate = _abort_error(result_type::success_data());
                 }
                 if(propagate) _cancelation_signals();
             }
@@ -156,18 +156,18 @@ namespace activities{
              */
             void _finish(){                
                 bool should_cancel = false;
-                if(!result_data_type::failed()){
+                if(!result_type::failed()){
                     if(!_cancel_if.empty()){
-                        should_cancel = _cancel_if(result_data_type::success_data());
+                        should_cancel = _cancel_if(result_type::success_data());
                     }
                 }else{
-                    should_cancel = result_data_type::failed() && _required;
+                    should_cancel = result_type::failed() && _required;
                 }
 
-                if(should_cancel) result_data_type::cancel();
+                if(should_cancel) result_type::cancel();
 
-                result_data_type self = static_cast<const result_data_type&>(*this);
-                detail::labeled<DerivedT, result_data_type> labeled(self);
+                result_type self = static_cast<const result_type&>(*this);
+                detail::labeled<DerivedT, result_type> labeled(self);
                 _shadow << labeled;
                 
                 if(should_cancel){
@@ -176,6 +176,15 @@ namespace activities{
                     _signal(self);
                 }
             }
+
+        private:
+            accessor_type           _shadow;
+            signal_type             _signal;
+            bool                    _required;
+            cancelation_signal_type _cancelation_signals;
+            cancel_if_ftor          _cancel_if;
+            abort_error_ftor        _abort_error;
+            abort_failure_ftor      _abort_failure;
     };
     
 }
