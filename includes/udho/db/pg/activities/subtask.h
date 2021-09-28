@@ -30,7 +30,7 @@
 
 #include <udho/db/pg/activities/fwd.h>
 #include <udho/activities/subtask.h>
-#include <udho/activities/data.h>
+#include <udho/activities/collector.h>
 #include <udho/db/pg/activities/on.h>
 
 namespace udho{

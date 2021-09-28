@@ -31,7 +31,7 @@
 #include <cstdint>
 #include <ostream>
 #include <boost/signals2.hpp>
-#include <udho/activities/data.h>
+#include <udho/activities/accessor.h>
 #include <udho/activities/result_data.h>
 
 namespace udho{

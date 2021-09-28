@@ -28,7 +28,7 @@
 #ifndef UDHO_DB_PG_DATA_H
 #define UDHO_DB_PG_DATA_H
 
-#include <udho/activities/data.h>
+#include <udho/activities/accessor.h>
 
 namespace udho{
 namespace db{

@@ -37,6 +37,12 @@ namespace udho{
  */
 namespace activities{
     
+    template <typename... T>
+    struct dataset;
+
+    template <typename... T>
+    struct accessor;
+
     template <typename NextT, typename... DependenciesT>
     struct combinator;
     

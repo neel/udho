@@ -30,7 +30,9 @@
 
 #include <cstdint>
 #include <memory>
-#include <udho/activities/data.h>
+#include <udho/activities/dataset.h>
+#include <udho/activities/collector.h>
+#include <udho/activities/accessor.h>
 #include <udho/activities/subtask.h>
 
 namespace udho{
@@ -48,7 +50,7 @@ namespace activities{
     template <typename CallbackT, typename... T, typename ContextT>
     struct joined<CallbackT, activities::collector<ContextT, dataset<T...>>>{
         typedef activities::collector<ContextT, dataset<T...>> collector_type;
-        typedef typename collector_type::accessor_type accessor_type;
+        typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
         typedef joined<callback_type, activities::collector<ContextT, dataset<T...>>> self_type;
         typedef int success_type;

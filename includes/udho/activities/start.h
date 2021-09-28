@@ -34,15 +34,22 @@
 #include <string>
 #include <boost/signals2.hpp>
 #include <boost/function.hpp>
-#include <udho/activities/data.h>
 #include <udho/activities/fwd.h>
+#include <udho/activities/dataset.h>
+#include <udho/activities/collector.h>
+#include <udho/activities/accessor.h>
 
 namespace udho{
 /**
  * \ingroup activities
  */
 namespace activities{
-    
+    /**
+     * @brief An empty initial activity that starts the chain of activities
+     * 
+     * @tparam ContextT 
+     * @tparam T ... List of activities
+     */
     template <typename ContextT, typename... T>
     struct start{
         typedef activities::collector<ContextT, activities::dataset<T...>> collector_type;
