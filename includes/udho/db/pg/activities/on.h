@@ -28,7 +28,7 @@
 #ifndef UDHO_DB_PG_ON_H
 #define UDHO_DB_PG_ON_H
 
-#include "udho/db/common/none.h"
+#include <udho/db/common/none.h>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/status.hpp>
 #include <udho/contexts.h>
@@ -93,8 +93,6 @@ typename TraitT::value_type trait(const TraitT&){
 #define PG_ERROR_CODE(ActivityT, ErrorC)   boost::beast::http::status trait(const udho::db::pg::traits::error_code<ActivityT>&) { return ErrorC; }
 
 namespace on{
-    
-// namespace http = boost::beast::http;
     
 /**
  * Specialize this template to customize error message on SQL failure
