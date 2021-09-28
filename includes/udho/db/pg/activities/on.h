@@ -158,32 +158,6 @@ struct validate{
         return false;
     }
 };
-
-// #define PG_ACTIVITY_VALID_UNLESS_BLANK(ActivityX)                 \
-//     namespace pg{namespace on{                                    \
-//         template <>                                               \
-//         struct validate<ActivityX>: unless::blank<ActivityX>{     \
-//             using blank::operator();                              \
-//         };                                                        \
-//     }}                                                            \
-        
-
-// namespace unless{
-    
-// /**
-//  * Expects at least one record in the resultset.
-//  */
-// template <typename ActivityT>
-// struct blank{
-//     /**
-//      * returns true (invalid) if empty.
-//      */
-//     bool operator()(const typename ActivityT::success_type& res){
-//         return res.empty();
-//     }
-// };
-    
-// }
     
 }
 }
