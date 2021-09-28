@@ -99,8 +99,8 @@ struct allow_empty{
 
 }
 
-#define PG_ALLOW_EMPTY(ActivityT, Allowed) bool trait(const udho::db::pg::traits::allow_empty<ActivityT>&) { return Allowed; }
-#define PG_ERROR_CODE(ActivityT, ErrorC)   boost::beast::http::status trait(const udho::db::pg::traits::error_code<ActivityT>&) { return ErrorC; }
+#define PG_ALLOW_EMPTY(ActivityT, Allowed) inline bool trait(const udho::db::pg::traits::allow_empty<ActivityT>&) { return Allowed; }
+#define PG_ERROR_CODE(ActivityT, ErrorC)   inline boost::beast::http::status trait(const udho::db::pg::traits::error_code<ActivityT>&) { return ErrorC; }
 
 namespace on{
     
