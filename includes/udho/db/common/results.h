@@ -52,17 +52,17 @@ struct results{
     
     auto inserter() { return std::back_inserter(_rows); }
     
-    struct blank{
-        bool operator()(const results<DataT>& result) const{
-            return result.empty();
-        }
-    };
+    // struct blank{
+    //     bool operator()(const results<DataT>& result) const{
+    //         return result.empty();
+    //     }
+    // };
     
-    struct never{
-        bool operator()(const results<DataT>&) const{
-            return false;
-        }
-    };
+    // struct never{
+    //     bool operator()(const results<DataT>&) const{
+    //         return false;
+    //     }
+    // };
     
     private:
         collection_type _rows;

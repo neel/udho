@@ -47,17 +47,17 @@ struct result{
     
     void operator()(const data_type& result){ _result = result; _empty = false; }
     
-    struct blank{
-        bool operator()(const result<DataT>& result) const{
-            return result.empty();
-        }
-    };
+    // struct blank{
+    //     bool operator()(const result<DataT>& result) const{
+    //         return result.empty();
+    //     }
+    // };
     
-    struct never{
-        bool operator()(const result<DataT>&) const{
-            return false;
-        }
-    };
+    // struct never{
+    //     bool operator()(const result<DataT>&) const{
+    //         return false;
+    //     }
+    // };
        
     private:
         data_type _result;
