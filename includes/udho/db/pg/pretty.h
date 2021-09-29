@@ -115,7 +115,8 @@ struct type<udho::db::pg::one<Fields...>, false>{
     template <typename FieldT>                                                                          \
     struct type<udho::db::pg:: Fn <FieldT>, false>{                                                     \
         static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){           \
-            if(std::is_same<FieldT, typename pg::detail::infer_index_type<FieldT>::type>::value){       \
+            using index_type = typename udho::db::pg::detail::infer_index_type<FieldT>::type;           \
+            if constexpr (std::is_same_v<FieldT, index_type>){                                          \
                 return udho::pretty::name<FieldT>() + "::" + #Fn;                                       \
             }                                                                                           \
             return std::string("udho::db::pg::") + #Fn + "<" + udho::pretty::name<FieldT>() + ">";      \
@@ -134,7 +135,8 @@ UDHO_DETAIL_DB_PRETTY_PG_FUNCTION(sum);
         static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){                   \
             udho::pretty::printer printer(p);                                                                   \
             printer.substitute<FieldT>();                                                                       \
-            if(std::is_same<FieldT, typename udho::db::pg::detail::infer_index_type<FieldT>::type>::value){     \
+            using index_type =  typename udho::db::pg::detail::infer_index_type<FieldT>::type;                  \
+            if constexpr (std::is_same_v<FieldT, index_type>){                                                  \
                 return udho::pretty::name<FieldT>() + "::" + #Operator;                                         \
             }else{                                                                                              \
                 return udho::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);                   \
@@ -146,7 +148,8 @@ UDHO_DETAIL_DB_PRETTY_PG_FUNCTION(sum);
         static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){                   \
             udho::pretty::printer printer(p);                                                                   \
             printer.substitute<FieldT>();                                                                       \
-            if(std::is_same<FieldT, typename udho::db::pg::detail::infer_index_type<FieldT>::type>::value){     \
+            using index_type = typename udho::db::pg::detail::infer_index_type<FieldT>::type;                   \
+            if constexpr (std::is_same_v<FieldT, index_type>){                                                  \
                 return udho::pretty::name<FieldT>() + "::" + #Operator;                                         \
             }else{                                                                                              \
                 return udho::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);                   \
