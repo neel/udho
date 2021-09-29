@@ -1,4 +1,5 @@
 #include "udho/hazo/node/fwd.h"
+#include <type_traits>
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 #include <udho/hazo/node/node.h>
@@ -110,6 +111,21 @@ TEST_CASE( "construction", "hazo::node" ) {
         typedef h::capsule<wrap_int> capsule_type;
         capsule_type cap1(wrap_int(42));
         capsule_type cap2(42);
+
+        h::node<wrap_int> nwi(42);
+        h::node<int, h::node<wrap_int>> nwi2(24, 42);
+
+        REQUIRE(std::is_constructible_v<h::capsule<int>, int>);
+        REQUIRE(std::is_constructible_v<h::capsule<int>, double>);
+        REQUIRE(std::is_constructible_v<h::capsule<wrap_int>, wrap_int>);
+        REQUIRE(std::is_constructible_v<h::capsule<wrap_int>, int>);
+        REQUIRE(std::is_constructible_v<h::capsule<wrap_int>, double>);
+
+        REQUIRE(std::is_constructible_v<h::node<int>, int>);
+        REQUIRE(std::is_constructible_v<h::node<wrap_int>, wrap_int>);
+        REQUIRE(std::is_constructible_v<h::node<wrap_int>, int>);
+        REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int>);
+        REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int, wrap_int>);
 
         // complex::n1_t n1;
         // complex::n2_t n2(no_arg(), 2);

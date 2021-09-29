@@ -40,6 +40,35 @@ namespace hazo{
     
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
+namespace detail{
+    template <typename DataT, typename ValueT>
+    struct _capsule{
+        typedef DataT value_type;
+        typedef ValueT data_type;
+        template <typename ArgT>
+        using is_constructible = std::integral_constant<bool, std::is_constructible_v<ValueT, ArgT> || std::is_constructible_v<DataT, ArgT> >;
+        template <typename ArgT>
+        static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
+        template <typename ArgT>
+        using is_assignable = std::integral_constant<bool, std::is_assignable_v<ValueT, ArgT> || std::is_assignable_v<DataT, ArgT> >;
+        template <typename ArgT>
+        static inline constexpr bool is_assignable_v = is_assignable<ArgT>::value;
+    };
+    template <typename DataT>
+    struct _capsule<DataT, DataT>{
+        typedef DataT value_type;
+        typedef DataT data_type;
+        template <typename ArgT>
+        using is_constructible =  std::is_constructible<DataT, ArgT>;
+        template <typename ArgT>
+        static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
+        template <typename ArgT>
+        using is_assignable =  std::is_assignable<DataT, ArgT>;
+        template <typename ArgT>
+        static inline constexpr bool is_assignable_v = is_assignable<ArgT>::value;
+    };
+}
+
 /**
  * capsule for plain old types 
  * \ingroup capsule

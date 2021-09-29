@@ -561,8 +561,8 @@ struct node<HeadT, void>{
     /**
      * Construct the node with any value convertible to either the date_type or the value_type of the node
      */
-    template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
-    node(const ArgT& d): _capsule(d) {}
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<value_type, ArgT> || (!std::is_same_v<value_type, data_type> && std::is_constructible_v<data_type, ArgT>), bool> = true>
+    node(const ArgT& v): _capsule(v) {}
     /**
      * Default copy constructor
      */
