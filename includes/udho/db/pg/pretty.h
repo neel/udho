@@ -84,11 +84,8 @@ template <typename... Fields>
 struct type<udho::db::pg::basic_schema<Fields...>, false>{
     static std::string name(const udho::pretty::printer& p = printer()){
         using schema_type = udho::db::pg::basic_schema<Fields...>;
-        schema_type schema;
         udho::pretty::printer printer(p);
-        schema.visit([&printer](const auto& f) mutable {
-            printer.substitute<std::remove_cv_t<std::remove_reference_t<decltype(f)>>>();
-        });
+        printer.substitute_all<Fields...>();
         return udho::pretty::demangle<schema_type>(printer);
     }
 };
@@ -195,7 +192,7 @@ template <typename... X>
 struct type<udho::db::pg::concat<X...>, false>{
     static std::string name(const udho::pretty::printer& p = printer()){
         udho::pretty::printer printer(p);
-        [[maybe_unused]] int x[] = {(printer.substitute<X>(), 0)...};
+        printer.substitute_all<X...>();
         return udho::pretty::demangle<udho::db::pg::concat<X...>>(printer);
     }
 };
@@ -224,7 +221,7 @@ template <typename... Fields>
 struct type<udho::db::pg::readonly<Fields...>, false>{
     static std::string name(const udho::pretty::printer& p = printer()){
         udho::pretty::printer printer(p);
-        [[maybe_unused]] int x[] = {(printer.substitute<Fields>(), 0)...};
+        printer.substitute_all<Fields...>();
         return udho::pretty::demangle<udho::db::pg::readonly<Fields...>>(printer);
     }
 };

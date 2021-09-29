@@ -37,10 +37,7 @@ namespace pg{
 namespace detail{
 
 template <typename FieldT, bool HasIndex = udho::util::hazo::detail::has_member_type_index_type<FieldT>::value>
-struct infer_index_type;
-
-template <typename FieldT>
-struct infer_index_type<FieldT, true>{
+struct infer_index_type{
     typedef typename FieldT::index_type type;
 };
 
