@@ -33,6 +33,7 @@
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/pg/constructs/types.h>
+#include <udho/db/pg/io/detail.h>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
@@ -63,32 +64,7 @@ namespace nlohmann {
 namespace udho{
 namespace db{
 namespace pg{
-
-namespace io{
-
-template <typename FieldT, bool Detached = FieldT::detached>
-struct extract_relation_name{
-    static auto apply(){
-        return constants::empty();
-    }
-};
-
-template <typename FieldT, typename Fn, typename ResultT>
-struct extract_relation_name<udho::db::pg::fn::unary<FieldT, Fn, ResultT>, false>{
-    static auto apply(){
-        return extract_relation_name<FieldT, FieldT::detached>::apply();
-    }
-};
-
-template <typename FieldT>
-struct extract_relation_name<FieldT, false>{
-    static auto apply(){
-        return FieldT::relation_type::name();
-    }
-};
-
-}
-    
+   
 #ifdef WITH_JSON_NLOHMANN
 
 template <typename... Fields>
@@ -108,7 +84,7 @@ struct decorator{
     decltype(auto) operator()(const FieldT& f){
         nlohmann::json j;
         nlohmann::json value = {
-            {"relation", extract_relation_name<FieldT>::apply().text().c_str()},
+            {"relation", io::detail::extract_relation_name<FieldT>::apply().text().c_str()},
             {"value", f.value()}
         };
         const char* key = f.detached ? f.key().c_str() : f.ozo_name().text().c_str();
@@ -118,7 +94,7 @@ struct decorator{
     template <typename FieldT, typename ResultT>
     decltype(auto) operator()(const FieldT& f, ResultT res){
         nlohmann::json value = {
-            {"relation", extract_relation_name<FieldT>::apply().text().c_str()},
+            {"relation", io::detail::extract_relation_name<FieldT>::apply().text().c_str()},
             {"value", f.value()}
         };
         const char* key = f.detached ? f.key().c_str() : f.ozo_name().text().c_str();

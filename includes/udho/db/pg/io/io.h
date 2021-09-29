@@ -25,14 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_PG_H
-#define UDHO_DB_PG_PG_H
+#ifndef UDHO_DB_PG_IO_IO_H
+#define UDHO_DB_PG_IO_IO_H
 
-#include <udho/db/common/common.h>
-#include <udho/db/pg/activities.h>
-#include <udho/db/pg/schema.h>
-#include <udho/db/pg/crud.h>
-#include <udho/db/pg/constructs.h>
-#include <udho/db/pg/io.h>
+#include <udho/db/pg/io/form.h>
+#include <udho/db/pg/io/json.h>
 
-#endif // UDHO_DB_PG_PG_H
+#endif // UDHO_DB_PG_IO_IO_H

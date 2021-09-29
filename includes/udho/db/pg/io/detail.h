@@ -25,14 +25,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_PG_H
-#define UDHO_DB_PG_PG_H
+#ifndef UDHO_DB_PG_IO_DETAIL_H
+#define UDHO_DB_PG_IO_DETAIL_H
 
-#include <udho/db/common/common.h>
-#include <udho/db/pg/activities.h>
-#include <udho/db/pg/schema.h>
-#include <udho/db/pg/crud.h>
-#include <udho/db/pg/constructs.h>
-#include <udho/db/pg/io.h>
+#include <udho/db/pg/constructs/functions.h>
+#include <udho/db/pg/constructs/strings.h>
 
-#endif // UDHO_DB_PG_PG_H
+namespace udho{
+namespace db{
+namespace pg{
+namespace io{
+namespace detail{
+
+template <typename FieldT, bool Detached = FieldT::detached>
+struct extract_relation_name{
+    static auto apply(){
+        return udho::db::pg::constants::empty();
+    }
+};
+
+template <typename FieldT, typename Fn, typename ResultT>
+struct extract_relation_name<udho::db::pg::fn::unary<FieldT, Fn, ResultT>, false>{
+    static auto apply(){
+        return extract_relation_name<FieldT, FieldT::detached>::apply();
+    }
+};
+
+template <typename FieldT>
+struct extract_relation_name<FieldT, false>{
+    static auto apply(){
+        return FieldT::relation_type::name();
+    }
+};
+
+}
+}
+}
+}
+}
+
+#endif // UDHO_DB_PG_IO_DETAIL_H
