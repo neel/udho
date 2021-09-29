@@ -104,24 +104,30 @@ TEST_CASE( "construction", "hazo::node" ) {
     SECTION( "construction using complex types with all values" ){
 
         std::cout << std::is_convertible_v<int, wrap_int> << std::endl;
+        std::cout << std::is_constructible_v<wrap_int, int> << std::endl;
+        std::cout << (!std::is_same_v<wrap_int, int> && std::is_constructible_v<wrap_int, int>) << std::endl;
 
-        complex::n1_t n1;
-        complex::n2_t n2(no_arg(), 2);
-        complex::n3_t n3(no_arg(), 2, "Hello");
-        complex::n4_t n4(no_arg(), 2, "Hello", "World");
+        typedef h::capsule<wrap_int> capsule_type;
+        capsule_type cap1(wrap_int(42));
+        // capsule_type cap2(42);
 
-        REQUIRE(n1.value()._v == 42);
+        // complex::n1_t n1;
+        // complex::n2_t n2(no_arg(), 2);
+        // complex::n3_t n3(no_arg(), 2, "Hello");
+        // complex::n4_t n4(no_arg(), 2, "Hello", "World");
+
+        // REQUIRE(n1.value()._v == 42);
         
-        REQUIRE(n2.value()._v == 42);
-        REQUIRE(n2.tail().value()._v == 2);
+        // REQUIRE(n2.value()._v == 42);
+        // REQUIRE(n2.tail().value()._v == 2);
 
-        REQUIRE(n3.value()._v == 42);
-        REQUIRE(n3.tail().value()._v == 2);
-        REQUIRE(n3.tail().tail().value()._v == "Hello");
+        // REQUIRE(n3.value()._v == 42);
+        // REQUIRE(n3.tail().value()._v == 2);
+        // REQUIRE(n3.tail().tail().value()._v == "Hello");
 
-        REQUIRE(n4.value()._v == 42);
-        REQUIRE(n4.tail().value()._v == 2);
-        REQUIRE(n4.tail().tail().value()._v == "Hello");
-        REQUIRE(n4.tail().tail().tail().value() == "World");
+        // REQUIRE(n4.value()._v == 42);
+        // REQUIRE(n4.tail().value()._v == 2);
+        // REQUIRE(n4.tail().tail().value()._v == "Hello");
+        // REQUIRE(n4.tail().tail().tail().value() == "World");
     }
 }

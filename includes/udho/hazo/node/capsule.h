@@ -86,7 +86,7 @@ struct capsule<DataT, false>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -214,7 +214,7 @@ struct capsule<char[N], false>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -339,7 +339,7 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -461,7 +461,7 @@ struct capsule<DataT, true>: encapsulate<DataT>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * assign another capsule encapsulating the same type
