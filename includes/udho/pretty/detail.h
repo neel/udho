@@ -26,8 +26,8 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PRETTY_DETAIL_H
-#define UDHO_ACTIVITIES_DB_PRETTY_DETAIL_H
+#ifndef UDHO_PRETTY_DETAIL_H
+#define UDHO_PRETTY_DETAIL_H
 
 #include <string>
 #include <cstdlib>
@@ -37,7 +37,6 @@
 #include <ctti/nameof.hpp>
 
 namespace udho{
-namespace db{
 namespace pretty{
    
 namespace detail{
@@ -70,7 +69,6 @@ namespace detail{
     }
 }
 
-}
 }
 }
 

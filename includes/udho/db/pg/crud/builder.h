@@ -35,7 +35,7 @@
 #include <udho/db/pg/crud/remove.h>
 #include <udho/db/pg/crud/limit.h>
 #include <udho/db/pg/crud/order.h>
-#include <udho/db/pg/io/pretty.h>
+#include <udho/db/pg/pretty.h>
 
 namespace udho{
 namespace db{
@@ -69,10 +69,10 @@ struct builder{
             auto sql(){ return std::move(activity<apply>::generate()); }
             void operator()(){ activity<apply>::query(sql()); }
             static std::string pretty(){
-                udho::db::pretty::printer printer;
+                udho::pretty::printer printer;
                 printer.substitute<RelationT>();
                 printer.substitute<SuccessT>();
-                return udho::db::pretty::demangle<apply>(printer);
+                return udho::pretty::demangle<apply>(printer);
             }
         };
         
@@ -102,10 +102,10 @@ struct builder{
                 auto sql(){ return std::move(activity<apply>::generate()); }
                 void operator()(){ activity<apply>::query(sql()); }
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SuccessT>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
             };
         };
@@ -136,11 +136,11 @@ struct builder{
                 auto sql(){ return std::move(activity<apply>::generate()); }
                 void operator()(){ activity<apply>::query(sql()); }
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SuccessT>();
                     printer.substitute<OrderedFieldT>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
             };
             
@@ -170,11 +170,11 @@ struct builder{
                     auto sql(){ return std::move(activity<apply>::generate()); }
                     void operator()(){ activity<apply>::query(sql()); }
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SuccessT>();
                         printer.substitute<OrderedFieldT>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                 };
             };
@@ -211,11 +211,11 @@ struct builder{
                 auto sql(){ return std::move(activity<apply>::generate()); }
                 void operator()(){ activity<apply>::query(sql()); }
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SuccessT>();
                     printer.substitute_all<GroupColumn...>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
             };
             
@@ -246,12 +246,12 @@ struct builder{
                     void operator()(){ activity<apply>::query(sql()); }
                     
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SuccessT>();
                         printer.substitute_all<GroupColumn...>();
                         printer.substitute<OrderedFieldT>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                 };
                 
@@ -281,12 +281,12 @@ struct builder{
                         auto sql(){ return std::move(activity<apply>::generate()); }
                         void operator()(){ activity<apply>::query(sql()); }
                         static std::string pretty(){
-                            udho::db::pretty::printer printer;
+                            udho::pretty::printer printer;
                             printer.substitute<RelationT>();
                             printer.substitute<SuccessT>();
                             printer.substitute_all<GroupColumn...>();
                             printer.substitute<OrderedFieldT>();
-                            return udho::db::pretty::demangle<apply>(printer);
+                            return udho::pretty::demangle<apply>(printer);
                         }
                     };
                 };
@@ -324,11 +324,11 @@ struct builder{
                 auto sql(){ return std::move(activity<apply>::generate()); }
                 void operator()(){ activity<apply>::query(sql()); }
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SuccessT>();
                     printer.substitute_all<Fields...>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
             };
             
@@ -358,11 +358,11 @@ struct builder{
                     auto sql(){ return std::move(activity<apply>::generate()); }
                     void operator()(){ activity<apply>::query(sql()); }
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SuccessT>();
                         printer.substitute_all<Fields...>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                 };
             };
@@ -393,12 +393,12 @@ struct builder{
                     auto sql(){ return std::move(activity<apply>::generate()); }
                     void operator()(){ activity<apply>::query(sql()); }
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SuccessT>();
                         printer.substitute<OrderedFieldT>();
                         printer.substitute_all<Fields...>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                 };
                 
@@ -428,12 +428,12 @@ struct builder{
                         auto sql(){ return std::move(activity<apply>::generate()); }
                         void operator()(){ activity<apply>::query(sql()); }
                         static std::string pretty(){
-                            udho::db::pretty::printer printer;
+                            udho::pretty::printer printer;
                             printer.substitute<RelationT>();
                             printer.substitute<SuccessT>();
                             printer.substitute<OrderedFieldT>();
                             printer.substitute_all<Fields...>();
-                            return udho::db::pretty::demangle<apply>(printer);
+                            return udho::pretty::demangle<apply>(printer);
                         }
                     };
                 };
@@ -470,11 +470,11 @@ struct builder{
                     auto sql(){ return std::move(activity<apply>::generate()); }
                     void operator()(){ activity<apply>::query(sql()); }
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SuccessT>();
                         printer.substitute_all<GroupColumn...>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                 };
                 
@@ -504,12 +504,12 @@ struct builder{
                         auto sql(){ return std::move(activity<apply>::generate()); }
                         void operator()(){ activity<apply>::query(sql()); }
                         static std::string pretty(){
-                            udho::db::pretty::printer printer;
+                            udho::pretty::printer printer;
                             printer.substitute<RelationT>();
                             printer.substitute<SuccessT>();
                             printer.substitute<OrderedFieldT>();
                             printer.substitute_all<GroupColumn...>();
-                            return udho::db::pretty::demangle<apply>(printer);
+                            return udho::pretty::demangle<apply>(printer);
                         }
                     };
                     
@@ -539,13 +539,13 @@ struct builder{
                             auto sql(){ return std::move(activity<apply>::generate()); }
                             void operator()(){ activity<apply>::query(sql()); }
                             static std::string pretty(){
-                                udho::db::pretty::printer printer;
+                                udho::pretty::printer printer;
                                 printer.substitute<RelationT>();
                                 printer.substitute<SuccessT>();
                                 printer.substitute<SuccessT>();
                                 printer.substitute_all<OrderedFieldT>();
                                 printer.substitute_all<GroupColumn...>();
-                                return udho::db::pretty::demangle<apply>(printer);
+                                return udho::pretty::demangle<apply>(printer);
                             }
                         };
                     };
@@ -583,10 +583,10 @@ struct builder{
             using activity<apply>::operator();
             
             static std::string pretty(){
-                udho::db::pretty::printer printer;
+                udho::pretty::printer printer;
                 printer.substitute<RelationT>();
                 printer.substitute<SchemaT>();
-                return udho::db::pretty::demangle<apply>(printer);
+                return udho::pretty::demangle<apply>(printer);
             }
             
             auto sql(){ return std::move(activity<apply>::generate()); }
@@ -618,11 +618,11 @@ struct builder{
                 using activity<apply>::operator();
                 
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SchemaT>();
                     printer.substitute_all<WithFields...>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
                 
                 auto sql(){ return std::move(activity<apply>::generate()); }
@@ -654,12 +654,12 @@ struct builder{
                     using activity<apply>::operator();
                     
                     static std::string pretty(){
-                        udho::db::pretty::printer printer;
+                        udho::pretty::printer printer;
                         printer.substitute<RelationT>();
                         printer.substitute<SchemaT>();
                         printer.substitute_all<WithFields...>();
                         printer.substitute_all<ReturningFields...>();
-                        return udho::db::pretty::demangle<apply>(printer);
+                        return udho::pretty::demangle<apply>(printer);
                     }
                     
                     auto sql(){ return std::move(activity<apply>::generate()); }
@@ -695,11 +695,11 @@ struct builder{
                 using activity<apply>::operator();
                 
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<RelationT>();
                     printer.substitute<SchemaT>();
                     printer.substitute_all<ReturningFields...>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
                 
                 auto sql(){ return std::move(activity<apply>::generate()); }
@@ -733,10 +733,10 @@ struct builder{
             using activity<apply>::operator();
             
             static std::string pretty(){
-                udho::db::pretty::printer printer;
+                udho::pretty::printer printer;
                 printer.substitute<RelationT>();
                 printer.substitute<SchemaT>();
-                return udho::db::pretty::demangle<apply>(printer);
+                return udho::pretty::demangle<apply>(printer);
             }
             
             auto sql(){ return std::move(activity<apply>::generate()); }
@@ -768,11 +768,11 @@ struct builder{
                 using activity<apply>::operator();
                 
                 static std::string pretty(){
-                    udho::db::pretty::printer printer;
+                    udho::pretty::printer printer;
                     printer.substitute<SchemaT>();
                     printer.substitute<RelationT>();
                     printer.substitute_all<ReturningFields...>();
-                    return udho::db::pretty::demangle<apply>(printer);
+                    return udho::pretty::demangle<apply>(printer);
                 }
                 
                 auto sql(){ return std::move(activity<apply>::generate()); }
@@ -806,10 +806,10 @@ struct builder{
             using activity<apply>::operator();
             
             static std::string pretty(){
-                udho::db::pretty::printer printer;
+                udho::pretty::printer printer;
                 printer.substitute<RelationT>();
                 printer.substitute_all<Fields...>();
-                return udho::db::pretty::demangle<apply>(printer);
+                return udho::pretty::demangle<apply>(printer);
             }
             
             auto sql(){ return std::move(activity<apply>::generate()); }

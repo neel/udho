@@ -36,7 +36,7 @@
 #include <udho/db/pg/constructs/operators.h>
 #include <udho/db/pg/constructs/functions.h>
 #include <udho/db/pg/schema/fwd.h>
-#include <udho/db/pretty/type.h>
+#include <udho/pretty/type.h>
 #include <boost/algorithm/string/replace.hpp>
 
 namespace udho{
@@ -157,9 +157,9 @@ struct Name ## _                                                             \
         return OZO_LITERAL(#Name);                                           \
     }                                                                        \
     static std::string pretty(){                                             \
-        udho::db::pretty::printer printer;                                   \
+        udho::pretty::printer printer;                                   \
         printer.substitute<T>();                                             \
-        using pretty_type = udho::db::pretty::type<Name ## _<T>, false>;     \
+        using pretty_type = udho::pretty::type<Name ## _<T>, false>;     \
         std::string pretty = pretty_type::name(printer);                     \
         if(std::is_same<T, Type>::value){                                    \
             std::string field = #Name;                                       \

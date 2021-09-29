@@ -26,17 +26,16 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PRETTY_PRINTER_H
-#define UDHO_ACTIVITIES_DB_PRETTY_PRINTER_H
+#ifndef UDHO_PRETTY_PRINTER_H
+#define UDHO_PRETTY_PRINTER_H
 
 #include <map>
 #include <string>
 #include <boost/algorithm/string/replace.hpp>
-#include <udho/db/pretty/detail.h>
-#include <udho/db/pretty/fwd.h>
+#include <udho/pretty/detail.h>
+#include <udho/pretty/fwd.h>
 
 namespace udho{
-namespace db{
 namespace pretty{
     
 namespace detail{
@@ -93,7 +92,6 @@ struct printer: detail::substitution{
     
 }
 }
-}
 
 
-#endif // UDHO_ACTIVITIES_DB_PRETTY_PRINTER_H
+#endif // UDHO_PRETTY_PRINTER_H

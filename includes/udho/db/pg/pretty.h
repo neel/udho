@@ -26,10 +26,10 @@
  */
 
 
-#ifndef UDHO_DB_PG_IO_PRETTY_H
-#define UDHO_DB_PG_IO_PRETTY_H
+#ifndef UDHO_DB_PG_PRETTY_H
+#define UDHO_DB_PG_PRETTY_H
 
-#include <udho/db/pretty/pretty.h>
+#include <udho/pretty/pretty.h>
 #include <udho/hazo/node/basic.h>
 #include <udho/db/pg/schema/basic.h>
 #include <udho/db/pg/constructs/functions.h>
@@ -43,83 +43,82 @@
 #include <udho/db/pg/crud/many.h>
 #include <udho/db/pg/crud/one.h>
 
-UDHO_DB_PRETTY(udho::db::pg::types::bigint);
-UDHO_DB_PRETTY(udho::db::pg::types::integer);
-UDHO_DB_PRETTY(udho::db::pg::types::smallint);
-UDHO_DB_PRETTY(udho::db::pg::types::bigserial);
-UDHO_DB_PRETTY(udho::db::pg::types::serial);
-UDHO_DB_PRETTY(udho::db::pg::types::smallserial);
-UDHO_DB_PRETTY(udho::db::pg::types::real);
-UDHO_DB_PRETTY(udho::db::pg::types::float8);
-UDHO_DB_PRETTY(udho::db::pg::types::boolean);
-UDHO_DB_PRETTY(udho::db::pg::types::varchar);
-UDHO_DB_PRETTY(udho::db::pg::types::text);
-UDHO_DB_PRETTY(udho::db::pg::types::timestamp);
-UDHO_DB_PRETTY(udho::db::pg::types::json);
-UDHO_DB_PRETTY(udho::db::pg::types::uuid);
+UDHO_PRETTY(udho::db::pg::types::bigint);
+UDHO_PRETTY(udho::db::pg::types::integer);
+UDHO_PRETTY(udho::db::pg::types::smallint);
+UDHO_PRETTY(udho::db::pg::types::bigserial);
+UDHO_PRETTY(udho::db::pg::types::serial);
+UDHO_PRETTY(udho::db::pg::types::smallserial);
+UDHO_PRETTY(udho::db::pg::types::real);
+UDHO_PRETTY(udho::db::pg::types::float8);
+UDHO_PRETTY(udho::db::pg::types::boolean);
+UDHO_PRETTY(udho::db::pg::types::varchar);
+UDHO_PRETTY(udho::db::pg::types::text);
+UDHO_PRETTY(udho::db::pg::types::timestamp);
+UDHO_PRETTY(udho::db::pg::types::json);
+UDHO_PRETTY(udho::db::pg::types::uuid);
 
 namespace udho{
-namespace db{
 namespace pretty{
    
 template <typename HeadT, typename TailT>
 struct type<udho::util::hazo::basic_node<HeadT, TailT>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute<HeadT>();
         printer.substitute<TailT>();
-        return udho::db::pretty::demangle<udho::util::hazo::basic_node<HeadT, TailT>>(printer);
+        return udho::pretty::demangle<udho::util::hazo::basic_node<HeadT, TailT>>(printer);
     }
 };
 
 template <typename FieldT, typename RelationT>
 struct type<udho::db::pg::column<FieldT, RelationT>, true>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute<FieldT>();
-        return udho::db::pretty::demangle<udho::db::pg::column<FieldT, RelationT>>(printer);
+        return udho::pretty::demangle<udho::db::pg::column<FieldT, RelationT>>(printer);
     }
 };
 
 template <typename... Fields>
 struct type<udho::db::pg::basic_schema<Fields...>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
+    static std::string name(const udho::pretty::printer& p = printer()){
         using schema_type = udho::db::pg::basic_schema<Fields...>;
         schema_type schema;
-        udho::db::pretty::printer printer(p);
+        udho::pretty::printer printer(p);
         schema.visit([&printer](const auto& f) mutable {
             printer.substitute<std::remove_cv_t<std::remove_reference_t<decltype(f)>>>();
         });
-        return udho::db::pretty::demangle<schema_type>(printer);
+        return udho::pretty::demangle<schema_type>(printer);
     }
 };
 
 template <typename... Fields>
 struct type<udho::db::pg::many<Fields...>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute_all<Fields...>();
-        return udho::db::pretty::demangle<udho::db::pg::many<Fields...>>(printer);
+        return udho::pretty::demangle<udho::db::pg::many<Fields...>>(printer);
     }
 };
 
 template <typename... Fields>
 struct type<udho::db::pg::one<Fields...>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute_all<Fields...>();
-        return udho::db::pretty::demangle<udho::db::pg::one<Fields...>>(printer);
+        return udho::pretty::demangle<udho::db::pg::one<Fields...>>(printer);
     }
 };
 
 #define UDHO_DETAIL_DB_PRETTY_PG_FUNCTION(Fn)                                                           \
     template <typename FieldT>                                                                          \
     struct type<udho::db::pg:: Fn <FieldT>, false>{                                                     \
-        static std::string name([[maybe_unused]] const udho::db::pretty::printer& p = printer()){       \
+        static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){           \
             if(std::is_same<FieldT, typename pg::detail::infer_index_type<FieldT>::type>::value){       \
-                return udho::db::pretty::name<FieldT>() + "::" + #Fn;                                   \
+                return udho::pretty::name<FieldT>() + "::" + #Fn;                                       \
             }                                                                                           \
-            return std::string("udho::db::pg::") + #Fn + "<" + udho::db::pretty::name<FieldT>() + ">";  \
+            return std::string("udho::db::pg::") + #Fn + "<" + udho::pretty::name<FieldT>() + ">";      \
         }                                                                                               \
     }
 
@@ -132,25 +131,25 @@ UDHO_DETAIL_DB_PRETTY_PG_FUNCTION(sum);
 #define UDHO_DETAIL_DB_PRETTY_PG_OP(Operator)                                                                   \
     template <typename FieldT>                                                                                  \
     struct type<udho::db::pg::op:: Operator <FieldT>, true>{                                                    \
-        static std::string name([[maybe_unused]] const udho::db::pretty::printer& p = printer()){               \
-            udho::db::pretty::printer printer(p);                                                               \
+        static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){                   \
+            udho::pretty::printer printer(p);                                                                   \
             printer.substitute<FieldT>();                                                                       \
             if(std::is_same<FieldT, typename udho::db::pg::detail::infer_index_type<FieldT>::type>::value){     \
-                return udho::db::pretty::name<FieldT>() + "::" + #Operator;                                     \
+                return udho::pretty::name<FieldT>() + "::" + #Operator;                                         \
             }else{                                                                                              \
-                return udho::db::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);               \
+                return udho::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);                   \
             }                                                                                                   \
         }                                                                                                       \
     };                                                                                                          \
     template <typename FieldT>                                                                                  \
     struct type<udho::db::pg::op:: Operator <FieldT>, false>{                                                   \
-        static std::string name([[maybe_unused]] const udho::db::pretty::printer& p = printer()){               \
-            udho::db::pretty::printer printer(p);                                                               \
+        static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){                   \
+            udho::pretty::printer printer(p);                                                                   \
             printer.substitute<FieldT>();                                                                       \
             if(std::is_same<FieldT, typename udho::db::pg::detail::infer_index_type<FieldT>::type>::value){     \
-                return udho::db::pretty::name<FieldT>() + "::" + #Operator;                                     \
+                return udho::pretty::name<FieldT>() + "::" + #Operator;                                         \
             }else{                                                                                              \
-                return udho::db::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);               \
+                return udho::pretty::demangle<udho::db::pg::op:: Operator <FieldT>>(printer);                   \
             }                                                                                                   \
         }                                                                                                       \
     }
@@ -191,58 +190,57 @@ struct type<udho::db::pg::constants::string<C...>, false>{
 
 template <typename... X>
 struct type<udho::db::pg::concat<X...>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         [[maybe_unused]] int x[] = {(printer.substitute<X>(), 0)...};
-        return udho::db::pretty::demangle<udho::db::pg::concat<X...>>(printer);
+        return udho::pretty::demangle<udho::db::pg::concat<X...>>(printer);
     }
 };
 
 template <typename FieldT, typename PgType>
 struct type<udho::db::pg::cast<FieldT, PgType>, true>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute<FieldT>();
         printer.substitute<PgType>();
-        return printer(udho::db::pretty::demangle<udho::db::pg::cast<FieldT, PgType>>());
+        return printer(udho::pretty::demangle<udho::db::pg::cast<FieldT, PgType>>());
     }
 };
 
 template <typename SourceT, typename AliasT>
 struct type<udho::db::pg::alias<SourceT, AliasT>, true>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         printer.substitute<SourceT>();
         printer.substitute<AliasT>();
-        return printer(udho::db::pretty::demangle<udho::db::pg::alias<SourceT, AliasT>>());
+        return printer(udho::pretty::demangle<udho::db::pg::alias<SourceT, AliasT>>());
     }
 };
 
 template <typename... Fields>
 struct type<udho::db::pg::readonly<Fields...>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        udho::db::pretty::printer printer(p);
+    static std::string name(const udho::pretty::printer& p = printer()){
+        udho::pretty::printer printer(p);
         [[maybe_unused]] int x[] = {(printer.substitute<Fields>(), 0)...};
-        return udho::db::pretty::demangle<udho::db::pg::readonly<Fields...>>(printer);
+        return udho::pretty::demangle<udho::db::pg::readonly<Fields...>>(printer);
     }
 };
 
 template <typename FieldT>
 struct type<udho::db::pg::ascending<FieldT, true>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        return "udho::db::pg::ascending<" + udho::db::pretty::name<FieldT>() + ">";
+    static std::string name(const udho::pretty::printer& p = printer()){
+        return "udho::db::pg::ascending<" + udho::pretty::name<FieldT>() + ">";
     }
 };
 
 template <typename FieldT>
 struct type<udho::db::pg::ascending<FieldT, false>, false>{
-    static std::string name(const udho::db::pretty::printer& p = printer()){
-        return "udho::db::pg::descending<" + udho::db::pretty::name<FieldT>() + ">";
+    static std::string name(const udho::pretty::printer& p = printer()){
+        return "udho::db::pg::descending<" + udho::pretty::name<FieldT>() + ">";
     }
 };
 
    
 }
 }
-}
-#endif // UDHO_DB_PG_IO_PRETTY_H
+#endif // UDHO_DB_PG_PRETTY_H

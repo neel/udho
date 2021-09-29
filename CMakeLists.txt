@@ -95,11 +95,11 @@ SET(UDHO_HEADERS
     includes/udho/scope.h
     includes/udho/visitor.h
     includes/udho/hazo.h
-    includes/udho/db/pretty/pretty.h
-    includes/udho/db/pretty/detail.h
-    includes/udho/db/pretty/type.h
-    includes/udho/db/pretty/printer.h
-    includes/udho/db/pretty/fwd.h
+    includes/udho/pretty/pretty.h
+    includes/udho/pretty/detail.h
+    includes/udho/pretty/type.h
+    includes/udho/pretty/printer.h
+    includes/udho/pretty/fwd.h
     includes/udho/db/pg.h
     includes/udho/db/pg/pg.h
     includes/udho/db/pg/constructs/operators.h
@@ -164,7 +164,7 @@ SET(UDHO_HEADERS
     includes/udho/db/pg/decorators/keys.h
     includes/udho/db/pg/decorators/values.h
     includes/udho/db/pg/decorators/conditions.h
-    includes/udho/db/pg/io/pretty.h
+    includes/udho/db/pg/pretty.h
     includes/udho/db/pg/io/json.h
     includes/udho/db/pg/io/form.h
     includes/udho/db/pg/ozo/io.h
@@ -174,8 +174,8 @@ SET(UDHO_SOURCES
     sources/udho/page.cpp
 )
 
-ADD_EXECUTABLE(sandbox sandbox.cpp)
-TARGET_LINK_LIBRARIES(sandbox udho)
+# ADD_EXECUTABLE(sandbox sandbox.cpp)
+# TARGET_LINK_LIBRARIES(sandbox udho)
 
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)

@@ -30,7 +30,7 @@
 
 #include <type_traits>
 #include <udho/db/pg/crud/fwd.h>
-#include <udho/db/pg/io/pretty.h>
+#include <udho/db/pg/pretty.h>
 #include <udho/db/pg/crud/many.h>
 #include <udho/db/pg/crud/one.h>
 
@@ -177,11 +177,11 @@ struct basic_join_on{
     using relation_of = typename data_of<FieldT>::relation_type;
     
     static std::string pretty(){
-        udho::db::pretty::printer printer;
+        udho::pretty::printer printer;
         printer.substitute<FieldL>();
         printer.substitute<FieldR>();
         printer.substitute<PreviousJoin>();
-        return udho::db::pretty::demangle<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>(printer);
+        return udho::pretty::demangle<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>(printer);
     }
     
     template <typename ResultT>

@@ -26,17 +26,16 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PRETTY_TYPE_H
-#define UDHO_ACTIVITIES_DB_PRETTY_TYPE_H
+#ifndef UDHO_PRETTY_TYPE_H
+#define UDHO_PRETTY_TYPE_H
 
 #include <set>
 #include <string>
-#include <udho/db/pretty/detail.h>
-#include <udho/db/pretty/fwd.h>
-#include <udho/db/pretty/printer.h>
+#include <udho/pretty/detail.h>
+#include <udho/pretty/fwd.h>
+#include <udho/pretty/printer.h>
 
 namespace udho{
-namespace db{
 namespace pretty{
    
 /**
@@ -142,6 +141,5 @@ std::string indent(const printer& p = printer()){
 
 }
 }
-}
 
-#endif // UDHO_ACTIVITIES_DB_PRETTY_TYPE_H
+#endif // UDHO_PRETTY_TYPE_H

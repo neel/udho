@@ -31,7 +31,7 @@
 #include <sstream>
 #include <string>
 #include <ozo/error.h>
-#include <udho/db/pretty/type.h>
+#include <udho/pretty/type.h>
 #include <udho/page.h>
 #include <boost/property_tree/detail/xml_parser_utils.hpp>
 
@@ -68,7 +68,7 @@ struct failure{
     template <typename ActivityT>
     static failure make(ActivityT& activity){
         failure f;
-        f.origin = db::pretty::indent<ActivityT>();
+        f.origin = udho::pretty::indent<ActivityT>();
         f.sql    = detail::extract_sql_text_if_available<ActivityT>::sql(activity);
         return f;
     }

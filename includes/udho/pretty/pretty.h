@@ -26,20 +26,48 @@
  */
 
 
-#ifndef UDHO_ACTIVITIES_DB_PRETTY_FWD_H
-#define UDHO_ACTIVITIES_DB_PRETTY_FWD_H
+#ifndef UDHO_PRETTY_PRETTY_H
+#define UDHO_PRETTY_PRETTY_H
 
-#include <udho/db/pretty/detail.h>
+#include <string>
+#include <udho/pretty/type.h>
+#include <udho/pretty/printer.h>
+#include <boost/hana/string.hpp>
 
 namespace udho{
-namespace db{
 namespace pretty{
     
-template <typename T, bool Specialized = detail::is_pretty<T>::value>
-struct type;
+template <char... C>
+struct type<boost::hana::string<C...>, false>{
+    static std::string name([[maybe_unused]] const udho::pretty::printer& p = printer()){
+        char const str[] = { C... };
+        std::string base = "boost::hana::string<";
+        for(std::size_t i = 0; i != sizeof(str); ++i){
+            if(i != 0) 
+                base.append(", ");
+            base.push_back('\'');
+            if(str[i] == '\'') 
+                base.append("\\'");
+            else 
+                base.push_back(str[i]);
+            base.push_back('\'');
+        }
+        base.append(">");
+        return base;
+    }
+};
     
-}
 }
 }
 
-#endif // UDHO_ACTIVITIES_DB_PRETTY_FWD_H
+#define UDHO_PRETTY(T)                     \
+    namespace udho::pretty{            \
+        template <>                        \
+        struct type<T, false>{             \
+            static std::string name(){     \
+                return std::string(#T);    \
+            }                              \
+        };                                 \
+    }
+
+#endif // UDHO_PRETTY_PRETTY_H
