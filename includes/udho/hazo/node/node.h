@@ -79,26 +79,23 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
      * \see capsule
      */
     typedef typename capsule_type::key_type key_type;
+
     typedef node<HeadT, TailT> self_type;
     
     enum { depth = tail_type::depth +1 };
-    
-    using tail_type::tail_type;
-    
+
     /// \name Constructor 
     /// @{
     /**
-     * Construct a node with a value that is convertible to the value_type. 
-     * \param v value of the node
+     * Default Constructor
      */
-    template <typename ArgT, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
-    node(const ArgT& v): _capsule(v) {}
+    node() = default;
     /**
      * Construct a node with a value of the current node and values for all or some of the nodes in the tail
      * \param v value of the current node
      * \param ts ... values of the nodes in the tail
      */
-    template <typename ArgT, typename... T, typename = typename std::enable_if<std::is_convertible<ArgT, value_type>::value || (!std::is_same<value_type, data_type>::value && std::is_convertible<ArgT, data_type>::value)>::type>
+    template <typename ArgT, typename... T, std::enable_if_t<std::is_constructible_v<value_type, ArgT> || (!std::is_same_v<value_type, data_type> && std::is_constructible_v<data_type, ArgT>), bool> = true>
     node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
      * Copy constructor to construct from another node of same type
@@ -109,7 +106,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
      * Construct from a node having different head and tail
      * \param other another noode of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, typename = typename std::enable_if<!std::is_same<self_type, node<OtherHeadT, OtherTailT>>::value>::type>
+    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
     node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
     /// @}
     

@@ -203,7 +203,8 @@ endif()
 
 if(UDHO_BUILD_TESTS)
    enable_testing()
-   add_subdirectory(tests/)
+   add_subdirectory(tests)
+   add_subdirectory(tests2)
 endif()
 
 # add_subdirectory(docs)

@@ -38,6 +38,8 @@ namespace udho{
 namespace util{
 namespace hazo{
     
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
 /**
  * capsule for plain old types 
  * \ingroup capsule
@@ -80,6 +82,12 @@ struct capsule<DataT, false>{
      * \param d data to be encapsulated 
      */
     capsule(const data_type& d): _data(d){}
+    /**
+     * Construct through an object of data_type
+     * \param d data to be encapsulated 
+     */
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
@@ -203,6 +211,12 @@ struct capsule<char[N], false>{
      */
     capsule(const data_type& str): _data(str){}
     /**
+     * Construct through an object of data_type
+     * \param d data to be encapsulated 
+     */
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    capsule(const ArgT& d): _data(d){}
+    /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
      */
@@ -322,6 +336,12 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      */
     capsule(const data_type& str): _data(str){}
     /**
+     * Construct through an object of data_type
+     * \param d data to be encapsulated 
+     */
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    capsule(const ArgT& d): _data(d){}
+    /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
      */
@@ -438,6 +458,12 @@ struct capsule<DataT, true>: encapsulate<DataT>{
      */
     capsule(const data_type& d): _data(d){}
     /**
+     * Construct through an object of data_type
+     * \param d data to be encapsulated 
+     */
+    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_convertible_v<data_type, ArgT>> = true>
+    capsule(const ArgT& d): _data(d){}
+    /**
      * assign another capsule encapsulating the same type
      */
     self_type& operator=(const self_type& other) = default;
@@ -497,7 +523,125 @@ struct capsule<DataT, true>: encapsulate<DataT>{
         return std::forward<FunctionT>(f)(_data);
     }
 };
+
+#else
+/**
+ * encapsulate a class which is not an element
+ * \ingroup capsule
+ */
+template <typename DataT>
+struct capsule<DataT>{
+    /**
+     * @brief type of data encapsulated within
+     */
+    typedef DataT data_type;
+    /**
+     * @brief A locally unique type associated with the type
+     * - If the DataT provides a key() method 
+     *   - then key_type of the capsule is same as the return type of DataT::key()
+     *   . 
+     * - Otherwise void
+     * .
+     * Generally a compile time string is associated as key e.g. boost::hana::string
+     */
+    typedef typename encapsulate<DataT>::key_type key_type;
+    /**
+     * @brief Type of value the compsule is containing
+     * - If the DataT provides a value() method and a value_type typedef 
+     *   - then uses that as value_type of the capsule
+     *   .
+     * - Otherwise data_type
+     * .
+     * @see data_type
+     */
+    typedef typename encapsulate<DataT>::value_type value_type;
+    /**
+     * @brief A locally unique type associated with the type
+     * - If DataT provides an index_type datatype 
+     *   - then uses that as index_type of the capsule
+     *   .
+     * - Otherwise void
+     * .
+     */
+    typedef typename encapsulate<DataT>::index_type index_type;
     
+    data_type _data;
+    
+    /**
+     * Default constructor
+     */
+    capsule(): _data(value_type()){};
+    /**
+     * Copy constructor
+     */
+    capsule(const self_type&) = default;
+    /**
+     * Construct with data
+     * \param d data to be encapsulated
+     */
+    capsule(const data_type& d): _data(d){}
+    /**
+     * assign another capsule encapsulating the same type
+     */
+    self_type& operator=(const self_type& other) = default;
+    /**
+     * Get the data encapsulated within
+     */
+    const data_type& data() const { return _data; }
+    /**
+     * Get the data encapsulated within
+     */
+    data_type& data() { return _data; }
+    /**
+     * Get the value of the data encapsulated within
+     */
+    const value_type& value() const { return data().value(); }
+    /**
+     * Get the value of the data encapsulated within
+     */
+    value_type& value() { return data().value(); }
+    /**
+     * Compare with another capsule encapsulating the same type of data
+     */
+    bool operator==(const self_type& other) const { return _data == other._head; }
+    /**
+     * Compare with another capsule encapsulating the same type of data
+     */
+    bool operator!=(const self_type& other) const { return !operator==(other); }
+    /**
+     * Compare with a data of data_type
+     */
+    bool operator==(const data_type& other) const { return _data == other; }
+    /**
+     * Compare with a data of data_type
+     */
+    bool operator!=(const data_type& other) const { return !operator==(_data, other); }
+    /**
+     * set data of the capsule
+     * \param d data
+     */
+    void set(const data_type& d) { _data = d; }
+    /**
+     * Convert to data_type
+     */
+    operator data_type() const { return _data; }
+    /**
+     * Apply a function on the data inside
+     */
+    template <typename FunctionT>
+    auto call(FunctionT&& f) const {
+        return std::forward<FunctionT>(f)(_data);
+    }
+    /**
+     * Apply a function on the data inside
+     */
+    template <typename FunctionT>
+    auto call(FunctionT&& f) {
+        return std::forward<FunctionT>(f)(_data);
+    }
+};
+#endif
+
 }
 }
 }
