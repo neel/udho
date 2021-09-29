@@ -109,7 +109,7 @@ TEST_CASE( "construction", "hazo::node" ) {
 
         typedef h::capsule<wrap_int> capsule_type;
         capsule_type cap1(wrap_int(42));
-        // capsule_type cap2(42);
+        capsule_type cap2(42);
 
         // complex::n1_t n1;
         // complex::n2_t n2(no_arg(), 2);
