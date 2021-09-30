@@ -103,11 +103,6 @@ TEST_CASE( "construction", "hazo::node" ) {
     }
 
     SECTION( "construction using complex types with all values" ){
-
-        std::cout << std::is_convertible_v<int, wrap_int> << std::endl;
-        std::cout << std::is_constructible_v<wrap_int, int> << std::endl;
-        std::cout << (!std::is_same_v<wrap_int, int> && std::is_constructible_v<wrap_int, int>) << std::endl;
-
         typedef h::capsule<wrap_int> capsule_type;
         capsule_type cap1(wrap_int(42));
         capsule_type cap2(42);
@@ -127,10 +122,10 @@ TEST_CASE( "construction", "hazo::node" ) {
         REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int>);
         REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int, wrap_int>);
 
-        // complex::n1_t n1;
-        // complex::n2_t n2(no_arg(), 2);
-        // complex::n3_t n3(no_arg(), 2, "Hello");
-        // complex::n4_t n4(no_arg(), 2, "Hello", "World");
+        complex::n1_t n1;
+        complex::n2_t n2(no_arg(), 2);
+        complex::n3_t n3(no_arg(), 2, "Hello");
+        complex::n4_t n4(no_arg(), 2, "Hello", "World");
 
         // REQUIRE(n1.value()._v == 42);
         

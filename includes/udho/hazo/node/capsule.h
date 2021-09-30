@@ -41,10 +41,11 @@ namespace hazo{
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 namespace detail{
-    template <typename DataT, typename ValueT>
+    template <typename DataT, typename ValueT = DataT>
     struct _capsule{
         typedef DataT value_type;
         typedef ValueT data_type;
+        static inline constexpr bool is_valid_v = std::is_default_constructible_v<DataT> && std::is_constructible_v<DataT, ValueT> && std::is_assignable_v<DataT, ValueT>;
         template <typename ArgT>
         using is_constructible = std::integral_constant<bool, std::is_constructible_v<ValueT, ArgT> || std::is_constructible_v<DataT, ArgT> >;
         template <typename ArgT>
@@ -58,6 +59,7 @@ namespace detail{
     struct _capsule<DataT, DataT>{
         typedef DataT value_type;
         typedef DataT data_type;
+        static inline constexpr bool is_valid_v = std::is_default_constructible_v<DataT>;
         template <typename ArgT>
         using is_constructible =  std::is_constructible<DataT, ArgT>;
         template <typename ArgT>
@@ -74,7 +76,9 @@ namespace detail{
  * \ingroup capsule
  */
 template <typename DataT>
-struct capsule<DataT, false>{
+class capsule<DataT, false>{
+    DataT _data;
+    public:
     /**
      * The encapsulated type is not a class. So key_type is void
      */
@@ -94,9 +98,6 @@ struct capsule<DataT, false>{
      * \note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
-    typedef capsule<DataT, false> self_type;
-    
-    data_type _data;
     
     /**
      * Default constructor
@@ -105,24 +106,31 @@ struct capsule<DataT, false>{
     /**
      * Copy constructor
      */
-    capsule(const self_type&) = default;
+    capsule(const capsule&) = default;
     /**
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    capsule(const data_type& d): _data(d){}
-    /**
-     * Construct through an object of data_type
-     * \param d data to be encapsulated 
-     */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
      */
-    self_type& operator=(const self_type& other) {
-        _data = other._data;
+    capsule& operator=(const capsule& other) {
+        _data = other.data();
+        return *this;
+    }
+    /**
+     * @brief 
+     * 
+     * @tparam ArgT 
+     * @param other 
+     * @return capsule& 
+     */
+    template <typename ArgT, std::enable_if_t<std::is_assignable_v<data_type, ArgT>, bool> = true>
+    capsule& operator=(const ArgT& other) {
+        _data = other.data();
         return *this;
     }
     /**
@@ -149,12 +157,12 @@ struct capsule<DataT, false>{
      * Comparison operator overload to compare with another capsule, encapsulating same type of data.
      * \param other another capsule
      */
-    bool operator==(const self_type& other) const { return _data == other._data; }
+    bool operator==(const capsule& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same type of data.
      * \param other another capsule
      */
-    bool operator!=(const self_type& other) const { return !operator==(other); }
+    bool operator!=(const capsule& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
      * \param other data
@@ -197,7 +205,9 @@ struct capsule<DataT, false>{
  * \ingroup capsule
  */
 template <int N>
-struct capsule<char[N], false>{
+class capsule<char[N], false>{
+    std::string _data;
+    public:
     /**
      * The encapsulated type is not a class. So key_type is void
      */
@@ -217,9 +227,6 @@ struct capsule<char[N], false>{
      * \note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
-    typedef capsule<char[N], false> self_type;
-    
-    data_type _data;
     
     /**
      * Default constructor
@@ -228,29 +235,24 @@ struct capsule<char[N], false>{
     /**
      * Construct through another capsule of data_type
      */
-    capsule(const self_type&) = default;
+    capsule(const capsule&) = default;
     /**
      * Construct from C string literal
      * \param str C string literal
      */
     capsule(const char* str): _data(str){}
     /**
-     * Construct a capsule from std::string
-     * \param str std::string
-     */
-    capsule(const data_type& str): _data(str){}
-    /**
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
      */
-    self_type& operator=(const self_type& other) {
-        _data = other._data;
+    capsule& operator=(const capsule& other) {
+        _data = other.data();
         return *this;
     }
     /**
@@ -277,14 +279,14 @@ struct capsule<char[N], false>{
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * \param other another capsule
      */
-    template <typename ValueT, typename = typename std::enable_if<std::is_convertible<ValueT, data_type>::value>>
-    bool operator==(const capsule<ValueT>& other) const { return _data == other._data; }
+    template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
+    bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * \param other another capsule
      */
-    template <typename ValueT, typename = typename std::enable_if<std::is_convertible<ValueT, data_type>::value>>
-    bool operator!=(const capsule<ValueT>& other) const { return !operator==(other); }
+    template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
+    bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
      * \param other data
@@ -327,7 +329,9 @@ struct capsule<char[N], false>{
  * \ingroup capsule
  */
 template <typename CharT, typename Traits, typename Alloc>
-struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
+class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
+    std::basic_string<CharT, Traits, Alloc> _data;
+    public:
     /**
      * The encapsulated type is not a class. So key_type is void
      */
@@ -347,9 +351,6 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * \note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
-    typedef capsule<std::basic_string<CharT, Traits, Alloc>, true> self_type;
-    
-    data_type _data;
     
     /**
      * Default constructor
@@ -358,7 +359,7 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     /**
      * Construct through another capsule of data_type
      */
-    capsule(const self_type&) = default;
+    capsule(const capsule&) = default;
     /**
      * Construct from a basic_string
      * \param str string
@@ -368,14 +369,14 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
      * \param other another capsule 
      */
-    self_type& operator=(const self_type& other) {
-        _data = other._data;
+    capsule& operator=(const capsule& other) {
+        _data = other.data();
         return *this;
     }
     /**
@@ -402,14 +403,14 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * \param other another capsule
      */
-    template <typename ValueT, typename = typename std::enable_if<std::is_convertible<ValueT, data_type>::value>>
-    bool operator==(const capsule<ValueT>& other) const { return _data == other._data; }
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * \param other another capsule
      */
-    template <typename ValueT, typename = typename std::enable_if<std::is_convertible<ValueT, data_type>::value>>
-    bool operator!=(const capsule<ValueT>& other) const { return !operator==(other); }
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
      * \param other data
@@ -452,7 +453,9 @@ struct capsule<std::basic_string<CharT, Traits, Alloc>, true>{
  * \ingroup capsule
  */
 template <typename DataT>
-struct capsule<DataT, true>: encapsulate<DataT>{
+class capsule<DataT, true>: encapsulate<DataT>{
+    DataT _data;
+    public:
     /**
      * type of data encapsulated within
      */
@@ -469,9 +472,6 @@ struct capsule<DataT, true>: encapsulate<DataT>{
      * If data_type has an index_type datatype then uses that as index_type of the capsule. Otherwise void.
      */
     typedef typename encapsulate<DataT>::index_type index_type;
-    typedef capsule<DataT, true> self_type;
-    
-    data_type _data;
     
     /**
      * Default constructor
@@ -480,7 +480,7 @@ struct capsule<DataT, true>: encapsulate<DataT>{
     /**
      * Copy constructor
      */
-    capsule(const self_type&) = default;
+    capsule(const capsule&) = default;
     /**
      * Construct with data
      * \param d data to be encapsulated
@@ -490,12 +490,12 @@ struct capsule<DataT, true>: encapsulate<DataT>{
      * Construct through an object of data_type
      * \param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<!std::is_same_v<data_type, ArgT> && std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * assign another capsule encapsulating the same type
      */
-    self_type& operator=(const self_type& other) = default;
+    capsule& operator=(const capsule& other) = default;
     /**
      * Get the data encapsulated within
      */
@@ -515,11 +515,11 @@ struct capsule<DataT, true>: encapsulate<DataT>{
     /**
      * Compare with another capsule encapsulating the same type of data
      */
-    bool operator==(const self_type& other) const { return _data == other._head; }
+    bool operator==(const capsule& other) const { return _data == other._head; }
     /**
      * Compare with another capsule encapsulating the same type of data
      */
-    bool operator!=(const self_type& other) const { return !operator==(other); }
+    bool operator!=(const capsule& other) const { return !operator==(other); }
     /**
      * Compare with a data of data_type
      */
