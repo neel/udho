@@ -56,10 +56,16 @@ struct key_<DataT, false>{
 template <typename DataT, bool HasValue = false>
 struct value_{
     typedef typename DataT::value_type value_type;
+
+    decltype(auto) value(DataT& d) { return d.value(); }
+    decltype(auto) value(const DataT& d) const { return d.value(); }
 };
 template <typename DataT>
 struct value_<DataT, false>{
     typedef DataT value_type;
+
+    value_type& value(DataT& d) { return d; }
+    const value_type& value(const DataT& d) const { return d; }
 };
 // }
 

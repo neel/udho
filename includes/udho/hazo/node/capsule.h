@@ -453,7 +453,7 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
  * \ingroup capsule
  */
 template <typename DataT>
-class capsule<DataT, true>: encapsulate<DataT>{
+class capsule<DataT, true>: private encapsulate<DataT>{
     DataT _data;
     public:
     /**
@@ -507,11 +507,11 @@ class capsule<DataT, true>: encapsulate<DataT>{
     /**
      * Get the value of the data encapsulated within
      */
-    const value_type& value() const { return data().value(); }
+    decltype(auto) value() const { return encapsulate<DataT>::value(data()); }
     /**
      * Get the value of the data encapsulated within
      */
-    value_type& value() { return data().value(); }
+    decltype(auto) value() { return encapsulate<DataT>::value(data()); }
     /**
      * Compare with another capsule encapsulating the same type of data
      */

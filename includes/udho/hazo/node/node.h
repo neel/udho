@@ -84,6 +84,15 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     enum { depth = tail_type::depth +1 };
 
+    template <typename ArgT, typename... T>
+    using is_constructible = std::integral_constant<bool, (
+            std::is_constructible_v<data_type, ArgT> || (
+                !std::is_same_v<data_type, value_type> && std::is_constructible_v<value_type, ArgT>
+            )
+        ) && std::conditional<sizeof...(T), tail_type::template is_constructible<T...>, std::true_type>::value>;
+    template <typename ArgT, typename... T>
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::value;
+
     /// \name Constructor 
     /// @{
     /**
@@ -95,7 +104,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
      * \param v value of the current node
      * \param ts ... values of the nodes in the tail
      */
-    template <typename ArgT, typename... T, std::enable_if_t<std::is_constructible_v<value_type, ArgT> || (!std::is_same_v<value_type, data_type> && std::is_constructible_v<data_type, ArgT>), bool> = true>
+    template <typename ArgT, typename... T, std::enable_if_t<is_constructible_v<ArgT, T...>, bool> = true>
     node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
      * Copy constructor to construct from another node of same type
@@ -549,6 +558,15 @@ struct node<HeadT, void>{
          */
         depth = 0 
     };
+
+    template <typename ArgT>
+    using is_constructible = std::integral_constant<bool, (
+            std::is_constructible_v<data_type, ArgT> || (
+                !std::is_same_v<data_type, value_type> && std::is_constructible_v<value_type, ArgT>
+            )
+        )>;
+    template <typename ArgT>
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
     
     /**
      * \name Constructors
@@ -561,7 +579,7 @@ struct node<HeadT, void>{
     /**
      * Construct the node with any value convertible to either the date_type or the value_type of the node
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<value_type, ArgT> || (!std::is_same_v<value_type, data_type> && std::is_constructible_v<data_type, ArgT>), bool> = true>
+    template <typename ArgT, typename... T, std::enable_if_t<is_constructible_v<ArgT>, bool> = true>
     node(const ArgT& v): _capsule(v) {}
     /**
      * Default copy constructor
