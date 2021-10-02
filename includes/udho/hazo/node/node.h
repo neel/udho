@@ -38,6 +38,19 @@ namespace udho{
 namespace util{
 namespace hazo{
 
+namespace detail{
+
+    template <typename NodeT, typename ArgT, typename... T>
+    struct node_is_constructible{
+        using type = std::integral_constant<bool, std::is_constructible_v<typename NodeT::data_type, ArgT> && node_is_constructible<typename NodeT::tail_type, T...>::type::value>;
+    };
+
+    template <typename NodeT, typename ArgT>
+    struct node_is_constructible<NodeT, ArgT>{
+        using type = std::is_constructible<typename NodeT::data_type, ArgT>;
+    };
+}
+
 /**
  * \brief A non terminal node in the chain of nodes. 
  * A node internally uses `capsule` to store the data inside the node.
@@ -85,13 +98,9 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     enum { depth = tail_type::depth +1 };
 
     template <typename ArgT, typename... T>
-    using is_constructible = std::integral_constant<bool, (
-            std::is_constructible_v<data_type, ArgT> || (
-                !std::is_same_v<data_type, value_type> && std::is_constructible_v<value_type, ArgT>
-            )
-        ) && std::conditional<sizeof...(T), tail_type::template is_constructible<T...>, std::true_type>::value>;
+    using is_constructible = detail::node_is_constructible<node, ArgT, T...>;
     template <typename ArgT, typename... T>
-    static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::value;
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
     /// \name Constructor 
     /// @{
@@ -560,13 +569,9 @@ struct node<HeadT, void>{
     };
 
     template <typename ArgT>
-    using is_constructible = std::integral_constant<bool, (
-            std::is_constructible_v<data_type, ArgT> || (
-                !std::is_same_v<data_type, value_type> && std::is_constructible_v<value_type, ArgT>
-            )
-        )>;
+    using is_constructible = detail::node_is_constructible<node, ArgT>;
     template <typename ArgT>
-    static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT>::type::value;
     
     /**
      * \name Constructors
