@@ -506,11 +506,11 @@ class capsule<DataT, true>: private encapsulate<DataT>{
     /**
      * Get the value of the data encapsulated within
      */
-    decltype(auto) value() const { return encapsulate<DataT>::value(data()); }
+    value_type& value() { return encapsulate<DataT>::value(data()); }
     /**
      * Get the value of the data encapsulated within
      */
-    decltype(auto) value() { return encapsulate<DataT>::value(data()); }
+    const value_type& value() const { return encapsulate<DataT>::value(data()); }
     /**
      * Compare with another capsule encapsulating the same type of data
      */
