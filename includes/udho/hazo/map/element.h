@@ -95,7 +95,7 @@ struct element: Mixins<DerivedT, ValueT>...{
      * Assign a value to the element
      * @{
      */
-    template <typename V, typename = typename std::enable_if<std::is_assignable<value_type, V>::value>::type>
+    template <typename V, std::enable_if_t<std::is_assignable_v<value_type, V>, bool> = true>
     self_type& operator=(const V& v) { 
         _value = v; 
         _initialized = true;
@@ -145,15 +145,15 @@ struct element: Mixins<DerivedT, ValueT>...{
      * \param v value
      * @{
      */
-    template<typename V>
-    typename std::enable_if<std::is_assignable<value_type, V>::value, void>::type set(const std::string& n, const V& v){
+    template<typename V, std::enable_if_t<std::is_assignable_v<value_type, V>, bool> = true>
+    void set(const std::string& n, const V& v){
         if(n == name()){
             _value = v;
             _initialized = true;
         }
     }
-    template<typename V>
-    typename std::enable_if<!std::is_assignable<value_type, V>::value, void>::type set(const std::string&, const V&){}
+    template<typename V, std::enable_if_t<!std::is_assignable_v<value_type, V>, bool> = true>
+    void set(const std::string&, const V&){}
     /// @}
     
     private:
