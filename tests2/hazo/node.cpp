@@ -65,19 +65,18 @@ TEST_CASE( "depth", "hazo::node" ) {
 
 TEST_CASE( "construction", "hazo::node" ) {
 
+    SECTION( "not construction with more values" ){
+        REQUIRE(!std::is_constructible_v<plain::n1_t, int, int>);
+        REQUIRE(!std::is_constructible_v<plain::n2_t, int, double, double>);
+        REQUIRE(!std::is_constructible_v<plain::n3_t, int, std::string, double, double>);
+    }
+
     SECTION( "construction with all values" ){
-        plain::n1_t pod_n1(10);
-        plain::n2_t pod_n2(20, 20.2);
-        plain::n3_t pod_n3(30, std::string("Hello"), 30.2);
-
-        REQUIRE(pod_n1.value() == 10);
-        
-        REQUIRE(pod_n2.value() == 20);
-        REQUIRE(pod_n2.tail().value() == 20.2);
-
-        REQUIRE(pod_n3.value() == 30);
-        REQUIRE(pod_n3.tail().value() == std::string("Hello"));
-        REQUIRE(pod_n3.tail().tail().value() == 30.2);
+        REQUIRE(std::is_constructible_v<plain::n1_t, int>);
+        REQUIRE(std::is_constructible_v<plain::n2_t, int, double>);
+        REQUIRE(std::is_constructible_v<plain::n3_t, int, std::string, double>);
+        REQUIRE(std::is_constructible_v<plain::n2_t, double, int>);
+        REQUIRE(!std::is_constructible_v<plain::n3_t, int, double, std::string>);
     }
 
     SECTION( "construction with few values" ){
@@ -111,31 +110,12 @@ TEST_CASE( "construction", "hazo::node" ) {
         REQUIRE(!std::is_constructible_v<h::capsule<value_str>, int>);
 
         REQUIRE(std::is_same_v<h::capsule<value_str>::value_type, std::string>);
-        REQUIRE(std::is_same_v<decltype(h::capsule<value_str>().value()), decltype(value_str().value())>);
+        REQUIRE(std::is_same_v<decltype(std::declval<const h::capsule<value_str>&>().value()), decltype(std::declval<const value_str&>().value())>);
 
         REQUIRE(std::is_constructible_v<h::node<int>, int>);
         REQUIRE(std::is_constructible_v<h::node<wrap_int>, wrap_int>);
         REQUIRE(std::is_constructible_v<h::node<wrap_int>, int>);
         REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int>);
         REQUIRE(std::is_constructible_v<h::node<int, h::node<wrap_int>>, int, wrap_int>);
-
-        complex::n1_t n1;
-        complex::n2_t n2(no_arg(), 2);
-        complex::n3_t n3(no_arg(), 2, "Hello");
-        complex::n4_t n4(no_arg(), 2, "Hello", "World");
-
-        REQUIRE(n1.value()._v == 42);
-        
-        // REQUIRE(n2.value()._v == 42);
-        // REQUIRE(n2.tail().value()._v == 2);
-
-        // REQUIRE(n3.value()._v == 42);
-        // REQUIRE(n3.tail().value()._v == 2);
-        // REQUIRE(n3.tail().tail().value()._v == "Hello");
-
-        // REQUIRE(n4.value()._v == 42);
-        // REQUIRE(n4.tail().value()._v == 2);
-        // REQUIRE(n4.tail().tail().value()._v == "Hello");
-        // REQUIRE(n4.tail().tail().tail().value() == "World");
     }
 }
