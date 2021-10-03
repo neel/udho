@@ -33,7 +33,6 @@
 #include <udho/hazo/node/capsule.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 /**
@@ -320,7 +319,6 @@ struct basic_node<HeadT, void>{
 };
 
 
-}
 }
 }
 

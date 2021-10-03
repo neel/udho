@@ -37,8 +37,8 @@ namespace db{
 namespace pg{
    
 template <typename... Fields>
-struct basic_schema: udho::util::hazo::map_v<Fields...>{
-    typedef udho::util::hazo::map_v<Fields...> map_type;
+struct basic_schema: udho::hazo::map_v<Fields...>{
+    typedef udho::hazo::map_v<Fields...> map_type;
     using map_type::map_type;
     
     template <template <typename> class ConditionT>

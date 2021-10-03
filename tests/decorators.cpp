@@ -67,6 +67,7 @@ BOOST_AUTO_TEST_CASE(postgres_decorators_values){
     student[students::marks::val] = 100;
     
     BOOST_CHECK(student.decorate(pg::decorators::values{}).text() == "$1, $2, $3, $4"_s);
+    std::cout << student.decorate(pg::decorators::values{}).params()[0_c].value() << std::endl;
     BOOST_CHECK((student.decorate(pg::decorators::values{}).params() == boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)));
     BOOST_CHECK(student.decorate(pg::decorators::values::only<students::id, students::name, students::marks>{}).text() == "$1, $2, $3"_s);
     BOOST_CHECK((student.decorate(pg::decorators::values::only<students::id, students::name, students::marks>{}).params() == boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)));

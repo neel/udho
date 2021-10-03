@@ -146,22 +146,22 @@ struct basic_update{
             }
             
             template <typename ElementT, int = 0, typename = typename std::enable_if<!schema_has<ElementT>::value && schema_contains<ElementT>::value && !with_has<ElementT>::value && !with_contains<ElementT>::value>::type>
-            auto& operator[](const udho::util::hazo::element_t<ElementT>& e){
+            auto& operator[](const udho::hazo::element_t<ElementT>& e){
                 return schema_type::template element<ElementT>(e);
             }
             
             template <typename ElementT, int = 0, typename = typename std::enable_if<!schema_has<ElementT>::value && schema_contains<ElementT>::value && !with_has<ElementT>::value && !with_contains<ElementT>::value>::type>
-            const auto& operator[](const udho::util::hazo::element_t<ElementT>& e) const{
+            const auto& operator[](const udho::hazo::element_t<ElementT>& e) const{
                 return schema_type::template element<ElementT>(e);
             }
             
             template <typename ElementT, typename = typename std::enable_if<!schema_has<ElementT>::value && !schema_contains<ElementT>::value && !with_has<ElementT>::value && with_contains<ElementT>::value>::type>
-            auto& operator[](const udho::util::hazo::element_t<ElementT>& e){
+            auto& operator[](const udho::hazo::element_t<ElementT>& e){
                 return where.template element<ElementT>(e);
             }
             
             template <typename ElementT, typename = typename std::enable_if<!schema_has<ElementT>::value && !schema_contains<ElementT>::value && !with_has<ElementT>::value && with_contains<ElementT>::value>::type>
-            const auto& operator[](const udho::util::hazo::element_t<ElementT>& e) const{
+            const auto& operator[](const udho::hazo::element_t<ElementT>& e) const{
                 return where.template element<ElementT>(e);
             }
             
@@ -228,22 +228,22 @@ struct basic_update{
                 
 
                 template <typename ElementT, typename = typename std::enable_if<!schema_has<ElementT>::value && !schema_contains<ElementT>::value && !with_has<ElementT>::value && with_contains<ElementT>::value>::type>
-                ElementT& operator[](const udho::util::hazo::element_t<ElementT>& e){
+                ElementT& operator[](const udho::hazo::element_t<ElementT>& e){
                     return where.template element<ElementT>(e);
                 }
                 
                 template <typename ElementT, typename = typename std::enable_if<!schema_has<ElementT>::value && !schema_contains<ElementT>::value && !with_has<ElementT>::value && with_contains<ElementT>::value>::type>
-                const ElementT& operator[](const udho::util::hazo::element_t<ElementT>& e) const{
+                const ElementT& operator[](const udho::hazo::element_t<ElementT>& e) const{
                     return where.template element<ElementT>(e);
                 }
                 
                 template <typename ElementT, int = 0, typename = typename std::enable_if<!schema_has<ElementT>::value && schema_contains<ElementT>::value && !with_has<ElementT>::value && !with_contains<ElementT>::value>::type>
-                ElementT& operator[](const udho::util::hazo::element_t<ElementT>& e){
+                ElementT& operator[](const udho::hazo::element_t<ElementT>& e){
                     return schema_type::template element<ElementT>(e);
                 }
                 
                 template <typename ElementT, int = 0, typename = typename std::enable_if<!schema_has<ElementT>::value && schema_contains<ElementT>::value && !with_has<ElementT>::value && !with_contains<ElementT>::value>::type>
-                const ElementT& operator[](const udho::util::hazo::element_t<ElementT>& e) const{
+                const ElementT& operator[](const udho::hazo::element_t<ElementT>& e) const{
                     return schema_type::template element<ElementT>(e);
                 }
                 

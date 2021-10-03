@@ -38,7 +38,6 @@
 #include <udho/hazo/operations/flatten.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename Policy, typename H, typename... X>
@@ -169,7 +168,6 @@ using basic_map_d = basic_map<by_data, X...>;
 template <typename... X>
 using basic_map_v = basic_map<by_value, X...>;
     
-}
 }
 }
 

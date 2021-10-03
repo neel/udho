@@ -6,7 +6,7 @@
 
 #include <boost/hana.hpp>
 using namespace boost;
-using namespace udho::util::hazo;
+using namespace udho::hazo;
 
 /**
  * seq<seq<A, B, C>, D, E>

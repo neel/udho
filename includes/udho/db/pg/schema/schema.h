@@ -43,7 +43,7 @@ namespace db{
 namespace pg{
     
 template <typename... T>
-using schema = typename udho::util::hazo::operations::flatten<basic_schema, T...>::type;
+using schema = typename udho::hazo::operations::flatten<basic_schema, T...>::type;
     
 }
 }

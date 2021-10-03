@@ -30,7 +30,6 @@
 #define UDHO_HAZO_DETAIL_MONOID_H
 
 namespace udho{
-namespace util{
 namespace hazo{
 namespace detail{
 
@@ -70,7 +69,6 @@ struct monoid<ContainerT, ContainerT<Policy, H, T...>>{
 };
 
 }    
-}
 }
 }
 

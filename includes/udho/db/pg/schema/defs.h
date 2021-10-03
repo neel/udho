@@ -133,13 +133,13 @@ struct field_lhs{
 #define PG_ELEMENT(Name, Type, ...)                                          \
 template <typename T>                                                        \
 struct Name ## _                                                             \
-    : udho::util::hazo::element<                                             \
+    : udho::hazo::element<                                             \
         Name ## _ <T>,                                                       \
         typename udho::db::pg::detail::extract_value_type<T>::type,          \
         udho::db::pg::detail::field_lhs,                                     \
         ##__VA_ARGS__                                                        \
     >{                                                                       \
-    using base = udho::util::hazo::element<                                  \
+    using base = udho::hazo::element<                                  \
         Name ## _ <T>,                                                       \
         typename udho::db::pg::detail::extract_value_type<T>::type,          \
         udho::db::pg::detail::field_lhs,                                     \
@@ -172,7 +172,7 @@ struct Name ## _                                                             \
 using Name = Name ## _ <Type>
 
 #define PG_ELEMENT_CAST(Name, Type, PgType, ...)                             \
-struct Name: udho::util::hazo::element<Name, Type, udho::db::pg::detail::field_lhs, ##__VA_ARGS__>{         \
+struct Name: udho::hazo::element<Name, Type, udho::db::pg::detail::field_lhs, ##__VA_ARGS__>{         \
     using element::element;                                                  \
     static constexpr auto key() {                                            \
         return BOOST_HANA_STRING(#Name);                                     \

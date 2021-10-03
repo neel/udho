@@ -35,7 +35,6 @@
 #include <udho/hazo/seq/seq.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename Policy, typename... X>
@@ -67,7 +66,6 @@ using seq_proxy_d = seq_proxy<by_data, X...>;
 template <typename... X>
 using seq_proxy_v = seq_proxy<by_value, X...>;
     
-}
 }
 }
 

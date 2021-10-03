@@ -104,13 +104,13 @@ struct attach_or_leave<MappingT, constants::string<C...>>{
 }
 
 template <typename... X>
-struct concat: udho::util::hazo::element<concat<X...>, std::string>{
+struct concat: udho::hazo::element<concat<X...>, std::string>{
     template <typename AliasT>
     using as = pg::alias<concat<X...>, AliasT>;
     using index_type = concat<typename pg::detail::infer_index_type<X>::type...>;
     template <template <typename> class MappingT>
     using attach = concat<typename fn::template attach_or_leave<MappingT, X>::type...>;
-    using base = udho::util::hazo::element<concat<X...>, std::string>;
+    using base = udho::hazo::element<concat<X...>, std::string>;
     
     using base::base;
     

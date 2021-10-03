@@ -33,7 +33,6 @@
 
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 namespace detail{
@@ -102,7 +101,6 @@ struct encapsulate
       detail::encapsulate::index_<DataT, HasIndex>
 {};
 
-}
 }
 }
 

@@ -29,13 +29,11 @@
 #define UDHO_HAZO_MAP_TAG_H
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename Policy, typename... T>
 struct udho_hazo_map_tag{};
 
-}
 }
 }
 

@@ -16,7 +16,7 @@ HAZO_ELEMENT_HANA(age, std::size_t)
 
 using namespace boost;
 using namespace boost::hana::literals;
-using namespace udho::util::hazo;
+using namespace udho::hazo;
 
 BOOST_AUTO_TEST_SUITE(hazo)
 

@@ -35,7 +35,6 @@
 #include <udho/hazo/map/map.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename Policy, typename... X>
@@ -85,7 +84,6 @@ using map_proxy_d = map_proxy<by_data, X...>;
 template <typename... X>
 using map_proxy_v = map_proxy<by_value, X...>;
 
-}
 }
 }
 

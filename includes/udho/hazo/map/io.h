@@ -34,7 +34,6 @@
 #include <udho/hazo/map/map.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
@@ -51,7 +50,6 @@ std::ostream& operator<<(std::ostream& stream, const basic_map<Policy, X...>& s)
     return stream;
 }
     
-}
 }
 }
 

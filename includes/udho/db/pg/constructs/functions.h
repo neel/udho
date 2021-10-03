@@ -43,8 +43,8 @@ namespace pg{
 namespace fn{
     
 template <typename FieldT, typename Fn, typename ResultT>
-struct unary: udho::util::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>{
-    typedef udho::util::hazo::element<unary<FieldT, Fn, ResultT>, ResultT> base;
+struct unary: udho::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>{
+    typedef udho::hazo::element<unary<FieldT, Fn, ResultT>, ResultT> base;
     typedef unary<typename pg::detail::infer_index_type<FieldT>::type, Fn, ResultT> index_type;
     
     enum {detached = FieldT::detached};
@@ -83,8 +83,8 @@ struct unary: udho::util::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>{
         return std::move(Fn::name()) + "("_SQL + std::move(FieldT::relate(rel)) + ")"_SQL; 
     }
     
-    bool null() const {return !udho::util::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>::initialized();}
-    void null(bool flag) { udho::util::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>::uninitialize(flag);}
+    bool null() const {return !udho::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>::initialized();}
+    void null(bool flag) { udho::hazo::element<unary<FieldT, Fn, ResultT>, ResultT>::uninitialize(flag);}
 };
 
 struct count_f{

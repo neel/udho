@@ -39,7 +39,6 @@
 #include <udho/hazo/map/operations.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename... T>
@@ -64,7 +63,6 @@ map_v<X...> make_map_v(const X&... xs){
     return map_v<X...>(xs...);
 }
 
-}
 }
 }
 

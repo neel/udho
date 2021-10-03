@@ -48,7 +48,7 @@ struct cast: FieldT::template alter<PgType>{
     
     enum {detached = FieldT::detached};
     
-    const static constexpr udho::util::hazo::element_t<cast<typename FieldT::field_type, PgType>> val = udho::util::hazo::element_t<cast<typename FieldT::field_type, PgType>>();
+    const static constexpr udho::hazo::element_t<cast<typename FieldT::field_type, PgType>> val = udho::hazo::element_t<cast<typename FieldT::field_type, PgType>>();
     
     using casted_field::casted_field;
     
@@ -70,7 +70,7 @@ struct cast: FieldT::template alter<PgType>{
 };
     
 template <typename FieldT, typename PgType>
-const udho::util::hazo::element_t<cast<typename FieldT::field_type, PgType>> cast<FieldT, PgType>::val;
+const udho::hazo::element_t<cast<typename FieldT::field_type, PgType>> cast<FieldT, PgType>::val;
 
     
 }

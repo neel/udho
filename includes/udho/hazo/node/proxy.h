@@ -36,7 +36,6 @@
 #include <udho/hazo/node/basic.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 namespace detail{
@@ -337,7 +336,6 @@ decltype(auto) operator>>(const node_proxy<T...>& proxy, V& var){
 template <typename... T>
 using proxy = node_proxy<detail::before<>, T...>;
     
-}
 }
 }
 

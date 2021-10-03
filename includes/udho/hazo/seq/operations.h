@@ -37,7 +37,6 @@
 #include <udho/hazo/operations/eliminate.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 namespace operations{
@@ -121,7 +120,6 @@ struct eliminate<basic_seq<Policy, H>, U>{
     
 }
 
-}
 }
 }
 

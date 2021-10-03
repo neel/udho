@@ -35,7 +35,6 @@
 #include <udho/hazo/node/encapsulate.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 #ifndef __DOXYGEN__
@@ -671,7 +670,6 @@ struct capsule<DataT>{
 };
 #endif
 
-}
 }
 }
 

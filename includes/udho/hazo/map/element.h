@@ -34,7 +34,6 @@
 #include <udho/hazo/node/tag.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 /**
@@ -165,7 +164,7 @@ template <typename DerivedT, typename ValueT, template<class, typename> class...
 const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
 #define HAZO_ELEMENT(Name, Type, ...)                                   \
-struct Name: udho::util::hazo::element<Name , Type , ##__VA_ARGS__>{    \
+struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{    \
     using element::element;                                             \
     static constexpr auto key() {                                       \
         return val;                                                     \
@@ -194,7 +193,6 @@ template < class T >
 struct has_member_type_element_type: public std::integral_constant<bool, HasMemberType_element_type<T>::RESULT>{ };
 
 
-}
 }
 }
 

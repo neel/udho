@@ -34,7 +34,6 @@
 #include <udho/hazo/detail/call_helper.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename Policy>
@@ -75,7 +74,6 @@ struct at_helper{
     }
 };
 
-}
 }
 }
 

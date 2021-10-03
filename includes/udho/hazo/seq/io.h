@@ -32,7 +32,6 @@
 #include <udho/hazo/seq/seq.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename Policy, typename... X>
@@ -43,8 +42,7 @@ std::ostream& operator<<(std::ostream& stream, const basic_seq<Policy, X...>& s)
     return stream;
 }
     
-}    
-}    
+}
 }
 
 #endif // UDHO_HAZO_SEQ_IO_H

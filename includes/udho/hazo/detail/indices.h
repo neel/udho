@@ -31,7 +31,6 @@
 #include <cstdint>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 // http://loungecpp.wikidot.com/tips-and-tricks%3aindices
@@ -49,7 +48,7 @@ struct build_indices<0, Is...> : indices<Is...> {
 
 
 }
-}
+
 }
 
 #endif // UDHO_HAZO_DETAIL_INDICES_H

@@ -33,7 +33,6 @@
 #include <udho/hazo/detail/has_member_type.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 namespace detail{
@@ -70,7 +69,6 @@ template <
 >
 struct encapsulate;
 
-}
 }
 }
 

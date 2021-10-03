@@ -39,7 +39,6 @@
 #include <udho/hazo/operations/flatten.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename Policy, typename H, typename... X>
@@ -115,7 +114,6 @@ using basic_seq_d = basic_seq<by_data, X...>;
 template <typename... X>
 using basic_seq_v = basic_seq<by_value, X...>;
     
-}
 }
 }
 

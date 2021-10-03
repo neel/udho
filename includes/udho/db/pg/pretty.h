@@ -62,12 +62,12 @@ namespace udho{
 namespace pretty{
    
 template <typename HeadT, typename TailT>
-struct type<udho::util::hazo::basic_node<HeadT, TailT>, false>{
+struct type<udho::hazo::basic_node<HeadT, TailT>, false>{
     static std::string name(const udho::pretty::printer& p = printer()){
         udho::pretty::printer printer(p);
         printer.substitute<HeadT>();
         printer.substitute<TailT>();
-        return udho::pretty::demangle<udho::util::hazo::basic_node<HeadT, TailT>>(printer);
+        return udho::pretty::demangle<udho::hazo::basic_node<HeadT, TailT>>(printer);
     }
 };
 

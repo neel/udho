@@ -34,7 +34,6 @@
 #include <udho/hazo/detail/indices.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename Policy, typename LevelT, std::size_t N>
@@ -72,7 +71,6 @@ struct const_extraction_helper<by_value, LevelT, Index>{
 };
 
 
-}
 }
 }
 

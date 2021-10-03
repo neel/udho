@@ -40,7 +40,6 @@
 #include <udho/hazo/seq/operations.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename... T>
@@ -65,7 +64,6 @@ seq_v<X...> make_seq_v(const X&... xs){
 }
 
 
-}
 }
 }
 

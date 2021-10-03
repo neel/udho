@@ -31,7 +31,6 @@
 #include <utility>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 namespace detail{
@@ -49,7 +48,6 @@ class is_streamable{
     
 }
     
-}
 }
 }
 

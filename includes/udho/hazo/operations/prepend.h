@@ -31,7 +31,6 @@
 #include <udho/hazo/operations/fwd.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 namespace operations{
@@ -41,7 +40,6 @@ namespace operations{
 
 }
     
-}
 }
 }
 

@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace h = udho::util::hazo;
+namespace h = udho::hazo;
 
 namespace plain{
     using n1_t = h::node<int>;

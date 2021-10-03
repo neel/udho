@@ -36,7 +36,6 @@
 #include <udho/hazo/detail/is_streamable.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 namespace detail{
@@ -98,7 +97,6 @@ std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
 }
     
 }    
-}
 }
 
 #endif // UDHO_UTIL_HAZO_NODE_IO_H

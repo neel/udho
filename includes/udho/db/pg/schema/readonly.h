@@ -37,7 +37,7 @@ namespace pg{
     
 template <typename... Fields>
 struct readonly{
-    using fields = udho::util::hazo::seq_d<Fields...>;
+    using fields = udho::hazo::seq_d<Fields...>;
     template <typename T>
     struct contains{ 
         enum { value = fields:: template contains<T>::value || fields:: template contains<typename pg::detail::infer_index_type<T>::type>::value };

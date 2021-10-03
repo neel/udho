@@ -50,11 +50,11 @@ struct neq: FieldT{
     template <template <typename> class MappingT>
     using attach = neq<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<neq<FieldT>> val = udho::util::hazo::element_t<neq<FieldT>>();
+    const static constexpr udho::hazo::element_t<neq<FieldT>> val = udho::hazo::element_t<neq<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<neq<FieldT>> neq<FieldT>::val;
+const udho::hazo::element_t<neq<FieldT>> neq<FieldT>::val;
 
 template <typename FieldT>
 struct eq: FieldT{
@@ -63,13 +63,13 @@ struct eq: FieldT{
     template <template <typename> class MappingT>
     using attach = eq<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<eq<FieldT>> val = udho::util::hazo::element_t<eq<FieldT>>();
+    const static constexpr udho::hazo::element_t<eq<FieldT>> val = udho::hazo::element_t<eq<FieldT>>();
 
     typedef neq<FieldT> no; 
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<eq<FieldT>> eq<FieldT>::val;
+const udho::hazo::element_t<eq<FieldT>> eq<FieldT>::val;
 
 template <typename FieldT>
 struct lt: FieldT{
@@ -78,11 +78,11 @@ struct lt: FieldT{
     template <template <typename> class MappingT>
     using attach = lt<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<lt<FieldT>> val = udho::util::hazo::element_t<lt<FieldT>>();
+    const static constexpr udho::hazo::element_t<lt<FieldT>> val = udho::hazo::element_t<lt<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<lt<FieldT>> lt<FieldT>::val;
+const udho::hazo::element_t<lt<FieldT>> lt<FieldT>::val;
 
 template <typename FieldT>
 struct gt: FieldT{
@@ -91,11 +91,11 @@ struct gt: FieldT{
     template <template <typename> class MappingT>
     using attach = gt<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<gt<FieldT>> val = udho::util::hazo::element_t<gt<FieldT>>();
+    const static constexpr udho::hazo::element_t<gt<FieldT>> val = udho::hazo::element_t<gt<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<gt<FieldT>> gt<FieldT>::val;
+const udho::hazo::element_t<gt<FieldT>> gt<FieldT>::val;
 
 template <typename FieldT>
 struct lte: FieldT{
@@ -104,11 +104,11 @@ struct lte: FieldT{
     template <template <typename> class MappingT>
     using attach = lte<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<lte<FieldT>> val = udho::util::hazo::element_t<lte<FieldT>>();
+    const static constexpr udho::hazo::element_t<lte<FieldT>> val = udho::hazo::element_t<lte<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<lte<FieldT>> lte<FieldT>::val;
+const udho::hazo::element_t<lte<FieldT>> lte<FieldT>::val;
 
 template <typename FieldT>
 struct gte: FieldT{
@@ -117,11 +117,11 @@ struct gte: FieldT{
     template <template <typename> class MappingT>
     using attach = gte<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<gte<FieldT>> val = udho::util::hazo::element_t<gte<FieldT>>();
+    const static constexpr udho::hazo::element_t<gte<FieldT>> val = udho::hazo::element_t<gte<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<gte<FieldT>> gte<FieldT>::val;
+const udho::hazo::element_t<gte<FieldT>> gte<FieldT>::val;
 
 template <typename FieldT>
 struct not_like: FieldT{
@@ -130,11 +130,11 @@ struct not_like: FieldT{
     template <template <typename> class MappingT>
     using attach = not_like<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<not_like<FieldT>> val = udho::util::hazo::element_t<not_like<FieldT>>();
+    const static constexpr udho::hazo::element_t<not_like<FieldT>> val = udho::hazo::element_t<not_like<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<not_like<FieldT>> not_like<FieldT>::val;
+const udho::hazo::element_t<not_like<FieldT>> not_like<FieldT>::val;
 
 template <typename FieldT>
 struct like: FieldT{
@@ -143,13 +143,13 @@ struct like: FieldT{
     template <template <typename> class MappingT>
     using attach = like<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<like<FieldT>> val = udho::util::hazo::element_t<like<FieldT>>();
+    const static constexpr udho::hazo::element_t<like<FieldT>> val = udho::hazo::element_t<like<FieldT>>();
     
     typedef not_like<FieldT> no;
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<like<FieldT>> like<FieldT>::val;
+const udho::hazo::element_t<like<FieldT>> like<FieldT>::val;
 
 template <typename FieldT>
 struct is_not: FieldT{
@@ -158,11 +158,11 @@ struct is_not: FieldT{
     template <template <typename> class MappingT>
     using attach = is_not<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<is_not<FieldT>> val = udho::util::hazo::element_t<is_not<FieldT>>();
+    const static constexpr udho::hazo::element_t<is_not<FieldT>> val = udho::hazo::element_t<is_not<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<is_not<FieldT>> is_not<FieldT>::val;
+const udho::hazo::element_t<is_not<FieldT>> is_not<FieldT>::val;
 
 template <typename FieldT>
 struct is: FieldT{
@@ -171,13 +171,13 @@ struct is: FieldT{
     template <template <typename> class MappingT>
     using attach = is<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<is<FieldT>> val = udho::util::hazo::element_t<is<FieldT>>();
+    const static constexpr udho::hazo::element_t<is<FieldT>> val = udho::hazo::element_t<is<FieldT>>();
     
     typedef is_not<FieldT> no;
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<is<FieldT>> is<FieldT>::val;
+const udho::hazo::element_t<is<FieldT>> is<FieldT>::val;
 
 template <typename FieldT>
 struct not_in: FieldT{
@@ -186,11 +186,11 @@ struct not_in: FieldT{
     template <template <typename> class MappingT>
     using attach = not_in<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<not_in<FieldT>> val = udho::util::hazo::element_t<not_in<FieldT>>();
+    const static constexpr udho::hazo::element_t<not_in<FieldT>> val = udho::hazo::element_t<not_in<FieldT>>();
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<not_in<FieldT>> not_in<FieldT>::val;
+const udho::hazo::element_t<not_in<FieldT>> not_in<FieldT>::val;
 
 template <typename FieldT>
 struct in: FieldT{
@@ -199,13 +199,13 @@ struct in: FieldT{
     template <template <typename> class MappingT>
     using attach = in<typename FieldT::template attach<MappingT>>;
     
-    const static constexpr udho::util::hazo::element_t<in<FieldT>> val = udho::util::hazo::element_t<in<FieldT>>();
+    const static constexpr udho::hazo::element_t<in<FieldT>> val = udho::hazo::element_t<in<FieldT>>();
 
     typedef not_in<FieldT> no;
 };
 
 template <typename FieldT>
-const udho::util::hazo::element_t<in<FieldT>> in<FieldT>::val;
+const udho::hazo::element_t<in<FieldT>> in<FieldT>::val;
     
 }
 

@@ -29,7 +29,6 @@
 #define UDHO_HAZO_TAG_H
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 template <typename DerivedT>
@@ -40,7 +39,6 @@ struct element_t{
 struct by_data{};
 struct by_value{};
 
-}
 }
 }
 

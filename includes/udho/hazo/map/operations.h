@@ -39,7 +39,6 @@
 #include <udho/hazo/operations/rest_of.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 namespace operations{
@@ -146,7 +145,6 @@ struct eliminate<basic_map<Policy, H>, U>{
     
 }
 
-}
 }
 }
 

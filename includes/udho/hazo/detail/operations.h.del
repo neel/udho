@@ -31,7 +31,6 @@
 #include <udho/hazo/detail/fwd.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename ContainerT, typename T, typename... Rest>
@@ -47,7 +46,6 @@ struct exclude<ContainerT, T>{
     using type = typename remove<ContainerT, T>::type;
 };
     
-}
 }
 }
     

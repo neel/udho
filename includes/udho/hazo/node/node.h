@@ -35,7 +35,6 @@
 #include <udho/hazo/node/tag.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 #ifndef __DOXYGEN__
@@ -1337,7 +1336,6 @@ struct node{
 
 #endif // __DOXYGEN__
     
-}
 }
 }
 

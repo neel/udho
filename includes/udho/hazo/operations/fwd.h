@@ -29,7 +29,6 @@
 #define UDHO_HAZO_OPERATIONS_FWD_H
 
 namespace udho{
-namespace util{
 namespace hazo{
     
 namespace operations{
@@ -54,7 +53,6 @@ struct prepend;
 
 }
     
-}
 }
 }
 

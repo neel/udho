@@ -35,7 +35,6 @@
 #include <udho/hazo/node/fwd.h>
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename Policy, typename LevelT, typename Indecies>
@@ -71,7 +70,6 @@ struct call_helper<Policy, LevelT, indices<Is...>>{
 };
 
 
-}
 }
 }
 

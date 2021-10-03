@@ -35,15 +35,15 @@
 namespace boost {
 namespace hana {
     template <typename Policy, int N>
-    struct at_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct at_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename SeqT, typename I>
         static constexpr decltype(auto) apply(SeqT&& xs, I const&) {
-            return udho::util::hazo::extraction_helper<Policy, SeqT, I::value>::apply(std::forward<SeqT>(xs));
+            return udho::hazo::extraction_helper<Policy, SeqT, I::value>::apply(std::forward<SeqT>(xs));
         }
     };
     
     template <typename Policy, int N>
-    struct drop_front_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct drop_front_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename Xs, typename I>
         static constexpr decltype(auto) apply(Xs&& xs, I const&) {
             return xs.template tail_at<I::value>();
@@ -51,7 +51,7 @@ namespace hana {
     };
 
     template <typename Policy, int N>
-    struct is_empty_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct is_empty_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename Xs>
         static constexpr auto apply(Xs const& xs) {
             return xs.depth == 1;
@@ -59,7 +59,7 @@ namespace hana {
     };
     
     template <typename Policy, int N>
-    struct unpack_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct unpack_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename Xs, typename F>
         static constexpr decltype(auto) apply(Xs&& xs, F&& f) {
             return std::forward<Xs>(xs).unpack(std::forward<F>(f));
@@ -67,15 +67,15 @@ namespace hana {
     };
     
     template <typename Policy, int N>
-    struct make_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct make_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename ...Args>
         static constexpr auto apply(Args&& ...args) {
-            return udho::util::hazo::basic_seq<Policy, Args...>(std::forward<Args>(args)...);
+            return udho::hazo::basic_seq<Policy, Args...>(std::forward<Args>(args)...);
         }
     };
     
     template <typename Policy, int N>
-    struct length_impl<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> {
+    struct length_impl<udho::hazo::udho_hazo_seq_tag<Policy, N>> {
         template <typename Xs>
         static constexpr auto apply(Xs const&) {
             return Xs::depth +1;
@@ -83,7 +83,7 @@ namespace hana {
     };
         
     template <typename Policy, int N>
-    struct Sequence<udho::util::hazo::udho_hazo_seq_tag<Policy, N>> : std::true_type { };
+    struct Sequence<udho::hazo::udho_hazo_seq_tag<Policy, N>> : std::true_type { };
 }
 }
 

@@ -30,13 +30,11 @@
 #define UDHO_HAZO_SEQ_TAG_H
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename Policy, int N>
 struct udho_hazo_seq_tag{};
 
-}
 }
 }
 

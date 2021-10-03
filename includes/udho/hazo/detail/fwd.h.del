@@ -29,7 +29,6 @@
 #define UDHO_HAZO_MAP_DETAIL_FWD_H
 
 namespace udho{
-namespace util{
 namespace hazo{
 
 template <typename ContainerT, typename... T>
@@ -38,7 +37,6 @@ struct extend;
 template <typename ContainerT, typename U>
 struct remove;
     
-}
 }
 }
     
