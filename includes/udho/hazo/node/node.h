@@ -738,9 +738,9 @@ struct node<HeadT, void>{
     const data_type& data() const{ return data(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
     data_type& data() { return data(); }
-    template <int N, typename = typename std::enable_if<N == 0, index_type>::type>
+    template <int N, std::enable_if_t<N == 0, bool> = true>
     const data_type& data() const { return data(); }
-    template <int N, typename = typename std::enable_if<N == 0, index_type>::type>
+    template <int N, std::enable_if_t<N == 0, bool> = true>
     data_type& data() { return data(); }
     template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
     const data_type& data(const KeyT&) const{ return data(); }
@@ -757,9 +757,9 @@ struct node<HeadT, void>{
     const value_type& value() const{ return value(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
     value_type& value() { return value(); }
-    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    template <int N, std::enable_if_t<N == 0, bool> = true>
     const value_type& value() const { return value(); }
-    template <int N, typename = typename std::enable_if<N == 0, value_type>::type>
+    template <int N, std::enable_if_t<N == 0, bool> = true>
     value_type& value() { return value(); }
     template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
     const value_type& value(const KeyT&) const{ return value(); }
