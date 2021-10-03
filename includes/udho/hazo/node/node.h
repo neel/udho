@@ -669,7 +669,7 @@ struct node<HeadT, void>{
      * Less than Comparator specialized for nodes with same depth
      * \param other The other node to compare
      */
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
+    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
     bool less(const LevelT& other) const {
         return _capsule < other._capsule;
     }
