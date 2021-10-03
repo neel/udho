@@ -24,7 +24,7 @@ if (DOXYGEN_FOUND)
         VERBATIM
     )
     
-    add_custom_target(docs ALL DEPENDS ${DOXYGEN_XML_INDEX})
+    add_custom_target(docs DEPENDS ${DOXYGEN_XML_INDEX})
         
     #if (SPHINX_FOUND)
         #set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/source)

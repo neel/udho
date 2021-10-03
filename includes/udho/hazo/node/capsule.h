@@ -38,7 +38,7 @@ namespace udho{
 namespace util{
 namespace hazo{
     
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
+#ifndef __DOXYGEN__
 
 namespace detail{
     template <typename DataT, typename ValueT = DataT>
