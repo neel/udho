@@ -72,7 +72,7 @@ namespace detail{
 
 /**
  * capsule for plain old types 
- * \ingroup capsule
+ * @ingroup capsule
  */
 template <typename DataT>
 class capsule<DataT, false>{
@@ -84,17 +84,17 @@ class capsule<DataT, false>{
     typedef void key_type;
     /**
      * type of the value encapsulated by the capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef DataT value_type;
     /**
      * type of the object encapsulated by the capsule.
-     * \note Same as value_type as the encapsulated type is not a class
+     * @note Same as value_type as the encapsulated type is not a class
      */
     typedef DataT data_type;
     /**
      * type used to index this capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
     
@@ -108,13 +108,13 @@ class capsule<DataT, false>{
     capsule(const capsule&) = default;
     /**
      * Construct through an object of data_type
-     * \param d data to be encapsulated 
+     * @param d data to be encapsulated 
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
-     * \param other another capsule 
+     * @param other another capsule 
      */
     capsule& operator=(const capsule& other) {
         _data = other.data();
@@ -134,47 +134,47 @@ class capsule<DataT, false>{
     }
     /**
      * returns a const reference to the encapsulated data
-     * \note same as value() as the encapsulated type is not a class
+     * @note same as value() as the encapsulated type is not a class
      */
     const data_type& data() const { return _data; }
     /**
      * returns a non-const reference to the encapsulated data
-     * \note same as value() as the encapsulated type is not a class
+     * @note same as value() as the encapsulated type is not a class
      */
     data_type& data() { return _data; }
     /**
      * returns a const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data() as the encapsulated type is not a class
+     * @note same as data() as the encapsulated type is not a class
      */
     const value_type& value() const { return data(); }
     /**
      * returns a non-const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data() as the encapsulated type is not a class
+     * @note same as data() as the encapsulated type is not a class
      */
     value_type& value() { return data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     bool operator==(const capsule& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     bool operator!=(const capsule& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator==(const data_type& other) const { return _data == other; }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     /**
      * Sets data of the capsule
-     * \param d data 
+     * @param d data 
      */
     void set(const data_type& d) { _data = d; }
     /**
@@ -183,7 +183,7 @@ class capsule<DataT, false>{
     operator data_type() const { return _data; }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) const {
@@ -191,7 +191,7 @@ class capsule<DataT, false>{
     }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) {
@@ -201,7 +201,7 @@ class capsule<DataT, false>{
 
 /**
  * capsule for C style string literal
- * \ingroup capsule
+ * @ingroup capsule
  */
 template <int N>
 class capsule<char[N], false>{
@@ -213,17 +213,17 @@ class capsule<char[N], false>{
     typedef void key_type;
     /**
      * type of the value encapsulated by the capsule (using std::string instead of char*).
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef std::string value_type;
     /**
      * type of the object encapsulated by the capsule (using std::string instead of char*).
-     * \note Same as value_type as the encapsulated type is not a class
+     * @note Same as value_type as the encapsulated type is not a class
      */
     typedef std::string data_type;
     /**
      * type used to index this capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
     
@@ -237,18 +237,18 @@ class capsule<char[N], false>{
     capsule(const capsule&) = default;
     /**
      * Construct from C string literal
-     * \param str C string literal
+     * @param str C string literal
      */
     capsule(const char* str): _data(str){}
     /**
      * Construct through an object of data_type
-     * \param d data to be encapsulated 
+     * @param d data to be encapsulated 
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
-     * \param other another capsule 
+     * @param other another capsule 
      */
     capsule& operator=(const capsule& other) {
         _data = other.data();
@@ -256,49 +256,49 @@ class capsule<char[N], false>{
     }
     /**
      * returns a const reference to the encapsulated data
-     * \note same as value() as the encapsulated type is not a class
+     * @note same as value() as the encapsulated type is not a class
      */
     const data_type& data() const { return _data; }
     /**
      * returns a non-const reference to the encapsulated data
-     * \note same as value() as the encapsulated type is not a class
+     * @note same as value() as the encapsulated type is not a class
      */
     data_type& data() { return _data; }
     /**
      * returns a const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data() as the encapsulated type is not a class
+     * @note same as data() as the encapsulated type is not a class
      */
     const value_type& value() const { return data(); }
     /**
      * returns a non-const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data() as the encapsulated type is not a class
+     * @note same as data() as the encapsulated type is not a class
      */
     value_type& value() { return data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
     bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
     bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator==(const data_type& other) const { return _data == other; }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     /**
      * Sets data of the capsule
-     * \param d data 
+     * @param d data 
      */
     void set(const data_type& value) { _data = value; }
     /**
@@ -307,7 +307,7 @@ class capsule<char[N], false>{
     operator data_type() const { return _data; }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) const {
@@ -315,7 +315,7 @@ class capsule<char[N], false>{
     }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) {
@@ -325,7 +325,7 @@ class capsule<char[N], false>{
 
 /**
  * capsule for basic_string
- * \ingroup capsule
+ * @ingroup capsule
  */
 template <typename CharT, typename Traits, typename Alloc>
 class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
@@ -337,17 +337,17 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     typedef void key_type;
     /**
      * type of the value encapsulated by the capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef std::basic_string<CharT, Traits, Alloc> value_type;
     /**
      * type of the value encapsulated by the capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef std::basic_string<CharT, Traits, Alloc> data_type;
     /**
      * type used to index this capsule.
-     * \note Same as data_type as the encapsulated type is not a class
+     * @note Same as data_type as the encapsulated type is not a class
      */
     typedef data_type index_type;
     
@@ -361,18 +361,18 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     capsule(const capsule&) = default;
     /**
      * Construct from a basic_string
-     * \param str string
+     * @param str string
      */
     capsule(const data_type& str): _data(str){}
     /**
      * Construct through an object of data_type
-     * \param d data to be encapsulated 
+     * @param d data to be encapsulated 
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
-     * \param other another capsule 
+     * @param other another capsule 
      */
     capsule& operator=(const capsule& other) {
         _data = other.data();
@@ -380,49 +380,49 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     }
     /**
      * returns a const reference to the encapsulated data
-     * \note same as value()
+     * @note same as value()
      */
     const data_type& data() const { return _data; }
     /**
      * returns a non-const reference to the encapsulated data
-     * \note same as value()
+     * @note same as value()
      */
     data_type& data() { return _data; }
     /**
      * returns a const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data()
+     * @note same as data()
      */
     const value_type& value() const { return data(); }
     /**
      * returns a const reference to the value() of the data encapsulated in the capsule.
-     * \note same as data()
+     * @note same as data()
      */
     value_type& value() { return data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
-     * \param other another capsule
+     * @param other another capsule
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator==(const data_type& other) const { return _data == other; }
     /**
      * Comparison operator overload to compare with an object of data_type.
-     * \param other data
+     * @param other data
      */
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     /**
      * Sets data of the capsule
-     * \param d data 
+     * @param d data 
      */
     void set(const data_type& value) { _data = value; }
     /**
@@ -431,7 +431,7 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     operator data_type() const { return _data; }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) const {
@@ -439,7 +439,7 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
     }
     /**
      * Calls a function with the encapsulated data and returns the returned output of that function
-     * \param f function
+     * @param f function
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) {
@@ -449,11 +449,12 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
 
 /**
  * encapsulate a class which is not an element
- * \ingroup capsule
+ * @ingroup capsule
  */
 template <typename DataT>
 class capsule<DataT, true>: private encapsulate<DataT>{
     DataT _data;
+
     public:
     /**
      * type of data encapsulated within
@@ -472,6 +473,10 @@ class capsule<DataT, true>: private encapsulate<DataT>{
      */
     typedef typename encapsulate<DataT>::index_type index_type;
     
+    static_assert(std::is_default_constructible_v<value_type>, "capsule<DataT> default constructor requires DataT::value_type to be default constructible");
+    static_assert(std::is_copy_constructible_v<data_type>, "capsule<DataT> constructor requires DataT to be copy constructible");
+    static_assert(std::is_constructible_v<data_type, value_type>, "capsule<DataT> default constructor requires DataT to be constructible through DataT::value_type");
+
     /**
      * Default constructor
      */
@@ -482,12 +487,12 @@ class capsule<DataT, true>: private encapsulate<DataT>{
     capsule(const capsule&) = default;
     /**
      * Construct with data
-     * \param d data to be encapsulated
+     * @param d data to be encapsulated
      */
     capsule(const data_type& d): _data(d){}
     /**
      * Construct through an object of data_type
-     * \param d data to be encapsulated 
+     * @param d data to be encapsulated 
      */
     template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
     capsule(const ArgT& d): _data(d){}
@@ -529,7 +534,7 @@ class capsule<DataT, true>: private encapsulate<DataT>{
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     /**
      * set data of the capsule
-     * \param d data
+     * @param d data
      */
     void set(const data_type& d) { _data = d; }
     /**
@@ -554,11 +559,24 @@ class capsule<DataT, true>: private encapsulate<DataT>{
 
 #else
 /**
- * encapsulate a class which is not an element
- * \ingroup capsule
+ * @brief encapsulate an object of type DataT that is to be included in a node (internally used for seq and map)
+ * - Expects `DataT` to be default constructible and copy constructible.
+ * - Type `capsule<DataT>::data_type` is an alias of DataT
+ * - The method `capsule<DataT>::data()` can be used to get the underlying `DataT` object.
+ * - The method `capsule<DataT>::value()` can be used to get `DataT::value()` if `DataT` provides a `value_type` and `value()` method.
+ * - If `DataT` provides a value_type and a `value()` method (preferrably a pair of const and non-const overloads) 
+ *   - Then `capsule<DataT>::value_type` is an alias of DataT::value_type
+ *   - Otherwise `capsule<DataT>::value_type` is an alias of `capsule<DataT>::data_type`
+ *   .
+ * - If `DataT` provides a static `key()` method
+ *   - Then return type of `DataT::key()` is used as `capsule<DataT>::key_type` expecting `DataT::key()` returns compile time unique types for each item
+ *   - Otherwise `capsule<DataT>::key_type` is an alias of void
+ *   .
+ * .
+ * @ingroup capsule
  */
 template <typename DataT>
-struct capsule<DataT>{
+struct capsule<DataT>: private encapsulate<DataT>{
     /**
      * @brief type of data encapsulated within
      */
@@ -596,72 +614,72 @@ struct capsule<DataT>{
     data_type _data;
     
     /**
-     * Default constructor
+     * @brief Default constructor
      */
     capsule(): _data(value_type()){};
     /**
-     * Copy constructor
+     * @brief Copy constructor
      */
     capsule(const self_type&) = default;
     /**
-     * Construct with data
-     * \param d data to be encapsulated
+     * @brief Construct with data
+     * @param d data to be encapsulated
      */
     capsule(const data_type& d): _data(d){}
     /**
-     * assign another capsule encapsulating the same type
+     * @brief assign another capsule encapsulating the same type
      */
     self_type& operator=(const self_type& other) = default;
     /**
-     * Get the data encapsulated within
+     * @brief Get the data encapsulated within
      */
     const data_type& data() const { return _data; }
     /**
-     * Get the data encapsulated within
+     * @brief Get the data encapsulated within
      */
     data_type& data() { return _data; }
     /**
-     * Get the value of the data encapsulated within
+     * @brief Get the value of the data encapsulated within
      */
     const value_type& value() const { return data().value(); }
     /**
-     * Get the value of the data encapsulated within
+     * @brief Get the value of the data encapsulated within
      */
     value_type& value() { return data().value(); }
     /**
-     * Compare with another capsule encapsulating the same type of data
+     * @brief Compare with another capsule encapsulating the same type of data
      */
     bool operator==(const self_type& other) const { return _data == other._head; }
     /**
-     * Compare with another capsule encapsulating the same type of data
+     * @brief Compare with another capsule encapsulating the same type of data
      */
     bool operator!=(const self_type& other) const { return !operator==(other); }
     /**
-     * Compare with a data of data_type
+     * @brief Compare with a data of data_type
      */
     bool operator==(const data_type& other) const { return _data == other; }
     /**
-     * Compare with a data of data_type
+     * @brief Compare with a data of data_type
      */
     bool operator!=(const data_type& other) const { return !operator==(_data, other); }
     /**
-     * set data of the capsule
-     * \param d data
+     * @brief set data of the capsule
+     * @param d data
      */
     void set(const data_type& d) { _data = d; }
     /**
-     * Convert to data_type
+     * @brief Convert to data_type
      */
     operator data_type() const { return _data; }
     /**
-     * Apply a function on the data inside
+     * @brief Apply a function on the data inside
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) const {
         return std::forward<FunctionT>(f)(_data);
     }
     /**
-     * Apply a function on the data inside
+     * @brief Apply a function on the data inside
      */
     template <typename FunctionT>
     auto call(FunctionT&& f) {

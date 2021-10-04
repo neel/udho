@@ -35,6 +35,8 @@
 namespace udho{
 namespace hazo{
 
+#ifndef __DOXYGEN__
+
 namespace detail{
 namespace encapsulate{
     
@@ -83,8 +85,8 @@ struct index_<DataT, false>{
 }
     
 /**
- * \brief An internal struct used to analyze the encapsulated type of the capsule.
- * \tparam DataT the type of data to be encapsulated
+ * @brief An internal struct used to analyze the encapsulated type of the capsule.
+ * @tparam DataT the type of data to be encapsulated
  * 
  * Depending on DataT the three datatypes `key_type`, `value_type` and `index_type` are defined as described below.
  * 
@@ -92,7 +94,7 @@ struct index_<DataT, false>{
  * * If DataT has a public member function named `value()` and a public typedef `value_type` then that `value_type` is used to define `value_type`. Otherwise `value_type` is same as `DataT`
  * * If DataT has a public typedef `index_type` then that is used to define `index_type`, otherwise `DataT` is used as `index_type`.
  * 
- * \ingroup encapsulate
+ * @ingroup encapsulate
  */
 template <typename DataT, bool HasKey, bool HasValue, bool HasIndex>
 struct encapsulate
@@ -100,6 +102,58 @@ struct encapsulate
       detail::encapsulate::value_<DataT, HasValue>,
       detail::encapsulate::index_<DataT, HasIndex>
 {};
+
+#else 
+/**
+ * @brief An internal struct used to analyze the encapsulated type of the capsule.
+ * @tparam DataT the type of data to be encapsulated
+ * 
+ * Depending on DataT the three datatypes `key_type`, `value_type` and `index_type` are defined as described below.
+ * 
+ * - If DataT has a public member function named `key()` then its return type is used to define `key_type`. Otherwise `key_type` is void.
+ * - If DataT has a public member function named `value()` and a public typedef `value_type` then that `value_type` is used to define `value_type`. Otherwise `value_type` is same as `DataT`
+ * - If DataT has a public typedef `index_type` then that is used to define `index_type`, otherwise `DataT` is used as `index_type`.
+ * .
+ * @ingroup encapsulate
+ */
+template <typename DataT>
+struct encapsulate{
+    /**
+     * @brief If DataT has a public member function named `key()` then its return type is used to define `key_type`. Otherwise `key_type` is void.
+     */
+    typedef <implementation-defined> key_type;
+    /**
+     * @brief If DataT has a public member function named `value()` and a public typedef `value_type` then that `value_type` is used to define `value_type`. Otherwise `value_type` is same as `DataT`
+     */
+    typedef <implementation-defined> value_type;
+    /**
+     * @brief If DataT has a public typedef `index_type` then that is used to define `index_type`, otherwise `DataT` is used as `index_type`.
+     */
+    typedef <implementation-defined> index_type;
+
+    /**
+     * @brief If `DataT` provides a static `key()` method, then return type of `DataT::key()` is used as `capsule<DataT>::key_type` expecting `DataT::key()` returns compile time unique types for each item, otherwise `capsule<DataT>::key_type` is an alias of void
+     * 
+     * @return constexpr key_type 
+     */
+    static constexpr key_type key();
+    /**
+     * @brief If `DataT` provides a value_type and a `value()` method (preferrably a pair of const and non-const overloads), then value calls `d.value()`, otherwise returns `d` itself
+     * 
+     * @param d 
+     * @return value_type& 
+     */
+    value_type& value(DataT& d);
+    /**
+     * @brief If `DataT` provides a value_type and a `value()` method (preferrably a pair of const and non-const overloads), then value calls `d.value()`, otherwise returns `d` itself
+     * 
+     * @param d 
+     * @return const value_type& 
+     */
+    const value_type& value(const DataT& d) const;
+};
+
+#endif // __DOXYGEN__
 
 }
 }

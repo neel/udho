@@ -59,11 +59,11 @@ namespace detail{
 }
 
 /**
- * \brief A non terminal node in the chain of nodes. 
+ * @brief A non terminal node in the chain of nodes. 
  * A node internally uses `capsule` to store the data inside the node.
- * \tparam HeadT type of the value in a node
- * \tparam TailT type of the tail (void for terminal  node)
- * \ingroup node
+ * @tparam HeadT type of the value in a node
+ * @tparam TailT type of the tail (void for terminal  node)
+ * @ingroup node
  */
 template <typename HeadT, typename TailT>
 struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
@@ -81,22 +81,22 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     typedef capsule<HeadT> capsule_type;
     /**
      * data type for the node
-     * \see capsule
+     * @see capsule
      */
     typedef typename capsule_type::data_type data_type;
     /**
      * data type for the node
-     * \see capsule
+     * @see capsule
      */
     typedef typename capsule_type::value_type value_type;
     /**
      * index type for the node
-     * \see capsule
+     * @see capsule
      */
     typedef typename capsule_type::index_type index_type;
     /**
      * key type for the node
-     * \see capsule
+     * @see capsule
      */
     typedef typename capsule_type::key_type key_type;
 
@@ -109,7 +109,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     template <typename ArgT, typename... T>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
-    /// \name Constructor 
+    /// @name Constructor 
     /// @{
     /**
      * Default Constructor
@@ -117,19 +117,19 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     node() = default;
     /**
      * Construct a node with a value of the current node and values for all or some of the nodes in the tail
-     * \param v value of the current node
-     * \param ts ... values of the nodes in the tail
+     * @param v value of the current node
+     * @param ts ... values of the nodes in the tail
      */
     template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible_v<ArgT, T...>, bool> = true>
     node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
      * Copy constructor to construct from another node of same type
-     * \param other another noode of same type
+     * @param other another noode of same type
      */
     node(const self_type& other) = default;
     /**
      * Construct from a node having different head and tail
-     * \param other another noode of different type
+     * @param other another noode of different type
      */
     template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
     node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
@@ -137,16 +137,16 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     /**
      * Front of the chain of nodes
-     * \return the capsule of the current node
+     * @return the capsule of the current node
      * @{
      */
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
-    ///@}
+    /// @}
     
     /**
      * tail of the node
-     * \return the tail of the current node
+     * @return the tail of the current node
      * @{
      */
     tail_type& tail() { return static_cast<tail_type&>(*this); }
@@ -171,25 +171,25 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     /**
      * Checks whether there exists any node identical to the provided type
-     * \tparam T type to match against all other node's index_type
+     * @tparam T type to match against all other node's index_type
      */
     template <typename T>
     bool exists() const{ return std::is_same_v<index_type, T> || tail_type::template exists<T>(); }
     
-    /// \name Comparison
-    ///@{
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT&) const { return false; }
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT& other) const {
+    /// @name Comparison
+    /// @{
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool operator==(const OtherNodeT&) const { return false; }
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool operator==(const OtherNodeT& other) const {
         return _capsule == other._capsule && tail_type::operator==(other.tail());
     }
-    template <typename LevelT>
-    bool operator!=(const LevelT& other) const{ return !(*this == other); }
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT&) const { return false; }
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT& other) const {
+    template <typename OtherNodeT>
+    bool operator!=(const OtherNodeT& other) const{ return !(*this == other); }
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool less(const OtherNodeT&) const { return false; }
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool less(const OtherNodeT& other) const {
         return _capsule < other._capsule && tail_type::less(other.tail());
     }
     /// @}
@@ -205,9 +205,9 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /**
      * Given a value v of type T, finds a node in the chain with matching index_type and sets the value to v.
      * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such node and skips the rest.
-     * \param v value 
-     * \param all is set to true then sets all value of type T to v
-     * \name set
+     * @param v value 
+     * @param all is set to true then sets all value of type T to v
+     * @name set
      * @{
      */
     template <typename T>
@@ -235,7 +235,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     }
     /// @}
     
-    /// \name capsule_at
+    /// @name capsule_at
     /// Get the N'th capsule of type T (index_type) @{
     // { capsule<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
@@ -260,7 +260,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     // }
     /// @}
 
-    /// \name data
+    /// @name data
     /// Get the data of the N'th of type T (index_type) @{
     // { data<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
@@ -326,7 +326,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     /// @}
     
-    /// \name value
+    /// @name value
     /// Get the value of the N'th of type T (index_type) @{
     // { value<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
@@ -392,7 +392,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     /// @}
     
-    /// \name tail_at
+    /// @name tail_at
     /// Get the tail of the N'th node @{
     template <int N, std::enable_if_t<N == 0, bool> = true>
     tail_type& tail_at() { return tail(); }
@@ -405,7 +405,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     typename types::template tail_at<N>& tail_at() const { return tail_type::template tail_at<N>(); }
     /// @}
     
-    /// \name element
+    /// @name element
     /// Get the data of the node identified by element handle @{
     // { element<ElementT>(const element_t<ElementT>&)
     template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
@@ -422,7 +422,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     // }
     /// @}
     
-    /// \name operator[]
+    /// @name operator[]
     /// @{
     /**
      * finds data of an node by element handle
@@ -458,9 +458,9 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /// @} 
     
     /**
-     * \name next
+     * @name next
      * get the current data in input var and return the tail
-     * \param var[out] 
+     * @param var[out] 
      * @{
      */
     const tail_type& next(data_type& var) const { var = data(); return tail(); } 
@@ -470,7 +470,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
         
     /**
      * print the chain 
-     * \warning all data in the chain has to be printable
+     * @warning all data in the chain has to be printable
      */
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -480,7 +480,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     }
     
     /**
-     * \name visit
+     * @name visit
      * Apply a function over all elements in the chain of nodes
      * @{
      */
@@ -497,7 +497,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /// @}
        
     /**
-     * \name accumulate
+     * @name accumulate
      * accumulate a function f over the chain e.g. f(a, f(b, f(c, initial)))
      * @{
      */
@@ -515,7 +515,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /// @}
     
     /**
-     * \name decorate 
+     * @name decorate 
      * @{
      */
     template <typename FunctionT, typename InitialT>
@@ -533,8 +533,8 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
 
 /**
  * A terminal node in the chain of nodes
- * \tparam HeadT type of the value in a node
- * \ingroup node
+ * @tparam HeadT type of the value in a node
+ * @ingroup node
  */
 template <typename HeadT>
 struct node<HeadT, void>{
@@ -581,7 +581,7 @@ struct node<HeadT, void>{
     static inline constexpr bool is_constructible_v = is_constructible<ArgT>::type::value;
     
     /**
-     * \name Constructors
+     * @name Constructors
      * @{
      */
     /**
@@ -632,60 +632,60 @@ struct node<HeadT, void>{
     value_type& value() { return _capsule.value(); }
     
     /**
-     * \name Comparison
+     * @name Comparison
      * @{
      */
     /**
      * Compare with another node of different depth
-     * \param other The other node to compare with
-     * \return always false
+     * @param other The other node to compare with
+     * @return always false
      */
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT&) const { return false; }
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool operator==(const OtherNodeT&) const { return false; }
     /**
      * Compare with another node of same depth
-     * \param other The other node to compare with
-     * \return the result of capsule comparator
+     * @param other The other node to compare with
+     * @return the result of capsule comparator
      */
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT& other) const {
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool operator==(const OtherNodeT& other) const {
         return _capsule == other._capsule;
     }
     /**
      * Not equals comparator to compare with another node 
-     * \param other The other node to compare
+     * @param other The other node to compare
      */
-    template <typename LevelT>
-    constexpr bool operator!=(const LevelT& other) const{
+    template <typename OtherNodeT>
+    constexpr bool operator!=(const OtherNodeT& other) const{
         return !(*this == other);
     }   
     /**
      * Less than comparator specialized for nodes with different depth 
-     * \param other The other node to compare
-     * \return false always
+     * @param other The other node to compare
+     * @return false always
      */
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT&) const { return false; }
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool less(const OtherNodeT&) const { return false; }
     /**
      * Less than Comparator specialized for nodes with same depth
-     * \param other The other node to compare
+     * @param other The other node to compare
      */
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT& other) const {
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    bool less(const OtherNodeT& other) const {
         return _capsule < other._capsule;
     }
     /// @}
     
     /**
      * Checks whether any node of type T exists
-     * \tparam T Type searched
+     * @tparam T Type searched
      */
     template <typename T>
     bool exists() const{ return std::is_same_v<HeadT, T>; }
     
     /**
      * Assignment operator to assign another node of same type
-     * \param other The other node
+     * @param other The other node
      */
     self_type& operator=(const self_type& other) { 
         _capsule = other._capsule;
@@ -694,8 +694,8 @@ struct node<HeadT, void>{
     
     /**
      * Set value of the node that matches with the input type
-     * \tparam T type of the input
-     * \param v input of type T
+     * @tparam T type of the input
+     * @param v input of type T
      */
     template <typename T>
     bool set(const T& v, bool){
@@ -707,9 +707,9 @@ struct node<HeadT, void>{
     }
     /**
      * Set the value for the N'th node having data_type T
-     * \tparam N has to be 0 (for the terminal node)
-     * \tparam T type of the input
-     * \param v input of type T
+     * @tparam N has to be 0 (for the terminal node)
+     * @tparam T type of the input
+     * @param v input of type T
      */
     template <int N, typename T, std::enable_if_t<N == 0 && std::is_same_v<T, data_type>, bool> = true>
     bool set(const T& v){
@@ -718,7 +718,7 @@ struct node<HeadT, void>{
     }
     
     /**
-     * \name capsule_at
+     * @name capsule_at
      * Get the N'th capsule of type T (index_type)
      * @{
      */
@@ -731,7 +731,7 @@ struct node<HeadT, void>{
     /// @}
     
     /**
-     * \name data
+     * @name data
      * Get the data of the N'th node of type T (index_type)
      * @{
      */
@@ -750,7 +750,7 @@ struct node<HeadT, void>{
     /// @}
     
     /**
-     * \name value
+     * @name value
      * Get the value of the N'th node of type T (index_type)
      * @{
      */
@@ -769,7 +769,7 @@ struct node<HeadT, void>{
     /// @}
     
     /**
-     * \name value
+     * @name value
      * Get the data of the node that matches with the given element handle
      * @{
      */
@@ -780,7 +780,7 @@ struct node<HeadT, void>{
     /// @}
     
     /**
-     * \name operator[] 
+     * @name operator[] 
      * Get the data of the node that matches with either the given element handle or with the key of that node
      * @{
      */
@@ -797,7 +797,7 @@ struct node<HeadT, void>{
     
     /**
      * get the current data in input var and return the tail
-     * \param var[out] 
+     * @param var[out] 
      * @{
      */
     void next(data_type& var) const { var = data(); } 
@@ -871,35 +871,35 @@ decltype(auto) operator>>(const node<T...>& node, V& var){
 template <typename HeadT, typename TailT>
 struct node{
     /**
-     * tail of the node
+     * @brief tail of the node
      */
     typedef node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     /**
-     * type assistance through basic_node
+     * @brief type assistance through basic_node
      */
     typedef typename basic_node<HeadT, TailT>::types types;
     /**
-     * capsule type for the node
+     * @brief capsule type for the node
      */
     typedef capsule<HeadT> capsule_type;
     /**
-     * data type for the node
-     * \see capsule
+     * @brief data type for the node
+     * @see capsule
      */
     typedef typename capsule_type::data_type data_type;
     /**
-     * data type for the node
-     * \see capsule
+     * @brief data type for the node
+     * @see capsule
      */
     typedef typename capsule_type::value_type value_type;
     /**
-     * index type for the node
-     * \see capsule
+     * @brief index type for the node
+     * @see capsule
      */
     typedef typename capsule_type::index_type index_type;
     /**
-     * key type for the node
-     * \see capsule
+     * @brief key type for the node
+     * @see capsule
      */
     typedef typename capsule_type::key_type key_type;
 
@@ -912,44 +912,44 @@ struct node{
     template <typename ArgT, typename... T>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
-    /// \name Constructor 
+    /// @name Constructor 
     /// @{
     /**
-     * Default Constructor
+     * @brief Default Constructor
      */
     node() = default;
     /**
-     * Construct a node with a value of the current node and values for all or some of the nodes in the tail
-     * \param v value of the current node
-     * \param ts ... values of the nodes in the tail
+     * @brief Construct a node with a value of the current node and values for all or some of the nodes in the tail
+     * @param v value of the current node
+     * @param ts ... values of the nodes in the tail
      */
     template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible_v<ArgT, T...>, bool> = true>
     node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
-     * Copy constructor to construct from another node of same type
-     * \param other another noode of same type
+     * @brief Copy constructor to construct from another node of same type
+     * @param other another noode of same type
      */
     node(const self_type& other) = default;
     /**
-     * Construct from a node having different head and tail
-     * \param other another noode of different type
+     * @brief Construct from a node having different head and tail
+     * @param other another noode of different type
      */
     template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
     node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
     /// @}
     
     /**
-     * Front of the chain of nodes
-     * \return the capsule of the current node
+     * @brief Front of the chain of nodes
+     * @return the capsule of the current node
      * @{
      */
     capsule_type& front() { return _capsule; }
     const capsule_type& front() const { return _capsule; }
-    ///@}
+    /// @}
     
     /**
-     * tail of the node
-     * \return the tail of the current node
+     * @brief tail of the node
+     * @return the tail of the current node
      * @{
      */
     tail_type& tail() { return static_cast<tail_type&>(*this); }
@@ -957,7 +957,7 @@ struct node{
     /// @}
     
     /**
-     * data of the node
+     * @brief data of the node
      * @{
      */
     data_type& data() { return _capsule.data(); }
@@ -965,7 +965,7 @@ struct node{
     /// @}
     
     /**
-     * value of the node
+     * @brief value of the node
      * @{
      */
     value_type& value() { return _capsule.value(); }
@@ -973,98 +973,64 @@ struct node{
     /// @}
     
     /**
-     * Checks whether there exists any node identical to the provided type
-     * \tparam T type to match against all other node's index_type
+     * @brief Checks whether there exists any node identical to the provided type
+     * @tparam T type to match against all other node's index_type
      */
     template <typename T>
     bool exists() const{ return std::is_same_v<index_type, T> || tail_type::template exists<T>(); }
     
-    /// \name Comparison
-    ///@{
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT&) const { return false; }
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool operator==(const LevelT& other) const {
-        return _capsule == other._capsule && tail_type::operator==(other.tail());
-    }
-    template <typename LevelT>
-    bool operator!=(const LevelT& other) const{ return !(*this == other); }
-    template <typename LevelT, std::enable_if_t<LevelT::depth != depth || !std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT&) const { return false; }
-    template <typename LevelT, std::enable_if_t<LevelT::depth == depth && std::is_same_v<typename LevelT::data_type, data_type>, bool> = true>
-    bool less(const LevelT& other) const {
-        return _capsule < other._capsule && tail_type::less(other.tail());
-    }
+    /// @name Comparison
+    /// @brief Compare with another node having same depth and same data_type
+    /// If the other node has different level of depth or it has a different data_type then returns false
+    /// @{
+    template <typename OtherNodeT>
+    bool operator==(const OtherNodeT& other) const;
+    template <typename OtherNodeT>
+    bool operator!=(const OtherNodeT& other) const;
+    
+    template <typename OtherNodeT>
+    bool less(const OtherNodeT& other) const;
     /// @}
     
     /**
-     * assign another node of the same type
-     */
-    self_type& operator=(const self_type& other) { 
-        _capsule = other._capsule; 
-        tail_type::operator=(other.tail());
-        return *this;
-    }
-    /**
-     * Given a value v of type T, finds a node in the chain with matching index_type and sets the value to v.
-     * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such node and skips the rest.
-     * \param v value 
-     * \param all is set to true then sets all value of type T to v
-     * \name set
+     * @name Assignment
+     * @brief assign another node of the same type
      * @{
      */
+    self_type& operator=(const self_type& other);
+    /**
+     * @brief Given a value v of type T, finds a node in the chain with matching index_type and sets the value to v.
+     * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such node and skips the rest.
+     * @param v value 
+     * @param all is set to true then sets all value of type T to v
+     * @name set
+     */
     template <typename T>
-    bool set(const T& v, bool all = false){
-        bool success = false;
-        if(std::is_same_v<index_type, T>){
-            _capsule.set(v);
-            success = true;
-        }
-        if(all) 
-            return success || tail_type::template set<T>(v, all);
-        else
-            return success && tail_type::template set<T>(v, all);
-    }
-    
-
-    template <int N, typename T, std::enable_if_t<N == 0, bool> = true>
-    bool set(const T& v){
-        _capsule.set(v);
-        return true;
-    }
-    template <int N, typename T, std::enable_if_t<N != 0, bool> = true>
-    bool set(const T& v){
-        return tail_type::template set<N-1, T>(v);
-    }
+    bool set(const T& v, bool all = false);
+    /**
+     * @brief Set value of the node at N'th depth
+     * 
+     * @tparam N 
+     * @tparam T 
+     * @param v 
+     * @return true 
+     * @return false 
+     */
+    template <int N, typename T>
+    bool set(const T& v);
     /// @}
     
-    /// \name capsule_at
-    /// Get the N'th capsule of type T (index_type) @{
-    // { capsule<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    const capsule_type& capsule_at() const{ return _capsule; }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template capsule_of<T, N>& capsule_at() const{ return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N-1>(); }
-    // }
-    
-    // { capsule<T, N>() 
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    capsule_type& capsule_at() { return _capsule; }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
-    // }
+    /// @name capsule_at
+    /// @brief Get the N'th capsule of type T (index_type) 
+    /// @{
+    template <typename T, int N = 0>
+    const capsule_type& capsule_at() const;
+    template <typename T, int N = 0>
+    capsule_type& capsule_at();
     /// @}
 
-    /// \name data
-    /// Get the data of the N'th of type T (index_type) @{
+    /// @name data
+    /// @brief Get the data of the N'th of type T (index_type) @{
     // { data<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
     const index_type& data() const{ return data(); }
@@ -1129,7 +1095,7 @@ struct node{
     
     /// @}
     
-    /// \name value
+    /// @name value
     /// Get the value of the N'th of type T (index_type) @{
     // { value<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
@@ -1195,7 +1161,7 @@ struct node{
     
     /// @}
     
-    /// \name tail_at
+    /// @name tail_at
     /// Get the tail of the N'th node @{
     template <int N, std::enable_if_t<N == 0, bool> = true>
     tail_type& tail_at() { return tail(); }
@@ -1208,7 +1174,7 @@ struct node{
     typename types::template tail_at<N>& tail_at() const { return tail_type::template tail_at<N>(); }
     /// @}
     
-    /// \name element
+    /// @name element
     /// Get the data of the node identified by element handle @{
     // { element<ElementT>(const element_t<ElementT>&)
     template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
@@ -1225,7 +1191,7 @@ struct node{
     // }
     /// @}
     
-    /// \name operator[]
+    /// @name operator[]
     /// @{
     /**
      * finds data of an node by element handle
@@ -1261,9 +1227,9 @@ struct node{
     /// @} 
     
     /**
-     * \name next
+     * @name next
      * get the current data in input var and return the tail
-     * \param var[out] 
+     * @param var[out] 
      * @{
      */
     const tail_type& next(data_type& var) const { var = data(); return tail(); } 
@@ -1273,7 +1239,7 @@ struct node{
         
     /**
      * print the chain 
-     * \warning all data in the chain has to be printable
+     * @warning all data in the chain has to be printable
      */
     template <typename StreamT>
     StreamT& write(StreamT& stream) const{
@@ -1283,7 +1249,7 @@ struct node{
     }
     
     /**
-     * \name visit
+     * @name visit
      * Apply a function over all elements in the chain of nodes
      * @{
      */
@@ -1300,7 +1266,7 @@ struct node{
     /// @}
        
     /**
-     * \name accumulate
+     * @name accumulate
      * accumulate a function f over the chain e.g. f(a, f(b, f(c, initial)))
      * @{
      */
@@ -1318,7 +1284,7 @@ struct node{
     /// @}
     
     /**
-     * \name decorate 
+     * @name decorate 
      * @{
      */
     template <typename FunctionT, typename InitialT>
