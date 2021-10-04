@@ -475,7 +475,7 @@ class capsule<DataT, true>: private encapsulate<DataT>{
     /**
      * Default constructor
      */
-    capsule() = default;
+    capsule(): _data(value_type()) {}
     /**
      * Copy constructor
      */
