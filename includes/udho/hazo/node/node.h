@@ -264,7 +264,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /// Get the data of the N'th of type T (index_type) @{
     // { data<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    const index_type& data() const{ return data(); }
+    const data_type& data() const{ return data(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
     const typename types::template data_of<T, N>& data() const{ return tail_type::template data<T, N>(); }
     template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
@@ -275,7 +275,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     
     // { data<T, N>()
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    index_type& data() { return data(); }
+    data_type& data() { return data(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
     template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
@@ -1033,7 +1033,7 @@ struct node{
     /// @brief Get the data of the N'th of type T (index_type) @{
     // { data<T, N>() const
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    const index_type& data() const{ return data(); }
+    const data_type& data() const{ return data(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
     const typename types::template data_of<T, N>& data() const{ return tail_type::template data<T, N>(); }
     template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
@@ -1044,7 +1044,7 @@ struct node{
     
     // { data<T, N>()
     template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    index_type& data() { return data(); }
+    data_type& data() { return data(); }
     template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
     template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
