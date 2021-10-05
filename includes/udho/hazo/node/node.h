@@ -919,12 +919,13 @@ struct node{
      */
     node() = default;
     /**
-     * @brief Construct a node with a value of the current node and values for all or some of the nodes in the tail
+     * @brief Construct a node with a value of the current node and values for all or some of the nodes in the tail.
+     * It is expected that the data_type's of nodes in the tail are constructible through the values provided. 
      * @param v value of the current node
      * @param ts ... values of the nodes in the tail
      */
-    template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible_v<ArgT, T...>, bool> = true>
-    node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
+    template <typename ArgT, typename... T>
+    node(const ArgT& v, const T&... ts);
     /**
      * @brief Copy constructor to construct from another node of same type
      * @param other another noode of same type
@@ -934,8 +935,8 @@ struct node{
      * @brief Construct from a node having different head and tail
      * @param other another noode of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
-    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
+    template <typename OtherHeadT, typename OtherTailT>
+    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other);
     /// @}
     
     /**
@@ -943,8 +944,8 @@ struct node{
      * @return the capsule of the current node
      * @{
      */
-    capsule_type& front() { return _capsule; }
-    const capsule_type& front() const { return _capsule; }
+    capsule_type& front();
+    const capsule_type& front() const;
     /// @}
     
     /**
@@ -952,24 +953,96 @@ struct node{
      * @return the tail of the current node
      * @{
      */
-    tail_type& tail() { return static_cast<tail_type&>(*this); }
-    const tail_type& tail() const { return static_cast<const tail_type&>(*this); }
+    tail_type& tail();
+    const tail_type& tail() const;
     /// @}
     
     /**
      * @brief data of the node
      * @{
      */
-    data_type& data() { return _capsule.data(); }
-    const data_type& data() const { return _capsule.data(); }
+    data_type& data();
+    const data_type& data() const;
+    /**
+     * @brief Returns the N'th T in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
+     * h.data<int>(); // First int (first item in the node chain)
+     * h.data<int, 1>(); // Second int (third item in the node chain)
+     * @endcode 
+     * @tparam T Data type
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    const T& data() const;
+    /**
+     * @brief Returns the N'th T in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * h.data<int>(); // 1
+     * h.data<int, 1>(); // 2
+     * @endcode 
+     * @tparam T Data type
+     * @tparam N Relative position
+     * @return typename T&
+     */
+    template <typename T, int N = 0>
+    typename T& data() const;
+    /**
+     * @brief Returns the N'th item in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * h.data<0>(); // 1
+     * h.data<1>(); // 3.14
+     * h.data<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template data_at<N>&
+     */
+    template <int N>
+    typename types::template data_at<N>& data();
+    /**
+     * @brief Returns the N'th item in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * h.data<0>(); // 1
+     * h.data<1>(); // 3.14
+     * h.data<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return const typename types::template data_at<N>&
+     */
+    template <int N>
+    const typename types::template data_at<N>& data() const;
+    /**
+     * @brief Given a key get the get the data that is associated with that key.
+     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template data_for<KeyT>& 
+     */
+    template <typename KeyT>
+    typename types::template data_for<KeyT>& data(const KeyT& k);
+    /**
+     * @brief Given a key get the get the data that is associated with that key.
+     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template data_for<KeyT>& 
+     */
+    template <typename KeyT>
+    const typename types::template data_for<KeyT>& data(const KeyT& k) const;
     /// @}
     
     /**
      * @brief value of the node
      * @{
      */
-    value_type& value() { return _capsule.value(); }
-    const value_type& value() const { return _capsule.value(); }
+    value_type& value();
+    const value_type& value() const;
     /// @}
     
     /**
