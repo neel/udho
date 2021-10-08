@@ -573,7 +573,7 @@ class capsule<DataT, true>: private encapsulate<DataT>{
  *   - Otherwise `capsule<DataT>::key_type` is an alias of void
  *   .
  * .
- * @ingroup capsule
+ * @tparam DataT data type 
  */
 template <typename DataT>
 struct capsule<DataT>: private encapsulate<DataT>{

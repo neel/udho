@@ -8,6 +8,8 @@
  * \brief usho heterogenous data storage
  */
 
+#ifndef __DOXYGEN__
+
 /**
  * \defgroup capsule
  * \brief Capsule serves as an encapsulation of the data inside the a node.
@@ -54,3 +56,5 @@
  * \defgroup map
  * \ingroup hazo
  */
+
+#endif // __DOXYGEN__

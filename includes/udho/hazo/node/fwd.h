@@ -35,6 +35,8 @@
 namespace udho{
 namespace hazo{
 
+#ifndef __DOXYGEN__
+
 namespace detail{
 GENERATE_HAS_MEMBER(key);
 GENERATE_HAS_MEMBER(value);
@@ -68,6 +70,8 @@ template <
     bool HasIndex = detail::has_member_type_index_type<DataT>::value
 >
 struct encapsulate;
+
+#endif // __DOXYGEN__
 
 }
 }

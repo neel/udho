@@ -865,7 +865,7 @@ decltype(auto) operator>>(const node<T...>& node, V& var){
  * @brief A node serves as the basic building block behind hazo seq and map
  * - Head of the node has to be default constructible and copy constrictible
  * - Instead of storing the Head directly node wraps it inside a capsule @see capsule
- * @tparam HeadT 
+ * @tparam HeadT Head Type
  * @tparam TailT another node or void
  */
 template <typename HeadT, typename TailT>
@@ -912,8 +912,6 @@ struct node{
     template <typename ArgT, typename... T>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
-    /// @name Constructor 
-    /// @{
     /**
      * @brief Default Constructor
      */
@@ -937,34 +935,82 @@ struct node{
      */
     template <typename OtherHeadT, typename OtherTailT>
     node(const node<OtherHeadT, OtherTailT>& other): tail_type(other);
-    /// @}
     
     /**
      * @brief Front of the chain of nodes
      * @return the capsule of the current node
-     * @{
      */
     capsule_type& front();
+    /**
+     * @brief Front of the chain of nodes
+     * @return the capsule of the current node
+     */
     const capsule_type& front() const;
-    /// @}
+    /**
+     * @brief Get the N'th capsule of type T (index_type) 
+     * 
+     * @tparam T 
+     * @tparam N 
+     * @return const capsule_type& 
+     */
+    template <typename T, int N = 0>
+    const capsule_type& capsule_at() const;
+    /**
+     * @brief Get the N'th capsule of type T (index_type) 
+     * 
+     * @tparam T 
+     * @tparam N 
+     * @return const capsule_type& 
+     */
+    template <typename T, int N = 0>
+    capsule_type& capsule_at();
     
     /**
      * @brief tail of the node
      * @return the tail of the current node
-     * @{
      */
     tail_type& tail();
-    const tail_type& tail() const;
-    /// @}
-    
     /**
-     * @brief data of the node
-     * @{
+     * @brief tail of the node
+     * @return the tail of the current node
+     */
+    const tail_type& tail() const;
+    /**
+     * @brief Get the tail of the N'th node
+     * 
+     * @tparam N 
+     * @return types::template tail_at<N>&
+     */
+    template <int N>
+    typename types::template tail_at<N>& tail_at();
+    /**
+     * @brief Get the tail of the N'th node
+     * 
+     * @tparam N 
+     * @return types::template tail_at<N>&
+     */
+    template <int N>
+    const typename types::template tail_at<N>& tail_at();
+
+    /**
+     * @brief Checks whether there exists any node identical to the provided type
+     * @tparam T type to match against all other node's index_type
+     */
+    template <typename T>
+    bool exists() const;
+
+    /**
+     * @brief get data of a node
+     * @return data_type&
      */
     data_type& data();
+    /**
+     * @brief get data of a node
+     * @return const data_type& 
+     */
     const data_type& data() const;
     /**
-     * @brief Returns the N'th T in the node chain
+     * @brief Returns the N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
      * @code
      * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
      * h.data<int>(); // First int (first item in the node chain)
@@ -977,7 +1023,7 @@ struct node{
     template <typename T, int N = 0>
     const T& data() const;
     /**
-     * @brief Returns the N'th T in the node chain
+     * @brief Returns the N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
      * @code
      * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.data<int>(); // 1
@@ -988,7 +1034,7 @@ struct node{
      * @return typename T&
      */
     template <typename T, int N = 0>
-    typename T& data() const;
+    T& data() const;
     /**
      * @brief Returns the N'th item in the node chain
      * @code
@@ -1035,40 +1081,117 @@ struct node{
      */
     template <typename KeyT>
     const typename types::template data_for<KeyT>& data(const KeyT& k) const;
-    /// @}
     
     /**
-     * @brief value of the node
-     * @{
+     * @brief get value of a node
+     * @return value_type&
      */
     value_type& value();
+    /**
+     * @brief Get value of a node
+     * @return const value_type& 
+     */
     const value_type& value() const;
-    /// @}
+    /**
+     * @brief Returns the value of N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
+     * h.value<int>(); // First int (first item in the node chain)
+     * h.value<int, 1>(); // Second int (third item in the node chain)
+     * @endcode 
+     * @tparam T Index type (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    const T& value() const;
+    /**
+     * @brief Returns the value of N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
+     * h.value<int>(); // First int (first item in the node chain)
+     * h.value<int, 1>(); // Second int (third item in the node chain)
+     * @endcode 
+     * @tparam T Index type (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    T& value() const;
+    /**
+     * @brief Returns value of the N'th item in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * h.value<0>(); // 1
+     * h.value<1>(); // 3.14
+     * h.value<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template value_at<N>&
+     */
+    template <int N>
+    typename types::template value_at<N>& value();
+    /**
+     * @brief Returns value of the N'th item in the node chain
+     * @code
+     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * h.value<0>(); // 1
+     * h.value<1>(); // 3.14
+     * h.value<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template value_at<N>&
+     */
+    template <int N>
+    const typename types::template value_at<N>& value() const;
+    /**
+     * @brief Given a key get the get the value that is associated with that key.
+     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template value_for<KeyT>& 
+     */
+    template <typename KeyT>
+    typename types::template value_for<KeyT>& value(const KeyT& k);
+    /**
+     * @brief Given a key get the get the value that is associated with that key.
+     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template value_for<KeyT>& 
+     */
+    template <typename KeyT>
+    const typename types::template value_for<KeyT>& value(const KeyT& k) const;
     
     /**
-     * @brief Checks whether there exists any node identical to the provided type
-     * @tparam T type to match against all other node's index_type
+     * @brief Compare with another node having same depth and same data_type
+     * If the other node has different level of depth or it has a different data_type then returns false
+     * @return bool
      */
-    template <typename T>
-    bool exists() const{ return std::is_same_v<index_type, T> || tail_type::template exists<T>(); }
-    
-    /// @name Comparison
-    /// @brief Compare with another node having same depth and same data_type
-    /// If the other node has different level of depth or it has a different data_type then returns false
-    /// @{
     template <typename OtherNodeT>
     bool operator==(const OtherNodeT& other) const;
+    /**
+     * @brief Compare with another node
+     * @return bool
+     */
     template <typename OtherNodeT>
     bool operator!=(const OtherNodeT& other) const;
-    
+    /**
+     * @brief Less that comparator
+     * 
+     * @tparam OtherNodeT 
+     * @param other 
+     * @return true 
+     * @return false 
+     */
     template <typename OtherNodeT>
     bool less(const OtherNodeT& other) const;
-    /// @}
     
+
     /**
-     * @name Assignment
      * @brief assign another node of the same type
-     * @{
      */
     self_type& operator=(const self_type& other);
     /**
@@ -1076,7 +1199,6 @@ struct node{
      * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such node and skips the rest.
      * @param v value 
      * @param all is set to true then sets all value of type T to v
-     * @name set
      */
     template <typename T>
     bool set(const T& v, bool all = false);
@@ -1091,286 +1213,94 @@ struct node{
      */
     template <int N, typename T>
     bool set(const T& v);
-    /// @}
-    
-    /// @name capsule_at
-    /// @brief Get the N'th capsule of type T (index_type) 
-    /// @{
-    template <typename T, int N = 0>
-    const capsule_type& capsule_at() const;
-    template <typename T, int N = 0>
-    capsule_type& capsule_at();
-    /// @}
 
-    /// @name data
-    /// @brief Get the data of the N'th of type T (index_type) @{
-    // { data<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    const data_type& data() const{ return data(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template data_of<T, N>& data() const{ return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N-1>(); }
-    // }
-    
-    // { data<T, N>()
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    data_type& data() { return data(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    typename types::template data_of<T, N>& data() { return tail_type::template data<T, N-1>(); }
-    // }
-    
-    // { data<N>()
     /**
-     * Get the data of the N'th node
-     */
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    data_type& data() { return data(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    typename types::template data_at<N>& data() { return tail_type::template data<N-1>();  }
-    // }
-    
-    // { data<N>() const
-    /**
-     * Get the data of the N'th node
-     */
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    const data_type& data() const { return data(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    const typename types::template data_at<N>& data() const { return tail_type::template data<N-1>();  }
-    // }
-    
-    // { data<KeyT>(const KeyT&)
-    /**
-     * Get the data of the node identified by the key KeyT
-     */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    data_type& data(const KeyT&){ return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
-    typename types::template data_for<KeyT>& data(const KeyT& k){ return tail_type::template data<KeyT>(k); }
-    // }
-    
-    // { data<KeyT>(const KeyT&) const
-    /**
-     * Get the data of the node identified by the key KeyT
-     */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    const data_type& data(const KeyT&) const { return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
-    const typename types::template data_for<KeyT>& data(const KeyT& k) const { return tail_type::template data<KeyT>(k); }
-    // }
-    
-    /// @}
-    
-    /// @name value
-    /// Get the value of the N'th of type T (index_type) @{
-    // { value<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    const value_type& value() const{ return value(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template value_of<T, N>& value() const{ return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N-1>(); }
-    // }
-    
-    // { value<T, N>()
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
-    value_type& value() { return value(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
-    typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
-    typename types::template value_of<T, N>& value() { return tail_type::template value<T, N-1>(); }
-    // }
-
-    // { value<N>()
-    /**
-     * Get the value of the N'th node
-     */
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    value_type& value() { return value(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    typename types::template value_at<N>& value() { return tail_type::template value<N-1>();  }
-    // }
-    
-    // { value<N>() const
-    /**
-     * Get the value of the N'th node
-     */
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    const value_type& value() const { return value(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    const typename types::template value_at<N>& value() const { return tail_type::template value<N-1>();  }
-    // }
-    
-    // { value<KeyT>(const KeyT&)
-    /**
-     * Get the value of the node identified by the key KeyT
-     */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    value_type& value(const KeyT&){ return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
-    typename types::template value_for<KeyT>& value(const KeyT& k){ return tail_type::template value<KeyT>(k); }
-    // }
-    
-    // { value<KeyT>(const KeyT&) const
-    /**
-     * Get the value of the node identified by the key KeyT
-     */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    const value_type& value(const KeyT&) const { return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
-    const typename types::template value_for<KeyT>& value(const KeyT& k) const { return tail_type::template value<KeyT>(k); }
-    // }
-    
-    /// @}
-    
-    /// @name tail_at
-    /// Get the tail of the N'th node @{
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    tail_type& tail_at() { return tail(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    typename types::template tail_at<N>& tail_at() { return tail_type::template tail_at<N>(); }
-    
-    template <int N, std::enable_if_t<N == 0, bool> = true>
-    const tail_type& tail_at() const { return tail(); }
-    template <int N, std::enable_if_t<N != 0, bool> = true>
-    typename types::template tail_at<N>& tail_at() const { return tail_type::template tail_at<N>(); }
-    /// @}
-    
-    /// @name element
-    /// Get the data of the node identified by element handle @{
-    // { element<ElementT>(const element_t<ElementT>&)
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
-    data_type& element(const element_t<ElementT>&) { return data(); }
-    template <typename ElementT, std::enable_if_t<!std::is_same_v<ElementT, index_type>, bool> = true>
-    typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
-    // }
-    
-    // { element<ElementT>(const element_t<ElementT>&) const
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
-    const data_type& element(const element_t<ElementT>&) const { return data(); }
-    template <typename ElementT, std::enable_if_t<!std::is_same_v<ElementT, index_type>, bool> = true>
-    const typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
-    // }
-    /// @}
-    
-    /// @name operator[]
-    /// @{
-    /**
-     * finds data of an node by element handle
+     * @brief Get the data of the node identified by element handle
+     * 
+     * @tparam ElementT 
+     * @return data_type& 
      */
     template <typename ElementT>
-    typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
+    typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
     /**
-     * finds data of an node by element handle
+     * @brief Get the data of the node identified by element handle
+     * 
+     * @tparam ElementT 
+     * @return data_type& 
      */
     template <typename ElementT>
-    const typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
+    const typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
+
+    /**
+     * @brief finds data of an node by element handle
+     */
+    template <typename ElementT>
+    typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e);
+    /**
+     * @brief finds data of an node by element handle
+     */
+    template <typename ElementT>
+    const typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e) const;
     
     /**
      * Finds data of an element by key
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
+    template <typename KeyT>
+    auto& operator[](const KeyT& k);
     /**
      * Finds data of an element by key
      */
-    template <typename K, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<K, key_type>, bool> = true>
-    auto& operator[](const K& k){ return tail().template operator[]<K>(k); } 
-    /**
-     * Finds data of an element by key
-     */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
-    data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
-    /**
-     * Finds data of an element by key
-     */
-    template <typename K, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<K, key_type>, bool> = true>
-    const auto& operator[](const K& k) const { return tail().template operator[]<K>(k); }
-    /// @} 
+    template <typename KeyT>
+    const auto& operator[](const KeyT& k) const;
+
     
     /**
-     * @name next
-     * get the current data in input var and return the tail
+     * @brief get the current data in input var and return the tail
+     * @tparam T Either data_type or convertible to value_type
      * @param var[out] 
-     * @{
      */
-    const tail_type& next(data_type& var) const { var = data(); return tail(); } 
     template <typename T, std::enable_if_t<!std::is_same_v<data_type, value_type> && std::is_convertible_v<value_type, T>, bool> = true>
-    const tail_type& next(T& var) const { var = value(); return tail(); } 
-    /// @}
+    const tail_type& next(T& var) const;
         
     /**
      * print the chain 
      * @warning all data in the chain has to be printable
      */
     template <typename StreamT>
-    StreamT& write(StreamT& stream) const{
-        stream << _capsule << ", " ;
-        tail_type::template write<StreamT>(stream);
-        return stream;
-    }
+    StreamT& write(StreamT& stream) const;
     
     /**
-     * @name visit
-     * Apply a function over all elements in the chain of nodes
-     * @{
+     * @brief Apply a function over all elements in the chain of nodes
      */
     template <typename FunctionT>
-    void visit(FunctionT&& f) const{
-        _capsule.call(std::forward<FunctionT>(f));
-        tail_type::visit(std::forward<FunctionT>(f));
-    }
+    void visit(FunctionT&& f) const;
+    /**
+     * @brief Apply a function over all elements in the chain of nodes
+     */
     template <typename FunctionT>
-    void visit(FunctionT&& f){
-        _capsule.call(std::forward<FunctionT>(f));
-        tail_type::visit(std::forward<FunctionT>(f));
-    }
-    /// @}
+    void visit(FunctionT&& f);
        
     /**
-     * @name accumulate
-     * accumulate a function f over the chain e.g. f(a, f(b, f(c, initial)))
-     * @{
+     * @brief accumulate a function f over the chain e.g. `f(a, f(b, f(c, initial)))`
      */
     template <typename FunctionT, typename InitialT>
-    auto accumulate(FunctionT&& f, InitialT&& initial) const {
-        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
-    }
+    auto accumulate(FunctionT&& f, InitialT&& initial) const;
     /**
-     * accumulate a function f over the chain e.g. f(a, f(b, f(c)))
+     * @brief accumulate a function f over the chain e.g. `f(a, f(b, f(c)))`
      */
     template <typename FunctionT>
-    auto accumulate(FunctionT&& f) const {
-        return std::forward<FunctionT>(f)(data(), tail_type::accumulate(std::forward<FunctionT>(f)));
-    }
-    /// @}
+    auto accumulate(FunctionT&& f) const;
     
     /**
-     * @name decorate 
-     * @{
+     * @brief decorate 
      */
     template <typename FunctionT, typename InitialT>
-    auto decorate(FunctionT&& f, InitialT&& initial) const {
-        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f), std::forward<InitialT>(initial)));
-    }
+    auto decorate(FunctionT&& f, InitialT&& initial) const;
+    /**
+     * @brief decorate 
+     */
     template <typename FunctionT>
-    auto decorate(FunctionT&& f) const{
-        return std::forward<FunctionT>(f).finish(accumulate(std::forward<FunctionT>(f)));
-    }
-    /// @}
-    
-    capsule_type _capsule;
+    auto decorate(FunctionT&& f) const;
 };
 
 #endif // __DOXYGEN__

@@ -114,7 +114,6 @@ struct encapsulate
  * - If DataT has a public member function named `value()` and a public typedef `value_type` then that `value_type` is used to define `value_type`. Otherwise `value_type` is same as `DataT`
  * - If DataT has a public typedef `index_type` then that is used to define `index_type`, otherwise `DataT` is used as `index_type`.
  * .
- * @ingroup encapsulate
  */
 template <typename DataT>
 struct encapsulate{
