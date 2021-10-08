@@ -80,7 +80,7 @@ struct meta_node{
          * @tparam N level of depth
          */
         template <int N>
-        using tail_at = typename std::conditional<N == 0, tail_type, typename tail_type::types::template tail_at<N-1>>;
+        using tail_at = typename std::conditional<N == 0, tail_type, typename tail_type::types::template tail_at<N-1>>::type;
         /**
          * type of the capsule at N'th level of depth
          * @tparam N level of depth

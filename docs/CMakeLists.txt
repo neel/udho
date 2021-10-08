@@ -27,55 +27,55 @@ if (DOXYGEN_FOUND)
     
     add_custom_target(docs DEPENDS ${DOXYGEN_XML_INDEX})
         
-    if (SPHINX_FOUND)
-        set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-        set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-        set(SPHINX_INDEX ${SPHINX_BUILD}/index.html)
-        file(GLOB SPHINX_PAGES ${SPHINX_SOURCE}/pages/*.rst)
+    # if (SPHINX_FOUND)
+    #     set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+    #     set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
+    #     set(SPHINX_INDEX ${SPHINX_BUILD}/index.html)
+    #     file(GLOB SPHINX_PAGES ${SPHINX_SOURCE}/pages/*.rst)
         
-        add_custom_command(
-            OUTPUT ${SPHINX_INDEX}
-            COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.dhyara=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            DEPENDS ${SPHINX_SOURCE}/index.rst ${DOXYGEN_XML_INDEX} ${SPHINX_PAGES}
-            MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-            COMMENT "Generating documentation with Sphinx"
-        )
-        add_custom_target(sphinx DEPENDS ${SPHINX_INDEX})
-    else (SPHINX_FOUND)
-        message("Sphinx need to be installed to generate the sphinx documentation")
-    endif (SPHINX_FOUND)
+    #     add_custom_command(
+    #         OUTPUT ${SPHINX_INDEX}
+    #         COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.dhyara=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
+    #         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    #         DEPENDS ${SPHINX_SOURCE}/index.rst ${DOXYGEN_XML_INDEX} ${SPHINX_PAGES}
+    #         MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
+    #         COMMENT "Generating documentation with Sphinx"
+    #     )
+    #     add_custom_target(sphinx DEPENDS ${SPHINX_INDEX})
+    # else (SPHINX_FOUND)
+    #     message("Sphinx need to be installed to generate the sphinx documentation")
+    # endif (SPHINX_FOUND)
         
 else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")
 endif (DOXYGEN_FOUND)
 
 
-set(CLDOC /home/neel/.espressif/python_env/idf4.4_py3.9_env/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
-if(CLDOC STREQUAL "")
-	find_program(CLDOC cldoc)
-elseif(NOT EXISTS ${CLDOC})
-	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
-endif()
+# set(CLDOC /home/neel/.espressif/python_env/idf4.4_py3.9_env/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
+# if(CLDOC STREQUAL "")
+# 	find_program(CLDOC cldoc)
+# elseif(NOT EXISTS ${CLDOC})
+# 	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
+# endif()
 
-set(HEADERS ${UDHO_HEADERS})
+# set(HEADERS ${UDHO_HEADERS})
 
-if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
-  set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
+# if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
+#   set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
   
-  message(STATUS "${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}")
+#   message(STATUS "${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}")
   
-  add_custom_target(cldoc COMMAND
-    ${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  )
+#   add_custom_target(cldoc COMMAND
+#     ${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}
+#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+#   )
 
-  add_custom_target(serve_cldoc COMMAND
-    ${CLDOC} serve -- ${CLDOC_OUT}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  )
+#   add_custom_target(serve_cldoc COMMAND
+#     ${CLDOC} serve -- ${CLDOC_OUT}
+#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+#   )
 
-  add_dependencies(serve_cldoc cldoc)
-else()
-  message(STATUS "cldoc Documentation will not be generated")
-endif()
+#   add_dependencies(serve_cldoc cldoc)
+# else()
+#   message(STATUS "cldoc Documentation will not be generated")
+# endif()

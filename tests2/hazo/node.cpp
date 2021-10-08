@@ -12,6 +12,12 @@ namespace plain{
     using n1_t = h::node<int>;
     using n2_t = h::node<int, h::node<double>>;
     using n3_t = h::node<int, h::node<std::string, h::node<double>>>;
+
+    namespace meta{
+        using n1_t = h::meta_node<int>;
+        using n2_t = h::meta_node<int, h::meta_node<double>>;
+        using n3_t = h::meta_node<int, h::meta_node<std::string, h::meta_node<double>>>;
+    }
 }
 
 struct no_arg{
@@ -51,6 +57,13 @@ namespace complex{
     using n2_t = h::node<no_arg, h::node<wrap_int>>;
     using n3_t = h::node<no_arg, h::node<wrap_int, h::node<wrap_str>>>;
     using n4_t = h::node<no_arg, h::node<wrap_int, h::node<wrap_str, h::node<value_str>>>>;
+
+    namespace meta{
+        using n1_t = h::meta_node<no_arg>;
+        using n2_t = h::meta_node<no_arg, h::meta_node<wrap_int>>;
+        using n3_t = h::meta_node<no_arg, h::meta_node<wrap_int, h::meta_node<wrap_str>>>;
+        using n4_t = h::meta_node<no_arg, h::meta_node<wrap_int, h::meta_node<wrap_str, h::meta_node<value_str>>>>;
+    }
 }
 
 TEST_CASE( "depth", "hazo::node" ) {
@@ -61,6 +74,140 @@ TEST_CASE( "depth", "hazo::node" ) {
     REQUIRE(complex::n2_t::depth == 1);
     REQUIRE(complex::n3_t::depth == 2);
     REQUIRE(complex::n4_t::depth == 3);
+}
+
+TEST_CASE( "types", "hazo::meta_node" ) {
+    REQUIRE(std::is_void_v<plain::meta::n1_t::tail_type>);
+    REQUIRE(!std::is_void_v<plain::meta::n2_t::tail_type>);
+    REQUIRE(std::is_void_v<plain::meta::n2_t::tail_type::tail_type>);
+
+    REQUIRE(std::is_void_v<complex::meta::n1_t::tail_type>);
+    REQUIRE(!std::is_void_v<complex::meta::n2_t::tail_type>);
+    REQUIRE(std::is_void_v<complex::meta::n2_t::tail_type::tail_type>);
+    REQUIRE(std::is_void_v<complex::meta::n3_t::tail_type::tail_type::tail_type>);
+    REQUIRE(std::is_void_v<complex::meta::n4_t::tail_type::tail_type::tail_type::tail_type>);
+
+    SECTION( "tail_type" ){
+        REQUIRE(std::is_same_v<plain::meta::n2_t::tail_type, h::meta_node<double>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::tail_type, h::meta_node<std::string, h::meta_node<double>>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::tail_type::tail_type, h::meta_node<double>>);
+        REQUIRE(std::is_void_v<plain::meta::n3_t::tail_type::tail_type::tail_type>);
+
+        REQUIRE(std::is_same_v<complex::meta::n2_t::tail_type, h::meta_node<wrap_int>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::tail_type, h::meta_node<wrap_int, h::meta_node<wrap_str>>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::tail_type::tail_type, h::meta_node<wrap_str>>);
+        REQUIRE(std::is_void_v<complex::meta::n3_t::tail_type::tail_type::tail_type>);
+    }
+
+    SECTION( "tail_at" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::tail_at<0>, plain::meta::n1_t::tail_type>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::tail_at<0>, plain::meta::n2_t::tail_type>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<0>, plain::meta::n3_t::tail_type>);
+
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::tail_at<0>, complex::meta::n1_t::tail_type>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::tail_at<0>, complex::meta::n2_t::tail_type>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<0>, complex::meta::n3_t::tail_type>);
+
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::tail_at<0>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::tail_at<1>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::tail_at<0>, h::meta_node<double>>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::tail_at<1>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::tail_at<2>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<0>, h::meta_node<std::string, h::meta_node<double>>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<1>, h::meta_node<double>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<2>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<3>, void>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::tail_at<0>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::tail_at<1>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::tail_at<0>, h::meta_node<wrap_int>>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::tail_at<1>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::tail_at<2>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<0>, h::meta_node<wrap_int, h::meta_node<wrap_str>>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<1>, h::meta_node<wrap_str>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<2>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<3>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::tail_at<99>, void>);
+
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::tail_at<2>, h::meta_node<value_str>>);
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::tail_at<3>, void>);
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::tail_at<99>, void>);
+    }
+
+    SECTION( "capsule_at" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::capsule_at<0>, h::capsule<int>>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::capsule_at<0>, h::capsule<int>>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::capsule_at<1>, h::capsule<double>>);
+
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<0>, h::capsule<int>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<1>, h::capsule<std::string>>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<2>, h::capsule<double>>);
+    }
+
+    SECTION( "data_at" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::data_at<0>, int>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::data_at<0>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::data_at<1>, double>);
+        
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<0>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<1>, std::string>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<2>, double>);
+    }
+
+    SECTION( "value_at" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::value_at<0>, int>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::value_at<0>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::value_at<1>, double>);
+        
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<0>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<1>, std::string>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<2>, double>);
+    }
+
+    SECTION( "data_of" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::data_of<int>, int>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::data_of<int>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::data_of<double>, double>);
+        
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_of<int>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_of<std::string>, std::string>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_of<double>, double>);
+    }
+
+    SECTION( "value_of" ){
+        REQUIRE(std::is_same_v<plain::meta::n1_t::types::value_of<int>, int>);
+
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::value_of<int>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n2_t::types::value_of<double>, double>);
+        
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_of<int>, int>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_of<std::string>, std::string>);
+        REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_of<double>, double>);
+    }
+
+    SECTION( "exists" ){
+        REQUIRE(plain::meta::n1_t::types::exists<int>::value);
+        REQUIRE(!plain::meta::n1_t::types::exists<double>::value);
+        REQUIRE(plain::meta::n2_t::types::exists<int>::value);
+        REQUIRE(plain::meta::n2_t::types::exists<double>::value);
+        REQUIRE(!plain::meta::n2_t::types::exists<std::string>::value);
+        REQUIRE(plain::meta::n3_t::types::exists<int>::value);
+        REQUIRE(plain::meta::n3_t::types::exists<std::string>::value);
+        REQUIRE(plain::meta::n3_t::types::exists<double>::value);
+    }
 }
 
 TEST_CASE( "construction", "hazo::node" ) {
