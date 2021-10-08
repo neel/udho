@@ -867,6 +867,7 @@ decltype(auto) operator>>(const node<T...>& node, V& var){
  * - Instead of storing the Head directly node wraps it inside a capsule @see capsule
  * @tparam HeadT Head Type
  * @tparam TailT another node or void
+ * @ingroup hazo
  */
 template <typename HeadT, typename TailT>
 struct node{

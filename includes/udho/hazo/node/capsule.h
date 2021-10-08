@@ -574,6 +574,7 @@ class capsule<DataT, true>: private encapsulate<DataT>{
  *   .
  * .
  * @tparam DataT data type 
+ * @ingroup hazo
  */
 template <typename DataT>
 struct capsule<DataT>: private encapsulate<DataT>{

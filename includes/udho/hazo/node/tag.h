@@ -31,12 +31,25 @@
 namespace udho{
 namespace hazo{
     
+/**
+ * @brief Element handle of an item in the hazo data structure
+ * @ingroup hazo
+ * @tparam DerivedT 
+ */
 template <typename DerivedT>
 struct element_t{
     typedef DerivedT element_type;
 };
 
+/**
+ * @brief Access items by data
+ * @ingroup hazo
+ */
 struct by_data{};
+/**
+ * @brief Access items by value
+ * @ingroup hazo
+ */
 struct by_value{};
 
 }
