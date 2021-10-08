@@ -33,7 +33,7 @@
 #include <udho/hazo/node/fwd.h>
 #include <udho/hazo/node/tag.h>
 #include <udho/hazo/node/capsule.h>
-#include <udho/hazo/node/basic.h>
+#include <udho/hazo/node/meta.h>
 
 namespace udho{
 namespace hazo{

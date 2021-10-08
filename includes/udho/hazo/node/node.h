@@ -31,7 +31,7 @@
 #include <utility>
 #include <type_traits>
 #include <udho/hazo/node/capsule.h>
-#include <udho/hazo/node/basic.h>
+#include <udho/hazo/node/meta.h>
 #include <udho/hazo/node/tag.h>
 
 namespace udho{
@@ -74,7 +74,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /**
      * type assistance through basic_node
      */
-    typedef typename basic_node<HeadT, TailT>::types types;
+    typedef typename meta_node<HeadT, TailT>::types types;
     /**
      * capsule type for the node
      */
@@ -545,7 +545,7 @@ struct node<HeadT, void>{
     /**
      * type assistance 
      */
-    typedef typename basic_node<HeadT>::types types;
+    typedef typename meta_node<HeadT>::types types;
     /**
      * Capsule for the node
      */

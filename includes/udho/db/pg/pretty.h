@@ -30,7 +30,7 @@
 #define UDHO_DB_PG_PRETTY_H
 
 #include <udho/pretty/pretty.h>
-#include <udho/hazo/node/basic.h>
+#include <udho/hazo/node/meta.h>
 #include <udho/db/pg/schema/basic.h>
 #include <udho/db/pg/constructs/functions.h>
 #include <udho/db/pg/constructs/concat.h>
@@ -62,12 +62,12 @@ namespace udho{
 namespace pretty{
    
 template <typename HeadT, typename TailT>
-struct type<udho::hazo::basic_node<HeadT, TailT>, false>{
+struct type<udho::hazo::meta_node<HeadT, TailT>, false>{
     static std::string name(const udho::pretty::printer& p = printer()){
         udho::pretty::printer printer(p);
         printer.substitute<HeadT>();
         printer.substitute<TailT>();
-        return udho::pretty::demangle<udho::hazo::basic_node<HeadT, TailT>>(printer);
+        return udho::pretty::demangle<udho::hazo::meta_node<HeadT, TailT>>(printer);
     }
 };
 

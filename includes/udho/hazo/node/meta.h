@@ -43,11 +43,11 @@ namespace hazo{
  * \ingroup node
  */
 template <typename HeadT, typename TailT = void>
-struct basic_node{
+struct meta_node{
     /**
      * tail type
      */
-    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    typedef meta_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     /**
      * capsule type
      */
@@ -143,11 +143,11 @@ struct basic_node{
         /**
          * A chain of all index_types in the chain of nodes
          */
-        using indices = basic_node<index_type, typename tail_type::types::indices>;
+        using indices = meta_node<index_type, typename tail_type::types::indices>;
         /**
          * A chain of all key_type's in the chain of nodes
          */
-        using keys = basic_node<key_type, typename tail_type::types::keys>;
+        using keys = meta_node<key_type, typename tail_type::types::keys>;
             
         /**
          * Checks whether there exists a node encapsulating data with index_type T
@@ -186,7 +186,7 @@ struct basic_node{
  * \ingroup node
  */
 template <typename HeadT>
-struct basic_node<HeadT, void>{
+struct meta_node<HeadT, void>{
     /**
      * The terminal node has no tail, hence set to void.
      */
@@ -283,11 +283,11 @@ struct basic_node<HeadT, void>{
         /**
          * A chain of all index_types in the chain of nodes
          */
-        using indices = basic_node<index_type, void>;
+        using indices = meta_node<index_type, void>;
         /**
          * A chain of all key_type's in the chain of nodes
          */
-        using keys = basic_node<key_type, void>;
+        using keys = meta_node<key_type, void>;
             
         /**
          * Checks whether there exists a node encapsulating data with index_type T
