@@ -152,6 +152,15 @@ TEST_CASE( "types", "hazo::meta_node" ) {
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<0>, h::capsule<int>>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<1>, h::capsule<std::string>>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::capsule_at<2>, h::capsule<double>>);
+
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::capsule_at<0>, h::capsule<no_arg>>);
+
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::capsule_at<0>, h::capsule<no_arg>>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::capsule_at<1>, h::capsule<wrap_int>>);
+
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::capsule_at<0>, h::capsule<no_arg>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::capsule_at<1>, h::capsule<wrap_int>>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::capsule_at<2>, h::capsule<wrap_str>>);
     }
 
     SECTION( "data_at" ){
@@ -163,6 +172,15 @@ TEST_CASE( "types", "hazo::meta_node" ) {
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<0>, int>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<1>, std::string>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::data_at<2>, double>);
+
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::data_at<0>, no_arg>);
+
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::data_at<0>, no_arg>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::data_at<1>, wrap_int>);
+
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::data_at<0>, no_arg>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::data_at<1>, wrap_int>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::data_at<2>, wrap_str>);
     }
 
     SECTION( "value_at" ){
@@ -174,6 +192,20 @@ TEST_CASE( "types", "hazo::meta_node" ) {
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<0>, int>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<1>, std::string>);
         REQUIRE(std::is_same_v<plain::meta::n3_t::types::value_at<2>, double>);
+
+        REQUIRE(std::is_same_v<complex::meta::n1_t::types::value_at<0>, no_arg>);
+
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::value_at<0>, no_arg>);
+        REQUIRE(std::is_same_v<complex::meta::n2_t::types::value_at<1>, wrap_int>);
+
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::value_at<0>, no_arg>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::value_at<1>, wrap_int>);
+        REQUIRE(std::is_same_v<complex::meta::n3_t::types::value_at<2>, wrap_str>);
+
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::value_at<0>, no_arg>);
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::value_at<1>, wrap_int>);
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::value_at<2>, wrap_str>);
+        REQUIRE(std::is_same_v<complex::meta::n4_t::types::value_at<3>, std::string>);
     }
 
     SECTION( "data_of" ){
