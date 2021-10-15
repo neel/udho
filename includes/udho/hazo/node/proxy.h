@@ -38,71 +38,74 @@
 namespace udho{
 namespace hazo{
     
+#ifndef __DOXYGEN__
+
 namespace detail{
-template <typename BeforeT, typename ExpectedT, typename NextT>
-struct counter{
-    enum {value = BeforeT::template count<NextT>::value + std::is_same_v<ExpectedT, NextT>};
-};
-  
-template <typename PreviousT = void, typename NextT = void>
-struct before{
-    typedef NextT next_type;
-    
-    template <typename T>
-    using count = counter<PreviousT, NextT, T>;
-};
 
-template <typename ExpectedT, typename NextT>
-struct counter<before<>, ExpectedT, NextT>{
-    enum {value = std::is_same_v<ExpectedT, NextT>};
-};
+    template <typename BeforeT, typename ExpectedT, typename NextT>
+    struct counter{
+        enum {value = BeforeT::template count<NextT>::value + std::is_same_v<ExpectedT, NextT>};
+    };
+    
+    template <typename PreviousT = void, typename NextT = void>
+    struct before{
+        typedef NextT next_type;
+        
+        template <typename T>
+        using count = counter<PreviousT, NextT, T>;
+    };
 
-template <>
-struct before<void, void>{
-    typedef void next_type;
-    
-    template <typename T>
-    using count = counter<before<>, void, T>;
-};
+    template <typename ExpectedT, typename NextT>
+    struct counter<before<>, ExpectedT, NextT>{
+        enum {value = std::is_same_v<ExpectedT, NextT>};
+    };
 
-template <typename NextT>
-struct before<before<>, NextT>{
-    typedef NextT next_type;
-    
-    template <typename T>
-    using count = counter<before<>, NextT, T>;
-};
+    template <>
+    struct before<void, void>{
+        typedef void next_type;
+        
+        template <typename T>
+        using count = counter<before<>, void, T>;
+    };
 
-template <typename ValueT, int Index>
-struct group{
-    enum {index = Index};
-    typedef ValueT type;
-    typedef capsule<type> capsule_type;
-    typedef typename capsule_type::key_type key_type;
-    typedef typename capsule_type::data_type data_type;
-    typedef typename capsule_type::value_type value_type;
-    
-    template <typename HeadT, typename TailT>
-    group(node<HeadT, TailT>& n): _capsule(n.template capsule_at<type, Index-1>()){}
-    
-    capsule_type& _capsule;
-    
-    data_type& data() { return _capsule.data(); }
-    const data_type& data() const { return _capsule.data(); }
-    value_type& value() { return _capsule.value(); }
-    const value_type& value() const { return _capsule.value(); }
-    
-    template <typename FunctionT>
-    void call(FunctionT& f) const{
-        _capsule.call(f);
-    }
-    
-    template <typename StreamT>
-    StreamT& write(StreamT& stream) const{
-        stream << _capsule << ", " ;
-        return stream;
-    }
-};
+    template <typename NextT>
+    struct before<before<>, NextT>{
+        typedef NextT next_type;
+        
+        template <typename T>
+        using count = counter<before<>, NextT, T>;
+    };
+
+    template <typename ValueT, int Index>
+    struct group{
+        enum {index = Index};
+        typedef ValueT type;
+        typedef capsule<type> capsule_type;
+        typedef typename capsule_type::key_type key_type;
+        typedef typename capsule_type::data_type data_type;
+        typedef typename capsule_type::value_type value_type;
+        
+        template <typename HeadT, typename TailT>
+        group(basic_node<HeadT, TailT>& n): _capsule(n.template capsule_at<type, Index-1>()){}
+        
+        capsule_type& _capsule;
+        
+        data_type& data() { return _capsule.data(); }
+        const data_type& data() const { return _capsule.data(); }
+        value_type& value() { return _capsule.value(); }
+        const value_type& value() const { return _capsule.value(); }
+        
+        template <typename FunctionT>
+        void call(FunctionT& f) const{
+            _capsule.call(f);
+        }
+        
+        template <typename StreamT>
+        StreamT& write(StreamT& stream) const{
+            stream << _capsule << ", " ;
+            return stream;
+        }
+    };
 
 }
 /**
@@ -150,7 +153,7 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     using count = typename node_proxy<detail::before<BeforeT, H>, Rest...>::template count<T>;
     
     template <typename HeadT, typename TailT>
-    node_proxy(node<HeadT, TailT>& n): tail_type(n), _group(n){}
+    node_proxy(basic_node<HeadT, TailT>& n): tail_type(n), _group(n){}
     
     data_type& data() { return _group.data(); }
     const data_type& data() const { return _group.data(); }
@@ -320,7 +323,7 @@ struct node_proxy<BeforeT, void>{
     using count = typename BeforeT::template count<T>;
     
     template <typename HeadT, typename TailT>
-    node_proxy(node<HeadT, TailT>&){}
+    node_proxy(basic_node<HeadT, TailT>&){}
 };
 
 template <typename... T>
@@ -336,6 +339,225 @@ decltype(auto) operator>>(const node_proxy<T...>& proxy, V& var){
 template <typename... T>
 using proxy = node_proxy<detail::before<>, T...>;
     
+#else
+
+/**
+ * @brief transparent proxy of a hazo node
+ * 
+ * @tparam T...
+ * @ingroup hazo 
+ */
+template <typename... T>
+struct proxy{
+    /**
+     * @brief type assistance through meta_node
+     */
+    typedef typename node<T...>::types types;
+    /**
+     * @brief Construct a new proxy object from a reference of the actual node object
+     * 
+     * @param original_node 
+     */
+    proxy(node<T...>& original_node);
+    /**
+     * @brief get data of a basic_node
+     * @return data_type&
+     */
+    data_type& data();
+    /**
+     * @brief get data of a basic_node
+     * @return const data_type& 
+     */
+    const data_type& data() const;
+    /**
+     * @brief Returns the N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, double, int, std::string> some_node(...);
+     * hazo::proxy<int, double, int, std::string> h(some_node);
+     * h.data<int>(); // First int (first item in the node chain)
+     * h.data<int, 1>(); // Second int (third item in the node chain)
+     * @endcode 
+     * @tparam T Data type
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    const T& data() const;
+    /**
+     * @brief Returns the N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, double, int, std::string> some_node(...);
+     * hazo::proxy<int, double, int, std::string> h(some_node);
+     * h.data<int>(); // First int (first item in the node chain)
+     * h.data<int, 1>(); // Second int (third item in the node chain)
+     * @endcode 
+     * @tparam T Data type
+     * @tparam N Relative position
+     * @return typename T&
+     */
+    template <typename T, int N = 0>
+    T& data() const;
+    /**
+     * @brief Returns the N'th item in the basic_node chain
+     * @code
+     * hazo::node<int, double, int, std::string> h(1, 3.14, 2, "Hello");
+     * h.data<0>(); // 1
+     * h.data<1>(); // 3.14
+     * h.data<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template data_at<N>&
+     */
+    template <int N>
+    typename types::template data_at<N>& data();
+    /**
+     * @brief Returns the N'th item in the basic_node chain
+     * @code
+     * hazo::node<int, double, int, std::string> h(1, 3.14, 2, "Hello");
+     * h.data<0>(); // 1
+     * h.data<1>(); // 3.14
+     * h.data<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return const typename types::template data_at<N>&
+     */
+    template <int N>
+    const typename types::template data_at<N>& data() const;
+    /**
+     * @brief Given a key get the get the data that is associated with that key.
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template data_for<KeyT>& 
+     */
+    template <typename KeyT>
+    typename types::template data_for<KeyT>& data(const KeyT& k);
+    /**
+     * @brief Given a key get the get the data that is associated with that key.
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template data_for<KeyT>& 
+     */
+    template <typename KeyT>
+    const typename types::template data_for<KeyT>& data(const KeyT& k) const;
+
+    /**
+     * @brief get value of a basic_node
+     * @return value_type&
+     */
+    value_type& value();
+    /**
+     * @brief Get value of a basic_node
+     * @return const value_type& 
+     */
+    const value_type& value() const;
+    /**
+     * @brief Returns the value of N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, double, int, std::string> h;
+     * h.value<int>(); // First int (first item in the basic_node chain)
+     * h.value<int, 1>(); // Second int (third item in the basic_node chain)
+     * @endcode 
+     * @tparam T Index type (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    const T& value() const;
+    /**
+     * @brief Returns the value of N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @code
+     * hazo::node<int, double, int, std::string> h;
+     * h.value<int>(); // First int (first item in the basic_node chain)
+     * h.value<int, 1>(); // Second int (third item in the basic_node chain)
+     * @endcode 
+     * @tparam T Index type (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
+     * @tparam N Relative position
+     * @return const T& 
+     */
+    template <typename T, int N = 0>
+    T& value() const;
+    /**
+     * @brief Returns value of the N'th item in the basic_node chain
+     * @code
+     * hazo::node<int, double, int, std::string> h(1, 3.14, 2, "Hello");
+     * h.value<0>(); // 1
+     * h.value<1>(); // 3.14
+     * h.value<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template value_at<N>&
+     */
+    template <int N>
+    typename types::template value_at<N>& value();
+    /**
+     * @brief Returns value of the N'th item in the basic_node chain
+     * @code
+     * hazo::node<int, double, int, std::string> h(1, 3.14, 2, "Hello");
+     * h.value<0>(); // 1
+     * h.value<1>(); // 3.14
+     * h.value<3>(); // Hello
+     * @endcode 
+     * @tparam N 
+     * @return types::template value_at<N>&
+     */
+    template <int N>
+    const typename types::template value_at<N>& value() const;
+    /**
+     * @brief Given a key get the get the value that is associated with that key.
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template value_for<KeyT>& 
+     */
+    template <typename KeyT>
+    typename types::template value_for<KeyT>& value(const KeyT& k);
+    /**
+     * @brief Given a key get the get the value that is associated with that key.
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
+     * 
+     * @tparam KeyT 
+     * @param k 
+     * @return types::template value_for<KeyT>& 
+     */
+    template <typename KeyT>
+    const typename types::template value_for<KeyT>& value(const KeyT& k) const;
+
+    /**
+     * @brief Get the data of the basic_node identified by element handle
+     * 
+     * @tparam ElementT 
+     * @return data_type& 
+     */
+    template <typename ElementT>
+    typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
+    /**
+     * @brief Get the data of the basic_node identified by element handle
+     * 
+     * @tparam ElementT 
+     * @return data_type& 
+     */
+    template <typename ElementT>
+    const typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
+
+    /**
+     * @brief finds data of an basic_node by element handle
+     */
+    template <typename ElementT>
+    typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e);
+    /**
+     * @brief finds data of an basic_node by element handle
+     */
+    template <typename ElementT>
+    const typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e) const;
+};
+
+#endif // __DOXYGEN__
+
 }
 }
 

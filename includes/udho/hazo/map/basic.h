@@ -41,8 +41,8 @@ namespace udho{
 namespace hazo{
     
 template <typename Policy, typename H, typename... X>
-struct basic_map: node<H, basic_map<Policy, X...>>{
-    typedef node<H, basic_map<Policy, X...>> node_type;
+struct basic_map: basic_node<H, basic_map<Policy, X...>>{
+    typedef basic_node<H, basic_map<Policy, X...>> node_type;
     
     using hana_tag = udho_hazo_map_tag<Policy, H, X...>;
     
@@ -66,7 +66,7 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
     using keys = typename node_type::types::keys;
     
     using node_type::node_type;
-    basic_map(const H& h, const X&... xs): node<H, basic_map<Policy, X...>>(h, xs...){}
+    basic_map(const H& h, const X&... xs): basic_node<H, basic_map<Policy, X...>>(h, xs...){}
     template <typename... Y, std::enable_if_t<!std::is_same_v<basic_map<Policy, H, X...>, basic_map<Policy, Y...>>, bool> = true>
     basic_map(const basic_map<Policy, Y...>& other): node_type(static_cast<const typename basic_map<Policy, Y...>::node_type&>(other)) {}
     template <typename FunctionT>
@@ -100,8 +100,8 @@ struct basic_map: node<H, basic_map<Policy, X...>>{
 };
 
 template <typename Policy, typename H>
-struct basic_map<Policy, H>: node<H, void>{
-    typedef node<H, void> node_type;
+struct basic_map<Policy, H>: basic_node<H, void>{
+    typedef basic_node<H, void> node_type;
 
     using hana_tag = udho_hazo_map_tag<Policy, H>;
     
@@ -125,7 +125,7 @@ struct basic_map<Policy, H>: node<H, void>{
     using keys = typename node_type::types::keys;
     
     using node_type::node_type;
-    basic_map(const H& h): node<H, void>(h){}
+    basic_map(const H& h): basic_node<H, void>(h){}
     template <typename... Y, std::enable_if_t<!std::is_same_v<basic_map<Policy, H>, basic_map<Policy, Y...>>, bool> = true>
     basic_map(const basic_map<Policy, Y...>& other): node_type(static_cast<const typename basic_map<Policy, Y...>::node_type&>(other)) {}
     

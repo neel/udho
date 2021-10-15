@@ -8,10 +8,11 @@ find_package(Catch2 REQUIRED)
 include(CTest)
 include(Catch)
 
-add_executable(x x.cpp)
-target_link_libraries(x PRIVATE Catch2::Catch2)
+add_executable(hazo-meta hazo/meta.cpp)
+target_link_libraries(hazo-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
-add_executable(hazo-node hazo/node.cpp)
-target_link_libraries(hazo-node PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+add_executable(hazo-proxy hazo/proxy.cpp)
+target_link_libraries(hazo-proxy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
-catch_discover_tests(x)
+catch_discover_tests(hazo-meta)
+catch_discover_tests(hazo-proxy)

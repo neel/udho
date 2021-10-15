@@ -4,7 +4,7 @@ project(udho-docs)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(Doxygen)
-find_package(Sphinx)
+# find_package(Sphinx)
 
 if (DOXYGEN_FOUND)
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)

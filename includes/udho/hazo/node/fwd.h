@@ -45,7 +45,7 @@ GENERATE_HAS_MEMBER_TYPE(value_type);
 }
     
 template <typename HeadT, typename TailT = void>
-struct node;
+struct basic_node;
 
 template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
 struct capsule;

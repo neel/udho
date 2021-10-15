@@ -42,8 +42,8 @@ namespace udho{
 namespace hazo{
     
 template <typename Policy, typename H, typename... X>
-struct basic_seq: node<H, basic_seq<Policy, X...>>{
-    typedef node<H, basic_seq<Policy, X...>> node_type;
+struct basic_seq: basic_node<H, basic_seq<Policy, X...>>{
+    typedef basic_node<H, basic_seq<Policy, X...>> node_type;
     
     typedef seq_proxy<Policy, H, X...> proxy;
     
@@ -76,8 +76,8 @@ struct basic_seq: node<H, basic_seq<Policy, X...>>{
 };
 
 template <typename Policy, typename H>
-struct basic_seq<Policy, H>: node<H, void>{
-    typedef node<H, void> node_type;
+struct basic_seq<Policy, H>: basic_node<H, void>{
+    typedef basic_node<H, void> node_type;
     
     typedef seq_proxy<Policy, H> proxy;
     

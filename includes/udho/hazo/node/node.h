@@ -66,11 +66,11 @@ namespace detail{
  * @ingroup node
  */
 template <typename HeadT, typename TailT>
-struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
+struct basic_node: private basic_node<typename TailT::data_type, typename TailT::tail_type>{
     /**
      * tail of the node
      */
-    typedef node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     /**
      * type assistance through basic_node
      */
@@ -100,12 +100,12 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
      */
     typedef typename capsule_type::key_type key_type;
 
-    typedef node<HeadT, TailT> self_type;
+    typedef basic_node<HeadT, TailT> self_type;
     
     enum { depth = tail_type::depth +1 };
 
     template <typename ArgT, typename... T>
-    using is_constructible = detail::node_is_constructible<node, ArgT, T...>;
+    using is_constructible = detail::node_is_constructible<basic_node, ArgT, T...>;
     template <typename ArgT, typename... T>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
@@ -114,25 +114,25 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
     /**
      * Default Constructor
      */
-    node() = default;
+    basic_node() = default;
     /**
      * Construct a node with a value of the current node and values for all or some of the nodes in the tail
      * @param v value of the current node
      * @param ts ... values of the nodes in the tail
      */
     template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible_v<ArgT, T...>, bool> = true>
-    node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
+    basic_node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
      * Copy constructor to construct from another node of same type
      * @param other another noode of same type
      */
-    node(const self_type& other) = default;
+    basic_node(const self_type& other) = default;
     /**
      * Construct from a node having different head and tail
      * @param other another noode of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
-    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
+    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, basic_node<OtherHeadT, OtherTailT>>, bool> = true>
+    basic_node(const basic_node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
     /// @}
     
     /**
@@ -537,7 +537,7 @@ struct node: private node<typename TailT::data_type, typename TailT::tail_type>{
  * @ingroup node
  */
 template <typename HeadT>
-struct node<HeadT, void>{
+struct basic_node<HeadT, void>{
     /**
      * A terminal node has no tail
      */
@@ -566,7 +566,7 @@ struct node<HeadT, void>{
      * Index type of the node
      */
     typedef typename capsule_type::index_type index_type;
-    typedef node<HeadT, void> self_type;
+    typedef basic_node<HeadT, void> self_type;
     
     enum { 
         /**
@@ -576,7 +576,7 @@ struct node<HeadT, void>{
     };
 
     template <typename ArgT>
-    using is_constructible = detail::node_is_constructible<node, ArgT>;
+    using is_constructible = detail::node_is_constructible<basic_node, ArgT>;
     template <typename ArgT>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT>::type::value;
     
@@ -587,21 +587,21 @@ struct node<HeadT, void>{
     /**
      * Default constructor
      */
-    node(): _capsule(){}
+    basic_node(): _capsule(){}
     /**
      * Construct the node with any value convertible to either the date_type or the value_type of the node
      */
     template <typename ArgT, std::enable_if_t<is_constructible_v<ArgT>, bool> = true>
-    node(const ArgT& v): _capsule(v) {}
+    basic_node(const ArgT& v): _capsule(v) {}
     /**
      * Default copy constructor
      */
-    node(const self_type& other) = default;
+    basic_node(const self_type& other) = default;
     /**
      * Construct from a node of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, node<OtherHeadT, OtherTailT>>, bool> = true>
-    node(const node<OtherHeadT, OtherTailT>& other) { _capsule.set(other.template data<HeadT>()); }
+    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, basic_node<OtherHeadT, OtherTailT>>, bool> = true>
+    basic_node(const basic_node<OtherHeadT, OtherTailT>& other) { _capsule.set(other.template data<HeadT>()); }
     /**
      * @}
      */
@@ -849,102 +849,123 @@ struct node<HeadT, void>{
     capsule_type _capsule;
 };
 
+namespace detail {
+    template <typename H, typename... T>
+    struct basic_node_builder{
+        using type = basic_node<H, typename basic_node_builder<T...>::type>;
+    };
+    template <typename H>
+    struct basic_node_builder<H>{
+        using type = basic_node<H, void>;
+    };
+}
+
+/**
+ * @brief builds a chain of basic node with the given type
+ * 
+ * @tparam H 
+ * @tparam T... 
+ */
+template <typename H, typename... T>
+using node = typename detail::basic_node_builder<H, T...>::type;
 
 template <typename HeadT, typename TailT>
-decltype(auto) operator>>(const node<HeadT, TailT>& node, HeadT& var){
+decltype(auto) operator>>(const basic_node<HeadT, TailT>& node, HeadT& var){
     return node.next(var);
 }
-template <typename... T, typename V, std::enable_if_t<!std::is_same_v<typename node<T...>::data_type, typename node<T...>::value_type> && std::is_convertible_v<typename node<T...>::value_type, V>, bool> = true>
-decltype(auto) operator>>(const node<T...>& node, V& var){
+template <typename... T, typename V, std::enable_if_t<!std::is_same_v<typename basic_node<T...>::data_type, typename basic_node<T...>::value_type> && std::is_convertible_v<typename basic_node<T...>::value_type, V>, bool> = true>
+decltype(auto) operator>>(const basic_node<T...>& node, V& var){
     return node.next(var);
 }
 
 #else
 
 /**
- * @brief A node serves as the basic building block behind hazo seq and map
- * - Head of the node has to be default constructible and copy constrictible
- * - Instead of storing the Head directly node wraps it inside a capsule @see capsule
+ * @brief A basic_node serves as the basic building block behind hazo seq and map
+ * - Head of the basic_node has to be default constructible and copy constrictible
+ * - Instead of storing the Head directly basic_node wraps it inside a capsule @see capsule
+ * @note use @ref node instead of using basic_node directly
  * @tparam HeadT Head Type
- * @tparam TailT another node or void
+ * @tparam TailT another basic_node or void
+ * @see node
  * @ingroup hazo
  */
 template <typename HeadT, typename TailT>
-struct node{
+struct basic_node{
     /**
-     * @brief tail of the node
+     * @brief tail of the basic_node
      */
-    typedef node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
     /**
-     * @brief type assistance through basic_node
+     * @brief type assistance through meta_node
      */
-    typedef typename basic_node<HeadT, TailT>::types types;
+    typedef typename meta_node<HeadT, TailT>::types types;
     /**
-     * @brief capsule type for the node
+     * @brief capsule type for the basic_node
      */
     typedef capsule<HeadT> capsule_type;
     /**
-     * @brief data type for the node
+     * @brief data type for the basic_node
      * @see capsule
      */
     typedef typename capsule_type::data_type data_type;
     /**
-     * @brief data type for the node
+     * @brief data type for the basic_node
      * @see capsule
      */
     typedef typename capsule_type::value_type value_type;
     /**
-     * @brief index type for the node
+     * @brief index type for the basic_node
      * @see capsule
      */
     typedef typename capsule_type::index_type index_type;
     /**
-     * @brief key type for the node
+     * @brief key type for the basic_node
      * @see capsule
      */
     typedef typename capsule_type::key_type key_type;
 
-    typedef node<HeadT, TailT> self_type;
+    typedef basic_node<HeadT, TailT> self_type;
     
     enum { depth = tail_type::depth +1 };
 
     template <typename ArgT, typename... T>
-    using is_constructible = detail::node_is_constructible<node, ArgT, T...>;
+    using is_constructible = detail::node_is_constructible<basic_node, ArgT, T...>;
     template <typename ArgT, typename... T>
     static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
 
     /**
      * @brief Default Constructor
      */
-    node() = default;
+    basic_node() = default;
     /**
-     * @brief Construct a node with a value of the current node and values for all or some of the nodes in the tail.
+     * @brief Construct a basic_node with a value of the current basic_node and values for all or some of the nodes in the tail.
      * It is expected that the data_type's of nodes in the tail are constructible through the values provided. 
-     * @param v value of the current node
+     * @param v value of the current basic_node
      * @param ts ... values of the nodes in the tail
      */
     template <typename ArgT, typename... T>
-    node(const ArgT& v, const T&... ts);
+    basic_node(const ArgT& v, const T&... ts);
     /**
-     * @brief Copy constructor to construct from another node of same type
+     * @brief Copy constructor to construct from another basic_node of same type
      * @param other another noode of same type
      */
-    node(const self_type& other) = default;
+    basic_node(const self_type& other) = default;
     /**
-     * @brief Construct from a node having different head and tail
+     * @brief Construct from a basic_node having different head and tail
      * @param other another noode of different type
      */
     template <typename OtherHeadT, typename OtherTailT>
-    node(const node<OtherHeadT, OtherTailT>& other): tail_type(other);
+    basic_node(const basic_node<OtherHeadT, OtherTailT>& other): tail_type(other);
     
     /**
      * @brief Front of the chain of nodes
-     * @return the capsule of the current node
+     * @return the capsule of the current basic_node
      */
     capsule_type& front();
     /**
      * @brief Front of the chain of nodes
-     * @return the capsule of the current node
+     * @return the capsule of the current basic_node
      */
     const capsule_type& front() const;
     /**
@@ -967,17 +988,17 @@ struct node{
     capsule_type& capsule_at();
     
     /**
-     * @brief tail of the node
-     * @return the tail of the current node
+     * @brief tail of the basic_node
+     * @return the tail of the current basic_node
      */
     tail_type& tail();
     /**
-     * @brief tail of the node
-     * @return the tail of the current node
+     * @brief tail of the basic_node
+     * @return the tail of the current basic_node
      */
     const tail_type& tail() const;
     /**
-     * @brief Get the tail of the N'th node
+     * @brief Get the tail of the N'th basic_node
      * 
      * @tparam N 
      * @return types::template tail_at<N>&
@@ -985,7 +1006,7 @@ struct node{
     template <int N>
     typename types::template tail_at<N>& tail_at();
     /**
-     * @brief Get the tail of the N'th node
+     * @brief Get the tail of the N'th basic_node
      * 
      * @tparam N 
      * @return types::template tail_at<N>&
@@ -994,28 +1015,28 @@ struct node{
     const typename types::template tail_at<N>& tail_at();
 
     /**
-     * @brief Checks whether there exists any node identical to the provided type
-     * @tparam T type to match against all other node's index_type
+     * @brief Checks whether there exists any basic_node identical to the provided type
+     * @tparam T type to match against all other basic_node's index_type
      */
     template <typename T>
     bool exists() const;
 
     /**
-     * @brief get data of a node
+     * @brief get data of a basic_node
      * @return data_type&
      */
     data_type& data();
     /**
-     * @brief get data of a node
+     * @brief get data of a basic_node
      * @return const data_type& 
      */
     const data_type& data() const;
     /**
-     * @brief Returns the N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @brief Returns the N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
-     * h.data<int>(); // First int (first item in the node chain)
-     * h.data<int, 1>(); // Second int (third item in the node chain)
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h;
+     * h.data<int>(); // First int (first item in the basic_node chain)
+     * h.data<int, 1>(); // Second int (third item in the basic_node chain)
      * @endcode 
      * @tparam T Data type
      * @tparam N Relative position
@@ -1024,9 +1045,9 @@ struct node{
     template <typename T, int N = 0>
     const T& data() const;
     /**
-     * @brief Returns the N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @brief Returns the N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.data<int>(); // 1
      * h.data<int, 1>(); // 2
      * @endcode 
@@ -1037,9 +1058,9 @@ struct node{
     template <typename T, int N = 0>
     T& data() const;
     /**
-     * @brief Returns the N'th item in the node chain
+     * @brief Returns the N'th item in the basic_node chain
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.data<0>(); // 1
      * h.data<1>(); // 3.14
      * h.data<3>(); // Hello
@@ -1050,9 +1071,9 @@ struct node{
     template <int N>
     typename types::template data_at<N>& data();
     /**
-     * @brief Returns the N'th item in the node chain
+     * @brief Returns the N'th item in the basic_node chain
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.data<0>(); // 1
      * h.data<1>(); // 3.14
      * h.data<3>(); // Hello
@@ -1064,7 +1085,7 @@ struct node{
     const typename types::template data_at<N>& data() const;
     /**
      * @brief Given a key get the get the data that is associated with that key.
-     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
      * 
      * @tparam KeyT 
      * @param k 
@@ -1074,7 +1095,7 @@ struct node{
     typename types::template data_for<KeyT>& data(const KeyT& k);
     /**
      * @brief Given a key get the get the data that is associated with that key.
-     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
      * 
      * @tparam KeyT 
      * @param k 
@@ -1084,45 +1105,45 @@ struct node{
     const typename types::template data_for<KeyT>& data(const KeyT& k) const;
     
     /**
-     * @brief get value of a node
+     * @brief get value of a basic_node
      * @return value_type&
      */
     value_type& value();
     /**
-     * @brief Get value of a node
+     * @brief Get value of a basic_node
      * @return const value_type& 
      */
     const value_type& value() const;
     /**
-     * @brief Returns the value of N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @brief Returns the value of N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
-     * h.value<int>(); // First int (first item in the node chain)
-     * h.value<int, 1>(); // Second int (third item in the node chain)
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h;
+     * h.value<int>(); // First int (first item in the basic_node chain)
+     * h.value<int, 1>(); // Second int (third item in the basic_node chain)
      * @endcode 
-     * @tparam T Index type (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @tparam T Index type (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @tparam N Relative position
      * @return const T& 
      */
     template <typename T, int N = 0>
     const T& value() const;
     /**
-     * @brief Returns the value of N'th item that is identified by index_type T in the node chain (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @brief Returns the value of N'th item that is identified by index_type T in the basic_node chain (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h;
-     * h.value<int>(); // First int (first item in the node chain)
-     * h.value<int, 1>(); // Second int (third item in the node chain)
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h;
+     * h.value<int>(); // First int (first item in the basic_node chain)
+     * h.value<int, 1>(); // Second int (third item in the basic_node chain)
      * @endcode 
-     * @tparam T Index type (if an item X in node does not provide an index_type then X is considered as its index_type)
+     * @tparam T Index type (if an item X in basic_node does not provide an index_type then X is considered as its index_type)
      * @tparam N Relative position
      * @return const T& 
      */
     template <typename T, int N = 0>
     T& value() const;
     /**
-     * @brief Returns value of the N'th item in the node chain
+     * @brief Returns value of the N'th item in the basic_node chain
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.value<0>(); // 1
      * h.value<1>(); // 3.14
      * h.value<3>(); // Hello
@@ -1133,9 +1154,9 @@ struct node{
     template <int N>
     typename types::template value_at<N>& value();
     /**
-     * @brief Returns value of the N'th item in the node chain
+     * @brief Returns value of the N'th item in the basic_node chain
      * @code
-     * hazo::node<int, hazo::node<double, hazo::node<int, hazo::node<std::string>>>> h(1, 3.14, 2, "Hello");
+     * hazo::basic_node<int, hazo::basic_node<double, hazo::basic_node<int, hazo::basic_node<std::string>>>> h(1, 3.14, 2, "Hello");
      * h.value<0>(); // 1
      * h.value<1>(); // 3.14
      * h.value<3>(); // Hello
@@ -1147,7 +1168,7 @@ struct node{
     const typename types::template value_at<N>& value() const;
     /**
      * @brief Given a key get the get the value that is associated with that key.
-     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
      * 
      * @tparam KeyT 
      * @param k 
@@ -1157,7 +1178,7 @@ struct node{
     typename types::template value_for<KeyT>& value(const KeyT& k);
     /**
      * @brief Given a key get the get the value that is associated with that key.
-     * Assuming the key() methods of the items in the node chain return values of compile time distingutible unique types
+     * Assuming the key() methods of the items in the basic_node chain return values of compile time distingutible unique types
      * 
      * @tparam KeyT 
      * @param k 
@@ -1167,14 +1188,14 @@ struct node{
     const typename types::template value_for<KeyT>& value(const KeyT& k) const;
     
     /**
-     * @brief Compare with another node having same depth and same data_type
-     * If the other node has different level of depth or it has a different data_type then returns false
+     * @brief Compare with another basic_node having same depth and same data_type
+     * If the other basic_node has different level of depth or it has a different data_type then returns false
      * @return bool
      */
     template <typename OtherNodeT>
     bool operator==(const OtherNodeT& other) const;
     /**
-     * @brief Compare with another node
+     * @brief Compare with another basic_node
      * @return bool
      */
     template <typename OtherNodeT>
@@ -1192,19 +1213,19 @@ struct node{
     
 
     /**
-     * @brief assign another node of the same type
+     * @brief assign another basic_node of the same type
      */
     self_type& operator=(const self_type& other);
     /**
-     * @brief Given a value v of type T, finds a node in the chain with matching index_type and sets the value to v.
-     * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such node and skips the rest.
+     * @brief Given a value v of type T, finds a basic_node in the chain with matching index_type and sets the value to v.
+     * If all is set to true then sets values of all such nodes to v. Otherwise only sets the value for the first such basic_node and skips the rest.
      * @param v value 
      * @param all is set to true then sets all value of type T to v
      */
     template <typename T>
     bool set(const T& v, bool all = false);
     /**
-     * @brief Set value of the node at N'th depth
+     * @brief Set value of the basic_node at N'th depth
      * 
      * @tparam N 
      * @tparam T 
@@ -1216,7 +1237,7 @@ struct node{
     bool set(const T& v);
 
     /**
-     * @brief Get the data of the node identified by element handle
+     * @brief Get the data of the basic_node identified by element handle
      * 
      * @tparam ElementT 
      * @return data_type& 
@@ -1224,7 +1245,7 @@ struct node{
     template <typename ElementT>
     typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
     /**
-     * @brief Get the data of the node identified by element handle
+     * @brief Get the data of the basic_node identified by element handle
      * 
      * @tparam ElementT 
      * @return data_type& 
@@ -1233,12 +1254,12 @@ struct node{
     const typename types::template data_of<ElementT>& element(const element_t<ElementT>&);
 
     /**
-     * @brief finds data of an node by element handle
+     * @brief finds data of an basic_node by element handle
      */
     template <typename ElementT>
     typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e);
     /**
-     * @brief finds data of an node by element handle
+     * @brief finds data of an basic_node by element handle
      */
     template <typename ElementT>
     const typename types::template data_of<ElementT>& operator[](const element_t<ElementT>& e) const;
@@ -1303,6 +1324,15 @@ struct node{
     template <typename FunctionT>
     auto decorate(FunctionT&& f) const;
 };
+
+/**
+ * @brief builds a chain of basic node with the given type
+ * 
+ * @tparam H 
+ * @tparam T... 
+ */
+template <typename H, typename... T>
+using node = typename detail::basic_node_builder<H, T...>::type;
 
 #endif // __DOXYGEN__
     

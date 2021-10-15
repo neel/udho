@@ -105,9 +105,9 @@ struct meta_node{
          * @tparam N defaults to 0
          */
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, 
+        using capsule_of = typename std::conditional<std::is_same_v<T, index_type> && N == 0, 
                 capsule_type, 
-                typename tail_type::types::template capsule_of<T, N - std::is_same<T, index_type>::value>
+                typename tail_type::types::template capsule_of<T, N - std::is_same_v<T, index_type>>
             >::type;
         /**
          * type of data used for N'th instance of index T in the chain of nodes.
@@ -128,7 +128,7 @@ struct meta_node{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
+        using data_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
                 data_type,
                 typename tail_type::types::template data_for<KeyT>
             >::type;
@@ -137,7 +137,7 @@ struct meta_node{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
+        using value_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
                 value_type,
                 typename tail_type::types::template value_for<KeyT>
             >::type;
@@ -184,7 +184,7 @@ struct meta_node{
 /**
  * @brief basic types for the terminal node
  * @tparam HeadT type of the data inside this node
- * basic_node provide type assistance for different operations on the node.
+ * meta_node provide type assistance for different operations on the node.
  * @ingroup node
  */
 template <typename HeadT>
@@ -248,7 +248,7 @@ struct meta_node<HeadT, void>{
          * @tparam N defaults to 0
          */
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, capsule_type, void>::type;
+        using capsule_of = typename std::conditional<std::is_same_v<T, index_type> && N == 0, capsule_type, void>::type;
         /**
          * type of data used for N'th instance of index T in the chain of nodes.
          * @tparam T index_type searched for
@@ -268,7 +268,7 @@ struct meta_node<HeadT, void>{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
+        using data_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
             data_type,
             void
             >::type;
@@ -320,10 +320,32 @@ struct meta_node<HeadT, void>{
     };
 };
 
+namespace detail {
+    template <typename H, typename... T>
+    struct meta_node_builder{
+        using type = meta_node<H, typename meta_node_builder<T...>::type>;
+    };
+    template <typename H>
+    struct meta_node_builder<H>{
+        using type = meta_node<H, void>;
+    };
+}
+
+/**
+ * @brief builds a chain of basic node with the given type
+ * 
+ * @tparam H 
+ * @tparam T... 
+ */
+template <typename H, typename... T>
+using meta = typename detail::meta_node_builder<H, T...>::type;
+
 #else 
 
 /**
  * @brief provides type assistance for hazo node
+ * Chain of types
+ * @note use @ref meta instead of using meta_node directly
  * @tparam HeadT type of the data inside this node
  * @tparam TailT tail of the current node
  * @ingroup hazo
@@ -464,6 +486,15 @@ struct meta_node{
         };
     };
 };
+
+/**
+ * @brief builds a chain of basic node with the given type
+ * 
+ * @tparam H 
+ * @tparam T... 
+ */
+template <typename H, typename... T>
+using meta = typename detail::meta_node_builder<H, T...>::type;
 
 #endif // __DOXYGEN__
 
