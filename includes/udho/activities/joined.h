@@ -58,7 +58,7 @@ namespace activities{
         typedef boost::function<bool (const success_type&)> abort_error_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
-        void operator()(){
+        void operator()(){  
             accessor_type accessor(_collector);
             _callback(accessor);
         }

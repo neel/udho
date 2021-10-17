@@ -168,8 +168,8 @@ struct result_data{
         /**
          * mark as canceled
          */
-        void cancel(){
-            _canceled = true;
+        void set_cancel(bool canceled = true){  
+            _canceled = canceled;
         }
     private:
         bool _completed;

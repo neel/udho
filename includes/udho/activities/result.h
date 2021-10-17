@@ -58,10 +58,7 @@ namespace activities{
         typedef boost::function<bool (const success_type&)> cancel_if_ftor;
         typedef boost::function<bool (const success_type&)> abort_error_ftor;
         typedef boost::function<bool (const failure_type&)> abort_failure_ftor;
-        
-        template <typename NextT, typename... DependenciesT>
-        friend struct combinator;
-        
+
         /**
          * @param store collector
          */
@@ -113,6 +110,15 @@ namespace activities{
         void if_failed(abort_failure_ftor ftor){
             _abort_failure = ftor;
         }
+        /**
+         * Mark the data as cancelled then propagate the cancellation accross all child activities.
+         * If the current activity fails and there is an if_failed callback set then whether it propagates the cancellation or not is decided by the if_failed callback.
+         * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
+         * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
+         */
+        void cancel(){
+            _cancel();
+        }
         protected:
             /**
              * signal successful completion of the activity with success data of type SuccessT
@@ -137,8 +143,8 @@ namespace activities{
              * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
              * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
              */
-            void _cancel(){
-                result_type::cancel();
+            void _cancel(){   
+                result_type::set_cancel(true);
                 bool propagate = true;
                 if(result_type::failed() && !_abort_failure.empty()){
                     propagate = _abort_failure(result_type::failure_data());
@@ -154,17 +160,18 @@ namespace activities{
              * If there is a cancel_if callback set then this behavour is overridden by the boolean output of the provided callback.
              * Otherwise it continues executing the activity tree 
              */
-            void _finish(){                
+            void _finish(){        
                 bool should_cancel = false;
                 if(!result_type::failed()){
+                    // if failed then whether the dependent activities will also be canceled or not 
+                    // is decided by the return of _cancel_if callback (if set by the user)
+                    // if no such callback is set and the activity fails then the dependent activities will not be canceled
                     if(!_cancel_if.empty()){
                         should_cancel = _cancel_if(result_type::success_data());
                     }
                 }else{
                     should_cancel = result_type::failed() && _required;
                 }
-
-                if(should_cancel) result_type::cancel();
 
                 result_type self = static_cast<const result_type&>(*this);
                 detail::labeled<DerivedT, result_type> labeled(self);
