@@ -46,6 +46,10 @@ struct collector;
 
 /**
  * @brief Collects data associated with all activities involved in the subtask graph
+ * For storage the @ref dataset is used internally which expects each ActivityT to 
+ * have typedef ActivityT::result_type which is and instance of result_data<SuccessT, FailureT>
+ * where SuccessT and FailureT denotes success and failure types associated with ActivityT.
+ * Collector extends the lifetime of HTTP request by copying the context object. 
  * @ingroup data
  * @tparam ContextT 
  * @tparam T ... Activities in the chains

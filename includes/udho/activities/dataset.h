@@ -44,7 +44,8 @@ namespace activities{
  * @brief Hosts result_data for all activities in the activity chain.
  * - Creates an on-memory store using @ref udho::cache::store to contain the result data of all activities in the chains
  * - Multiple activities may yield same type of result_data, which is avoided by labeling the result_type with the activity_type
- * 
+ * .
+ * In order to allow multiple activities having same result_type it tags the result_type with the activity type
  * @see udho::cache::store
  * @see udho::cache::shadow
  * @ingroup data

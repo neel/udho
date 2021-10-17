@@ -75,7 +75,7 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      * @tparam V activity type
      */
     template <typename V>
-    const typename V::result_type& get() const{
+    typename V::result_type get() const{
         return base_type::template get<detail::labeled<V, typename V::result_type>>();
     }
     /**
