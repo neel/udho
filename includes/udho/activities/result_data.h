@@ -35,37 +35,37 @@ namespace activities{
     
 namespace detail{
     template <bool invocable, typename FunctorT, typename... TargetsT>
-    struct apply_helper_{
+    struct apply_helper_internal{
         void operator()(FunctorT& f, const TargetsT&... t){f(t...);}
     };
     template <typename FunctorT, typename... TargetsT>
-    struct apply_helper_<false, FunctorT, TargetsT...>{
+    struct apply_helper_internal<false, FunctorT, TargetsT...>{
         void operator()(FunctorT&, const TargetsT&...){}
     };
     template <typename FunctorT, typename... TargetsT>
-    using apply_helper = apply_helper_<udho::util::is_invocable<FunctorT, TargetsT...>::value, FunctorT, TargetsT... >;
-}
+    using apply_helper_ = apply_helper_internal<udho::util::is_invocable<FunctorT, TargetsT...>::value, FunctorT, TargetsT... >;
 
-template <typename FunctorT, typename SuccessT, typename FailureT>
-struct apply_helper: detail::apply_helper<FunctorT>, detail::apply_helper<FunctorT, SuccessT>, detail::apply_helper<FunctorT, FailureT>, detail::apply_helper<FunctorT, SuccessT, FailureT>{
-    FunctorT& _ftor;
-    
-    apply_helper(FunctorT& f): _ftor(f){}
-    
-    void operator()(){
-        detail::apply_helper<FunctorT>::operator()(_ftor);
-    }
-    void operator()(const SuccessT& s){
-        detail::apply_helper<FunctorT, SuccessT>::operator()(_ftor, s);
-    }
-    void operator()(const FailureT& f){
-        detail::apply_helper<FunctorT, FailureT>::operator()(_ftor, f);
-    }
-    void operator()(const SuccessT& s, const FailureT& f){
-        detail::apply_helper<FunctorT, SuccessT, FailureT>::operator()(_ftor, s, f);
-    }
-    
-};
+    template <typename FunctorT, typename SuccessT, typename FailureT>
+    struct apply_helper: detail::apply_helper_<FunctorT>, detail::apply_helper_<FunctorT, SuccessT>, detail::apply_helper_<FunctorT, FailureT>, detail::apply_helper_<FunctorT, SuccessT, FailureT>{
+        FunctorT& _ftor;
+        
+        apply_helper(FunctorT& f): _ftor(f){}
+        
+        void operator()(){
+            detail::apply_helper_<FunctorT>::operator()(_ftor);
+        }
+        void operator()(const SuccessT& s){
+            detail::apply_helper_<FunctorT, SuccessT>::operator()(_ftor, s);
+        }
+        void operator()(const FailureT& f){
+            detail::apply_helper_<FunctorT, FailureT>::operator()(_ftor, f);
+        }
+        void operator()(const SuccessT& s, const FailureT& f){
+            detail::apply_helper_<FunctorT, SuccessT, FailureT>::operator()(_ftor, s, f);
+        }
+        
+    };
+}
 
 /**
  * @brief Contains Copiable Success or Failure data for an activity.
@@ -138,7 +138,7 @@ struct result_data{
      */
     template <typename CallableT>
     void apply(CallableT callback){
-        apply_helper<CallableT, success_type, failure_type> helper(callback);
+        detail::apply_helper<CallableT, success_type, failure_type> helper(callback);
         if(!completed()){ // Never completed hence success or failure does not matter
             helper();
         }else if(canceled()){ // cancelation may occur after failure or after success (forced by cancel_if) hence passed both success and failure data as callback
