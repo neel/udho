@@ -35,7 +35,7 @@ struct E{
     typedef int result_type;
 };
 
-SCENARIO( "activity data", "[activity]" ) {
+TEST_CASE( "activity data", "[activity]" ) {
     boost::asio::io_service io;
     udho::servers::quiet::stateless::request_type req;
     udho::servers::quiet::stateless::attachment_type attachment(io);
