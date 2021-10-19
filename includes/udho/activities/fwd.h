@@ -29,7 +29,6 @@
 #define UDHO_ACTIVITIES_FWD_H
 
 #include <memory>
-#include <udho/activities/joined.h>
 
 namespace udho{
 /**

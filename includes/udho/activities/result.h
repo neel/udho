@@ -143,8 +143,12 @@ namespace activities{
              * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
              * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
              */
-            void _cancel(){   
+            void _cancel(){ 
                 result_type::set_cancel(true);
+                result_type self = static_cast<const result_type&>(*this);
+                detail::labeled<DerivedT, result_type> labeled(self);
+                _shadow << labeled;
+                
                 bool propagate = true;
                 if(result_type::failed() && !_abort_failure.empty()){
                     propagate = _abort_failure(result_type::failure_data());
@@ -172,14 +176,13 @@ namespace activities{
                 }else{
                     should_cancel = result_type::failed() && _required;
                 }
-
-                result_type self = static_cast<const result_type&>(*this);
-                detail::labeled<DerivedT, result_type> labeled(self);
-                _shadow << labeled;
                 
                 if(should_cancel){
                     _cancel();
                 }else{
+                    result_type self = static_cast<const result_type&>(*this);
+                    detail::labeled<DerivedT, result_type> labeled(self);
+                    _shadow << labeled;
                     _signal(self);
                 }
             }
