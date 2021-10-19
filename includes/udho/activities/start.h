@@ -35,7 +35,6 @@
 #include <boost/signals2.hpp>
 #include <boost/function.hpp>
 #include <udho/activities/fwd.h>
-#include <udho/activities/dataset.h>
 #include <udho/activities/collector.h>
 #include <udho/activities/accessor.h>
 
@@ -52,7 +51,7 @@ namespace activities{
      */
     template <typename ContextT, typename... T>
     struct start{
-        typedef activities::collector<ContextT, activities::dataset<T...>> collector_type;
+        typedef activities::collector<ContextT, T...> collector_type;
         typedef activities::accessor<T...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;

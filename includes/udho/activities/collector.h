@@ -30,10 +30,9 @@
 
 #include <string>
 #include <memory>
-#include <udho/cache.h>
+#include <udho/hazo/node.h>
 #include <udho/activities/detail.h>
 #include <udho/activities/fwd.h>
-#include <udho/activities/dataset.h>
 
 namespace udho{
 /**
@@ -41,12 +40,9 @@ namespace udho{
  */
 namespace activities{
 
-template <typename ContextT, typename DatasetT>
-struct collector;
-
 /**
  * @brief Collects data associated with all activities involved in the subtask graph
- * For storage the @ref dataset is used internally which expects each ActivityT to 
+ * For storage the @ref hazo::node is used internally which expects each ActivityT to 
  * have typedef ActivityT::result_type which is and instance of result_data<SuccessT, FailureT>
  * where SuccessT and FailureT denotes success and failure types associated with ActivityT.
  * Collector extends the lifetime of HTTP request by copying the context object. 
@@ -55,8 +51,8 @@ struct collector;
  * @tparam T ... Activities in the chains
  */
 template <typename ContextT, typename... T>
-struct collector<ContextT, dataset<T...>>: dataset<T...>, std::enable_shared_from_this<collector<ContextT, dataset<T...>>>{
-    typedef dataset<T...> base_type;
+struct collector: udho::hazo::node<detail::labeled<T, typename T::result_type>...>, std::enable_shared_from_this<collector<ContextT, T...>>{
+    typedef udho::hazo::node<detail::labeled<T, typename T::result_type>...> base_type;
     typedef ContextT context_type;
     
     context_type _context;
@@ -67,7 +63,7 @@ struct collector<ContextT, dataset<T...>>: dataset<T...>, std::enable_shared_fro
      * @param ctx 
      * @param name 
      */
-    collector(context_type ctx, const std::string& name): base_type(ctx.aux().config(), name), _context(ctx) {}
+    collector(context_type ctx, const std::string& name): _context(ctx) {}
     /**
      * @brief Get the context
      * 
@@ -86,9 +82,8 @@ struct collector<ContextT, dataset<T...>>: dataset<T...>, std::enable_shared_fro
  * @ingroup data
  */
 template <typename U, typename ContextT, typename... T>
-collector<ContextT, dataset<T...>>& operator<<(collector<ContextT, dataset<T...>>& h, const U& data){
-    auto& shadow = h.shadow();
-    shadow.template set<U>(h.name(), data);
+collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, const U& data){
+    h.template data<U>() = data;
     return h;
 }
 
@@ -96,9 +91,8 @@ collector<ContextT, dataset<T...>>& operator<<(collector<ContextT, dataset<T...>
  * @ingroup data
  */
 template <typename U, typename ContextT, typename... T>
-const collector<ContextT, dataset<T...>>& operator>>(const collector<ContextT, dataset<T...>>& h, U& data){
-    const auto& shadow = h.shadow();
-    data = shadow.template get<U>(h.name());
+const collector<ContextT, T...>& operator>>(const collector<ContextT, T...>& h, U& data){
+    data = h.template data<U>();
     return h;
 }
 
@@ -106,8 +100,8 @@ const collector<ContextT, dataset<T...>>& operator>>(const collector<ContextT, d
  * @ingroup data
  */
 template <typename... T, typename ContextT>
-std::shared_ptr<collector<ContextT, dataset<T...>>> collect(ContextT& ctx, const std::string& name){
-    typedef collector<ContextT, dataset<T...>> collector_type;
+std::shared_ptr<collector<ContextT, T...>> collect(ContextT& ctx, const std::string& name){
+    typedef collector<ContextT, T...> collector_type;
     return std::make_shared<collector_type>(ctx, name);
 }
     

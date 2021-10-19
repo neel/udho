@@ -154,12 +154,17 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     
     template <typename T>
     using count = typename node_proxy<before_type, Rest...>::template count<T>;
-    
+
     template <typename HeadT, typename TailT>
     node_proxy(basic_node<HeadT, TailT>& n): tail_type(n), _group(n){}
 
     template <typename XBeforeT, typename... T>
     node_proxy(node_proxy<XBeforeT, T...>& p): tail_type(p), _group(p.template group_of<H, before_type::template count<H>::value>()) {}
+
+    template <typename T>
+    bool exists() const {
+        return std::is_same_v<T, H> || tail_type::template exists<T>();
+    }
 
     template <typename T, int Count, std::enable_if_t<std::is_same_v<T, H> && group_type::index == Count, bool> = true>
     group_type& group_of(){ return _group; }
@@ -338,6 +343,11 @@ struct node_proxy<BeforeT, void>{
 
     template <typename XBeforeT, typename... T>
     node_proxy(node_proxy<XBeforeT, T...>& p) {}
+
+    template <typename T>
+    bool exists() const {
+        return false;
+    }
 };
 
 template <typename... T>
