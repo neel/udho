@@ -858,16 +858,20 @@ namespace detail {
     struct basic_node_builder<H>{
         using type = basic_node<H, void>;
     };
+    /**
+    * @brief builds a chain of basic node with the given type
+    * 
+    * @tparam H 
+    * @tparam T... 
+    */
+    template <typename H, typename... T>
+    struct node_{
+        typedef typename detail::basic_node_builder<H, T...>::type type;
+    };
 }
 
-/**
- * @brief builds a chain of basic node with the given type
- * 
- * @tparam H 
- * @tparam T... 
- */
-template <typename H, typename... T>
-using node = typename detail::basic_node_builder<H, T...>::type;
+template <typename... T>
+using node = typename detail::node_<T...>::type;
 
 template <typename HeadT, typename TailT>
 decltype(auto) operator>>(const basic_node<HeadT, TailT>& node, HeadT& var){
