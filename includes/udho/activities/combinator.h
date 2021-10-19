@@ -35,21 +35,13 @@
 #include <mutex>
 #include <boost/signals2.hpp>
 #include <udho/activities/fwd.h>
+#include <udho/hazo/node/meta.h>
 
 namespace udho{
 /**
  * @ingroup activities
  */
 namespace activities{
-    
-    /**
-     * @internal 
-     */
-    template <typename DependencyT>
-    struct junction{
-        void operator()(const DependencyT&){}
-    };
-    
     /**
      * @brief A combinator combines multiple activities and proceeds towards the next activity
      * @tparam NextT next activity
@@ -57,9 +49,10 @@ namespace activities{
      * @ingroup activities
      */
     template <typename NextT, typename... DependenciesT>
-    struct combinator: junction<typename DependenciesT::result_type>...{
+    struct combinator{
         typedef std::shared_ptr<NextT> next_type;
         typedef boost::signals2::signal<void (NextT&)> signal_type;
+        typedef typename udho::hazo::meta<typename DependenciesT::result_type...>::types allowed_inputs;
         
         /**
          * @brief Construct a new combinator object
@@ -75,9 +68,8 @@ namespace activities{
          * @tparam U Result type of one of the subtasks connected to this combinator.
          * @param u 
          */
-        template <typename U>
+        template <typename U, std::enable_if_t<allowed_inputs::template exists<U>::value, bool> = true>
         void operator()(const U& u){
-            junction<U>::operator()(u);
             propagate();
         }
         

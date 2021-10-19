@@ -870,6 +870,11 @@ namespace detail {
     };
 }
 
+/**
+ * @brief build a chain of nodes
+ * 
+ * @tparam T...
+ */
 template <typename... T>
 using node = typename detail::node_<T...>::type;
 

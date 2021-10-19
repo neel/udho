@@ -329,16 +329,25 @@ namespace detail {
     struct meta_node_builder<H>{
         using type = meta_node<H, void>;
     };
+/**
+    * @brief builds a chain of basic node with the given type
+    * 
+    * @tparam H 
+    * @tparam T... 
+    */
+    template <typename H, typename... T>
+    struct meta_{
+        typedef typename detail::meta_node_builder<H, T...>::type type;
+    };
 }
 
 /**
  * @brief builds a chain of basic node with the given type
  * 
- * @tparam H 
  * @tparam T... 
  */
-template <typename H, typename... T>
-using meta = typename detail::meta_node_builder<H, T...>::type;
+template <typename... T>
+using meta = typename detail::meta_<T...>::type;
 
 #else 
 
