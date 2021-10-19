@@ -72,5 +72,39 @@ TEST_CASE( "transparent node proxy", "[hazo]" ) {
             }
         }
 
+        WHEN( "a proxy with smaller projection in same order can be constructed" ) {
+            h::proxy<int, std::string, int> proxy(chain);
+
+            THEN( "both the proxy correctly points to the appropriate item in original chain" ) {
+                REQUIRE(proxy.data<0>() == chain.data<0>());
+                REQUIRE(proxy.data<1>() == chain.data<1>());
+                REQUIRE(proxy.data<2>() == chain.data<5>());
+            }
+
+            THEN( "a secondary proxy can be constructed using smaller projection" ) {
+                h::proxy<int, std::string> proxy2(proxy);
+
+                REQUIRE(proxy2.data<0>() == proxy.data<0>());
+                REQUIRE(proxy2.data<1>() == proxy.data<1>());
+            }
+        }
+
+        WHEN( "a proxy with smaller projection in different order can be constructed" ) {
+            h::proxy<int, std::string, int, std::string> proxy(chain);
+
+            THEN( "both the proxy correctly points to the appropriate item in original chain" ) {
+                REQUIRE(proxy.data<0>() == chain.data<0>());
+                REQUIRE(proxy.data<1>() == chain.data<1>());
+                REQUIRE(proxy.data<2>() == chain.data<5>());
+                REQUIRE(proxy.data<3>() == chain.data<4>());
+            }
+
+            THEN( "a secondary proxy can be constructed using smaller projection" ) {
+                h::proxy<std::string, std::string> proxy2(proxy);
+
+                REQUIRE(proxy2.data<0>() == proxy.data<1>());
+                REQUIRE(proxy2.data<1>() == proxy.data<3>());
+            }
+        }
     }
 }
