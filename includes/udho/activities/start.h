@@ -35,7 +35,6 @@
 #include <boost/signals2.hpp>
 #include <boost/function.hpp>
 #include <udho/activities/fwd.h>
-#include <udho/activities/dataset.h>
 #include <udho/activities/collector.h>
 #include <udho/activities/accessor.h>
 
@@ -52,7 +51,7 @@ namespace activities{
      */
     template <typename ContextT, typename... T>
     struct start{
-        typedef activities::collector<ContextT, activities::dataset<T...>> collector_type;
+        typedef activities::collector<ContextT, T...> collector_type;
         typedef activities::accessor<T...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;
@@ -61,7 +60,7 @@ namespace activities{
         collector_ptr _collector;
         accessor_type _accessor;
         
-        start(ContextT& ctx, const std::string& name): _collector(std::make_shared<collector_type>(ctx, name)), _accessor(_collector){}
+        start(ContextT& ctx): _collector(std::make_shared<collector_type>(ctx)), _accessor(_collector){}
         
         collector_ptr collector() const { return _collector; }
         const accessor_type& accessor() const { return _accessor; }
@@ -133,8 +132,8 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        static self_type with(ContextT ctx, const std::string& name = ""){
-            return self_type(ctx, name);
+        static self_type with(ContextT ctx){
+            return self_type(ctx);
         }
         
         /**
@@ -152,8 +151,8 @@ namespace activities{
         }
         
         protected:
-            subtask(ContextT ctx, const std::string& name = ""){
-                _activity = std::shared_ptr<activity_type>(new activity_type(ctx, name));
+            subtask(ContextT ctx){
+                _activity = std::shared_ptr<activity_type>(new activity_type(ctx));
             }
             
             std::shared_ptr<activity_type> _activity;
@@ -168,7 +167,7 @@ struct start_: activities::subtask<activities::start<ContextT, T...>>{
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
     
-    start_(ContextT ctx, const std::string& name = "activity"): base(ctx, name){}
+    start_(ContextT ctx): base(ctx){}
     
     auto collector() { return base::_activity->collector(); }
     auto data() const { return base::_activity->collector(); }
@@ -187,8 +186,8 @@ struct start_: activities::subtask<activities::start<ContextT, T...>>{
 template <typename... T>
 struct start{
     template <typename ContextT>
-    static start_<ContextT, T...> with(ContextT ctx, const std::string& name = "activity"){
-        return start_<ContextT, T...>(ctx, name);
+    static start_<ContextT, T...> with(ContextT ctx){
+        return start_<ContextT, T...>(ctx);
     }
     
     start() = delete;

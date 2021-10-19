@@ -42,6 +42,13 @@ namespace hazo{
 
 namespace detail{
 
+    /**
+     * @brief counts the number of occurences of NextT
+     * 
+     * @tparam BeforeT 
+     * @tparam ExpectedT 
+     * @tparam NextT 
+     */
     template <typename BeforeT, typename ExpectedT, typename NextT>
     struct counter{
         enum {value = BeforeT::template count<NextT>::value + std::is_same_v<ExpectedT, NextT>};
@@ -49,8 +56,6 @@ namespace detail{
     
     template <typename PreviousT = void, typename NextT = void>
     struct before{
-        typedef NextT next_type;
-        
         template <typename T>
         using count = counter<PreviousT, NextT, T>;
     };
@@ -62,31 +67,28 @@ namespace detail{
 
     template <>
     struct before<void, void>{
-        typedef void next_type;
-        
         template <typename T>
         using count = counter<before<>, void, T>;
     };
 
     template <typename NextT>
     struct before<before<>, NextT>{
-        typedef NextT next_type;
-        
         template <typename T>
         using count = counter<before<>, NextT, T>;
     };
 
-    template <typename ValueT, int Index>
+    template <typename T, int Index>
     struct group{
         enum {index = Index};
-        typedef ValueT type;
-        typedef capsule<type> capsule_type;
+        typedef capsule<T> capsule_type;
         typedef typename capsule_type::key_type key_type;
         typedef typename capsule_type::data_type data_type;
         typedef typename capsule_type::value_type value_type;
         
         template <typename HeadT, typename TailT>
-        group(basic_node<HeadT, TailT>& n): _capsule(n.template capsule_at<type, Index-1>()){}
+        group(basic_node<HeadT, TailT>& node): _capsule(node.template capsule_at<T, Index-1>()){}
+        template <int OtherIndex>
+        group(group<T, OtherIndex>& other): _capsule(other._capsule) {}
         
         capsule_type& _capsule;
         
@@ -139,8 +141,9 @@ namespace detail{
 template <typename BeforeT, typename H = void, typename... Rest>
 struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     typedef H head_type;
-    typedef node_proxy<detail::before<BeforeT, H>, Rest...> tail_type;
-    typedef detail::group<H, detail::before<BeforeT, H>::template count<H>::value> group_type;
+    typedef detail::before<BeforeT, H> before_type;
+    typedef node_proxy<before_type, Rest...> tail_type;
+    typedef detail::group<H, before_type::template count<H>::value> group_type;
     typedef typename group_type::key_type key_type;
     typedef typename group_type::data_type data_type;
     typedef typename group_type::value_type value_type;
@@ -150,10 +153,23 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     group_type _group;
     
     template <typename T>
-    using count = typename node_proxy<detail::before<BeforeT, H>, Rest...>::template count<T>;
-    
+    using count = typename node_proxy<before_type, Rest...>::template count<T>;
+
     template <typename HeadT, typename TailT>
     node_proxy(basic_node<HeadT, TailT>& n): tail_type(n), _group(n){}
+
+    template <typename XBeforeT, typename... T>
+    node_proxy(node_proxy<XBeforeT, T...>& p): tail_type(p), _group(p.template group_of<H, before_type::template count<H>::value>()) {}
+
+    template <typename T>
+    bool exists() const {
+        return std::is_same_v<T, H> || tail_type::template exists<T>();
+    }
+
+    template <typename T, int Count, std::enable_if_t<std::is_same_v<T, H> && group_type::index == Count, bool> = true>
+    group_type& group_of(){ return _group; }
+    template <typename T, int Count, std::enable_if_t<!std::is_same_v<T, H> || group_type::index != Count, bool> = true>
+    auto& group_of(){ return tail_type::template group_of<T, Count>(); }
     
     data_type& data() { return _group.data(); }
     const data_type& data() const { return _group.data(); }
@@ -324,6 +340,14 @@ struct node_proxy<BeforeT, void>{
     
     template <typename HeadT, typename TailT>
     node_proxy(basic_node<HeadT, TailT>&){}
+
+    template <typename XBeforeT, typename... T>
+    node_proxy(node_proxy<XBeforeT, T...>& p) {}
+
+    template <typename T>
+    bool exists() const {
+        return false;
+    }
 };
 
 template <typename... T>

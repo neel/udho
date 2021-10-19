@@ -33,7 +33,7 @@
 
 namespace udho{
 /**
- * \ingroup activities
+ * @ingroup activities
  */
 namespace activities{
     
@@ -44,11 +44,11 @@ namespace activities{
      * The activity `A` must take the collector as the first argument to its constructor, which is passed to the base class `activity<A, SuccessA, FailureA>`.
      * Hence its prefered to take the first parameter to the constructor as template parameter.
      * 
-     * \tparam DerivedT Activity Class 
-     * \tparam SuccessDataT data associated to the activity if the activity succeeds
-     * \tparam FailureDataT data associated to the activity if the activity fails
+     * @tparam DerivedT Activity Class 
+     * @tparam SuccessDataT data associated to the activity if the activity succeeds
+     * @tparam FailureDataT data associated to the activity if the activity fails
      * 
-     * \ingroup activities
+     * @ingroup activities
      */
     template <typename DerivedT, typename SuccessDataT = void, typename FailureDataT = void>
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<DerivedT, SuccessDataT, FailureDataT>{

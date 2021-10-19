@@ -30,10 +30,8 @@
 
 #include <string>
 #include <memory>
-#include <udho/cache.h>
 #include <udho/activities/detail.h>
 #include <udho/activities/fwd.h>
-#include <udho/activities/dataset.h>
 #include <udho/activities/collector.h>
 
 namespace udho{
@@ -41,33 +39,31 @@ namespace udho{
  * @ingroup activities
  */
 namespace activities{
-
 /**
  * Access a subset of data from the collector
  * @ingroup data
  */
 template <typename... T>
-struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>>{
-    typedef detail::fixed_key_accessor<udho::cache::shadow<std::string, typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>> base_type;
-    typedef udho::cache::shadow<std::string, typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...> shadow_type;
-    
-    shadow_type _shadow;
+struct accessor: udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>{
+    typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...> base_type;
     
     template <typename ContextT, typename... U>
-    accessor(std::shared_ptr<collector<ContextT, dataset<U...>>> collector): base_type(_shadow, collector->name()), _shadow(collector->shadow()){}
+    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(*collector){}
     template <typename... U>
-    accessor(accessor<U...> accessor): base_type(_shadow, accessor.name()), _shadow(accessor.shadow()){}
-    std::string name() const{ return base_type::key(); }
-    shadow_type& shadow() { return _shadow; }
-    const shadow_type& shadow() const { return _shadow; }
+    accessor(accessor<U...> accessor): base_type(accessor) {}
     
     /**
-     * Whether there exists any data for activity V
+     * Checks Whether there exists any data for activity V and that data is initialized
      * @tparam V Activity Type
      */
     template <typename V>
     bool exists() const{
-        return base_type::template exists<detail::labeled<V, typename V::result_type>>();
+        using type = typename std::conditional<detail::is_labeled<V>::value, V, detail::labeled<V, typename V::result_type>>::type;
+        if(base_type::template exists<type>()){
+            const detail::labeled<V, typename V::result_type>& labeled_data = base_type::template data<type>();
+            return labeled_data.initialized();
+        }
+        return false;
     }
     /**
      * get data associated with activity V
@@ -76,7 +72,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     const typename V::result_type& get() const{
-        return base_type::template get<detail::labeled<V, typename V::result_type>>();
+        using type = typename std::conditional<detail::is_labeled<V>::value, V, detail::labeled<V, typename V::result_type>>::type;
+        return base_type::template data<type>().get();
     }
     /**
      * Check whether activity V has completed.
@@ -84,9 +81,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     bool completed() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.completed();
+        if(exists<V>()){
+            return get<V>().completed();
         }
         return false;
     }
@@ -96,9 +92,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     bool canceled() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.canceled();
+        if(exists<V>()){
+            return get<V>().canceled();
         }
         return false;
     }
@@ -108,9 +103,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     bool failed() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.failed();
+        if(exists<V>()){
+            return get<V>().failed();
         }
         return true;
     }
@@ -120,9 +114,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     bool okay() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.okay();
+        if(exists<V>()){
+            return get<V>().okay();
         }
         return false;
     }
@@ -132,9 +125,8 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     typename V::result_type::success_type success() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.success_data();
+        if(exists<V>()){
+            return get<V>().success_data();
         }
         return typename V::result_type::success_type();
     }
@@ -144,15 +136,15 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V>
     typename V::result_type::failure_type failure() const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            return res.failure_data();
+        if(exists<V>()){
+            return get<V>().failure_data();
         }
         return typename V::result_type::failure_type();
     }
     template <typename V>
     void set(const typename V::result_type& value){
-        base_type::template set<detail::labeled<V, typename V::result_type>>(value);
+        using type = typename std::conditional<detail::is_labeled<V>::value, V, detail::labeled<V, typename V::result_type>>::type;
+        base_type::template data<type>() = value;
     }
     /**
      * Apply a callback on result of V
@@ -161,9 +153,9 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
      */
     template <typename V, typename F>
     void apply(F f) const{
-        if(base_type::template exists<detail::labeled<V, typename V::result_type>>()){
-            typename V::result_type res = base_type::template get<detail::labeled<V, typename V::result_type>>();
-            res.template apply<F>(f);
+        if(exists<V>()){
+            typename V::result_type d = get<V>();
+            d.template apply<F>(f);
         }
     }
 };
@@ -173,8 +165,7 @@ struct accessor: detail::fixed_key_accessor<udho::cache::shadow<std::string, typ
  */
 template <typename U, typename... T>
 accessor<T...>& operator<<(accessor<T...>& h, const U& data){
-    auto& shadow = h.shadow();
-    shadow.template set<U>(h.name(), data);
+    h.template set<U>(data);
     return h;
 }
 
@@ -183,22 +174,16 @@ accessor<T...>& operator<<(accessor<T...>& h, const U& data){
  */
 template <typename U, typename... T>
 const accessor<T...>& operator>>(const accessor<T...>& h, U& data){
-    auto& shadow = h.shadow();
-    data = shadow.template get<U>(h.name());
+    data = h.template get<U>();
     return h;
 }
 
-template <typename DatasetT>
+template <typename CollectorT>
 struct accessor_of;
 
-template <typename ... T>
-struct accessor_of<dataset<T...>>{
+template <typename ContextT, typename... T>
+struct accessor_of<collector<ContextT, T...>>{
     using type = accessor<T...>;
-};
-
-template <typename ContextT, typename DatasetT>
-struct accessor_of<collector<ContextT, DatasetT>>{
-    using type = typename accessor_of<DatasetT>::type;
 };
 
 }

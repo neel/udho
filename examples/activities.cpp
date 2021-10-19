@@ -167,7 +167,7 @@ struct A3i: udho::activity<A3i, A3SData, A3FData>{
 void planet(udho::contexts::stateless ctx, std::string name){
     auto& io = ctx.io();
     
-    auto data = udho::collect<A1, A2i, A3i>(ctx, "A");
+    auto data = udho::collect<A1, A2i, A3i>(ctx);
     
     auto t1 = udho::perform<A1>::with(data, io).cancel_if([](const A1SData& d){
         return true;

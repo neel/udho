@@ -52,35 +52,53 @@ struct labeled{
      * @brief Construct a new labeled object
      * 
      */
-    labeled(){}
+    labeled(): _initialized(false) {}
+    /**
+     * @brief Construct a new labeled object
+     * 
+     * @param other 
+     */
+    labeled(const labeled<ActivityT, ResultT>& other): _result(other._result), _initialized(other._initialized) {}
     /**
      * @brief Construct a new labeled object
      * 
      * @param res 
      */
-    labeled(const result_type& res): _result(res){}
+    labeled(const result_type& res): _result(res), _initialized(true){}
     /**
      * @brief Result can be assigned to a labeled result
      * 
      * @param res ResultT
      * @return self_type& 
      */
-    self_type& operator=(const result_type& res) { _result = res; return *this; }
+    self_type& operator=(const result_type& res) { 
+        _result = res; 
+        _initialized = true; 
+        return *this; 
+    }
     /**
      * @brief get the result
      * 
      * @return ResultT 
      */
-    result_type get() const { return _result;}
+    const result_type& get() const { return _result;}
     /**
      * @brief Conversion operator overload
      * 
      * @return ResultT 
      */
     operator result_type() const { return get(); }
+    /**
+     * @brief is initialized
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool initialized() const { return _initialized; }
     
     private:
         result_type _result;
+        bool        _initialized;
 };
 
 /**
@@ -101,42 +119,6 @@ struct is_labeled{
 template <typename ActivityT, typename ResultT>
 struct is_labeled<labeled<ActivityT, ResultT>>{
     static constexpr bool value = true;
-};
-
-/**
- * \defgroup data data
- * data collected by activities
- * @ingroup activities
- */    
-template <typename StoreT>
-struct fixed_key_accessor{
-    typedef typename StoreT::key_type key_type;
-    
-    StoreT&  _shadow;
-    key_type _key;
-    
-    fixed_key_accessor(StoreT& store, const key_type& key): _shadow(store), _key(key){}
-    std::string key() const{ return _key; }        
-    
-    template <typename V>
-    bool exists() const{
-        return _shadow.template exists<V>(key());
-    }
-    template <typename V>
-    V get() const{
-        return _shadow.template get<V>(key());
-    }
-    template <typename V>
-    V at(){
-        return _shadow.template at<V>(key());
-    }
-    template <typename V>
-    void set(const V& value){
-        _shadow.template set<V>(key(), value);
-    }
-    std::size_t size() const{
-        return _shadow.size();
-    }
 };
     
 }

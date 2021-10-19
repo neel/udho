@@ -30,7 +30,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <udho/activities/dataset.h>
 #include <udho/activities/collector.h>
 #include <udho/activities/accessor.h>
 #include <udho/activities/subtask.h>
@@ -48,17 +47,17 @@ namespace activities{
      * \ingroup activities
      */
     template <typename CallbackT, typename... T, typename ContextT>
-    struct joined<CallbackT, activities::collector<ContextT, dataset<T...>>>{
-        typedef activities::collector<ContextT, dataset<T...>> collector_type;
+    struct joined<CallbackT, activities::collector<ContextT, T...>>{
+        typedef activities::collector<ContextT, T...> collector_type;
         typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
-        typedef joined<callback_type, activities::collector<ContextT, dataset<T...>>> self_type;
+        typedef joined<callback_type, activities::collector<ContextT, T...>> self_type;
         typedef int success_type;
         typedef boost::function<bool (const success_type&)> cancel_if_ftor;
         typedef boost::function<bool (const success_type&)> abort_error_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
-        void operator()(){
+        void operator()(){  
             accessor_type accessor(_collector);
             _callback(accessor);
         }
