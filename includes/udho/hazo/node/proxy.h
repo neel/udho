@@ -42,6 +42,13 @@ namespace hazo{
 
 namespace detail{
 
+    /**
+     * @brief counts the number of occurences of NextT
+     * 
+     * @tparam BeforeT 
+     * @tparam ExpectedT 
+     * @tparam NextT 
+     */
     template <typename BeforeT, typename ExpectedT, typename NextT>
     struct counter{
         enum {value = BeforeT::template count<NextT>::value + std::is_same_v<ExpectedT, NextT>};
@@ -134,8 +141,9 @@ namespace detail{
 template <typename BeforeT, typename H = void, typename... Rest>
 struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     typedef H head_type;
-    typedef node_proxy<detail::before<BeforeT, H>, Rest...> tail_type;
-    typedef detail::group<H, detail::before<BeforeT, H>::template count<H>::value> group_type;
+    typedef detail::before<BeforeT, H> before_type;
+    typedef node_proxy<before_type, Rest...> tail_type;
+    typedef detail::group<H, before_type::template count<H>::value> group_type;
     typedef typename group_type::key_type key_type;
     typedef typename group_type::data_type data_type;
     typedef typename group_type::value_type value_type;
@@ -145,18 +153,18 @@ struct node_proxy: private node_proxy<detail::before<BeforeT, H>, Rest...> {
     group_type _group;
     
     template <typename T>
-    using count = typename node_proxy<detail::before<BeforeT, H>, Rest...>::template count<T>;
+    using count = typename node_proxy<before_type, Rest...>::template count<T>;
     
     template <typename HeadT, typename TailT>
     node_proxy(basic_node<HeadT, TailT>& n): tail_type(n), _group(n){}
 
     template <typename XBeforeT, typename... T>
-    node_proxy(node_proxy<XBeforeT, T...>& p): tail_type(p), _group(p.template group_of<H>()) {}
+    node_proxy(node_proxy<XBeforeT, T...>& p): tail_type(p), _group(p.template group_of<H, before_type::template count<H>::value>()) {}
 
-    template <typename T, std::enable_if_t<std::is_same_v<T, H>, bool> = true>
+    template <typename T, int Count, std::enable_if_t<std::is_same_v<T, H> && group_type::index == Count, bool> = true>
     group_type& group_of(){ return _group; }
-    template <typename T, std::enable_if_t<!std::is_same_v<T, H>, bool> = true>
-    auto& group_of(){ return tail_type::template group_of<T>(); }
+    template <typename T, int Count, std::enable_if_t<!std::is_same_v<T, H> || group_type::index != Count, bool> = true>
+    auto& group_of(){ return tail_type::template group_of<T, Count>(); }
     
     data_type& data() { return _group.data(); }
     const data_type& data() const { return _group.data(); }
