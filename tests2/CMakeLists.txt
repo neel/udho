@@ -11,6 +11,12 @@ include(Catch)
 add_executable(hazo-meta hazo/meta.cpp)
 target_link_libraries(hazo-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
+add_executable(hazo-element hazo/element.cpp)
+target_link_libraries(hazo-element PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
+add_executable(hazo-node hazo/node.cpp)
+target_link_libraries(hazo-node PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
 add_executable(hazo-proxy hazo/proxy.cpp)
 target_link_libraries(hazo-proxy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
@@ -21,6 +27,8 @@ add_executable(activities-activity activities/activity.cpp)
 target_link_libraries(activities-activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
 catch_discover_tests(hazo-meta)
+catch_discover_tests(hazo-element)
+catch_discover_tests(hazo-node)
 catch_discover_tests(hazo-proxy)
 catch_discover_tests(activities-data)
 catch_discover_tests(activities-activity)

@@ -37,12 +37,15 @@ namespace udho{
 namespace hazo{
     
 /**
- * An element is an object identifiable by a key defined by DerivedT::key() and contains a value of type ValueT.
- * It is expected that the DerivedT class must have a key() method which returns a key that is compile time distinguishable from other keys e.g. compile time string.
- * \tparam DerivedT The class that provides the key() method
- * \tparam ValueT The type of value the element intends to contain
- * \tparam Mixins ... extend features of the element.
- * \ingroup map
+ * @brief An element is an object identifiable by a key defined by DerivedT::key() and contains a value of type ValueT.
+ * - It is expected that the DerivedT class must have a key() method which returns a key that is compile time distinguishable from other keys e.g. compile time string.
+ * - An element is uninitialized by default. Whenever a value is set it gets initialized.
+ * - An element element has a name which is obtained by converting key().c_str() to std::string. 
+ * @tparam DerivedT The class that provides the key() method
+ * @tparam ValueT The type of value the element intends to contain
+ * @tparam Mixins ... extend features of the element.
+ * @see HAZO_ELEMENT, HAZO_ELEMENT_HANA
+ * @ingroup hazo
  */
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 struct element: Mixins<DerivedT, ValueT>...{
@@ -126,13 +129,13 @@ struct element: Mixins<DerivedT, ValueT>...{
     
     /**
      * Compare with a value of value_type
-     * \param v value_type
+     * @param v value_type
      * @{
      */
     bool operator==(const value_type& v) const { return _initialized && _value == v; }
     /**
      * Compare with an element of same type
-     * \param other element_type
+     * @param other element_type
      */
     bool operator==(const self_type& other) const { return _initialized == other._initialized && _value == other._value; }
     bool operator!=(const self_type& other) const { return !operator==(other); }
@@ -140,8 +143,8 @@ struct element: Mixins<DerivedT, ValueT>...{
     
     /**
      * Set value of the element only if the type of value matches with value type and name matches with the name of the element
-     * \param n name 
-     * \param v value
+     * @param n name 
+     * @param v value
      * @{
      */
     template<typename V, std::enable_if_t<std::is_assignable_v<value_type, V>, bool> = true>
@@ -163,13 +166,25 @@ struct element: Mixins<DerivedT, ValueT>...{
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 
+/**
+ * @brief Define and element that has a key() method which returns compile time distinguishable element_t
+ * @code 
+ * HAZO_HANA(first_name, std::string);
+ * first_name f("Neel");
+ * @endcode 
+ * @param Name Name of the element
+ * @param Type Type of the element
+ * @ingroup hazo
+ */
 #define HAZO_ELEMENT(Name, Type, ...)                                   \
-struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{    \
-    using element::element;                                             \
-    static constexpr auto key() {                                       \
-        return val;                                                     \
-    }                                                                   \
-};
+    struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{      \
+        using element::element;                                         \
+        static constexpr auto key() {                                   \
+            return val;                                                 \
+        }                                                               \
+    }
+
+#ifndef __DOXYGEN__
 
 template < class T >
 class HasMemberType_element_type{
@@ -192,6 +207,7 @@ class HasMemberType_element_type{
 template < class T >
 struct has_member_type_element_type: public std::integral_constant<bool, HasMemberType_element_type<T>::RESULT>{ };
 
+#endif // __DOXYGEN__
 
 }
 }

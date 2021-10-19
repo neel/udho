@@ -39,14 +39,27 @@
 #include <udho/hazo/map/helpers.h>
 
 #define HANA_LITERAL(TEXT) TEXT ## _s
+
+/**
+ * @brief Define and element that has a key() method which returns compile time boost hana string 
+ * @code 
+ * HAZO_ELEMENT_HANA(first_name, std::string);
+ * first_name f("Neel");
+ * @endcode 
+ * @param Name Name of the element
+ * @param Type Type of the element
+ * @ingroup hazo
+ */
 #define HAZO_ELEMENT_HANA(Name, Type, ...)                                  \
-struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{        \
-    using element::element;                                                 \
-    static constexpr auto key() {                                           \
-        using namespace boost::hana::literals;                              \
-        return HANA_LITERAL(#Name);                                         \
-    }                                                                       \
-};
+    struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{          \
+        using element::element;                                             \
+        static constexpr auto key() {                                       \
+            using namespace boost::hana::literals;                          \
+            return HANA_LITERAL(#Name);                                     \
+        }                                                                   \
+    }
+
+#ifndef __DOXYGEN__
 
 namespace boost {
 namespace hana {
@@ -123,5 +136,6 @@ namespace hana {
 }
 }
 
+#endif // __DOXYGEN__
 
 #endif // UDHO_HAZO_MAP_HANA_H

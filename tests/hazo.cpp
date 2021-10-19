@@ -10,9 +10,9 @@
 #include <udho/hazo/map/basic.h>
 #include <udho/hazo/operations/flatten.h>
 
-HAZO_ELEMENT_HANA(first_name, std::string)
-HAZO_ELEMENT_HANA(last_name, std::string)
-HAZO_ELEMENT_HANA(age, std::size_t)
+HAZO_ELEMENT_HANA(first_name, std::string);
+HAZO_ELEMENT_HANA(last_name, std::string);
+HAZO_ELEMENT_HANA(age, std::size_t);
 
 using namespace boost;
 using namespace boost::hana::literals;

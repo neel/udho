@@ -28,6 +28,9 @@
 #ifndef UDHO_HAZO_TAG_H
 #define UDHO_HAZO_TAG_H
 
+#include <string>
+#include <cstring>
+
 namespace udho{
 namespace hazo{
     
@@ -39,6 +42,11 @@ namespace hazo{
 template <typename DerivedT>
 struct element_t{
     typedef DerivedT element_type;
+
+    const char* c_str() const { 
+        const char* name = __PRETTY_FUNCTION__;
+        return name+76;
+    }
 };
 
 /**
