@@ -21,17 +21,6 @@ struct failure_t{
     inline explicit failure_t(int v): _value(v){}
 };
 
-struct success_t2{
-    int _value;
-    inline success_t2(): _value(0){}
-    inline explicit success_t2(int v): _value(v){}
-};
-struct failure_t2{
-    int _value;
-    inline failure_t2(): _value(0){}
-    inline explicit failure_t2(int v): _value(v){}
-};
-
 struct MinimalA1: activities::activity<MinimalA1, success_t, failure_t>{
     bool _succeed;
     template <typename CollectorT>
@@ -41,10 +30,10 @@ struct MinimalA1: activities::activity<MinimalA1, success_t, failure_t>{
         else            failure(failure_t{24});
     }
 };
-struct MinimalA2: activities::activity<MinimalA2, success_t2, failure_t2>{
+struct MinimalA2: activities::activity<MinimalA2, success_t, failure_t>{
     using activity::activity;
     void operator()() {
-        success(success_t2{42});
+        success(success_t{42});
     }
 };
 
