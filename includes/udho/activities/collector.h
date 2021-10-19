@@ -63,7 +63,7 @@ struct collector: udho::hazo::node<detail::labeled<T, typename T::result_type>..
      * @param ctx 
      * @param name 
      */
-    collector(context_type ctx, const std::string& name): _context(ctx) {}
+    collector(context_type ctx): _context(ctx) {}
     /**
      * @brief Get the context
      * 
@@ -100,9 +100,9 @@ const collector<ContextT, T...>& operator>>(const collector<ContextT, T...>& h, 
  * @ingroup data
  */
 template <typename... T, typename ContextT>
-std::shared_ptr<collector<ContextT, T...>> collect(ContextT& ctx, const std::string& name){
+std::shared_ptr<collector<ContextT, T...>> collect(ContextT& ctx){
     typedef collector<ContextT, T...> collector_type;
-    return std::make_shared<collector_type>(ctx, name);
+    return std::make_shared<collector_type>(ctx);
 }
     
 }

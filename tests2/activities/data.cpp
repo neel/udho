@@ -43,7 +43,7 @@ TEST_CASE( "activity data", "[activity]" ) {
 
     GIVEN( "a collector<A, B, C, D>" ) {
         WHEN( "some data has been inserted into it in the ABCD order" ) {
-            auto collector = activities::collect<A, B, C, D>(ctx, "abc");
+            auto collector = activities::collect<A, B, C, D>(ctx);
             *collector  << activities::detail::labeled<A, A::result_type>(A::result_type{"Hello World"}) 
                         << activities::detail::labeled<B, B::result_type>(B::result_type{42})
                         << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})
@@ -79,7 +79,7 @@ TEST_CASE( "activity data", "[activity]" ) {
         }
 
         WHEN( "some data has been inserted into it in the CBA order" ) {
-            auto collector = activities::collect<A, B, C, D>(ctx, "abc");
+            auto collector = activities::collect<A, B, C, D>(ctx);
             *collector  << activities::detail::labeled<D, D::result_type>(D::result_type{2.718}) 
                         << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})
                         << activities::detail::labeled<B, B::result_type>(B::result_type{42})
@@ -117,7 +117,7 @@ TEST_CASE( "activity data", "[activity]" ) {
     }
 
     GIVEN( "a collector<A, B, C, D, E> where no value for E is set" ) {
-        auto collector = activities::collect<A, B, C, D, E>(ctx, "abc");
+        auto collector = activities::collect<A, B, C, D, E>(ctx);
         *collector  << activities::detail::labeled<A, A::result_type>(A::result_type{"Hello World"}) 
                     << activities::detail::labeled<B, B::result_type>(B::result_type{42})
                     << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})

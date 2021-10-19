@@ -42,8 +42,8 @@ namespace udho{
  * \ingroup data
  */
 template <typename... T, typename ContextT>
-auto collect(ContextT& ctx, const std::string& name){
-    return udho::activities::collect<T...>(ctx, name);
+auto collect(ContextT& ctx){
+    return udho::activities::collect<T...>(ctx);
 }
 
 /**

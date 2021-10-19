@@ -46,16 +46,11 @@ namespace activities{
 template <typename... T>
 struct accessor: udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>{
     typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...> base_type;
-    typedef base_type shadow_type;
     
     template <typename ContextT, typename... U>
     accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(*collector){}
     template <typename... U>
     accessor(accessor<U...> accessor): base_type(accessor) {}
-    
-    std::string name() const{ return ""; }
-    shadow_type& shadow() { return *this; }
-    const shadow_type& shadow() const { return *this; }
     
     /**
      * Checks Whether there exists any data for activity V and that data is initialized

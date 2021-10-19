@@ -67,7 +67,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){
-        auto collector_a1_a2_ptr = activities::collect<MinimalA1, MinimalA2>(ctx, "");
+        auto collector_a1_a2_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
         MinimalA1 a1_test1(collector_a1_a2_ptr, true);
         activities::accessor<MinimalA1> accessor_a1_test1(collector_a1_a2_ptr);
 
@@ -89,7 +89,7 @@ TEST_CASE( "activity", "[activities]" ) {
         }
     }
     WHEN("a minimal activity MinimalA1 is constructed using collector<MinimalA1>") {
-        auto collector_a1_ptr = activities::collect<MinimalA1>(ctx, "");
+        auto collector_a1_ptr = activities::collect<MinimalA1>(ctx);
         MinimalA1 a1_test2(collector_a1_ptr, false);
         activities::accessor<MinimalA1> accessor_a1_test2(collector_a1_ptr);
 
@@ -104,7 +104,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx, "");
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
@@ -126,7 +126,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx, "");
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, true);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
@@ -148,7 +148,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx, "");
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         a1_ptr->required(false);
@@ -171,7 +171,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     GIVEN( "one activity that depends on two parent activities" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx, "");
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx);
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto a3_ptr = std::make_shared<MinimalA3>(collector_ptr);
@@ -207,7 +207,7 @@ TEST_CASE( "activity", "[activities]" ) {
     }
 
     GIVEN( "one activity that depends on two parent activities" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx, "");
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx);
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, true);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto a3_ptr = std::make_shared<MinimalA3>(collector_ptr);
