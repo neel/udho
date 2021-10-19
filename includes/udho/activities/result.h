@@ -63,7 +63,7 @@ namespace activities{
          * @param store collector
          */
         template <typename StoreT>
-        result(StoreT& store): _shadow(store), _required(true){}
+        result(StoreT& store): _accessor(store), _required(true){}
         
         /**
          * attach another subtask as done callback which will be executed once this subtask finishes
@@ -147,7 +147,7 @@ namespace activities{
                 result_type::set_cancel(true);
                 result_type self = static_cast<const result_type&>(*this);
                 detail::labeled<DerivedT, result_type> labeled(self);
-                _shadow << labeled;
+                _accessor << labeled;
                 
                 bool propagate = true;
                 if(result_type::failed() && !_abort_failure.empty()){
@@ -182,13 +182,13 @@ namespace activities{
                 }else{
                     result_type self = static_cast<const result_type&>(*this);
                     detail::labeled<DerivedT, result_type> labeled(self);
-                    _shadow << labeled;
+                    _accessor << labeled;
                     _signal(self);
                 }
             }
 
         private:
-            accessor_type           _shadow;
+            accessor_type           _accessor;
             signal_type             _signal;
             bool                    _required;
             cancelation_signal_type _cancelation_signals;
