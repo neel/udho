@@ -14,9 +14,13 @@ target_link_libraries(hazo-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 add_executable(hazo-proxy hazo/proxy.cpp)
 target_link_libraries(hazo-proxy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
-add_executable(activity-data activities/data.cpp)
-target_link_libraries(activity-data PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+add_executable(activities-data activities/data.cpp)
+target_link_libraries(activities-data PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
+add_executable(activities-activity activities/activity.cpp)
+target_link_libraries(activities-activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
 catch_discover_tests(hazo-meta)
 catch_discover_tests(hazo-proxy)
-catch_discover_tests(activity-data)
+catch_discover_tests(activities-data)
+catch_discover_tests(activities-activity)
