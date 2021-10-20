@@ -34,7 +34,7 @@
 #include <udho/hazo/operations/fwd.h>
 #include <udho/hazo/operations/append.h>
 #include <udho/hazo/operations/prepend.h>
-#include <udho/hazo/operations/eliminate.h>
+#include <udho/hazo/operations/exclude.h>
 
 namespace udho{
 namespace hazo{

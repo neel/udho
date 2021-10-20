@@ -42,7 +42,7 @@ namespace hazo{
 template <typename DerivedT>
 struct element_t{
     typedef DerivedT element_type;
-
+    bool operator==(const element_t<DerivedT>&) const { return true; }
     const char* c_str() const { 
         const char* name = __PRETTY_FUNCTION__;
         return name+76;

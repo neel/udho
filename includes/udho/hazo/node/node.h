@@ -443,7 +443,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Finds data of an element by key
      */
-    template <typename K, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<K, key_type>, bool> = true>
+    template <typename K, std::enable_if_t<std::is_void_v<key_type> || !std::is_same_v<K, key_type>, bool> = true>
     auto& operator[](const K& k){ return tail().template operator[]<K>(k); } 
     /**
      * Finds data of an element by key
@@ -453,7 +453,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Finds data of an element by key
      */
-    template <typename K, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<K, key_type>, bool> = true>
+    template <typename K, std::enable_if_t<std::is_void_v<key_type> || !std::is_same_v<K, key_type>, bool> = true>
     const auto& operator[](const K& k) const { return tail().template operator[]<K>(k); }
     /// @} 
     
@@ -1335,13 +1335,13 @@ struct basic_node{
 };
 
 /**
- * @brief builds a chain of basic node with the given type
- * 
- * @tparam H 
- * @tparam T... 
+ * @brief build a chain of nodes with given types
+ * @tparam T...
+ * @ingroup hazo
+ * @see basic_node
  */
-template <typename H, typename... T>
-using node = typename detail::basic_node_builder<H, T...>::type;
+template <typename... T>
+using node = typename detail::node_<T...>::type;
 
 #endif // __DOXYGEN__
     

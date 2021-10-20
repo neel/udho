@@ -34,67 +34,68 @@
 #include <udho/hazo/node/proxy.h>
 #include <udho/hazo/detail/has_member.h>
 #include <udho/hazo/detail/is_streamable.h>
+#include <boost/hana/string.hpp>
 
 namespace udho{
 namespace hazo{
     
 namespace detail{
-    template <typename ValueT, bool HasKey = detail::has_member_key<ValueT>::value>
-    struct print_capsule_key;
-    
-    template <typename ValueT>
-    struct print_capsule_key<ValueT, true>{
-        static std::ostream& apply(std::ostream& stream, const capsule<ValueT, true>& cap){
-            stream << cap.key().c_str();
-            return stream;
-        }
-    };
-
-    template <typename ValueT>
-    struct print_capsule_key<ValueT, false>{
-        static std::ostream& apply(std::ostream& stream, const capsule<ValueT, true>&){
-            stream << "[object]";
-            return stream;
-        }
-    };
-    
     template <typename ValueT, typename StreamT = std::ostream, bool IsStreamable = detail::is_streamable<StreamT, ValueT>::value>
-    struct print_capsule_value;
-    
-    template <typename ValueT, typename StreamT>
-    struct print_capsule_value<ValueT, StreamT, true>{
-        static StreamT& apply(StreamT& stream, const capsule<ValueT, true>& cap){
-            stream << cap.value();
+    struct print_if_streamable_{
+        static StreamT& apply(StreamT& stream, const ValueT& v){ 
+            stream << v;
             return stream;
         }
     };
-    
     template <typename ValueT, typename StreamT>
-    struct print_capsule_value<ValueT, StreamT, false>{
-        static StreamT& apply(StreamT& stream, const capsule<ValueT, true>&){
+    struct print_if_streamable_<ValueT, StreamT, false>{
+        static StreamT& apply(StreamT& stream, const ValueT&){ 
             stream << "UNSTREAMABLE";
             return stream;
         }
     };
+    template <typename StreamT, char... C>
+    struct print_if_streamable_<boost::hana::string<C...>, StreamT, false>{
+        static StreamT& apply(StreamT& stream, const boost::hana::string<C...>& str){ 
+            stream << str.c_str();
+            return stream;
+        }
+    };
+    template <typename DerivedT, typename StreamT>
+    struct print_if_streamable_<udho::hazo::element_t<DerivedT>, StreamT, false>{
+        static StreamT& apply(StreamT& stream, const udho::hazo::element_t<DerivedT>& e){
+            std::string key(e.c_str());
+            key.erase(key.size()-1);
+            stream << key;
+            return stream;
+        }
+    };
+    template <typename ValueT, typename StreamT = std::ostream>
+    StreamT& print_if_streamable(StreamT& stream, const ValueT& v){
+        return print_if_streamable_<ValueT, StreamT>::apply(stream, v);
+    }
 }
-    
-template <typename CharT, typename Traits, typename Alloc>
-std::ostream& operator<<(std::ostream& stream, const capsule<std::basic_string<CharT, Traits, Alloc>, true>& c){
-    stream << c.value();
-    return stream;
-}
-template <typename ValueT>
+
+template <typename ValueT, std::enable_if_t<!std::is_void_v<typename capsule<ValueT, true>::key_type>, bool> = true>
 std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
-    detail::print_capsule_key<ValueT>::apply(stream, c);
+    detail::print_if_streamable(stream, c.key());
     stream << " -> ";
-    detail::print_capsule_value<ValueT>::apply(stream, c);
+    detail::print_if_streamable(stream, c.value());
     return stream;
 }
+
+template <typename ValueT, std::enable_if_t<std::is_void_v<typename capsule<ValueT, true>::key_type>, bool> = true>
+std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
+    detail::print_if_streamable(stream, c.data());
+    return stream;
+}
+
 template <typename ValueT>
 std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
-    stream << c.value();
+    stream << c.data();
     return stream;
 }
+
     
 }    
 }

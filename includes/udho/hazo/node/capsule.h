@@ -452,7 +452,7 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
  * @ingroup capsule
  */
 template <typename DataT>
-class capsule<DataT, true>: private encapsulate<DataT>{
+class capsule<DataT, true>: public encapsulate<DataT>{
     DataT _data;
 
     public:
@@ -519,7 +519,7 @@ class capsule<DataT, true>: private encapsulate<DataT>{
     /**
      * Compare with another capsule encapsulating the same type of data
      */
-    bool operator==(const capsule& other) const { return _data == other._head; }
+    bool operator==(const capsule& other) const { return _data == other._data; }
     /**
      * Compare with another capsule encapsulating the same type of data
      */
@@ -650,7 +650,7 @@ struct capsule<DataT>: private encapsulate<DataT>{
     /**
      * @brief Compare with another capsule encapsulating the same type of data
      */
-    bool operator==(const self_type& other) const { return _data == other._head; }
+    bool operator==(const self_type& other) const { return _data == other._data; }
     /**
      * @brief Compare with another capsule encapsulating the same type of data
      */

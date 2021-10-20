@@ -367,7 +367,6 @@ using proxy = node_proxy<detail::before<>, T...>;
 
 /**
  * @brief transparent proxy of a hazo node
- * 
  * @tparam T...
  * @ingroup hazo 
  */
