@@ -53,6 +53,7 @@
 #define HAZO_ELEMENT_HANA(Name, Type, ...)                                  \
     struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{          \
         using element::element;                                             \
+        using element::operator=;                                           \
         static constexpr auto key() {                                       \
             using namespace boost::hana::literals;                          \
             return HANA_LITERAL(#Name);                                     \

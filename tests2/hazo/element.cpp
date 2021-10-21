@@ -27,6 +27,14 @@ TEST_CASE("element", "[hazo]") {
             REQUIRE(c == c);
         }
 
+        THEN( "assignable by value" ) {
+            f = "Neel";
+            l = "Basu";
+            a = 32;
+            n = "Neel Basu";
+            c = "India";
+        }
+
         THEN( "comparable with its value operator==()" ) {
             REQUIRE(f == "Neel");
             REQUIRE(l == "Basu");

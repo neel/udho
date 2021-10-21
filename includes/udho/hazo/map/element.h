@@ -41,6 +41,26 @@ namespace hazo{
  * - It is expected that the DerivedT class must have a key() method which returns a key that is compile time distinguishable from other keys e.g. compile time string.
  * - An element is uninitialized by default. Whenever a value is set it gets initialized.
  * - An element element has a name which is obtained by converting key().c_str() to std::string. 
+ * .
+ * Following is an example usage of the element directly
+ * @code {.cpp}
+ * struct label: udho::hazo::element<label, std::string>{
+ *   using element::element;
+ *   using element::operator=;
+ * };
+ * struct height: udho::hazo::element<height, std::size_t>{
+ *   using element::element;
+ *   using element::operator=;
+ * };
+ * 
+ * label l1, l2("good");
+ * l1 = l2;
+ * l1 = "okay";
+ * height h1, h2(42);
+ * h1 = h2;
+ * h1 = 24;
+ * @endcode
+ * However it is mostly used through two macros @ref HAZO_ELEMENT and @ref HAZO_ELEMENT_HANA
  * @tparam DerivedT The class that provides the key() method
  * @tparam ValueT The type of value the element intends to contain
  * @tparam Mixins ... extend features of the element.
@@ -78,7 +98,7 @@ struct element: Mixins<DerivedT, ValueT>...{
      * @{
      */
     element(): _value(value_type()), _initialized(false){}
-    element(const value_type& v): _value(v), _initialized(true){}
+    explicit element(const value_type& v): _value(v), _initialized(true){}
     element(const self_type& other) = default;
     /// @}
     
@@ -97,7 +117,7 @@ struct element: Mixins<DerivedT, ValueT>...{
      * Assign a value to the element
      * @{
      */
-    template <typename V, std::enable_if_t<std::is_assignable_v<value_type, V>, bool> = true>
+    template <typename V, std::enable_if_t<std::is_assignable<std::add_lvalue_reference_t<value_type>, V>::value, bool> = true>
     self_type& operator=(const V& v) { 
         _value = v; 
         _initialized = true;
@@ -179,6 +199,7 @@ const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
 #define HAZO_ELEMENT(Name, Type, ...)                                   \
     struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{      \
         using element::element;                                         \
+        using element::operator=;                                       \
         static constexpr auto key() {                                   \
             return val;                                                 \
         }                                                               \

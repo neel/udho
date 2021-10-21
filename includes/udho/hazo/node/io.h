@@ -38,7 +38,9 @@
 
 namespace udho{
 namespace hazo{
-    
+
+#ifndef __DOXYGEN__    
+
 namespace detail{
     template <typename ValueT, typename StreamT = std::ostream, bool IsStreamable = detail::is_streamable<StreamT, ValueT>::value>
     struct print_if_streamable_{
@@ -95,6 +97,24 @@ std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
     stream << c.data();
     return stream;
 }
+
+#else
+
+/**
+ * @brief print a hazo capsule to std::ostream
+ * prints the data of the capsule if the capsule encapsulats a pod type or a class type which does not provide a key()
+ * otherwise prints the key() -> value()
+ * @tparam X Data Type inside hazo capsule
+ * @param stream std::ostream
+ * @param cap udho::hazo::capsule<X>
+ * @return std::ostream& 
+ * @see @ref udho::hazo::capsule
+ * @ingroup hazo
+ */
+template <typename X>
+std::ostream& operator<<(std::ostream& stream, const capsule<X>& cap);
+
+#endif // __DOXYGEN__
 
     
 }    

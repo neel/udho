@@ -34,6 +34,16 @@
 namespace udho{
 namespace hazo{
     
+/**
+ * @brief print a basic sequence to std::ostream
+ * 
+ * @tparam Policy 
+ * @tparam X 
+ * @param stream 
+ * @param s 
+ * @return std::ostream& 
+ * @ingroup hazo
+ */
 template <typename Policy, typename... X>
 std::ostream& operator<<(std::ostream& stream, const basic_seq<Policy, X...>& s){
     stream << "(";
