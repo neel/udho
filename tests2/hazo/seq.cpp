@@ -79,13 +79,13 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         chain.data<0>()  = 24;
         chain.data<1>()  = "Twenty Four";
         chain.data<2>()  = first_name("Sunanda");
-        chain.data<3>()  = last_name("Bose");
-        chain.data<4>()  = age(33);
+        chain.data<3>()  = "Bose";
+        chain.data<4>()  = 33;
         chain.data<5>()  = 2.4;
         chain.data<6>()  = '?';
         chain.data<7>()  = "Twenty Four";
         chain.data<8>()  = name("Sunanda Bose");
-        chain.data<9>()  = country("India");
+        chain.data<9>()  = "India";
         chain.data<10>() = 42;
         chain.data<11>() = wrap_int(20);
         chain.data<12>() = wrap_str("Hello");
@@ -105,6 +105,55 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         REQUIRE(chain.data<11>() == wrap_int(20));
         REQUIRE(chain.data<12>() == wrap_str("Hello"));
         REQUIRE(chain.data<13>() == value_str("Hi!"));
+    }
+
+    SECTION( "value can be retrieved and modified by position" ) {
+        h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"));
+
+        REQUIRE(chain.value<0>()  == 42);
+        REQUIRE(chain.value<1>()  == "Fourty Two");
+        REQUIRE(chain.value<2>()  == "Neel");
+        REQUIRE(chain.value<3>()  == "Basu");
+        REQUIRE(chain.value<4>()  == 32);
+        REQUIRE(chain.value<5>()  == 4.2);
+        REQUIRE(chain.value<6>()  == '!');
+        REQUIRE(chain.value<7>()  == "Fourty Two");
+        REQUIRE(chain.value<8>()  == "Neel Basu");
+        REQUIRE(chain.value<9>()  == "India");
+        REQUIRE(chain.value<10>() == 24);
+        REQUIRE(chain.value<11>() == wrap_int(10));
+        REQUIRE(chain.value<12>() == wrap_str("Hello World"));
+        REQUIRE(chain.value<13>() == "Hi");
+
+        chain.value<0>()  = 24;
+        chain.value<1>()  = "Twenty Four";
+        chain.value<2>()  = "Sunanda";
+        chain.value<3>()  = "Bose";
+        chain.value<4>()  = 33;
+        chain.value<5>()  = 2.4;
+        chain.value<6>()  = '?';
+        chain.value<7>()  = "Twenty Four";
+        chain.value<8>()  = "Sunanda Bose";
+        chain.value<9>()  = "India";
+        chain.value<10>() = 42;
+        chain.value<11>() = wrap_int(20);
+        chain.value<12>() = wrap_str("Hello");
+        chain.value<13>() = "Hi!";
+
+        REQUIRE(chain.value<0>()  == 24);
+        REQUIRE(chain.value<1>()  == "Twenty Four");
+        REQUIRE(chain.value<2>()  == "Sunanda");
+        REQUIRE(chain.value<3>()  == "Bose");
+        REQUIRE(chain.value<4>()  == 33);
+        REQUIRE(chain.value<5>()  == 2.4);
+        REQUIRE(chain.value<6>()  == '?');
+        REQUIRE(chain.value<7>()  == "Twenty Four");
+        REQUIRE(chain.value<8>()  == "Sunanda Bose");
+        REQUIRE(chain.value<9>()  == "India");
+        REQUIRE(chain.value<10>() == 42);
+        REQUIRE(chain.value<11>() == wrap_int(20));
+        REQUIRE(chain.value<12>() == wrap_str("Hello"));
+        REQUIRE(chain.value<13>() == "Hi!");
     }
 
     SECTION( "data can be retrieved and modified by type and position" ) {
@@ -157,6 +206,58 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         REQUIRE(chain.data<wrap_str>()          == wrap_str("Hello"));
         REQUIRE(chain.data<value_str>()         == value_str("Hi!"));
         REQUIRE(chain.data<wrap_int_index, 1>() == wrap_int(46));
+    }
+
+    SECTION( "value can be retrieved and modified by type and position" ) {
+        h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str, wrap_int> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"), wrap_int(64));
+
+        REQUIRE(chain.value<int, 0>()            == 42);
+        REQUIRE(chain.value<std::string, 0>()    == "Fourty Two");
+        REQUIRE(chain.value<first_name, 0>()     == "Neel");
+        REQUIRE(chain.value<last_name, 0>()      == "Basu");
+        REQUIRE(chain.value<age, 0>()            == 32);
+        REQUIRE(chain.value<double, 0>()         == 4.2);
+        REQUIRE(chain.value<char, 0>()           == '!');
+        REQUIRE(chain.value<std::string, 1>()    == "Fourty Two");
+        REQUIRE(chain.value<name, 0>()           == "Neel Basu");
+        REQUIRE(chain.value<country, 0>()        == "India");
+        REQUIRE(chain.value<int, 1>()            == 24);
+        REQUIRE(chain.value<wrap_int_index, 0>() == wrap_int(10));
+        REQUIRE(chain.value<wrap_str>()          == wrap_str("Hello World"));
+        REQUIRE(chain.value<value_str>()         == "Hi");
+        REQUIRE(chain.value<wrap_int_index, 1>() == wrap_int(64));
+
+        chain.value<int, 0>()                    = 24;
+        chain.value<std::string, 0>()            = "Twenty Four";
+        chain.value<first_name, 0>()             = "Sunanda";
+        chain.value<last_name, 0>()              = "Bose";
+        chain.value<age, 0>()                    = 33;
+        chain.value<double, 0>()                 = 2.4;
+        chain.value<char, 0>()                   = '?';
+        chain.value<std::string, 1>()            = "Twenty Four";
+        chain.value<name, 0>()                   = "Sunanda Bose";
+        chain.value<country, 0>()                = "India";
+        chain.value<int, 1>()                    = 42;
+        chain.value<wrap_int_index, 0>()         = wrap_int(20);
+        chain.value<wrap_str>()                  = wrap_str("Hello");
+        chain.value<value_str>()                 = "Hi!";
+        chain.value<wrap_int_index, 1>()         = wrap_int(46);
+
+        REQUIRE(chain.value<int, 0>()            == 24);
+        REQUIRE(chain.value<std::string, 0>()    == "Twenty Four");
+        REQUIRE(chain.value<first_name, 0>()     == "Sunanda");
+        REQUIRE(chain.value<last_name, 0>()      == "Bose");
+        REQUIRE(chain.value<age, 0>()            == 33);
+        REQUIRE(chain.value<double, 0>()         == 2.4);
+        REQUIRE(chain.value<char, 0>()           == '?');
+        REQUIRE(chain.value<std::string, 1>()    == "Twenty Four");
+        REQUIRE(chain.value<name, 0>()           == "Sunanda Bose");
+        REQUIRE(chain.value<country, 0>()        == "India");
+        REQUIRE(chain.value<int, 1>()            == 42);
+        REQUIRE(chain.value<wrap_int_index, 0>() == wrap_int(20));
+        REQUIRE(chain.value<wrap_str>()          == wrap_str("Hello"));
+        REQUIRE(chain.value<value_str>()         == "Hi!");
+        REQUIRE(chain.value<wrap_int_index, 1>() == wrap_int(46));
     }
 
     GIVEN("a seq_d constructed with elements as well as pod types") {
