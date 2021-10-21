@@ -53,7 +53,7 @@ struct basic_map: basic_node<H, basic_map<Policy, X...>>{
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
     template <template <typename> class ConditionT>
-    using exclude_if = typename operations::eliminate_if<basic_map<Policy, H, X...>, ConditionT>::type;
+    using exclude_if = typename operations::exclude_if<basic_map<Policy, H, X...>, ConditionT>::type;
     template <typename... U>
     using exclude = typename operations::exclude<basic_map<Policy, H, X...>, U...>::type;
     template <typename... U>
@@ -112,7 +112,7 @@ struct basic_map<Policy, H>: basic_node<H, void>{
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
     template <template <typename> class ConditionT>
-    using exclude_if = typename operations::eliminate_if<basic_map<Policy, H>, ConditionT>::type;
+    using exclude_if = typename operations::exclude_if<basic_map<Policy, H>, ConditionT>::type;
     template <typename... U>
     using exclude = typename operations::exclude<basic_map<Policy, H>, U...>::type;
     template <typename... U>

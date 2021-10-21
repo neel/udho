@@ -3,6 +3,8 @@
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/hana.h>
 #include <udho/hazo/seq.h>
+#include <udho/hazo/seq/hana.h>
+#include <boost/hana/string.hpp>
 #include <string>
 
 namespace h = udho::hazo;
@@ -55,6 +57,11 @@ struct value_str{
     inline bool operator==(const value_str& other) const { return _v == other._v; }
     inline bool operator!=(const value_str& other) const { return !operator==(other); }
 };
+
+template <typename ContainerT, typename KeyT>
+bool Has(const ContainerT&, const KeyT&){
+    return ContainerT::template has<KeyT>::value;
+}
 
 TEST_CASE("sequence common node functionalities", "[hazo]") {
 
@@ -485,11 +492,115 @@ TEST_CASE("sequence specific functionalities", "[hazo]") {
         REQUIRE(seq_d_type::exclude<int, int>("Hello", 4.2, "Neel", "Basu", "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), name("Neel Basu"), country("India")));
         REQUIRE(seq_d_type::exclude<int>("Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India")));
         REQUIRE(seq_d_type::exclude<first_name, last_name>(42, "Hello", 4.2, 85, "Neel Basu", "India") == h::make_seq_d(42, "Hello", 4.2, 85, name("Neel Basu"), country("India")));
+
+        REQUIRE(std::is_same<seq_d_type::exclude_if<std::is_pod>, h::seq_d<std::string, first_name, last_name, name, country>>::value);
+    }
+
+    SECTION("one or more types can be included") {
+        REQUIRE(seq_d_type::extend<int, std::string>(42, "Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India", 10, "Hi") == h::make_seq_d(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"), 10, "Hi"));
+    }
+
+    SECTION("contains") {
+        typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country, wrap_int> sequence_type;
+
+        REQUIRE(sequence_type::contains<int>::value);
+        REQUIRE(sequence_type::contains<std::string>::value);
+        REQUIRE(sequence_type::contains<double>::value);
+        REQUIRE(sequence_type::contains<first_name>::value);
+        REQUIRE(sequence_type::contains<last_name>::value);
+        REQUIRE(sequence_type::contains<name>::value);
+        REQUIRE(sequence_type::contains<country>::value);
+        REQUIRE(sequence_type::contains<wrap_int_index>::value);
+        REQUIRE(!sequence_type::contains<wrap_int>::value);
+        REQUIRE(!sequence_type::contains<value_str>::value);
+    }
+
+    SECTION("has") {
+        typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country, wrap_int> sequence_type;
+        sequence_type xs;
+        using namespace boost::hana::literals;
+        REQUIRE(Has(xs, "name"_s));
+        REQUIRE(Has(xs, "country"_s));
+        REQUIRE(Has(xs, first_name::val));
+        REQUIRE(Has(xs, last_name::val));
+        REQUIRE(!Has(xs, age::val));
+        REQUIRE(!Has(xs, "first_name]"_s));
+        REQUIRE(!Has(xs, "first_name]"));
+    }
+
+    SECTION("monoid") {
+        typedef h::seq_v<unsigned, double> seq_type1;
+        typedef h::seq_v<seq_type1, int> seq_type2;
+        typedef h::seq_v<seq_type2, seq_type2> seq_type3;
+        typedef h::seq_v<seq_type3> seq_type4;
+        
+        REQUIRE((std::is_same<seq_type4::types::data_at<0>, unsigned>::value));
+        REQUIRE((std::is_same<seq_type4::types::data_at<1>, double>::value));
+        REQUIRE((std::is_same<seq_type4::types::data_at<2>, int>::value));
+        REQUIRE((std::is_same<seq_type4::types::data_at<3>, unsigned>::value));
+        REQUIRE((std::is_same<seq_type4::types::data_at<4>, double>::value));
+        REQUIRE((std::is_same<seq_type4::types::data_at<5>, int>::value));
+        
+        double res = 0.0f;
+        seq_type4 seq4(42, 2.4f, 24, 84, 4.8f, 48);
+        
+        REQUIRE(seq4.data<0>() == 42);
+        REQUIRE(seq4.data<1>() == 2.4f);
+        REQUIRE(seq4.data<2>() == 24);
+        REQUIRE(seq4.data<3>() == 84);
+        REQUIRE(seq4.data<4>() == 4.8f);
+        REQUIRE(seq4.data<5>() == 48);
+        
+        seq4.visit([&res](auto val){
+            res += (double)val;
+        });
+        REQUIRE(unsigned(res*10) == 2052);
+        
+        double out = seq4.accumulate([](auto val, double out = 0){
+            out += (double)val;
+            return out;
+        });
+        REQUIRE(unsigned(out*10) == 2052);
     }
 }
 
 TEST_CASE("sequence hana functionalities", "[hazo]") {
+    typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country> seq_d_type;
+    typedef h::seq_v<int, std::string, double, int> seq_v_type;
+    namespace hana = boost::hana;
+
+    REQUIRE((hana::Comparable<seq_v_type>::value));
+    REQUIRE((hana::Foldable<seq_v_type>::value));
+    REQUIRE((hana::Iterable<seq_v_type>::value));
+    REQUIRE(hana::size(h::make_seq_v(42, 34.5, "World")) == hana::size_c<3>);
+
+    REQUIRE((hana::Comparable<seq_d_type>::value));
+    REQUIRE((hana::Foldable<seq_d_type>::value));
+    REQUIRE((hana::Iterable<seq_d_type>::value));
+    REQUIRE((hana::size(seq_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>));
+
+    auto add = [](auto x, auto y, auto z) {
+        return x + y + z;
+    };
+    auto tpl = h::make_seq_v(1, 2, 3);
+    REQUIRE(tpl.unpack(add) == 6);
+    REQUIRE(hana::unpack(tpl, add) == 6);
+
+    seq_v_type vec_v(42, "Hello", 3.14, 84);
+    REQUIRE(hana::at(vec_v, hana::size_t<0>{}) == 42);
+    REQUIRE(hana::at(vec_v, hana::size_t<1>{}) == "Hello");
     
+    auto to_string = [](auto x) {
+        std::ostringstream ss;
+        ss << x;
+        return ss.str();
+    };
+    REQUIRE(hana::transform(h::make_seq_v(1, '2', "345", std::string{"67"}), to_string) == h::make_seq_v("1", "2", "345", "67"));
+    auto negate = [](auto x) {
+        return -x;
+    };
+    REQUIRE(hana::adjust(h::make_seq_v(1, 4, 9, 2, 3, 4), 4, negate) == h::make_seq_v(1, -4, 9, 2, 3, -4));
+    BOOST_HANA_RUNTIME_CHECK(hana::fill(h::make_seq_v(1, '2', 3.3, nullptr), 'x') == h::make_seq_v('x', 'x', 'x', 'x'), "");
 }
 
 TEST_CASE("sequence proxy functionalities", "[hazo]") {

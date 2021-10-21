@@ -34,20 +34,9 @@ namespace udho{
 namespace hazo{
     
 namespace operations{
-
-// template <typename ContainerT, template <typename> class ConditionT>
-// struct exclude_if{
-//     using type = typename exclude_if<
-//         typename eliminate_if<ContainerT, ConditionT>::type,
-//         ConditionT
-//     >::type;
-// };
-
-// template <typename ContainerT, template <typename> class ConditionT>
-// struct exclude_if<ContainerT, ConditionT>{
-//     using type = typename eliminate_if<ContainerT, ConditionT>::type;
-// };
     
+namespace detail{
+
 template <typename ContainerT, typename T, typename... Rest>
 struct exclude{
     using type = typename exclude<
@@ -60,6 +49,37 @@ template <typename ContainerT, typename T>
 struct exclude<ContainerT, T>{
     using type = typename eliminate<ContainerT, T>::type;
 };
+
+template <typename ContainerT, typename T, typename... Rest>
+struct exclude_all{
+    using type = typename exclude_all<
+        typename eliminate_all<ContainerT, T>::type, 
+        Rest...
+    >::type;
+};
+
+template <typename ContainerT, typename T>
+struct exclude_all<ContainerT, T>{
+    using type = typename eliminate_all<ContainerT, T>::type;
+};
+
+}
+
+template <typename ContainerT, typename... X>
+struct exclude{
+    using type = typename detail::exclude<ContainerT, X...>::type;
+};
+
+template <typename ContainerT, typename... X>
+struct exclude_all{
+    using type = typename detail::exclude_all<ContainerT, X...>::type;
+};
+
+template <typename ContainerT, template <typename> class ConditionT>
+struct exclude_if{
+    using type = typename eliminate_if<ContainerT, ConditionT>::type;
+};
+
 
 }
     

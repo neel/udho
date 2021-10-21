@@ -37,6 +37,12 @@
 namespace udho{
 namespace hazo{
     
+/**
+ * @brief 
+ * 
+ * @tparam Policy 
+ * @tparam X...
+ */
 template <typename Policy, typename... X>
 struct seq_proxy: proxy<X...>{
     typedef proxy<X...> node_type;
@@ -61,8 +67,18 @@ struct seq_proxy: proxy<X...>{
     }
 };
 
+/**
+ * @brief 
+ * 
+ * @tparam X...
+ */
 template <typename... X>
 using seq_proxy_d = seq_proxy<by_data, X...>;
+/**
+ * @brief 
+ * 
+ * @tparam X...
+ */
 template <typename... X>
 using seq_proxy_v = seq_proxy<by_value, X...>;
     

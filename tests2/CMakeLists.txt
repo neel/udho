@@ -20,6 +20,9 @@ target_link_libraries(hazo-node PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 add_executable(hazo-seq hazo/seq.cpp)
 target_link_libraries(hazo-seq PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
+add_executable(hazo-map hazo/map.cpp)
+target_link_libraries(hazo-map PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
 add_executable(hazo-proxy hazo/proxy.cpp)
 target_link_libraries(hazo-proxy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
@@ -32,7 +35,8 @@ target_link_libraries(activities-activity PRIVATE ${Boost_LIBRARIES} Catch2::Cat
 catch_discover_tests(hazo-meta)
 catch_discover_tests(hazo-element)
 catch_discover_tests(hazo-node)
-catch_discover_tests(hazo-seq)
 catch_discover_tests(hazo-proxy)
+catch_discover_tests(hazo-seq)
+catch_discover_tests(hazo-map)
 catch_discover_tests(activities-data)
 catch_discover_tests(activities-activity)

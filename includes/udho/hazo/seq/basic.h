@@ -61,6 +61,8 @@ struct basic_seq: basic_node<H, basic_seq<Policy, X...>>{
     using contains = typename node_type::types::template exists<T>;
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class ConditionT>
+    using exclude_if = typename operations::exclude_if<basic_seq<Policy, H, X...>, ConditionT>::type;
     template <template <typename> class F>
     using transform = basic_seq<Policy, F<H>, F<X>...>;
     
@@ -95,6 +97,8 @@ struct basic_seq<Policy, H>: basic_node<H, void>{
     using contains = typename node_type::types::template exists<T>;
     template <typename KeyT>
     using has = typename node_type::types::template has<KeyT>;
+    template <template <typename> class ConditionT>
+    using exclude_if = typename operations::exclude_if<basic_seq<Policy, H>, ConditionT>::type;
     template <template <typename> class F>
     using transform = basic_seq<Policy, F<H>>;
     

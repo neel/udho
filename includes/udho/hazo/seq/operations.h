@@ -95,6 +95,29 @@ struct prepend<basic_seq<Policy>, T...>{
     using type = basic_seq<Policy, T...>;
 };
 
+template <typename Policy, typename H, typename... X, template <typename> class ConditionT>
+struct eliminate_if<basic_seq<Policy, H, X...>, ConditionT>{
+    enum { 
+        matched = ConditionT<H>::value
+    };
+    using tail = basic_seq<Policy, X...>;
+    using type = typename std::conditional<matched, 
+        typename eliminate_if<tail, ConditionT>::type,
+        typename prepend<typename eliminate_if<tail, ConditionT>::type, H>::type
+    >::type;
+};
+
+template <typename Policy, typename H, template <typename> class ConditionT>
+struct eliminate_if<basic_seq<Policy, H>, ConditionT>{
+    enum { 
+        matched = ConditionT<H>::value
+    };
+    using type = typename std::conditional<matched, 
+        basic_seq<Policy, void>,
+        basic_seq<Policy, H>
+    >::type;
+};
+
 template <typename Policy, typename H, typename... X, typename U>
 struct eliminate<basic_seq<Policy, H, X...>, U>{
     enum { 

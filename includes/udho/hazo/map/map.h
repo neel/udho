@@ -41,27 +41,50 @@
 namespace udho{
 namespace hazo{
 
+/**
+ * @brief 
+ * @tparam T...
+ * @ingroup hazo
+ */
 template <typename... T>
 using map_d = typename operations::flatten<basic_map_d, T...>::type;
-
+/**
+ * @brief 
+ * @tparam T...
+ * @ingroup hazo
+ */
 template <typename... T>
 using map_v = typename operations::flatten<basic_map_v, T...>::type;
 
-
+/**
+ * @brief 
+ * 
+ * @tparam Policy 
+ * @tparam X...
+ * @param xs...
+ * @return basic_map<Policy, X...> 
+ * @ingroup hazo
+ */
 template <typename Policy, typename... X>
-basic_map<Policy, X...> make_map(const X&... xs){
-    return basic_map<Policy, X...>(xs...);
-}
-
+basic_map<Policy, X...> make_map(const X&... xs){ return basic_map<Policy, X...>(xs...); }
+/**
+ * @brief 
+ * @tparam X...
+ * @param xs...
+ * @return map_d<X...>
+ * @ingroup hazo
+ */
 template <typename... X>
-map_d<X...> make_map_v(const X&... xs){
-    return map_d<X...>(xs...);
-}
-
+map_d<X...> make_map_d(const X&... xs){ return map_d<X...>(xs...); }
+/**
+ * @brief 
+ * @tparam X...
+ * @param xs...
+ * @return map_d<X...>
+ * @ingroup hazo
+ */
 template <typename... X>
-map_v<X...> make_map_v(const X&... xs){
-    return map_v<X...>(xs...);
-}
+map_v<X...> make_map_v(const X&... xs){ return map_v<X...>(xs...); }
 
 }
 }

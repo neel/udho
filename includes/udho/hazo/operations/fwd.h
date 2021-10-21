@@ -33,21 +33,86 @@ namespace hazo{
     
 namespace operations{
 
+/**
+ * @brief eliminate the first occurence of U in the container
+ * @note specialized for each conatiner
+ * @tparam ContainerT 
+ * @tparam U 
+ * @ingroup hazo
+ */
 template <typename ContainerT, typename U>
 struct eliminate;
 
+/**
+ * @brief eliminate all occurences of type T that yields a true value for ConditionT<T>::value
+ * @note specialized for each conatiner
+ * @tparam ContainerT 
+ * @tparam ConditionT 
+ * @ingroup hazo
+ */
 template <typename ContainerT, template <typename> class ConditionT>
 struct eliminate_if;
 
-template <typename ContainerT, typename T, typename... Rest>
+/**
+ * @brief eliminate all occurences of U in the container
+ * @note specialized for each conatiner
+ * @tparam ContainerT 
+ * @tparam U 
+ * @ingroup hazo
+ */
+template <typename ContainerT, typename U>
+struct eliminate_all;
+
+/**
+ * @brief exclude the first occurence of U in the container
+ * @note works on all containers
+ * @note uses @ref eliminate internally
+ * @tparam ContainerT 
+ * @tparam T 
+ * @tparam Rest 
+ */
+template <typename ContainerT, typename... X>
 struct exclude;
 
-// template <typename ContainerT, template <typename> class ConditionT>
-// struct exclude_if;
+/**
+ * @brief exclude all occurence of U in the container
+ * @note works on all containers
+ * @note uses @ref eliminate_all internally
+ * @tparam ContainerT 
+ * @tparam T 
+ * @tparam Rest 
+ */
+template <typename ContainerT, typename... X>
+struct exclude_all;
 
+/**
+ * @brief exclude all occurences of type T that yields a true value for ConditionT<T>::value
+ * @note works on all containers
+ * @note uses @ref eliminate_if internally
+ * @tparam ContainerT 
+ * @tparam T 
+ * @tparam Rest 
+ */
+template <typename ContainerT, template <typename> class ConditionT>
+struct exclude_if;
+
+/**
+ * @brief append a set of types T... into an existing container
+ * @note specialized for each conatiner
+ * @tparam ContainerT 
+ * @tparam T 
+ * @ingroup hazo
+ */
 template <typename ContainerT, typename... T>
 struct append;
 
+/**
+ * @brief prepend a set of types T... into an existing container
+ * @note specialized for each conatiner
+ * @tparam ContainerT 
+ * @tparam T 
+ * @ingroup hazo
+ */
 template <typename ContainerT, typename... T>
 struct prepend;
 

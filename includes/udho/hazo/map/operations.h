@@ -104,7 +104,7 @@ struct eliminate_if<basic_map<Policy, H, X...>, ConditionT>{
     };
     using tail = basic_map<Policy, X...>;
     using type = typename std::conditional<matched, 
-        tail,
+        typename eliminate_if<tail, ConditionT>::type,
         typename prepend<typename eliminate_if<tail, ConditionT>::type, H>::type
     >::type;
 };
@@ -118,6 +118,13 @@ struct eliminate_if<basic_map<Policy, H>, ConditionT>{
         basic_map<Policy, void>,
         basic_map<Policy, H>
     >::type;
+};
+
+template <typename Policy, typename H, typename... X, typename U>
+struct eliminate_all<basic_map<Policy, H, X...>, U>{
+    template <typename V>
+    struct matched: std::is_same<U, V>{};
+    using type = typename eliminate_if<basic_map<Policy, H, X...>, matched>::type;
 };
 
 template <typename Policy, typename H, typename... X, typename U>
