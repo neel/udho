@@ -98,7 +98,7 @@ struct element: Mixins<DerivedT, ValueT>...{
      * @{
      */
     element(): _value(value_type()), _initialized(false){}
-    explicit element(const value_type& v): _value(v), _initialized(true){}
+    element(const value_type& v): _value(v), _initialized(true){}
     element(const self_type& other) = default;
     /// @}
     
