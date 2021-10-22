@@ -165,19 +165,19 @@ namespace activities{
              * Otherwise it continues executing the activity tree 
              */
             void _finish(){        
-                bool should_cancel = false;
+                bool may_cancel_next_activities = false;
                 if(!result_type::failed()){
                     // if failed then whether the dependent activities will also be canceled or not 
                     // is decided by the return of _cancel_if callback (if set by the user)
                     // if no such callback is set and the activity fails then the dependent activities will not be canceled
                     if(!_cancel_if.empty()){
-                        should_cancel = _cancel_if(result_type::success_data());
+                        may_cancel_next_activities = _cancel_if(result_type::success_data());
                     }
                 }else{
-                    should_cancel = result_type::failed() && _required;
+                    may_cancel_next_activities = _required;
                 }
                 
-                if(should_cancel){
+                if(may_cancel_next_activities){
                     _cancel();
                 }else{
                     result_type self = static_cast<const result_type&>(*this);

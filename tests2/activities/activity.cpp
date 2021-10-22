@@ -230,4 +230,93 @@ TEST_CASE( "activity basic", "[activities]" ) {
             }
         }
     }
+
+    GIVEN( "an activity fails" ) {
+        THEN( "the if_failed callback is called" ) {
+            auto collector_ptr = activities::collect<MinimalA1>(ctx);
+            MinimalA1 a1(collector_ptr, false);
+            activities::accessor<MinimalA1> accessor(collector_ptr);
+            int failure_value = 0;
+            a1.if_failed([&failure_value](const failure_t& failure){
+                failure_value = failure._value;
+                return true;
+            });
+            a1();
+            REQUIRE(failure_value == 24);
+            REQUIRE(accessor.exists<MinimalA1>());
+            REQUIRE(accessor.completed<MinimalA1>());
+            REQUIRE(accessor.failed<MinimalA1>());
+            REQUIRE(!accessor.okay<MinimalA1>());
+            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+        }
+        THEN( "then child activities are cancelled if the if_failed callback returns true" ) {
+            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+            auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
+            auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
+
+            auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
+            a1_ptr->done(combinator);
+
+            activities::accessor<MinimalA1, MinimalA2> accessor(collector_ptr);
+
+            MinimalA1& a1 = *a1_ptr;
+
+            int failure_value = 0;
+            a1.if_failed([&failure_value](const failure_t& failure){
+                failure_value = failure._value;
+                return true;
+            });
+            
+            a1();
+            REQUIRE(failure_value == 24);
+
+            REQUIRE(accessor.exists<MinimalA1>());
+            REQUIRE(accessor.completed<MinimalA1>());
+            REQUIRE(accessor.failed<MinimalA1>());
+            REQUIRE(!accessor.okay<MinimalA1>());
+            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+
+            REQUIRE(accessor.exists<MinimalA2>());
+            REQUIRE(!accessor.completed<MinimalA2>());
+            REQUIRE(accessor.failed<MinimalA2>());
+            REQUIRE(!accessor.okay<MinimalA2>());
+            REQUIRE(accessor.canceled<MinimalA2>());
+        }
+        THEN( "then child activities are not cancelled if the if_failed callback returns false" ) {
+            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+            auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
+            auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
+
+            auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
+            a1_ptr->done(combinator);
+
+            activities::accessor<MinimalA1, MinimalA2> accessor(collector_ptr);
+
+            MinimalA1& a1 = *a1_ptr;
+
+            int failure_value = 0;
+            a1.if_failed([&failure_value](const failure_t& failure){
+                failure_value = failure._value;
+                return true;
+            });
+            
+            a1();
+            REQUIRE(failure_value == 24);
+
+            REQUIRE(accessor.exists<MinimalA1>());
+            REQUIRE(accessor.completed<MinimalA1>());
+            REQUIRE(accessor.failed<MinimalA1>());
+            REQUIRE(!accessor.okay<MinimalA1>());
+            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+
+            REQUIRE(accessor.exists<MinimalA2>());
+            REQUIRE(accessor.completed<MinimalA2>());
+            REQUIRE(!accessor.failed<MinimalA2>());
+            REQUIRE(accessor.okay<MinimalA2>());
+            REQUIRE(!accessor.canceled<MinimalA2>());
+        }
+    }
 }
