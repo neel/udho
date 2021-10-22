@@ -84,40 +84,47 @@ struct result_data{
     
     /**
      * @brief Construct a new result data object
-     * 
      */
     result_data(): _completed(false), _success(false), _canceled(false){}
 
     /**
-     * either success or failure data set
+     * @brief either success or failure data set
+     * @note check exists<Activity>() before calling completed()
      */
     inline bool completed() const{
         return _completed;
     }
     /**
-     * whether the activity has failed
+     * @brief whether the activity has failed.
+     * @note an incomplete or canceled activity is neither okay() not failed()
      */
     inline bool failed() const{
-        return !_success;
+        return completed() && !canceled() && !_success;
     }
     /**
-     * check whether the activity has been canceled
+     * @brief check whether the activity has been canceled
      */
     inline bool canceled() const{
         return _canceled;
     }
     
+    /**
+     * @brief whether the activity has successfully completed.
+     * @note an incomplete or canceled activity is neither okay() not failed()
+     */
     inline bool okay() const{
         return completed() && !failed() && !canceled();
     }
     /**
-     * Success data 
+     * @brief retrieve the success data 
+     * @note call okay() before calling success_data
      */
     inline const success_type& success_data() const{
         return _sdata;
     }
     /**
-     * Failure data
+     * @brief retrieve the failure data
+     * @note call failed() before calling failure_data
      */
     inline const failure_type& failure_data() const{
         return _fdata;

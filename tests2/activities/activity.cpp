@@ -79,16 +79,16 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
     WHEN("a minimal activity MinimalA1 is constructed using collector<MinimalA1>") {
         auto collector_a1_ptr = activities::collect<MinimalA1>(ctx);
-        MinimalA1 a1_test2(collector_a1_ptr, false);
-        activities::accessor<MinimalA1> accessor_a1_test2(collector_a1_ptr);
+        MinimalA1 a1(collector_a1_ptr, false);
+        activities::accessor<MinimalA1> accessor_a1(collector_a1_ptr);
 
         THEN("after UNsuccessful invocation produces expected results") {
-            a1_test2();
-            REQUIRE(accessor_a1_test2.completed<MinimalA1>());
-            REQUIRE(accessor_a1_test2.failed<MinimalA1>());
-            REQUIRE(!accessor_a1_test2.okay<MinimalA1>());
-            REQUIRE(accessor_a1_test2.exists<MinimalA1>());
-            REQUIRE(accessor_a1_test2.failure<MinimalA1>()._value == 24);
+            a1();
+            REQUIRE(accessor_a1.completed<MinimalA1>());
+            REQUIRE(accessor_a1.failed<MinimalA1>());
+            REQUIRE(!accessor_a1.okay<MinimalA1>());
+            REQUIRE(accessor_a1.exists<MinimalA1>());
+            REQUIRE(accessor_a1.failure<MinimalA1>()._value == 24);
         }
     }
 
@@ -190,7 +190,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
                 REQUIRE(!accessor_a3.completed<MinimalA3>());
                 REQUIRE(accessor_a3.canceled<MinimalA3>());
                 REQUIRE(!accessor_a3.okay<MinimalA3>());
-                REQUIRE(accessor_a3.failed<MinimalA3>());
+                REQUIRE(!accessor_a3.failed<MinimalA3>());
             }
         }
     }
@@ -224,7 +224,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             THEN("the third activity is completed too") {
                 REQUIRE(accessor_a3.exists<MinimalA3>());
                 REQUIRE(accessor_a3.completed<MinimalA3>());
-                REQUIRE(accessor_a3.canceled<MinimalA3>());
+                REQUIRE(!accessor_a3.canceled<MinimalA3>());
                 REQUIRE(!accessor_a3.okay<MinimalA3>());
                 REQUIRE(accessor_a3.failed<MinimalA3>());
             }
@@ -247,7 +247,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             REQUIRE(accessor.completed<MinimalA1>());
             REQUIRE(accessor.failed<MinimalA1>());
             REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(!accessor.canceled<MinimalA1>());
             REQUIRE(accessor.failure<MinimalA1>()._value == 24);
         }
         THEN( "then child activities are cancelled if the if_failed callback returns true" ) {
@@ -275,12 +275,12 @@ TEST_CASE( "activity basic", "[activities]" ) {
             REQUIRE(accessor.completed<MinimalA1>());
             REQUIRE(accessor.failed<MinimalA1>());
             REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(!accessor.canceled<MinimalA1>()); 
             REQUIRE(accessor.failure<MinimalA1>()._value == 24);
 
             REQUIRE(accessor.exists<MinimalA2>());
             REQUIRE(!accessor.completed<MinimalA2>());
-            REQUIRE(accessor.failed<MinimalA2>());
+            REQUIRE(!accessor.failed<MinimalA2>());
             REQUIRE(!accessor.okay<MinimalA2>());
             REQUIRE(accessor.canceled<MinimalA2>());
         }
@@ -309,7 +309,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             REQUIRE(accessor.completed<MinimalA1>());
             REQUIRE(accessor.failed<MinimalA1>());
             REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            REQUIRE(!accessor.canceled<MinimalA1>());
             REQUIRE(accessor.failure<MinimalA1>()._value == 24);
 
             REQUIRE(accessor.exists<MinimalA2>());
