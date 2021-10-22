@@ -299,7 +299,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             int failure_value = 0;
             a1.if_failed([&failure_value](const failure_t& failure){
                 failure_value = failure._value;
-                return true;
+                return false;
             });
             
             a1();
@@ -317,6 +317,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             REQUIRE(!accessor.failed<MinimalA2>());
             REQUIRE(accessor.okay<MinimalA2>());
             REQUIRE(!accessor.canceled<MinimalA2>());
+            REQUIRE(accessor.success<MinimalA2>()._value == 42);
         }
     }
 }

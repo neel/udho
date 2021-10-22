@@ -155,7 +155,9 @@ namespace activities{
                 }else if(!_abort_error.empty()){
                     propagate = _abort_error(result_type::success_data());
                 }
-                if(propagate) _cancelation_signals();
+
+                if(propagate)   _cancelation_signals();
+                else            _signal(self);
             }
             /**
              * Called after success/failure to execute the child activities. 
