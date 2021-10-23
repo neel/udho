@@ -69,10 +69,33 @@ namespace detail{
 
 /**
  * @brief Contains Copiable Success or Failure data for an activity.
- * Contains one SuccessT and one FailureT values using their default constructors. 
  * @note Both SuccessT and FailureT must be default constructible.
  * @tparam SuccessT success data type
  * @tparam FailureT failure data type
+ *
+ * Contains one SuccessT and one FailureT values using their default constructors. 
+ * State of an activity is expressed as combination of three inputs.
+ * - <b>_completed</b>: Initialized as false. Whenever a success of failure value is set _completed is set to true.
+ * - <b>_canceled</b>:  Initialized as false. Set to true whenever an activity is canceled either explicitely or triggered by failure or cancalation of its parent activity.
+ * - <b>_success</b>:   Initialized as false. Whenever a success value is set through set_success() method then the _success is set to true. When a failure value is set through the set_failure() method then the _success is set to false.
+ * .
+ * Based on these three input 5 methods are provided to get the information regarding the current state. 
+ * Conditions of these methods returning true is shown in the following table.
+ *
+ * |             | _completed | _canceled | _success |      |
+ * |-------------|------------|-----------|----------|------|
+ * | completed() | TRUE       | N/A       | N/A      | TRUE |
+ * | canceled()  | N/A        | TRUE      | N/A      | TRUE |
+ * | okay()      | TRUE       | FALSE     | TRUE     | TRUE |
+ * | failed()    | TRUE       | FALSE     | FALSE    | TRUE |
+ * | error()     | TRUE       | TRUE      | TRUE     | TRUE |
+ *
+ * - completed(): returns true if _completed is set to true irrespective of value of other input variables.
+ * - canceled():  returns true if _canceled is set to true irrespective of value of other input variables.
+ * - failed():    returns true if _success is false. However setting _success to false after invocation (through set_failure() method) implies that the activity has completed. Additionally although a successful activity can be forcibly canceled though cancel_if() hook, a canceled activity cannot fail because it has never been executed. Hence failed() returns true only if _completed is true, _canceled is false and _success is false.  
+ * - okay():      returns true if _success is true. However as succesful invocation implies complition, it is expected that if _success is true, _completed is also true. Hence okay() returns true only if _completed is true and _success is true.  
+ * - error():     returns true for completed activities if both _success and _completed are true.
+ * .
  * @ingroup activities
  * @ingroup data
  */
@@ -99,7 +122,7 @@ struct result_data{
      * @note an incomplete or canceled activity is neither okay() not failed()
      */
     inline bool failed() const{
-        return completed() && !canceled() && !_success;
+        return _completed && !_canceled && !_success;
     }
     /**
      * @brief check whether the activity has been canceled
@@ -107,13 +130,18 @@ struct result_data{
     inline bool canceled() const{
         return _canceled;
     }
-    
+    /**
+     * @brief 
+     */
+    inline bool error() const{
+        return _completed && _success && _canceled;
+    }
     /**
      * @brief whether the activity has successfully completed.
      * @note an incomplete or canceled activity is neither okay() not failed()
      */
     inline bool okay() const{
-        return completed() && !failed() && !canceled();
+        return _completed && _success;
     }
     /**
      * @brief retrieve the success data 
@@ -159,7 +187,7 @@ struct result_data{
         /**
          * Set Success Data
          */
-        void success(const success_type& data){
+        void set_success(const success_type& data){
             _sdata     = data;
             _success   = true;
             _completed = true;
@@ -167,7 +195,7 @@ struct result_data{
         /**
          * Set Failure Data
          */
-        void failure(const failure_type& data){
+        void set_failure(const failure_type& data){
             _fdata     = data;
             _success   = false;
             _completed = true;
