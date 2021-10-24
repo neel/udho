@@ -35,17 +35,61 @@
 #include <udho/activities/result_data.h>
 
 namespace udho{
-/**
- * @ingroup activities
- */
 namespace activities{
     
+#ifndef __DOXYGEN__
+
     /**
-     * @brief Completion handler for an activity.
-     * @tparam SuccessT success data associated with the activity (requires default constructible)
-     * @tparam FailureT failure data associated with the activity (requires default constructible)
-     * @ingroup activities
-     * States
+     * @brief activity result
+     * @ref activities::activity uses @ref activities::result to provide storage for activity results and hooks to the activities behaviour.
+     * The life of an activity is started when its operator()() is called without any arguments.
+     * Then the activity needs to call either success() or failure() methods (derived from @ref result) in order signal its success or failure.
+     * Depending on success or failure, the next activities that depend on the successful or failed activity is either executed or canceled.
+     * Hence we can consider three different entry points for the evaluation of the activity data e.g. success(), failure() and cancel().
+     * Similarly there can be two exit routes abort() or proceed() which cancels or executes the dependent activities respectively.
+     * @ref result allows the user code to provide a set of callbacks to react and to specialize the exit route for different activity instances.
+     * The provided callbacks are called on different scenarios with the provided success / failure data. 
+     * The returned value of these callbacks may alter the predetermined exit route i.e. proceed an activity which was supposed to abort due to failure or vice versa.
+     * These hooks not only provides a means of further analysis of the success or failure data, but also it provides a means to react to the success an failure events, on case by case basis.
+     * Following is an example use case of these hooks.
+     *
+     * > For a database activity a successful query evaluation results to success. Only failed query invocation is considered as failed.
+     * > However for certain queries an empty result may be considered as a failure is sprite of the query being evaluated successfully.
+     * > Of course in such cases the activity itself may analyze the resultset and respond with failure instead responding with success.
+     * > But for a generic database activity it may be difficult to distinguish between a valid empty resultset from an invalid one.
+     * > In such scenarios these hooks provide an additional way to treat that successful query evaluation differently (by taking abort 
+     * > exit route instead of proceed) because an empty resultset is invalid in that particular case. It may also react with an 404 Error
+     * > page as a consequence.
+     *
+     * Following are the 3 methods that can be used to set callbacks.
+     * - if_failed()
+     *
+     *   Generally if an activity fails then the abort exit route is taken and all dependent activities are canceled(). 
+     *   However if a callback is set through if_failed() then that is called and its return value determines whether it should abort or proceed. 
+     *   The provided callback is called with the faulre result and if it returns false then the dependent activities are not canceled, instead 
+     *   it takes the proceed exit route. Otherwise, if the provided callback returns true then as usual all dependent activities are canceled.
+     *
+     * - cancel_if()
+     *
+     *  Generally if an activity yields success result then the proceed exit route is taken an all dependent activities are executed. However if 
+     *  a callback is set through cancel_if() then that is called with the success result. If the callback returns true then the activity is canceled
+     *  in spite of being successful and it takes the abort exit route which cancels all dependent activities.
+     *
+     * - if_errored()
+     *
+     *  If an activity that yielded success result has been suggested to canceled by cancel_if then the callback set by if_errored is called.
+     *  If that callback is set to false then the previously decided abort route is abandoned and the proceed route is taken.
+     * .
+     *
+     * The state of an activity is described through the following 5 methods.
+     * - completed() 
+     * - canceled()
+     * - failed()
+     * - okay()
+     * - error()
+     * .
+     * The following table depicts how the entry and the hooks impact the state and the exit route of an activity invocation.
+     *
      * |   Entry   |           |          |   Config  |     Hooks    |              |               |    State    |            |        |          |         | Exit      |
      * |:---------:|:---------:|:--------:|:---------:|:------------:|:------------:|:-------------:|:-----------:|:----------:|:------:|:--------:|:-------:|-----------|
      * | success() | failure() | cancel() | _required | _cancel_if() | _if_failed() | _if_errored() | completed() | canceled() | okay() | failed() | error() | Next      |
@@ -61,7 +105,10 @@ namespace activities{
      * |           |           |     *    |   FALSE   |      N/A     |      N/A     |      N/A      |    FALSE    |    TRUE    |  FALSE |   FALSE  |  FALSE  | cancel()  |
      * |           |     *     |          |   FALSE   |      N/A     |      N/A     |      N/A      |     TRUE    |    FALSE   |  FALSE |   TRUE   |  FALSE  | proceed() |
      * |     *     |           |          |   FALSE   |      N/A     |      N/A     |      N/A      |     TRUE    |    FALSE   |  TRUE  |   FALSE  |  FALSE  | proceed() |
-     * 
+     *
+     * @tparam SuccessT success data associated with the activity (requires default constructible)
+     * @tparam FailureT failure data associated with the activity (requires default constructible)
+     * @ingroup activities
      */
     template <typename DerivedT, typename SuccessT, typename FailureT>
     struct result: private udho::activities::result_data<SuccessT, FailureT>{
@@ -202,8 +249,9 @@ namespace activities{
             abort_failure_ftor      _if_failed;
     };
     
-}
+#endif // __DOXYGEN__
 
+}
 }
 
 #endif // UDHO_ACTIVITIES_RESULT_H

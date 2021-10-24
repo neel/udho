@@ -33,6 +33,8 @@
 namespace udho{
 namespace activities{
     
+#ifndef __DOXYGEN__
+
 namespace detail{
     template <bool invocable, typename FunctorT, typename... TargetsT>
     struct apply_helper_internal{
@@ -69,11 +71,28 @@ namespace detail{
 
 /**
  * @brief Contains Copiable Success or Failure data for an activity.
- * @note Both SuccessT and FailureT must be default constructible.
- * @tparam SuccessT success data type
- * @tparam FailureT failure data type
+ * Stores the resulting data of an activity, which may succedd or fail. The provided SuccessT and FailureT is used to store the success and failure data respectively.
+ * result_data is not supposed to be used directly. Instead it is privately inherited by the @ref activities::result to store the activity results.
+ * result_data provides three protected methods to store the activity result as shown below.
+ * - set_success(const SuccessT&)
+ * - set_failure(const FailureT&)
+ * - set_cancel(bool)
+ * .
+ * Both set_success and set_failure methods mark the result_data as complete.
+ * Success and failure data can be retrieved though the following methods method.
+ * - success_data()
+ * - failure_data()
+ * .
+ * The following 5 methods are provided to descrive the state of an activity.
+ * - completed() 
+ * - canceled()
+ * - failed()
+ * - okay()
+ * - error()
+ * .
  *
- * Contains one SuccessT and one FailureT values using their default constructors. 
+ * ### States 
+ *
  * State of an activity is expressed as combination of three inputs.
  * - <b>_completed</b>: Initialized as false. Whenever a success of failure value is set _completed is set to true.
  * - <b>_canceled</b>:  Initialized as false. Set to true whenever an activity is canceled either explicitely or triggered by failure or cancalation of its parent activity.
@@ -96,6 +115,9 @@ namespace detail{
  * - okay():      returns true if _success is true. However as succesful invocation implies complition, it is expected that if _success is true, _completed is also true. Hence okay() returns true only if _completed is true and _success is true.  
  * - error():     returns true for completed activities if both _success and _completed are true.
  * .
+ * @tparam SuccessT success data type
+ * @tparam FailureT failure data type
+ * @note Both SuccessT and FailureT must be default constructible.
  * @ingroup activities
  * @ingroup data
  */
@@ -214,6 +236,8 @@ struct result_data{
         failure_type _fdata;
 };
     
+#endif // __DOXYGEN__
+
 }
 }
 

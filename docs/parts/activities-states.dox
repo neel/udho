@@ -1,0 +1,26 @@
+/**
+ * ### Activity States
+ *
+ * State of an activity is expressed as combination of three inputs.
+ * - <b>_completed</b>: Initialized as false. Whenever a success of failure value is set _completed is set to true.
+ * - <b>_canceled</b>:  Initialized as false. Set to true whenever an activity is canceled either explicitely or triggered by failure or cancalation of its parent activity.
+ * - <b>_success</b>:   Initialized as false. Whenever a success value is set through set_success() method then the _success is set to true. When a failure value is set through the set_failure() method then the _success is set to false.
+ * .
+ * Based on these three input 5 methods are provided to get the information regarding the current state. 
+ * Conditions of these methods returning true is shown in the following table.
+ *
+ * |             | _completed | _canceled | _success |      |
+ * |-------------|------------|-----------|----------|------|
+ * | completed() | TRUE       | N/A       | N/A      | TRUE |
+ * | canceled()  | N/A        | TRUE      | N/A      | TRUE |
+ * | okay()      | TRUE       | FALSE     | TRUE     | TRUE |
+ * | failed()    | TRUE       | FALSE     | FALSE    | TRUE |
+ * | error()     | TRUE       | TRUE      | TRUE     | TRUE |
+ *
+ * - completed(): returns true if _completed is set to true irrespective of value of other input variables.
+ * - canceled():  returns true if _canceled is set to true irrespective of value of other input variables.
+ * - failed():    returns true if _success is false. However setting _success to false after invocation (through set_failure() method) implies that the activity has completed. Additionally although a successful activity can be forcibly canceled though cancel_if() hook, a canceled activity cannot fail because it has never been executed. Hence failed() returns true only if _completed is true, _canceled is false and _success is false.  
+ * - okay():      returns true if _success is true. However as succesful invocation implies complition, it is expected that if _success is true, _completed is also true. Hence okay() returns true only if _completed is true and _success is true.  
+ * - error():     returns true for completed activities if both _success and _completed are true.
+ * .
+ */
