@@ -32,13 +32,10 @@
 #include <udho/activities/joined.h>
 
 namespace udho{
-/**
- * \ingroup activities
- */
 namespace activities{
     
     /**
-     * \ingroup activities
+     * @ingroup activities
      */
     template <typename... DependenciesT>
     struct require{

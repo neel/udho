@@ -35,11 +35,10 @@
 #include <udho/activities/collector.h>
 
 namespace udho{
-/**
- * \ingroup activities
- */
 namespace activities{
     
+#ifndef __DOXYGEN__
+
     /**
      * A `subtask` is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
      * A subtask contains two shared pointers, one to the activity and another one to the combinator.
@@ -310,8 +309,144 @@ namespace activities{
             udho::detail::interaction_& _interaction;
     };
     
-}
+#else 
 
+    /**
+     * @brief 
+     * 
+     * @tparam ActivityT 
+     * @tparam DependenciesT...
+     */
+    template <typename ActivityT, typename... DependenciesT>
+    struct subtask{
+        typedef ActivityT activity_type;
+        typedef combinator<ActivityT, DependenciesT...> combinator_type;
+        typedef subtask<ActivityT, DependenciesT...> self_type;
+        
+        template <typename U, typename... DependenciesU>
+        friend struct subtask;
+        
+        subtask(const self_type& other);
+        
+        /**
+         * @brief shared pointer to the activity
+         */
+        std::shared_ptr<activity_type> activity_ptr() {
+            return _activity;
+        }
+        
+        /**
+         * @brief reference to the underlying activity object
+         */
+        activity_type& activity(){
+            return *(_activity.get());
+        }
+        
+        /**
+         * @brief reference to the underlying activity object through teh * operator
+         */
+        activity_type& operator*(){
+            return activity();
+        }
+        
+        /**
+         * @brief execute task next after the current one
+         * @param next the next subtask
+         */
+        template <typename V, typename... DependenciesV>
+        self_type& done(subtask<V, DependenciesV...>& next){
+            activity_ptr()->done(next._combinator);
+            return *this;
+        }
+        
+        /**
+         * @brief t2.after(t1) is equivalent to t1.done(t2)
+         * @param previous the previous subtask
+         */
+        template <typename V, typename... DependenciesV>
+        self_type& after(subtask<V, DependenciesV...>& previous){
+            previous._activity->done(_combinator);
+            return *this;
+        }
+        
+        /**
+         * @brief Arguments for the constructor of the Activity
+         */
+        template <typename ContextT, typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+            return self_type(collector_ptr, u...);
+        }
+        
+        /**
+         * @brief attach a callback which will be called with a reference to the activity after it has been instantiated and all its dependencies have completed.
+         */
+        template <typename PreparatorT>
+        self_type& prepare(PreparatorT prep){
+            _combinator->prepare(prep);
+            return *this;
+        }
+
+        /**
+         * @brief Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
+         */
+        self_type& required(bool flag){
+            _activity->required(flag);
+            return *this;
+        }
+        
+        /**
+         * @brief Force cancelation of the activity even after it is successful to stop propagating to the next activities
+         * @param f callback which should return true to signal cancelation
+         */
+        self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
+            _activity->cancel_if(cancelor);
+            return *this;
+        }
+        
+        /**
+         * @brief returns the shared pointer to the actiivity
+         */
+        std::shared_ptr<activity_type> operator->(){
+            return _activity;
+        }
+        
+        /**
+         * @brief abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+         */
+        template <typename FunctionT>        
+        self_type& if_errored(FunctionT ftor);
+        
+        /**
+         * @brief abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+         */
+        template <typename FunctionT>
+        self_type& if_failed(FunctionT ftor);
+        
+        /**
+         * @brief 
+         * 
+         * @tparam FunctionT 
+         * @param ftor 
+         * @return self_type& 
+         */
+        template <typename FunctionT>
+        self_type& if_canceled(FunctionT ftor);
+        
+        /**
+         * @brief calls the `operator()()` of the activity and starts executing the graph
+         */
+        template <typename... U>
+        void operator()(U&&... u){
+            _activity->operator()(u...);
+        }
+        protected:
+            template <typename ContextT, typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u);
+    };
+
+#endif // __DOXYGEN__
+
+}
 }
 
 #endif // UDHO_ACTIVITIES_SUBTASK_H

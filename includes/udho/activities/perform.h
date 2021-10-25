@@ -33,26 +33,55 @@
 #include <udho/activities/subtask.h>
 
 namespace udho{
-/**
- * \ingroup activities
- */
 namespace activities{
     
     /**
-     * create a subtask to perform activity ActivityT
-     * \tparam ActivityT the activity to perform
-     * \ingroup activities
+     * @brief convenience function for creating subtasks 
+     * @tparam ActivityT the activity to perform
+     *
+     * creates a subtask that performs the requested activity.
+     * @code {.cpp}
+     * auto a1 = activities::perform<A1>::with(args...);
+     * @endcode
+     * The above code is equivalent of 
+     * @code {.cpp}
+     * activities::subtask<A1> a1(args...);
+     * @endcode
+     * If the activity depends on some other activity then that can be specified using require as shown in the following example.
+     * @code {.cpp}
+     * auto a3 = activities::perform<A3>::require<A1, A2>::with(args...);
+     * @endcode
+     * The above code is equivalent of 
+     * @code {.cpp}
+     * activities::subtask<A3, A1, A2> a1(args...);
+     * @endcode
+     * @warning In case of dependent activity it only creates the subtask. It does not link the dependent subtask with its 
+     *          dependencies. The user code still needs to mention that using `after` or `done` methods provided by the 
+     *          @ref activities::subtask as shown in the example below.
+     *          @code {.cpp}
+     *          auto t1 = udho::perform<A1>::with(data, io);
+     *          auto t2 = udho::perform<A2>::require<A1>::with(data, io).after(t1);
+     *          auto t3 = udho::perform<A3>::require<A1>::with(data, io).after(t1);
+     *          @endcode
+     * @note    @ref activities::after on the other hand creates the subtask and then connects its dependencies with the 
+     *          created subtask.
+     * @ingroup activities
+     * @see activities::after
      */
     template <typename ActivityT>
     struct perform{
         /**
-         * mention the activities that has to be performed before executing this subtask.
-         * \tparam DependenciesT dependencies
+         * @brief mention the activities that has to be performed before executing this subtask.
+         * @tparam DependenciesT... dependencies
          */
         template <typename... DependenciesT>
         struct require{
             /**
-             * arguments for the activity constructor
+             * @brief arguments for the activity constructor
+             * 
+             * @tparam U 
+             * @param u 
+             * @return subtask<ActivityT, DependenciesT...> 
              */
             template <typename... U>
             static subtask<ActivityT, DependenciesT...> with(U&&... u){
@@ -60,9 +89,13 @@ namespace activities{
             }
         };
         
-       /**
-        * arguments for the activity constructor
-        */
+        /**
+         * @brief arguments for the activity constructor
+         * 
+         * @tparam U 
+         * @param u 
+         * @return subtask<ActivityT> 
+         */
         template <typename... U>
         static subtask<ActivityT> with(U&&... u){
             return subtask<ActivityT>::with(u...);

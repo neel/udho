@@ -32,6 +32,9 @@ target_link_libraries(activities-data PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 
 add_executable(activities-activity activities/activity.cpp)
 target_link_libraries(activities-activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
+add_executable(activities-subtask activities/subtask.cpp)
+target_link_libraries(activities-subtask PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
 catch_discover_tests(hazo-meta)
 catch_discover_tests(hazo-element)
 catch_discover_tests(hazo-node)
@@ -40,3 +43,4 @@ catch_discover_tests(hazo-seq)
 catch_discover_tests(hazo-map)
 catch_discover_tests(activities-data)
 catch_discover_tests(activities-activity)
+catch_discover_tests(activities-subtask)

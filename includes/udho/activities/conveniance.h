@@ -86,9 +86,15 @@ template <typename ActivityT, typename AccessorT>
 udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
     return udho::activities::analyzer<ActivityT>(accessor);
 }
-
+/**
+ * @brief 
+ * 
+ * @tparam T 
+ * @param dependencies 
+ * @return udho::activities::after<T...> 
+ */
 template <typename... T>
-udho::activities::after<T...> after(T&... dependencies){
+udho::activities::basic_after<udho::activities::subtask, T...> after(T&... dependencies){
     return udho::activities::after<T...>(dependencies...);
 }
 
