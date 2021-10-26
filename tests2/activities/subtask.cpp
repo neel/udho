@@ -12,6 +12,7 @@
 #include <udho/contexts.h>
 #include <udho/server.h>
 #include <string>
+#include <boost/thread.hpp>
 
 namespace activities = udho::activities;
 
@@ -56,8 +57,14 @@ struct A: activities::activity<A<N>, success_t, failure_t>, private accessor_sto
 
     void operator()(){
         _value = 2 * _value;
-        _timer.expires_from_now(boost::posix_time::milliseconds(100 + (rand() % 100)));
+
+        auto now = boost::get_system_time();
+        auto at  = now + boost::posix_time::milliseconds(100 + (rand() % 2000));
+
+        _timer.expires_at(at);
         _timer.async_wait(boost::bind(&A<N>::finished, activity_type::self(), boost::asio::placeholders::error));
+
+        std::cout << "A<" << N << ">" << " " << now << " -> " << at << std::endl;
     }
     void finished(const boost::system::error_code&){
         _value = 1+ _value;
@@ -142,7 +149,12 @@ TEST_CASE("subtask basic", "[activities]") {
     a0();
     REQUIRE(!test_run);
 
-    io.run();
+    boost::thread_group group;
+    for (unsigned i = 0; i < 2; ++i){
+        group.create_thread(boost::bind(&boost::asio::io_context::run, &io));
+    }
+
+    group.join_all();
     REQUIRE(test_run);
 
     REQUIRE(a0->value() == 100*2+1); // 201
@@ -157,15 +169,23 @@ TEST_CASE("subtask basic", "[activities]") {
     REQUIRE(a3->time() <= a3->time());
     REQUIRE(a3->time() <= a4->time());
 
+    std::cout << "a0" << " ";
+    std::copy(a0->begin(), a0->end(), std::ostream_iterator<int>(std::cout, " "));
+    std::cout << std::endl;
+
+    std::cout << "a1" << " ";
     std::copy(a1->begin(), a1->end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
 
+    std::cout << "a2" << " ";
     std::copy(a2->begin(), a2->end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
 
+    std::cout << "a3" << " ";
     std::copy(a3->begin(), a3->end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
 
+    std::cout << "a4" << " ";
     std::copy(a4->begin(), a4->end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
 }
