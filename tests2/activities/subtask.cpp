@@ -188,4 +188,8 @@ TEST_CASE("subtask basic", "[activities]") {
     std::cout << "a4" << " ";
     std::copy(a4->begin(), a4->end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
+
+    THEN("all subtasks can access its previous subtasks data through appropriate accessor") {
+        
+    }
 }
