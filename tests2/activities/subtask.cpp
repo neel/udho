@@ -134,7 +134,7 @@ TEST_CASE("subtask basic", "[activities]") {
 
     bool test_run = false;
 
-    activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+    auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
         CHECK(data.completed<A0>());
         CHECK(data.completed<A1>());
         CHECK(data.completed<A2>());
@@ -143,6 +143,8 @@ TEST_CASE("subtask basic", "[activities]") {
 
         test_run = true;
     });
+
+    // auto a5 = activities::after(a_finished).perform<A5>(collector, 110);
 
     a0();
     CHECK(!test_run);

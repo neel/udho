@@ -51,10 +51,6 @@ namespace activities{
         typedef activities::collector<ContextT, T...> collector_type;
         typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
-        typedef joined<callback_type, activities::collector<ContextT, T...>> self_type;
-        typedef int success_type;
-        typedef boost::function<bool (const success_type&)> cancel_if_ftor;
-        typedef boost::function<bool (const success_type&)> abort_error_ftor;
         
         joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
         void operator()(){  
@@ -64,17 +60,82 @@ namespace activities{
         void cancel(){
             operator()();
         }
-        template <typename U>
-        void cancel_if(U&){}
-        template <typename U>
-        void if_failed(U&){}
-        template <typename U>
-        void if_errored(U&){}
-        template <typename U>
-        void if_canceled(U&){}
+
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;
+    };
+
+#ifndef __DOXYGEN__
+
+    template <typename CallbackT, typename... X, typename CtxT, typename... DependenciesT>
+    struct subtask<joined<CallbackT, activities::collector<CtxT, X...>>, DependenciesT...>{
+        typedef subtask<joined<CallbackT, activities::collector<CtxT, X...>>, DependenciesT...> self_type;
+        typedef joined<CallbackT, activities::collector<CtxT, X...>> activity_type;
+        typedef combinator<activity_type, DependenciesT...> combinator_type;
+
+        template <typename U, typename... DependenciesU>
+        friend struct subtask;
+
+        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
+
+        std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        activity_type& activity(){ return *(_activity.get()); }
+        activity_type& operator*(){ return activity(); }
+        std::shared_ptr<activity_type> operator->(){ return _activity; }
+
+        /**
+         * execute task next after the current one
+         * \param next the next subtask
+         */
+        template <typename V, typename... DependenciesV>
+        self_type& done(subtask<V, DependenciesV...>& next){
+            activity_ptr()->done(next._combinator);
+            return *this;
+        }
+        
+        /**
+         * t2.after(t1) is equivalent to t1.done(t2)
+         * \param previous the previous subtask
+         */
+        template <typename V, typename... DependenciesV>
+        self_type& after(subtask<V, DependenciesV...>& previous){
+            previous._activity->done(_combinator);
+            return *this;
+        }
+        
+        /**
+         * Arguments for the constructor of the Activity
+         */
+        template <typename ContextT, typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+            return self_type(collector_ptr, u...);
+        }
+        
+        /**
+         * attach a callback which will be called with a reference to the activity after it has been instantiated and all its dependencies have completed.
+         */
+        template <typename PreparatorT>
+        self_type& prepare(PreparatorT prep){
+            _combinator->prepare(prep);
+            return *this;
+        }
+
+        /**
+         * Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
+         */
+        self_type& required(bool flag){ _activity->required(flag); return *this; }
+
+        protected:
+            template <typename ContextT, typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): _interaction(collector_ptr->context().interaction()){
+                _activity = std::make_shared<activity_type>(collector_ptr, u...);
+                _combinator = std::make_shared<combinator_type>(_activity);
+            }
+            
+            std::shared_ptr<activity_type> _activity;
+            std::shared_ptr<combinator_type> _combinator;
+            udho::detail::interaction_& _interaction;
     };
     
     namespace detail{
@@ -91,6 +152,8 @@ namespace activities{
         };
     }
     
+#endif
+
 }
 
 }

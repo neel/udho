@@ -58,27 +58,11 @@ namespace activities{
         friend struct subtask;
         
         subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
-        
-        /**
-         * shared pointer to the activity
-         */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
-        
-        /**
-         * reference to the underlying activity object
-         */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
-        
-        /**
-         * reference to the underlying activity object through teh * operator
-         */
-        activity_type& operator*(){
-            return activity();
-        }
+
+        std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        activity_type& activity(){ return *(_activity.get()); }
+        activity_type& operator*(){ return activity(); }
+        std::shared_ptr<activity_type> operator->(){ return _activity; }
         
         /**
          * execute task next after the current one
@@ -132,13 +116,6 @@ namespace activities{
         self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
             _activity->cancel_if(cancelor);
             return *this;
-        }
-        
-        /**
-         * returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
         }
         
         /**
@@ -201,26 +178,10 @@ namespace activities{
         
         subtask(const self_type& other): _activity(other._activity), _interaction(other._interaction){}
             
-        /**
-         * shared pointer to the activity
-         */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
-        
-        /**
-         * reference to the underlying activity object
-         */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
-        
-        /**
-         * reference to the underlying activity object through teh * operator
-         */
-        activity_type& operator*(){
-            return activity();
-        }
+        std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        std::shared_ptr<activity_type> operator->(){ return _activity; }
+        activity_type& activity(){ return *(_activity.get()); }
+        activity_type& operator*(){ return activity(); }
         
         /**
          * execute task next after the current one
@@ -263,13 +224,6 @@ namespace activities{
         self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
             _activity->cancel_if(cancelor);
             return *this;
-        }
-        
-        /**
-         * returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
         }
         
         /**
