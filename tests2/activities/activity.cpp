@@ -171,6 +171,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
 
         MinimalA1& a1 = *a1_ptr;
         MinimalA2& a2 = *a2_ptr;
+        activities::accessor<MinimalA1> accessor_a1(collector_ptr);
         activities::accessor<MinimalA2> accessor_a2(collector_ptr);
         activities::accessor<MinimalA3> accessor_a3(collector_ptr);
 
@@ -178,7 +179,15 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a1();
             a2();
 
-            THEN("the second parent activity is completed") {
+            THEN("the first parent activity is completed and failed") {
+                CHECK(accessor_a1.exists<MinimalA1>());
+                CHECK(accessor_a1.completed<MinimalA1>());
+                CHECK(!accessor_a1.canceled<MinimalA1>());
+                CHECK(!accessor_a1.okay<MinimalA1>());
+                CHECK(accessor_a1.failed<MinimalA1>());
+            }
+
+            THEN("the second parent activity is completed and successful") {
                 CHECK(accessor_a2.exists<MinimalA2>());
                 CHECK(accessor_a2.completed<MinimalA2>());
                 CHECK(!accessor_a2.canceled<MinimalA2>());
@@ -190,7 +199,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
                 CHECK(!accessor_a3.completed<MinimalA3>());
                 CHECK(accessor_a3.canceled<MinimalA3>());
                 CHECK(!accessor_a3.okay<MinimalA3>());
-                CHECK(accessor_a3.failed<MinimalA3>());
+                CHECK(!accessor_a3.failed<MinimalA3>());
             }
         }
     }
@@ -207,6 +216,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
 
         MinimalA1& a1 = *a1_ptr;
         MinimalA2& a2 = *a2_ptr;
+        activities::accessor<MinimalA1> accessor_a1(collector_ptr);
         activities::accessor<MinimalA2> accessor_a2(collector_ptr);
         activities::accessor<MinimalA3> accessor_a3(collector_ptr);
 
@@ -214,6 +224,14 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a1();
             a2();
 
+            THEN("the first parent activity is completed") {
+                CHECK(accessor_a1.exists<MinimalA1>());
+                CHECK(accessor_a1.completed<MinimalA1>());
+                CHECK(!accessor_a1.canceled<MinimalA1>());
+                CHECK(accessor_a1.okay<MinimalA1>());
+                CHECK(!accessor_a1.failed<MinimalA1>());
+            }
+            
             THEN("the second parent activity is completed") {
                 CHECK(accessor_a2.exists<MinimalA2>());
                 CHECK(accessor_a2.completed<MinimalA2>());
@@ -224,7 +242,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             THEN("the third activity is completed too") {
                 CHECK(accessor_a3.exists<MinimalA3>());
                 CHECK(accessor_a3.completed<MinimalA3>());
-                CHECK(accessor_a3.canceled<MinimalA3>());
+                CHECK(!accessor_a3.canceled<MinimalA3>());
                 CHECK(!accessor_a3.okay<MinimalA3>());
                 CHECK(accessor_a3.failed<MinimalA3>());
             }
@@ -247,7 +265,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             CHECK(accessor.completed<MinimalA1>());
             CHECK(accessor.failed<MinimalA1>());
             CHECK(!accessor.okay<MinimalA1>());
-            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(!accessor.canceled<MinimalA1>());
             CHECK(accessor.failure<MinimalA1>()._value == 24);
         }
         THEN( "then child activities are cancelled if the if_failed callback returns true" ) {
@@ -275,12 +293,12 @@ TEST_CASE( "activity basic", "[activities]" ) {
             CHECK(accessor.completed<MinimalA1>());
             CHECK(accessor.failed<MinimalA1>());
             CHECK(!accessor.okay<MinimalA1>());
-            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(!accessor.canceled<MinimalA1>());
             CHECK(accessor.failure<MinimalA1>()._value == 24);
 
             CHECK(accessor.exists<MinimalA2>());
             CHECK(!accessor.completed<MinimalA2>());
-            CHECK(accessor.failed<MinimalA2>());
+            CHECK(!accessor.failed<MinimalA2>());
             CHECK(!accessor.okay<MinimalA2>());
             CHECK(accessor.canceled<MinimalA2>());
         }
@@ -309,7 +327,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             CHECK(accessor.completed<MinimalA1>());
             CHECK(accessor.failed<MinimalA1>());
             CHECK(!accessor.okay<MinimalA1>());
-            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(!accessor.canceled<MinimalA1>());
             CHECK(accessor.failure<MinimalA1>()._value == 24);
 
             CHECK(accessor.exists<MinimalA2>());

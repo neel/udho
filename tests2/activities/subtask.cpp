@@ -220,7 +220,7 @@ TEST_CASE("subtask flow", "[activities]") {
         group.join_all();
 
         THEN("All other activities are canceled") {
-            CHECK(a0.canceled());
+            CHECK(!a0.canceled());
             CHECK(a1.canceled());
             CHECK(a2.canceled());
             CHECK(a3.canceled());
@@ -261,7 +261,7 @@ TEST_CASE("subtask flow", "[activities]") {
 
         THEN("All other activities are canceled") {
             CHECK(!a0.canceled());
-            CHECK(a1.canceled());
+            CHECK(!a1.canceled());
             CHECK(!a2.canceled());
             CHECK(a3.canceled());
             CHECK(a4.canceled());
