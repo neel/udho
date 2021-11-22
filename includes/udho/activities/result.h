@@ -103,14 +103,14 @@ namespace activities{
          * @param ftor callback of type `bool (const success_type&)` which should return true in order to cancel all child activities
          */
         void if_errored(abort_error_ftor ftor){
-            _abort_error = ftor;
+            _if_errored = ftor;
         }
         /**
          * @brief The supplied callback is called if the activity fails
          * @param ftor callback of type `bool (const failure_type&)` which should return true in order to cancel all child activities
          */
         void if_failed(abort_failure_ftor ftor){
-            _abort_failure = ftor;
+            _if_failed = ftor;
         }
         /**
          * Mark the data as cancelled then propagate the cancellation accross all child activities.
@@ -161,10 +161,10 @@ namespace activities{
                 _accessor << labeled;
                 
                 bool propagate = true;
-                if(result_type::failed() && !_abort_failure.empty()){
-                    propagate = _abort_failure(result_type::failure_data());
-                }else if(!_abort_error.empty()){
-                    propagate = _abort_error(result_type::success_data());
+                if(result_type::failed() && !_if_failed.empty()){
+                    propagate = _if_failed(result_type::failure_data());
+                }else if(!_if_errored.empty()){
+                    propagate = _if_errored(result_type::success_data());
                 }
 
                 if(propagate)   _cancelation_signals();
@@ -206,8 +206,8 @@ namespace activities{
             bool                    _required;
             cancelation_signal_type _cancelation_signals;
             cancel_if_ftor          _cancel_if;
-            abort_error_ftor        _abort_error;
-            abort_failure_ftor      _abort_failure;
+            abort_error_ftor        _if_errored;
+            abort_failure_ftor      _if_failed;
     };
     
 }
