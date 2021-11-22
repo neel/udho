@@ -119,82 +119,78 @@ using A5 = A<5>;
 using A6 = A<6>;
 using A7 = A<7>;
 
-TEST_CASE("subtask basic", "[activities]") {
+TEST_CASE("subtask flow", "[activities]") {
     boost::asio::io_service io;
     udho::servers::quiet::stateless::request_type req;
     udho::servers::quiet::stateless::attachment_type attachment(io);
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
-    auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
-    auto a0 = activities::after()       .perform<A0>(collector, 100);
-    auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
-    auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
-    auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
-    auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+    WHEN("All subtasks succeed") {
+        std::cout << "---------------------------0" << std::endl;
+        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
+        auto a0 = activities::after()       .perform<A0>(collector, 100);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
 
-    bool test_run = false;
+        bool test_run = false;
 
-    auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
-        CHECK(data.completed<A0>());
-        CHECK(data.completed<A1>());
-        CHECK(data.completed<A2>());
-        CHECK(data.completed<A3>());
-        CHECK(data.completed<A4>());
+        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+            CHECK(data.completed<A0>());
+            CHECK(data.completed<A1>());
+            CHECK(data.completed<A2>());
+            CHECK(data.completed<A3>());
+            CHECK(data.completed<A4>());
 
-        test_run = true;
-    });
+            test_run = true;
+        });
 
-    a0();
-    CHECK(!test_run);
+        a0();
+        CHECK(!test_run);
 
-    boost::thread_group group;
-    for (unsigned i = 0; i < 2; ++i){
-        group.create_thread(boost::bind(&boost::asio::io_context::run, &io));
+        boost::thread_group group;
+        for (unsigned i = 0; i < 2; ++i){
+            group.create_thread(boost::bind(&boost::asio::io_context::run, &io));
+        }
+
+        group.join_all();
+        CHECK(test_run);
+
+        THEN("all subtasks are executed in proper sequence") {
+            CHECK(a0->value() == 100*2+1); // 201
+            CHECK(a1->value() == 102*2+1); // 205
+            CHECK(a2->value() == 104*2+1); // 209
+            CHECK(a3->value() == 106*2+1); // 213
+            CHECK(a4->value() == 108*2+1); // 217
+        }
+
+        THEN("all subtasks are executed after all dependent subtasks are done") {
+            CHECK(a0->time() <= a1->time());
+            CHECK(a0->time() <= a2->time());
+            CHECK(a1->time() <= a3->time());
+            CHECK(a3->time() <= a3->time());
+            CHECK(a3->time() <= a4->time());
+        }
+
+        THEN("all subtasks can access its previous subtasks data through appropriate accessor") {
+            CHECK(a0->size() >= 0);
+            CHECK(a1->size() >= 1);
+            CHECK(a2->size() >= 1);
+            CHECK(a3->size() >= 3);
+            CHECK(a4->size() >= 4);
+
+            CHECK(*(a1->begin()+0) == 201);
+            CHECK(*(a2->begin()+0) == 201);
+            CHECK(*(a3->begin()+0) == 201);
+            CHECK(*(a3->begin()+1) == 205);
+            CHECK(*(a3->begin()+2) == 209);
+            CHECK(*(a4->begin()+0) == 201);
+            CHECK(*(a4->begin()+1) == 205);
+            CHECK(*(a4->begin()+2) == 209);
+            CHECK(*(a4->begin()+3) == 213);
+        }
     }
-
-    group.join_all();
-    CHECK(test_run);
-
-    THEN("all subtasks are executed in proper sequence") {
-        CHECK(a0->value() == 100*2+1); // 201
-        CHECK(a1->value() == 102*2+1); // 205
-        CHECK(a2->value() == 104*2+1); // 209
-        CHECK(a3->value() == 106*2+1); // 213
-        CHECK(a4->value() == 108*2+1); // 217
-    }
-
-    THEN("all subtasks are executed after all dependent subtasks are done") {
-        CHECK(a0->time() <= a1->time());
-        CHECK(a0->time() <= a2->time());
-        CHECK(a1->time() <= a3->time());
-        CHECK(a3->time() <= a3->time());
-        CHECK(a3->time() <= a4->time());
-    }
-
-    THEN("all subtasks can access its previous subtasks data through appropriate accessor") {
-        CHECK(a0->size() >= 0);
-        CHECK(a1->size() >= 1);
-        CHECK(a2->size() >= 1);
-        CHECK(a3->size() >= 3);
-        CHECK(a4->size() >= 4);
-
-        CHECK(*(a1->begin()+0) == 201);
-        CHECK(*(a2->begin()+0) == 201);
-        CHECK(*(a3->begin()+0) == 201);
-        CHECK(*(a3->begin()+1) == 205);
-        CHECK(*(a3->begin()+2) == 209);
-        CHECK(*(a4->begin()+0) == 201);
-        CHECK(*(a4->begin()+1) == 205);
-        CHECK(*(a4->begin()+2) == 209);
-        CHECK(*(a4->begin()+3) == 213);
-    }
-}
-
-TEST_CASE("subtask hooks", "[activities]") {
-    boost::asio::io_service io;
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
     WHEN("The first subtask fails") {
         std::cout << "---------------------------1" << std::endl;
