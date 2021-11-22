@@ -51,8 +51,8 @@ TEST_CASE( "activity basic", "[activities]" ) {
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
     SECTION( "construction" ) {
-        REQUIRE(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1, MinimalA2>>>&, bool>);
-        REQUIRE(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1>>>&, bool>);
+        CHECK(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1, MinimalA2>>>&, bool>);
+        CHECK(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1>>>&, bool>);
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){
@@ -61,20 +61,20 @@ TEST_CASE( "activity basic", "[activities]" ) {
         activities::accessor<MinimalA1> accessor_a1_test1(collector_a1_a2_ptr);
 
         THEN("before invocation it is failed but not okay, neither completed nor canceled") {
-            REQUIRE(!accessor_a1_test1.completed<MinimalA1>());
-            REQUIRE(!accessor_a1_test1.canceled<MinimalA1>());
-            REQUIRE(!accessor_a1_test1.okay<MinimalA1>());
-            REQUIRE(accessor_a1_test1.failed<MinimalA1>());
-            REQUIRE(!accessor_a1_test1.exists<MinimalA1>());
+            CHECK(!accessor_a1_test1.completed<MinimalA1>());
+            CHECK(!accessor_a1_test1.canceled<MinimalA1>());
+            CHECK(!accessor_a1_test1.okay<MinimalA1>());
+            CHECK(accessor_a1_test1.failed<MinimalA1>());
+            CHECK(!accessor_a1_test1.exists<MinimalA1>());
         }
 
         THEN("after successful invocation produces expected results") {
             a1_test1();
-            REQUIRE(accessor_a1_test1.completed<MinimalA1>());
-            REQUIRE(!accessor_a1_test1.failed<MinimalA1>());
-            REQUIRE(accessor_a1_test1.okay<MinimalA1>());
-            REQUIRE(accessor_a1_test1.exists<MinimalA1>());
-            REQUIRE(accessor_a1_test1.success<MinimalA1>()._value == 42);
+            CHECK(accessor_a1_test1.completed<MinimalA1>());
+            CHECK(!accessor_a1_test1.failed<MinimalA1>());
+            CHECK(accessor_a1_test1.okay<MinimalA1>());
+            CHECK(accessor_a1_test1.exists<MinimalA1>());
+            CHECK(accessor_a1_test1.success<MinimalA1>()._value == 42);
         }
     }
     WHEN("a minimal activity MinimalA1 is constructed using collector<MinimalA1>") {
@@ -84,11 +84,11 @@ TEST_CASE( "activity basic", "[activities]" ) {
 
         THEN("after UNsuccessful invocation produces expected results") {
             a1_test2();
-            REQUIRE(accessor_a1_test2.completed<MinimalA1>());
-            REQUIRE(accessor_a1_test2.failed<MinimalA1>());
-            REQUIRE(!accessor_a1_test2.okay<MinimalA1>());
-            REQUIRE(accessor_a1_test2.exists<MinimalA1>());
-            REQUIRE(accessor_a1_test2.failure<MinimalA1>()._value == 24);
+            CHECK(accessor_a1_test2.completed<MinimalA1>());
+            CHECK(accessor_a1_test2.failed<MinimalA1>());
+            CHECK(!accessor_a1_test2.okay<MinimalA1>());
+            CHECK(accessor_a1_test2.exists<MinimalA1>());
+            CHECK(accessor_a1_test2.failure<MinimalA1>()._value == 24);
         }
     }
 
@@ -107,9 +107,9 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a1();
 
             THEN("the second activity is canceled") {
-                REQUIRE(accessor_a2.exists<MinimalA2>());
-                REQUIRE(!accessor_a2.completed<MinimalA2>());
-                REQUIRE(accessor_a2.canceled<MinimalA2>());
+                CHECK(accessor_a2.exists<MinimalA2>());
+                CHECK(!accessor_a2.completed<MinimalA2>());
+                CHECK(accessor_a2.canceled<MinimalA2>());
             }
         }
     }
@@ -129,9 +129,9 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a1();
 
             THEN("the second activity is completed") {
-                REQUIRE(accessor_a2.exists<MinimalA2>());
-                REQUIRE(accessor_a2.completed<MinimalA2>());
-                REQUIRE(!accessor_a2.canceled<MinimalA2>());
+                CHECK(accessor_a2.exists<MinimalA2>());
+                CHECK(accessor_a2.completed<MinimalA2>());
+                CHECK(!accessor_a2.canceled<MinimalA2>());
             }
         }
     }
@@ -152,9 +152,9 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a1();
 
             THEN("the second activity is completed") {
-                REQUIRE(accessor_a2.exists<MinimalA2>());
-                REQUIRE(accessor_a2.completed<MinimalA2>());
-                REQUIRE(!accessor_a2.canceled<MinimalA2>());
+                CHECK(accessor_a2.exists<MinimalA2>());
+                CHECK(accessor_a2.completed<MinimalA2>());
+                CHECK(!accessor_a2.canceled<MinimalA2>());
             }
         }
     }
@@ -179,18 +179,18 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a2();
 
             THEN("the second parent activity is completed") {
-                REQUIRE(accessor_a2.exists<MinimalA2>());
-                REQUIRE(accessor_a2.completed<MinimalA2>());
-                REQUIRE(!accessor_a2.canceled<MinimalA2>());
-                REQUIRE(accessor_a2.okay<MinimalA2>());
-                REQUIRE(!accessor_a2.failed<MinimalA2>());
+                CHECK(accessor_a2.exists<MinimalA2>());
+                CHECK(accessor_a2.completed<MinimalA2>());
+                CHECK(!accessor_a2.canceled<MinimalA2>());
+                CHECK(accessor_a2.okay<MinimalA2>());
+                CHECK(!accessor_a2.failed<MinimalA2>());
             }
             THEN("the third activity is canceled") {
-                REQUIRE(accessor_a3.exists<MinimalA3>());
-                REQUIRE(!accessor_a3.completed<MinimalA3>());
-                REQUIRE(accessor_a3.canceled<MinimalA3>());
-                REQUIRE(!accessor_a3.okay<MinimalA3>());
-                REQUIRE(accessor_a3.failed<MinimalA3>());
+                CHECK(accessor_a3.exists<MinimalA3>());
+                CHECK(!accessor_a3.completed<MinimalA3>());
+                CHECK(accessor_a3.canceled<MinimalA3>());
+                CHECK(!accessor_a3.okay<MinimalA3>());
+                CHECK(accessor_a3.failed<MinimalA3>());
             }
         }
     }
@@ -215,18 +215,18 @@ TEST_CASE( "activity basic", "[activities]" ) {
             a2();
 
             THEN("the second parent activity is completed") {
-                REQUIRE(accessor_a2.exists<MinimalA2>());
-                REQUIRE(accessor_a2.completed<MinimalA2>());
-                REQUIRE(!accessor_a2.canceled<MinimalA2>());
-                REQUIRE(accessor_a2.okay<MinimalA2>());
-                REQUIRE(!accessor_a2.failed<MinimalA2>());
+                CHECK(accessor_a2.exists<MinimalA2>());
+                CHECK(accessor_a2.completed<MinimalA2>());
+                CHECK(!accessor_a2.canceled<MinimalA2>());
+                CHECK(accessor_a2.okay<MinimalA2>());
+                CHECK(!accessor_a2.failed<MinimalA2>());
             }
             THEN("the third activity is completed too") {
-                REQUIRE(accessor_a3.exists<MinimalA3>());
-                REQUIRE(accessor_a3.completed<MinimalA3>());
-                REQUIRE(accessor_a3.canceled<MinimalA3>());
-                REQUIRE(!accessor_a3.okay<MinimalA3>());
-                REQUIRE(accessor_a3.failed<MinimalA3>());
+                CHECK(accessor_a3.exists<MinimalA3>());
+                CHECK(accessor_a3.completed<MinimalA3>());
+                CHECK(accessor_a3.canceled<MinimalA3>());
+                CHECK(!accessor_a3.okay<MinimalA3>());
+                CHECK(accessor_a3.failed<MinimalA3>());
             }
         }
     }
@@ -242,13 +242,13 @@ TEST_CASE( "activity basic", "[activities]" ) {
                 return true;
             });
             a1();
-            REQUIRE(failure_value == 24);
-            REQUIRE(accessor.exists<MinimalA1>());
-            REQUIRE(accessor.completed<MinimalA1>());
-            REQUIRE(accessor.failed<MinimalA1>());
-            REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
-            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+            CHECK(failure_value == 24);
+            CHECK(accessor.exists<MinimalA1>());
+            CHECK(accessor.completed<MinimalA1>());
+            CHECK(accessor.failed<MinimalA1>());
+            CHECK(!accessor.okay<MinimalA1>());
+            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(accessor.failure<MinimalA1>()._value == 24);
         }
         THEN( "then child activities are cancelled if the if_failed callback returns true" ) {
             auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
@@ -269,20 +269,20 @@ TEST_CASE( "activity basic", "[activities]" ) {
             });
             
             a1();
-            REQUIRE(failure_value == 24);
+            CHECK(failure_value == 24);
 
-            REQUIRE(accessor.exists<MinimalA1>());
-            REQUIRE(accessor.completed<MinimalA1>());
-            REQUIRE(accessor.failed<MinimalA1>());
-            REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
-            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+            CHECK(accessor.exists<MinimalA1>());
+            CHECK(accessor.completed<MinimalA1>());
+            CHECK(accessor.failed<MinimalA1>());
+            CHECK(!accessor.okay<MinimalA1>());
+            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(accessor.failure<MinimalA1>()._value == 24);
 
-            REQUIRE(accessor.exists<MinimalA2>());
-            REQUIRE(!accessor.completed<MinimalA2>());
-            REQUIRE(accessor.failed<MinimalA2>());
-            REQUIRE(!accessor.okay<MinimalA2>());
-            REQUIRE(accessor.canceled<MinimalA2>());
+            CHECK(accessor.exists<MinimalA2>());
+            CHECK(!accessor.completed<MinimalA2>());
+            CHECK(accessor.failed<MinimalA2>());
+            CHECK(!accessor.okay<MinimalA2>());
+            CHECK(accessor.canceled<MinimalA2>());
         }
         THEN( "then child activities are not cancelled if the if_failed callback returns false" ) {
             auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
@@ -303,21 +303,21 @@ TEST_CASE( "activity basic", "[activities]" ) {
             });
             
             a1();
-            REQUIRE(failure_value == 24);
+            CHECK(failure_value == 24);
 
-            REQUIRE(accessor.exists<MinimalA1>());
-            REQUIRE(accessor.completed<MinimalA1>());
-            REQUIRE(accessor.failed<MinimalA1>());
-            REQUIRE(!accessor.okay<MinimalA1>());
-            REQUIRE(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
-            REQUIRE(accessor.failure<MinimalA1>()._value == 24);
+            CHECK(accessor.exists<MinimalA1>());
+            CHECK(accessor.completed<MinimalA1>());
+            CHECK(accessor.failed<MinimalA1>());
+            CHECK(!accessor.okay<MinimalA1>());
+            CHECK(accessor.canceled<MinimalA1>());    // TODO failed task is canceled
+            CHECK(accessor.failure<MinimalA1>()._value == 24);
 
-            REQUIRE(accessor.exists<MinimalA2>());
-            REQUIRE(accessor.completed<MinimalA2>());
-            REQUIRE(!accessor.failed<MinimalA2>());
-            REQUIRE(accessor.okay<MinimalA2>());
-            REQUIRE(!accessor.canceled<MinimalA2>());
-            REQUIRE(accessor.success<MinimalA2>()._value == 42);
+            CHECK(accessor.exists<MinimalA2>());
+            CHECK(accessor.completed<MinimalA2>());
+            CHECK(!accessor.failed<MinimalA2>());
+            CHECK(accessor.okay<MinimalA2>());
+            CHECK(!accessor.canceled<MinimalA2>());
+            CHECK(accessor.success<MinimalA2>()._value == 42);
         }
     }
 }

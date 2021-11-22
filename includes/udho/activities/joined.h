@@ -30,21 +30,22 @@
 
 #include <cstdint>
 #include <memory>
+#include <udho/activities/fwd.h>
 #include <udho/activities/collector.h>
 #include <udho/activities/accessor.h>
 #include <udho/activities/subtask.h>
 
 namespace udho{
 /**
- * \ingroup activities
+ * @ingroup activities
  */
 namespace activities{
     
-    template <typename CallbackT, typename CollectorT>
-    struct joined;
-    
     /**
-     * \ingroup activities
+     * @brief A joined activity is the final activity in the chain that consists of a callback which is called with an accessor compatiable with the collector.
+     * @note the callback is called irrespective of whether its dependencies have succeed, failed or canceled.
+     * 
+     * @ingroup activities
      */
     template <typename CallbackT, typename... T, typename ContextT>
     struct joined<CallbackT, activities::collector<ContextT, T...>>{
@@ -52,7 +53,7 @@ namespace activities{
         typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
         
-        joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback){}
+        joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback) {}
         void operator()(){  
             accessor_type accessor(_collector);
             _callback(accessor);
@@ -60,7 +61,6 @@ namespace activities{
         void cancel(){
             operator()();
         }
-
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;

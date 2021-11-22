@@ -59,10 +59,14 @@ namespace activities{
         
         subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
 
-        std::shared_ptr<activity_type> activity_ptr() { return _activity; }
-        activity_type& activity(){ return *(_activity.get()); }
-        activity_type& operator*(){ return activity(); }
-        std::shared_ptr<activity_type> operator->(){ return _activity; }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        inline activity_type& activity(){ return *(_activity.get()); }
+        inline activity_type& operator*(){ return activity(); }
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        inline bool completed() const{ return _activity->completed(); }
+        inline bool failed() const{ return _activity->failed(); }
+        inline bool canceled() const{ return _activity->canceled(); }
+        inline bool okay() const{ return _activity->okay(); }
         
         /**
          * execute task next after the current one
@@ -178,10 +182,14 @@ namespace activities{
         
         subtask(const self_type& other): _activity(other._activity), _interaction(other._interaction){}
             
-        std::shared_ptr<activity_type> activity_ptr() { return _activity; }
-        std::shared_ptr<activity_type> operator->(){ return _activity; }
-        activity_type& activity(){ return *(_activity.get()); }
-        activity_type& operator*(){ return activity(); }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        inline activity_type& activity(){ return *(_activity.get()); }
+        inline activity_type& operator*(){ return activity(); }
+        inline bool completed() const{ return _activity->completed(); }
+        inline bool failed() const{ return _activity->failed(); }
+        inline bool canceled() const{ return _activity->canceled(); }
+        inline bool okay() const{ return _activity->okay(); }
         
         /**
          * execute task next after the current one
@@ -285,23 +293,37 @@ namespace activities{
         /**
          * @brief shared pointer to the activity
          */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
         
         /**
          * @brief reference to the underlying activity object
          */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
+        inline activity_type& activity(){ return *(_activity.get()); }
         
         /**
          * @brief reference to the underlying activity object through teh * operator
          */
-        activity_type& operator*(){
-            return activity();
-        }
+        inline activity_type& operator*(){ return activity(); }
+        /**
+         * @brief returns the shared pointer to the actiivity
+         */
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        /**
+         * @brief Checks whether teh underlying activity has been completed
+         */
+        inline bool completed() const{ return _activity->completed(); }
+        /**
+         * @brief Checks whether teh underlying activity has failed
+         */
+        inline bool failed() const{ return _activity->failed(); }
+        /**
+         * @brief Checks whether teh underlying activity has been canceled
+         */
+        inline bool canceled() const{ return _activity->canceled(); }
+        /**
+         * @brief Checks whether teh underlying activity is in okay state
+         */
+        inline bool okay() const{ return _activity->okay(); }
         
         /**
          * @brief execute task next after the current one
@@ -355,13 +377,6 @@ namespace activities{
         self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
             _activity->cancel_if(cancelor);
             return *this;
-        }
-        
-        /**
-         * @brief returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
         }
         
         /**

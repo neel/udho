@@ -34,6 +34,8 @@
 #include <udho/activities/accessor.h>
 #include <udho/activities/result_data.h>
 
+#include <udho/pretty/pretty.h>
+
 namespace udho{
 /**
  * @ingroup activities
@@ -117,14 +119,22 @@ namespace activities{
          * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
          */
         void cancel(){
+            std::cout << "[activity] canceled " << udho::pretty::name<DerivedT>() << std::endl;
             _cancel();
         }
+
+        using result_type::completed;
+        using result_type::failed;
+        using result_type::canceled;
+        using result_type::okay;
+        
         protected:
             /**
              * signal successful completion of the activity with success data of type SuccessT
              * @param data success data
              */
             void success(const success_type& data){
+                std::cout << "[activity] successfull " << udho::pretty::name<DerivedT>() << std::endl;
                 result_type::success(data);
                 _finish();
             }
@@ -133,6 +143,7 @@ namespace activities{
              * @param data failure data
              */
             void failure(const failure_type& data){
+                std::cout << "[activity] failed " << udho::pretty::name<DerivedT>() << std::endl;
                 result_type::failure(data);
                 _finish();
             }

@@ -47,6 +47,9 @@ namespace activities{
     
     template <typename ActivityT, typename... DependenciesT>
     struct subtask;
+
+    template <typename CallbackT, typename CollectorT>
+    struct joined;
     
     namespace detail{
         

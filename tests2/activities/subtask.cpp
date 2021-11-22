@@ -196,22 +196,83 @@ TEST_CASE("subtask hooks", "[activities]") {
     udho::servers::quiet::stateless::attachment_type attachment(io);
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
-    auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
-    auto a0 = activities::after()       .perform<A0>(collector, 100);
-    auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
-    auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
-    auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
-    auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+    WHEN("The first subtask fails") {
+        std::cout << "---------------------------1" << std::endl;
+        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
+        auto a0 = activities::after()       .perform<A0>(collector, 100, false);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
 
-    bool test_run = false;
+        bool test_run = false;
 
-    auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
-        CHECK(data.completed<A0>());
-        CHECK(data.completed<A1>());
-        CHECK(data.completed<A2>());
-        CHECK(data.completed<A3>());
-        CHECK(data.completed<A4>());
+        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+            CHECK(data.completed<A0>());
+            CHECK(!data.completed<A1>());
+            CHECK(!data.completed<A2>());
+            CHECK(!data.completed<A3>());
+            CHECK(!data.completed<A4>());
+            test_run = true;
+        });
 
-        test_run = true;
-    });
+        a0();
+        boost::thread_group group;
+        for (unsigned i = 0; i < 2; ++i){
+            group.create_thread(boost::bind(&boost::asio::io_context::run, &io));
+        }
+        group.join_all();
+
+        THEN("All other activities are canceled") {
+            CHECK(a0.canceled());
+            CHECK(a1.canceled());
+            CHECK(a2.canceled());
+            CHECK(a3.canceled());
+            CHECK(a4.canceled());
+        }
+
+        THEN("The final subtask is run irrespective of success or failure of its dependencies") {
+            CHECK(test_run);
+        }
+    }
+
+    WHEN("The second subtask fails") {
+        std::cout << "---------------------------2" << std::endl;
+        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
+        auto a0 = activities::after()       .perform<A0>(collector, 100);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, 102, false);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+
+        bool test_run = false;
+
+        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+            CHECK(data.completed<A0>());
+            CHECK(data.completed<A1>());
+            CHECK(data.completed<A2>());
+            CHECK(!data.completed<A3>());
+            CHECK(!data.completed<A4>());
+            test_run = true;
+        });
+
+        a0();
+        boost::thread_group group;
+        for (unsigned i = 0; i < 2; ++i){
+            group.create_thread(boost::bind(&boost::asio::io_context::run, &io));
+        }
+        group.join_all();
+
+        THEN("All other activities are canceled") {
+            CHECK(!a0.canceled());
+            CHECK(a1.canceled());
+            CHECK(!a2.canceled());
+            CHECK(a3.canceled());
+            CHECK(a4.canceled());
+        }
+
+        THEN("The final subtask is run irrespective of success or failure of its dependencies") {
+            CHECK(test_run);
+        }
+    }
 }

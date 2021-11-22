@@ -115,13 +115,14 @@ namespace activities{
         
         subtask(const self_type& other): _activity(other._activity){}
                 
-        std::shared_ptr<activity_type> activity() {
-            return _activity;
-        }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        inline activity_type& activity(){ return *(_activity.get()); }
+        inline activity_type& operator*(){ return activity(); }
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
         
         /**
-         * execute task next after the current one
-         * \param next the next subtask
+         * @brief execute task next after the current one
+         * @param next the next subtask
          */
         template <typename V, typename... DependenciesV>
         self_type& done(subtask<V, DependenciesV...>& next){
@@ -130,24 +131,17 @@ namespace activities{
         }
         
         /**
-         * Arguments for the constructor of the Activity
+         * @brief Arguments for the constructor of the Activity
          */
         static self_type with(ContextT ctx){
             return self_type(ctx);
         }
         
         /**
-         * calls the `operator()()` of the activity and starts executing the graph
+         * @brief calls the `operator()()` of the activity and starts executing the graph
          */
         void operator()(){
             _activity->operator()();
-        }
-        
-        /**
-         * returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
         }
         
         protected:
