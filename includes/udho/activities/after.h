@@ -38,117 +38,117 @@ namespace activities{
     
 #ifndef __DOXYGEN__
 
-    namespace detail{
+namespace detail{
+    
+    template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
+    struct after<SubtaskT<ActivityT, DependenciesT...>>{
+        after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}
         
-        template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
-        struct after<SubtaskT<ActivityT, DependenciesT...>>{
-            after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}
-            
-            template <typename OtherActivityT, typename... OtherDependenciesT>
-            void attach(SubtaskT<OtherActivityT, OtherDependenciesT...>& sub){
-                sub.after(_before);
-            }
-            private:
-                SubtaskT<ActivityT, DependenciesT...>& _before;
-        };
-        
+        template <typename OtherActivityT, typename... OtherDependenciesT>
+        void attach(SubtaskT<OtherActivityT, OtherDependenciesT...>& sub){
+            sub.after(_before);
+        }
+        private:
+            SubtaskT<ActivityT, DependenciesT...>& _before;
+    };
+    
+}
+
+template <template <typename, typename...> class SubtaskT, typename HeadT, typename... TailT>
+struct basic_after: private basic_after<SubtaskT, TailT...>{
+    basic_after(HeadT& head, TailT&... tail): _head(head), basic_after<SubtaskT, TailT...>(tail...){}
+    
+    template <typename ActivityT, typename... Args>
+    SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
+        SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...>::with(args...);
+        attach(sub);
+        return sub;
     }
     
-    template <template <typename, typename...> class SubtaskT, typename HeadT, typename... TailT>
-    struct basic_after: private basic_after<SubtaskT, TailT...>{
-        basic_after(HeadT& head, TailT&... tail): _head(head), basic_after<SubtaskT, TailT...>(tail...){}
-        
-        template <typename ActivityT, typename... Args>
-        SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
-            SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...>::with(args...);
-            attach(sub);
-            return sub;
-        }
-        
-        // template <typename CallbackT, typename StartT>
-        // SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(StartT& starter, CallbackT callback){
-        //     SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...>::with(starter.collector(), callback);
-        //     attach(sub);
-        //     return sub;
-        // }
+    // template <typename CallbackT, typename StartT>
+    // SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(StartT& starter, CallbackT callback){
+    //     SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type, typename TailT::activity_type...>::with(starter.collector(), callback);
+    //     attach(sub);
+    //     return sub;
+    // }
 
-        template <typename CallbackT, typename ContextT, typename... T>
-        SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type, typename TailT::activity_type...> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
-            using joined_type = joined<CallbackT, collector<ContextT, T...>>;
-            using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type, typename TailT::activity_type...>;
-            joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
-            attach(sub);
-            return sub;
-        }
-
-        private:
-            detail::after<HeadT> _head;
-        protected:
-            template <typename ActivityT, typename... DependenciesT>
-            void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
-                _head.attach(sub);
-                basic_after<SubtaskT, TailT...>::attach(sub);
-            }
-    };
-    
-    template <template <typename, typename...> class SubtaskT, typename HeadT>
-    struct basic_after<SubtaskT, HeadT>{
-        basic_after(HeadT& head): _head(head){}
-        
-        template <typename ActivityT, typename... Args>
-        SubtaskT<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
-            SubtaskT<ActivityT, typename HeadT::activity_type> sub = SubtaskT<ActivityT, typename HeadT::activity_type>::with(args...);
-            attach(sub);
-            return sub;
-        }
-        
-        // template <typename CallbackT, typename StartT>
-        // SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> finish(StartT& starter, CallbackT callback){
-        //     SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type>::with(starter.collector(), callback);
-        //     attach(sub);
-        //     return sub;
-        // }
-
-        template <typename CallbackT, typename ContextT, typename... T>
-        SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
-            using joined_type = joined<CallbackT, collector<ContextT, T...>>;
-            using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type>;
-            joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
-            attach(sub);
-            return sub;
-        }
-
-        private:
-            detail::after<HeadT> _head;
-        protected:
-            template <typename ActivityT, typename... DependenciesT>
-            void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
-                _head.attach(sub);
-            }
-    };
-    
-    /**
-     * @brief conveniance function to construct subtasks with no dependencies
-     */
-    struct after_none{
-        template <typename ActivityT, typename... Args>
-        subtask<ActivityT> perform(Args&&... args){
-            return subtask<ActivityT>::with(args...);
-        }
-    };
-
-    /**
-    * @brief conveniance function to construct basic_after for activities with dependencies
-    * 
-    * @tparam T...
-    * @param dependencies... 
-    * @return udho::activities::after<T...> 
-    */
-    template <typename... T>
-    udho::activities::basic_after<subtask, T...> after(T&... dependencies){
-        return udho::activities::basic_after<subtask, T...>(dependencies...);
+    template <typename CallbackT, typename ContextT, typename... T>
+    SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type, typename TailT::activity_type...> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
+        using joined_type = joined<CallbackT, collector<ContextT, T...>>;
+        using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type, typename TailT::activity_type...>;
+        joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
+        attach(sub);
+        return sub;
     }
-    inline after_none after(){ return after_none{}; }
+
+    private:
+        detail::after<HeadT> _head;
+    protected:
+        template <typename ActivityT, typename... DependenciesT>
+        void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
+            _head.attach(sub);
+            basic_after<SubtaskT, TailT...>::attach(sub);
+        }
+};
+
+template <template <typename, typename...> class SubtaskT, typename HeadT>
+struct basic_after<SubtaskT, HeadT>{
+    basic_after(HeadT& head): _head(head){}
+    
+    template <typename ActivityT, typename... Args>
+    SubtaskT<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
+        SubtaskT<ActivityT, typename HeadT::activity_type> sub = SubtaskT<ActivityT, typename HeadT::activity_type>::with(args...);
+        attach(sub);
+        return sub;
+    }
+    
+    // template <typename CallbackT, typename StartT>
+    // SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> finish(StartT& starter, CallbackT callback){
+    //     SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type> sub = SubtaskT<joined<CallbackT, typename StartT::collector_type>, typename HeadT::activity_type>::with(starter.collector(), callback);
+    //     attach(sub);
+    //     return sub;
+    // }
+
+    template <typename CallbackT, typename ContextT, typename... T>
+    SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
+        using joined_type = joined<CallbackT, collector<ContextT, T...>>;
+        using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type>;
+        joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
+        attach(sub);
+        return sub;
+    }
+
+    private:
+        detail::after<HeadT> _head;
+    protected:
+        template <typename ActivityT, typename... DependenciesT>
+        void attach(SubtaskT<ActivityT, DependenciesT...>& sub){
+            _head.attach(sub);
+        }
+};
+
+/**
+ * @brief conveniance function to construct subtasks with no dependencies
+ */
+struct after_none{
+    template <typename ActivityT, typename... Args>
+    subtask<ActivityT> perform(Args&&... args){
+        return subtask<ActivityT>::with(args...);
+    }
+};
+
+/**
+* @brief conveniance function to construct basic_after for activities with dependencies
+* 
+* @tparam T...
+* @param dependencies... 
+* @return udho::activities::after<T...> 
+*/
+template <typename... T>
+udho::activities::basic_after<subtask, T...> after(T&... dependencies){
+    return udho::activities::basic_after<subtask, T...>(dependencies...);
+}
+inline after_none after(){ return after_none{}; }
 
 #else
 
@@ -190,7 +190,22 @@ struct basic_after{
      * @return subtask<NextActivityT, Dependencies...> 
      */
     template <typename NextActivityT, typename... Args>
-    subtask<NextActivityT, Dependencies...> perform(Args&&... args);
+    subtask<NextActivityT, typename Dependencies::activity_type...> perform(Args&&... args);
+
+    /**
+     * @brief Finish an activity chain by associating a callback, which will be invoked with an accessor containing data of compatiable with the collector.
+     * Returns a Joined subtask that depends on the dependencies specified. 
+     * @not The returned joined subtask cannot be used as a dependency for some other subtasks
+     * @tparam CallbackT 
+     * @tparam ContextT 
+     * @tparam T 
+     * @param collector_ptr 
+     * @param callback 
+     * @return SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> 
+     * @see joined
+     */
+    template <typename CallbackT, typename ContextT, typename... T>
+    SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback);
 };
 
 /**

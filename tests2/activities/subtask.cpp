@@ -144,8 +144,6 @@ TEST_CASE("subtask basic", "[activities]") {
         test_run = true;
     });
 
-    // auto a5 = activities::after(a_finished).perform<A5>(collector, 110);
-
     a0();
     CHECK(!test_run);
 
@@ -190,4 +188,30 @@ TEST_CASE("subtask basic", "[activities]") {
         CHECK(*(a4->begin()+2) == 209);
         CHECK(*(a4->begin()+3) == 213);
     }
+}
+
+TEST_CASE("subtask hooks", "[activities]") {
+    boost::asio::io_service io;
+    udho::servers::quiet::stateless::request_type req;
+    udho::servers::quiet::stateless::attachment_type attachment(io);
+    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+
+    auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
+    auto a0 = activities::after()       .perform<A0>(collector, 100);
+    auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
+    auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
+    auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
+    auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+
+    bool test_run = false;
+
+    auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+        CHECK(data.completed<A0>());
+        CHECK(data.completed<A1>());
+        CHECK(data.completed<A2>());
+        CHECK(data.completed<A3>());
+        CHECK(data.completed<A4>());
+
+        test_run = true;
+    });
 }
