@@ -3,7 +3,7 @@ stages:
   - test
 
 build:arch:
-  image: archlinux/base
+  image: archlinux/latest
   stage: build
   before_script:
     - pacman -Syu --noconfirm
@@ -18,7 +18,7 @@ build:arch:
       - build
            
 test:arch:
-  image: archlinux/base
+  image: archlinux/latest
   stage: test
   before_script:
     - pacman -Syu --noconfirm
@@ -41,7 +41,7 @@ build:ubuntu:focal:
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev
   script:
     - mkdir build
     - cd build
@@ -63,7 +63,7 @@ test:ubuntu:focal:
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev
   script:
     - cd build
     - ctest
