@@ -1,25 +1,13 @@
 stages:
-  - dox
   - build
   - test
-
-pages:
-    image: alpine
-    stage: dox
-    script:
-        - apk update && apk add doxygen graphviz ttf-freefont
-        - doxygen Doxyfile
-        - mv dox/html/ public/
-    artifacts:
-        paths:
-        - public
 
 build:arch:
   image: archlinux/base
   stage: build
   before_script:
     - pacman -Syu --noconfirm
-    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml --noconfirm
+    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
   script:
     - mkdir build
     - cd build
@@ -34,8 +22,7 @@ test:arch:
   stage: test
   before_script:
     - pacman -Syu --noconfirm
-    - pacman -S base-devel boost cmake gcc clang git curl wget --noconfirm
-    - pacman -S pugixml --noconfirm
+    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
   script:
     - cd build
     - ctest
@@ -54,7 +41,7 @@ build:ubuntu:focal:
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json-dev
   script:
     - mkdir build
     - cd build
@@ -76,7 +63,7 @@ test:ubuntu:focal:
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json-dev
   script:
     - cd build
     - ctest
