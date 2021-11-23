@@ -51,9 +51,23 @@ namespace activities{
  * @tparam T ... Activities in the chains
  */
 template <typename ContextT, typename... T>
-struct collector: udho::hazo::node<detail::labeled<T, typename T::result_type>...>, std::enable_shared_from_this<collector<ContextT, T...>>{
+struct collector: std::enable_shared_from_this<collector<ContextT, T...>>, private udho::hazo::node<detail::labeled<T, typename T::result_type>...>{
     typedef udho::hazo::node<detail::labeled<T, typename T::result_type>...> base_type;
     typedef ContextT context_type;
+
+    template <typename... X>
+    friend class accessor;
+
+    template <typename U>
+    friend collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, const U& data){
+        h.node().template data<U>() = data;
+        return h;
+    }
+    template <typename U>
+    friend const collector<ContextT, T...>& operator>>(const collector<ContextT, T...>& h, U& data){
+        data = h.node().template data<U>();
+        return h;
+    }
     
     context_type _context;
     
@@ -76,25 +90,29 @@ struct collector: udho::hazo::node<detail::labeled<T, typename T::result_type>..
      * @return const context_type& 
      */
     const context_type& context() const { return _context; }
+
+    private:
+        base_type& node() { return *this; }
+        const base_type& node() const { return *this; }
 };
 
-/**
- * @ingroup data
- */
-template <typename U, typename ContextT, typename... T>
-collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, const U& data){
-    h.template data<U>() = data;
-    return h;
-}
+// /**
+//  * @ingroup data
+//  */
+// template <typename U, typename ContextT, typename... T>
+// inline collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, U const& data){
+//     h.node().template data<U>() = data;
+//     return h;
+// }
 
-/**
- * @ingroup data
- */
-template <typename U, typename ContextT, typename... T>
-const collector<ContextT, T...>& operator>>(const collector<ContextT, T...>& h, U& data){
-    data = h.template data<U>();
-    return h;
-}
+// /**
+//  * @ingroup data
+//  */
+// template <typename U, typename ContextT, typename... T>
+// inline const collector<ContextT, T...>& operator>>(collector<ContextT, T...> const& h, U& data){
+//     data = h.node().template data<U>();
+//     return h;
+// }
 
 /**
  * @ingroup data

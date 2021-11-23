@@ -44,13 +44,16 @@ namespace activities{
  * @ingroup data
  */
 template <typename... T>
-struct accessor: udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>{
+struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>{
     typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...> base_type;
-    
+   
+    template <typename... X>
+    friend class accessor;
+
     template <typename ContextT, typename... U>
-    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(*collector){}
+    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(collector->node()){}
     template <typename... U>
-    accessor(accessor<U...> accessor): base_type(accessor) {}
+    accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
     
     /**
      * Checks Whether there exists any data for activity V and that data is initialized
@@ -158,6 +161,9 @@ struct accessor: udho::hazo::proxy<typename std::conditional<detail::is_labeled<
             d.template apply<F>(f);
         }
     }
+    private:
+        base_type& proxy() { return *this; }
+        const base_type& proxy() const { return *this; }
 };
 
 /**
