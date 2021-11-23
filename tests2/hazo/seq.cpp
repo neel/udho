@@ -572,12 +572,12 @@ TEST_CASE("sequence hana functionalities", "[hazo]") {
     REQUIRE((hana::Comparable<seq_v_type>::value));
     REQUIRE((hana::Foldable<seq_v_type>::value));
     REQUIRE((hana::Iterable<seq_v_type>::value));
-    REQUIRE(hana::size(h::make_seq_v(42, 34.5, "World")) == hana::size_c<3>);
+    REQUIRE(hana::size(h::make_seq_v(42, 34.5, "World")) == hana::size_c<3>());
 
     REQUIRE((hana::Comparable<seq_d_type>::value));
     REQUIRE((hana::Foldable<seq_d_type>::value));
     REQUIRE((hana::Iterable<seq_d_type>::value));
-    REQUIRE((hana::size(seq_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>));
+    REQUIRE((hana::size(seq_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>()));
 
     auto add = [](auto x, auto y, auto z) {
         return x + y + z;

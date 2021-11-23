@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(seq_hana){
     BOOST_CHECK((hana::Foldable<seq_v_type>::value));
     BOOST_CHECK((hana::Iterable<seq_v_type>::value));
     
-    BOOST_CHECK(hana::size(make_seq_v(42, 34.5, "World")) == hana::size_c<3>);
+    BOOST_CHECK(hana::size(make_seq_v(42, 34.5, "World")) == hana::size_c<3>());
     
     BOOST_CHECK(make_seq_v(42, 34.5, "World") != make_seq_v(42, 34.5, "Hello"));
     BOOST_CHECK(make_seq_v(1, 2, 3) == make_seq_v(1, 2, 3));
@@ -385,7 +385,7 @@ BOOST_AUTO_TEST_CASE(map_hana){
     BOOST_CHECK((hana::Struct<map_v_type>::value));
     BOOST_CHECK((hana::Searchable<map_v_type>::value));
     
-    BOOST_CHECK(hana::size(mv1) == hana::size_c<3>);
+    BOOST_CHECK(hana::size(mv1) == hana::size_c<3>());
     
     {
         std::ostringstream ss_v;

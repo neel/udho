@@ -573,13 +573,13 @@ TEST_CASE("map hana functionalities", "[hazo]") {
     REQUIRE(hana::Foldable<map_v_type>::value);
     REQUIRE(hana::Struct<map_v_type>::value);
     REQUIRE(hana::Searchable<map_v_type>::value);
-    REQUIRE(hana::size(h::make_map_v(42, 34.5, "World")) == hana::size_c<3>);
+    REQUIRE(hana::size(h::make_map_v(42, 34.5, "World")) == hana::size_c<3>());
 
     REQUIRE(hana::Comparable<map_d_type>::value);
     REQUIRE(hana::Foldable<map_d_type>::value);
     REQUIRE(hana::Struct<map_d_type>::value);
     REQUIRE(hana::Searchable<map_d_type>::value);
-    REQUIRE((hana::size(map_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>));
+    REQUIRE((hana::size(map_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>()));
 
     auto add = [](auto x, auto y, auto z) {
         return x + y + z;
