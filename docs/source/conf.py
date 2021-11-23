@@ -61,8 +61,8 @@ breathe_projects['udho'] = str(d_build_docs.absolute() / 'xml')
 subprocess.call('doxygen', shell=True)
 
 exhale_args = {
-    "containmentFolder":     str((d_build_docs / 'sphinx' / 'api').absolute()),
-    "rootFileName":          str((d_build_docs / 'sphinx' / 'root.rst').absolute()),
+    "containmentFolder":     "./api",
+    "rootFileName":          "root.rst",
     "rootFileTitle":         "Udho API",
     "doxygenStripFromPath":  "..",
     "createTreeView":        True
