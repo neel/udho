@@ -60,6 +60,14 @@ configureDoxyfile(d_docs.absolute(), d_build_docs.absolute(),  d_udho.absolute()
 breathe_projects['udho'] = str(d_build_docs.absolute() / 'xml')
 subprocess.call('doxygen', shell=True)
 
+exhale_args = {
+    "containmentFolder":     str((d_build_docs / 'sphinx' / 'api').absolute()),
+    "rootFileName":          str((d_build_docs / 'sphinx' / 'root.rst').absolute()),
+    "rootFileTitle":         "Udho API",
+    "doxygenStripFromPath":  "..",
+    "createTreeView":        True
+}
+
 if not read_the_docs_build:
     import sphinx_rtd_theme
     html_theme = 'sphinx_rtd_theme'
