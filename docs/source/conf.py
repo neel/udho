@@ -15,6 +15,18 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 import subprocess, os
+from pathlib import Path
+
+def configureDoxyfile(docs_in, docs_out, source_in):
+    with open(str((docs_in / 'Doxyfile.in').absolute()), 'r') as file :
+        filedata = file.read()
+
+    filedata = filedata.replace('@CMAKE_CURRENT_SOURCE_DIR@', str(docs_in))
+    filedata = filedata.replace('@CMAKE_CURRENT_BINARY_DIR@', str(docs_out))
+    filedata = filedata.replace('@UDHO_SOURCE_DIR@',          str(source_in))
+
+    with open('Doxyfile', 'w') as file:
+        file.write(filedata)
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -35,67 +47,18 @@ breathe_projects = {}
 breathe_default_project = "udho"
 autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 3
-output_dir = 'dox'
-subprocess.call('doxygen', shell=True)
-breathe_projects['udho'] = output_dir + '/xml'
-
-exhale_args = {
-    # These arguments are required
-    "containmentFolder":     "./api",
-    "rootFileName":          "root.rst",
-    "rootFileTitle":         "Udho API",
-    "doxygenStripFromPath":  "..",
-    # Suggested optional arguments
-    "createTreeView":        True,
-    # TIP: if using the sphinx-bootstrap-theme, you need
-    # "treeViewIsBootstrap": True,
-    "exhaleExecutesDoxygen": True,
-    "exhaleDoxygenStdin":    "INPUT = ../../includes"
-}
-
-# Tell sphinx what the primary language being documented is.
 primary_domain = 'cpp'
-
-# Tell sphinx what the pygments highlight language should be.
 highlight_language = 'cpp'
 
-breathe_projects_source = {
-    "udho" : ( "../includes/udho", [
-        "access.h", "activities.h", "application.h", "attachment.h", 
-        "bridge.h", 
-        "cache.h", "client.h", "compositors.h", "configuration.h", "connection.h", "context.h", "contexts.h", "cookie.h", 
-        "defs.h", 
-        "form.h", 
-        "listener.h", "logging.h", 
-        "page.h", "parser.h", 
-        "router.h", 
-        "scope.h", "server.h", "session.h", "sse.h", 
-        "url.h", "util.h",
-        "visitor.h",
-        "watcher.h"
-    ])
-}
+d_source     = Path(os.path.dirname(os.path.realpath(__file__)))
+d_docs       = d_source.parent
+d_udho       = d_docs.parent
+d_build      = d_udho / 'build'
+d_build_docs = d_build / 'docs'
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
-
-
-# -- Options for HTML output -------------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-# html_theme = 'alabaster'
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+configureDoxyfile(d_docs.absolute(), d_build_docs.absolute(),  d_udho.absolute())
+breathe_projects['udho'] = str(d_build_docs.absolute() / 'xml')
+subprocess.call('doxygen', shell=True)
 
 if not read_the_docs_build:
     import sphinx_rtd_theme
