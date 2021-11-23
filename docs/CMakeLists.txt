@@ -4,7 +4,7 @@ project(udho-docs)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(Doxygen)
-# find_package(Sphinx)
+find_package(Sphinx)
 
 if (DOXYGEN_FOUND)
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
@@ -27,24 +27,24 @@ if (DOXYGEN_FOUND)
     
     add_custom_target(docs DEPENDS ${DOXYGEN_XML_INDEX})
         
-    # if (SPHINX_FOUND)
-    #     set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-    #     set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-    #     set(SPHINX_INDEX ${SPHINX_BUILD}/index.html)
-    #     file(GLOB SPHINX_PAGES ${SPHINX_SOURCE}/pages/*.rst)
+    if (SPHINX_FOUND)
+        set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+        set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
+        set(SPHINX_INDEX ${SPHINX_BUILD}/index.html)
+        file(GLOB SPHINX_PAGES ${SPHINX_SOURCE}/pages/*.rst)
         
-    #     add_custom_command(
-    #         OUTPUT ${SPHINX_INDEX}
-    #         COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.dhyara=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
-    #         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    #         DEPENDS ${SPHINX_SOURCE}/index.rst ${DOXYGEN_XML_INDEX} ${SPHINX_PAGES}
-    #         MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-    #         COMMENT "Generating documentation with Sphinx"
-    #     )
-    #     add_custom_target(sphinx DEPENDS ${SPHINX_INDEX})
-    # else (SPHINX_FOUND)
-    #     message("Sphinx need to be installed to generate the sphinx documentation")
-    # endif (SPHINX_FOUND)
+        add_custom_command(
+            OUTPUT ${SPHINX_INDEX}
+            COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.dhyara=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            DEPENDS ${SPHINX_SOURCE}/index.rst ${DOXYGEN_XML_INDEX} ${SPHINX_PAGES}
+            MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
+            COMMENT "Generating documentation with Sphinx"
+        )
+        add_custom_target(sphinx DEPENDS ${SPHINX_INDEX})
+    else (SPHINX_FOUND)
+        message("Sphinx need to be installed to generate the sphinx documentation")
+    endif (SPHINX_FOUND)
         
 else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")

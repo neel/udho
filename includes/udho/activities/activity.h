@@ -178,6 +178,7 @@ namespace activities{
      * @tparam DerivedT 
      * @tparam SuccessDataT 
      * @tparam FailureDataT 
+     * @ingroup activities 
      */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
     struct activity: std::enable_shared_from_this<DerivedT>{
