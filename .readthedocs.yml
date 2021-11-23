@@ -27,4 +27,4 @@ python:
 #  fail_on_warning: false
 
 sphinx:
-  configuration: sphinx/source/conf.py
+  configuration: docs/source/conf.py
