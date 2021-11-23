@@ -65,7 +65,7 @@ if read_the_docs_build:
     d_build      = d_udho / 'build'
     d_build_docs = d_build / 'docs'
 
-    os.mkdirs(str(d_build_docs.absolute()))
+    os.makedirs(str(d_build_docs.absolute()))
 
     configureDoxyfile(d_docs.absolute(), d_build_docs.absolute(),  d_udho.absolute())
     subprocess.call('doxygen', shell=True)
