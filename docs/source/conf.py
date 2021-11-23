@@ -50,16 +50,6 @@ autosectionlabel_maxdepth = 3
 primary_domain = 'cpp'
 highlight_language = 'cpp'
 
-d_source     = Path(os.path.dirname(os.path.realpath(__file__)))
-d_docs       = d_source.parent
-d_udho       = d_docs.parent
-d_build      = d_udho / 'build'
-d_build_docs = d_build / 'docs'
-
-configureDoxyfile(d_docs.absolute(), d_build_docs.absolute(),  d_udho.absolute())
-breathe_projects['udho'] = str(d_build_docs.absolute() / 'xml')
-subprocess.call('doxygen', shell=True)
-
 exhale_args = {
     "containmentFolder":     "./api",
     "rootFileName":          "root.rst",
@@ -68,7 +58,16 @@ exhale_args = {
     "createTreeView":        True
 }
 
-if not read_the_docs_build:
+if read_the_docs_build:
+    d_source     = Path(os.path.dirname(os.path.realpath(__file__)))
+    d_docs       = d_source.parent
+    d_udho       = d_docs.parent
+    d_build      = d_udho / 'build'
+    d_build_docs = d_build / 'docs'
+    configureDoxyfile(d_docs.absolute(), d_build_docs.absolute(),  d_udho.absolute())
+    subprocess.call('doxygen', shell=True)
+    breathe_projects['udho'] = str(d_build_docs.absolute() / 'xml')
+else:
     import sphinx_rtd_theme
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
