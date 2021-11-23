@@ -2,34 +2,34 @@ stages:
   - build
   - test
 
-build:arch:
-  image: archlinux/latest
-  stage: build
-  before_script:
-    - pacman -Syu --noconfirm
-    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
-  script:
-    - mkdir build
-    - cd build
-    - cmake ..
-    - make
-  artifacts:
-    paths:
-      - build
+# build:arch:
+#   image: archlinux/latest
+#   stage: build
+#   before_script:
+#     - pacman -Syu --noconfirm
+#     - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
+#   script:
+#     - mkdir build
+#     - cd build
+#     - cmake ..
+#     - make
+#   artifacts:
+#     paths:
+#       - build
            
-test:arch:
-  image: archlinux/latest
-  stage: test
-  before_script:
-    - pacman -Syu --noconfirm
-    - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
-  script:
-    - cd build
-    - ctest
-  dependencies:
-    - build:arch
+# test:arch:
+#   image: archlinux/latest
+#   stage: test
+#   before_script:
+#     - pacman -Syu --noconfirm
+#     - pacman -S base-devel boost cmake gcc clang git curl wget pugixml nlohmann-json --noconfirm
+#   script:
+#     - cd build
+#     - ctest
+#   dependencies:
+#     - build:arch
     
-build:ubuntu:focal:
+build:ubuntu:hirsute:
   image: ubuntu:21.04
   stage: build
   variables:
@@ -45,13 +45,13 @@ build:ubuntu:focal:
   script:
     - mkdir build
     - cd build
-    - cmake ..
+    - cmake -DPostgreSQL_TYPE_INCLUDE_DIR=/usr/include/postgresql/ ..
     - make
   artifacts:
     paths:
       - build
     
-test:ubuntu:focal:
+test:ubuntu:hirsute:
   image: ubuntu:21.04
   stage: test
   variables:
@@ -68,6 +68,6 @@ test:ubuntu:focal:
     - cd build
     - ctest
   dependencies:
-    - build:ubuntu:focal
+    - build:ubuntu:hirsute
 
     
