@@ -44,7 +44,9 @@ namespace activities{
     /**
      * @brief A joined activity is the final activity in the chain that consists of a callback which is called with an accessor compatiable with the collector.
      * @note the callback is called irrespective of whether its dependencies have succeed, failed or canceled.
-     * 
+     * There can be multiple callbacks joined in the leaf of activity tree.
+     * @warning a joined subtask cannot be used as a dependency of another subtask.
+     * @see basic_after::finish
      * @ingroup activities
      */
     template <typename CallbackT, typename... T, typename ContextT>
