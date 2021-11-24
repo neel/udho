@@ -26,9 +26,13 @@ target_link_libraries(map PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 add_executable(proxy proxy.cpp)
 target_link_libraries(proxy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
+add_executable(legacy legacy.cpp)
+target_link_libraries(legacy PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+
 catch_discover_tests(meta)
 catch_discover_tests(element)
 catch_discover_tests(node)
 catch_discover_tests(proxy)
 catch_discover_tests(seq)
 catch_discover_tests(map)
+catch_discover_tests(legacy)
