@@ -283,4 +283,8 @@ TEST_CASE("subtask flow", "[activities]") {
             CHECK(test_run);
         }
     }
+
+    // WHEN("using start instead of using collector directly") {
+    //     auto start = activities::start<A0,A1,A2,A3,A4>::with(ctx);
+    // }
 }

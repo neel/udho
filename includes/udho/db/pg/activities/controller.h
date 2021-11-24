@@ -44,8 +44,8 @@ namespace activities{
  * @tparam T... Activity types that are to be performed. 
  */
 template <typename ContextT, typename... T>
-struct controller: udho::db::pg::activities::subtask<udho::activities::start<ContextT, T...>>{
-    typedef udho::activities::start<ContextT, T...> activity_type;
+struct controller: udho::db::pg::activities::subtask<udho::activities::init<ContextT, T...>>{
+    typedef udho::activities::init<ContextT, T...> activity_type;
     typedef udho::db::pg::activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;

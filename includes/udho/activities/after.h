@@ -40,6 +40,13 @@ namespace activities{
 
 namespace detail{
     
+    /**
+     * @brief specializes how a subtask will be attached with the provided subtask
+     * 
+     * @tparam SubtaskT 
+     * @tparam ActivityT 
+     * @tparam DependenciesT 
+     */
     template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
     struct after<SubtaskT<ActivityT, DependenciesT...>>{
         after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}

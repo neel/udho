@@ -280,6 +280,8 @@ namespace activities{
      * the conveniance method after.
      *
      * @see activities::after
+     * @see activities::perform
+     * @see activities::require
      * @tparam ActivityT 
      * @tparam DependenciesT...
      */

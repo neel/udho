@@ -37,38 +37,52 @@
 #include <udho/activities/fwd.h>
 #include <udho/activities/collector.h>
 #include <udho/activities/accessor.h>
+#include <udho/activities/after.h>
 
 namespace udho{
-/**
- * \ingroup activities
- */
 namespace activities{
     /**
      * @brief An empty initial activity that starts the chain of activities
-     * 
+     * Constructs a collector to collect the result of the activities provided in Activities... using the provided context.
+     * This is a special activity that always succeeds and cannot be canceled. The activity is invoked via its operator() 
+     * which succeeds and invokes all other activities that depend on this activity,
      * @tparam ContextT 
-     * @tparam T ... List of activities
+     * @tparam Activities... List of activities
+     * @ingroup activities
      */
-    template <typename ContextT, typename... T>
-    struct start{
-        typedef activities::collector<ContextT, T...> collector_type;
-        typedef activities::accessor<T...> accessor_type;
+    template <typename ContextT, typename... Activities>
+    struct init{
+        typedef activities::collector<ContextT, Activities...> collector_type;
+        typedef activities::accessor<Activities...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;
         
-        signal_type   _signal;
-        collector_ptr _collector;
-        accessor_type _accessor;
+        init(ContextT& ctx): _collector(std::make_shared<collector_type>(ctx)), _accessor(_collector){}
         
-        start(ContextT& ctx): _collector(std::make_shared<collector_type>(ctx)), _accessor(_collector){}
-        
+        /**
+         * @brief get the collector used for the activity graph
+         * 
+         * @return collector_ptr 
+         */
         collector_ptr collector() const { return _collector; }
+        /**
+         * @brief get the accessor associated with the collector
+         * 
+         * @return const accessor_type& 
+         */
         const accessor_type& accessor() const { return _accessor; }
+        /**
+         * @brief get the accessor associated with the collector
+         * 
+         * @return accessor_type& 
+         */
         accessor_type& accessor() { return _accessor; }
         
-        void operator()(){
-            success();
-        }
+        /**
+         * @brief invoke the activity, which always succeeds and as a result it starts the activity graph.
+         * 
+         */
+        void operator()(){ success(); }
         
         template <typename CombinatorT>
         void done(CombinatorT cmb){
@@ -77,14 +91,26 @@ namespace activities{
             });
             _signal.connect(fnc);
         }
-        
-        void success(){                
-            _signal();
-        }
+
+        private:
+            void success(){ _signal(); }
+
+            signal_type   _signal;
+            collector_ptr _collector;
+            accessor_type _accessor;
     };
     
+#ifndef __DOXYGEN__
+
+    /**
+     * @brief combinator specialized for init activity
+     * This combinator cannot be prepared, because no other subtask is completed before it.
+     * @tparam NextT 
+     * @tparam ContextT 
+     * @tparam T 
+     */
     template <typename NextT, typename ContextT, typename... T>
-    struct combinator<NextT, start<ContextT, T...>>{
+    struct combinator<NextT, init<ContextT, T...>>{
         typedef std::shared_ptr<NextT> next_type;
         next_type  _next;
 
@@ -105,10 +131,16 @@ namespace activities{
         }
     };
     
+    /**
+     * @brief subtask specialized for init activity
+     * This subtask does not depend on any other subtasks. So it does not have a combinator
+     * @tparam ContextT 
+     * @tparam T 
+     */
     template <typename ContextT, typename... T>
-    struct subtask<start<ContextT, T...>>{
-        typedef start<ContextT, T...> activity_type;
-        typedef subtask<start<ContextT, T...>> self_type;
+    struct subtask<init<ContextT, T...>>{
+        typedef init<ContextT, T...> activity_type;
+        typedef subtask<init<ContextT, T...>> self_type;
         
         template <typename U, typename... DependenciesU>
         friend struct subtask;
@@ -151,61 +183,124 @@ namespace activities{
             
             std::shared_ptr<activity_type> _activity;
     };
-    
-}
+#endif 
 
+/**
+ * @brief A wrapper around the subtask for init activity.
+ * @see start
+ * @tparam ContextT 
+ * @tparam T 
+ * @ingroup activities
+ */
 template <typename ContextT, typename... T>
-struct start_: activities::subtask<activities::start<ContextT, T...>>{
-    typedef activities::start<ContextT, T...> activity_type;
+struct starter: activities::subtask<activities::init<ContextT, T...>>{
+    typedef activities::init<ContextT, T...> activity_type;
     typedef activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
+    typedef typename activity_type::collector_ptr collector_ptr;
     typedef typename activity_type::accessor_type accessor_type;
     
-    start_(ContextT ctx): base(ctx){}
+    /**
+     * @brief Construct a new starter object using the context
+     * 
+     * @param ctx 
+     */
+    explicit starter(ContextT ctx): base(ctx){}
     
-    auto collector() { return base::_activity->collector(); }
-    auto data() const { return base::_activity->collector(); }
-    auto data() { return base::_activity->collector(); }
+    /**
+     * @brief get the collector for the activity graph
+     * 
+     * @return collector_ptr 
+     */
+    inline collector_ptr collector() { return base::_activity->collector(); }
+    /**
+     * @brief get the collector for the activity graph
+     * 
+     * @return collector_ptr 
+     */
+    inline collector_ptr data() const { return collector(); }
+    /**
+     * @brief get the collector for the activity graph
+     * 
+     * @return collector_ptr 
+     */
+    inline collector_ptr data() { return collector(); }
+    /**
+     * @brief get the accessor for the activity graph
+     * 
+     * @return const accessor_type& 
+     */
+    inline const accessor_type& accessor() const { return base::_activity->accessor(); }
+    /**
+     * @brief get the accessor for the activity graph
+     * 
+     * @return accessor_type& 
+     */
+    inline accessor_type& accessor() { return base::_activity->accessor(); }
     
+    /**
+     * @brief get success data of some activity in the activity graph
+     * 
+     * @tparam ActivityT 
+     * @return auto 
+     */
     template <typename ActivityT>
-    auto success() const {
-        return udho::activities::accessor<ActivityT>(data()).template success<ActivityT>();
-    }
+    auto success() const { return accessor().template success<ActivityT>(); }
+    /**
+     * @brief get failure data of some activity in the activity graph
+     * 
+     * @tparam ActivityT 
+     * @return auto 
+     */
     template <typename ActivityT>
-    auto failure() const {
-        return udho::activities::accessor<ActivityT>(data()).template failure<ActivityT>();
-    }
+    auto failure() const { return accessor().template failure<ActivityT>(); }
 };
 
-template <typename... T>
+/**
+ * @brief conveniance function to create a starter for an activity graph
+ * 
+ * @tparam Activities...
+ * @ingroup activities
+ */
+template <typename... Activities>
 struct start{
+    /**
+     * @brief construct a starter using the context provided.
+     * 
+     * @tparam ContextT 
+     * @param ctx 
+     * @return starter<ContextT, Activities...> 
+     */
     template <typename ContextT>
-    static start_<ContextT, T...> with(ContextT ctx){
-        return start_<ContextT, T...>(ctx);
+    static starter<ContextT, Activities...> with(ContextT ctx){
+        return starter<ContextT, Activities...>(ctx);
     }
     
     start() = delete;
-    start(const start<T...>&) = delete;
+    start(const start<Activities...>&) = delete;
 };
 
-namespace activities{
-    namespace detail{
+#ifndef __DOXYGEN__
+
+namespace detail{
+    
+    template <typename ContextT, typename... T>
+    struct after<udho::activities::starter<ContextT, T...>>{
+        udho::activities::starter<ContextT, T...>& _before;
         
-        template <typename ContextT, typename... T>
-        struct after<udho::start_<ContextT, T...>>{
-            udho::start_<ContextT, T...>& _before;
-            
-            after(udho::start_<ContextT, T...>& before): _before(before){}
-            
-            template <typename OtherActivityT, typename... OtherDependenciesT>
-            void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
-                sub.after(_before);
-            }
-        };
+        after(udho::activities::starter<ContextT, T...>& before): _before(before){}
         
-    }
+        template <typename OtherActivityT, typename... OtherDependenciesT>
+        void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){
+            sub.after(_before);
+        }
+    };
+    
 }
 
+#endif 
+
+}
 }
 
 #endif // UDHO_ACTIVITIES_START_H
