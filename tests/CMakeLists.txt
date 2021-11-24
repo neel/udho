@@ -15,12 +15,6 @@ TARGET_LINK_LIBRARIES(parsing ${Boost_LIBRARIES} udho)
 ADD_EXECUTABLE(client client.cpp)
 TARGET_LINK_LIBRARIES(client ${Boost_LIBRARIES} udho)
 
-ADD_EXECUTABLE(activity activity.cpp)
-TARGET_LINK_LIBRARIES(activity ${Boost_LIBRARIES} udho)
-
-# ADD_EXECUTABLE(sandbox sandbox.cpp)
-# TARGET_LINK_LIBRARIES(sandbox ${Boost_LIBRARIES} udho)
-
 ADD_EXECUTABLE(decorators decorators.cpp)
 TARGET_LINK_LIBRARIES(decorators ${Boost_LIBRARIES} udho)
 
@@ -36,7 +30,6 @@ ADD_TEST(hazo hazo --report_level=short --log_level=message --show_progress=true
 ADD_TEST(routing routing --report_level=short --log_level=message --show_progress=true)
 ADD_TEST(parsing parsing --report_level=short --log_level=message --show_progress=true)
 ADD_TEST(client client --report_level=short --log_level=message --show_progress=true)
-ADD_TEST(activity activity --report_level=short --log_level=message --show_progress=true)
 ADD_TEST(decorators decorators --report_level=short --log_level=message --show_progress=true)
 ADD_TEST(generators generators --report_level=short --log_level=message --show_progress=true)
 ADD_TEST(sql sql --report_level=short --log_level=message --show_progress=true)
