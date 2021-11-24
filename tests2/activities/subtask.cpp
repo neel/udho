@@ -135,6 +135,7 @@ TEST_CASE("subtask flow", "[activities]") {
         auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
 
         bool test_run = false;
+        bool test_run2 = false;
 
         auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
             CHECK(data.completed<A0>());
@@ -146,8 +147,18 @@ TEST_CASE("subtask flow", "[activities]") {
             test_run = true;
         });
 
+        auto a_finished2 = activities::after(a4).finish(collector, [ctx, &test_run, &test_run2](const activities::accessor<A2, A3, A4>& data){
+            CHECK(data.completed<A2>());
+            CHECK(data.completed<A3>());
+            CHECK(data.completed<A4>());
+
+            REQUIRE(test_run);
+            test_run2 = true;
+        });
+
         a0();
         CHECK(!test_run);
+        CHECK(!test_run2);
 
         boost::thread_group group;
         for (unsigned i = 0; i < 2; ++i){
@@ -156,6 +167,7 @@ TEST_CASE("subtask flow", "[activities]") {
 
         group.join_all();
         CHECK(test_run);
+        CHECK(test_run2);
 
         THEN("all subtasks are executed in proper sequence") {
             CHECK(a0->value() == 100*2+1); // 201
