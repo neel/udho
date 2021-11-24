@@ -274,8 +274,12 @@ namespace activities{
 #else 
 
     /**
-     * @brief 
-     * 
+     * @brief A subtask is an instantiation of an `activity`. The subtask reuses an activity to model different use cases by attaching dependencies.
+     * A subtask contains two shared pointers, one to the activity and another one to the combinator.
+     * The subtask cannot be instantiated directly by calling the subtask constructor. Instead call the static `with` method to instantiate. Or use 
+     * the conveniance method after.
+     *
+     * @see activities::after
      * @tparam ActivityT 
      * @tparam DependenciesT...
      */
