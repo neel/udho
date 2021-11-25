@@ -54,6 +54,13 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
     accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(collector->node()){}
     template <typename... U>
     accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
+
+    struct types{
+        template<typename X>
+        using labeled = typename std::conditional<detail::is_labeled<X>::value, X, detail::labeled<X, typename X::result_type>>::type;
+        template <typename X>
+        using exists = typename base_type::types::template exists<labeled<X>>;
+    };
     
     /**
      * Checks Whether there exists any data for activity V and that data is initialized
@@ -61,9 +68,9 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
      */
     template <typename V>
     bool exists() const{
-        using type = typename std::conditional<detail::is_labeled<V>::value, V, detail::labeled<V, typename V::result_type>>::type;
-        if(base_type::template exists<type>()){
-            const detail::labeled<V, typename V::result_type>& labeled_data = base_type::template data<type>();
+        using type = typename types:: template labeled<V>;
+        if(types::template exists<type>::value){
+            const typename types:: template labeled<V>& labeled_data = base_type::template data<type>();
             return labeled_data.initialized();
         }
         return false;
@@ -75,7 +82,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
      */
     template <typename V>
     const typename V::result_type& get() const{
-        using type = typename std::conditional<detail::is_labeled<V>::value, V, detail::labeled<V, typename V::result_type>>::type;
+        using type = typename types:: template labeled<V>;
         return base_type::template data<type>().get();
     }
     /**
