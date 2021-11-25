@@ -44,29 +44,37 @@ namespace detail{
     struct _capsule{
         typedef DataT value_type;
         typedef ValueT data_type;
-        static inline constexpr bool is_valid_v = std::is_default_constructible_v<DataT> && std::is_constructible_v<DataT, ValueT> && std::is_assignable_v<DataT, ValueT>;
         template <typename ArgT>
-        using is_constructible = std::integral_constant<bool, std::is_constructible_v<ValueT, ArgT> || std::is_constructible_v<DataT, ArgT> >;
+        using is_constructible = std::integral_constant<bool, std::is_constructible<ValueT, ArgT>::value || std::is_constructible<DataT, ArgT>::value >;
+        template <typename ArgT>
+        using is_assignable = std::integral_constant<bool, std::is_assignable<ValueT, ArgT>::value || std::is_assignable<DataT, ArgT>::value >;
+
+    #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L) 
+        static inline constexpr bool is_valid_v = std::is_default_constructible<DataT>::value && std::is_constructible<DataT, ValueT>::value && std::is_assignable<DataT, ValueT>::value;
         template <typename ArgT>
         static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
         template <typename ArgT>
-        using is_assignable = std::integral_constant<bool, std::is_assignable_v<ValueT, ArgT> || std::is_assignable_v<DataT, ArgT> >;
-        template <typename ArgT>
         static inline constexpr bool is_assignable_v = is_assignable<ArgT>::value;
+    #endif
     };
+
     template <typename DataT>
     struct _capsule<DataT, DataT>{
         typedef DataT value_type;
         typedef DataT data_type;
-        static inline constexpr bool is_valid_v = std::is_default_constructible_v<DataT>;
         template <typename ArgT>
         using is_constructible =  std::is_constructible<DataT, ArgT>;
         template <typename ArgT>
+        using is_assignable =  std::is_assignable<DataT, ArgT>;
+
+    #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L) 
+        static inline constexpr bool is_valid_v = std::is_default_constructible<DataT>::value;
+        template <typename ArgT>
         static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
         template <typename ArgT>
-        using is_assignable =  std::is_assignable<DataT, ArgT>;
-        template <typename ArgT>
         static inline constexpr bool is_assignable_v = is_assignable<ArgT>::value;
+    #endif 
+
     };
 }
 
@@ -110,7 +118,7 @@ class capsule<DataT, false>{
      * Construct through an object of data_type
      * @param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -127,7 +135,7 @@ class capsule<DataT, false>{
      * @param other 
      * @return capsule& 
      */
-    template <typename ArgT, std::enable_if_t<std::is_assignable_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_assignable<data_type, ArgT>::value, bool> = true>
     capsule& operator=(const ArgT& other) {
         _data = other.data();
         return *this;
@@ -244,7 +252,7 @@ class capsule<char[N], false>{
      * Construct through an object of data_type
      * @param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -278,13 +286,13 @@ class capsule<char[N], false>{
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * @param other another capsule
      */
-    template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_convertible<data_type, ArgT>::value, bool> = true>
     bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * @param other another capsule
      */
-    template <typename ArgT, std::enable_if_t<std::is_convertible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_convertible<data_type, ArgT>::value, bool> = true>
     bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
@@ -368,7 +376,7 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Construct through an object of data_type
      * @param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * Assign another capsule, encapsulating same type of data.
@@ -402,13 +410,13 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * @param other another capsule
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     bool operator==(const capsule<ArgT>& other) const { return _data == other.data(); }
     /**
      * Comparison operator overload to compare with another capsule, encapsulating same or convertible type of data.
      * @param other another capsule
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     bool operator!=(const capsule<ArgT>& other) const { return !operator==(other); }
     /**
      * Comparison operator overload to compare with an object of data_type.
@@ -473,9 +481,9 @@ class capsule<DataT, true>: public encapsulate<DataT>{
      */
     typedef typename encapsulate<DataT>::index_type index_type;
     
-    static_assert(std::is_default_constructible_v<value_type>, "capsule<DataT> default constructor requires DataT::value_type to be default constructible");
-    static_assert(std::is_copy_constructible_v<data_type>, "capsule<DataT> constructor requires DataT to be copy constructible");
-    static_assert(std::is_constructible_v<data_type, value_type>, "capsule<DataT> default constructor requires DataT to be constructible through DataT::value_type");
+    static_assert(std::is_default_constructible<value_type>::value, "capsule<DataT> default constructor requires DataT::value_type to be default constructible");
+    static_assert(std::is_copy_constructible<data_type>::value, "capsule<DataT> constructor requires DataT to be copy constructible");
+    static_assert(std::is_constructible<data_type, value_type>::value, "capsule<DataT> default constructor requires DataT to be constructible through DataT::value_type");
 
     /**
      * Default constructor
@@ -494,7 +502,7 @@ class capsule<DataT, true>: public encapsulate<DataT>{
      * Construct through an object of data_type
      * @param d data to be encapsulated 
      */
-    template <typename ArgT, std::enable_if_t<std::is_constructible_v<data_type, ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<std::is_constructible<data_type, ArgT>::value, bool> = true>
     capsule(const ArgT& d): _data(d){}
     /**
      * assign another capsule encapsulating the same type

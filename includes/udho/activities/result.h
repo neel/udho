@@ -124,11 +124,11 @@ namespace activities{
         typedef std::function<bool (const success_type&)> abort_error_ftor;
         typedef std::function<bool (const failure_type&)> abort_failure_ftor;
 
-        /**
-         * @param store collector
-         */
-        template <typename StoreT>
-        result(StoreT& store): _accessor(store), _required(true){}
+        template <typename ContextT, typename... U, std::enable_if_t<accessor_type::types::template compatiable_with<accessor<U...>>::value, bool> = true >
+        result(std::shared_ptr<collector<ContextT, U...>> collector): _accessor(collector), _required(true){}
+
+        template <typename... U, std::enable_if_t<accessor_type::types::template compatiable_with<accessor<U...>>::value, bool> = true >
+        result(accessor<U...>& accessor): _accessor(accessor), _required(true){}
         
         /**
          * attach another subtask as done callback which will be executed once this subtask finishes

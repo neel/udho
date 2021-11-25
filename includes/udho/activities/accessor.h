@@ -33,34 +33,82 @@
 #include <udho/activities/detail.h>
 #include <udho/activities/fwd.h>
 #include <udho/activities/collector.h>
+#include <udho/hazo/node/proxy.h>
 
 namespace udho{
 /**
  * @ingroup activities
  */
 namespace activities{
+
+#ifndef __DOXYGEN__
+
+namespace detail{
+    /**
+     * @brief Checks whether the AccessorT is is_superset_of SubAccessorT.
+     * AccessorT (e.g. accessor<X...>) is is_superset_of SubAccessorT (e.g. accessor<S...>) if S... is a subset of X... which means all s in S... must exist in X...
+     * @tparam AccessorT 
+     * @tparam SubAccessorT 
+     */
+    template <typename AccessorT, typename SubAccessorT>
+    struct is_superset_of;
+
+    template <typename... X, typename Head, typename... Tail>
+    struct is_superset_of<accessor<X...>, accessor<Head, Tail...>>{
+        using type = std::integral_constant<bool, is_superset_of<accessor<X...>, accessor<Head>>::value || is_superset_of<accessor<X...>, accessor<Tail...>>::value>;
+        enum { value = type::value };
+    };
+
+    template <typename... X, typename Y>
+    struct is_superset_of<accessor<X...>, accessor<Y>>{
+        using type = std::integral_constant<bool, accessor<X...>::types::template exists<Y>::value>;
+        enum { value = type::value };
+    };
+    template <typename SubAccessorT, typename AccessorT>
+    using is_subset_of = is_superset_of<AccessorT, SubAccessorT>;
+}
+
+#endif 
+
 /**
- * Access a subset of data from the collector
+ * @brief Access a subset of data from the collector
+ * 
  * @ingroup data
+ * @tparam Activities... A set of Activities (which might be labeled with its result type)
  */
-template <typename... T>
-struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...>{
-    typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<T>::value, T, detail::labeled<T, typename T::result_type>>::type...> base_type;
+template <typename... Activities>
+struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...>{
+    typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...> base_type;
    
     template <typename... X>
     friend class accessor;
 
-    template <typename ContextT, typename... U>
-    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(collector->node()){}
-    template <typename... U>
-    accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
-
     struct types{
+        template <typename OtherAccessorT>
+        using compatiable_with = typename detail::is_subset_of<accessor<Activities...>, OtherAccessorT>::type;
         template<typename X>
         using labeled = typename std::conditional<detail::is_labeled<X>::value, X, detail::labeled<X, typename X::result_type>>::type;
         template <typename X>
         using exists = typename base_type::types::template exists<labeled<X>>;
     };
+
+    /**
+     * @brief Construct an accessor using a shared pointer to a compatiable collector
+     * 
+     * @tparam ContextT 
+     * @tparam U... 
+     * @param collector 
+     */
+    template <typename ContextT, typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
+    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(collector->node()){}
+    /**
+     * @brief Construct an accessor using another compatiable accessor
+     * 
+     * @tparam U...
+     * @param accessor 
+     */
+    template <typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
+    accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
     
     /**
      * Checks Whether there exists any data for activity V and that data is initialized
@@ -68,9 +116,9 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
      */
     template <typename V>
     bool exists() const{
-        using type = typename types:: template labeled<V>;
+        using type = typename types::template labeled<V>;
         if(types::template exists<type>::value){
-            const typename types:: template labeled<V>& labeled_data = base_type::template data<type>();
+            const typename types::template labeled<V>& labeled_data = base_type::template data<type>();
             return labeled_data.initialized();
         }
         return false;
@@ -82,7 +130,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
      */
     template <typename V>
     const typename V::result_type& get() const{
-        using type = typename types:: template labeled<V>;
+        using type = typename types::template labeled<V>;
         return base_type::template data<type>().get();
     }
     /**
