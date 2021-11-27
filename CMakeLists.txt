@@ -194,7 +194,7 @@ foreach(h IN LISTS UDHO_HEADERS)
     list(APPEND UDHO_HEADERS_LIST ${absolute_h})
 endforeach()
 set_property(TARGET udho PROPERTY UDHO_HEADERS ${UDHO_HEADERS_LIST})
-set_property(TARGET udho PROPERTY UDHO_INCLUDE_DIRS ${INCLUDE_DIRS})
+set_property(TARGET udho PROPERTY UDHO_INCLUDE_DIRS ${INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ctti/include ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ozo/include ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ozo/contrib/resource_pool/include)
 # set_property(TARGET udho PROPERTY UDHO_FULL_INCLUDE_DIRS ${INCLUDE_DIRS} ${INCLUDE_DIRECTORIES})
 
 if(UDHO_USE_ICU)
