@@ -31,6 +31,7 @@
 #include <ozo/connection_info.h>
 #include <ozo/connection_pool.h>
 #include <ozo/request.h>
+#include <ozo/result.h>
 #include <udho/db/pg/ozo/connection.h>
 #include <udho/db/pg/ozo/io.h>
 #include <udho/db/common/common.h>
@@ -39,6 +40,7 @@
 #include <udho/db/pg/activities/controller.h>
 #include <boost/bind/bind.hpp>
 #include <boost/beast/http/message.hpp>
+#include <udho/db/pg/ozo/fwd.h>
 
 namespace udho{
 namespace db{
