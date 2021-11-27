@@ -63,7 +63,7 @@ ENDIF()
 SET(INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
-  vendor/certify/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/vendor/certify/include
 )
 
 SET(UDHO_HEADERS 
@@ -193,7 +193,9 @@ foreach(h IN LISTS UDHO_HEADERS)
     get_filename_component(absolute_h ${h} ABSOLUTE)
     list(APPEND UDHO_HEADERS_LIST ${absolute_h})
 endforeach()
-set_property(TARGET udho PROPERTY Headers ${UDHO_HEADERS_LIST})
+set_property(TARGET udho PROPERTY UDHO_HEADERS ${UDHO_HEADERS_LIST})
+set_property(TARGET udho PROPERTY UDHO_INCLUDE_DIRS ${INCLUDE_DIRS})
+# set_property(TARGET udho PROPERTY UDHO_FULL_INCLUDE_DIRS ${INCLUDE_DIRS} ${INCLUDE_DIRECTORIES})
 
 if(UDHO_USE_ICU)
     TARGET_LINK_LIBRARIES(udho PUBLIC ICU::uc ICU::in)

@@ -11,8 +11,13 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
     set(DOXYGEN_XML_DIR ${CMAKE_CURRENT_BINARY_DIR}/xml)
     set(DOXYGEN_XML_INDEX ${DOXYGEN_XML_DIR}/index.xml)
+    get_target_property(UDHO_INCLUDE_DIRS udho UDHO_INCLUDE_DIRS)
+    set(FULL_INCLUDE_COMPILER_STRING )
+    foreach(dir ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES} ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES} ${UDHO_INCLUDE_DIRS})
+        set(FULL_INCLUDE_COMPILER_STRING ${FULL_INCLUDE_COMPILER_STRING} -I${dir})
+    endforeach()
     get_target_property(UDHO_SOURCE_DIR udho SOURCE_DIR)
-    get_property(UDHO_HEADERS TARGET udho PROPERTY Headers)
+    get_property(UDHO_HEADERS TARGET udho PROPERTY UDHO_HEADERS)
 
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
@@ -50,32 +55,41 @@ else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")
 endif (DOXYGEN_FOUND)
 
+# See https://github.com/jessevdk/cldoc/issues/141
+set(CLDOC /home/neel/.local/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
+if(CLDOC STREQUAL "")
+	find_program(CLDOC cldoc)
+elseif(NOT EXISTS ${CLDOC})
+	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
+endif()
 
-# set(CLDOC /home/neel/.espressif/python_env/idf4.4_py3.9_env/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
-# if(CLDOC STREQUAL "")
-# 	find_program(CLDOC cldoc)
-# elseif(NOT EXISTS ${CLDOC})
-# 	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
-# endif()
+set(HEADERS ${UDHO_HEADERS})
 
-# set(HEADERS ${UDHO_HEADERS})
-
-# if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
-#   set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
+if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
+  set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
   
-#   message(STATUS "${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}")
+  message(STATUS "${CLDOC} generate -std=c++17 
+    ${FULL_INCLUDE_COMPILER_STRING}
+    -- 
+    --output ${CLDOC_OUT} 
+    ${HEADERS}"
+  )
   
-#   add_custom_target(cldoc COMMAND
-#     ${CLDOC} generate ${CMAKE_CXX_FLAGS} -Iincludes -Ideps/ctti/include -Ideps/certify/include -I/usr/include/c++/11.1.0 -I/usr/include/c++/11.1.0/x86_64-pc-linux-gnu -I/usr/local/include -I/usr/lib/clang/12.0.1/include -I/usr/include -- --output ${CLDOC_OUT} ${HEADERS}
-#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-#   )
+  add_custom_target(cldoc COMMAND
+    ${CLDOC} generate -std=c++17 -ferror-limit=0
+        ${FULL_INCLUDE_COMPILER_STRING} 
+        --  
+        --output ${CLDOC_OUT} 
+        ${HEADERS}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
 
-#   add_custom_target(serve_cldoc COMMAND
-#     ${CLDOC} serve -- ${CLDOC_OUT}
-#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-#   )
+  add_custom_target(serve_cldoc COMMAND
+    ${CLDOC} serve -- ${CLDOC_OUT}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
 
-#   add_dependencies(serve_cldoc cldoc)
-# else()
-#   message(STATUS "cldoc Documentation will not be generated")
-# endif()
+  add_dependencies(serve_cldoc cldoc)
+else()
+  message(STATUS "cldoc Documentation will not be generated")
+endif()
