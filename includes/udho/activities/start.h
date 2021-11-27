@@ -99,6 +99,12 @@ namespace activities{
             collector_ptr _collector;
             accessor_type _accessor;
     };
+
+    template <typename ContextT, typename... Activities>
+    struct collector_of<init<ContextT, Activities...>>{
+        using type = collector<ContextT, Activities...>;
+        static std::shared_ptr<type> apply(std::shared_ptr<init<ContextT, Activities...>> init){ return init->collector(); }
+    };
     
 #ifndef __DOXYGEN__
 

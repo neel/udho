@@ -30,43 +30,108 @@
 
 #include <string>
 #include <memory>
+#include <type_traits>
 #include <udho/activities/detail.h>
 #include <udho/activities/fwd.h>
 #include <udho/activities/collector.h>
 #include <udho/hazo/node/proxy.h>
+#include <boost/shared_ptr.hpp>
 
 namespace udho{
+namespace activities{
+
 /**
+ * @brief Checks whether the AccessorT is superset of SubAccessorT.
+ * AccessorT (e.g. accessor<X...>) is superset of SubAccessorT (e.g. accessor<S...>) if S... is a subset of X... which means all s in S... must exist in X...
+ * 
+ * @tparam AccessorT 
+ * @tparam SubAccessorT 
  * @ingroup activities
  */
-namespace activities{
+template <typename AccessorT, typename SubAccessorT>
+struct is_superset_of;
+
+/**
+ * @brief Checks whether the SubAccessorT is subset of AccessorT.
+ * 
+ * @tparam SubAccessorT 
+ * @tparam AccessorT 
+ * @ingroup activities
+ * @see is_superset_of
+ */
+template <typename SubAccessorT, typename AccessorT>
+using is_subset_of = is_superset_of<AccessorT, SubAccessorT>;
+
+/**
+ * @brief To mark a class X as Accessible (e.g. an accessor can be retrieved from and instance of X) specialize accessor_of<X>
+ * The specialization accessor_of<X> must provide a typedef named `type` which returns the type of the appropriate accessot.
+ * The specialization must also provide a static apply(X& x) method that returns an accessor of the above mentioned type from x
+ * @note If X is accessible then std::shared_ptr<X> is also accessible. No need to specialize std::shared_ptr or boost::shared_ptr
+ * @tparam AccessibleT 
+ * @ingroup activities
+ */
+template <typename AccessibleT>
+struct accessor_of{
+    using type = void;
+    type apply(const AccessibleT&) {}
+};
+
+/**
+ * @brief Checks whether the given type Xis accessible (e.g. an accessor can be retrieved from and instance of X)
+ * 
+ * @tparam AccessibleT 
+ * @ingroup activities
+ * @see accessor_of
+ */
+template <typename AccessibleT>
+using is_accessible = std::integral_constant<bool, !std::is_void<typename accessor_of<AccessibleT>::type>::value>;
+
+/**
+ * @brief Retrieve the accessor from an Accessible
+ * @see accessor_of
+ * @tparam AccessibleT 
+ * @param accessible 
+ * @return accessor_of<AccessibleT>::type 
+ * @ingroup activities
+ */
+template <typename AccessibleT>
+typename accessor_of<AccessibleT>::type accessor_from(const AccessibleT& accessible){
+    return accessor_of<AccessibleT>::apply(accessible);
+}
 
 #ifndef __DOXYGEN__
 
-namespace detail{
-    /**
-     * @brief Checks whether the AccessorT is is_superset_of SubAccessorT.
-     * AccessorT (e.g. accessor<X...>) is is_superset_of SubAccessorT (e.g. accessor<S...>) if S... is a subset of X... which means all s in S... must exist in X...
-     * @tparam AccessorT 
-     * @tparam SubAccessorT 
-     */
-    template <typename AccessorT, typename SubAccessorT>
-    struct is_superset_of;
+template <typename... X, typename Head, typename... Tail>
+struct is_superset_of<accessor<X...>, accessor<Head, Tail...>>: std::integral_constant<bool, is_superset_of<accessor<X...>, accessor<Head>>::value || is_superset_of<accessor<X...>, accessor<Tail...>>::value> {};
 
-    template <typename... X, typename Head, typename... Tail>
-    struct is_superset_of<accessor<X...>, accessor<Head, Tail...>>{
-        using type = std::integral_constant<bool, is_superset_of<accessor<X...>, accessor<Head>>::value || is_superset_of<accessor<X...>, accessor<Tail...>>::value>;
-        enum { value = type::value };
-    };
+template <typename... X, typename Y>
+struct is_superset_of<accessor<X...>, accessor<Y>>: std::integral_constant<bool, accessor<X...>::types::template exists<Y>::value> {};
 
-    template <typename... X, typename Y>
-    struct is_superset_of<accessor<X...>, accessor<Y>>{
-        using type = std::integral_constant<bool, accessor<X...>::types::template exists<Y>::value>;
-        enum { value = type::value };
-    };
-    template <typename SubAccessorT, typename AccessorT>
-    using is_subset_of = is_superset_of<AccessorT, SubAccessorT>;
-}
+template <typename AccessibleT>
+struct accessor_of<std::shared_ptr<AccessibleT>>{
+    using type = typename accessor_of<AccessibleT>::type;
+    static type apply(std::shared_ptr<AccessibleT> ptr){ return accessor_of<AccessibleT>::apply(*ptr); }
+    static type apply(std::shared_ptr<AccessibleT>& ptr){ return accessor_of<AccessibleT>::apply(*ptr); }
+};
+
+template <typename AccessibleT>
+struct accessor_of<boost::shared_ptr<AccessibleT>>{
+    using type = typename accessor_of<AccessibleT>::type;
+    static type apply(boost::shared_ptr<AccessibleT> ptr){ return accessor_of<AccessibleT>::apply(*ptr); }
+    static type apply(boost::shared_ptr<AccessibleT>& ptr){ return accessor_of<AccessibleT>::apply(*ptr); }
+};
+
+template <typename ContextT, typename... T>
+struct accessor_of<collector<ContextT, T...>>{
+    using type = accessor<T...>;
+    static type apply(collector<ContextT, T...>& collector){ return type(collector); }
+};
+
+template <typename... T>
+struct accessor_of<accessor<T...>>{
+    using type = accessor<T...>;
+    static type apply(accessor<T...>& accessor){ return accessor; }
+};
 
 #endif 
 
@@ -85,7 +150,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 
     struct types{
         template <typename OtherAccessorT>
-        using compatiable_with = typename detail::is_subset_of<accessor<Activities...>, OtherAccessorT>::type;
+        using compatiable_with = typename is_subset_of<accessor<Activities...>, OtherAccessorT>::type;
         template<typename X>
         using labeled = typename std::conditional<detail::is_labeled<X>::value, X, detail::labeled<X, typename X::result_type>>::type;
         template <typename X>
@@ -100,7 +165,17 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
      * @param collector 
      */
     template <typename ContextT, typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
-    accessor(std::shared_ptr<collector<ContextT, U...>> collector): base_type(collector->node()){}
+    accessor(std::shared_ptr<collector<ContextT, U...>> collector): accessor(*collector){}
+
+    /**
+     * @brief Construct an accessor using a shared pointer to a compatiable collector
+     * 
+     * @tparam ContextT 
+     * @tparam U... 
+     * @param collector 
+     */
+    template <typename ContextT, typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
+    accessor(collector<ContextT, U...>& collector): base_type(collector.node()){}
     /**
      * @brief Construct an accessor using another compatiable accessor
      * 
@@ -238,14 +313,6 @@ const accessor<T...>& operator>>(const accessor<T...>& h, U& data){
     data = h.template get<U>();
     return h;
 }
-
-template <typename CollectorT>
-struct accessor_of;
-
-template <typename ContextT, typename... T>
-struct accessor_of<collector<ContextT, T...>>{
-    using type = accessor<T...>;
-};
 
 }
 }

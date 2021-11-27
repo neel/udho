@@ -43,7 +43,7 @@ namespace detail{
 
     template <typename NodeT, typename ArgT, typename... T>
     struct node_is_constructible{
-        using type = std::integral_constant<bool, std::is_constructible_v<typename NodeT::data_type, ArgT> && node_is_constructible<typename NodeT::tail_type, T...>::type::value>;
+        using type = std::integral_constant<bool, std::is_constructible<typename NodeT::data_type, ArgT>::value && node_is_constructible<typename NodeT::tail_type, T...>::type::value>;
     };
 
     template <typename NodeT, typename ArgT>
@@ -105,9 +105,11 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     enum { depth = tail_type::depth +1 };
 
     template <typename ArgT, typename... T>
-    using is_constructible = detail::node_is_constructible<basic_node, ArgT, T...>;
+    using is_constructible = typename detail::node_is_constructible<basic_node, ArgT, T...>::type;
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L) 
     template <typename ArgT, typename... T>
-    static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::type::value;
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT, T...>::value;
+#endif 
 
     /// @name Constructor 
     /// @{
@@ -120,7 +122,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      * @param v value of the current node
      * @param ts ... values of the nodes in the tail
      */
-    template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible_v<ArgT, T...>, bool> = true>
+    template <typename ArgT, typename... T, std::enable_if_t<sizeof...(T) <= depth && is_constructible<ArgT, T...>::value, bool> = true>
     basic_node(const ArgT& v, const T&... ts):  tail_type(ts...), _capsule(v) {}
     /**
      * Copy constructor to construct from another node of same type
@@ -131,7 +133,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      * Construct from a node having different head and tail
      * @param other another noode of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, basic_node<OtherHeadT, OtherTailT>>, bool> = true>
+    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same<self_type, basic_node<OtherHeadT, OtherTailT>>::value, bool> = true>
     basic_node(const basic_node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
     /// @}
     
@@ -174,21 +176,21 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      * @tparam T type to match against all other node's index_type
      */
     template <typename T>
-    bool exists() const{ return std::is_same_v<index_type, T> || tail_type::template exists<T>(); }
+    bool exists() const{ return std::is_same<index_type, T>::value || tail_type::template exists<T>(); }
     
     /// @name Comparison
     /// @{
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool operator==(const OtherNodeT&) const { return false; }
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool operator==(const OtherNodeT& other) const {
         return _capsule == other._capsule && tail_type::operator==(other.tail());
     }
     template <typename OtherNodeT>
     bool operator!=(const OtherNodeT& other) const{ return !(*this == other); }
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool less(const OtherNodeT&) const { return false; }
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool less(const OtherNodeT& other) const {
         return _capsule < other._capsule && tail_type::less(other.tail());
     }
@@ -213,7 +215,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     template <typename T>
     bool set(const T& v, bool all = false){
         bool success = false;
-        if(std::is_same_v<index_type, T>){
+        if(std::is_same<index_type, T>::value){
             _capsule.set(v);
             success = true;
         }
@@ -238,24 +240,24 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /// @name capsule_at
     /// Get the N'th capsule of type T (index_type) @{
     // { capsule<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const capsule_type& capsule_at() const{ return _capsule; }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template capsule_of<T, N>& capsule_at() const{ return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     const typename types::template capsule_of<T, N>& capsule_at() const { return tail_type::template capsule_at<T, N-1>(); }
     // }
     
     // { capsule<T, N>() 
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     capsule_type& capsule_at() { return _capsule; }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     typename types::template capsule_of<T, N>& capsule_at() { return tail_type::template capsule_at<T, N-1>(); }
     // }
     /// @}
@@ -263,24 +265,24 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /// @name data
     /// Get the data of the N'th of type T (index_type) @{
     // { data<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const data_type& data() const{ return data(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template data_of<T, N>& data() const{ return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     const typename types::template data_of<T, N>& data() const { return tail_type::template data<T, N-1>(); }
     // }
     
     // { data<T, N>()
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     data_type& data() { return data(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     typename types::template data_of<T, N>& data() { return tail_type::template data<T, N-1>(); }
     // }
     
@@ -308,9 +310,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Get the data of the node identified by the key KeyT
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& data(const KeyT&){ return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value, bool> = true>
     typename types::template data_for<KeyT>& data(const KeyT& k){ return tail_type::template data<KeyT>(k); }
     // }
     
@@ -318,9 +320,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Get the data of the node identified by the key KeyT
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     const data_type& data(const KeyT&) const { return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value, bool> = true>
     const typename types::template data_for<KeyT>& data(const KeyT& k) const { return tail_type::template data<KeyT>(k); }
     // }
     
@@ -329,24 +331,24 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /// @name value
     /// Get the value of the N'th of type T (index_type) @{
     // { value<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const value_type& value() const{ return value(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template value_of<T, N>& value() const{ return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     const typename types::template value_of<T, N>& value() const { return tail_type::template value<T, N-1>(); }
     // }
     
     // { value<T, N>()
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     value_type& value() { return value(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, std::enable_if_t<N != 0 && !std::is_same<T, index_type>::value, bool> = true>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N>(); }
-    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N, int = 0, char = 0, std::enable_if_t<N != 0 && std::is_same<T, index_type>::value, bool> = true>
     typename types::template value_of<T, N>& value() { return tail_type::template value<T, N-1>(); }
     // }
 
@@ -374,9 +376,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Get the value of the node identified by the key KeyT
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     value_type& value(const KeyT&){ return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value, bool> = true>
     typename types::template value_for<KeyT>& value(const KeyT& k){ return tail_type::template value<KeyT>(k); }
     // }
     
@@ -384,9 +386,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Get the value of the node identified by the key KeyT
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     const value_type& value(const KeyT&) const { return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && !std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && !std::is_same<KeyT, key_type>::value, bool> = true>
     const typename types::template value_for<KeyT>& value(const KeyT& k) const { return tail_type::template value<KeyT>(k); }
     // }
     
@@ -408,16 +410,16 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /// @name element
     /// Get the data of the node identified by element handle @{
     // { element<ElementT>(const element_t<ElementT>&)
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<std::is_same<ElementT, index_type>::value, bool> = true>
     data_type& element(const element_t<ElementT>&) { return data(); }
-    template <typename ElementT, std::enable_if_t<!std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<!std::is_same<ElementT, index_type>::value, bool> = true>
     typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) { return tail().template element<ElementT>(e); }
     // }
     
     // { element<ElementT>(const element_t<ElementT>&) const
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<std::is_same<ElementT, index_type>::value, bool> = true>
     const data_type& element(const element_t<ElementT>&) const { return data(); }
-    template <typename ElementT, std::enable_if_t<!std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<!std::is_same<ElementT, index_type>::value, bool> = true>
     const typename types::template data_of<ElementT>& element(const element_t<ElementT>& e) const { return tail().template element<ElementT>(e); }
     // }
     /// @}
@@ -438,22 +440,22 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     /**
      * Finds data of an element by key
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
     /**
      * Finds data of an element by key
      */
-    template <typename K, std::enable_if_t<std::is_void_v<key_type> || !std::is_same_v<K, key_type>, bool> = true>
+    template <typename K, std::enable_if_t<std::is_void<key_type>::value || !std::is_same<K, key_type>::value, bool> = true>
     auto& operator[](const K& k){ return tail().template operator[]<K>(k); } 
     /**
      * Finds data of an element by key
      */
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     /**
      * Finds data of an element by key
      */
-    template <typename K, std::enable_if_t<std::is_void_v<key_type> || !std::is_same_v<K, key_type>, bool> = true>
+    template <typename K, std::enable_if_t<std::is_void<key_type>::value || !std::is_same<K, key_type>::value, bool> = true>
     const auto& operator[](const K& k) const { return tail().template operator[]<K>(k); }
     /// @} 
     
@@ -464,7 +466,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      * @{
      */
     const tail_type& next(data_type& var) const { var = data(); return tail(); } 
-    template <typename T, std::enable_if_t<!std::is_same_v<data_type, value_type> && std::is_convertible_v<value_type, T>, bool> = true>
+    template <typename T, std::enable_if_t<!std::is_same<data_type, value_type>::value && std::is_convertible<value_type, T>::value, bool> = true>
     const tail_type& next(T& var) const { var = value(); return tail(); } 
     /// @}
         
@@ -576,10 +578,12 @@ struct basic_node<HeadT, void>{
     };
 
     template <typename ArgT>
-    using is_constructible = detail::node_is_constructible<basic_node, ArgT>;
+    using is_constructible = typename detail::node_is_constructible<basic_node, ArgT>::type;
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L) 
     template <typename ArgT>
-    static inline constexpr bool is_constructible_v = is_constructible<ArgT>::type::value;
-    
+    static inline constexpr bool is_constructible_v = is_constructible<ArgT>::value;
+#endif 
+
     /**
      * @name Constructors
      * @{
@@ -591,7 +595,7 @@ struct basic_node<HeadT, void>{
     /**
      * Construct the node with any value convertible to either the date_type or the value_type of the node
      */
-    template <typename ArgT, std::enable_if_t<is_constructible_v<ArgT>, bool> = true>
+    template <typename ArgT, std::enable_if_t<is_constructible<ArgT>::value, bool> = true>
     basic_node(const ArgT& v): _capsule(v) {}
     /**
      * Default copy constructor
@@ -600,7 +604,7 @@ struct basic_node<HeadT, void>{
     /**
      * Construct from a node of different type
      */
-    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same_v<self_type, basic_node<OtherHeadT, OtherTailT>>, bool> = true>
+    template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same<self_type, basic_node<OtherHeadT, OtherTailT>>::value, bool> = true>
     basic_node(const basic_node<OtherHeadT, OtherTailT>& other) { _capsule.set(other.template data<HeadT>()); }
     /**
      * @}
@@ -640,14 +644,14 @@ struct basic_node<HeadT, void>{
      * @param other The other node to compare with
      * @return always false
      */
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool operator==(const OtherNodeT&) const { return false; }
     /**
      * Compare with another node of same depth
      * @param other The other node to compare with
      * @return the result of capsule comparator
      */
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool operator==(const OtherNodeT& other) const {
         return _capsule == other._capsule;
     }
@@ -664,13 +668,13 @@ struct basic_node<HeadT, void>{
      * @param other The other node to compare
      * @return false always
      */
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth != depth || !std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool less(const OtherNodeT&) const { return false; }
     /**
      * Less than Comparator specialized for nodes with same depth
      * @param other The other node to compare
      */
-    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same_v<typename OtherNodeT::data_type, data_type>, bool> = true>
+    template <typename OtherNodeT, std::enable_if_t<OtherNodeT::depth == depth && std::is_same<typename OtherNodeT::data_type, data_type>::value, bool> = true>
     bool less(const OtherNodeT& other) const {
         return _capsule < other._capsule;
     }
@@ -681,7 +685,7 @@ struct basic_node<HeadT, void>{
      * @tparam T Type searched
      */
     template <typename T>
-    bool exists() const{ return std::is_same_v<HeadT, T>; }
+    bool exists() const{ return std::is_same<HeadT, T>::value; }
     
     /**
      * Assignment operator to assign another node of same type
@@ -699,7 +703,7 @@ struct basic_node<HeadT, void>{
      */
     template <typename T>
     bool set(const T& v, bool){
-        if(std::is_same_v<HeadT, T>){
+        if(std::is_same<HeadT, T>::value){
             _capsule.template set<T>(v);
             return true;
         }
@@ -711,7 +715,7 @@ struct basic_node<HeadT, void>{
      * @tparam T type of the input
      * @param v input of type T
      */
-    template <int N, typename T, std::enable_if_t<N == 0 && std::is_same_v<T, data_type>, bool> = true>
+    template <int N, typename T, std::enable_if_t<N == 0 && std::is_same<T, data_type>::value, bool> = true>
     bool set(const T& v){
         _capsule.set(v);
         return true;
@@ -723,9 +727,9 @@ struct basic_node<HeadT, void>{
      * @{
      */
     // { capsule<T, N>() const
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const capsule_type& capsule_at() const{ return _capsule; }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     capsule_type& capsule_at() { return _capsule; }
     // }
     /// @}
@@ -735,17 +739,17 @@ struct basic_node<HeadT, void>{
      * Get the data of the N'th node of type T (index_type)
      * @{
      */
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const data_type& data() const{ return data(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     data_type& data() { return data(); }
     template <int N, std::enable_if_t<N == 0, bool> = true>
     const data_type& data() const { return data(); }
     template <int N, std::enable_if_t<N == 0, bool> = true>
     data_type& data() { return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     const data_type& data(const KeyT&) const{ return data(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& data(const KeyT&){ return data(); }
     /// @}
     
@@ -754,17 +758,17 @@ struct basic_node<HeadT, void>{
      * Get the value of the N'th node of type T (index_type)
      * @{
      */
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     const value_type& value() const{ return value(); }
-    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same_v<T, index_type>, bool> = true>
+    template <typename T, int N = 0, std::enable_if_t<N == 0 &&  std::is_same<T, index_type>::value, bool> = true>
     value_type& value() { return value(); }
     template <int N, std::enable_if_t<N == 0, bool> = true>
     const value_type& value() const { return value(); }
     template <int N, std::enable_if_t<N == 0, bool> = true>
     value_type& value() { return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     const value_type& value(const KeyT&) const{ return value(); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     value_type& value(const KeyT&){ return value(); }
     /// @}
     
@@ -773,9 +777,9 @@ struct basic_node<HeadT, void>{
      * Get the data of the node that matches with the given element handle
      * @{
      */
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<std::is_same<ElementT, index_type>::value, bool> = true>
     data_type& element(const element_t<ElementT>&) { return data(); }
-    template <typename ElementT, std::enable_if_t<std::is_same_v<ElementT, index_type>, bool> = true>
+    template <typename ElementT, std::enable_if_t<std::is_same<ElementT, index_type>::value, bool> = true>
     const data_type& element(const element_t<ElementT>&) const { return data(); }
     /// @}
     
@@ -786,12 +790,12 @@ struct basic_node<HeadT, void>{
      */
     template <typename ElementT>
     data_type& operator[](const element_t<ElementT>& e){ return element<ElementT>(e); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& operator[](const KeyT& k){ return data<KeyT>(k); }
     
     template <typename ElementT>
     const data_type& operator[](const element_t<ElementT>& e) const { return element<ElementT>(e); }
-    template <typename KeyT, std::enable_if_t<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>, bool> = true>
+    template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     /// @}
     
@@ -801,7 +805,7 @@ struct basic_node<HeadT, void>{
      * @{
      */
     void next(data_type& var) const { var = data(); } 
-    template <typename T, std::enable_if_t<!std::is_same_v<data_type, value_type> && std::is_convertible_v<value_type, T>, bool> = true>
+    template <typename T, std::enable_if_t<!std::is_same<data_type, value_type>::value && std::is_convertible<value_type, T>::value, bool> = true>
     void next(T& var) const { var = value(); } 
     /// @}
     
@@ -882,7 +886,7 @@ template <typename HeadT, typename TailT>
 decltype(auto) operator>>(const basic_node<HeadT, TailT>& node, HeadT& var){
     return node.next(var);
 }
-template <typename... T, typename V, std::enable_if_t<!std::is_same_v<typename basic_node<T...>::data_type, typename basic_node<T...>::value_type> && std::is_convertible_v<typename basic_node<T...>::value_type, V>, bool> = true>
+template <typename... T, typename V, std::enable_if_t<!std::is_same<typename basic_node<T...>::data_type, typename basic_node<T...>::value_type>::value && std::is_convertible<typename basic_node<T...>::value_type, V>::value, bool> = true>
 decltype(auto) operator>>(const basic_node<T...>& node, V& var){
     return node.next(var);
 }

@@ -40,7 +40,7 @@ namespace activities{
     
 /**
  * @brief A pg::subtask is the specialization of udho::activities::subtask that adds few features related to a postgresql activity 
- * - The operator[] forwards to the operator[] of teh underlying pg::activity object
+ * - The operator[] forwards to the operator[] of the underlying pg::activity object
  * - Automatically binds the default `if_failed`, `if_errored` and `cancel_if` callbacks
  * 
  * @tparam ActivityT 
@@ -122,6 +122,52 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
             subtask_base::if_errored(pg::on::error<ActivityT>(collector_ptr->context()));
             subtask_base::cancel_if(pg::on::validate<ActivityT>());
         }
+};
+
+template <typename CallbackT, typename... T, typename CtxT, typename... DependenciesT>
+struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...>: udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...>{
+    typedef udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...> subtask_base;
+    typedef subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...> self_type;
+    
+    subtask() = default;
+    subtask(const self_type& other) = default;
+    
+    /**
+     * @brief Construct a pg::subtask with a controller and additional optional arguments passed to the activity's constructor
+     * 
+     * @tparam ContextT 
+     * @tparam T... Activities
+     * @tparam U... Types of additional arguments
+     * @param controller 
+     * @param u... Additional parameters for the activity constructor
+     * @return self_type 
+     */
+    template <typename ContextT, typename... X, typename... U>
+    static self_type with(pg::activities::controller<ContextT, X...> controller, U&&... u){
+        return self_type(controller, std::forward<U>(u)...);
+    }
+    
+    /**
+     * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
+     * 
+     * @tparam ContextT 
+     * @tparam T... Activities
+     * @tparam U... Types of additional arguments
+     * @param collector_ptr 
+     * @param u... Additional parameters for the activity constructor
+     * @return self_type 
+     */
+    template <typename ContextT, typename... X, typename... U>
+    static self_type with(std::shared_ptr<udho::activities::collector<ContextT, X...>> collector_ptr, U&&... u){
+        return self_type(collector_ptr, std::forward<U>(u)...);
+    }
+    
+    protected:
+        using subtask_base::subtask_base;
+        template <typename ContextT, typename... X, typename... U>
+        subtask(pg::activities::controller<ContextT, X...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){}
+        template <typename ContextT, typename... X, typename... U>
+        subtask(std::shared_ptr<udho::activities::collector<ContextT, X...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){}
 };
     
 }

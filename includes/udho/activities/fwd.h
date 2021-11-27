@@ -35,12 +35,18 @@ namespace udho{
  * \ingroup activities
  */
 namespace activities{
-    
-    template <typename... T>
-    struct dataset;
+
+    template <typename ContextT, typename... T>
+    struct collector;
+
+    template <typename CollectorLikeT>
+    struct collector_of;
 
     template <typename... T>
     struct accessor;
+
+    template <typename AccessibleT>
+    struct accessor_of;
 
     template <typename NextT, typename... DependenciesT>
     struct combinator;

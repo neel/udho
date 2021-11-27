@@ -53,8 +53,8 @@ namespace activities{
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<DerivedT, SuccessDataT, FailureDataT>{
         typedef std::shared_ptr<DerivedT> derived_ptr_type;
         
-        template <typename StoreT>
-        activity(StoreT& store): udho::activities::result<DerivedT, SuccessDataT, FailureDataT>(store){}
+        template <typename AccessibleT, std::enable_if_t<activities::is_accessible<AccessibleT>::value, bool> = true>
+        activity(AccessibleT& accessible): udho::activities::result<DerivedT, SuccessDataT, FailureDataT>(accessible) {}
         
         /**
          * shared_ptr to this
@@ -182,26 +182,29 @@ namespace activities{
      */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
     struct activity: std::enable_shared_from_this<DerivedT>{
+        /**
+         * @brief Construct a using one of the following 
+         * - a shared pointer to a compatiable collector
+         * - a compatiable accessor
+         * .
+         * Compatiable storage implies that the storage must be capable of containing the result of this activity and zero or more other activity
+         * @tparam StoreT 
+         * @param store A compatiable storage
+         */
         template <typename StoreT>
         activity(StoreT& store);
 
-        std::shared_ptr<DerivedT> self() {
-            return std::enable_shared_from_this<DerivedT>::shared_from_this();
-        }
         /**
-         * mark the activity as required or optional
+         * @brief shared pointer to the activity
+         * 
+         * @return std::shared_ptr<DerivedT> 
+         */
+        std::shared_ptr<DerivedT> self();
+        /**
+         * @brief mark the activity as required or optional
          * @param flag 
          */
-        void required(bool flag){
-            _required = flag;
-        }
-        /**
-         * mark the activity as required or optional
-         * @param flag 
-         */
-        void required(bool flag){
-            _required = flag;
-        }
+        void required(bool flag);
         
         /// @name hooks
         /// @{
@@ -209,23 +212,17 @@ namespace activities{
          * @brief Force cancelation of the activity even after it is successful to stop propagating to the next activities
          * @param f callback of type `bool (const success_type&)` which should return true to cancel
          */
-        void cancel_if(cancel_if_ftor f){
-            _cancel_if = f;
-        }
+        void cancel_if(cancel_if_ftor f);
         /**
          * @brief Even if the activity runs successfully, it may be considered as error based on the response  
          * @param ftor callback of type `bool (const success_type&)` which should return true in order to cancel all child activities
          */
-        void if_errored(abort_error_ftor ftor){
-            _if_errored = ftor;
-        }
+        void if_errored(abort_error_ftor ftor);
         /**
          * @brief The supplied callback is called if the activity fails
          * @param ftor callback of type `bool (const failure_type&)` which should return true in order to cancel all child activities
          */
-        void if_failed(abort_failure_ftor ftor){
-            _if_failed = ftor;
-        }
+        void if_failed(abort_failure_ftor ftor);
         /// @}
         /**
          * Mark the data as cancelled then propagate the cancellation accross all child activities.
@@ -233,45 +230,32 @@ namespace activities{
          * Otherwise if there is an if_errored callback set then that is called and its boolean output is used to determine whether to propagate the cancellation or not.
          * If neither if_failed nor if_errored callback is set then the cancellation propagates to the child activities.
          */
-        void cancel(){
-            result_type::set_cancel(true);
-            _finish();
-        }
+        void cancel();
         /// @name states
         /// @{
         /**
          * @brief either success or failure data set
          * @note check exists<Activity>() before calling completed()
          */
-        inline bool completed() const{
-            return _completed;
-        }
+        inline bool completed() const;
         /**
          * @brief whether the activity has failed.
          * @note an incomplete or canceled activity is neither okay() not failed()
          */
-        inline bool failed() const{
-            return _completed && !_canceled && !_success;
-        }
+        inline bool failed() const;
         /**
          * @brief check whether the activity has been canceled
          */
-        inline bool canceled() const{
-            return _canceled;
-        }
+        inline bool canceled() const;
         /**
          * @brief 
          */
-        inline bool error() const{
-            return _completed && _success && _canceled;
-        }
+        inline bool error() const;
         /**
          * @brief whether the activity has successfully completed.
          * @note an incomplete or canceled activity is neither okay() not failed()
          */
-        inline bool okay() const{
-            return _completed && _success;
-        }
+        inline bool okay() const;
         /// @}
         /// @name data
         /// @{ 
@@ -279,49 +263,31 @@ namespace activities{
          * @brief retrieve the success data 
          * @note call okay() before calling success_data
          */
-        inline const success_type& success_data() const{
-            return _sdata;
-        }
+        inline const success_type& success_data() const;
         /**
          * @brief retrieve the failure data
          * @note call failed() before calling failure_data
          */
-        inline const failure_type& failure_data() const{
-            return _fdata;
-        }
+        inline const failure_type& failure_data() const;
         /// @}
         /**
-         * attach another subtask as done callback which will be executed once this subtask finishes
-         * @param cmb next subtask
+         * @brief attach a combinator as done callback which will be executed once this activity finishes by calling either success or failure
+         * @param cmb A combinator towards the next activity
          */
-        template <typename CombinatorT>
-        void done(CombinatorT cmb){
-            boost::function<void (const result_type&)> fnc([cmb](const result_type& data){
-                cmb->operator()(data);
-            });
-            _signal.connect(fnc);
-            boost::function<void ()> canceler([cmb](){
-                cmb->cancel();
-            });
-            _cancelation_signals.connect(canceler);
-        }
+        template <typename NextT, typename... DependenciesT>
+        void done(std::shared_ptr<combinator<NextT, DependenciesT...>> cmb);
+
         protected:
             /**
              * signal successful completion of the activity with success data of type SuccessT
              * @param data success data
              */
-            void success(const success_type& data){
-                result_type::set_success(data);
-                _finish();
-            }
+            void success(const success_type& data);
             /**
              * signal failed completion of the activity with failure data of type FailureT
              * @param data failure data
              */
-            void failure(const failure_type& data){
-                result_type::set_failure(data);
-                _finish();
-            }
+            void failure(const failure_type& data);
     };
 #endif // __DOXYGEN__
 

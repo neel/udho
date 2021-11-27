@@ -124,26 +124,23 @@ namespace activities{
         typedef std::function<bool (const success_type&)> abort_error_ftor;
         typedef std::function<bool (const failure_type&)> abort_failure_ftor;
 
-        template <typename ContextT, typename... U, std::enable_if_t<accessor_type::types::template compatiable_with<accessor<U...>>::value, bool> = true >
-        result(std::shared_ptr<collector<ContextT, U...>> collector): _accessor(collector), _required(true){}
-
-        template <typename... U, std::enable_if_t<accessor_type::types::template compatiable_with<accessor<U...>>::value, bool> = true >
-        result(accessor<U...>& accessor): _accessor(accessor), _required(true){}
+        /**
+         * @brief Construct using any accessible (e.g. collector or accessor)
+         * 
+         * @tparam AccessibleT 
+         * @param accessible 
+         */
+        template <typename AccessibleT, std::enable_if_t<activities::is_accessible<AccessibleT>::value, bool> = true>
+        result(AccessibleT& accessible): _accessor(activities::accessor_from(accessible)), _required(true){}
         
         /**
-         * attach another subtask as done callback which will be executed once this subtask finishes
+         * @brief attach another subtask as done callback which will be executed once this subtask finishes
          * @param cmb next subtask
          */
-        template <typename CombinatorT>
-        void done(CombinatorT cmb){
-            boost::function<void (const result_type&)> fnc([cmb](const result_type& data){
-                cmb->operator()(data);
-            });
-            _signal.connect(fnc);
-            boost::function<void ()> canceler([cmb](){
-                cmb->cancel();
-            });
-            _cancelation_signals.connect(canceler);
+        template <typename NextT, typename... DependenciesT>
+        void done(std::shared_ptr<combinator<NextT, DependenciesT...>> cmb){
+            _signal.connect([cmb](const result_type& data){ cmb->operator()(data); });
+            _cancelation_signals.connect([cmb](){ cmb->cancel(); });
         }
         
         /**

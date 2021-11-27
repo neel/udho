@@ -35,10 +35,53 @@
 #include <udho/activities/fwd.h>
 
 namespace udho{
+namespace activities{
+
 /**
+ * @brief Given an instance of CollectorLikeT that contains a collector inside returns the type of collector contained inside and extracts the collector
+ * @tparam CollectorLikeT 
+ */
+template <typename CollectorLikeT>
+struct collector_of{
+    using type = void;
+    static void apply(){}
+};
+
+// template <typename ContextT, typename... T>
+// struct collector_of<collector<ContextT, T...>>{
+//     using type = collector<ContextT, T...>;
+//     static std::shared_ptr<type> apply(collector<ContextT, T...>& collector){ return std::shared_ptr<type>(&collector); }
+// };
+
+template <typename ContextT, typename... T>
+struct collector_of<std::shared_ptr<collector<ContextT, T...>>>{
+    using type = collector<ContextT, T...>;
+    static std::shared_ptr<type> apply(std::shared_ptr<collector<ContextT, T...>>& collector){ return collector; }
+};
+
+/**
+ * @brief Checks whether the given type X has a collector inside (e.g. a collector can be retrieved from and instance of X)
+ * 
+ * @tparam X 
+ * @ingroup activities
+ * @see collector_of
+ */
+template <typename X>
+using has_collector = std::integral_constant<bool, !std::is_void<typename collector_of<X>::type>::value>;
+
+/**
+ * @brief Retrieve the shared_ptr to the collector from an instance of X that is expected to contain a collector inside
+ * @see collector_of
+ * @tparam X 
+ * @param x 
+ * @return std::shared_ptr<collector_of<X>::type>
  * @ingroup activities
  */
-namespace activities{
+template <typename X, std::enable_if_t<has_collector<X>::value, bool> = true>
+typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
+    return collector_of<X>::apply(x);
+}
+
 
 /**
  * @brief Collects data associated with all activities involved in the subtask graph
@@ -57,6 +100,8 @@ struct collector: std::enable_shared_from_this<collector<ContextT, T...>>, priva
 
     template <typename... X>
     friend class accessor;
+    
+    friend class accessor_of<collector<ContextT, T...>>;
 
     template <typename U>
     friend collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, const U& data){

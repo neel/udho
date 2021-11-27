@@ -51,8 +51,8 @@ TEST_CASE( "activity basic", "[activities]" ) {
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
     SECTION( "construction" ) {
-        CHECK(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1, MinimalA2>>>&, bool>);
-        CHECK(std::is_constructible_v<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, activities::dataset<MinimalA1>>>&, bool>);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, MinimalA1, MinimalA2>>&, bool>::value);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, MinimalA1>>&, bool>::value);
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){
