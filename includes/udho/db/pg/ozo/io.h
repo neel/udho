@@ -33,6 +33,7 @@
 #include <ozo/connection_info.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/schema/basic.h>
+#include <udho/db/pg/ozo/connection.h>
 #include <system_error>
 #include <boost/format.hpp>
 

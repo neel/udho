@@ -80,12 +80,12 @@ if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
   )
   
   add_custom_target(cldoc COMMAND
-    ${CLDOC} generate -std=c++17 ${UDHO_COMPILER_GLAGS} -ferror-limit=0
+    ${CLDOC} generate --static -std=c++17 -Wgnu-string-literal-operator-template ${UDHO_COMPILER_GLAGS} -ferror-limit=0 
         -DBOOST_BEAST_USE_POSIX_FILE=ON -DBOOST_BEAST_USE_POSIX_FADVISE=ON -DBOOST_HANA_CONFIG_ENABLE_STRING_UDL=ON
         -I/usr/lib/clang/13.0.0/include
         ${FULL_INCLUDE_COMPILER_STRING} 
         --  
-        --output ${CLDOC_OUT} 
+        --type html --output ${CLDOC_OUT} 
         ${HEADERS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )

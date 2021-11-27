@@ -30,6 +30,7 @@
 
 #include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/generators/fwd.h>
+#include <udho/db/pg/schema/schema.h>
 
 namespace udho{
 namespace db{

@@ -66,6 +66,9 @@ struct limited;
 template <typename FieldT, bool IsAscending = true>
 struct ascending;
 
+template <typename FromRelationT>
+struct attached;
+
 }
 }
 }

@@ -34,6 +34,7 @@
 #include <udho/db/pg/constructs/functions.h>
 #include <udho/db/pg/crud/many.h>
 #include <udho/db/pg/crud/one.h>
+#include <udho/db/pg/crud/fwd.h>
 
 namespace udho{
 namespace db{
