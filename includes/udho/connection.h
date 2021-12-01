@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -77,6 +78,9 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     std::shared_ptr<void> res_;
     send_lambda _lambda;
     boost::posix_time::ptime _time;
+
+    std::mutex _respond_mutex;
+    bool _responded;
   public:
     /**
      * session constructor
@@ -90,7 +94,8 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
           _socket(std::move(socket)),
           _strand(_socket.get_executor()),
           _lambda(*this),
-          _time(boost::posix_time::second_clock::local_time())
+          _time(boost::posix_time::second_clock::local_time()),
+          _responded(false)
           {}
     ~connection(){
         // std::cout << "destructing connection" << std::endl;
@@ -233,8 +238,14 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() - _time;
         
-        _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% responded after %4% delay") % _socket.remote_endpoint().address() % _req.method() % path % diff;
-        _lambda(std::move(msg));
+        const std::lock_guard<std::mutex> lock(_respond_mutex);
+        if(!_responded){
+            _attachment << udho::logging::messages::formatted::info("router", "%1% %2% %3% responded after %4% delay") % _socket.remote_endpoint().address() % _req.method() % path % diff;
+            _lambda(std::move(msg));
+            _responded = true;
+        }else{
+            _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% discarded redundant response after %4% delay") % _socket.remote_endpoint().address() % _req.method() % path % diff;
+        }
     }
 };
 
