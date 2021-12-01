@@ -85,7 +85,7 @@ if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
         -I/usr/lib/clang/13.0.0/include
         ${FULL_INCLUDE_COMPILER_STRING} 
         --  
-        --type html --output ${CLDOC_OUT} --static 
+        --output ${CLDOC_OUT} --report
         ${HEADERS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )

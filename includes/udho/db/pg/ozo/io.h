@@ -31,9 +31,11 @@
 #include <string>
 #include <ozo/connection_pool.h>
 #include <ozo/connection_info.h>
+#include <ozo/result.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/schema/basic.h>
 #include <udho/db/pg/ozo/connection.h>
+#include <udho/db/pg/ozo/fwd.h>
 #include <system_error>
 #include <boost/format.hpp>
 

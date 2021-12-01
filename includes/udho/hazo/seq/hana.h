@@ -29,6 +29,7 @@
 #define UDHO_HAZO_SEQ_HANA_H
 
 #include <boost/hana.hpp>
+#include <udho/hazo/seq/fwd.h>
 #include <udho/hazo/seq/tag.h>
 #include <udho/hazo/detail/extraction_helper.h>
 
