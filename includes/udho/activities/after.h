@@ -74,23 +74,15 @@ struct basic_after: private basic_after<SubtaskT, TailT...>{
     }
     
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(CollectorContainingT& collector_like, CallbackT callback){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(CollectorContainingT& collector_like, CallbackT callback, bool always = true){
         using collector_type = typename collector_of<CollectorContainingT>::type;
         using joined_type = joined<CallbackT, collector_type>;
         using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type, typename TailT::activity_type...>;
         joined_subtask_type sub = joined_subtask_type::with(collector_from(collector_like), callback);
+        sub->always(always);
         attach(sub);
         return sub;
     }
-
-    // template <typename CallbackT, typename ContextT, typename... T>
-    // SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type, typename TailT::activity_type...> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
-    //     using joined_type = joined<CallbackT, collector<ContextT, T...>>;
-    //     using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type, typename TailT::activity_type...>;
-    //     joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
-    //     attach(sub);
-    //     return sub;
-    // }
 
     private:
         detail::after<HeadT> _head;
@@ -114,23 +106,15 @@ struct basic_after<SubtaskT, HeadT>{
     }
     
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback, bool always = true){
         using collector_type = typename collector_of<CollectorContainingT>::type;
         using joined_type = joined<CallbackT, collector_type>;
         using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type>;
         joined_subtask_type sub = joined_subtask_type::with(collector_from(collector_like), callback);
+        sub->always(always);
         attach(sub);
         return sub;
     }
-
-    // template <typename CallbackT, typename ContextT, typename... T>
-    // SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename HeadT::activity_type> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback) {
-    //     using joined_type = joined<CallbackT, collector<ContextT, T...>>;
-    //     using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type>;
-    //     joined_subtask_type sub = joined_subtask_type::with(collector_ptr, callback);
-    //     attach(sub);
-    //     return sub;
-    // }
 
     private:
         detail::after<HeadT> _head;
@@ -213,13 +197,14 @@ struct basic_after{
      * @tparam CallbackT 
      * @tparam ContextT 
      * @tparam T 
-     * @param collector_ptr 
-     * @param callback 
+     * @param collector_like shared pointer to the collector or any other object that has a collector
+     * @param callback The callback (lambda function) which is to be executed.
+     * @param always if set true executes the callback even if the dependencies fails. Otherwise invokes only when the chain is successful.
      * @return SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> 
      * @see joined
      */
-    template <typename CallbackT, typename ContextT, typename... T>
-    SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> finish(std::shared_ptr<collector<ContextT, T...>> collector_ptr, CallbackT callback);
+    template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback, bool always = true){
 };
 
 /**
