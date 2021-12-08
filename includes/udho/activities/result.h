@@ -195,7 +195,7 @@ namespace activities{
              * @param data success data
              */
             void success(const success_type& data){
-                std::cout << "[activity] successfull " << udho::pretty::name<DerivedT>() << std::endl;
+                // std::cout << "[activity] successfull " << udho::pretty::name<DerivedT>() << std::endl;
                 result_type::set_success(data);
                 _finish();
             }

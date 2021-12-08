@@ -65,7 +65,7 @@ namespace detail{
     };
     template <typename DataT>
     struct check_empty<db::results<DataT>>{
-        bool operator()(const db::results<DataT>& res) const { return res.empty(); }
+        bool operator()(const db::results<DataT>& res) const { return false; }
     };
 
     template<typename TraitT, typename = void>
