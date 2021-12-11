@@ -108,7 +108,7 @@ namespace detail{
     };
     template <typename DataT>
     struct check_empty<db::results<DataT>>{
-        bool operator()(const db::results<DataT>& res) const { return false; }
+        bool operator()(const db::results<DataT>& res) const { return res.empty(); }
     };
 
     /**
@@ -232,7 +232,7 @@ struct error{
  * rejected. A true return value implies that the result is accepted as valid. And a false 
  * return value indicates an invalid success result.
  * @note The default implementation checks the `traits::allow_empty` trait for the activity.
- *       If empty result is allowed for the success result type then uses the default empty 
+ *       If empty result is NOT allowed for the success result type then uses the default empty 
  *       checker `traits::detail::check_empty` to check whether the success result is considered
  *       as empty or not.
  * @ingroup pg 
@@ -243,9 +243,9 @@ struct validate{
      * disqualifies none
      */
     bool operator()(const typename ActivityT::success_type& res){
-        if(traits::detail::adl_trait(traits::allow_empty<ActivityT>{})){
+        if(!traits::detail::adl_trait(traits::allow_empty<ActivityT>{})){
             traits::detail::check_empty<typename ActivityT::success_type> empty_checker;
-            return empty_checker(res);
+            return !empty_checker(res);
         }
         return false;
     }

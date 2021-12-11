@@ -245,6 +245,7 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             _responded = true;
         }else{
             _attachment << udho::logging::messages::formatted::warning("router", "%1% %2% %3% discarded redundant response after %4% delay") % _socket.remote_endpoint().address() % _req.method() % path % diff;
+            std::cout << msg << std::endl << "--------------------" << std::endl;
         }
     }
 };
