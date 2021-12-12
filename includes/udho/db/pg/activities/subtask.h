@@ -114,13 +114,13 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
         subtask(pg::activities::controller<ContextT, T...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){
             subtask_base::if_failed(pg::on::failure<ActivityT>(controller.context()));
             subtask_base::if_errored(pg::on::error<ActivityT>(controller.context()));
-            subtask_base::cancel_if(pg::on::validate<ActivityT>());
+            subtask_base::cancel_if(pg::on::invalid<ActivityT>());
         }
         template <typename ContextT, typename... T, typename... U>
         subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){
             subtask_base::if_failed(pg::on::failure<ActivityT>(collector_ptr->context()));
             subtask_base::if_errored(pg::on::error<ActivityT>(collector_ptr->context()));
-            subtask_base::cancel_if(pg::on::validate<ActivityT>());
+            subtask_base::cancel_if(pg::on::invalid<ActivityT>());
         }
 };
 

@@ -97,6 +97,11 @@ namespace detail{
     struct check_empty{
         bool operator()(const ResultT&) const { return false; }
     };
+    template <typename ResultT>
+    bool is_empty(const ResultT& res){
+        check_empty<ResultT> empty_checker;
+        return empty_checker(res);
+    }
     /**
      * @brief Empty checker specialized for `db::result` checks whether the result is empty or not.
      * 
@@ -196,7 +201,7 @@ struct failure{
     bool operator()(const pg::failure& f){
         std::string message = f.error.message() + f.reason;
         _ctx << pg::exception(f, message);
-        return false;
+        return true;
     }
     private:
         udho::contexts::stateless _ctx;
@@ -219,7 +224,7 @@ struct error{
     bool operator()(const typename ActivityT::success_type& d){
         boost::beast::http::status status = traits::detail::adl_trait(traits::error_code<ActivityT>{});
         _ctx << udho::exceptions::http_error(status);
-        return false;
+        return true;
     }
     private:
         udho::contexts::stateless _ctx;
@@ -238,14 +243,14 @@ struct error{
  * @ingroup pg 
  */
 template <typename ActivityT>
-struct validate{
+struct invalid{
     /**
-     * disqualifies none
+     * By default cancels none, however if the activity s[pecifies that it does not allow empty result
+     * returns true (suggests cancellation) if the result is empty.
      */
     bool operator()(const typename ActivityT::success_type& res){
         if(!traits::detail::adl_trait(traits::allow_empty<ActivityT>{})){
-            traits::detail::check_empty<typename ActivityT::success_type> empty_checker;
-            return !empty_checker(res);
+            return traits::detail::is_empty(res);
         }
         return false;
     }
