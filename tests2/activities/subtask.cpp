@@ -145,7 +145,7 @@ TEST_CASE("subtask flow", "[activities]") {
             CHECK(data.completed<A4>());
 
             test_run = true;
-        });
+        }, true);
 
         auto a_finished2 = activities::after(a4).finish(collector, [ctx, &test_run, &test_run2](const activities::accessor<A2, A3, A4>& data){
             CHECK(data.completed<A2>());
@@ -154,7 +154,7 @@ TEST_CASE("subtask flow", "[activities]") {
 
             REQUIRE(test_run);
             test_run2 = true;
-        });
+        }, true);
 
         a0();
         CHECK(!test_run);
@@ -222,7 +222,7 @@ TEST_CASE("subtask flow", "[activities]") {
             CHECK(!data.completed<A3>());
             CHECK(!data.completed<A4>());
             test_run = true;
-        });
+        }, true);
 
         a0();
         boost::thread_group group;
@@ -262,7 +262,7 @@ TEST_CASE("subtask flow", "[activities]") {
             CHECK(!data.completed<A3>());
             CHECK(!data.completed<A4>());
             test_run = true;
-        });
+        }, true);
 
         a0();
         boost::thread_group group;

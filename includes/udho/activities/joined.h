@@ -55,22 +55,27 @@ namespace activities{
         typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
         
-        joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback), _always(true) {}
+        joined(std::shared_ptr<collector_type> collector, CallbackT callback): _collector(collector), _callback(callback), _forced(false) {}
         void operator()(){  
             accessor_type accessor(_collector);
             _callback(accessor);
         }
         void cancel(){
-            if(_always){
+            if(_forced){
                 operator()();
             }
         }
-        bool always() const { return _always; }
-        void always(bool flag) { _always = flag; }
+        bool forced() const { return _forced; }
+        /**
+         * @brief force invocation of the supplied callback even if cancelled
+         * 
+         * @param flag 
+         */
+        void force(bool flag) { _forced = flag; }
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;
-            bool _always;
+            bool _forced;
     };
 
 #ifndef __DOXYGEN__
