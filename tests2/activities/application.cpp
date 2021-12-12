@@ -12,8 +12,8 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 
-#define SMALL_TIMEOUT 2
-#define LARGE_TIMEOUT 4
+#define SMALL_TIMEOUT 1
+#define LARGE_TIMEOUT 2
 
 struct A1SData{
     int value;
@@ -196,7 +196,7 @@ void unprepared(udho::contexts::stateless ctx){
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
-    }).after(t2).after(t3);
+    }).after(t2).after(t3)->force(true);
     
     t1();
 }
@@ -239,7 +239,7 @@ void prepared(udho::contexts::stateless ctx){
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
-    }).after(t2).after(t3);
+    }).after(t2).after(t3)->force(true);
     
     t1();
 }
