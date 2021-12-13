@@ -119,7 +119,6 @@ namespace detail{
  * @tparam FailureT failure data type
  * @note Both SuccessT and FailureT must be default constructible.
  * @ingroup activities
- * @ingroup data
  */
 template <typename SuccessT, typename FailureT>
 struct result_data{

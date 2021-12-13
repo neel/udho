@@ -138,7 +138,7 @@ struct accessor_of<accessor<T...>>{
 /**
  * @brief Access a subset of data from the collector
  * 
- * @ingroup data
+ * @ingroup activities
  * @tparam Activities... A set of Activities (which might be labeled with its result type)
  */
 template <typename... Activities>
@@ -148,7 +148,16 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
     template <typename... X>
     friend class accessor;
 
+    /**
+     * @brief type assistance of an accessor
+     * 
+     */
     struct types{
+        /**
+         * @brief Checks whether an other accessor is compatiable with the current accessor
+         * 
+         * @tparam OtherAccessorT 
+         */
         template <typename OtherAccessorT>
         using compatiable_with = typename is_subset_of<accessor<Activities...>, OtherAccessorT>::type;
         template<typename X>
@@ -159,7 +168,6 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 
     /**
      * @brief Construct an accessor using a shared pointer to a compatiable collector
-     * 
      * @tparam ContextT 
      * @tparam U... 
      * @param collector 
@@ -169,7 +177,6 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 
     /**
      * @brief Construct an accessor using a shared pointer to a compatiable collector
-     * 
      * @tparam ContextT 
      * @tparam U... 
      * @param collector 
@@ -178,7 +185,6 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
     accessor(collector<ContextT, U...>& collector): base_type(collector.node()){}
     /**
      * @brief Construct an accessor using another compatiable accessor
-     * 
      * @tparam U...
      * @param accessor 
      */
@@ -186,7 +192,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
     accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
     
     /**
-     * Checks Whether there exists any data for activity V and that data is initialized
+     * @brief Checks Whether there exists any data for activity V and that data is initialized
      * @tparam V Activity Type
      */
     template <typename V>
@@ -199,8 +205,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return false;
     }
     /**
-     * get data associated with activity V
-     * 
+     * @brief get data associated with activity V
      * @tparam V activity type
      */
     template <typename V>
@@ -209,7 +214,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return base_type::template data<type>().get();
     }
     /**
-     * Check whether activity V has completed.
+     * @brief Check whether activity V has completed.
      * @tparam V activity type
      */
     template <typename V>
@@ -220,7 +225,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return false;
     }
     /**
-     * Check whether activity V has been canceled.
+     * @brief Check whether activity V has been canceled.
      * @tparam V activity type
      */
     template <typename V>
@@ -231,7 +236,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return false;
     }
     /**
-     * Check whether activity V has failed (only the failure data of V is valid).
+     * @brief Check whether activity V has failed (only the failure data of V is valid).
      * @tparam V activity type
      */
     template <typename V>
@@ -242,7 +247,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return true;
     }
     /**
-     * Check whether activity V is okay.
+     * @brief Check whether activity V is okay.
      * @tparam V activity type
      */
     template <typename V>
@@ -253,7 +258,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return false;
     }
     /**
-     * get success data for activity V
+     * @brief get success data for activity V
      * @tparam V activity type
      */
     template <typename V>
@@ -264,7 +269,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         return typename V::result_type::success_type();
     }
     /**
-     * get failure data for activity V
+     * @brief get failure data for activity V
      * @tparam V activity type
      */
     template <typename V>
@@ -280,7 +285,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         base_type::template data<type>() = value;
     }
     /**
-     * Apply a callback on result of V
+     * @brief Apply a callback on result of V
      * @tparam V activity type
      * @param f callback
      */
@@ -297,7 +302,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 };
 
 /**
- * @ingroup data
+ * @ingroup activities
  */
 template <typename U, typename... T>
 accessor<T...>& operator<<(accessor<T...>& h, const U& data){
@@ -306,7 +311,7 @@ accessor<T...>& operator<<(accessor<T...>& h, const U& data){
 }
 
 /**
- * @ingroup data
+ * @ingroup activities
  */
 template <typename U, typename... T>
 const accessor<T...>& operator>>(const accessor<T...>& h, U& data){

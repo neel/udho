@@ -73,17 +73,74 @@ namespace activities{
      *
      * An activity also defines two datastructures that is supposed to store the result of successful and failed evaluations
      * as shown in the example below.
-     * @include {} snippets/activities/minimal/data.h 
+     * @code
+     * struct success_t{
+     *     int _value;
+     *     inline success_t(): _value(0){}
+     *     inline explicit success_t(int v): _value(v){}
+     * };
+     * struct failure_t{
+     *     int _value;
+     *     inline failure_t(): _value(0){}
+     *     inline explicit failure_t(int v): _value(v){}
+     * };
+     * @endcode 
      * The activity must provide a no argument operator() overload which can be called publicly. Two examples of basic minimal 
      * activities are shown below.
-     * @include {} snippets/activities/minimal/activity.h 
+     * @code 
+     * struct X: activities::activity<X, success_t, failure_t>{
+     *     using activity::activity;
+     *     void operator()() {
+     *         success(success_t{42});
+     *     }
+     * };
+     * 
+     * struct Y: activities::activity<Y, success_t, failure_t>{
+     *     using activity::activity;
+     *     void operator()() {
+     *         failure(failure_t{24});
+     *     }
+     * };
+     * @endcode 
      * In the first example the first activity X always succeeds with a success value of 42 while the second activity Y always
      * fails with a failure value of 24. The above two are very simple example. However the activities are actually intended 
      * to perform asynchronous activities as shown the the next example.
-     * @include {} snippets/activities/minimal/async_activity.h 
+     * @code
+     * struct A: activities::activity<A, success_t, failure_t>{
+     *     using activity::activity;
+     *     void operator()() {
+     *         SomeAsyncOperation op;
+     *         op.on_finish(std::bind(&X::finish, self(), _1));
+     *         op.run();
+     *     }
+     *     void finish(int answer){
+     *         success(success_t{answer});
+     *     }
+     * };
+     * @endcode 
      * A concrete example is shown below in which the activity's operator() starts a timer that after 2 seconds calls its finish 
      * method which calls success() with the success value of 42.
-     * @include {} snippets/activities/minimal/timer_activity.h 
+     * @code
+     * struct TimerActivity: udho::activity<TimerActivity, success_t, failure_t>{
+     *     boost::asio::deadline_timer _timer;
+     *     
+     *     template <typename CollectorT>
+     *     A1(CollectorT c, boost::asio::io_context& io): activity(c), _timer(io){}
+     *     
+     *     void operator()(){
+     *         _timer.expires_from_now(boost::posix_time::seconds(1));
+     *         _timer.async_wait(boost::bind(&TimerActivity::finished, self(), boost::asio::placeholders::error));
+     *     }
+     *     
+     *     void finished(const boost::system::error_code& e){
+     *         if(!e){
+     *             success(success_t{42});
+     *         }else{
+     *             failure(failure_t(24));
+     *         }
+     *     }
+     * };
+     * @endcode 
      * Some tasks may requre a chain, rather a tree of activities to complete in order to derive the final conclusion. Some
      * activities may be dependent on others. So an activity graph can be constructed by linking a dependent activity with the 
      * parent activity. All these activities store their result (success or failure) into a common collector which is provided 
@@ -97,7 +154,14 @@ namespace activities{
      * constructors of all activities A1, A2 and A3. Generally not only the collector, but also the activities are instantiated
      * as shared pointers using std::make_shared. One activity is linked with another through a combinator as shown in the
      * following example. 
-     * @include {} snippets/activities/minimal/combinator.cpp
+     * @code 
+     * auto collector = activities::collect<A1, A2>(ctx);
+     * auto a1 = std::make_shared<A1>(collector);
+     * auto a2 = std::make_shared<A2>(collector);
+     * 
+     * auto combinator = std::make_shared<activities::combinator<A2, A1>>(a2);
+     * a1->done(combinator);
+     * @endcode 
      * To link A1 with A2 we create a `combinator<A2, A1>` and pass that combinator to the done() method of A1's shared_ptr.
      * A `combinator<Next, Dependencies...>` may depend on one or more other activities. It takes the next activity as the first  
      * template parameter. In the above example the activity A2 depends on the completion of A1. Hence A1 is provided as the 

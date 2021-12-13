@@ -40,18 +40,13 @@ namespace activities{
 /**
  * @brief Given an instance of CollectorLikeT that contains a collector inside returns the type of collector contained inside and extracts the collector
  * @tparam CollectorLikeT 
+ * @ingroup activities
  */
 template <typename CollectorLikeT>
 struct collector_of{
     using type = void;
     static void apply(){}
 };
-
-// template <typename ContextT, typename... T>
-// struct collector_of<collector<ContextT, T...>>{
-//     using type = collector<ContextT, T...>;
-//     static std::shared_ptr<type> apply(collector<ContextT, T...>& collector){ return std::shared_ptr<type>(&collector); }
-// };
 
 template <typename ContextT, typename... T>
 struct collector_of<std::shared_ptr<collector<ContextT, T...>>>{
@@ -84,14 +79,14 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
 
 
 /**
- * @brief Collects data associated with all activities involved in the subtask graph
+ * @brief Collects data associated with all activities involved in the subtask graph.
  * For storage the @ref hazo::node is used internally which expects each ActivityT to 
  * have typedef ActivityT::result_type which is and instance of result_data<SuccessT, FailureT>
  * where SuccessT and FailureT denotes success and failure types associated with ActivityT.
  * Collector extends the lifetime of HTTP request by copying the context object. 
- * @ingroup data
  * @tparam ContextT 
  * @tparam T ... Activities in the chains
+ * @ingroup activities
  */
 template <typename ContextT, typename... T>
 struct collector: std::enable_shared_from_this<collector<ContextT, T...>>, private udho::hazo::node<detail::labeled<T, typename T::result_type>...>{
@@ -141,26 +136,13 @@ struct collector: std::enable_shared_from_this<collector<ContextT, T...>>, priva
         const base_type& node() const { return *this; }
 };
 
-// /**
-//  * @ingroup data
-//  */
-// template <typename U, typename ContextT, typename... T>
-// inline collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, U const& data){
-//     h.node().template data<U>() = data;
-//     return h;
-// }
-
-// /**
-//  * @ingroup data
-//  */
-// template <typename U, typename ContextT, typename... T>
-// inline const collector<ContextT, T...>& operator>>(collector<ContextT, T...> const& h, U& data){
-//     data = h.node().template data<U>();
-//     return h;
-// }
-
 /**
- * @ingroup data
+ * @brief conveniance function to construct a collector object. Returns a shared pointer to a collector
+ * Assuming there are three activities A1, A2, and A3 a collector can be constructed as shown in the example below.
+ * @code {.cpp}, 
+ * auto collector = activities::collect<A1, A2, A3>(ctx);
+ * @endcode
+ * @ingroup activities
  */
 template <typename... T, typename ContextT>
 std::shared_ptr<collector<ContextT, T...>> collect(ContextT& ctx){
