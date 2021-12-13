@@ -958,7 +958,9 @@ RECURSIVE              = YES
 
 EXCLUDE                = @UDHO_SOURCE_DIR@/CMakeLists.txt              \
                          @UDHO_SOURCE_DIR@/docs/CMakeLists.txt         \
-                         @UDHO_SOURCE_DIR@/examples/*/CMakeLists.txt   \
+                         @UDHO_SOURCE_DIR@/tests/*                     \
+                         @UDHO_SOURCE_DIR@/tests2/*                    \
+                         @UDHO_SOURCE_DIR@/examples/*                  \
                          @UDHO_SOURCE_DIR@/build
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
@@ -2063,7 +2065,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = NO
+GENERATE_XML           = YES
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of

@@ -278,7 +278,7 @@ namespace activities{
      * A subtask contains two shared pointers, one to the activity and another one to the combinator.
      * The subtask cannot be instantiated directly by calling the subtask constructor. Instead call the static `with` method to instantiate. Or use 
      * the conveniance method after.
-     *
+     * @ingroup activities
      * @see activities::after
      * @see activities::perform
      * @see activities::require

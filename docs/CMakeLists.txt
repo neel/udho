@@ -40,7 +40,7 @@ if (DOXYGEN_FOUND)
         
         add_custom_command(
             OUTPUT ${SPHINX_INDEX}
-            COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.dhyara=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
+            COMMAND ${SPHINX_EXECUTABLE} -b html -Dbreathe_projects.udho=${DOXYGEN_XML_DIR} ${SPHINX_SOURCE} ${SPHINX_BUILD}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             DEPENDS ${SPHINX_SOURCE}/index.rst ${DOXYGEN_XML_INDEX} ${SPHINX_PAGES}
             MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
@@ -56,46 +56,46 @@ else (DOXYGEN_FOUND)
 endif (DOXYGEN_FOUND)
 
 # See https://github.com/jessevdk/cldoc/issues/141
-set(CLDOC /home/neel/.local/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
-if(CLDOC STREQUAL "")
-	find_program(CLDOC cldoc)
-elseif(NOT EXISTS ${CLDOC})
-	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
-endif()
+# set(CLDOC /home/neel/.local/bin/cldoc CACHE STRING "User specified '/path/to/cldoc'")
+# if(CLDOC STREQUAL "")
+# 	find_program(CLDOC cldoc)
+# elseif(NOT EXISTS ${CLDOC})
+# 	message(FATAL_ERROR "CLDOC was set to '${CLDOC}' but does not exist")
+# endif()
 
-set(HEADERS ${UDHO_HEADERS})
+# set(HEADERS ${UDHO_HEADERS})
 
-if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
-  set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
+# if(NOT ${CLDOC} STREQUAL "CLDOC-NOTFOUND")
+#   set(CLDOC_OUT ${CMAKE_CURRENT_BINARY_DIR}/cldoc-docs)
   
-  string(STRIP "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" UDHO_COMPILER_GLAGS)
+#   string(STRIP "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" UDHO_COMPILER_GLAGS)
 
-  message(STATUS "${CLDOC} generate -std=c++17 ${UDHO_COMPILER_GLAGS}
-    -DBOOST_BEAST_USE_POSIX_FILE=ON -DBOOST_BEAST_USE_POSIX_FADVISE=ON
-    -I/usr/lib/clang/13.0.0/include
-    ${FULL_INCLUDE_COMPILER_STRING}
-    -- 
-    --output ${CLDOC_OUT} 
-    ${HEADERS}"
-  )
+#   message(STATUS "${CLDOC} generate -std=c++17 ${UDHO_COMPILER_GLAGS}
+#     -DBOOST_BEAST_USE_POSIX_FILE=ON -DBOOST_BEAST_USE_POSIX_FADVISE=ON
+#     -I/usr/lib/clang/13.0.0/include
+#     ${FULL_INCLUDE_COMPILER_STRING}
+#     -- 
+#     --output ${CLDOC_OUT} 
+#     ${HEADERS}"
+#   )
   
-  add_custom_target(cldoc COMMAND
-    ${CLDOC} generate -std=c++17 -Wgnu-string-literal-operator-template ${UDHO_COMPILER_GLAGS} -ferror-limit=0 
-        -DBOOST_BEAST_USE_POSIX_FILE=ON -DBOOST_BEAST_USE_POSIX_FADVISE=ON -DBOOST_HANA_CONFIG_ENABLE_STRING_UDL=ON
-        -I/usr/lib/clang/13.0.0/include
-        ${FULL_INCLUDE_COMPILER_STRING} 
-        --  
-        --output ${CLDOC_OUT} --report
-        ${HEADERS}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  )
+#   add_custom_target(cldoc COMMAND
+#     ${CLDOC} generate -std=c++17 -Wgnu-string-literal-operator-template ${UDHO_COMPILER_GLAGS} -ferror-limit=0 
+#         -DBOOST_BEAST_USE_POSIX_FILE=ON -DBOOST_BEAST_USE_POSIX_FADVISE=ON -DBOOST_HANA_CONFIG_ENABLE_STRING_UDL=ON
+#         -I/usr/lib/clang/13.0.0/include
+#         ${FULL_INCLUDE_COMPILER_STRING} 
+#         --  
+#         --output ${CLDOC_OUT} --report
+#         ${HEADERS}
+#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+#   )
 
-  add_custom_target(serve_cldoc COMMAND
-    ${CLDOC} serve -- ${CLDOC_OUT}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  )
+#   add_custom_target(serve_cldoc COMMAND
+#     ${CLDOC} serve -- ${CLDOC_OUT}
+#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+#   )
 
-  add_dependencies(serve_cldoc cldoc)
-else()
-  message(STATUS "cldoc Documentation will not be generated")
-endif()
+#   add_dependencies(serve_cldoc cldoc)
+# else()
+#   message(STATUS "cldoc Documentation will not be generated")
+# endif()
