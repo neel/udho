@@ -1,0 +1,18 @@
+table.memname tr {
+    display: block;
+    float: left;
+}
+table.memname tr > td:first-child {
+    float: left;
+}
+table.memname tr > td:nth-child(2) {
+    float: left;
+}
+table.memname tr > td:nth-last-child(2) {
+    display: block;
+    float: left;
+    margin-left: 6px;
+}
+table.memname tr > td.paramtype {
+    padding-left: 25px;
+}
