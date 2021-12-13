@@ -262,7 +262,7 @@ void unprepared_a1_fail(udho::contexts::stateless ctx){
         A1FData pre = d.failure<A1>();
         
         ctx.respond(boost::lexical_cast<std::string>(pre.reason), "text/plain");
-    }).after(t2).after(t3);
+    }).after(t2).after(t3).force();
     
     t1();
 }

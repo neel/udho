@@ -74,12 +74,11 @@ struct basic_after: private basic_after<SubtaskT, TailT...>{
     }
     
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(CollectorContainingT& collector_like, CallbackT callback, bool forced = false){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type, typename TailT::activity_type...> finish(CollectorContainingT& collector_like, CallbackT callback){
         using collector_type = typename collector_of<CollectorContainingT>::type;
         using joined_type = joined<CallbackT, collector_type>;
         using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type, typename TailT::activity_type...>;
         joined_subtask_type sub = joined_subtask_type::with(collector_from(collector_like), callback);
-        sub->force(forced);
         attach(sub);
         return sub;
     }
@@ -106,12 +105,11 @@ struct basic_after<SubtaskT, HeadT>{
     }
     
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback, bool forced = false){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback){
         using collector_type = typename collector_of<CollectorContainingT>::type;
         using joined_type = joined<CallbackT, collector_type>;
         using joined_subtask_type = SubtaskT<joined_type, typename HeadT::activity_type>;
         joined_subtask_type sub = joined_subtask_type::with(collector_from(collector_like), callback);
-        sub->force(forced);
         attach(sub);
         return sub;
     }
@@ -199,12 +197,11 @@ struct basic_after{
      * @tparam T 
      * @param collector_like shared pointer to the collector or any other object that has a collector
      * @param callback The callback (lambda function) which is to be executed.
-     * @param forced if set to true then executes the callback even if the dependencies fails. Otherwise invokes only when the chain is successful.
      * @return SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> 
      * @see joined
      */
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback, bool force = false){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback){
 };
 
 /**

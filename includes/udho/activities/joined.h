@@ -71,7 +71,7 @@ namespace activities{
          * 
          * @param flag 
          */
-        void force(bool flag) { _forced = flag; }
+        void force(bool flag = true) { _forced = flag; }
         private:
             std::shared_ptr<collector_type> _collector;
             callback_type _callback;
@@ -136,8 +136,14 @@ namespace activities{
         /**
          * Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
          */
-        self_type& required(bool flag){ _activity->required(flag); return *this; }
-
+        self_type& required(bool flag) { _activity->required(flag); return *this; }
+        /**
+         * @brief force the final subtask to be invoked even if some intermediate dependency fails
+         * 
+         * @param flag 
+         * @return self_type& 
+         */
+        self_type& force(bool flag = true) { _activity->force(flag); return *this; }
         protected:
             template <typename ContextT, typename... T, typename... U>
             subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): _interaction(collector_ptr->context().interaction()){
