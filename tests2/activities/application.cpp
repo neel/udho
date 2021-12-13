@@ -196,7 +196,7 @@ void unprepared(udho::contexts::stateless ctx){
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
-    }).after(t2).after(t3)->force(true);
+    }).after(t2).after(t3);
     
     t1();
 }
@@ -239,7 +239,7 @@ void prepared(udho::contexts::stateless ctx){
         }
         
         ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
-    }).after(t2).after(t3)->force(true);
+    }).after(t2).after(t3);
     
     t1();
 }
