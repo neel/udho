@@ -12,7 +12,7 @@
 /**
  * @defgroup activities
  * @brief udho async activities.
- * activities module provides a framework of performing chain of asynchronous operations using boost asio io context. 
+ * activities module provides a framework of performing one or more asynchronous operations sequentially or parallelly using boost asio io context. 
  * 
  * @ingroup udho
  */
