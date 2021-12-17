@@ -85,26 +85,26 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
  * where SuccessT and FailureT denotes success and failure types associated with ActivityT.
  * Collector extends the lifetime of HTTP request by copying the context object. 
  * @tparam ContextT 
- * @tparam T ... Activities in the chains
+ * @tparam Activities ... Activities in the chains
  * @ingroup activities
  */
-template <typename ContextT, typename... T>
-struct collector: std::enable_shared_from_this<collector<ContextT, T...>>, private udho::hazo::node<detail::labeled<T, typename T::result_type>...>{
-    typedef udho::hazo::node<detail::labeled<T, typename T::result_type>...> base_type;
+template <typename ContextT, typename... Activities>
+struct collector: std::enable_shared_from_this<collector<ContextT, Activities...>>, private udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...>{
+    typedef udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...> base_type;
     typedef ContextT context_type;
 
     template <typename... X>
     friend class accessor;
     
-    friend class accessor_of<collector<ContextT, T...>>;
+    friend class accessor_of<collector<ContextT, Activities...>>;
 
     template <typename U>
-    friend collector<ContextT, T...>& operator<<(collector<ContextT, T...>& h, const U& data){
+    friend collector<ContextT, Activities...>& operator<<(collector<ContextT, Activities...>& h, const U& data){
         h.node().template data<U>() = data;
         return h;
     }
     template <typename U>
-    friend const collector<ContextT, T...>& operator>>(const collector<ContextT, T...>& h, U& data){
+    friend const collector<ContextT, Activities...>& operator>>(const collector<ContextT, Activities...>& h, U& data){
         data = h.node().template data<U>();
         return h;
     }
