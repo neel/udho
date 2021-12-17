@@ -134,23 +134,30 @@ struct after_none{
 };
 
 /**
-* @brief conveniance function to construct basic_after for activities with dependencies
-* 
-* @tparam T...
-* @param dependencies... 
-* @return udho::activities::after<T...> 
-*/
+ * @brief conveniance function to construct basic_after for activities with dependencies
+ * 
+ * @tparam T...
+ * @param dependencies... 
+ * @return udho::activities::after<T...> 
+ * @ingroup activities
+ */
 template <typename... T>
 udho::activities::basic_after<subtask, T...> after(T&... dependencies){
     return udho::activities::basic_after<subtask, T...>(dependencies...);
 }
+/**
+ * @brief after overload for the root subtask
+ * 
+ * @return after_none 
+ * @ingroup activities
+ */
 inline after_none after(){ return after_none{}; }
 
 #else
 
 /**
  * @brief convenience function for creating subtasks 
- * 
+ * @tparam SubtaskT
  * @tparam Dependencies... 
  *
  * creates a subtask that performs the requested activity after all its dependencies are done.
@@ -169,7 +176,7 @@ inline after_none after(){ return after_none{}; }
  * @see activities::perform
  * @ingroup activities
  */
-template <typename... Dependencies>
+template <template <typename, typename...> class SubtaskT, typename... Dependencies>
 struct basic_after{
     /**
      * @brief Construct a new after object
@@ -183,10 +190,10 @@ struct basic_after{
      * @tparam NextActivityT 
      * @tparam Args 
      * @param args 
-     * @return subtask<NextActivityT, Dependencies...> 
+     * @return SubtaskT<NextActivityT, Dependencies...> 
      */
     template <typename NextActivityT, typename... Args>
-    subtask<NextActivityT, typename Dependencies::activity_type...> perform(Args&&... args);
+    SubtaskT<NextActivityT, typename Dependencies::activity_type...> perform(Args&&... args);
 
     /**
      * @brief Finish an activity chain by associating a callback, which will be invoked with an accessor containing data of compatiable with the collector.
@@ -201,28 +208,28 @@ struct basic_after{
      * @see joined
      */
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>
-    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback){
+    SubtaskT<joined<CallbackT, typename collector_of<CollectorContainingT>::type>, typename HeadT::activity_type> finish(CollectorContainingT& collector_like, CallbackT callback){}
 };
 
 /**
  * @brief conveniance function to construct basic_after for activities with dependencies
  * 
- * @tparam T...
+ * @tparam D... Dependencies
  * @param dependencies... 
- * @return udho::activities::basic_after<T...> 
- * @see udho::activities::basic_after<T...> 
+ * @return udho::activities::basic_after<udho::activities::subtask, D...> 
  * @ingroup activities
+ * @see udho::activities::basic_after<udho::activities::subtask, D...> 
  */
-template <typename... T>
-udho::activities::basic_after<subtask, T...> after(T&... dependencies){
-    return udho::activities::basic_after<subtask, T...>(dependencies...);
+template <typename... D>
+udho::activities::basic_after<udho::activities::subtask, D...> after(D&... dependencies){
+    return udho::activities::basic_after<udho::activities::subtask, D...>(dependencies...);
 }
 
 /**
  * @brief conveniance function to construct subtasks with no dependencies
  * Similar to @ref activities::perform with no require
- * @see activities::perform
  * @ingroup activities
+ * @see activities::perform
  */
 inline after_none after(){ return after_none{}; }
 

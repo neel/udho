@@ -37,7 +37,28 @@
  * dependencies of an activity `X` and on completion of all its dependencies, it calls or
  * cancels the invocation of `X::operator()`. e.g. if any of its required dependencies fail
  * then the activity `X` is canceled.
- * 
+ *
+ * A \ref udho::activities::subtask "subtask" provides a convenient way of instantiating an
+ * activity and attaching a combinator with it. Instead of instantiating the activity or the
+ * combinator separately, a \ref udho::activities::subtask "subtask" is used. The subtask is 
+ * usually created using the \ref udho::activities::after "after" method.
+ *
+ * Anatomy
+ * --------
+ *
+ * The anatomy of a graph of async activities is shown in the following figure. In this example 
+ * eight activities A1, A2, A3, B1, B2, C1, D1 and D2 are to be executed. So the heterogenous 
+ * \ref udho::activities::collector "collector<ContextT, A1, A2, A3, B1, B2, C1, D1, D2>" collects
+ * results of all these eight activities. The result may include success as well as failure result
+ * as yielded by an activity. The first three activities have no dependencies, hence run parallelly. 
+ * Activity B1 requires both A1 and A2 to complete before it can start. Similarly B2 requires A2 and 
+ * A3 to complete before it can start. `A1` inherits from \ref udho::activities::activity "activity<A1, A1S, A1F>" 
+ * (assuming that `A1S` and `A1F` are two classes intended to denote the success and failure result 
+ * of A1. To signal successful completion `A1::operator()()` calls protected method `activity<A1, A1S, A1F>::success(s)` 
+ * where `s` is an instance of `A1S`. Each of the activities contain a partial accessor to the actual 
+ * collector. 
+ *
+ * A 2-1 combinator combines A1 and A2 and once both of them  finishes it calls the `B1::operator()()`.
  * @image html activities-anatomy.png 
  * @ingroup udho
  */
