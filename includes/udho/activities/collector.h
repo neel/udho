@@ -80,19 +80,47 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
 
 /**
  * @brief Collects data associated with all activities involved in the subtask graph.
- * For storage the @ref hazo::node is used internally which expects each ActivityT to 
- * have typedef ActivityT::result_type which is and instance of result_data<SuccessT, FailureT>
- * where SuccessT and FailureT denotes success and failure types associated with ActivityT.
- * Collector extends the lifetime of HTTP request by copying the context object. 
+ * Multiple activities may have different semantics to denote their success and failure. An 
+ * activity `X` is defined by subclassing from @ref udho::activities::activity "activity<X, S, F>"
+ * where `S` and `F` are two data structures containing information related to the successful
+ * and failed invocation of the activity. An asynchronous subtask graph involving multiple such
+ * activities, will require storage and retrieval facilities for all the success and failure 
+ * data structures. Hence collector provides a heterogenous storage that is accessed by all the
+ * activities in the subtask graph.
+ * 
+ * @note Collector expects each Activity to have typedef `result_type` which is an instance of 
+ *       `result_data<SuccessT, FailureT>` where `SuccessT` and `FailureT` denotes success and 
+ *       failure types associated with that `Activity`. 
+ *
+ * Collector are usually accessed through an \ref udho::activities::accessor "accessor" which 
+ * provides read write access to the collector. A partial accessor may provide access to a subset
+ * of data collected by the collector. Whereas a full accessor provides full access. The final
+ * callback which concludes the invocation of chains of asynchronous activities reads all data
+ * collected by the collector though a full accessor.
+ *
+ * To execute asynchronous activities `A1`, `A2` and `A3` a collector is created using the 
+ * \ref udho::activities::collect "collect" method as shown below.
+ * @code 
+ * auto collector = udho::activities::collect<A1, A2, A3>(ctx);
+ * @endcode 
+ * The collect method instantiates a shared pointer to `udho::activities::collector<ContextT, A1, A2, A3>` 
+ * where `ContextT` is the type of ctx. While creating subtasks each of these activities create a partial 
+ * accessor to access the slice of data required for that activity. 
+ *
+ * @note Collector extends the lifetime of HTTP context by copying the context object. 
+ *
  * @tparam ContextT 
  * @tparam Activities ... Activities in the chains
  * @ingroup activities
  */
 template <typename ContextT, typename... Activities>
 struct collector: std::enable_shared_from_this<collector<ContextT, Activities...>>, private udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...>{
+#ifndef __DOXYGEN__
     typedef udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...> base_type;
     typedef ContextT context_type;
 
+    context_type _context;
+#endif 
     template <typename... X>
     friend class accessor;
     
@@ -108,8 +136,6 @@ struct collector: std::enable_shared_from_this<collector<ContextT, Activities...
         data = h.node().template data<U>();
         return h;
     }
-    
-    context_type _context;
     
     /**
      * @brief Construct a new collector object
@@ -131,9 +157,11 @@ struct collector: std::enable_shared_from_this<collector<ContextT, Activities...
      */
     const context_type& context() const { return _context; }
 
+#ifndef __DOXYGEN__
     private:
         base_type& node() { return *this; }
         const base_type& node() const { return *this; }
+#endif 
 };
 
 /**

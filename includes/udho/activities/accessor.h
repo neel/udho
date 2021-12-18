@@ -136,15 +136,25 @@ struct accessor_of<accessor<T...>>{
 #endif 
 
 /**
- * @brief Access a subset of data from the collector
- * 
+ * @brief Access a subset of data from the collector. 
+ * Given a collector collecting result data of different activities, multiple accessors can be created to access
+ * the full or a subset of the data collected by the collector. For example, given a collector of type 
+ * @ref udho::activities::collector `collector<ContextT, A1, A2, A3>` there can be an @ref udho::activities::accessor `accessor<A1, A2>`
+ * that provides a read write access to the success and failre results of A1 and A2 activities only. While 
+ * instantiating an activity `A1` the collector is passed, because the @ref udho::activities::activity "activity<A1, ...>"
+ * base class constructs an `accessor<A1>` to store the success or failure result of the acitivity. When `A1` 
+ * calls the @ref udho::activities::activity::success "activity::success(s)" the value s is stored into the 
+ * collector via that internal accessor. Thats why it is essential for the `A1` constructor to take a collector
+ * (or an accessor, or any other object from which an accessor can be extracted) as argument and pass that to 
+ * the activity base class. 
  * @ingroup activities
  * @tparam Activities... A set of Activities (which might be labeled with its result type)
  */
 template <typename... Activities>
 struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...>{
+#ifndef __DOXYGEN__
     typedef udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...> base_type;
-   
+#endif 
     template <typename... X>
     friend class accessor;
 
@@ -191,6 +201,8 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
     template <typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
     accessor(accessor<U...> accessor): base_type(accessor.proxy()) {}
     
+    /// @name state
+    /// @{
     /**
      * @brief Checks Whether there exists any data for activity V and that data is initialized
      * @tparam V Activity Type
@@ -203,15 +215,6 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
             return labeled_data.initialized();
         }
         return false;
-    }
-    /**
-     * @brief get data associated with activity V
-     * @tparam V activity type
-     */
-    template <typename V>
-    const typename V::result_type& get() const{
-        using type = typename types::template labeled<V>;
-        return base_type::template data<type>().get();
     }
     /**
      * @brief Check whether activity V has completed.
@@ -257,6 +260,19 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
         }
         return false;
     }
+    /// @}
+
+    /// @name data
+    /// @{
+    /**
+     * @brief get data associated with activity V
+     * @tparam V activity type
+     */
+    template <typename V>
+    const typename V::result_type& get() const{
+        using type = typename types::template labeled<V>;
+        return base_type::template data<type>().get();
+    }
     /**
      * @brief get success data for activity V
      * @tparam V activity type
@@ -296,9 +312,13 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
             d.template apply<F>(f);
         }
     }
+    /// @}
+
+#ifndef __DOXYGEN__
     private:
         base_type& proxy() { return *this; }
         const base_type& proxy() const { return *this; }
+#endif 
 };
 
 /**
