@@ -88,16 +88,25 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
  * data structures. Hence collector provides a heterogenous storage that is accessed by all the
  * activities in the subtask graph.
  * 
- * @note Collector expects each Activity to have typedef `result_type` which is an instance of 
- *       `result_data<SuccessT, FailureT>` where `SuccessT` and `FailureT` denotes success and 
- *       failure types associated with that `Activity`. 
- *
  * Collector are usually accessed through an \ref udho::activities::accessor "accessor" which 
  * provides read write access to the collector. A partial accessor may provide access to a subset
  * of data collected by the collector. Whereas a full accessor provides full access. The final
  * callback which concludes the invocation of chains of asynchronous activities reads all data
  * collected by the collector though a full accessor.
  *
+ * @par Internal Details
+ *       A collector uses @ref udho::activities::result_data "result_data<S, F>" to store 
+ *       the activity result. To allow multiple activities to have the same success and failure 
+ *       type it labels each such `result_data` with the activity type. The `result_type` type 
+ *       in the base class @ref udho::activities::activity "activity" is actually a typedef of 
+ *       `result_data<S, F>` where `S` and `F` are the success and failure data type of the activity. 
+ *       The labeling is done by internal `detail::labeled` template as shown below. 
+ *       @code 
+ *       detail::labeled<X, udho::activities::result_data<S, F> >
+ *       @endcode 
+ *       So, instead of storing the `result_data` the collector stores an labeled `result_data` 
+ *       internally.
+ * 
  * To execute asynchronous activities `A1`, `A2` and `A3` a collector is created using the 
  * \ref udho::activities::collect "collect" method as shown below.
  * @code 

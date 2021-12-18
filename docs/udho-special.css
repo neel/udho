@@ -1,18 +1,11 @@
-table.memname tr {
-    display: block;
-    float: left;
-}
-table.memname tr > td:first-child {
-    float: left;
-}
-table.memname tr > td:nth-child(2) {
-    float: left;
-}
-table.memname tr > td:nth-last-child(2) {
-    display: block;
-    float: left;
-    margin-left: 6px;
-}
-table.memname tr > td.paramtype {
-    padding-left: 25px;
+.section.user{
+    padding: var(--spacing-medium);
+    margin: var(--spacing-medium) 0;
+    color: var(--page-background-color);
+    overflow: hidden;
+    margin-left: 0;
+    border-radius: var(--border-radius-small);
+    background: var(--deprecated-color);
+    border-left: 8px solid var(--deprecated-color-dark);
+    color: var(--deprecated-color-darker);
 }

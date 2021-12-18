@@ -69,6 +69,8 @@ namespace detail{
     };
 }
 
+#endif // __DOXYGEN__
+
 /**
  * @brief Contains Copiable Success or Failure data for an activity.
  * Stores the resulting data of an activity, which may succedd or fail. The provided SuccessT and FailureT is used to store the success and failure data respectively.
@@ -124,7 +126,9 @@ template <typename SuccessT, typename FailureT>
 struct result_data{
     typedef SuccessT success_type;
     typedef FailureT failure_type;
+#ifndef __DOXYGEN__
     typedef result_data<SuccessT, FailureT> self_type;
+#endif 
     
     /**
      * @brief Construct a new result data object
@@ -227,15 +231,16 @@ struct result_data{
         void set_cancel(bool canceled = true){  
             _canceled = canceled;
         }
+
+#ifndef __DOXYGEN__
     private:
         bool _completed;
         bool _success;
         bool _canceled;
         success_type _sdata;
         failure_type _fdata;
+#endif 
 };
-    
-#endif // __DOXYGEN__
 
 }
 }
