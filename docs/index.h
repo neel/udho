@@ -44,7 +44,7 @@
  * usually created using the \ref udho::activities::after "after" method.
  * 
  * Example
- * --------
+ * =========
  * Following is an example of an activity `A1`. The activity starts some async operation from 
  * its `operator()()`. It uses `A1::finished` as a callback which is supposed to be called once
  * that *something* operation finishes. From `A1::finished` it constructs a success result `s`
@@ -97,7 +97,7 @@
  * @endcode 
  *
  * Anatomy
- * --------
+ * =========
  *
  * The anatomy of a graph of async activities is shown in the following figure. In this example 
  * eight activities A1, A2, A3, B1, B2, C1, D1 and D2 are to be executed. So the heterogenous 

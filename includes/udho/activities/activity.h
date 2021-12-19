@@ -67,6 +67,10 @@ namespace activities{
 #else
     /**
      * @brief Activity
+     * @tparam DerivedT A derived class that provides a no argument `operator()` overload.
+     * @tparam SuccessDataT A datastructure to represent the success result of the activity.
+     * @tparam FailureDataT A datastructure to represent the failure result of the activity
+     *
      * An activity consists of one or more asynchronous operations that yields success or failure data after completion.
      * An activity is defined in a class X that inherits from activity<X> and provides a no argument operator() overload  
      * to initiate the operation, which ultimately leads to a call to either of the success() or failure() functions.
@@ -152,8 +156,8 @@ namespace activities{
      * @endcode
      * The @ref activities::collect method returns a shared_pointer to a collector. This collector has to be passed to the 
      * constructors of all activities A1, A2 and A3. Generally not only the collector, but also the activities are instantiated
-     * as shared pointers using std::make_shared. One activity is linked with another through a combinator as shown in the
-     * following example. 
+     * as shared pointers using std::make_shared. One activity is linked with another through a \ref udho::activities::combinator "combinator" 
+     * as shown in the following example. 
      * @code 
      * auto collector = activities::collect<A1, A2>(ctx);
      * auto a1 = std::make_shared<A1>(collector);
@@ -239,9 +243,6 @@ namespace activities{
      * |     *     |           |          |   FALSE   |      N/A     |      N/A     |      N/A      |     TRUE    |    FALSE   |  TRUE  |   FALSE  |  FALSE  | proceed() |
      *
      *
-     * @tparam DerivedT 
-     * @tparam SuccessDataT 
-     * @tparam FailureDataT 
      * @ingroup activities 
      */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>

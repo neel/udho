@@ -80,6 +80,9 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
 
 /**
  * @brief Collects data associated with all activities involved in the subtask graph.
+ * @tparam ContextT 
+ * @tparam Activities ... Activities in the chains
+ *
  * Multiple activities may have different semantics to denote their success and failure. An 
  * activity `X` is defined by subclassing from @ref udho::activities::activity "activity<X, S, F>"
  * where `S` and `F` are two data structures containing information related to the successful
@@ -117,9 +120,6 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
  * accessor to access the slice of data required for that activity. 
  *
  * @note Collector extends the lifetime of HTTP context by copying the context object. 
- *
- * @tparam ContextT 
- * @tparam Activities ... Activities in the chains
  * @ingroup activities
  */
 template <typename ContextT, typename... Activities>

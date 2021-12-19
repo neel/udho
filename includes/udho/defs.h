@@ -88,59 +88,10 @@ typedef boost::uuids::uuid session_key_type;
 
 \defgroup activities activities
 
-Async Task Graph
-================
+Overview
+=========
 
-Execution of Asynchronous Tasks may be required for executing SQL or any
-other data queries including HTTP queries to fetch external data. udho
-does not including a database library with itself. However any
-asynchronous database library using boost asio may benifit from an async
-activity framework. `udho::activities` provides an way to describe a
-task graph that gather data into an heterogenous collector. A task may
-be associated with its dependencies of other tasks and task related
-data.
-
-Following is an example use case describing how the activities API is
-supposed to be used. Assuming a scenario where a post identified by
-post\_id is retrieved through an HTTP request when the user identified
-by user\_id is logged in. In the assumed use case 5 tasks has to be
-performed in order to fetch the post along with the comments
-
-> :access::user: An async activity to check whether user\_id has read
-> access to post\_id. If access is forbidden then terminate execution of
-> the task graph and send 403 Forbidden HTTP response. :posts::retrieve:
-> An async activity to retrieve the post record identified by id
-> post\_id. Treat empty result as an error and terminate execution of
-> the task graph. Send 404 Not found error if canceled. :comments::of:
-> An async activity to retrieve the comments on post post\_id.
-> :history::create: An async activity to register that user\_id has
-> viewed post\_id, which is not essential to the task graph.
-
-\code
-using namespace boost::beast::http;
-auto start = udho::start<access::user, posts::retrieve, comments::of, history::create>::with(ctx);
-auto check_access = udho::after(start).perform<access::user>(start.data(), post_id, user_id)
-    .cancel_if(access::status::forbidden())
-    .if_canceled(access::user::abort(ctx, status::forbidden));
-auto retrieve_post = udho::after(check_access).perform<posts::retrieve>(start.data(), post_id)
-    .cancel_if(posts::retrieve::success::blank())
-    .if_canceled(posts::retrieve::abort(ctx, status::not_found));
-auto retrieve_comments = udho::after(check_access).perform<comments::of>(start.data(), post_id)
-    .cancel_if(comments::of::success::blank())
-    .if_canceled(comments::of::abort(ctx, status::not_found));
-auto create_history = udho::after(retrieve_post).perform<history::create>(start.data(), "post:view", post_id, user_id)
-    .required(false);
-
-udho::after(retrieve_comments, create_history).finish(start, [ctx](const udho::accessor<access::user, posts::retrieve, comments::of, history::create>& d) mutable{
-    auto post = d.success<posts::retrieve>();       // The post record
-    auto comments = d.success<comments::of>();      // The comment records
-
-    // ... generate response
-    ctx.respond(...);
-});
-
-start();
-\endcode 
+Following is a brief overview of important constructs in the activity module.
 
 Collector
 ---------

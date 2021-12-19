@@ -137,6 +137,8 @@ struct accessor_of<accessor<T...>>{
 
 /**
  * @brief Access a subset of data from the collector. 
+ * @tparam Activities... A set of Activities (which might be labeled with its result type).
+ *
  * Given a collector collecting result data of different activities, multiple accessors can be created to access
  * the full or a subset of the data collected by the collector. For example, given a collector of type 
  * @ref udho::activities::collector `collector<ContextT, A1, A2, A3>` there can be an @ref udho::activities::accessor `accessor<A1, A2>`
@@ -147,8 +149,21 @@ struct accessor_of<accessor<T...>>{
  * collector via that internal accessor. Thats why it is essential for the `A1` constructor to take a collector
  * (or an accessor, or any other object from which an accessor can be extracted) as argument and pass that to 
  * the activity base class. 
+ *
+ * Given a collector that collects results of A, B, C, D, E and full accessor can be created that provides RW acces
+ * to the result data of each of the activities.
+ * @code 
+ * auto collector = activities::collect<A, B, C, D, E>(ctx);
+ * activities::accessor<A, B, C, D, E> accessor(collector);
+ * bool failed = accessor.failed<A>();        // checks whether activity A has failed or not.
+ * A::success_type a = accessor.success<A>(); // Get the success result of activity A
+ * @endcode 
+ * A partial accessor may also be constructed from a collector.
+ * @code 
+ * activities::accessor<A, B> accessor(collector);
+ * @endcode 
+ * The above mentioned accessor can only be used to get results from A and B activities.
  * @ingroup activities
- * @tparam Activities... A set of Activities (which might be labeled with its result type)
  */
 template <typename... Activities>
 struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...>{
