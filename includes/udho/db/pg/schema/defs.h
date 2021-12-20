@@ -133,13 +133,13 @@ struct field_lhs{
 #define PG_ELEMENT(Name, Type, ...)                                          \
 template <typename T>                                                        \
 struct Name ## _                                                             \
-    : udho::hazo::element<                                             \
+    : udho::hazo::element<                                                   \
         Name ## _ <T>,                                                       \
         typename udho::db::pg::detail::extract_value_type<T>::type,          \
         udho::db::pg::detail::field_lhs,                                     \
         ##__VA_ARGS__                                                        \
     >{                                                                       \
-    using base = udho::hazo::element<                                  \
+    using base = udho::hazo::element<                                        \
         Name ## _ <T>,                                                       \
         typename udho::db::pg::detail::extract_value_type<T>::type,          \
         udho::db::pg::detail::field_lhs,                                     \
@@ -157,9 +157,9 @@ struct Name ## _                                                             \
         return OZO_LITERAL(#Name);                                           \
     }                                                                        \
     static std::string pretty(){                                             \
-        udho::pretty::printer printer;                                   \
+        udho::pretty::printer printer;                                       \
         printer.substitute<T>();                                             \
-        using pretty_type = udho::pretty::type<Name ## _<T>, false>;     \
+        using pretty_type = udho::pretty::type<Name ## _<T>, false>;         \
         std::string pretty = pretty_type::name(printer);                     \
         if(std::is_same<T, Type>::value){                                    \
             std::string field = #Name;                                       \
