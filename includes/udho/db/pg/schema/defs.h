@@ -130,6 +130,13 @@ struct field_lhs{
 // struct ::ozo::is_nullable<Name ## _<T>>: ::std::true_type {}
 
 #define OZO_LITERAL(TEXT) TEXT ## _SQL
+/**
+ * @def PG_ELEMENT(Name, Type)
+ * @brief Define a postgresql column
+ * @param Name Name for the column
+ * @param Type type of the column
+ * @ingroup pg
+ */
 #define PG_ELEMENT(Name, Type, ...)                                          \
 template <typename T>                                                        \
 struct Name ## _                                                             \
