@@ -30,9 +30,8 @@
 
 #include <string>
 #include <udho/activities/activity.h>
-#include <udho/activities/require.h>
 #include <udho/activities/perform.h>
-#include <udho/activities/analyzer.h>
+#include <udho/activities/require.h>
 #include <udho/activities/after.h>
 
 namespace udho{
@@ -78,14 +77,6 @@ using require = udho::activities::require<DependenciesT...>;
 template <typename ActivityT>
 using perform = udho::activities::perform<ActivityT>;
 
-/**
- * \see udho::activities::analyzer
- * \ingroup activities
- */
-template <typename ActivityT, typename AccessorT>
-udho::activities::analyzer<ActivityT> analyze(AccessorT& accessor){
-    return udho::activities::analyzer<ActivityT>(accessor);
-}
 /**
  * @brief 
  * 

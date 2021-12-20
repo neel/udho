@@ -105,9 +105,9 @@ struct meta_node{
          * @tparam N defaults to 0
          */
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same_v<T, index_type> && N == 0, 
+        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, 
                 capsule_type, 
-                typename tail_type::types::template capsule_of<T, N - std::is_same_v<T, index_type>>
+                typename tail_type::types::template capsule_of<T, N - std::is_same<T, index_type>::value>
             >::type;
         /**
          * type of data used for N'th instance of index T in the chain of nodes.
@@ -128,7 +128,7 @@ struct meta_node{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
+        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
                 data_type,
                 typename tail_type::types::template data_for<KeyT>
             >::type;
@@ -137,7 +137,7 @@ struct meta_node{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using value_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
+        using value_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
                 value_type,
                 typename tail_type::types::template value_for<KeyT>
             >::type;
@@ -248,7 +248,7 @@ struct meta_node<HeadT, void>{
          * @tparam N defaults to 0
          */
         template <typename T, int N = 0>
-        using capsule_of = typename std::conditional<std::is_same_v<T, index_type> && N == 0, capsule_type, void>::type;
+        using capsule_of = typename std::conditional<std::is_same<T, index_type>::value && N == 0, capsule_type, void>::type;
         /**
          * type of data used for N'th instance of index T in the chain of nodes.
          * @tparam T index_type searched for
@@ -268,7 +268,7 @@ struct meta_node<HeadT, void>{
          * @tparam KeyT key_type searched for
          */
         template <typename KeyT>
-        using data_for = typename std::conditional<!std::is_void_v<key_type> && std::is_same_v<KeyT, key_type>,
+        using data_for = typename std::conditional<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value,
             data_type,
             void
             >::type;

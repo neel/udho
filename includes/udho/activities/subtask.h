@@ -58,27 +58,15 @@ namespace activities{
         friend struct subtask;
         
         subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
-        
-        /**
-         * shared pointer to the activity
-         */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
-        
-        /**
-         * reference to the underlying activity object
-         */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
-        
-        /**
-         * reference to the underlying activity object through teh * operator
-         */
-        activity_type& operator*(){
-            return activity();
-        }
+
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        inline activity_type& activity(){ return *(_activity.get()); }
+        inline activity_type& operator*(){ return activity(); }
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        inline bool completed() const{ return _activity->completed(); }
+        inline bool failed() const{ return _activity->failed(); }
+        inline bool canceled() const{ return _activity->canceled(); }
+        inline bool okay() const{ return _activity->okay(); }
         
         /**
          * execute task next after the current one
@@ -132,13 +120,6 @@ namespace activities{
         self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
             _activity->cancel_if(cancelor);
             return *this;
-        }
-        
-        /**
-         * returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
         }
         
         /**
@@ -201,26 +182,14 @@ namespace activities{
         
         subtask(const self_type& other): _activity(other._activity), _interaction(other._interaction){}
             
-        /**
-         * shared pointer to the activity
-         */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
-        
-        /**
-         * reference to the underlying activity object
-         */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
-        
-        /**
-         * reference to the underlying activity object through teh * operator
-         */
-        activity_type& operator*(){
-            return activity();
-        }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        inline activity_type& activity(){ return *(_activity.get()); }
+        inline activity_type& operator*(){ return activity(); }
+        inline bool completed() const{ return _activity->completed(); }
+        inline bool failed() const{ return _activity->failed(); }
+        inline bool canceled() const{ return _activity->canceled(); }
+        inline bool okay() const{ return _activity->okay(); }
         
         /**
          * execute task next after the current one
@@ -266,13 +235,6 @@ namespace activities{
         }
         
         /**
-         * returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
-        }
-        
-        /**
          * abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
          */
         template <typename FunctionT>        
@@ -312,8 +274,31 @@ namespace activities{
 #else 
 
     /**
-     * @brief 
-     * 
+     * @brief A subtask is an instantiation of an `activity`. The subtask reuses an activity to model 
+     * different use cases by attaching dependencies. A subtask contains two shared pointers, one to 
+     * the activity and another one to the combinator. The subtask cannot be instantiated directly by 
+     * calling the subtask constructor. Instead call the static `with` method to instantiate. 
+     * @code 
+     * auto data = udho::activities::collect<A1, A2, A3>(context);
+     * auto t1   = udho::activities::subtask<A1>::with(data);               // NO dependencies (root subtask)
+     * auto t2   = udho::activities::subtask<A2, A1>::with(data).after(t1); // Performs A2, while A1 is the only dependency
+     * @endcode 
+     * Subtasks can also be created more explicitely using \ref udho::activities::perform "perform" as 
+     * shown in the following example.
+     * @code 
+     * auto t1 = udho::activities::perform<A1>::with(data);                         // NO dependencies (root subtask)
+     * auto t2 = udho::activities::perform<A2>::require<A1>::with(data).after(t1);  // Performs A2, while A1 is the only dependency
+     * @endcode  
+     * However, the method \ref udho::activities::after "after" provides the most convenient and recomended 
+     * way of instantiating subtasks.
+     * @code 
+     * auto t1 = activities::after()  .perform<A1>(data);    // NO dependencies (root subtask)
+     * auto t2 = activities::after(t1).perform<A2>(data);    // Performs A2, while A1 is the only dependency
+     * @endcode 
+     * @ingroup activities
+     * @see activities::after
+     * @see activities::perform
+     * @see activities::require
      * @tparam ActivityT 
      * @tparam DependenciesT...
      */
@@ -321,117 +306,151 @@ namespace activities{
     struct subtask{
         typedef ActivityT activity_type;
         typedef combinator<ActivityT, DependenciesT...> combinator_type;
-        typedef subtask<ActivityT, DependenciesT...> self_type;
         
         template <typename U, typename... DependenciesU>
         friend struct subtask;
         
-        subtask(const self_type& other);
-        
+        /**
+         * @brief A subtask is copy constructible
+         * @note A subtask can only be constructed using the `with()` method.
+         * @param other 
+         */
+        subtask(const subtask<ActivityT, DependenciesT...>& other);
+        /**
+         * @brief Arguments for the constructor of the Activity
+         */
+        template <typename ContextT, typename... T, typename... U>
+        static subtask<ActivityT, DependenciesT...> with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+            return subtask<ActivityT, DependenciesT...>(collector_ptr, u...);
+        }
+
+        /**
+         * @brief Set required flag on or off. 
+         * If a required subtask fails then all intermediate subtask that depend on it fails and the final callback 
+         * is called immediately. 
+         * @note By default all subtasks are required.
+         */
+        subtask<ActivityT, DependenciesT...>& required(bool flag){
+            _activity->required(flag);
+            return *this;
+        }
+
+        /**
+         * @brief Prepare an activity before it is actually invoked.
+         * Attach a callback which will be called before invoking its `operator()()`.
+         * @note The callback will be called with a reference to the underlying activity, after it has been 
+         *       instantiated and all its dependencies have completed.
+         * @attention the root subtasks have no dependencies, hence cannot be prepared. Because the initial  
+         *            state of a root subtask is not dependent on success or failure of some other subtasks.
+         */
+        template <typename PreparatorT>
+        subtask<ActivityT, DependenciesT...>& prepare(PreparatorT prep){
+            _combinator->prepare(prep);
+            return *this;
+        }
+
+        /// @name activity
+        /// @{
         /**
          * @brief shared pointer to the activity
          */
-        std::shared_ptr<activity_type> activity_ptr() {
-            return _activity;
-        }
+        inline std::shared_ptr<activity_type> activity_ptr() { return _activity; }
         
         /**
          * @brief reference to the underlying activity object
          */
-        activity_type& activity(){
-            return *(_activity.get());
-        }
+        inline activity_type& activity(){ return *(_activity.get()); }
         
         /**
-         * @brief reference to the underlying activity object through teh * operator
+         * @brief reference to the underlying activity object through the * operator
          */
-        activity_type& operator*(){
-            return activity();
-        }
-        
+        inline activity_type& operator*(){ return activity(); }
+        /**
+         * @brief returns the shared pointer to the actiivity
+         */
+        inline std::shared_ptr<activity_type> operator->(){ return _activity; }
+        /// @}
+
+        /// @name state
+        /// @{
+        /**
+         * @brief Checks whether the underlying activity has been completed
+         * @see udho::activities::activity::completed
+         */
+        inline bool completed() const{ return _activity->completed(); }
+        /**
+         * @brief Checks whether the underlying activity has failed
+         * @see udho::activities::activity::failed
+         */
+        inline bool failed() const{ return _activity->failed(); }
+        /**
+         * @brief Checks whether the underlying activity has been canceled
+         * @see udho::activities::activity::canceled
+         */
+        inline bool canceled() const{ return _activity->canceled(); }
+        /**
+         * @brief Checks whether the underlying activity is in okay state
+         * @see udho::activities::activity::okay
+         */
+        inline bool okay() const{ return _activity->okay(); }
+        /// @}
+
+        /// @name chain
+        /// @{
         /**
          * @brief execute task next after the current one
          * @param next the next subtask
          */
         template <typename V, typename... DependenciesV>
-        self_type& done(subtask<V, DependenciesV...>& next){
+        subtask<ActivityT, DependenciesT...>& done(subtask<V, DependenciesV...>& next){
             activity_ptr()->done(next._combinator);
             return *this;
         }
-        
         /**
          * @brief t2.after(t1) is equivalent to t1.done(t2)
          * @param previous the previous subtask
          */
         template <typename V, typename... DependenciesV>
-        self_type& after(subtask<V, DependenciesV...>& previous){
+        subtask<ActivityT, DependenciesT...>& after(subtask<V, DependenciesV...>& previous){
             previous._activity->done(_combinator);
             return *this;
         }
+        /// @}
         
-        /**
-         * @brief Arguments for the constructor of the Activity
-         */
-        template <typename ContextT, typename... T, typename... U>
-        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
-            return self_type(collector_ptr, u...);
-        }
-        
-        /**
-         * @brief attach a callback which will be called with a reference to the activity after it has been instantiated and all its dependencies have completed.
-         */
-        template <typename PreparatorT>
-        self_type& prepare(PreparatorT prep){
-            _combinator->prepare(prep);
-            return *this;
-        }
-
-        /**
-         * @brief Set required flag on or off. If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately. By default all subtasks are required
-         */
-        self_type& required(bool flag){
-            _activity->required(flag);
-            return *this;
-        }
-        
+        /// @name hooks
+        /// @{
         /**
          * @brief Force cancelation of the activity even after it is successful to stop propagating to the next activities
          * @param f callback which should return true to signal cancelation
+         * @see udho::activities::activity::cancel_if
          */
-        self_type& cancel_if(typename activity_type::cancel_if_ftor cancelor){
+        subtask<ActivityT, DependenciesT...>& cancel_if(typename activity_type::cancel_if_ftor cancelor){
             _activity->cancel_if(cancelor);
             return *this;
         }
-        
-        /**
-         * @brief returns the shared pointer to the actiivity
-         */
-        std::shared_ptr<activity_type> operator->(){
-            return _activity;
-        }
-        
         /**
          * @brief abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+         * @see udho::activities::activity::if_errored
          */
         template <typename FunctionT>        
-        self_type& if_errored(FunctionT ftor);
-        
+        subtask<ActivityT, DependenciesT...>& if_errored(FunctionT ftor);
         /**
          * @brief abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+         * @see udho::activities::activity::if_failed
          */
         template <typename FunctionT>
-        self_type& if_failed(FunctionT ftor);
-        
+        subtask<ActivityT, DependenciesT...>& if_failed(FunctionT ftor);
         /**
-         * @brief 
-         * 
+         * @brief Associate a callback that will be invoked if the activity is canceled
          * @tparam FunctionT 
          * @param ftor 
-         * @return self_type& 
+         * @return subtask<ActivityT, DependenciesT...>& 
+         * @see udho::activities::activity::if_canceled
          */
         template <typename FunctionT>
-        self_type& if_canceled(FunctionT ftor);
-        
+        subtask<ActivityT, DependenciesT...>& if_canceled(FunctionT ftor);
+        /// @}
+
         /**
          * @brief calls the `operator()()` of the activity and starts executing the graph
          */

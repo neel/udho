@@ -5,8 +5,29 @@
 
 /**
  * \defgroup hazo
- * \brief usho heterogenous data storage
+ * \brief udho heterogenous data storage
+ * \ingroup udho
  */
+
+/**
+ * @defgroup activities
+ * @brief udho async activities.
+ * @copydoc Activities
+ * @ingroup udho
+ */
+
+/**
+ * @defgroup db
+ * @brief udho database functionalities
+ * @ingroup udho
+ */
+
+ /**
+  * @defgroup pg
+  * @brief udho postgresql databae functionalities
+  * @ingroup db
+  */
+
 
 #ifndef __DOXYGEN__
 

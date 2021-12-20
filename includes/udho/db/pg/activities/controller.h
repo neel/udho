@@ -31,6 +31,7 @@
 #include <udho/db/pg/ozo/connection.h>
 #include <udho/db/pg/activities/subtask.h>
 #include <udho/activities/start.h>
+#include <udho/activities/fwd.h>
 
 namespace udho{
 namespace db{
@@ -43,9 +44,9 @@ namespace activities{
  * @tparam ContextT 
  * @tparam T... Activity types that are to be performed. 
  */
-template <typename ContextT, typename... T>
-struct controller: udho::db::pg::activities::subtask<udho::activities::start<ContextT, T...>>{
-    typedef udho::activities::start<ContextT, T...> activity_type;
+template <typename ContextT, typename... Activities>
+struct controller: udho::db::pg::activities::subtask<udho::activities::init<ContextT, Activities...>>{
+    typedef udho::activities::init<ContextT, Activities...> activity_type;
     typedef udho::db::pg::activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
@@ -122,7 +123,7 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::start<Con
         boost::asio::io_service& _io;
         ContextT _ctx;
 };
-    
+
 }
 
 template <typename ContextT, typename... T>
@@ -134,6 +135,13 @@ using controller = pg::activities::controller<ContextT, T...>;
 
 namespace udho{
 namespace activities{
+
+    template <typename ContextT, typename... Activities>
+    struct collector_of<udho::db::pg::activities::controller<ContextT, Activities...>>{
+        using type = collector<ContextT, Activities...>;
+        static std::shared_ptr<type> apply(udho::db::pg::activities::controller<ContextT, Activities...>& controller){ return controller->collector(); }
+    };
+
     namespace detail{
         
         template <typename ContextT, typename... T>

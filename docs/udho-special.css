@@ -1,0 +1,11 @@
+.section.user{
+    padding: var(--spacing-medium);
+    margin: var(--spacing-medium) 0;
+    color: var(--page-background-color);
+    overflow: hidden;
+    margin-left: 0;
+    border-radius: var(--border-radius-small);
+    background: var(--deprecated-color);
+    border-left: 8px solid var(--deprecated-color-dark);
+    color: var(--deprecated-color-darker);
+}

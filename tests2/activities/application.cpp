@@ -1,6 +1,3 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE "udho Unit Test (udho::activity)"
-#include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -12,9 +9,11 @@
 #include <iostream>
 #include <udho/configuration.h>
 #include <udho/activities.h>
+#define CATCH_CONFIG_MAIN
+#include <catch2/catch.hpp>
 
-#define SMALL_TIMEOUT 2
-#define LARGE_TIMEOUT 4
+#define SMALL_TIMEOUT 1
+#define LARGE_TIMEOUT 2
 
 struct A1SData{
     int value;
@@ -177,12 +176,12 @@ void unprepared(udho::contexts::stateless ctx){
     auto t3 = udho::perform<A3>::require<A1>::with(data, io).after(t1);
         
     udho::require<A2, A3>::with(data).exec([ctx](const udho::accessor<A1, A2, A3>& d) mutable{
-        BOOST_CHECK(d.completed<A1>());
-        BOOST_CHECK(d.completed<A2>());
-        BOOST_CHECK(d.completed<A3>());
-        BOOST_CHECK(!d.failed<A1>());
-        BOOST_CHECK(!d.failed<A2>());
-        BOOST_CHECK(!d.failed<A3>());
+        CHECK(d.completed<A1>());
+        CHECK(d.completed<A2>());
+        CHECK(d.completed<A3>());
+        CHECK(!d.failed<A1>());
+        CHECK(!d.failed<A2>());
+        CHECK(!d.failed<A3>());
         
         int sum = 0;
         
@@ -220,12 +219,12 @@ void prepared(udho::contexts::stateless ctx){
     });
         
     udho::require<A2i, A3i>::with(data).exec([ctx](const udho::accessor<A1, A2i, A3i>& d) mutable{
-        BOOST_CHECK(d.completed<A1>());
-        BOOST_CHECK(d.completed<A2i>());
-        BOOST_CHECK(d.completed<A3i>());
-        BOOST_CHECK(!d.failed<A1>());
-        BOOST_CHECK(!d.failed<A2i>());
-        BOOST_CHECK(!d.failed<A3i>());
+        CHECK(d.completed<A1>());
+        CHECK(d.completed<A2i>());
+        CHECK(d.completed<A3i>());
+        CHECK(!d.failed<A1>());
+        CHECK(!d.failed<A2i>());
+        CHECK(!d.failed<A3i>());
         
         int sum = 0;
         
@@ -255,82 +254,82 @@ void unprepared_a1_fail(udho::contexts::stateless ctx){
     auto t3 = udho::perform<A3>::require<A1>::with(data, io).after(t1);
         
     udho::require<A2, A3>::with(data).exec([ctx](const udho::accessor<A1, A2, A3>& d) mutable{
-        BOOST_CHECK(d.completed<A1>());
-        BOOST_CHECK(d.failed<A1>());
-        BOOST_CHECK(!d.completed<A2>());
-        BOOST_CHECK(!d.completed<A3>());
+        CHECK(d.completed<A1>());
+        CHECK(d.failed<A1>());
+        CHECK(!d.completed<A2>());
+        CHECK(!d.completed<A3>());
         
         A1FData pre = d.failure<A1>();
         
         ctx.respond(boost::lexical_cast<std::string>(pre.reason), "text/plain");
-    }).after(t2).after(t3);
+    }).after(t2).after(t3).force();
     
     t1();
 }
 
-BOOST_AUTO_TEST_SUITE(activity)
+TEST_CASE( "activity application", "[activities]" ) {
 
-BOOST_AUTO_TEST_CASE(unprepared_subtasks){
-    boost::asio::io_service io;
-    udho::servers::quiet::stateless server(io);
-    auto urls = udho::router()
-        | (udho::get(&unprepared).deferred() = "^/unprepared");
-    server.serve(urls, 9198);
-    
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-    
-    ctx.client().get("http://localhost:9198/unprepared")
-        .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-            BOOST_CHECK(status == boost::beast::http::status::ok);
-            BOOST_CHECK(body == "128");
-            io.stop();
-        });
-    
-    io.run();
+    SECTION("unprepared_subtasks"){
+        boost::asio::io_service io;
+        udho::servers::quiet::stateless server(io);
+        auto urls = udho::router()
+            | (udho::get(&unprepared).deferred() = "^/unprepared");
+        server.serve(urls, 9198);
+        
+        udho::servers::quiet::stateless::request_type req;
+        udho::servers::quiet::stateless::attachment_type attachment(io);
+        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+        
+        ctx.client().get("http://localhost:9198/unprepared")
+            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
+                CHECK(status == boost::beast::http::status::ok);
+                CHECK(body == "128");
+                io.stop();
+            });
+        
+        io.run();
+    }
+
+    SECTION("prepared_subtasks"){
+        boost::asio::io_service io;
+        udho::servers::quiet::stateless server(io);
+        auto urls = udho::router()
+            | (udho::get(&prepared).deferred() = "^/prepared");
+        server.serve(urls, 9198);
+        
+        udho::servers::quiet::stateless::request_type req;
+        udho::servers::quiet::stateless::attachment_type attachment(io);
+        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+        
+        ctx.client().get("http://localhost:9198/prepared")
+            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
+                CHECK(status == boost::beast::http::status::ok);
+                CHECK(body == "128");
+                io.stop();
+            });
+        
+        io.run();
+    }
+
+    SECTION("unprepared_subtasks_a1_fail"){
+        boost::asio::io_service io;
+        udho::servers::quiet::stateless server(io);
+        auto urls = udho::router()
+            | (udho::get(&unprepared_a1_fail).deferred() = "^/unprepared_a1_fail");
+        server.serve(urls, 9198);
+        
+        udho::servers::quiet::stateless::request_type req;
+        udho::servers::quiet::stateless::attachment_type attachment(io);
+        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+        
+        ctx.client().get("http://localhost:9198/unprepared_a1_fail")
+            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
+                CHECK(status == boost::beast::http::status::ok);
+                CHECK(body == "100");
+                io.stop();
+            });
+        
+        io.run();
+    }
+
 }
-
-BOOST_AUTO_TEST_CASE(prepared_subtasks){
-    boost::asio::io_service io;
-    udho::servers::quiet::stateless server(io);
-    auto urls = udho::router()
-        | (udho::get(&prepared).deferred() = "^/prepared");
-    server.serve(urls, 9198);
-    
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-    
-    ctx.client().get("http://localhost:9198/prepared")
-        .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-            BOOST_CHECK(status == boost::beast::http::status::ok);
-            BOOST_CHECK(body == "128");
-            io.stop();
-        });
-    
-    io.run();
-}
-
-BOOST_AUTO_TEST_CASE(unprepared_subtasks_a1_fail){
-    boost::asio::io_service io;
-    udho::servers::quiet::stateless server(io);
-    auto urls = udho::router()
-        | (udho::get(&unprepared_a1_fail).deferred() = "^/unprepared_a1_fail");
-    server.serve(urls, 9198);
-    
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-    
-    ctx.client().get("http://localhost:9198/unprepared_a1_fail")
-        .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-            BOOST_CHECK(status == boost::beast::http::status::ok);
-            BOOST_CHECK(body == "100");
-            io.stop();
-        });
-    
-    io.run();
-}
-
-BOOST_AUTO_TEST_SUITE_END()

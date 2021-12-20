@@ -4,19 +4,12 @@ Udho (উধো)
 udho is a minimalistic featureful HTTP framework based on [Boost.Beast](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html).
 
 [Code](https://gitlab.com/neel.basu/udho) | [Issues](https://gitlab.com/neel.basu/udho/issues)
-
 [![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)](https://opensource.org/licenses/BSD-2-Clause)
-
 [![Documentation Status](https://readthedocs.org/projects/udho/badge/?version=latest)](https://udho.readthedocs.io/en/latest/?badge=latest)
-
 [![pipeline status develop](https://gitlab.com/neel.basu/udho/badges/develop/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/develop)
-
 [![pipeline status master](https://gitlab.com/neel.basu/udho/badges/master/pipeline.svg)](https://gitlab.com/neel.basu/udho/commits/master)
-
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/20093f1597cd490ba923fc5401ada672)](https://www.codacy.com/manual/neel.basu.z/udho?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=neel/udho&amp;utm_campaign=Badge_Grade)
-
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/alerts/)
-
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/neel/udho.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/neel/udho/context:cpp)
 
 ``` {.sourceCode .cpp}

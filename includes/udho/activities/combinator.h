@@ -38,14 +38,31 @@
 #include <udho/hazo/node/meta.h>
 
 namespace udho{
-/**
- * @ingroup activities
- */
 namespace activities{
     /**
-     * @brief A combinator combines multiple activities and proceeds towards the next activity
+     * @brief A combinator combines multiple activities and proceeds towards the next activity.
      * @tparam NextT next activity
      * @tparam DependenciesT dependencies
+     *
+     * Given two activities A1 and A2, in order to express the dependency of A2 on A1 a `combinator<A2, A1>` 
+     * is used by the @ref udho::activities::subtask "subtask" internally. a `combinator<X, A, B, C, ...>`
+     * combines all dependencies `A, B, C, ...`  and once all the dependencies complete it starts the next 
+     * activity `X`, i.e. calls the next activity `X`'s `operator()()`.
+     * @attention It is not recomended to construct a combinator directly. Instead use subtasks and other 
+     *            convenient functions that constructs and manages the combinator appropriate for the activity 
+     *            and the dependencies.
+     *
+     * Following example demonstrates usage of the combinator.
+     * @code 
+     * auto collector = activities::collect<A1, A2>(ctx);
+     * auto a1 = std::make_shared<A1>(collector);
+     * auto a2 = std::make_shared<A2>(collector);
+     *  
+     * auto combinator = std::make_shared<activities::combinator<A2, A1>>(a2);
+     * a1->done(combinator);
+     * @endcode 
+     * A combinator also provides a `prepare` function which takes a callback as an input which is called 
+     * after all its depedencies have completed and before the next activity is invoked.
      * @ingroup activities
      */
     template <typename NextT, typename... DependenciesT>

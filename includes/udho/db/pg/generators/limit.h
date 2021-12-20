@@ -28,6 +28,7 @@
 #ifndef UDHO_DB_PG_GENERATORS_PARTS_LIMIT_H
 #define UDHO_DB_PG_GENERATORS_PARTS_LIMIT_H
 
+#include <ozo/query_builder.h>
 #include <udho/db/pg/crud/limit.h>
 #include <udho/db/pg/generators/fwd.h>
 

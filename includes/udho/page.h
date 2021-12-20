@@ -217,7 +217,7 @@ namespace visual{
 
 template <typename AuxT, typename RequestT, typename ShadowT>
 udho::context<AuxT, RequestT, ShadowT>& operator<<(udho::context<AuxT, RequestT, ShadowT>& context, const exceptions::http_error& error){
-    std::cout << "ERROR" << error._message << std::endl;
+    std::cout << "Uncaught HTTP Error" << " " << error.result() << " " << error.what() << std::endl;
     auto response = error.response(context);
     context.respond(response);
     return context;

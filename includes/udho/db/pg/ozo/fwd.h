@@ -25,48 +25,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_ACTIVITIES_FWD_H
-#define UDHO_ACTIVITIES_FWD_H
-
-#include <memory>
+#ifndef UDHO_DB_PG_OZO_FWD_H
+#define UDHO_DB_PG_OZO_FWD_H
 
 namespace udho{
-/**
- * \ingroup activities
- */
-namespace activities{
+namespace db{
+namespace pg{
+namespace io{
 
-    template <typename ContextT, typename... T>
-    struct collector;
-
-    template <typename CollectorLikeT>
-    struct collector_of;
-
-    template <typename... T>
-    struct accessor;
-
-    template <typename AccessibleT>
-    struct accessor_of;
-
-    template <typename NextT, typename... DependenciesT>
-    struct combinator;
-    
-    template <typename ActivityT, typename... DependenciesT>
-    struct subtask;
-
-    template <typename CallbackT, typename CollectorT>
-    struct joined;
-    
-    namespace detail{
-        
-        template <typename T>
-        struct after;
-        
-    }
+template <typename RecordT>
+struct receive;
     
 }
-
+}
+}
 }
 
-#endif // UDHO_ACTIVITIES_FWD_H
-
+#endif // UDHO_DB_PG_OZO_FWD_H

@@ -57,10 +57,10 @@ TEST_CASE( "activity data", "[activity]" ) {
 
                 *collector >> a >> b >> c >> d;
 
-                REQUIRE(a.get()._value == "Hello World");
-                REQUIRE(b.get()._value == 42);
-                REQUIRE(c.get()._value == 3.14);
-                REQUIRE(d.get()._value == 2.718);
+                CHECK(a.get()._value == "Hello World");
+                CHECK(b.get()._value == 42);
+                CHECK(c.get()._value == 3.14);
+                CHECK(d.get()._value == 2.718);
             }
 
             THEN( "the same data can be retrieved in opposite order" ) {
@@ -71,10 +71,10 @@ TEST_CASE( "activity data", "[activity]" ) {
 
                 *collector >> d >> c >> b >> a;
 
-                REQUIRE(a.get()._value == "Hello World");
-                REQUIRE(b.get()._value == 42);
-                REQUIRE(c.get()._value == 3.14);
-                REQUIRE(d.get()._value == 2.718);
+                CHECK(a.get()._value == "Hello World");
+                CHECK(b.get()._value == 42);
+                CHECK(c.get()._value == 3.14);
+                CHECK(d.get()._value == 2.718);
             }
         }
 
@@ -93,10 +93,10 @@ TEST_CASE( "activity data", "[activity]" ) {
 
                 *collector >> a >> b >> c >> d;
 
-                REQUIRE(a.get()._value == "Hello World");
-                REQUIRE(b.get()._value == 42);
-                REQUIRE(c.get()._value == 3.14);
-                REQUIRE(d.get()._value == 2.718);
+                CHECK(a.get()._value == "Hello World");
+                CHECK(b.get()._value == 42);
+                CHECK(c.get()._value == 3.14);
+                CHECK(d.get()._value == 2.718);
             }
 
             THEN( "the same data can be retrieved in opposite order" ) {
@@ -107,10 +107,10 @@ TEST_CASE( "activity data", "[activity]" ) {
 
                 *collector >> d >> c >> b >> a;
 
-                REQUIRE(a.get()._value == "Hello World");
-                REQUIRE(b.get()._value == 42);
-                REQUIRE(c.get()._value == 3.14);
-                REQUIRE(d.get()._value == 2.718);
+                CHECK(a.get()._value == "Hello World");
+                CHECK(b.get()._value == 42);
+                CHECK(c.get()._value == 3.14);
+                CHECK(d.get()._value == 2.718);
             }
 
         }
@@ -131,12 +131,12 @@ TEST_CASE( "activity data", "[activity]" ) {
                 C::result_type c = accessor.get<C>();
                 D::result_type d = accessor.get<D>();
 
-                REQUIRE(!accessor.exists<E>());
-                REQUIRE(accessor.exists<D>());
-                REQUIRE(a._value == "Hello World");
-                REQUIRE(b._value == 42);
-                REQUIRE(c._value == 3.14);
-                REQUIRE(d._value == 2.718);
+                CHECK(!accessor.exists<E>());
+                CHECK(accessor.exists<D>());
+                CHECK(a._value == "Hello World");
+                CHECK(b._value == 42);
+                CHECK(c._value == 3.14);
+                CHECK(d._value == 2.718);
             }
         }
 
@@ -147,9 +147,9 @@ TEST_CASE( "activity data", "[activity]" ) {
                 C::result_type c = accessor.get<C>();
                 D::result_type d = accessor.get<D>();
 
-                REQUIRE(a._value == "Hello World");
-                REQUIRE(c._value == 3.14);
-                REQUIRE(d._value == 2.718);
+                CHECK(a._value == "Hello World");
+                CHECK(c._value == 3.14);
+                CHECK(d._value == 2.718);
             }
         }
 
@@ -165,9 +165,9 @@ TEST_CASE( "activity data", "[activity]" ) {
 
                 *collector >> c >> a >> d;
 
-                REQUIRE(a.get()._value == "Hello Mars");
-                REQUIRE(c.get()._value == 4.2);
-                REQUIRE(d.get()._value == 2.718);
+                CHECK(a.get()._value == "Hello Mars");
+                CHECK(c.get()._value == 4.2);
+                CHECK(d.get()._value == 2.718);
             }
         }
     }

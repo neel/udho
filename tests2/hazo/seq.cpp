@@ -68,20 +68,20 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
     SECTION( "data can be retrieved and modified by position" ) {
         h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"));
 
-        REQUIRE(chain.data<0>()  == 42);
-        REQUIRE(chain.data<1>()  == "Fourty Two");
-        REQUIRE(chain.data<2>()  == "Neel");
-        REQUIRE(chain.data<3>()  == "Basu");
-        REQUIRE(chain.data<4>()  == age(32));
-        REQUIRE(chain.data<5>()  == 4.2);
-        REQUIRE(chain.data<6>()  == '!');
-        REQUIRE(chain.data<7>()  == "Fourty Two");
-        REQUIRE(chain.data<8>()  == name("Neel Basu"));
-        REQUIRE(chain.data<9>()  == "India");
-        REQUIRE(chain.data<10>() == 24);
-        REQUIRE(chain.data<11>() == wrap_int(10));
-        REQUIRE(chain.data<12>() == wrap_str("Hello World"));
-        REQUIRE(chain.data<13>() == value_str("Hi"));
+        CHECK(chain.data<0>()  == 42);
+        CHECK(chain.data<1>()  == "Fourty Two");
+        CHECK(chain.data<2>()  == "Neel");
+        CHECK(chain.data<3>()  == "Basu");
+        CHECK(chain.data<4>()  == age(32));
+        CHECK(chain.data<5>()  == 4.2);
+        CHECK(chain.data<6>()  == '!');
+        CHECK(chain.data<7>()  == "Fourty Two");
+        CHECK(chain.data<8>()  == name("Neel Basu"));
+        CHECK(chain.data<9>()  == "India");
+        CHECK(chain.data<10>() == 24);
+        CHECK(chain.data<11>() == wrap_int(10));
+        CHECK(chain.data<12>() == wrap_str("Hello World"));
+        CHECK(chain.data<13>() == value_str("Hi"));
 
         chain.data<0>()  = 24;
         chain.data<1>()  = "Twenty Four";
@@ -98,39 +98,39 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         chain.data<12>() = wrap_str("Hello");
         chain.data<13>() = value_str("Hi!");
 
-        REQUIRE(chain.data<0>()  == 24);
-        REQUIRE(chain.data<1>()  == "Twenty Four");
-        REQUIRE(chain.data<2>()  == "Sunanda");
-        REQUIRE(chain.data<3>()  == "Bose");
-        REQUIRE(chain.data<4>()  == 33);
-        REQUIRE(chain.data<5>()  == 2.4);
-        REQUIRE(chain.data<6>()  == '?');
-        REQUIRE(chain.data<7>()  == "Twenty Four");
-        REQUIRE(chain.data<8>()  == name("Sunanda Bose"));
-        REQUIRE(chain.data<9>()  == "India");
-        REQUIRE(chain.data<10>() == 42);
-        REQUIRE(chain.data<11>() == wrap_int(20));
-        REQUIRE(chain.data<12>() == wrap_str("Hello"));
-        REQUIRE(chain.data<13>() == value_str("Hi!"));
+        CHECK(chain.data<0>()  == 24);
+        CHECK(chain.data<1>()  == "Twenty Four");
+        CHECK(chain.data<2>()  == "Sunanda");
+        CHECK(chain.data<3>()  == "Bose");
+        CHECK(chain.data<4>()  == 33);
+        CHECK(chain.data<5>()  == 2.4);
+        CHECK(chain.data<6>()  == '?');
+        CHECK(chain.data<7>()  == "Twenty Four");
+        CHECK(chain.data<8>()  == name("Sunanda Bose"));
+        CHECK(chain.data<9>()  == "India");
+        CHECK(chain.data<10>() == 42);
+        CHECK(chain.data<11>() == wrap_int(20));
+        CHECK(chain.data<12>() == wrap_str("Hello"));
+        CHECK(chain.data<13>() == value_str("Hi!"));
     }
 
     SECTION( "value can be retrieved and modified by position" ) {
         h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"));
 
-        REQUIRE(chain.value<0>()  == 42);
-        REQUIRE(chain.value<1>()  == "Fourty Two");
-        REQUIRE(chain.value<2>()  == "Neel");
-        REQUIRE(chain.value<3>()  == "Basu");
-        REQUIRE(chain.value<4>()  == 32);
-        REQUIRE(chain.value<5>()  == 4.2);
-        REQUIRE(chain.value<6>()  == '!');
-        REQUIRE(chain.value<7>()  == "Fourty Two");
-        REQUIRE(chain.value<8>()  == "Neel Basu");
-        REQUIRE(chain.value<9>()  == "India");
-        REQUIRE(chain.value<10>() == 24);
-        REQUIRE(chain.value<11>() == wrap_int(10));
-        REQUIRE(chain.value<12>() == wrap_str("Hello World"));
-        REQUIRE(chain.value<13>() == "Hi");
+        CHECK(chain.value<0>()  == 42);
+        CHECK(chain.value<1>()  == "Fourty Two");
+        CHECK(chain.value<2>()  == "Neel");
+        CHECK(chain.value<3>()  == "Basu");
+        CHECK(chain.value<4>()  == 32);
+        CHECK(chain.value<5>()  == 4.2);
+        CHECK(chain.value<6>()  == '!');
+        CHECK(chain.value<7>()  == "Fourty Two");
+        CHECK(chain.value<8>()  == "Neel Basu");
+        CHECK(chain.value<9>()  == "India");
+        CHECK(chain.value<10>() == 24);
+        CHECK(chain.value<11>() == wrap_int(10));
+        CHECK(chain.value<12>() == wrap_str("Hello World"));
+        CHECK(chain.value<13>() == "Hi");
 
         chain.value<0>()  = 24;
         chain.value<1>()  = "Twenty Four";
@@ -147,40 +147,40 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         chain.value<12>() = wrap_str("Hello");
         chain.value<13>() = "Hi!";
 
-        REQUIRE(chain.value<0>()  == 24);
-        REQUIRE(chain.value<1>()  == "Twenty Four");
-        REQUIRE(chain.value<2>()  == "Sunanda");
-        REQUIRE(chain.value<3>()  == "Bose");
-        REQUIRE(chain.value<4>()  == 33);
-        REQUIRE(chain.value<5>()  == 2.4);
-        REQUIRE(chain.value<6>()  == '?');
-        REQUIRE(chain.value<7>()  == "Twenty Four");
-        REQUIRE(chain.value<8>()  == "Sunanda Bose");
-        REQUIRE(chain.value<9>()  == "India");
-        REQUIRE(chain.value<10>() == 42);
-        REQUIRE(chain.value<11>() == wrap_int(20));
-        REQUIRE(chain.value<12>() == wrap_str("Hello"));
-        REQUIRE(chain.value<13>() == "Hi!");
+        CHECK(chain.value<0>()  == 24);
+        CHECK(chain.value<1>()  == "Twenty Four");
+        CHECK(chain.value<2>()  == "Sunanda");
+        CHECK(chain.value<3>()  == "Bose");
+        CHECK(chain.value<4>()  == 33);
+        CHECK(chain.value<5>()  == 2.4);
+        CHECK(chain.value<6>()  == '?');
+        CHECK(chain.value<7>()  == "Twenty Four");
+        CHECK(chain.value<8>()  == "Sunanda Bose");
+        CHECK(chain.value<9>()  == "India");
+        CHECK(chain.value<10>() == 42);
+        CHECK(chain.value<11>() == wrap_int(20));
+        CHECK(chain.value<12>() == wrap_str("Hello"));
+        CHECK(chain.value<13>() == "Hi!");
     }
 
     SECTION( "data can be retrieved and modified by type and position" ) {
         h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str, wrap_int> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"), wrap_int(64));
 
-        REQUIRE(chain.data<int, 0>()            == 42);
-        REQUIRE(chain.data<std::string, 0>()    == "Fourty Two");
-        REQUIRE(chain.data<first_name, 0>()     == "Neel");
-        REQUIRE(chain.data<last_name, 0>()      == "Basu");
-        REQUIRE(chain.data<age, 0>()            == age(32));
-        REQUIRE(chain.data<double, 0>()         == 4.2);
-        REQUIRE(chain.data<char, 0>()           == '!');
-        REQUIRE(chain.data<std::string, 1>()    == "Fourty Two");
-        REQUIRE(chain.data<name, 0>()           == name("Neel Basu"));
-        REQUIRE(chain.data<country, 0>()        == "India");
-        REQUIRE(chain.data<int, 1>()            == 24);
-        REQUIRE(chain.data<wrap_int_index, 0>() == wrap_int(10));
-        REQUIRE(chain.data<wrap_str>()          == wrap_str("Hello World"));
-        REQUIRE(chain.data<value_str>()         == value_str("Hi"));
-        REQUIRE(chain.data<wrap_int_index, 1>() == wrap_int(64));
+        CHECK(chain.data<int, 0>()            == 42);
+        CHECK(chain.data<std::string, 0>()    == "Fourty Two");
+        CHECK(chain.data<first_name, 0>()     == "Neel");
+        CHECK(chain.data<last_name, 0>()      == "Basu");
+        CHECK(chain.data<age, 0>()            == age(32));
+        CHECK(chain.data<double, 0>()         == 4.2);
+        CHECK(chain.data<char, 0>()           == '!');
+        CHECK(chain.data<std::string, 1>()    == "Fourty Two");
+        CHECK(chain.data<name, 0>()           == name("Neel Basu"));
+        CHECK(chain.data<country, 0>()        == "India");
+        CHECK(chain.data<int, 1>()            == 24);
+        CHECK(chain.data<wrap_int_index, 0>() == wrap_int(10));
+        CHECK(chain.data<wrap_str>()          == wrap_str("Hello World"));
+        CHECK(chain.data<value_str>()         == value_str("Hi"));
+        CHECK(chain.data<wrap_int_index, 1>() == wrap_int(64));
 
         chain.data<int, 0>()                    = 24;
         chain.data<std::string, 0>()            = "Twenty Four";
@@ -198,41 +198,41 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         chain.data<value_str>()                 = value_str("Hi!");
         chain.data<wrap_int_index, 1>()         = wrap_int(46);
 
-        REQUIRE(chain.data<int, 0>()            == 24);
-        REQUIRE(chain.data<std::string, 0>()    == "Twenty Four");
-        REQUIRE(chain.data<first_name, 0>()     == "Sunanda");
-        REQUIRE(chain.data<last_name, 0>()      == "Bose");
-        REQUIRE(chain.data<age, 0>()            == 33);
-        REQUIRE(chain.data<double, 0>()         == 2.4);
-        REQUIRE(chain.data<char, 0>()           == '?');
-        REQUIRE(chain.data<std::string, 1>()    == "Twenty Four");
-        REQUIRE(chain.data<name, 0>()           == name("Sunanda Bose"));
-        REQUIRE(chain.data<country, 0>()        == "India");
-        REQUIRE(chain.data<int, 1>()            == 42);
-        REQUIRE(chain.data<wrap_int_index, 0>() == wrap_int(20));
-        REQUIRE(chain.data<wrap_str>()          == wrap_str("Hello"));
-        REQUIRE(chain.data<value_str>()         == value_str("Hi!"));
-        REQUIRE(chain.data<wrap_int_index, 1>() == wrap_int(46));
+        CHECK(chain.data<int, 0>()            == 24);
+        CHECK(chain.data<std::string, 0>()    == "Twenty Four");
+        CHECK(chain.data<first_name, 0>()     == "Sunanda");
+        CHECK(chain.data<last_name, 0>()      == "Bose");
+        CHECK(chain.data<age, 0>()            == 33);
+        CHECK(chain.data<double, 0>()         == 2.4);
+        CHECK(chain.data<char, 0>()           == '?');
+        CHECK(chain.data<std::string, 1>()    == "Twenty Four");
+        CHECK(chain.data<name, 0>()           == name("Sunanda Bose"));
+        CHECK(chain.data<country, 0>()        == "India");
+        CHECK(chain.data<int, 1>()            == 42);
+        CHECK(chain.data<wrap_int_index, 0>() == wrap_int(20));
+        CHECK(chain.data<wrap_str>()          == wrap_str("Hello"));
+        CHECK(chain.data<value_str>()         == value_str("Hi!"));
+        CHECK(chain.data<wrap_int_index, 1>() == wrap_int(46));
     }
 
     SECTION( "value can be retrieved and modified by type and position" ) {
         h::seq_d<int, std::string, first_name, last_name, age, double, char, std::string, name, country, int, wrap_int, wrap_str, value_str, wrap_int> chain(42, "Fourty Two", "Neel", "Basu", age(32), 4.2, '!', "Fourty Two", name("Neel Basu"), "India", 24, wrap_int(10), wrap_str("Hello World"), value_str("Hi"), wrap_int(64));
 
-        REQUIRE(chain.value<int, 0>()            == 42);
-        REQUIRE(chain.value<std::string, 0>()    == "Fourty Two");
-        REQUIRE(chain.value<first_name, 0>()     == "Neel");
-        REQUIRE(chain.value<last_name, 0>()      == "Basu");
-        REQUIRE(chain.value<age, 0>()            == 32);
-        REQUIRE(chain.value<double, 0>()         == 4.2);
-        REQUIRE(chain.value<char, 0>()           == '!');
-        REQUIRE(chain.value<std::string, 1>()    == "Fourty Two");
-        REQUIRE(chain.value<name, 0>()           == "Neel Basu");
-        REQUIRE(chain.value<country, 0>()        == "India");
-        REQUIRE(chain.value<int, 1>()            == 24);
-        REQUIRE(chain.value<wrap_int_index, 0>() == wrap_int(10));
-        REQUIRE(chain.value<wrap_str>()          == wrap_str("Hello World"));
-        REQUIRE(chain.value<value_str>()         == "Hi");
-        REQUIRE(chain.value<wrap_int_index, 1>() == wrap_int(64));
+        CHECK(chain.value<int, 0>()            == 42);
+        CHECK(chain.value<std::string, 0>()    == "Fourty Two");
+        CHECK(chain.value<first_name, 0>()     == "Neel");
+        CHECK(chain.value<last_name, 0>()      == "Basu");
+        CHECK(chain.value<age, 0>()            == 32);
+        CHECK(chain.value<double, 0>()         == 4.2);
+        CHECK(chain.value<char, 0>()           == '!');
+        CHECK(chain.value<std::string, 1>()    == "Fourty Two");
+        CHECK(chain.value<name, 0>()           == "Neel Basu");
+        CHECK(chain.value<country, 0>()        == "India");
+        CHECK(chain.value<int, 1>()            == 24);
+        CHECK(chain.value<wrap_int_index, 0>() == wrap_int(10));
+        CHECK(chain.value<wrap_str>()          == wrap_str("Hello World"));
+        CHECK(chain.value<value_str>()         == "Hi");
+        CHECK(chain.value<wrap_int_index, 1>() == wrap_int(64));
 
         chain.value<int, 0>()                    = 24;
         chain.value<std::string, 0>()            = "Twenty Four";
@@ -250,21 +250,21 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         chain.value<value_str>()                 = "Hi!";
         chain.value<wrap_int_index, 1>()         = wrap_int(46);
 
-        REQUIRE(chain.value<int, 0>()            == 24);
-        REQUIRE(chain.value<std::string, 0>()    == "Twenty Four");
-        REQUIRE(chain.value<first_name, 0>()     == "Sunanda");
-        REQUIRE(chain.value<last_name, 0>()      == "Bose");
-        REQUIRE(chain.value<age, 0>()            == 33);
-        REQUIRE(chain.value<double, 0>()         == 2.4);
-        REQUIRE(chain.value<char, 0>()           == '?');
-        REQUIRE(chain.value<std::string, 1>()    == "Twenty Four");
-        REQUIRE(chain.value<name, 0>()           == "Sunanda Bose");
-        REQUIRE(chain.value<country, 0>()        == "India");
-        REQUIRE(chain.value<int, 1>()            == 42);
-        REQUIRE(chain.value<wrap_int_index, 0>() == wrap_int(20));
-        REQUIRE(chain.value<wrap_str>()          == wrap_str("Hello"));
-        REQUIRE(chain.value<value_str>()         == "Hi!");
-        REQUIRE(chain.value<wrap_int_index, 1>() == wrap_int(46));
+        CHECK(chain.value<int, 0>()            == 24);
+        CHECK(chain.value<std::string, 0>()    == "Twenty Four");
+        CHECK(chain.value<first_name, 0>()     == "Sunanda");
+        CHECK(chain.value<last_name, 0>()      == "Bose");
+        CHECK(chain.value<age, 0>()            == 33);
+        CHECK(chain.value<double, 0>()         == 2.4);
+        CHECK(chain.value<char, 0>()           == '?');
+        CHECK(chain.value<std::string, 1>()    == "Twenty Four");
+        CHECK(chain.value<name, 0>()           == "Sunanda Bose");
+        CHECK(chain.value<country, 0>()        == "India");
+        CHECK(chain.value<int, 1>()            == 42);
+        CHECK(chain.value<wrap_int_index, 0>() == wrap_int(20));
+        CHECK(chain.value<wrap_str>()          == wrap_str("Hello"));
+        CHECK(chain.value<value_str>()         == "Hi!");
+        CHECK(chain.value<wrap_int_index, 1>() == wrap_int(46));
     }
 
     GIVEN("a seq_d constructed with elements as well as pod types") {
@@ -278,254 +278,254 @@ TEST_CASE("sequence common node functionalities", "[hazo]") {
         h::seq_d<int, first_name, last_name, age, std::string, double, name, country, char> seq_d2(42, f, l, a, "Hello World", 3.14, n, c, '!');
 
         THEN( "elements can be retrieved through the element method" ) {
-            REQUIRE(std::is_same_v<decltype(seq_d1.element(first_name::val)), first_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.element(last_name::val)), last_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.element(age::val)), age&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.element(name::val)), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.element(country::val)), country&>);
+            CHECK(std::is_same_v<decltype(seq_d1.element(first_name::val)), first_name&>);
+            CHECK(std::is_same_v<decltype(seq_d1.element(last_name::val)), last_name&>);
+            CHECK(std::is_same_v<decltype(seq_d1.element(age::val)), age&>);
+            CHECK(std::is_same_v<decltype(seq_d1.element(name::val)), name&>);
+            CHECK(std::is_same_v<decltype(seq_d1.element(country::val)), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1.element(first_name::val))>, first_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1.element(last_name::val))>, last_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1.element(age::val))>, age>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1.element(name::val))>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1.element(country::val))>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1.element(first_name::val))>, first_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1.element(last_name::val))>, last_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1.element(age::val))>, age>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1.element(name::val))>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1.element(country::val))>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.element(first_name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.element(last_name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.element(age::val))>, std::size_t>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.element(name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.element(country::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.element(first_name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.element(last_name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.element(age::val))>, std::size_t>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.element(name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.element(country::val))>, std::string>);
 
-            REQUIRE(seq_d1.element(first_name::val) == f);
-            REQUIRE(seq_d1.element(last_name::val) == l);
-            REQUIRE(seq_d1.element(age::val) == a);
-            REQUIRE(seq_d1.element(name::val) == n);
-            REQUIRE(seq_d1.element(country::val) == c);
+            CHECK(seq_d1.element(first_name::val) == f);
+            CHECK(seq_d1.element(last_name::val) == l);
+            CHECK(seq_d1.element(age::val) == a);
+            CHECK(seq_d1.element(name::val) == n);
+            CHECK(seq_d1.element(country::val) == c);
 
-            REQUIRE(seq_d1.element(first_name::val) == "Neel");
-            REQUIRE(seq_d1.element(last_name::val) == "Basu");
-            REQUIRE(seq_d1.element(age::val) == 32);
-            REQUIRE(seq_d1.element(name::val) == "Neel Basu");
-            REQUIRE(seq_d1.element(country::val) == "India");
+            CHECK(seq_d1.element(first_name::val) == "Neel");
+            CHECK(seq_d1.element(last_name::val) == "Basu");
+            CHECK(seq_d1.element(age::val) == 32);
+            CHECK(seq_d1.element(name::val) == "Neel Basu");
+            CHECK(seq_d1.element(country::val) == "India");
 
-            REQUIRE(std::is_same_v<decltype(seq_d2.element(first_name::val)), first_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2.element(last_name::val)), last_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2.element(age::val)), age&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2.element(name::val)), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2.element(country::val)), country&>);
+            CHECK(std::is_same_v<decltype(seq_d2.element(first_name::val)), first_name&>);
+            CHECK(std::is_same_v<decltype(seq_d2.element(last_name::val)), last_name&>);
+            CHECK(std::is_same_v<decltype(seq_d2.element(age::val)), age&>);
+            CHECK(std::is_same_v<decltype(seq_d2.element(name::val)), name&>);
+            CHECK(std::is_same_v<decltype(seq_d2.element(country::val)), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2.element(first_name::val))>, first_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2.element(last_name::val))>, last_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2.element(age::val))>, age>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2.element(name::val))>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2.element(country::val))>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2.element(first_name::val))>, first_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2.element(last_name::val))>, last_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2.element(age::val))>, age>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2.element(name::val))>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2.element(country::val))>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2.element(first_name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2.element(last_name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2.element(age::val))>, std::size_t>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2.element(name::val))>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2.element(country::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2.element(first_name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2.element(last_name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2.element(age::val))>, std::size_t>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2.element(name::val))>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2.element(country::val))>, std::string>);
 
-            REQUIRE(seq_d2.element(first_name::val) == f);
-            REQUIRE(seq_d2.element(last_name::val) == l);
-            REQUIRE(seq_d2.element(age::val) == a);
-            REQUIRE(seq_d2.element(name::val) == n);
-            REQUIRE(seq_d2.element(country::val) == c);
+            CHECK(seq_d2.element(first_name::val) == f);
+            CHECK(seq_d2.element(last_name::val) == l);
+            CHECK(seq_d2.element(age::val) == a);
+            CHECK(seq_d2.element(name::val) == n);
+            CHECK(seq_d2.element(country::val) == c);
 
-            REQUIRE(seq_d2.element(first_name::val) == "Neel");
-            REQUIRE(seq_d2.element(last_name::val) == "Basu");
-            REQUIRE(seq_d2.element(age::val) == 32);
-            REQUIRE(seq_d2.element(name::val) == "Neel Basu");
-            REQUIRE(seq_d2.element(country::val) == "India");
+            CHECK(seq_d2.element(first_name::val) == "Neel");
+            CHECK(seq_d2.element(last_name::val) == "Basu");
+            CHECK(seq_d2.element(age::val) == 32);
+            CHECK(seq_d2.element(name::val) == "Neel Basu");
+            CHECK(seq_d2.element(country::val) == "India");
         }
 
         THEN( "elements can be retrieved through operator[] using element handle" ) {
-            REQUIRE(std::is_same_v<decltype(seq_d1[first_name::val]), first_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1[last_name::val]), last_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1[age::val]), age&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1[name::val]), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1[country::val]), country&>);
+            CHECK(std::is_same_v<decltype(seq_d1[first_name::val]), first_name&>);
+            CHECK(std::is_same_v<decltype(seq_d1[last_name::val]), last_name&>);
+            CHECK(std::is_same_v<decltype(seq_d1[age::val]), age&>);
+            CHECK(std::is_same_v<decltype(seq_d1[name::val]), name&>);
+            CHECK(std::is_same_v<decltype(seq_d1[country::val]), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1[first_name::val])>, first_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1[last_name::val])>, last_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1[age::val])>, age>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1[name::val])>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1[country::val])>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1[first_name::val])>, first_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1[last_name::val])>, last_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1[age::val])>, age>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1[name::val])>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1[country::val])>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1[first_name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1[last_name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1[age::val])>, std::size_t>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1[name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1[country::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1[first_name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1[last_name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1[age::val])>, std::size_t>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1[name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1[country::val])>, std::string>);
 
-            REQUIRE(seq_d1[first_name::val] == f);
-            REQUIRE(seq_d1[last_name::val] == l);
-            REQUIRE(seq_d1[age::val] == a);
-            REQUIRE(seq_d1[name::val] == n);
-            REQUIRE(seq_d1[country::val] == c);
+            CHECK(seq_d1[first_name::val] == f);
+            CHECK(seq_d1[last_name::val] == l);
+            CHECK(seq_d1[age::val] == a);
+            CHECK(seq_d1[name::val] == n);
+            CHECK(seq_d1[country::val] == c);
 
-            REQUIRE(seq_d1[first_name::val] == "Neel");
-            REQUIRE(seq_d1[last_name::val] == "Basu");
-            REQUIRE(seq_d1[age::val] == 32);
-            REQUIRE(seq_d1[name::val] == "Neel Basu");
-            REQUIRE(seq_d1[country::val] == "India");
+            CHECK(seq_d1[first_name::val] == "Neel");
+            CHECK(seq_d1[last_name::val] == "Basu");
+            CHECK(seq_d1[age::val] == 32);
+            CHECK(seq_d1[name::val] == "Neel Basu");
+            CHECK(seq_d1[country::val] == "India");
 
-            REQUIRE(std::is_same_v<decltype(seq_d2[first_name::val]), first_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2[last_name::val]), last_name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2[age::val]), age&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2[name::val]), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2[country::val]), country&>);
+            CHECK(std::is_same_v<decltype(seq_d2[first_name::val]), first_name&>);
+            CHECK(std::is_same_v<decltype(seq_d2[last_name::val]), last_name&>);
+            CHECK(std::is_same_v<decltype(seq_d2[age::val]), age&>);
+            CHECK(std::is_same_v<decltype(seq_d2[name::val]), name&>);
+            CHECK(std::is_same_v<decltype(seq_d2[country::val]), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2[first_name::val])>, first_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2[last_name::val])>, last_name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2[age::val])>, age>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2[name::val])>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2[country::val])>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2[first_name::val])>, first_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2[last_name::val])>, last_name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2[age::val])>, age>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2[name::val])>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2[country::val])>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2[first_name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2[last_name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2[age::val])>, std::size_t>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2[name::val])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2[country::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2[first_name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2[last_name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2[age::val])>, std::size_t>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2[name::val])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2[country::val])>, std::string>);
 
-            REQUIRE(seq_d2[first_name::val] == f);
-            REQUIRE(seq_d2[last_name::val] == l);
-            REQUIRE(seq_d2[age::val] == a);
-            REQUIRE(seq_d2[name::val] == n);
-            REQUIRE(seq_d2[country::val] == c);
+            CHECK(seq_d2[first_name::val] == f);
+            CHECK(seq_d2[last_name::val] == l);
+            CHECK(seq_d2[age::val] == a);
+            CHECK(seq_d2[name::val] == n);
+            CHECK(seq_d2[country::val] == c);
 
-            REQUIRE(seq_d2[first_name::val] == "Neel");
-            REQUIRE(seq_d2[last_name::val] == "Basu");
-            REQUIRE(seq_d2[age::val] == 32);
-            REQUIRE(seq_d2[name::val] == "Neel Basu");
-            REQUIRE(seq_d2[country::val] == "India");
+            CHECK(seq_d2[first_name::val] == "Neel");
+            CHECK(seq_d2[last_name::val] == "Basu");
+            CHECK(seq_d2[age::val] == 32);
+            CHECK(seq_d2[name::val] == "Neel Basu");
+            CHECK(seq_d2[country::val] == "India");
         }
 
         THEN( "elements can be retrieved through operator[] using key" ) {
             using namespace boost::hana::literals;
-            REQUIRE(std::is_same_v<decltype(seq_d1["name"_s]), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1["country"_s]), country&>);
+            CHECK(std::is_same_v<decltype(seq_d1["name"_s]), name&>);
+            CHECK(std::is_same_v<decltype(seq_d1["country"_s]), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1["name"_s])>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d1["country"_s])>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1["name"_s])>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d1["country"_s])>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1["name"_s])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1["country"_s])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1["name"_s])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1["country"_s])>, std::string>);
 
-            REQUIRE(seq_d1["name"_s] == n);
-            REQUIRE(seq_d1["country"_s] == c);
+            CHECK(seq_d1["name"_s] == n);
+            CHECK(seq_d1["country"_s] == c);
 
-            REQUIRE(seq_d1["name"_s] == "Neel Basu");
-            REQUIRE(seq_d1["country"_s] == "India");
+            CHECK(seq_d1["name"_s] == "Neel Basu");
+            CHECK(seq_d1["country"_s] == "India");
 
-            REQUIRE(std::is_same_v<decltype(seq_d2["name"_s]), name&>);
-            REQUIRE(std::is_same_v<decltype(seq_d2["country"_s]), country&>);
+            CHECK(std::is_same_v<decltype(seq_d2["name"_s]), name&>);
+            CHECK(std::is_same_v<decltype(seq_d2["country"_s]), country&>);
 
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2["name"_s])>, name>);
-            REQUIRE(std::is_same_v<std::decay_t<decltype(seq_d2["country"_s])>, country>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2["name"_s])>, name>);
+            CHECK(std::is_same_v<std::decay_t<decltype(seq_d2["country"_s])>, country>);
 
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2["name"_s])>, std::string>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d2["country"_s])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2["name"_s])>, std::string>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d2["country"_s])>, std::string>);
 
-            REQUIRE(seq_d2["name"_s] == n);
-            REQUIRE(seq_d2["country"_s] == c);
+            CHECK(seq_d2["name"_s] == n);
+            CHECK(seq_d2["country"_s] == c);
 
-            REQUIRE(seq_d2["name"_s] == "Neel Basu");
-            REQUIRE(seq_d2["country"_s] == "India");
+            CHECK(seq_d2["name"_s] == "Neel Basu");
+            CHECK(seq_d2["country"_s] == "India");
         }
 
         THEN( "data and value methods work in the expected way" ) {
-            REQUIRE(seq_d1.data<0>() == 42);
-            REQUIRE(seq_d1.data<1>() == f);
-            REQUIRE(seq_d1.data<1>() == "Neel");
-            REQUIRE(seq_d1.data<6>() == n);
-            REQUIRE(seq_d1.data<6>() == "Neel Basu");
+            CHECK(seq_d1.data<0>() == 42);
+            CHECK(seq_d1.data<1>() == f);
+            CHECK(seq_d1.data<1>() == "Neel");
+            CHECK(seq_d1.data<6>() == n);
+            CHECK(seq_d1.data<6>() == "Neel Basu");
 
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<0>()), int&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<1>()), first_name&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.data<1>())>, std::string>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<6>()), name&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.data<6>())>, std::string>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<0>()), int&>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<1>()), first_name&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.data<1>())>, std::string>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<6>()), name&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.data<6>())>, std::string>);
 
-            REQUIRE(seq_d1.value<0>() == 42);
-            REQUIRE(seq_d1.value<1>() == "Neel");
-            REQUIRE(seq_d1.value<6>() == "Neel Basu");
+            CHECK(seq_d1.value<0>() == 42);
+            CHECK(seq_d1.value<1>() == "Neel");
+            CHECK(seq_d1.value<6>() == "Neel Basu");
 
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<0>()), int&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.value<1>())>, first_name>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<1>()), std::string&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.value<6>())>, name>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<6>()), std::string&>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<0>()), int&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.value<1>())>, first_name>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<1>()), std::string&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.value<6>())>, name>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<6>()), std::string&>);
 
-            REQUIRE(seq_d1.data<int>() == 42);
-            REQUIRE(seq_d1.data<first_name>() == f);
-            REQUIRE(seq_d1.data<first_name>() == "Neel");
-            REQUIRE(seq_d1.data<name>() == n);
-            REQUIRE(seq_d1.data<name>() == "Neel Basu");
+            CHECK(seq_d1.data<int>() == 42);
+            CHECK(seq_d1.data<first_name>() == f);
+            CHECK(seq_d1.data<first_name>() == "Neel");
+            CHECK(seq_d1.data<name>() == n);
+            CHECK(seq_d1.data<name>() == "Neel Basu");
 
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<int>()), int&>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<first_name>()), first_name&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.data<first_name>())>, std::string>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.data<name>()), name&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.data<name>())>, std::string>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<int>()), int&>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<first_name>()), first_name&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.data<first_name>())>, std::string>);
+            CHECK(std::is_same_v<decltype(seq_d1.data<name>()), name&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.data<name>())>, std::string>);
 
-            REQUIRE(seq_d1.value<int>() == 42);
-            REQUIRE(seq_d1.value<first_name>() == "Neel");
-            REQUIRE(seq_d1.value<name>() == "Neel Basu");
+            CHECK(seq_d1.value<int>() == 42);
+            CHECK(seq_d1.value<first_name>() == "Neel");
+            CHECK(seq_d1.value<name>() == "Neel Basu");
 
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<int>()), int&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.value<first_name>())>, first_name>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<first_name>()), std::string&>);
-            REQUIRE(!std::is_same_v<std::decay_t<decltype(seq_d1.value<name>())>, name>);
-            REQUIRE(std::is_same_v<decltype(seq_d1.value<name>()), std::string&>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<int>()), int&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.value<first_name>())>, first_name>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<first_name>()), std::string&>);
+            CHECK(!std::is_same_v<std::decay_t<decltype(seq_d1.value<name>())>, name>);
+            CHECK(std::is_same_v<decltype(seq_d1.value<name>()), std::string&>);
         }
     }
 }
 
 TEST_CASE("sequence specific functionalities", "[hazo]") {
     typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country> seq_d_type;
-    REQUIRE(h::make_seq_d(4.2, 85) == h::make_seq_d(4.2, 85));
-    REQUIRE(h::make_seq_d(4.2, 85) != h::make_seq_d(4.2, 85, "Hello World"));
+    CHECK(h::make_seq_d(4.2, 85) == h::make_seq_d(4.2, 85));
+    CHECK(h::make_seq_d(4.2, 85) != h::make_seq_d(4.2, 85, "Hello World"));
 
     SECTION("one or more types can be excluded") {
-        REQUIRE(seq_d_type::exclude<int, std::string>(4.2, "Neel", "Basu", 85, "Neel Basu", "India") == h::make_seq_d(4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India")));
-        REQUIRE(seq_d_type::exclude<int, int>("Hello", 4.2, "Neel", "Basu", "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), name("Neel Basu"), country("India")));
-        REQUIRE(seq_d_type::exclude<int>("Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India")));
-        REQUIRE(seq_d_type::exclude<first_name, last_name>(42, "Hello", 4.2, 85, "Neel Basu", "India") == h::make_seq_d(42, "Hello", 4.2, 85, name("Neel Basu"), country("India")));
+        CHECK(seq_d_type::exclude<int, std::string>(4.2, "Neel", "Basu", 85, "Neel Basu", "India") == h::make_seq_d(4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India")));
+        CHECK(seq_d_type::exclude<int, int>("Hello", 4.2, "Neel", "Basu", "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), name("Neel Basu"), country("India")));
+        CHECK(seq_d_type::exclude<int>("Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India") == h::make_seq_d("Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India")));
+        CHECK(seq_d_type::exclude<first_name, last_name>(42, "Hello", 4.2, 85, "Neel Basu", "India") == h::make_seq_d(42, "Hello", 4.2, 85, name("Neel Basu"), country("India")));
 
-        REQUIRE(std::is_same<seq_d_type::exclude_if<std::is_pod>, h::seq_d<std::string, first_name, last_name, name, country>>::value);
+        CHECK(std::is_same<seq_d_type::exclude_if<std::is_pod>, h::seq_d<std::string, first_name, last_name, name, country>>::value);
     }
 
     SECTION("one or more types can be included") {
-        REQUIRE(seq_d_type::extend<int, std::string>(42, "Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India", 10, "Hi") == h::make_seq_d(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"), 10, "Hi"));
+        CHECK(seq_d_type::extend<int, std::string>(42, "Hello", 4.2, "Neel", "Basu", 85, "Neel Basu", "India", 10, "Hi") == h::make_seq_d(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"), 10, "Hi"));
     }
 
     SECTION("contains") {
         typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country, wrap_int> sequence_type;
 
-        REQUIRE(sequence_type::contains<int>::value);
-        REQUIRE(sequence_type::contains<std::string>::value);
-        REQUIRE(sequence_type::contains<double>::value);
-        REQUIRE(sequence_type::contains<first_name>::value);
-        REQUIRE(sequence_type::contains<last_name>::value);
-        REQUIRE(sequence_type::contains<name>::value);
-        REQUIRE(sequence_type::contains<country>::value);
-        REQUIRE(sequence_type::contains<wrap_int_index>::value);
-        REQUIRE(!sequence_type::contains<wrap_int>::value);
-        REQUIRE(!sequence_type::contains<value_str>::value);
+        CHECK(sequence_type::contains<int>::value);
+        CHECK(sequence_type::contains<std::string>::value);
+        CHECK(sequence_type::contains<double>::value);
+        CHECK(sequence_type::contains<first_name>::value);
+        CHECK(sequence_type::contains<last_name>::value);
+        CHECK(sequence_type::contains<name>::value);
+        CHECK(sequence_type::contains<country>::value);
+        CHECK(sequence_type::contains<wrap_int_index>::value);
+        CHECK(!sequence_type::contains<wrap_int>::value);
+        CHECK(!sequence_type::contains<value_str>::value);
     }
 
     SECTION("has") {
         typedef h::seq_d<int, std::string, double, first_name, last_name, int, name, country, wrap_int> sequence_type;
         sequence_type xs;
         using namespace boost::hana::literals;
-        REQUIRE(Has(xs, "name"_s));
-        REQUIRE(Has(xs, "country"_s));
-        REQUIRE(Has(xs, first_name::val));
-        REQUIRE(Has(xs, last_name::val));
-        REQUIRE(!Has(xs, age::val));
-        REQUIRE(!Has(xs, "first_name]"_s));
-        REQUIRE(!Has(xs, "first_name]"));
+        CHECK(Has(xs, "name"_s));
+        CHECK(Has(xs, "country"_s));
+        CHECK(Has(xs, first_name::val));
+        CHECK(Has(xs, last_name::val));
+        CHECK(!Has(xs, age::val));
+        CHECK(!Has(xs, "first_name]"_s));
+        CHECK(!Has(xs, "first_name]"));
     }
 
     SECTION("monoid") {
@@ -534,33 +534,33 @@ TEST_CASE("sequence specific functionalities", "[hazo]") {
         typedef h::seq_v<seq_type2, seq_type2> seq_type3;
         typedef h::seq_v<seq_type3> seq_type4;
         
-        REQUIRE((std::is_same<seq_type4::types::data_at<0>, unsigned>::value));
-        REQUIRE((std::is_same<seq_type4::types::data_at<1>, double>::value));
-        REQUIRE((std::is_same<seq_type4::types::data_at<2>, int>::value));
-        REQUIRE((std::is_same<seq_type4::types::data_at<3>, unsigned>::value));
-        REQUIRE((std::is_same<seq_type4::types::data_at<4>, double>::value));
-        REQUIRE((std::is_same<seq_type4::types::data_at<5>, int>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<0>, unsigned>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<1>, double>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<2>, int>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<3>, unsigned>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<4>, double>::value));
+        CHECK((std::is_same<seq_type4::types::data_at<5>, int>::value));
         
         double res = 0.0f;
         seq_type4 seq4(42, 2.4f, 24, 84, 4.8f, 48);
         
-        REQUIRE(seq4.data<0>() == 42);
-        REQUIRE(seq4.data<1>() == 2.4f);
-        REQUIRE(seq4.data<2>() == 24);
-        REQUIRE(seq4.data<3>() == 84);
-        REQUIRE(seq4.data<4>() == 4.8f);
-        REQUIRE(seq4.data<5>() == 48);
+        CHECK(seq4.data<0>() == 42);
+        CHECK(seq4.data<1>() == 2.4f);
+        CHECK(seq4.data<2>() == 24);
+        CHECK(seq4.data<3>() == 84);
+        CHECK(seq4.data<4>() == 4.8f);
+        CHECK(seq4.data<5>() == 48);
         
         seq4.visit([&res](auto val){
             res += (double)val;
         });
-        REQUIRE(unsigned(res*10) == 2052);
+        CHECK(unsigned(res*10) == 2052);
         
         double out = seq4.accumulate([](auto val, double out = 0){
             out += (double)val;
             return out;
         });
-        REQUIRE(unsigned(out*10) == 2052);
+        CHECK(unsigned(out*10) == 2052);
     }
 }
 
@@ -569,37 +569,37 @@ TEST_CASE("sequence hana functionalities", "[hazo]") {
     typedef h::seq_v<int, std::string, double, int> seq_v_type;
     namespace hana = boost::hana;
 
-    REQUIRE((hana::Comparable<seq_v_type>::value));
-    REQUIRE((hana::Foldable<seq_v_type>::value));
-    REQUIRE((hana::Iterable<seq_v_type>::value));
-    REQUIRE(hana::size(h::make_seq_v(42, 34.5, "World")) == hana::size_c<3>);
+    CHECK((hana::Comparable<seq_v_type>::value));
+    CHECK((hana::Foldable<seq_v_type>::value));
+    CHECK((hana::Iterable<seq_v_type>::value));
+    CHECK(hana::size(h::make_seq_v(42, 34.5, "World")) == hana::size_c<3>());
 
-    REQUIRE((hana::Comparable<seq_d_type>::value));
-    REQUIRE((hana::Foldable<seq_d_type>::value));
-    REQUIRE((hana::Iterable<seq_d_type>::value));
-    REQUIRE((hana::size(seq_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>));
+    CHECK((hana::Comparable<seq_d_type>::value));
+    CHECK((hana::Foldable<seq_d_type>::value));
+    CHECK((hana::Iterable<seq_d_type>::value));
+    CHECK((hana::size(seq_d_type(42, "Hello", 4.2, first_name("Neel"), last_name("Basu"), 85, name("Neel Basu"), country("India"))) == hana::size_c<8>()));
 
     auto add = [](auto x, auto y, auto z) {
         return x + y + z;
     };
     auto tpl = h::make_seq_v(1, 2, 3);
-    REQUIRE(tpl.unpack(add) == 6);
-    REQUIRE(hana::unpack(tpl, add) == 6);
+    CHECK(tpl.unpack(add) == 6);
+    CHECK(hana::unpack(tpl, add) == 6);
 
     seq_v_type vec_v(42, "Hello", 3.14, 84);
-    REQUIRE(hana::at(vec_v, hana::size_t<0>{}) == 42);
-    REQUIRE(hana::at(vec_v, hana::size_t<1>{}) == "Hello");
+    CHECK(hana::at(vec_v, hana::size_t<0>{}) == 42);
+    CHECK(hana::at(vec_v, hana::size_t<1>{}) == "Hello");
     
     auto to_string = [](auto x) {
         std::ostringstream ss;
         ss << x;
         return ss.str();
     };
-    REQUIRE(hana::transform(h::make_seq_v(1, '2', "345", std::string{"67"}), to_string) == h::make_seq_v("1", "2", "345", "67"));
+    CHECK(hana::transform(h::make_seq_v(1, '2', "345", std::string{"67"}), to_string) == h::make_seq_v("1", "2", "345", "67"));
     auto negate = [](auto x) {
         return -x;
     };
-    REQUIRE(hana::adjust(h::make_seq_v(1, 4, 9, 2, 3, 4), 4, negate) == h::make_seq_v(1, -4, 9, 2, 3, -4));
+    CHECK(hana::adjust(h::make_seq_v(1, 4, 9, 2, 3, 4), 4, negate) == h::make_seq_v(1, -4, 9, 2, 3, -4));
     BOOST_HANA_RUNTIME_CHECK(hana::fill(h::make_seq_v(1, '2', 3.3, nullptr), 'x') == h::make_seq_v('x', 'x', 'x', 'x'), "");
 }
 

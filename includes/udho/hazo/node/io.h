@@ -78,7 +78,7 @@ namespace detail{
     }
 }
 
-template <typename ValueT, std::enable_if_t<!std::is_void_v<typename capsule<ValueT, true>::key_type>, bool> = true>
+template <typename ValueT, std::enable_if_t<!std::is_void<typename capsule<ValueT, true>::key_type>::value, bool> = true>
 std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
     detail::print_if_streamable(stream, c.key());
     stream << " -> ";
@@ -86,7 +86,7 @@ std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
     return stream;
 }
 
-template <typename ValueT, std::enable_if_t<std::is_void_v<typename capsule<ValueT, true>::key_type>, bool> = true>
+template <typename ValueT, std::enable_if_t<std::is_void<typename capsule<ValueT, true>::key_type>::value, bool> = true>
 std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, true>& c){
     detail::print_if_streamable(stream, c.data());
     return stream;

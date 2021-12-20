@@ -1,14 +1,9 @@
 build
 *.kdev*
 .vs*
-dox
-docs.sphinx/_build
-sphinx/build
-sphinx/source/api
 cmake-build-*
 .idea
-docs.sphinx/bin
-docs.sphinx/lib
-docs.sphinx/pyvenv.cfg
-docs/_build
 .cache
+docs/source/Doxyfile
+docs/source/api
+dox

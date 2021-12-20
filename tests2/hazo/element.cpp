@@ -20,11 +20,11 @@ TEST_CASE("element", "[hazo]") {
 
     GIVEN( "a set of hazo element and hazo hana element" ) {
         THEN( "comparable with itself operator==()" ) {
-            REQUIRE(f == f);
-            REQUIRE(l == l);
-            REQUIRE(a == a);
-            REQUIRE(n == n);
-            REQUIRE(c == c);
+            CHECK(f == f);
+            CHECK(l == l);
+            CHECK(a == a);
+            CHECK(n == n);
+            CHECK(c == c);
         }
 
         THEN( "assignable by value" ) {
@@ -36,20 +36,20 @@ TEST_CASE("element", "[hazo]") {
         }
 
         THEN( "comparable with its value operator==()" ) {
-            REQUIRE(f == "Neel");
-            REQUIRE(l == "Basu");
-            REQUIRE(a == 32);
-            REQUIRE(n == "Neel Basu");
-            REQUIRE(c == "India");
+            CHECK(f == "Neel");
+            CHECK(l == "Basu");
+            CHECK(a == 32);
+            CHECK(n == "Neel Basu");
+            CHECK(c == "India");
         }
 
         THEN( "key() returns appropriately" ) {
             using namespace boost::hana::literals;
-            REQUIRE(f.key() == first_name::val);
-            REQUIRE(l.key() == last_name::val);
-            REQUIRE(a.key() == age::val);
-            REQUIRE(std::is_same_v<decltype(n.key()), decltype("name"_s)>);
-            REQUIRE(std::is_same_v<decltype(c.key()), decltype("country"_s)>);
+            CHECK(f.key() == first_name::val);
+            CHECK(l.key() == last_name::val);
+            CHECK(a.key() == age::val);
+            CHECK(std::is_same_v<decltype(n.key()), decltype("name"_s)>);
+            CHECK(std::is_same_v<decltype(c.key()), decltype("country"_s)>);
         }
     }
 }
