@@ -34,8 +34,19 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief handful of frequently used ozo string constants 
+ * @ingroup pg
+ */
 namespace constants{
     
+/**
+ * @brief Declare an ozo string
+ * @code 
+ * typedef udho::db::pg::constants::string<'h', 'e', 'l', 'l', 'o'> hello;
+ * @endcode 
+ * @tparam C... 
+ */
 template <char... C>
 using string = ozo::query_builder<
     boost::hana::tuple<
@@ -45,39 +56,56 @@ using string = ozo::query_builder<
     > 
 >;
 
-using empty  = string<>;
-using space  = string<' '>;
-using hyphen = string<'-'>;
-using comma  = string<','>;
-using dot    = string<'.'>;
 
+using empty  = string<>;      ///< empty ozo string
+using space  = string<' '>;   ///< space ( )
+using hyphen = string<'-'>;   ///< hyphen (-)
+using comma  = string<','>;   ///< comma (,)
+using dot    = string<'.'>;   ///< dot (.)
+
+/**
+ * @brief quoted versions of frequently used characters
+ */
 namespace quoted{
     
-    using empty  = string<>;
-    using space  = string<'\'', ' ', '\''>;
-    using hyphen = string<'\'', '-', '\''>;
-    using comma  = string<'\'', ',', '\''>;
-    using dot    = string<'\'', '.', '\''>;
+    using empty  = string<>;                    ///< empty
+    using space  = string<'\'', ' ', '\''>;     ///< quoted space (' ')
+    using hyphen = string<'\'', '-', '\''>;     ///< quoted hyphen ('-')
+    using comma  = string<'\'', ',', '\''>;     ///< quoted comma (',')
+    using dot    = string<'\'', '.', '\''>;     ///< quoted dot ('.')
     
 }
 
+/**
+ * @brief parenthesis characters
+ */
 namespace parenthesis{
-    using open  = string<'('>;
-    using close = string<')'>;
+    using open  = string<'('>;                  ///< parenthesis open (()
+    using close = string<')'>;                  ///< parenthesis close ())
 }
 
+/**
+ * @brief curly brace characters
+ */
 namespace curly{
-    using open  = string<'{'>;
-    using close = string<'}'>;
+    using open  = string<'{'>;                  ///< curly brace open ({)
+    using close = string<'}'>;                  ///< curly brace clone (})
 }
 
+/**
+ * @brief square brace characters
+ */
 namespace square{
-    using open  = string<'['>;
-    using close = string<']'>;
+    using open  = string<'['>;                  ///< square brace open ([)
+    using close = string<']'>;                  ///< square brace close (])
 }
 
 }
     
+/**
+ * @}
+ */
+
 }
 }
 }

@@ -65,6 +65,12 @@ struct attached<IdentifierT, void>{
     typedef IdentifierT type;
 };
     
+/**
+ * @brief PostgreSQL field Mixin.
+ * 
+ * @tparam FieldT 
+ * @tparam ValueT 
+ */
 template <typename FieldT, typename ValueT>
 struct field_lhs{
     typedef FieldT field_type;
@@ -132,9 +138,17 @@ struct field_lhs{
 #define OZO_LITERAL(TEXT) TEXT ## _SQL
 /**
  * @def PG_ELEMENT(Name, Type)
- * @brief Define a postgresql column
+ * @brief Define a postgresql Field.
  * @param Name Name for the column
  * @param Type type of the column
+ *
+ * A postgresql field is declared using `PG_ELEMENT` macro as shown below.
+ * @code 
+ * PG_ELEMENT(id,          pg::types::integer);
+ * PG_ELEMENT(first_name,  pg::types::varchar);
+ * PG_ELEMENT(last_name,   pg::types::varchar);
+ * @endcode 
+ * By default the field uses @ref udho::db::pg::detail::field_lhs mixin
  * @ingroup pg
  */
 #define PG_ELEMENT(Name, Type, ...)                                          \

@@ -41,8 +41,16 @@ namespace udho{
 namespace db{
 namespace pg{
  
+/**
+ * @brief PostgreSQL Operators
+ * @ingroup pg
+ */
 namespace op{
     
+/**
+ * @brief NotEqual
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct neq: FieldT{
     using FieldT::FieldT;
@@ -56,6 +64,10 @@ struct neq: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<neq<FieldT>> neq<FieldT>::val;
 
+/**
+ * @brief Equal
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct eq: FieldT{
     using FieldT::FieldT;
@@ -64,13 +76,19 @@ struct eq: FieldT{
     using attach = eq<typename FieldT::template attach<MappingT>>;
     
     const static constexpr udho::hazo::element_t<eq<FieldT>> val = udho::hazo::element_t<eq<FieldT>>();
-
+    /**
+     * @brief Not Equal
+     */
     typedef neq<FieldT> no; 
 };
 
 template <typename FieldT>
 const udho::hazo::element_t<eq<FieldT>> eq<FieldT>::val;
 
+/**
+ * @brief LessThan
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct lt: FieldT{
     using FieldT::FieldT;
@@ -84,6 +102,10 @@ struct lt: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<lt<FieldT>> lt<FieldT>::val;
 
+/**
+ * @brief GreaterThan
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct gt: FieldT{
     using FieldT::FieldT;
@@ -97,6 +119,10 @@ struct gt: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<gt<FieldT>> gt<FieldT>::val;
 
+/**
+ * @brief LessThanEqual
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct lte: FieldT{
     using FieldT::FieldT;
@@ -110,6 +136,10 @@ struct lte: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<lte<FieldT>> lte<FieldT>::val;
 
+/**
+ * @brief GreaterThanEqual
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct gte: FieldT{
     using FieldT::FieldT;
@@ -123,6 +153,10 @@ struct gte: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<gte<FieldT>> gte<FieldT>::val;
 
+/**
+ * @brief NotLike
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct not_like: FieldT{
     using FieldT::FieldT;
@@ -136,6 +170,10 @@ struct not_like: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<not_like<FieldT>> not_like<FieldT>::val;
 
+/**
+ * @brief Like
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct like: FieldT{
     using FieldT::FieldT;
@@ -144,13 +182,20 @@ struct like: FieldT{
     using attach = like<typename FieldT::template attach<MappingT>>;
     
     const static constexpr udho::hazo::element_t<like<FieldT>> val = udho::hazo::element_t<like<FieldT>>();
-    
+    /**
+     * @brief Not Like
+     * 
+     */
     typedef not_like<FieldT> no;
 };
 
 template <typename FieldT>
 const udho::hazo::element_t<like<FieldT>> like<FieldT>::val;
 
+/**
+ * @brief IsNot
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct is_not: FieldT{
     using FieldT::FieldT;
@@ -164,6 +209,10 @@ struct is_not: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<is_not<FieldT>> is_not<FieldT>::val;
 
+/**
+ * @brief Is
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct is: FieldT{
     using FieldT::FieldT;
@@ -179,6 +228,10 @@ struct is: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<is<FieldT>> is<FieldT>::val;
 
+/**
+ * @brief NotIn
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct not_in: FieldT{
     using FieldT::FieldT;
@@ -192,6 +245,10 @@ struct not_in: FieldT{
 template <typename FieldT>
 const udho::hazo::element_t<not_in<FieldT>> not_in<FieldT>::val;
 
+/**
+ * @brief In
+ * @tparam FieldT 
+ */
 template <typename FieldT>
 struct in: FieldT{
     using FieldT::FieldT;
@@ -200,7 +257,10 @@ struct in: FieldT{
     using attach = in<typename FieldT::template attach<MappingT>>;
     
     const static constexpr udho::hazo::element_t<in<FieldT>> val = udho::hazo::element_t<in<FieldT>>();
-
+    /**
+     * @brief Not In
+     * 
+     */
     typedef not_in<FieldT> no;
 };
 

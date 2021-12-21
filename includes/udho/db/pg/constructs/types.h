@@ -48,6 +48,10 @@ namespace oz{
     OZO_STRONG_TYPEDEF(std::string, varchar)
 }
     
+/**
+ * @brief PostgreSQL datatypes
+ * @ingroup pg
+ */
 namespace types{
 
 #define _OZO_LITERAL_(TEXT) TEXT ## _SQL
@@ -107,7 +111,7 @@ struct timestamp_tz{
  * };
  * using bigint = type<std::int64_t, names::bigint>;
  * @endcode 
- * @ingroup pg
+ * @ingroup types
  */
 template <typename ValueT, typename NameT>
 struct type{
@@ -118,10 +122,6 @@ struct type{
     }
 };
 
-/**
- * @{
- * @ingroup pg
- */
 using bigint      = type<ozo::pg::bigint, names::bigint>;               ///< Postgresql Type bigint
 using integer     = type<ozo::pg::int4, names::integer>;                ///< Postgresql Type integer
 using smallint    = type<ozo::pg::int2, names::smallint>;               ///< Postgresql Type smallint
@@ -138,9 +138,7 @@ using uuid        = type<ozo::pg::uuid, names::uuid>;                   ///< Pos
 #ifdef __DOXYGEN__
 using json        = type<implementation-defined, names::json>;          ///< Postgresql Type json @warning If nlohmann json is unavailable then std::string is used to store the json data. Otherwise nlohmann json is used
 #endif 
-/**
- * @}
- */
+
 
 #ifndef __DOXYGEN__
 
@@ -154,25 +152,32 @@ using json        = type<ozo::pg::json, names::json>;
 
 }
  
-using bigint      = types::bigint;
-using integer     = types::integer;
-using smallint    = types::smallint;
-using bigserial   = types::bigserial;
-using serial      = types::serial;
-using smallserial = types::smallserial;
-using real        = types::real;
-using float8      = types::float8;
-using varchar     = types::varchar;
-using boolean     = types::boolean;
-using text        = types::text;
-using timestamp   = types::timestamp;
-using json        = types::json;
-using uuid        = types::uuid;
- 
-}
+/**
+ * @ingroup types
+ * @{
+ */
+using bigint      = types::bigint;           ///< @copydoc types::bigint convenient typedef in `udho::db::pg` namespace
+using integer     = types::integer;          ///< @copydoc types::integer convenient typedef in `udho::db::pg` namespace
+using smallint    = types::smallint;         ///< @copydoc types::smallint convenient typedef in `udho::db::pg` namespace
+using bigserial   = types::bigserial;        ///< @copydoc types::bigserial convenient typedef in `udho::db::pg` namespace
+using serial      = types::serial;           ///< @copydoc types::serial convenient typedef in `udho::db::pg` namespace
+using smallserial = types::smallserial;      ///< @copydoc types::smallserial convenient typedef in `udho::db::pg` namespace
+using real        = types::real;             ///< @copydoc types::real convenient typedef in `udho::db::pg` namespace
+using float8      = types::float8;           ///< @copydoc types::float8 convenient typedef in `udho::db::pg` namespace
+using varchar     = types::varchar;          ///< @copydoc types::varchar convenient typedef in `udho::db::pg` namespace
+using boolean     = types::boolean;          ///< @copydoc types::boolean convenient typedef in `udho::db::pg` namespace
+using text        = types::text;             ///< @copydoc types::text convenient typedef in `udho::db::pg` namespace
+using timestamp   = types::timestamp;        ///< @copydoc types::timestamp convenient typedef in `udho::db::pg` namespace
+using json        = types::json;             ///< @copydoc types::json convenient typedef in `udho::db::pg` namespace
+using uuid        = types::uuid;             ///< @copydoc types::uuid convenient typedef in `udho::db::pg` namespace
+/**
+ * @}
+ */
 
-}
-}
+}  // pg
+
+} // db
+} // udho
 
 OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar")
 
