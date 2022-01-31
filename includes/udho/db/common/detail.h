@@ -118,6 +118,17 @@ struct transform<ThatT, TargetT, TargetT>: std::unary_function<const TargetT&, T
     }
 };
 
+/**
+ * @brief processes SuccessT into ThatT 
+ * - Takes a reference to a ThatT object, which is expected to provide an operator() overload for the specific SuccessT.
+ * - The default template ignores SuccessT, while expecting that the ThatT::operator() will take the pair of iterators 
+ *   as arguments and construct itself.
+ * - In other specializations the SuccessT is used as an intermediate container between the iterator pair and the ThatT.
+ * 
+ * @tparam ThatT 
+ * @tparam SuccessT 
+ * @ingroup db
+ */
 template <typename ThatT, typename SuccessT>
 struct processor{
     typedef ThatT    that_type;
@@ -131,6 +142,17 @@ struct processor{
         _that(begin, end);
     }
 };
+
+/**
+ * @brief processor specialization to process a db::results<DataT> into ThatT
+ * - creates an intermediate db::results<DataT> data structure and writes deferenced values of [begin, end) into it.
+ * - expects that the iterator pair can be dereferenced and inserted into a db::results<DataT> data structure without any explicit conversion.
+ * - passes the intermediate db::results to ThatT::operator() for further processing.
+ *
+ * @tparam ThatT 
+ * @tparam DataT 
+ * @ingroup db
+ */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::results<DataT>>{
     typedef ThatT    that_type;
@@ -147,6 +169,16 @@ struct processor<ThatT, db::results<DataT>>{
     }
 };
 
+/**
+ * @brief processor specialization to process a db::result into ThatT
+ * - creates an intermediate db::result<DataT> data structure 
+ * - passes the deferenced value of begin to it's operator().
+ * - passes the intermediate db::result to ThatT::operator() for further processing.
+ * 
+ * @tparam ThatT 
+ * @tparam DataT 
+ * @ingroup db
+ */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::result<DataT>>{
     typedef ThatT    that_type;
@@ -165,6 +197,12 @@ struct processor<ThatT, db::result<DataT>>{
     }
 };
 
+/**
+ * @brief Checks whether the provided struct T has a `data_type` typedef 
+ * 
+ * @tparam T 
+ * @ingroup db
+ */
 template< typename T >
 struct HasDataType{
   typedef char                 yes;

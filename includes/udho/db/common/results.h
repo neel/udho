@@ -33,29 +33,97 @@
 namespace udho{
 namespace db{
 
+/**
+ * @brief wrapper around a multi row result.
+ * Intended to be used for queries where 0 or more record(s) are expected to be in the resultset.
+ * @ingroup db
+ * @tparam DataT specifies schema of a row
+ */
 template <typename DataT>
 struct results{
     typedef DataT data_type;
     typedef std::vector<data_type> collection_type;
+    /**
+     * @brief const iterator to the records
+     * 
+     */
     typedef typename collection_type::const_iterator iterator;
        
+    /**
+     * @brief const iterator to the begin of the records
+     * 
+     * @return iterator 
+     */
     iterator begin() const { return _rows.cbegin(); }
+    /**
+     * @brief const iterator to the end of the records
+     * 
+     * @return iterator 
+     */
     iterator end() const { return _rows.cend(); }
+    /**
+     * @brief number of records
+     * 
+     * @return std::size_t 
+     */
     std::size_t count() const { return _rows.size(); }
+    /**
+     * @brief checks for emptyness
+     * 
+     * @return true 
+     * @return false 
+     */
     bool empty() const { return !std::distance(begin(), end()); }
+    /**
+     * @brief const reference to the first record from the results
+     * @warning Must check for emptyness using @ref empty method
+     * @return const data_type& 
+     */
     const data_type& front() const { return _rows.front(); }
+    /**
+     * @brief const reference to the last record from the results
+     * @warning Must check for emptyness using @ref empty method
+     * @return const data_type& 
+     */
     const data_type& back() const { return _rows.back(); }
+    /**
+     * @brief const reference to a value of the given column of the first row
+     * 
+     * @tparam T 
+     * @param col 
+     * @return const auto& 
+     */
     template <typename T>
     const auto& first(const T& col) const { return front()[col]; }
+    /**
+     * @brief const reference to a value of the given column of the last row
+     * 
+     * @tparam T 
+     * @param col 
+     * @return const auto& 
+     */
     template <typename T>
     const auto& last(const T& col) const { return back()[col]; }
-    
+    /**
+     * @brief returns a back inserter iterator
+     * 
+     * @return auto 
+     */
     auto inserter() { return std::back_inserter(_rows); }
     
     private:
         collection_type _rows;
 };
 
+/**
+ * @brief operator to write a record to the results
+ * 
+ * @tparam DataT 
+ * @param res 
+ * @param data 
+ * @return results<DataT>& 
+ * @ingroup db
+ */
 template <typename DataT>
 results<DataT>& operator<<(results<DataT>& res, const DataT& data){
     *res++ = data;
