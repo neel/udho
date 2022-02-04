@@ -158,7 +158,9 @@ struct url: udho::configuration<detail::url_data>, udho::forms::drivers::urlenco
                 std::copy(it, url.end(), std::back_inserter(tgt));
                 std::string::const_iterator query_it = std::find(it, url.end(), '?');
                 std::copy(it, query_it, std::back_inserter(pth));
-                std::copy(++query_it, url.end(), std::back_inserter(qry));
+                if(query_it != url.end()){
+                    std::copy(++query_it, url.end(), std::back_inserter(qry));
+                }
             }
             
             (*this)[protocol] = proto;

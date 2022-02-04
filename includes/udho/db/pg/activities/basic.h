@@ -112,9 +112,24 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
         
     enum {generated = false};
 
+    /**
+     * @brief Construct a new basic activity object by using a collector, collection pool and asio io service.
+     * @note the collector must be able to collect the success result (e.g.  success_type)
+     * @tparam CollectorT 
+     * @param c 
+     * @param pool 
+     * @param io 
+     */
     template <typename CollectorT>
     basic_activity(CollectorT c, pg::connection::pool& pool, boost::asio::io_service& io): base(c), _pool(pool), _io(io), _transformer(static_cast<derived_type&>(*this)){}
     
+    /**
+     * @brief Construct a new basic activity object with a controller
+     * 
+     * @tparam ContextT 
+     * @tparam T 
+     * @param ctrl 
+     */
     template <typename ContextT, typename... T>
     basic_activity(pg::controller<ContextT, T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
     
@@ -189,7 +204,6 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
     
     /**
      * @brief clears the internal storage
-     * 
      */
     void clear(){
         _rows.clear();
@@ -218,14 +232,38 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
     typedef basic_activity<DerivedT> self_type;
     typedef db::none success_type;
     typedef DerivedT derived_type;
-        
-    template <typename CollectorT>
-    basic_activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): base(collector), _pool(pool), _io(io){}
-    template <typename ContextT, typename... T>
-    basic_activity(pg::controller<ContextT, T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
-    
+
     enum {generated = false};
 
+    /**
+     * @brief Construct a new basic activity object by using a collector, collection pool and asio io service.
+     * @note the collector must be able to collect the success result (e.g.  success_type)
+     * @tparam CollectorT 
+     * @param c 
+     * @param pool 
+     * @param io 
+     */
+    template <typename CollectorT>
+    basic_activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): base(collector), _pool(pool), _io(io){}
+    /**
+     * @brief Construct a new basic activity object with a controller
+     * 
+     * @tparam ContextT 
+     * @tparam T 
+     * @param ctrl 
+     */
+    template <typename ContextT, typename... T>
+    basic_activity(pg::controller<ContextT, T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+
+    /**
+     * @brief performs the SQL query asynchronously.
+     * - If there is an error while performing the query then save a failure result.
+     * - Otherwise the results would be written to the internal ozo::result data structure.
+     * - Once the query invocation completes the resolve function is called.
+     *
+     * @tparam QueryT 
+     * @param query The SQL query to perform
+     */
     template <typename QueryT>
     void query(QueryT&& query){
         derived_type& self = static_cast<derived_type&>(*this);
@@ -240,6 +278,14 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
         }
     }
     
+    /**
+     * @brief The success/failure callback to capture the result of SQL query invocation.
+     * - If there is an error, save a failure result
+     * - Otherwise call DerivedT::operator() with aen empty db::none object.
+     * 
+     * @param ec 
+     * @param conn 
+     */
     void resolve(ozo::error_code ec, pg::connection::pool::connection_type conn){
         derived_type& self = static_cast<derived_type&>(*this);
         if(ec){
@@ -259,6 +305,10 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
             self(data);
         }
     }
+
+    /**
+     * @brief clears the internal storage (does nothing in this specialization)
+     */
     void clear(){}
     
     private:

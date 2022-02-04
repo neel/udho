@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(https){
         .done([ctx](boost::beast::http::status status, const std::string& body) mutable {
             BOOST_CHECK_MESSAGE(false, "SSL verification succeeded with http://expired.badssl.com which is unexpected");
         }).error([ctx](const boost::beast::error_code& ec) mutable {
-            BOOST_CHECK_MESSAGE(ec.value() == 337047686, "expecting SSL varification failure, but got somethign else");
+            BOOST_CHECK_MESSAGE(ec.value() == 337047686 || ec.value() == 167772294, "expecting SSL varification failure, but got somethign else");
         })
         .option(udho::client_options::follow_redirect, true)
         .option(udho::client_options::verify_certificate, true);
