@@ -38,17 +38,21 @@ namespace db{
 namespace detail{
 
 /**
- * @brief Converts an object of source type SourceT to target type TargetT using a converter ThatT.
- * ThatT should provide an operator() overload that returns a TargetT when called with a SourceT.
- * @internal However if SourceT is convertible to TargetT that ThatT is not used for conversion.
+ * @brief Converts an object of source type SourceT to target type TargetT.
+ * If the SourceT is implicitely convertible to TargetT then expects an `ThatT` to provide
+ * a `ThatT::operator()` overload which returns a TargetT when called with a `SourceT`.
  * 
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
+ * @ingroup db
  */
-template <typename ThatT, typename TargetT, typename SourceT, bool convertible = std::is_convertible<SourceT, TargetT>::value>
-struct conversion{
+template <typename ThatT, typename TargetT, typename SourceT, bool convertible = std::is_convertible<const SourceT&, TargetT>::value>
+struct conversion;
+
+template <typename ThatT, typename TargetT, typename SourceT>
+struct conversion<ThatT, TargetT, SourceT, true>{
     const ThatT& _that;
     
     conversion(const ThatT& that): _that(that){}
@@ -59,18 +63,21 @@ struct conversion{
 };
 
 /**
- * @brief Converts an object of source type SourceT to target type TargetT using a converter ThatT.
- * ThatT should provide an operator() overload that returns a TargetT when called with a SourceT.
- * @internal However if SourceT is convertible to TargetT that ThatT is not used for conversion.
+ * @brief Converts an object of source type SourceT to target type TargetT.
+ * If the SourceT is implicitely convertible to TargetT then expects an `ThatT` to provide
+ * a `ThatT::operator()` overload which returns a TargetT when called with a `SourceT`.
  * 
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT, typename SourceT>
 struct conversion<ThatT, TargetT, SourceT, false>{
     const ThatT& _that;
+
+    // static_assert(std::is_invocable_v<decltype(&ThatT::operator()), ThatT&, const SourceT&>, "ThatT must provide operator()(const SourceT&) overload that returns TargetT");
     
     conversion(const ThatT& that): _that(that){}
     TargetT operator()(const SourceT& source) const{
@@ -79,11 +86,13 @@ struct conversion<ThatT, TargetT, SourceT, false>{
 };
 
 /**
- * @brief An unary function object to transform an object of source type to target type
- * 
+ * @brief An unary function object to transform an object of source type to target type using @ref conversion 
+ * @note used in combination with `boost::transform_iterator` in `basic_activity` to convert an intermediate 
+ *       row (usually a tuple like object) to the intended object.
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT, typename SourceT = TargetT>
 struct transform: std::unary_function<const SourceT&, TargetT>, private detail::conversion<ThatT, TargetT, SourceT>{
@@ -99,10 +108,12 @@ struct transform: std::unary_function<const SourceT&, TargetT>, private detail::
 };
 
 /**
- * @brief When the SourceT and TargetT are same
- * 
+ * @brief An unary function object to transform an object of source type to target type using @ref conversion 
+ * @note used in combination with `boost::transform_iterator` in `basic_activity` to convert an intermediate 
+ *       row (usually a tuple like object) to the intended object
  * @tparam ThatT 
  * @tparam TargetT 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT>
 struct transform<ThatT, TargetT, TargetT>: std::unary_function<const TargetT&, TargetT>{
