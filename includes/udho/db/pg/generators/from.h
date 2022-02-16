@@ -38,7 +38,13 @@ namespace db{
 namespace pg{
     
 namespace generators{
-    
+
+/**
+ * @addtogroup generators
+ * @ingroup pg
+ * @{
+ */
+
 /**
  * from table part of the query
  */
@@ -73,6 +79,10 @@ struct from<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, Pr
         return from<pg::from<typename basic_join_type::source>>::apply() + " "_SQL + join<typename basic_join_type::type>::apply();
     }
 };
+
+/**
+ * @}
+ */
     
 }
 

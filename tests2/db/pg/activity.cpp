@@ -108,7 +108,6 @@ struct OZOStrQSelectStructRes2: pg::activity<OZOStrQSelectStructRes2, db::result
 };
 
 TEST_CASE("postgresql activity with plain OZO SQL query", "[pg]") {
-    CHECK(0 == 0);
     boost::asio::io_service io;
     udho::servers::quiet::stateless::request_type req;
     udho::servers::quiet::stateless::attachment_type attachment(io);

@@ -41,6 +41,16 @@ namespace udho{
 namespace db{
 namespace pg{
        
+/**
+ * @brief Casts a PostgreSQL field of one type into another and generates corresponding SQL query.
+ * - subclasses from `FieldT::alter<PgType>` for receiving `PgType` values using the newly casted type.
+ * - hides the `relate()` and `ozo_name()` method of the base class to inject corresponding query for PostgreSQL type casting.
+ * .
+ * @tparam FieldT The Postgresql field 
+ * @tparam PgType The new type of that field
+ * 
+ * @ingroup pg
+ */
 template <typename FieldT, typename PgType>
 struct cast: FieldT::template alter<PgType>{
     typedef typename FieldT::template alter<PgType> casted_field;

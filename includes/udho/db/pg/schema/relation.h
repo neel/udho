@@ -41,63 +41,84 @@ namespace db{
 namespace pg{
     
 /**
- * \code
- * namespace student{
+ * @brief define a table by specifying its fields and name.
+ * @tparam RelationT The derived Class
+ * @tparam Fields... The fields in the relation.
  * 
- * PG_ELEMENT(id,    std::int64_t)
- * PG_ELEMENT(name,  std::string)
- * PG_ELEMENT(grade, std::int64_t)
- * PG_ELEMENT(marks, std::int64_t)
+ * Multiple relations relating to the same postgreSQL table can be defined. Such relations
+ * are useful for scenarios when some queries are to be performed on a projection of a table.
+ * - Multiple select operation on different prtojection of the same table.
+ * - Selection on one projection and insert/update on different projection.
+ * - Defining a view with additional fields that the table relation.
+ * .
+ * @code
+ * namespace fields{
+ *     PG_ELEMENT(id,                  pg::types::integer);
+ *     PG_ELEMENT(first_name,          pg::types::varchar);
+ *     PG_ELEMENT(last_name,           pg::types::varchar);
+ *     PG_ELEMENT(email,               pg::types::varchar);
+ *     PG_ELEMENT(phone,               pg::types::varchar);
+ *     PG_ELEMENT(pass,                pg::types::varchar);
+ *     PG_ELEMENT(designation,         pg::types::varchar);
+ *     PG_ELEMENT(current_designation, pg::types::varchar);
+ *     PG_ELEMENT(photo,               pg::types::text);
+ *     PG_ELEMENT(rank,                pg::types::bigint);
+ *     PG_ELEMENT(last_gossip,         pg::types::bigint);
+ * }
  * 
- * struct crud: pg::relation<crud, id, name, grade, marks>{
- *      static auto name(){
- *          using namespace ozo::literals;
- *          return "student"_SQL;
- *      }
+ * struct table: pg::relation<table, fields::id, fields::first_name, fields::last_name, fields::email, fields::phone, fields::pass, fields::designation, fields::current_designation, fields::photo, fields::rank, fields::last_gossip>{
+ *     PG_NAME(users)
+ *     using readonly = pg::readonly<fields::id>;
  * };
  * 
- * }
- * 
- * namespace students{
- * 
- * using by_id = student::crud
- *       ::retrieve
- *       ::by<student::id>
- *       ::apply;
- * 
- * using by_grade = student::crud
- *       ::fetch
- *       ::by<student::grade>
- *       ::limit<5>
- *       ::apply;
- * 
- * using best_by_grade = student::crud
- *       ::fetch
- *       ::by<student::grade, student::marks::gte>
- *       ::descending<student::marks>
- *       ::limit<5>
- *       ::apply;
- * 
- * }
- * 
- * \endcode
+ * struct brief: pg::relation<brief, fields::id, fields::first_name, fields::last_name, fields::phone>{
+ *     PG_NAME(users)
+ *     using readonly = pg::readonly<fields::id>;
+ * };
+ * @endcode
+ * @note @ref PG_NAME macro specifies the actual PostgreSQL table name.
+ * @ingroup pg
  */
 template <typename RelationT, typename... Fields>
 struct relation{
     typedef RelationT relation_type;
     typedef pg::builder<pg::from<relation_type>> builder_type;
     
+    /**
+     * @brief Get a field on this relation as column
+     * Same as `pg::column<FieldT, RelationT>` where `RelationT` is a relation created 
+     * using `pg::relation`
+     * @tparam FieldT 
+     */
     template <typename FieldT>
     using column = pg::column<FieldT, RelationT>;
+    /**
+     * @brief Schema containing all fields of this relation
+     */
     using schema = pg::schema<column<Fields>...>;
-    using many = pg::many<column<Fields>...>;
-    using one = pg::one<column<Fields>...>;
-    using all = schema;
+    /**
+     * @brief Resultset for retrieving 0 or more rows containing all fields of this relation
+     */
+    using many   = pg::many<column<Fields>...>;
+    /**
+     * @brief Resultset for retrieving 0 or 1 row containing all fields of this relation
+     */
+    using one    = pg::one<column<Fields>...>;
+    /**
+     * @brief Schema containing all fields of this relation
+     */
+    using all    = schema;
     
+    /**
+     * @brief Get name of the table as compile time OZO string
+     */
     static auto name(){
         return RelationT::name();
     }
     
+    /**
+     * @brief Hide the default readonly typedef and specify the readonly fields in the derived class.
+     */
     using readonly = pg::readonly<>;
 };
     
