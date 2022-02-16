@@ -21,11 +21,11 @@ struct OZOStrQCreateNoRes: pg::activity<OZOStrQCreateNoRes>{
     void operator()(){
         using namespace ozo::literals;
         query(
-            "CREATE TABLE IF NOT EXISTS students ("
+            "CREATE TABLE IF NOT EXISTS udho_unit_test__table__students ("
                 "id bigserial NOT NULL,"
                 "first_name text COLLATE pg_catalog.\"default\" NOT NULL,"
                 "last_name text COLLATE pg_catalog.\"default\","
-                "CONSTRAINT students_pkey PRIMARY KEY (id)"
+                "CONSTRAINT udho_unit_test__table__students_pkey PRIMARY KEY (id)"
             ")"_SQL
         );
     }
@@ -35,7 +35,7 @@ struct OZOStrQTruncateNoRes: pg::activity<OZOStrQTruncateNoRes>{
     using activity::operator();
     void operator()(){
         using namespace ozo::literals;
-        query("TRUNCATE students RESTART IDENTITY;"_SQL);
+        query("TRUNCATE udho_unit_test__table__students RESTART IDENTITY;"_SQL);
     }
 };
 struct OZOStrQInsert1Res: pg::activity<OZOStrQInsert1Res, std::int64_t>{
@@ -47,7 +47,7 @@ struct OZOStrQInsert1Res: pg::activity<OZOStrQInsert1Res, std::int64_t>{
     void operator()(){
         using namespace ozo::literals;
         query(
-            "INSERT INTO students"
+            "INSERT INTO udho_unit_test__table__students"
                 "(first_name, last_name)" 
                 "VALUES ("_SQL
                     + _first + ","_SQL
@@ -62,7 +62,7 @@ struct OZOStrQSelectTupleRes: pg::activity<OZOStrQSelectTupleRes, db::results<St
     using activity::operator();
     void operator()(){
         using namespace ozo::literals;
-        query("select id, first_name, last_name from students"_SQL);
+        query("select id, first_name, last_name from udho_unit_test__table__students"_SQL);
     }
 };
 
@@ -77,7 +77,7 @@ struct OZOStrQSelectStructRes: pg::activity<OZOStrQSelectStructRes, db::results<
     using activity::operator();
     void operator()(){
         using namespace ozo::literals;
-        query("select id, first_name, last_name from students"_SQL);
+        query("select id, first_name, last_name from udho_unit_test__table__students"_SQL);
     }
     student_t operator()(const StudentSchemaTuple& tuple) const {
         student_t s;
@@ -103,7 +103,7 @@ struct OZOStrQSelectStructRes2: pg::activity<OZOStrQSelectStructRes2, db::result
     using activity::operator();
     void operator()(){
         using namespace ozo::literals;
-        query("select id, first_name, last_name from students"_SQL);
+        query("select id, first_name, last_name from udho_unit_test__table__students"_SQL);
     }
 };
 
