@@ -39,16 +39,24 @@ namespace pg{
 namespace generators{
     
 /**
- * table ([field]*) part of the select query
+ * @brief generates group by part of a select query
+ * @ingroup generators
+ * @tparam Fields... fields to use in teh group by query
  */
 template <typename... Fields>
 struct group{
     group(){}
     
+    /**
+     * @brief function call operator overload for generating the group by query
+     */
     auto operator()(){
         return all();
     }
     
+    /**
+     * @brief use all fields for constructing the group by query
+     */
     auto all(){
         using namespace ozo::literals;
         

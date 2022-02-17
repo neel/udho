@@ -77,7 +77,7 @@ namespace pg{
  * };
  * @endcode
  * @note @ref PG_NAME macro specifies the actual PostgreSQL table name.
- * @ingroup pg
+ * @ingroup schema
  */
 template <typename RelationT, typename... Fields>
 struct relation{

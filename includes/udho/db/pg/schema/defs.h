@@ -43,6 +43,8 @@ namespace udho{
 namespace db{
 namespace pg{
     
+
+    
 namespace detail{
     
 template <typename ValueT>
@@ -54,6 +56,7 @@ template <typename ValueT, typename NameT>
 struct extract_value_type<udho::db::pg::types::type<ValueT, NameT>>{
     typedef ValueT type;
 };
+
 
 template <typename IdentifierT, typename LookupT>
 struct attached{
@@ -71,7 +74,7 @@ struct attached<IdentifierT, void>{
  * @tparam FieldT 
  * @tparam ValueT 
  * 
- * @ingroup pg
+ * @ingroup schema
  */
 template <typename FieldT, typename ValueT>
 struct field_lhs{
@@ -151,10 +154,6 @@ struct field_lhs{
 }
 }
 
-// #define PG_NULLABLE(Name)                                                    
-// template <typename T>                                                        
-// struct ::ozo::is_nullable<Name ## _<T>>: ::std::true_type {}
-
 #define OZO_LITERAL(TEXT) TEXT ## _SQL
 /**
  * @def PG_ELEMENT(Name, Type)
@@ -183,7 +182,7 @@ struct field_lhs{
  *       where `X` is a PostgreSQL type different from `Type`. This is useful for 
  *       type casting.
  * 
- * @ingroup pg
+ * @ingroup schema
  */
 #define PG_ELEMENT(Name, Type, ...)                                          \
 template <typename T>                                                        \
@@ -231,7 +230,8 @@ using Name = Name ## _ <Type>
  * @brief Specify name of a relation.
  * Used in relations created using pg::relation
  * @see pg::relation
- * @ingroup pg
+ * 
+ * @ingroup schema
  */
 #define PG_NAME(Name)                   \
     static auto name(){                 \

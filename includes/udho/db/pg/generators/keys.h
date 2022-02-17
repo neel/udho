@@ -43,37 +43,44 @@ namespace generators{
  * @brief Generated comma separeted keys as OZO string.
  * e.g. id, first_name, last_name, which can be used inside an insert query.
  * @tparam Fields... One or more fields 
+ * @ingroup generators
  */
 template <typename... Fields>
 struct keys<pg::basic_schema<Fields...>>{
     keys(const pg::basic_schema<Fields...>& schema): _schema(schema){}
     
+    /**
+     * @brief The function call operator overload generates comma seperated keys for all keys
+     */
     auto operator()(){
         return all();
     }
     
     /**
-     * @brief Use 
-     * 
-     * @return auto 
+     * @brief Generate comma seperated keys for all keys
      */
     auto all(){
         using namespace ozo::literals;
-        
         return "("_SQL + _schema.unqualified_fields() + ")"_SQL;
     }
     
+    /**
+     * @brief Generate a comma seperated keys for the selected fields only.
+     * @tparam OnlyFields... A subset of fields
+     */
     template <typename... OnlyFields>
     auto only(){
         using namespace ozo::literals;
-        
         return "("_SQL + _schema.template unqualified_fields_only<OnlyFields...>() + ")"_SQL;
     }
     
+    /**
+     * @brief Generate a comma seperated keys for all fields excluding the selected fields.
+     * @tparam ExceptFields... A subset of fields
+     */
     template <typename... ExceptFields>
     auto except(){
         using namespace ozo::literals;
-        
         return "("_SQL + _schema.template unqualified_fields_except<ExceptFields...>() + ")"_SQL;
     }
     

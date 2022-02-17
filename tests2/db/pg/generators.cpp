@@ -35,7 +35,7 @@ struct table: pg::relation<table, id, name, grade, marks>{
 }
 
 TEST_CASE("postgresql query generators", "[pg]") {
-    SECTION("postgres_generators_select"){
+    SECTION("postgres generators select"){
         students::table::schema student;
         
         pg::generators::select<students::table::schema> select(student);
@@ -50,7 +50,7 @@ TEST_CASE("postgresql query generators", "[pg]") {
         CHECK(std::string(select.except<students::grade>("s"_SQL).text().c_str()) == "select s.id, s.name, s.marks");
     }
 
-    SECTION("postgres_generators_keys"){
+    SECTION("postgres generators keys"){
         students::table::schema student;
         
         pg::generators::keys<students::table::schema> keys(student);
@@ -62,7 +62,7 @@ TEST_CASE("postgresql query generators", "[pg]") {
         CHECK(std::string(keys.except<students::grade>().text().c_str()) == "(id, name, marks)");
     }
 
-    SECTION("postgres_generators_values"){
+    SECTION("postgres generators values"){
         students::table::schema student;
         
         student[students::id::val] = 42;
@@ -82,7 +82,7 @@ TEST_CASE("postgresql query generators", "[pg]") {
         CHECK((values.except<students::grade>().params() == boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)));
     }
 
-    SECTION("postgres_generators_set"){
+    SECTION("postgres generators set"){
         students::table::schema student;
         
         student[students::id::val] = 42;
@@ -102,7 +102,7 @@ TEST_CASE("postgresql query generators", "[pg]") {
         CHECK((set.except<students::grade>().params() == boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)));
     }
 
-    SECTION("postgres_generators_where"){
+    SECTION("postgres generators where"){
         students::table::schema student;
         
         student[students::id::val] = 42;
@@ -122,7 +122,7 @@ TEST_CASE("postgresql query generators", "[pg]") {
         CHECK((where.except<students::grade>().params() == boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)));
     }
 
-    SECTION("postgres_generators_returning"){
+    SECTION("postgres generators returning"){
         students::table::schema student;
 
         pg::generators::returning<students::table::schema> returning;

@@ -36,10 +36,28 @@ namespace udho{
 namespace db{
 namespace pg{
    
+/**
+ * @brief Typesafe container to define a projection.
+ * @tparam Fields...
+ * 
+ * A schema is a type safe heterogenous container that defines a projection.
+ * It is used to define the subset of columns in a query. A schema can also
+ * contain values corresponding to each of these columns. Usually the fields
+ * inside a schama are created using @ref PG_ELEMENT and have a PostgreSQL 
+ * type associated with it.
+ * 
+ * It can be used as an associative container to set and get the values for 
+ * each of the fields in the schema. It will raise compile time error if the 
+ * requested field is not part of the schema or a value of an unexpected type
+ * is being set for a field. 
+ *  
+ * @ingroup schema
+ */
 template <typename... Fields>
 struct basic_schema: udho::hazo::map_v<Fields...>{
     typedef udho::hazo::map_v<Fields...> map_type;
     using map_type::map_type;
+
     
     template <template <typename> class ConditionT>
     using exclude_if = typename map_type::template exclude_if<ConditionT>::template translate<basic_schema>;

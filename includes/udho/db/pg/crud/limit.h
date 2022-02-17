@@ -35,14 +35,42 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief An utility to specify the limit and offset, used in combination with the limit generator
+ * 
+ * @tparam Limit 
+ * @tparam Offset 
+ * 
+ * @ingroup generators
+ */
 template <int Limit, int Offset>
 struct limited{
     limited(): _limit(Limit), _offset(Offset){}
     
+    /**
+     * @brief set the limit
+     * 
+     * @param limit 
+     */
     void limit(const std::int64_t& limit) { _limit = limit; }
+    /**
+     * @brief get the limit already set
+     * 
+     * @return const std::int64_t& 
+     */
     const std::int64_t& limit() const { return _limit; }
     
+    /**
+     * @brief set the offset
+     * 
+     * @param offset 
+     */
     void offset(const std::int64_t& offset) { _offset = offset; }
+    /**
+     * @brief get the offset altready set
+     * 
+     * @return const std::int64_t& 
+     */
     const std::int64_t& offset() const { return _offset; }
     
     private:

@@ -39,22 +39,24 @@ namespace pg{
     
 namespace generators{
 
-/**
- * @addtogroup generators
- * @ingroup pg
- * @{
- */
 
 /**
- * from table part of the query
+ * @brief from table part of the query
+ * @ingroup generators
  */
 template <typename RelationT>
 struct from<pg::from<RelationT>>{
     
+    /**
+     * @brief function call operator overload returns the from part of the query as OZO string
+     */
     auto operator()(){
         return apply();
     }
     
+    /**
+     * @brief generate from part of the query as OZO string 
+     */
     static auto apply(){
         using namespace ozo::literals;
         
@@ -63,26 +65,30 @@ struct from<pg::from<RelationT>>{
 };
 
 /**
- * from table [inner join other on table.field = other.field]* part of the query
+ * @brief from table [inner join other on table.field = other.field]* part of the query
+ * Specialization of from for joining multiple relations
+ * @ingroup generators
  */
 template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
 struct from<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>{
     typedef basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin> basic_join_type;
     
+    /**
+     * @brief function call operator overload returns the from part of the query as OZO string
+     */
     auto operator()(){
         return apply();
     }
     
+    /**
+     * @brief generate from part of the query as OZO string 
+     */
     static auto apply(){
         using namespace ozo::literals;
         
         return from<pg::from<typename basic_join_type::source>>::apply() + " "_SQL + join<typename basic_join_type::type>::apply();
     }
 };
-
-/**
- * @}
- */
     
 }
 

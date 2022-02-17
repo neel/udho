@@ -28,6 +28,29 @@
   * @ingroup db
   */
 
+/**
+  * @defgroup schema
+  * @brief udho postgresql databae schema
+  * @ingroup pg
+  */
+
+/**
+  * @defgroup decorators
+  * @brief udho postgresql schema decorators
+  * @ingroup pg
+  */
+
+/**
+  * @defgroup generators
+  * @brief udho postgresql query generator
+  * @ingroup pg
+  */
+
+/**
+  * @defgroup crud
+  * @brief udho postgresql query model
+  * @ingroup pg
+  */
 
 #ifndef __DOXYGEN__
 

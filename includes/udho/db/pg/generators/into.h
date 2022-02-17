@@ -39,21 +39,32 @@ namespace pg{
 namespace generators{
     
 /**
- * from table part of the query
+ * @brief into part of the query
+ * 
+ * @tparam RelationT 
  */
 template <typename RelationT>
 struct into<pg::from<RelationT>>{
     
+    /**
+     * @brief function call operator overload generates the into part of the query as string
+     */
     auto operator()(){
         return apply();
     }
     
+    /**
+     * @brief generate the into part of the query as OZO string
+     */
     static auto apply(){
         using namespace ozo::literals;
         
         return "into "_SQL + std::move(RelationT::name());
     }
     
+    /**
+     * @brief relation name
+     */
     static auto relation(){
         return RelationT::name();
     }

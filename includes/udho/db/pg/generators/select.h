@@ -35,10 +35,12 @@ namespace udho{
 namespace db{
 namespace pg{
     
+
 namespace generators{
     
 /**
- * select [field]* part of the select query
+ * @brief "select [field]*" part of the select query
+ * @ingroup generators
  */
 template <typename... Fields>
 struct select<pg::basic_schema<Fields...>>{

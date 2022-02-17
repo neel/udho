@@ -39,7 +39,8 @@ namespace pg{
 namespace generators{
     
 /**
- * limit N Offset M part of the select query
+ * @brief limit N Offset M part of the select query
+ * @ingroup generators
  */
 template <int Limit, int Offset>
 struct limit<pg::limited<Limit, Offset>>{

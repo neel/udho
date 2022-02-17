@@ -36,6 +36,17 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @ingroup schema
+ * @{
+ */
+
+/**
+ * @brief Associates a field with a relation.
+ * 
+ * @tparam FieldT The field created using @ref PG_ELEMENT
+ * @tparam RelationT A relation that subclasses from @ref pg::relation 
+ */
 template <typename FieldT, typename RelationT>
 struct column: FieldT{
     typedef FieldT field_type;
@@ -53,6 +64,12 @@ struct column: FieldT{
     }
 };
 
+/**
+ * @brief Checks whether the two inputs refer to the same field
+ * 
+ * @tparam L A field created using @ref PG_ELEMENT or a column using such a field
+ * @tparam R A field created using @ref PG_ELEMENT or a column using such a field
+ */
 template <typename L, typename R>
 struct is_equivalent{
     enum {
@@ -60,6 +77,14 @@ struct is_equivalent{
     };
 };
 
+/**
+ * @brief Checks whether the two inputs refer to the same field
+ * 
+ * @tparam L A field created using @ref PG_ELEMENT or a column using such a field
+ * @tparam R A field created using @ref PG_ELEMENT or a column using such a field
+ * 
+ * Specialization when the RHS is a column while the LHS is not
+ */
 template <typename L, typename R, typename RelationT>
 struct is_equivalent<L, pg::column<R, RelationT>>{
     enum {
@@ -67,6 +92,14 @@ struct is_equivalent<L, pg::column<R, RelationT>>{
     };
 };
 
+/**
+ * @brief Checks whether the two inputs refer to the same field
+ * 
+ * @tparam L A field created using @ref PG_ELEMENT or a column using such a field
+ * @tparam R A field created using @ref PG_ELEMENT or a column using such a field
+ * 
+ * Specialization when the LHS is a column while the RHS is not
+ */
 template <typename L, typename R, typename RelationT>
 struct is_equivalent<pg::column<L, RelationT>, R>{
     enum {
@@ -74,12 +107,25 @@ struct is_equivalent<pg::column<L, RelationT>, R>{
     };
 };
 
+/**
+ * @brief Checks whether the two inputs refer to the same field
+ * 
+ * @tparam L A field created using @ref PG_ELEMENT or a column using such a field
+ * @tparam R A field created using @ref PG_ELEMENT or a column using such a field
+ * 
+ * Specialization when both LHS and RHS are columns.
+ */
 template <typename L, typename R, typename RelationT>
 struct is_equivalent<pg::column<L, RelationT>, pg::column<R, RelationT>>{
     enum {
         value = std::is_same<L, R>::value
     };
 };
+
+/**
+ * @}
+ * 
+ */
     
 }
 }
