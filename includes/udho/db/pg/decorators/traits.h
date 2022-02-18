@@ -41,10 +41,15 @@ namespace fields{
 /**
  * @ingroup decorators
  * @addtogroup traits
+ * @brief decoration trait of a field or *field like* entity.
+ * Used by the decorators while decorating a field.
  * @{
  */
 
 
+/**
+ * @brief use the `ozo_name()` of the field
+ */
 struct transparent{
     template <typename FieldT>
     auto apply(const FieldT&){
@@ -56,6 +61,9 @@ struct transparent{
     }
 };
 
+/**
+ * @brief Use the field name only even if the field is a column associated with a relation.
+ */
 struct unqualified{
     template <typename FieldT>
     auto apply(const FieldT&){
@@ -67,6 +75,10 @@ struct unqualified{
     }
 };
 
+/**
+ * @brief field names are prefixed by a compile time string
+ * @tparam PrefixT Compile time OZO string
+ */
 template <typename PrefixT>
 struct prefixed{
     PrefixT _prefix;
