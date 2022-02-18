@@ -42,6 +42,12 @@ namespace pg{
 
 namespace decorators{
     
+/**
+ * @ingroup decorators
+ * @addtogroup values
+ * @{
+ */
+
 struct basic_values{
     template <typename FieldT>
     decltype(auto) operator()(const FieldT& f){
@@ -103,6 +109,10 @@ struct values: basic_values{
     template <typename... Fields>
     using except = values_except<Fields...>;
 };
+
+/**
+ * @}
+ */
     
 }
 

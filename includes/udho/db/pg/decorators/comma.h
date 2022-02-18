@@ -38,6 +38,12 @@ namespace pg{
 
 namespace decorators{
     
+/**
+ * @ingroup decorators
+ * @addtogroup helpers
+ * @{
+ */
+
 template <typename InitialT, typename LeftT, typename RightT>
 struct comma_helper{
     comma_helper(const InitialT&){}
@@ -59,6 +65,10 @@ constexpr decltype(auto) comma(InitialT initial, LeftT&& l, RightT&& r){
     comma_helper<InitialT, LeftT, RightT> helper(initial);
     return helper(std::forward<LeftT>(l), std::forward<RightT>(r));
 }
+
+/**
+ * @}
+ */
 
 }
 

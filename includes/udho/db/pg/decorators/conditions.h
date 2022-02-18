@@ -42,6 +42,12 @@ namespace pg{
 
 namespace decorators{
 
+/**
+ * @ingroup decorators
+ * @addtogroup conditions
+ * @{
+ */
+
 template <typename FieldTraitT>
 struct basic_conditions: private FieldTraitT{
     template <typename... Args>
@@ -132,6 +138,10 @@ struct conditions: basic_conditions<traits::fields::transparent>{
         return conditions_prefixed<PrefixT>(std::forward<PrefixT>(k));
     }
 };
+
+/**
+ * @}
+ */
 
 }
 

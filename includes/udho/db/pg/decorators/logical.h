@@ -34,6 +34,12 @@ namespace pg{
 
 namespace decorators{
     
+/**
+ * @ingroup decorators
+ * @addtogroup helpers
+ * @{
+ */
+
 template <bool C>
 struct logical_not{
     enum {
@@ -100,6 +106,10 @@ struct logical_false{
         value = false
     };
 };
+
+/**
+ * @}
+ */
 
 }
 

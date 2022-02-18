@@ -38,6 +38,13 @@ namespace decorators{
 namespace traits{
 namespace fields{
 
+/**
+ * @ingroup decorators
+ * @addtogroup traits
+ * @{
+ */
+
+
 struct transparent{
     template <typename FieldT>
     auto apply(const FieldT&){
@@ -75,6 +82,10 @@ struct prefixed{
         return apply(f);
     }
 };
+
+/**
+ * @}
+ */
     
 }
 }

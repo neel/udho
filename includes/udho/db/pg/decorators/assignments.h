@@ -42,6 +42,13 @@ namespace pg{
 
 namespace decorators{
 
+/**
+ * @ingroup decorators
+ * @addtogroup assignments
+ * @brief decorates 
+ * @{
+ */
+
 template <typename FieldTraitT>
 struct basic_assignments: private FieldTraitT{
     template <typename... Args>
@@ -147,6 +154,10 @@ struct assignments: basic_assignments<traits::fields::transparent>{
     }
     using unqualified = assignments_unqualified;
 };
+
+/**
+ * @)
+ */
 
 }
 

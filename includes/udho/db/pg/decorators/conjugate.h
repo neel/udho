@@ -38,6 +38,12 @@ namespace pg{
 
 namespace decorators{
 
+/**
+ * @ingroup decorators
+ * @addtogroup helpers
+ * @{
+ */
+
 template <typename InitialT, typename LeftT, typename RightT>
 struct conjugate_helper{
     conjugate_helper(const InitialT&){}
@@ -60,6 +66,10 @@ constexpr decltype(auto) conjugate(InitialT initial, LeftT&& l, RightT&& r){
     return helper(std::forward<LeftT>(l), std::forward<RightT>(r));
 }
     
+/**
+ * @}
+ */
+
 }
 
 }

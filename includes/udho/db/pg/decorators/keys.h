@@ -42,6 +42,13 @@ namespace pg{
 
 namespace decorators{
     
+/**
+ * @ingroup decorators
+ * @addtogroup keys
+ * @{
+ */
+
+
 template <typename FieldTraitT>
 struct basic_keys: private FieldTraitT{
     template <typename... Args>
@@ -144,6 +151,11 @@ struct keys: basic_keys<traits::fields::transparent>{
     }
     using unqualified = keys_unqualified;
 };
+
+/**
+ * @}
+ * 
+ */
 
 }
 
