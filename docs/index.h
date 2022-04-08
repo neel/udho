@@ -103,7 +103,7 @@
 /**
   * @defgroup decorators
   * @brief udho postgresql schema decorators.
-  * 
+  * Decorates a schema and generate OZO string with placeholders and a tuple of parameters.
   * 
   * @ingroup pg
   */

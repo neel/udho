@@ -38,68 +38,77 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @ingroup crud
+ * @{
+ */
+
+/**
+ * @brief Different types of join
+ * 
+ */
 namespace join_types{
     
-/**
- * @brief Inner Join
- * 
- */
-struct inner{
-    static auto keyword(){
-        using namespace ozo::literals;
-        return "inner join"_SQL;
-    }
-};
+    /**
+     * @brief Inner Join
+     * 
+     */
+    struct inner{
+        static auto keyword(){
+            using namespace ozo::literals;
+            return "inner join"_SQL;
+        }
+    };
 
-/**
- * @brief Left join
- * 
- */
-struct left{
-    static auto keyword(){
-        using namespace ozo::literals;
-        return "left join"_SQL;
-    }
-};
-/**
- * @brief Right join
- * 
- */
-struct right{
-    static auto keyword(){
-        using namespace ozo::literals;
-        return "right join"_SQL;
-    }
-};
+    /**
+     * @brief Left join
+     * 
+     */
+    struct left{
+        static auto keyword(){
+            using namespace ozo::literals;
+            return "left join"_SQL;
+        }
+    };
+    /**
+     * @brief Right join
+     * 
+     */
+    struct right{
+        static auto keyword(){
+            using namespace ozo::literals;
+            return "right join"_SQL;
+        }
+    };
 
-/**
- * @brief Full Join
- * 
- */
-struct full{
-    static auto keyword(){
-        using namespace ozo::literals;
-        return "full join"_SQL;
-    }
-};
+    /**
+     * @brief Full Join
+     * 
+     */
+    struct full{
+        static auto keyword(){
+            using namespace ozo::literals;
+            return "full join"_SQL;
+        }
+    };
 
-/**
- * @brief Full Join
- * 
- */
-struct full_outer{
-    static auto keyword(){
-        using namespace ozo::literals;
-        return "full outer join"_SQL;
-    }
-};
-    
+    /**
+     * @brief Full Join
+     * 
+     */
+    struct full_outer{
+        static auto keyword(){
+            using namespace ozo::literals;
+            return "full outer join"_SQL;
+        }
+    };
+        
 }
     
 /**
- * @brief 
+ * @brief Defines a join between two fields of two relations
  * 
- * @tparam JoinType Type of join \see join_types::inner,  join_types::outer, join_types::left, join_types::right
+ * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
  * @tparam FieldL The field of the left relation 
@@ -115,23 +124,56 @@ struct joined{
     typedef typename relation_right::schema schema;
 };
 
-
+/**
+ * @brief Defines a join clause by chaining multiple join 
+ * 
+ * @tparam CurrentJoin A join defined by the @ref joined template
+ * @tparam RestJoin An optional join clause
+ */
 template <typename CurrentJoin, typename RestJoin = void>
 struct join_clause;
 
+/**
+ * @brief Specialization for Simple join clause.
+ * 
+ * @tparam JoinType Type of join @ref join_types
+ * @tparam RelationL The relation on the left side of join
+ * @tparam RelationR The relation on the right side of join
+ * @tparam FieldL The field of the left relation 
+ * @tparam FieldR The field of the right relation
+ */
 template <typename JoinType, typename RelationL, typename RelationR, typename FieldL, typename FieldR>
 struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, void>{
-    typedef joined<JoinType, RelationL, RelationR, FieldL, FieldR> head;
+    typedef joined<JoinType, RelationL, RelationR, FieldL, FieldR> head; // TODO maybe unused
     typedef void tail;
-    typedef pg::schema<typename RelationL::schema, typename head::schema> schema;
+    /**
+     * @brief Produces a schema by merging the schema of both RelationL and RelationR
+     */
+    typedef pg::schema<typename RelationL::schema, typename RelationR::schema> schema;
+    // typedef pg::schema<typename RelationL::schema, typename head::schema> schema;
     typedef RelationL source;
 };
 
+/**
+ * @brief Specialization for a join clause chained with another.
+ * 
+ * @tparam JoinType Type of join @ref join_types
+ * @tparam RelationL The relation on the left side of join
+ * @tparam RelationR The relation on the right side of join
+ * @tparam FieldL The field of the left relation 
+ * @tparam FieldR The field of the right relation
+ * @tparam CurrentJoin 
+ * @tparam RestJoin 
+ */
 template <typename JoinType, typename RelationL, typename RelationR, typename FieldL, typename FieldR, typename CurrentJoin, typename RestJoin>
 struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, join_clause<CurrentJoin, RestJoin>>{
-    typedef joined<JoinType, RelationL, RelationR, FieldL, FieldR> head;
+    typedef joined<JoinType, RelationL, RelationR, FieldL, FieldR> head; // TODO maybe unused
     typedef join_clause<CurrentJoin, RestJoin> tail;
-    typedef pg::schema<typename tail::schema, typename head::schema> schema;
+    /**
+     * @brief Produces a schema by merging the schema RelationR with the schema of the other join_clause
+     */
+    typedef pg::schema<typename tail::schema, typename RelationR::schema> schema;
+    // typedef pg::schema<typename tail::schema, typename head::schema> schema;
     typedef typename tail::source source;
 };
 
@@ -156,7 +198,7 @@ struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
  * @internal Not to be used directly, Rather to be used wih the \see basic_join conveniance structure
  * @tparam JoinType Type of join \see join_types::inner,  join_types::outer, join_types::left, join_types::right
  * @tparam FromRelationT The relation on the left side of the join
- * @tparam RelationT The relation on the rigth side of the join
+ * @tparam RelationT The relation on the right side of the join
  * @tparam FieldL The field of the left relation
  * @tparam FieldR The field of the right relation
  * @tparam PreviousJoin Previous joins in the chain
@@ -366,6 +408,10 @@ struct attached{
     template <typename RelationT>
     using join = basic_join<FromRelationT, RelationT>;
 };
+
+/**
+ * @}
+ */
     
 }
 }

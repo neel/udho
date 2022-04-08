@@ -45,6 +45,46 @@ namespace decorators{
 /**
  * @ingroup decorators
  * @addtogroup keys
+ * @brief decorates a schema as comma separeted keys
+ * Given the following:
+ * @code 
+ * namespace students{
+ *   PG_ELEMENT(id,    std::int64_t);
+ *   PG_ELEMENT(name,  std::string);
+ *   PG_ELEMENT(grade, std::int64_t);
+ *   PG_ELEMENT(marks, std::int64_t);
+ *   
+ *   struct table: pg::relation<table, id, name, grade, marks>{
+ *       static auto name(){
+ *           return "students"_SQL;
+ *       }
+ *   };
+ * }
+ * @endcode 
+ * Different keys decorators produces different outputs when applied on the schema. The decorate
+ * method returns an OZO string that has `text()` and `params()` method. The `text()` method produces 
+ * `boost::hana::string` with placeholders and the `params()` produces a tuple with values. Following
+ * are the examples of applying the decorators in the schema mentioned above.
+ * @code 
+ * student.decorate(pg::decorators::keys{});
+ * // .text():   students.id, students.name, students.grade, students.marks
+ * student.decorate(pg::decorators::keys::unqualified{});
+ * // .text():   id, name, grade, marks
+ * student.decorate(pg::decorators::keys::prefixed("s"_SQL));
+ * // .text():   s.id, s.name, s.grade, s.marks
+ * student.decorate(pg::decorators::keys::only<students::id, students::name, students::marks>{});
+ * // .text():   students.id, students.name, students.marks
+ * student.decorate(pg::decorators::keys::only<students::id, students::name, students::marks>::unqualified{});
+ * // .text():   id  name, marks
+ * student.decorate(pg::decorators::keys::only<students::id, students::name, students::marks>::prefixed("s"_SQL));
+ * // .text():   s.id, s.name, s.marks
+ * student.decorate(pg::decorators::keys::except<students::grade>{});
+ * // .text():   students.id, students.name, students.marks
+ * student.decorate(pg::decorators::keys::except<students::grade>::unqualified{});
+ * // .text():   id, name, marks
+ * student.decorate(pg::decorators::keys::except<students::grade>::prefixed("s"_SQL));
+ * // .text():   s.id, s.name, s.marks
+ * @endcode 
  * @{
  */
 

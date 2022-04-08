@@ -46,6 +46,54 @@ namespace decorators{
  * @ingroup decorators
  * @addtogroup assignments
  * @brief decorates a schema as comma separeted assignments
+ * Given the following:
+ * @code 
+ * namespace students{
+ *   PG_ELEMENT(id,    std::int64_t);
+ *   PG_ELEMENT(name,  std::string);
+ *   PG_ELEMENT(grade, std::int64_t);
+ *   PG_ELEMENT(marks, std::int64_t);
+ *   
+ *   struct table: pg::relation<table, id, name, grade, marks>{
+ *       static auto name(){
+ *           return "students"_SQL;
+ *       }
+ *   };
+ * }
+ * @endcode 
+ * Different assignment decorators produces different outputs when applied on the schema. The decorate
+ * method returns an OZO string that has `text()` and `params()` method. The `text()` method produces 
+ * `boost::hana::string` with placeholders and the `params()` produces a tuple with values. Following
+ * are the examples of applying the decorators in the schema mentioned above.
+ * @code 
+ * student.decorate(pg::decorators::assignments{});
+ * // .text():   students.id = $1, students.name = $2, students.grade = $3, students.marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::unqualified{});
+ * // .text():   id = $1, name = $2, grade = $3, marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.grade = $3, s.marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>{});
+ * // .text():   students.id = $1, students.name = $2, students.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>::unqualified{});
+ * // .text():   id = $1, name = $2, marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>{});
+ * // .text():   students.id = $1, students.name = $2, students.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>::unqualified{});
+ * // .text():   id = $1, name = $2, marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * @endcode 
  * @{
  */
 
