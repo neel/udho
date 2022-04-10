@@ -39,13 +39,8 @@ namespace db{
 namespace pg{
     
 /**
- * @ingroup crud
- * @{
- */
-
-/**
  * @brief Different types of join
- * 
+ * @ingroup crud
  */
 namespace join_types{
     
@@ -105,9 +100,10 @@ namespace join_types{
         
 }
     
+
 /**
  * @brief Defines a join between two fields of two relations
- * 
+ * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -126,7 +122,7 @@ struct joined{
 
 /**
  * @brief Defines a join clause by chaining multiple join 
- * 
+ * @ingroup crud
  * @tparam CurrentJoin A join defined by the @ref joined template
  * @tparam RestJoin An optional join clause
  */
@@ -135,7 +131,7 @@ struct join_clause;
 
 /**
  * @brief Specialization for Simple join clause.
- * 
+ * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -156,7 +152,7 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, void>
 
 /**
  * @brief Specialization for a join clause chained with another.
- * 
+ * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -194,9 +190,11 @@ struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
 };
 
 /**
- * @brief A node in the chain of multiple joins
- * @internal Not to be used directly, Rather to be used wih the \see basic_join conveniance structure
- * @tparam JoinType Type of join \see join_types::inner,  join_types::outer, join_types::left, join_types::right
+ * @brief A node in the chain of multiple joins.
+ * Datastructure to define a join of two columns accross two tables or to define a chain of multiple such joins.
+ * @ingroup crud
+ * @note Not to be used directly, Rather to be used wih the \ref basic_join convenience structure
+ * @tparam JoinType Type of join \ref join_types::inner,  join_types::outer, join_types::left, join_types::right
  * @tparam FromRelationT The relation on the left side of the join
  * @tparam RelationT The relation on the right side of the join
  * @tparam FieldL The field of the left relation
@@ -294,7 +292,7 @@ struct basic_join_on{
 
 /**
  * @brief Provides join functionality
- * 
+ * @ingroup crud
  * @tparam FromRelationT The relation on the left side of the join
  * @tparam RelationT The relation on the right side of the join
  * @tparam PreviousJoin The previous join in the chain or void
@@ -385,7 +383,7 @@ struct basic_join{
 
 /**
  * @brief join attach 
- *
+ * @ingroup crud
  * @code 
  *   join<post::full>::inner::on<author::id, post::author>
  * ::join<project::full>::outer::on<author::id, project::owner>
@@ -408,10 +406,6 @@ struct attached{
     template <typename RelationT>
     using join = basic_join<FromRelationT, RelationT>;
 };
-
-/**
- * @}
- */
     
 }
 }
