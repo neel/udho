@@ -15,6 +15,8 @@
 #include <udho/db/pg/generators/select.h>
 #include <udho/db/pg/generators/from.h>
 
+#include<boost/algorithm/string/erase.hpp>
+
 using namespace udho::db;
 using namespace ozo::literals;
 using namespace boost::hana::literals;
@@ -140,7 +142,48 @@ TEST_CASE("postgresql crud join", "[pg]"){
         >::type
     >::fetch::all::apply;
     auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>(ctx);
-    CHECK(std::string(simple_join_2_t(simple_join_2_t_collector, pool, io).sql().text().c_str()) == "select articles.id, articles.title, articles.author, articles.project, projects.id, projects.title, articles.id, articles.title, articles.author, articles.project from articles inner join projects on articles.project = projects.id  inner join articles on students.id = articles.author");
+    CHECK(boost::algorithm::erase_all_copy(std::string(simple_join_2_t(simple_join_2_t_collector, pool, io).sql().text().c_str()), " ") == 
+    boost::algorithm::erase_all_copy(std::string(
+        "select                                         \
+            articles.id,                                \
+            articles.title,                             \
+            articles.author,                            \
+            articles.project,                           \
+            projects.id,                                \
+            projects.title,                             \
+            articles.id,                                \
+            articles.title,                             \
+            articles.author,                            \
+            articles.project                            \
+        from articles                                   \
+        inner join projects                             \
+            on articles.project = projects.id           \
+        inner join articles                             \
+            on students.id = articles.author            \
+    "), " "));
 
-    
+    using simple_join_3_t = pg::basic_join_on<
+        pg::join_types::inner,
+        memberships::table,
+        projects::table,
+        memberships::project,
+        projects::id,
+        pg::basic_join_on<
+            pg::join_types::inner,
+            memberships::table,
+            students::table,
+            memberships::student,
+            students::id,
+            pg::basic_join_on<
+                pg::join_types::inner,
+                articles::table,
+                students::table,
+                articles::author,
+                students::id,
+                void
+            >::type
+        >::type
+    >::fetch::all::apply;
+    auto simple_join_3_t_collector = udho::activities::collect<simple_join_3_t>(ctx);
+    std::cout << std::string(simple_join_3_t(simple_join_3_t_collector, pool, io).sql().text().c_str()) << std::endl;
 }
