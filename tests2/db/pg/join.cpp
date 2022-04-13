@@ -6,6 +6,7 @@
 #include <udho/server.h>
 #include <string>
 #include <tuple>
+#include <regex>
 #include <boost/hana/string.hpp>
 #include <udho/db/pg/schema/defs.h>
 #include <udho/db/pg/schema/field.h>
@@ -15,7 +16,11 @@
 #include <udho/db/pg/generators/select.h>
 #include <udho/db/pg/generators/from.h>
 
-#include<boost/algorithm/string/erase.hpp>
+
+
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/erase.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 using namespace udho::db;
 using namespace ozo::literals;
@@ -57,8 +62,9 @@ namespace projects{
 
 PG_ELEMENT(id,     std::int64_t);
 PG_ELEMENT(title,  std::string);
+PG_ELEMENT(admin,  std::int64_t);
 
-struct table: pg::relation<table, id, title>{
+struct table: pg::relation<table, id, title, admin>{
     PG_NAME(projects)
     using readonly = pg::readonly<id>;
 };
@@ -79,6 +85,43 @@ struct table: pg::relation<table, id, student, project>{
 }
 
 // } relations
+
+struct sql{
+    std::string _query;
+
+    sql() = default;
+    explicit sql(const char* q): _query(q) {}
+    sql(const sql&) = default;
+
+    std::string query() const { 
+        std::string q = boost::algorithm::trim_copy(_query);
+        return std::regex_replace(q, std::regex("\\s+"), " ");
+    }
+
+    friend bool operator==(const sql& lhs, const sql& rhs);
+    friend std::ostream& operator<<(std::ostream& stream, const sql& s);
+    friend sql operator%(const sql&, const char* str);
+    friend sql operator%(const char* str, const sql&);
+};
+
+bool operator==(const sql& lhs, const sql& rhs){
+    return lhs.query() == rhs.query();
+}
+
+sql operator%(const sql&, const char* str){
+    return sql(str);
+}
+
+sql operator%(const char* str, const sql&){
+    return sql(str);
+}
+
+std::ostream& operator<<(std::ostream& stream, const sql& s){
+    stream << s.query();
+    return stream;
+}
+
+#define SQL_EXPECT_SAME(x, y) CHECK(sql() % x.text().c_str() == y % sql())
 
 TEST_CASE("postgresql crud join", "[pg]"){
     boost::asio::io_service io;
@@ -117,50 +160,152 @@ TEST_CASE("postgresql crud join", "[pg]"){
 
     using simple_join_1_t = pg::basic_join_on<
         pg::join_types::inner,
-        students::table,
         articles::table,
+        students::table,        // Join 1
+        articles::author,       // From
         students::id,
-        articles::author,
         void
     >::fetch::all::apply;
     auto simple_join_1_t_collector = udho::activities::collect<simple_join_1_t>(ctx);
-    CHECK(std::string(simple_join_1_t(simple_join_1_t_collector, pool, io).sql().text().c_str()) == "select students.id, students.name, students.project, students.marks, articles.id, articles.title, articles.author, articles.project from students inner join articles on students.id = articles.author ");
+    SQL_EXPECT_SAME(
+        simple_join_1_t(simple_join_1_t_collector, pool, io).sql(), 
+        "select                                 \
+            articles.id,                        \
+            articles.title,                     \
+            articles.author,                    \
+            articles.project,                   \
+            students.id,                        \
+            students.name,                      \
+            students.project,                   \
+            students.marks                      \
+        from articles                           \
+        inner join students                     \
+            on articles.author = students.id    \
+        "
+    );
 
+    // FROM articles <> (projects, students)
+    // articles.project <> projects.id 
+    // articles.author  <> students.id
     using simple_join_2_t = pg::basic_join_on<
         pg::join_types::inner,
-        students::table,
-        articles::table,
-        students::id,
+        articles::table, 
+        students::table,                // Join 2
         articles::author,
+        students::id,
         pg::basic_join_on<
             pg::join_types::inner,
             articles::table,
-            projects::table,
-            articles::project,
+            projects::table,            // Join 1
+            articles::project,          // From
             projects::id,
             void
         >::type
     >::fetch::all::apply;
     auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>(ctx);
-    CHECK(boost::algorithm::erase_all_copy(std::string(simple_join_2_t(simple_join_2_t_collector, pool, io).sql().text().c_str()), " ") == 
-    boost::algorithm::erase_all_copy(std::string(
-        "select                                         \
-            articles.id,                                \
-            articles.title,                             \
-            articles.author,                            \
-            articles.project,                           \
-            projects.id,                                \
-            projects.title,                             \
-            articles.id,                                \
-            articles.title,                             \
-            articles.author,                            \
-            articles.project                            \
-        from articles                                   \
-        inner join projects                             \
-            on articles.project = projects.id           \
-        inner join articles                             \
-            on students.id = articles.author            \
-    "), " "));
+    SQL_EXPECT_SAME(
+        simple_join_2_t(simple_join_2_t_collector, pool, io).sql(), 
+        "select                                   \
+            articles.id,                          \
+            articles.title,                       \
+            articles.author,                      \
+            articles.project,                     \
+            projects.id,                          \
+            projects.title,                       \
+            projects.admin,                       \
+            students.id,                          \
+            students.name,                        \
+            students.project,                     \
+            students.marks                        \
+        from articles                             \
+        inner join projects                       \
+            on articles.project = projects.id     \
+        inner join students                       \
+            on articles.author = students.id      \
+        "
+    );
+
+    // FROM articles <> projects <> students
+    // articles.project <> projects.id 
+    // projects.admin   <> students.id
+    using simple_join_2a_t = pg::basic_join_on<
+        pg::join_types::inner,
+        projects::table, 
+        students::table,                // Join 2
+        projects::admin,
+        students::id,
+        pg::basic_join_on<
+            pg::join_types::inner,
+            articles::table,
+            projects::table,            // Join 1
+            articles::project,          // From
+            projects::id,
+            void
+        >::type
+    >::fetch::all::apply;
+    auto simple_join_2a_t_collector = udho::activities::collect<simple_join_2a_t>(ctx);
+    SQL_EXPECT_SAME(
+        simple_join_2a_t(simple_join_2a_t_collector, pool, io).sql(), 
+        "select                                   \
+            articles.id,                          \
+            articles.title,                       \
+            articles.author,                      \
+            articles.project,                     \
+            projects.id,                          \
+            projects.title,                       \
+            projects.admin,                       \
+            students.id,                          \
+            students.name,                        \
+            students.project,                     \
+            students.marks                        \
+        from articles                             \
+        inner join projects                       \
+            on articles.project = projects.id     \
+        inner join students                       \
+            on projects.admin = students.id       \
+        "
+    );
+
+    // !MALFORMED 
+    // FROM articles <> projects | students <> projects
+    // articles.project <> projects.id 
+    // students.id      <> projects.admin
+    using simple_join_2b_t = pg::basic_join_on<
+        pg::join_types::inner,
+        students::table, 
+        projects::table,                // Join 2
+        students::id,
+        projects::admin,
+        pg::basic_join_on<
+            pg::join_types::inner,
+            articles::table,
+            projects::table,            // Join 1
+            articles::project,          // From
+            projects::id,
+            void
+        >::type
+    >::fetch::all::apply;
+    auto simple_join_2b_t_collector = udho::activities::collect<simple_join_2b_t>(ctx);
+    SQL_EXPECT_SAME(
+        simple_join_2b_t(simple_join_2b_t_collector, pool, io).sql(), 
+        "select                                   \
+            articles.id,                          \
+            articles.title,                       \
+            articles.author,                      \
+            articles.project,                     \
+            projects.id,                          \
+            projects.title,                       \
+            projects.admin,                       \
+            projects.id,                          \
+            projects.title,                       \
+            projects.admin                        \
+        from articles                             \
+        inner join projects                       \
+            on articles.project = projects.id     \
+        inner join projects                       \
+            on students.id = projects.admin       \
+        "
+    );
 
     using simple_join_3_t = pg::basic_join_on<
         pg::join_types::inner,
