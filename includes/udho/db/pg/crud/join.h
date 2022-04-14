@@ -102,7 +102,8 @@ namespace join_types{
     
 
 /**
- * @brief Defines a join between two fields of two relations
+ * @brief Datastructure to store a pair of relations and the corresponding fields to be joined at compile time
+ * @note Not to be used directly. Used internally by @ref basic_join_on
  * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
@@ -121,7 +122,8 @@ struct joined{
 };
 
 /**
- * @brief Defines a join clause by chaining multiple join 
+ * @brief Compile time datastructure to store a chain of chaining multiple joins
+ * @note Not to be used directly. Used internally by @ref basic_join_on
  * @ingroup crud
  * @tparam CurrentJoin A join defined by the @ref joined template
  * @tparam RestJoin An optional join clause
@@ -131,6 +133,7 @@ struct join_clause;
 
 /**
  * @brief Specialization for Simple join clause.
+ * @note Not to be used directly. Used internally by @ref basic_join_on
  * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
@@ -147,11 +150,15 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, void>
      */
     typedef pg::schema<typename RelationL::schema, typename RelationR::schema> schema;
     // typedef pg::schema<typename RelationL::schema, typename head::schema> schema;
+    /**
+     * @brief Source relation (RelationL)
+     */
     typedef RelationL source;
 };
 
 /**
  * @brief Specialization for a join clause chained with another.
+ * @note Not to be used directly. Used internally by @ref basic_join_on
  * @ingroup crud
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
@@ -170,6 +177,9 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, join_
      */
     typedef pg::schema<typename tail::schema, typename RelationR::schema> schema;
     // typedef pg::schema<typename tail::schema, typename head::schema> schema;
+    /**
+     * @brief Source relation of the tail
+     */
     typedef typename tail::source source;
 };
 
@@ -192,21 +202,231 @@ struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
 /**
  * @brief A node in the chain of multiple joins.
  * Datastructure to define a join of two columns accross two tables or to define a chain of multiple such joins.
- * @ingroup crud
- * @note Not to be used directly, Rather to be used wih the \ref basic_join convenience structure
  * @tparam JoinType Type of join \ref join_types::inner,  join_types::outer, join_types::left, join_types::right
  * @tparam FromRelationT The relation on the left side of the join
  * @tparam RelationT The relation on the right side of the join
  * @tparam FieldL The field of the left relation
  * @tparam FieldR The field of the right relation
  * @tparam PreviousJoin Previous joins in the chain
+ * 
+ * @note Not to be used directly, Rather to be used wih the \ref basic_join convenience structure
+ * @ingroup crud
+ * The `FromRelationT` is associated with `FieldL` and used as the lhs column for composing JOIN SQL queries. Similarly 
+ * the `RelationT` is associated with `FieldR` and used as the  while composing the JOIN SQL query. Chain of multiple
+ * JOINs can be constructed using the `PreviousJoin` template parameter which is `void` by default. `JoinType` is used
+ * to specify the type of join, e.g. left, tight, inner, outer etc..
+ * @code 
+ * pg::basic_join_on<
+ *    pg::join_types::inner,  // INNER JOIN
+ *    articles::table,        // FROM table
+ *    students::table,        // JOIN table 
+ *    articles::author,       // JOIN lhs
+ *    students::id,           // JOIN rhs
+ *    void                    // No previous joins
+ * >::fetch::all::apply;
+ * @endcode 
+ * The above generate SQL like the following
+ * @code 
+ * select                              
+ *     articles.id,                    
+ *     articles.title,                 
+ *     articles.author,                
+ *     articles.project,               
+ *     students.id,                    
+ *     students.name,                  
+ *     students.project,               
+ *     students.marks                  
+ * from articles                       
+ * inner join students                 
+ *     on articles.author = students.id
+ * @endcode 
+ * For multiple joins, FROM is choosen from the inner most `PreviousJoin` in the above mentioned way. In the example shown
+ * below two tables `projects` and `articles` are joined with the same table (which is in FROM) using different foreign keys.
+ * @code 
+ * pg::basic_join_on<
+ *     pg::join_types::inner,
+ *     articles::table,                // Joined with the FROM table
+ *     students::table,                // JOIN table (2)
+ *     articles::author,               // JOIN lhs   (2)
+ *     students::id,                   // JOIN rhs   (2)
+ *     pg::basic_join_on<
+ *         pg::join_types::inner,
+ *         articles::table,            // FROM table
+ *         projects::table,            // JOIN table (1)
+ *         articles::project,          // JOIN lhs   (1)
+ *         projects::id,               // JOIN rhs   (1)
+ *         void
+ *     >::type
+ * >::fetch::all::apply;
+ * @endcode 
+ * The above may generate SQL like the following 
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on articles.author = students.id     // JOIN       (2)
+ * @endcode 
+ * In the following example, the second join refers to a field from the first join table.
+ * @code 
+ * pg::basic_join_on<
+ *     pg::join_types::inner,
+ *     projects::table,                // Joined with the JOIN (1) table
+ *     students::table,                // JOIN table (2)
+ *     projects::admin,                // JOIN lhs   (2)
+ *     students::id,                   // JOIN rhs   (2)
+ *     pg::basic_join_on<
+ *         pg::join_types::inner,
+ *         articles::table,            // FROM table
+ *         projects::table,            // JOIN table (1)
+ *         articles::project,          // JOIN lhs   (1)
+ *         projects::id,               // JOIN rhs   (1)
+ *         void
+ *     >::type
+ * >::fetch::all::apply;
+ * @endcode 
+ * The above code can be used to generate the following SQL.
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table     
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on projects.admin = students.id      // JOIN       (2)
+ * @endcode 
+ * @warning The `FromRelationT` must either be the FROM table or a table present in the `PreviousJoin` at some depth.
+ *          @code 
+ *          pg::basic_join_on<
+ *              pg::join_types::inner,
+ *              students::table,                // Joined with a table which is neither in FROM not in Previous JOIN
+ *              projects::table,                // JOIN table (2)
+ *              students::id,                   // JOIN lhs   (2)
+ *              projects::admin,                // JOIN rhs   (2)
+ *              pg::basic_join_on<
+ *                  pg::join_types::inner,
+ *                  articles::table,            // FROM table
+ *                  projects::table,            // JOIN table (1)
+ *                  articles::project,          // JOIN lhs   (1)
+ *                  projects::id,               // JOIN rhs   (1)
+ *                  void
+ *              >::type
+ *          >::fetch::all::apply;
+ *          @endcode 
+ *          the above code produces a MALFORMED SQL as shown below.
+ *          @code 
+ *          select                               
+ *              articles.id,                     
+ *              articles.title,                  
+ *              articles.author,                 
+ *              articles.project,                
+ *              projects.id,                     
+ *              projects.title,                  
+ *              projects.admin,                  
+ *              projects.id,                     
+ *              projects.title,                  
+ *              projects.admin                   
+ *          from articles                        
+ *          inner join projects                  
+ *              on articles.project = projects.id
+ *          inner join projects                  
+ *              on students.id = projects.admin  
+ *          @endcode 
+ * 
+ * Not limited to two, but there can be any number of joins chained together as shown in the example below.
+ * @code 
+ * pg::basic_join_on<
+ *     pg::join_types::inner,
+ *     memberships::table,
+ *     projects::table,
+ *     memberships::project,
+ *     projects::id,
+ *     pg::basic_join_on<
+ *         pg::join_types::inner,
+ *         students::table,
+ *         memberships::table,
+ *         students::id,
+ *         memberships::student,
+ *         pg::basic_join_on<
+ *             pg::join_types::inner,
+ *             articles::table,
+ *             students::table,
+ *             articles::author,
+ *             students::id,
+ *             void
+ *         >::type
+ *     >::type
+ * >::fetch::all::apply;
+ * @endcode 
+ * The above will produce SQL like the following.
+ * @code 
+ * select                                   
+ *     articles.id,                         
+ *     articles.title,                      
+ *     articles.author,                     
+ *     articles.project,                    
+ *     students.id,                         
+ *     students.name,                       
+ *     students.project,                    
+ *     students.marks,                      
+ *     memberships.id,                      
+ *     memberships.student,                 
+ *     memberships.project,                 
+ *     projects.id,                         
+ *     projects.title,                      
+ *     projects.admin                       
+ * from articles                            
+ * inner join students                      
+ *     on articles.author = students.id     
+ * inner join memberships                   
+ *     on students.id = memberships.student 
+ * inner join projects                      
+ *     on memberships.project = projects.id 
+ * @endcode 
  */
 template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
 struct basic_join_on{
+    /**
+     * @brief Corresponding JOIN clause
+     */
     using type = join_clause<joined<JoinType, FromRelationT, RelationT, FieldL, FieldR>, PreviousJoin>;
+    /**
+     * @brief The source relation (used as FROM)
+     */
     using source = typename type::source;
+    /**
+     * @brief The schema consists of all relations in the from and join clauses
+     */
     using schema = typename type::schema;
     
+    /**
+     * @brief Join some other relation
+     * 
+     * @tparam OtherRelationT 
+     * @tparam SomeFromT 
+     */
     template <typename OtherRelationT, typename SomeFromT = FromRelationT>
     using join = pg::basic_join<SomeFromT, OtherRelationT, type>;
     

@@ -158,14 +158,15 @@ TEST_CASE("postgresql crud join", "[pg]"){
     //     ::join<memberships::table>::inner::on<students::id, memberships::student>
     //     ::join<articles::table>::inner::on<students::id, articles::author>;
 
-    using simple_join_1_t = pg::basic_join_on<
+    using basic_simple_join_1_t = pg::basic_join_on<
         pg::join_types::inner,
         articles::table,
         students::table,        // Join 1
         articles::author,       // From
         students::id,
         void
-    >::fetch::all::apply;
+    >;
+    using simple_join_1_t = basic_simple_join_1_t::fetch::all::apply;
     auto simple_join_1_t_collector = udho::activities::collect<simple_join_1_t>(ctx);
     SQL_EXPECT_SAME(
         simple_join_1_t(simple_join_1_t_collector, pool, io).sql(), 
@@ -183,11 +184,18 @@ TEST_CASE("postgresql crud join", "[pg]"){
             on articles.author = students.id    \
         "
     );
+    CHECK(
+        std::is_same<
+            basic_simple_join_1_t, 
+            pg::basic_join<articles::table, students::table>
+                ::inner::on<articles::author, students::id>
+        >::value
+    );
 
     // FROM articles <> (projects, students)
     // articles.project <> projects.id 
     // articles.author  <> students.id
-    using simple_join_2_t = pg::basic_join_on<
+    using basic_simple_join_2_t = pg::basic_join_on<
         pg::join_types::inner,
         articles::table, 
         students::table,                // Join 2
@@ -201,7 +209,8 @@ TEST_CASE("postgresql crud join", "[pg]"){
             projects::id,
             void
         >::type
-    >::fetch::all::apply;
+    >;
+    using simple_join_2_t = basic_simple_join_2_t::fetch::all::apply;
     auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>(ctx);
     SQL_EXPECT_SAME(
         simple_join_2_t(simple_join_2_t_collector, pool, io).sql(), 
@@ -225,10 +234,20 @@ TEST_CASE("postgresql crud join", "[pg]"){
         "
     );
 
+    CHECK(
+        std::is_same<
+            basic_simple_join_2_t,
+            pg::basic_join<articles::table, projects::table>
+                ::inner::on<articles::project, projects::id>
+            ::join<students::table>
+                ::inner::on<articles::author, students::id>
+        >::value
+    );
+
     // FROM articles <> projects <> students
     // articles.project <> projects.id 
     // projects.admin   <> students.id
-    using simple_join_2a_t = pg::basic_join_on<
+    using basic_simple_join_2a_t = pg::basic_join_on<
         pg::join_types::inner,
         projects::table, 
         students::table,                // Join 2
@@ -242,7 +261,8 @@ TEST_CASE("postgresql crud join", "[pg]"){
             projects::id,
             void
         >::type
-    >::fetch::all::apply;
+    >;
+    using simple_join_2a_t = basic_simple_join_2a_t::fetch::all::apply;
     auto simple_join_2a_t_collector = udho::activities::collect<simple_join_2a_t>(ctx);
     SQL_EXPECT_SAME(
         simple_join_2a_t(simple_join_2a_t_collector, pool, io).sql(), 
@@ -265,6 +285,17 @@ TEST_CASE("postgresql crud join", "[pg]"){
             on projects.admin = students.id       \
         "
     );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_2a_t,
+            pg::basic_join<articles::table, projects::table>
+                ::inner::on<articles::project, projects::id>
+            ::join<students::table, projects::table>
+                ::inner::on<projects::admin, students::id>
+        >::value
+    );
+    
 
     // !MALFORMED 
     // FROM articles <> projects | students <> projects
@@ -307,7 +338,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
         "
     );
 
-    using simple_join_3_t = pg::basic_join_on<
+    using basic_simple_join_3_t = pg::basic_join_on<
         pg::join_types::inner,
         memberships::table,
         projects::table,
@@ -315,10 +346,10 @@ TEST_CASE("postgresql crud join", "[pg]"){
         projects::id,
         pg::basic_join_on<
             pg::join_types::inner,
-            memberships::table,
             students::table,
-            memberships::student,
+            memberships::table,
             students::id,
+            memberships::student,
             pg::basic_join_on<
                 pg::join_types::inner,
                 articles::table,
@@ -328,7 +359,44 @@ TEST_CASE("postgresql crud join", "[pg]"){
                 void
             >::type
         >::type
-    >::fetch::all::apply;
+    >;
+    using simple_join_3_t = basic_simple_join_3_t::fetch::all::apply;
     auto simple_join_3_t_collector = udho::activities::collect<simple_join_3_t>(ctx);
-    std::cout << std::string(simple_join_3_t(simple_join_3_t_collector, pool, io).sql().text().c_str()) << std::endl;
+    SQL_EXPECT_SAME(
+        simple_join_3_t(simple_join_3_t_collector, pool, io).sql(), 
+        "select                                        \
+            articles.id,                               \
+            articles.title,                            \
+            articles.author,                           \
+            articles.project,                          \
+            students.id,                               \
+            students.name,                             \
+            students.project,                          \
+            students.marks,                            \
+            memberships.id,                            \
+            memberships.student,                       \
+            memberships.project,                       \
+            projects.id,                               \
+            projects.title,                            \
+            projects.admin                             \
+        from articles                                  \
+        inner join students                            \
+            on articles.author = students.id           \
+        inner join memberships                         \
+            on students.id = memberships.student       \
+        inner join projects                            \
+            on memberships.project = projects.id       \
+        "
+    );
+    CHECK(
+        std::is_same<
+            basic_simple_join_3_t,
+            pg::basic_join<articles::table, students::table>
+                ::inner::on<articles::author, students::id>
+            ::join<memberships::table, students::table>
+                ::inner::on<students::id, memberships::student>
+            ::join<projects::table, memberships::table>
+                ::inner::on<memberships::project, projects::id>
+        >::value
+    );
 }
