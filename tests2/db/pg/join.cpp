@@ -192,6 +192,15 @@ TEST_CASE("postgresql crud join", "[pg]"){
         >::value
     );
 
+    CHECK(
+        std::is_same<
+            basic_simple_join_1_t, 
+            pg::attached<articles::table>
+                ::join<students::table>
+                    ::inner::on<articles::author, students::id>
+        >::value
+    );
+
     // FROM articles <> (projects, students)
     // articles.project <> projects.id 
     // articles.author  <> students.id
@@ -237,10 +246,21 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(
         std::is_same<
             basic_simple_join_2_t,
-            pg::basic_join<articles::table, projects::table>
-                ::inner::on<articles::project, projects::id>
-            ::join<students::table>
-                ::inner::on<articles::author, students::id>
+            pg::basic_join<articles::table, projects::table>            // FROM table (0), JOIN table (1)
+                ::inner::on<articles::project, projects::id>            // lhs (0), rhs (1)
+            ::join<students::table>                                     // JOIN table (2) 
+                ::inner::on<articles::author, students::id>             // lhs (0), rhs (2)
+        >::value
+    );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_2_t,
+            pg::attached<articles::table>                                   // FROM table (0)
+                ::join<projects::table>                                     // JOIN table (1)
+                    ::inner::on<articles::project, projects::id>            // lhs (0), rhs (1)
+                ::join<students::table>                                     // JOIN table (2) 
+                    ::inner::on<articles::author, students::id>             // lhs (0), rhs (2)
         >::value
     );
 
@@ -289,10 +309,21 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(
         std::is_same<
             basic_simple_join_2a_t,
-            pg::basic_join<articles::table, projects::table>
-                ::inner::on<articles::project, projects::id>
-            ::join<students::table, projects::table>
-                ::inner::on<projects::admin, students::id>
+            pg::basic_join<articles::table, projects::table>            // FROM table (0), JOIN table (1)
+                ::inner::on<articles::project, projects::id>            // lhs (0), rhs (1)
+            ::join<students::table, projects::table>                    // JOIN table (2), JOIN table (1)
+                ::inner::on<projects::admin, students::id>              // lhs (1), rhs (2)
+        >::value
+    );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_2a_t,
+            pg::attached<articles::table>                               // FROM table (0)
+                ::join<projects::table>                                 // JOIN table (1)
+                    ::inner::on<articles::project, projects::id>        // lhs (0), rhs (1)
+                ::join<students::table, projects::table>                // JOIN table (2), JOIN table (1)
+                    ::inner::on<projects::admin, students::id>          // lhs (1), rhs (2)
         >::value
     );
     
@@ -391,12 +422,25 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(
         std::is_same<
             basic_simple_join_3_t,
-            pg::basic_join<articles::table, students::table>
-                ::inner::on<articles::author, students::id>
-            ::join<memberships::table, students::table>
-                ::inner::on<students::id, memberships::student>
-            ::join<projects::table, memberships::table>
-                ::inner::on<memberships::project, projects::id>
+            pg::basic_join<articles::table, students::table>            // FROM table (0), JOIN table (1)
+                ::inner::on<articles::author, students::id>             // lhs (0), rhs (1)
+            ::join<memberships::table, students::table>                 // JOIN table (2), JOIN table (1)
+                ::inner::on<students::id, memberships::student>         // lhs (1), rhs (2)
+            ::join<projects::table, memberships::table>                 // JOIN table (3), JOIN table (2)
+                ::inner::on<memberships::project, projects::id>         // lhs (2), rhs (3)
+        >::value
+    );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_3_t,
+            pg::attached<articles::table>                               // FROM table (0)
+                ::join<students::table>                                 // JOIN table (1)
+                    ::inner::on<articles::author, students::id>         // lhs (0), rhs (1)
+                ::join<memberships::table, students::table>             // JOIN table (2), JOIN table (1)
+                    ::inner::on<students::id, memberships::student>     // lhs (1), rhs (2)
+                ::join<projects::table, memberships::table>             // JOIN table (3), JOIN table (2)
+                    ::inner::on<memberships::project, projects::id>     // lhs (2), rhs (3)
         >::value
     );
 }

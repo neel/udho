@@ -430,9 +430,19 @@ struct basic_join_on{
     template <typename OtherRelationT, typename SomeFromT = FromRelationT>
     using join = pg::basic_join<SomeFromT, OtherRelationT, type>;
     
+    /**
+     * @brief Given a field returns the column for it.
+     * 
+     * @tparam FieldT 
+     */
     template <typename FieldT>
     using data_of = typename schema::types::template data_of<FieldT>;
     
+    /**
+     * @brief Given a field returns the relation it is associated with.
+     * 
+     * @tparam FieldT 
+     */
     template <typename FieldT>
     using relation_of = typename data_of<FieldT>::relation_type;
     
@@ -511,17 +521,131 @@ struct basic_join_on{
 };
 
 /**
- * @brief Provides join functionality
- * @ingroup crud
+ * @brief Compile time datastructure to define one or more JOINs.
  * @tparam FromRelationT The relation on the left side of the join
  * @tparam RelationT The relation on the right side of the join
  * @tparam PreviousJoin The previous join in the chain or void
+ * 
+ * @ingroup crud
+ * 
+ * Constructs a chain of one or more JOIN clauses relating multiple tables. 
+ * @code 
+ * pg::basic_join<articles::table,  students::table>       // FROM (0), JOIN Table (1)
+ *    ::inner::on<articles::author, students::id>          // lhs (0), rhs (1)
+ * @endcode 
+ * The above code may be used to generate the following SQL
+ * @code 
+ * select                              
+ *     articles.id,                    
+ *     articles.title,                 
+ *     articles.author,                
+ *     articles.project,               
+ *     students.id,                    
+ *     students.name,                  
+ *     students.project,               
+ *     students.marks                  
+ * from articles                                // Table (0)
+ * inner join students                          // Table (1)
+ *     on articles.author = students.id         // lhs (0), rhs (1)
+ * @endcode 
+ * @note in the documentation (0) refers to the relation used in the FROM clause and the fields associated with it. 
+ *       Any integer n > 0 is used to refer the same for the n'th relation present in the subsequent JOIN clauses.
+ * 
+ * Following is the example of joining two tables with table (0)
+ * @code 
+ * pg::basic_join<articles::table, projects::table>            // FROM table (0), JOIN table (1)
+ *   ::inner::on<articles::project, projects::id>              // lhs (0), rhs (1)
+ * ::join<students::table>                                     // JOIN table (2) 
+ *   ::inner::on<articles::author, students::id>               // lhs (0), rhs (2)
+ * @endcode 
+ * The above code may be used to generate the following SQL
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on articles.author = students.id     // JOIN       (2)
+ * @endcode 
+ * In the above example both projects and  students table is joined with `articles` table (which is in the FROM). So it was  
+ * not reqired to specify the `articles` relation again. However when JOIN relates to some relation which is not in the FROM
+ * clause, then it is necessary to specify that relation.
+ * @code 
+ * pg::basic_join<articles::table, projects::table>            // FROM table (0), JOIN table (1)
+ *   ::inner::on<articles::project, projects::id>              // lhs (0), rhs (1)
+ * ::join<students::table, projects::table>                    // JOIN table (2), JOIN table (1)
+ *   ::inner::on<projects::admin, students::id>                // lhs (1), rhs (2)
+ * @endcode 
+ * The above can be used to generate the following SQL
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table     
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on projects.admin = students.id      // JOIN       (2)
+ * @endcode 
+ * Another example
+ * @code 
+ * pg::basic_join<articles::table, students::table>            // FROM table (0), JOIN table (1)
+ *   ::inner::on<articles::author, students::id>               // lhs (0), rhs (1)
+ * ::join<memberships::table, students::table>                 // JOIN table (2), JOIN table (1)
+ *   ::inner::on<students::id, memberships::student>           // lhs (1), rhs (2)
+ * ::join<projects::table, memberships::table>                 // JOIN table (3), JOIN table (2)
+ *   ::inner::on<memberships::project, projects::id>           // lhs (2), rhs (3)
+ * @endcode 
+ * The above may be used to generate the following SQL 
+ * @code 
+ * select                                   
+ *     articles.id,                         
+ *     articles.title,                      
+ *     articles.author,                     
+ *     articles.project,                    
+ *     students.id,                         
+ *     students.name,                       
+ *     students.project,                    
+ *     students.marks,                      
+ *     memberships.id,                      
+ *     memberships.student,                 
+ *     memberships.project,                 
+ *     projects.id,                         
+ *     projects.title,                      
+ *     projects.admin                       
+ * from articles                            
+ * inner join students                      
+ *     on articles.author = students.id     
+ * inner join memberships                   
+ *     on students.id = memberships.student 
+ * inner join projects                      
+ *     on memberships.project = projects.id 
+ * @endcode 
  */
 template <typename FromRelationT, typename RelationT, typename PreviousJoin>
 struct basic_join{
     /**
      * @brief Inner join
-     * 
      */
     struct inner{
         /**
@@ -535,7 +659,6 @@ struct basic_join{
     };
     /**
      * @brief left join
-     * 
      */
     struct left{
         /**
@@ -548,7 +671,7 @@ struct basic_join{
         using on = basic_join_on<join_types::left, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>;
         /**
          * @brief LEFT JOIN is LEFT OUTER JOIN
-         * 
+
          */
         using outer = left;
     };
@@ -604,21 +727,127 @@ struct basic_join{
 /**
  * @brief join attach 
  * @ingroup crud
- * @code 
- *   join<post::full>::inner::on<author::id, post::author>
- * ::join<project::full>::outer::on<author::id, project::owner>
- * ::join<group::full>::outer::on<author::id, group::owner>
+ * @tparam FromRelationT The relation which is supposed to be in the FROM clause
  * 
- * join_clause<
- *      joined<outer, group::full, author::id, group::owner>,
- *      join_clause<
- *          joined<outer, project::full, author::id, project::owner>,
- *          join_clause<
- *              joined<inner, post::full, author::id, post::author>,
- *              void
- *          >
- *      >
- * >
+ * Compose joining clause involving one or more relations. It takes the relation in the FROM clause as a template
+ * parameter. Then provides a templated `join` typedef which applies a thin layer over the @ref basic_join template by
+ * injecting the `FromRelationT` as the first parameter.
+ * 
+ * @code 
+ * pg::attached<articles::table>                        // FROM table (0)
+ *   ::join<students::table>                            // JOIN table (1)
+ *     ::inner::on<articles::author, students::id>      // lhs (0), rhs (1)
+ * @endcode 
+ * @note in the documentation (0) refers to the relation used in the FROM clause and the fields associated with it. 
+ *       Any integer n > 0 is used to refer the same for the n'th relation present in the subsequent JOIN clauses.
+ * 
+ * The above can be used to generate the following SQL.
+ * @code 
+ * select                              
+ *     articles.id,                    
+ *     articles.title,                 
+ *     articles.author,                
+ *     articles.project,               
+ *     students.id,                    
+ *     students.name,                  
+ *     students.project,               
+ *     students.marks                  
+ * from articles                                // Table (0)
+ * inner join students                          // Table (1)
+ *     on articles.author = students.id         // lhs (0), rhs (1)
+ * @endcode 
+ * Following is the example of joining two tables with table (0)
+ * @code 
+ * pg::attached<articles::table>                               // FROM table (0)
+ * ::join<projects::table>                                     // JOIN table (1)
+ *   ::inner::on<articles::project, projects::id>              // lhs (0), rhs (1)
+ * ::join<students::table>                                     // JOIN table (2) 
+ *   ::inner::on<articles::author, students::id>               // lhs (0), rhs (2)
+ * @endcode 
+ * The above code may be used to generate the following SQL
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on articles.author = students.id     // JOIN       (2)
+ * @endcode 
+ * In the above example both projects and  students table is joined with `articles` table (which is in the FROM). So it was  
+ * not reqired to specify the `articles` relation again. However when JOIN relates to some relation which is not in the FROM
+ * clause, then it is necessary to specify that relation.
+ * @code 
+ * pg::attached<articles::table>                               // FROM table (0)
+ * ::join<projects::table>                                     // JOIN table (1)
+ *   ::inner::on<articles::project, projects::id>              // lhs (0), rhs (1)
+ * ::join<students::table, projects::table>                    // JOIN table (2), JOIN table (1)
+ *   ::inner::on<projects::admin, students::id>                // lhs (1), rhs (2)
+ * @endcode 
+ * The above can be used to generate the following SQL
+ * @code 
+ * select                                
+ *     articles.id,                      
+ *     articles.title,                   
+ *     articles.author,                  
+ *     articles.project,                 
+ *     projects.id,                      
+ *     projects.title,                   
+ *     projects.admin,                   
+ *     students.id,                      
+ *     students.name,                    
+ *     students.project,                 
+ *     students.marks                    
+ * from articles                            // FROM table     
+ * inner join projects                      // JOIN table (1)
+ *     on articles.project = projects.id    // JOIN       (1)
+ * inner join students                      // JOIN table (2)
+ *     on projects.admin = students.id      // JOIN       (2)
+ * @endcode 
+ * Another example
+ * @code 
+ * pg::attached<articles::table>                               // FROM table (0)
+ * ::join<students::table>                                     // JOIN table (1)
+ *   ::inner::on<articles::author, students::id>               // lhs (0), rhs (1)
+ * ::join<memberships::table, students::table>                 // JOIN table (2), JOIN table (1)
+ *   ::inner::on<students::id, memberships::student>           // lhs (1), rhs (2)
+ * ::join<projects::table, memberships::table>                 // JOIN table (3), JOIN table (2)
+ *   ::inner::on<memberships::project, projects::id>           // lhs (2), rhs (3)
+ * @endcode 
+ * The above may be used to generate the following SQL 
+ * @code 
+ * select                                   
+ *     articles.id,                         
+ *     articles.title,                      
+ *     articles.author,                     
+ *     articles.project,                    
+ *     students.id,                         
+ *     students.name,                       
+ *     students.project,                    
+ *     students.marks,                      
+ *     memberships.id,                      
+ *     memberships.student,                 
+ *     memberships.project,                 
+ *     projects.id,                         
+ *     projects.title,                      
+ *     projects.admin                       
+ * from articles                            
+ * inner join students                      
+ *     on articles.author = students.id     
+ * inner join memberships                   
+ *     on students.id = memberships.student 
+ * inner join projects                      
+ *     on memberships.project = projects.id 
  * @endcode 
  */
 template <typename FromRelationT>
