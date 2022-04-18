@@ -23,9 +23,12 @@ target_link_libraries(pg_generators PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 ud
 add_executable(pg_join join.cpp)
 target_link_libraries(pg_join PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
+add_executable(pg_model model.cpp)
+target_link_libraries(pg_model PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
 
 catch_discover_tests(pg_basic_activity)
 catch_discover_tests(pg_activity)
 catch_discover_tests(pg_decorators)
 catch_discover_tests(pg_generators)
 catch_discover_tests(pg_join)
+catch_discover_tests(pg_model)

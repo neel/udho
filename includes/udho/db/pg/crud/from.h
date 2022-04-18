@@ -54,6 +54,16 @@ struct relation_of_helper<SchemaT, FieldT, false>{
     
 }
     
+/**
+ * @brief FROM clause, often the start point for building the query.
+ * @code 
+ * using all = pg::from<users>
+ *     ::fetch
+ *     ::all
+ *     ::apply;
+ * @endcode 
+ * @tparam FromRelationT 
+ */
 template <typename FromRelationT>
 struct from{
     using schema = typename FromRelationT::schema;
@@ -66,13 +76,25 @@ struct from{
      */
     template <typename ForeignRelationT>
     using join = typename pg::attached<FromRelationT>::template join<ForeignRelationT>;
-    
+    /**
+     * @brief Given a field returns the column for it.
+     * 
+     * @tparam FieldT 
+     */
     template <typename FieldT>
     using data_of = typename schema::types::template data_of<FieldT>;
-    
+    /**
+     * @brief Given a field returns the relation it is associated with.
+     * 
+     * @tparam FieldT 
+     */
     template <typename FieldT>
     using relation_of = typename detail::template relation_of_helper<schema, FieldT>::type;
-        
+    /**
+     * @brief different types of select queries
+     * 
+     * @tparam ResultT schema to select
+     */
     template <typename ResultT>
     struct basic_read{
         using fields = typename builder_type::template select<ResultT>;
