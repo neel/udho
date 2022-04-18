@@ -120,6 +120,12 @@
   * @ingroup pg
   */
 
+ /**
+  * @defgroup joining
+  * @brief Joining
+  * @ingroup crud
+  */
+
 #ifndef __DOXYGEN__
 
 /**

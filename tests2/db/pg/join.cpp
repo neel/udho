@@ -133,31 +133,6 @@ TEST_CASE("postgresql crud join", "[pg]"){
     ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres");
     auto pool = ozo::connection_pool(conn_info, dbconfig);
 
-    CHECK(0 == 0);
-    /**
-     * udho::db::pg::basic_join_on<
-     *      udho::db::pg::join_types::inner, 
-     *      students::table, 
-     *      articles::table, 
-     *      students::id_<long int>, 
-     *      articles::author_<long int>, 
-     *      udho::db::pg::join_clause<
-     *          udho::db::pg::joined<
-     *              udho::db::pg::join_types::inner, 
-     *              students::table, 
-     *              memberships::table, 
-     *              students::id_<long int>, 
-     *              memberships::student_<long int> 
-     *          >, 
-     *          void
-     *      > 
-     * >
-     * 
-     */
-    // using join1 = pg::attached<students::table>
-    //     ::join<memberships::table>::inner::on<students::id, memberships::student>
-    //     ::join<articles::table>::inner::on<students::id, articles::author>;
-
     using basic_simple_join_1_t = pg::basic_join_on<
         pg::join_types::inner,
         articles::table,
@@ -166,6 +141,11 @@ TEST_CASE("postgresql crud join", "[pg]"){
         students::id,
         void
     >;
+    CHECK(std::is_same<basic_simple_join_1_t::data_of<articles::title>, articles::table::column<articles::title>>::value);
+    CHECK(std::is_same<basic_simple_join_1_t::data_of<students::name>,  students::table::column<students::name>>::value);
+    CHECK(std::is_same<basic_simple_join_1_t::relation_of<articles::title>, articles::table>::value);
+    CHECK(std::is_same<basic_simple_join_1_t::relation_of<students::name>,  students::table>::value);
+    CHECK(std::is_same<basic_simple_join_1_t::source, articles::table>::value);
     using simple_join_1_t = basic_simple_join_1_t::fetch::all::apply;
     auto simple_join_1_t_collector = udho::activities::collect<simple_join_1_t>(ctx);
     SQL_EXPECT_SAME(
@@ -219,6 +199,13 @@ TEST_CASE("postgresql crud join", "[pg]"){
             void
         >::type
     >;
+    CHECK(std::is_same<basic_simple_join_2_t::data_of<articles::title>, articles::table::column<articles::title>>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::data_of<students::name>,  students::table::column<students::name>>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::data_of<projects::title>, projects::table::column<projects::title>>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::relation_of<articles::title>, articles::table>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::relation_of<students::name>,  students::table>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::relation_of<projects::title>, projects::table>::value);
+    CHECK(std::is_same<basic_simple_join_2_t::source, articles::table>::value);
     using simple_join_2_t = basic_simple_join_2_t::fetch::all::apply;
     auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>(ctx);
     SQL_EXPECT_SAME(
@@ -282,6 +269,13 @@ TEST_CASE("postgresql crud join", "[pg]"){
             void
         >::type
     >;
+    CHECK(std::is_same<basic_simple_join_2a_t::data_of<articles::title>, articles::table::column<articles::title>>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::data_of<students::name>,  students::table::column<students::name>>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::data_of<projects::title>, projects::table::column<projects::title>>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::relation_of<articles::title>, articles::table>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::relation_of<students::name>,  students::table>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::relation_of<projects::title>, projects::table>::value);
+    CHECK(std::is_same<basic_simple_join_2a_t::source, articles::table>::value);
     using simple_join_2a_t = basic_simple_join_2a_t::fetch::all::apply;
     auto simple_join_2a_t_collector = udho::activities::collect<simple_join_2a_t>(ctx);
     SQL_EXPECT_SAME(
@@ -391,6 +385,15 @@ TEST_CASE("postgresql crud join", "[pg]"){
             >::type
         >::type
     >;
+    CHECK(std::is_same<basic_simple_join_3_t::data_of<articles::title>, articles::table::column<articles::title>>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::data_of<students::name>,  students::table::column<students::name>>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::data_of<projects::title>, projects::table::column<projects::title>>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::data_of<memberships::id>, memberships::table::column<memberships::id>>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::relation_of<articles::title>, articles::table>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::relation_of<students::name>,  students::table>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::relation_of<projects::title>, projects::table>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::relation_of<memberships::id>, memberships::table>::value);
+    CHECK(std::is_same<basic_simple_join_3_t::source, articles::table>::value);
     using simple_join_3_t = basic_simple_join_3_t::fetch::all::apply;
     auto simple_join_3_t_collector = udho::activities::collect<simple_join_3_t>(ctx);
     SQL_EXPECT_SAME(

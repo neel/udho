@@ -40,7 +40,7 @@ namespace pg{
     
 /**
  * @brief Different types of join
- * @ingroup crud
+ * @ingroup joining
  */
 namespace join_types{
     
@@ -104,7 +104,7 @@ namespace join_types{
 /**
  * @brief Datastructure to store a pair of relations and the corresponding fields to be joined at compile time
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup crud
+ * @ingroup joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -124,7 +124,7 @@ struct joined{
 /**
  * @brief Compile time datastructure to store a chain of chaining multiple joins
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup crud
+ * @ingroup joining
  * @tparam CurrentJoin A join defined by the @ref joined template
  * @tparam RestJoin An optional join clause
  */
@@ -134,7 +134,7 @@ struct join_clause;
 /**
  * @brief Specialization for Simple join clause.
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup crud
+ * @ingroup joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -159,7 +159,7 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, void>
 /**
  * @brief Specialization for a join clause chained with another.
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup crud
+ * @ingroup joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -183,6 +183,13 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, join_
     typedef typename tail::source source;
 };
 
+/**
+ * @brief helper to produce an appropriate column for a given field.
+ * @ingroup joining
+ * 
+ * @tparam OnlyFieldT 
+ * @tparam SchemaT 
+ */
 template <typename OnlyFieldT, typename SchemaT>
 struct column_helper{
     template <typename FieldT>
@@ -194,6 +201,13 @@ struct column_helper{
     using column = typename OnlyFieldT::template attach<relation_of>;
 };
 
+/**
+ * @brief helper to produce an appropriate column for a given field.
+ * @ingroup joining
+ * 
+ * @tparam OnlyFields...
+ * @tparam SchemaT 
+ */
 template <typename... OnlyFields, typename SchemaT>
 struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
     using column = pg::schema<OnlyFields...>;
@@ -210,7 +224,7 @@ struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
  * @tparam PreviousJoin Previous joins in the chain
  * 
  * @note Not to be used directly, Rather to be used wih the \ref basic_join convenience structure
- * @ingroup crud
+ * @ingroup joining
  * The `FromRelationT` is associated with `FieldL` and used as the lhs column for composing JOIN SQL queries. Similarly 
  * the `RelationT` is associated with `FieldR` and used as the  while composing the JOIN SQL query. Chain of multiple
  * JOINs can be constructed using the `PreviousJoin` template parameter which is `void` by default. `JoinType` is used
@@ -454,32 +468,79 @@ struct basic_join_on{
         return udho::pretty::demangle<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>(printer);
     }
     
+    /**
+     * @brief different types of select queries
+     * 
+     * @tparam ResultT schema to select
+     */
     template <typename ResultT>
     struct basic_read{
+        /**
+         * @brief Basic select query builder.
+         * @see pg::builder 
+         */
         using fields = typename pg::builder<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>::template select<ResultT>;
         
+        /**
+         * @brief pg activity class to derive for custom SQL query (assisted by the generators).
+         * @tparam DerivedT derived class must provide an operator() 
+         */
         template <typename DerivedT>
         using activity = typename fields::template activity<DerivedT>;
         
+        /**
+         * @brief generates standard SELECT query with the fields provided in ResultT schema 
+         */
         using apply = typename fields::apply;
         
+        /**
+         * @brief ORDER BY DESC <FieldT>.
+         * @tparam FieldT field name
+         */
         template <typename FieldT>
         using descending = typename fields::template descending<typename FieldT::template attach<relation_of>>;
+        /**
+         * @brief ORDER BY ASC <FieldT>.
+         * @tparam FieldT field name
+         */
         template <typename FieldT>
         using ascending  = typename fields::template ascending<typename FieldT::template attach<relation_of>>;
         
+        /**
+         * @brief LIMIT <Limit> OFFSET <Offset>
+         * 
+         * @tparam Limit 
+         * @tparam Offset 
+         */
         template <int Limit, int Offset = 0>
         using limit = typename fields::template limit<Limit, Offset>;
         
+        /**
+         * @brief WHERE ByFields...
+         * 
+         * @tparam ByFields...
+         */
         template <typename... ByFields>
         struct by: fields::template with<typename ByFields::template attach<relation_of>...>{
             using where = typename fields::template with<typename ByFields::template attach<relation_of>...>;
             
+            /**
+             * @brief ORDER BY DESC <FieldT>.
+             * @tparam FieldT field name
+             */
             template <typename FieldT>
             using descending = typename where::template descending<typename FieldT::template attach<relation_of>>;
+            /**
+             * @brief ORDER BY ASC <FieldT>.
+             * @tparam FieldT field name
+             */
             template <typename FieldT>
             using ascending  = typename where::template ascending<typename FieldT::template attach<relation_of>>;
             
+            /**
+             * @brief GROUP BY GroupFields...
+             * @tparam GroupFields...
+             */
             template <typename... GroupFields>
             struct group_by: where::template group<typename GroupFields::template attach<relation_of>...>{
                 using grouped = typename where::template group<typename GroupFields::template attach<relation_of>...>;
@@ -491,30 +552,73 @@ struct basic_join_on{
             };
         };
         
+        /**
+         * @brief Exclude a subset of fields from the existing schema ResultT.
+         * @tparam X... Fields to exclude
+         */
         template <typename... X>
         using exclude = basic_read<typename ResultT::template exclude<typename X::template attach<relation_of>...>>;
+        /**
+         * @brief Include some extra fields in the existing schema ResultT.
+         * @tparam X... Fields to include
+         */
         template <typename... X>
         using include = basic_read<typename ResultT::template include<typename X::template attach<relation_of>...>>;
         
+        /**
+         * @brief GROUP BY GroupFields...
+         * @tparam GroupFields...
+         */
         template <typename... GroupFields>
         struct group_by: fields::template group<typename GroupFields::template attach<relation_of>...>{
             using grouped = typename fields::template group<typename GroupFields::template attach<relation_of>...>;
             
+            /**
+             * @brief ORDER BY DESC <FieldT>.
+             * @tparam FieldT field name
+             */
             template <typename FieldT>
             using descending = typename grouped::template descending<typename FieldT::template attach<relation_of>>;
+            /**
+             * @brief ORDER BY ASC <FieldT>.
+             * @tparam FieldT field name
+             */
             template <typename FieldT>
             using ascending  = typename grouped::template ascending<typename FieldT::template attach<relation_of>>;
         };
     };
     
+    /**
+     * @brief expect zero or one rows. 
+     * Use when there is a where query that specifies conditions met by exactly one row.
+     */
     struct fetch{
+        /**
+         * @brief Select all fields in the schema.
+         */
         using all = basic_read<pg::many<schema>>;
+        /**
+         * @brief select a subset of fields.
+         * 
+         * @tparam OnlyFields 
+         */
         template <typename... OnlyFields>
         using only = basic_read<pg::many<typename column_helper<OnlyFields, schema>::column...>>;
     };
     
+    /**
+     * @brief expect zero or more rows.
+     */
     struct retrieve{
+        /**
+         * @brief Select all fields in the schema.
+         */
         using all = basic_read<pg::one<schema>>;
+        /**
+         * @brief select a subset of fields.
+         * 
+         * @tparam OnlyFields 
+         */
         template <typename... OnlyFields>
         using only = basic_read<pg::one<typename column_helper<OnlyFields, schema>::column...>>;
     };
@@ -526,7 +630,7 @@ struct basic_join_on{
  * @tparam RelationT The relation on the right side of the join
  * @tparam PreviousJoin The previous join in the chain or void
  * 
- * @ingroup crud
+ * @ingroup joining
  * 
  * Constructs a chain of one or more JOIN clauses relating multiple tables. 
  * @code 
@@ -726,7 +830,7 @@ struct basic_join{
 
 /**
  * @brief join attach 
- * @ingroup crud
+ * @ingroup joining
  * @tparam FromRelationT The relation which is supposed to be in the FROM clause
  * 
  * Compose joining clause involving one or more relations. It takes the relation in the FROM clause as a template
