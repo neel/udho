@@ -54,8 +54,8 @@ namespace pg{
  * @ingroup schema
  */
 template <typename... Fields>
-struct basic_schema: udho::hazo::map_v<Fields...>{
-    typedef udho::hazo::map_v<Fields...> map_type;
+struct basic_schema: udho::hazo::map_d<Fields...>{
+    typedef udho::hazo::map_d<Fields...> map_type;
     using map_type::map_type;
 
     
