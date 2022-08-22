@@ -33,6 +33,29 @@
 #include <udho/db/pg/schema/column.h>
 #include <ozo/query_builder.h>
 
+
+/**
+ * @brief need to remove thsi and use OZO_LITERAL defined in defs.h However be careful about circular include
+ * 
+ */
+#define OZO_LITERAL_2(TEXT) TEXT ## _SQL
+
+#define GENERATE_OPERATOR(OPCODE, OPSYM)                                   \
+    template <typename FieldT, typename ColumnT>                           \
+    struct op<pg::op:: OPCODE ## _ <FieldT, ColumnT>>{                     \
+        static auto apply(){                                               \
+            using namespace ozo::literals;                                 \
+            return OZO_LITERAL_2(#OPSYM) + " "_SQL + std::move(ColumnT::ozo_name()); \
+        }                                                                  \
+    };                                                                     \
+    template <typename FieldT>                                             \
+    struct op<pg::op:: OPCODE ## _ <FieldT, void>>{                        \
+        static auto apply(){                                               \
+            using namespace ozo::literals;                                 \
+            return OZO_LITERAL_2(#OPSYM);                                  \
+        }                                                                  \
+    }                                                                      \
+
 namespace udho{
 namespace db{
 namespace pg{
@@ -47,94 +70,19 @@ struct op{
     }
 };
 
-template <typename FieldT>
-struct op<pg::op::eq<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "="_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::neq<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "!="_SQL;
-    }
-};
 
-template <typename FieldT>
-struct op<pg::op::lt<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "<"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::gt<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return ">"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::lte<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "<="_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::gte<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return ">="_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::is<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "is"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::is_not<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "is"_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::like<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "like"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::not_like<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "not like"_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::in<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "in"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::not_in<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "not in"_SQL;
-    }
-};
+GENERATE_OPERATOR(lt, <);
+GENERATE_OPERATOR(lte, <=);
+GENERATE_OPERATOR(gt, >);
+GENERATE_OPERATOR(gte, >=);
+GENERATE_OPERATOR(eq, =);
+GENERATE_OPERATOR(neq, !=);
+GENERATE_OPERATOR(is, is);
+GENERATE_OPERATOR(is_not, is not);
+GENERATE_OPERATOR(like, like);
+GENERATE_OPERATOR(not_like, not like);
+GENERATE_OPERATOR(in, in);
+GENERATE_OPERATOR(not_in, not in);
 
 template <typename FieldOPT, typename RelationT>
 struct op<pg::column<FieldOPT, RelationT>>: op<FieldOPT>{};

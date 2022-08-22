@@ -36,6 +36,25 @@
 #include <udho/db/pg/schema/detail.h>
 #include <udho/hazo/seq/seq.h>
 #include <boost/algorithm/string/replace.hpp>
+#include <udho/db/pg/schema/column.h>
+
+#define DECLARE_OPERATOR(OPCODE)                                                                                                                                                                                            \
+    template <typename FieldT, typename ColumnT = void>                                                                                                                                                                     \
+    struct OPCODE ## _ : FieldT{                                                                                                                                                                                            \
+        using valueable = std::is_void<ColumnT>;                                                                                                                                                                            \
+        using FieldT::FieldT;                                                                                                                                                                                               \
+        using index_type = OPCODE ## _ <typename detail::infer_index_type<FieldT>::type, ColumnT>;                                                                                                                          \
+        template <template <typename> class MappingT>                                                                                                                                                                       \
+        using attach = OPCODE ## _ <typename FieldT::template attach<MappingT>, ColumnT>;                                                                                                                                   \
+                                                                                                                                                                                                                            \
+        const static constexpr udho::hazo::element_t<OPCODE ## _ <FieldT, ColumnT>> val = udho::hazo::element_t<OPCODE ## _ <FieldT, ColumnT>>();                                                                           \
+    };                                                                                                                                                                                                                      \
+    template <typename FieldT, typename ColumnT>                                                                                                                                                                            \
+    const udho::hazo::element_t<OPCODE ## _ <FieldT, ColumnT>> OPCODE ## _ <FieldT, ColumnT>::val;                                                                                                                          \
+    template <typename FieldT>                                                                                                                                                                                              \
+    using OPCODE = OPCODE ## _ <FieldT, void>                                                                                                                                                                               \
+                                                                                                                                                                                                                            \
+
 
 namespace udho{
 namespace db{
@@ -46,227 +65,20 @@ namespace pg{
  * @ingroup pg
  */
 namespace op{
-    
-/**
- * @brief NotEqual
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct neq: FieldT{
-    using FieldT::FieldT;
-    using index_type = neq<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = neq<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<neq<FieldT>> val = udho::hazo::element_t<neq<FieldT>>();
-};
 
-template <typename FieldT>
-const udho::hazo::element_t<neq<FieldT>> neq<FieldT>::val;
+DECLARE_OPERATOR(lt);
+DECLARE_OPERATOR(gt);
+DECLARE_OPERATOR(lte);
+DECLARE_OPERATOR(gte);
+DECLARE_OPERATOR(eq);
+DECLARE_OPERATOR(neq);
+DECLARE_OPERATOR(is);
+DECLARE_OPERATOR(is_not);
+DECLARE_OPERATOR(in);
+DECLARE_OPERATOR(not_in);
+DECLARE_OPERATOR(like);
+DECLARE_OPERATOR(not_like);
 
-/**
- * @brief Equal
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct eq: FieldT{
-    using FieldT::FieldT;
-    using index_type = eq<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = eq<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<eq<FieldT>> val = udho::hazo::element_t<eq<FieldT>>();
-    /**
-     * @brief Not Equal
-     */
-    typedef neq<FieldT> no; 
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<eq<FieldT>> eq<FieldT>::val;
-
-/**
- * @brief LessThan
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct lt: FieldT{
-    using FieldT::FieldT;
-    using index_type = lt<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = lt<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<lt<FieldT>> val = udho::hazo::element_t<lt<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<lt<FieldT>> lt<FieldT>::val;
-
-/**
- * @brief GreaterThan
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct gt: FieldT{
-    using FieldT::FieldT;
-    using index_type = gt<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = gt<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<gt<FieldT>> val = udho::hazo::element_t<gt<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<gt<FieldT>> gt<FieldT>::val;
-
-/**
- * @brief LessThanEqual
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct lte: FieldT{
-    using FieldT::FieldT;
-    using index_type = lte<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = lte<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<lte<FieldT>> val = udho::hazo::element_t<lte<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<lte<FieldT>> lte<FieldT>::val;
-
-/**
- * @brief GreaterThanEqual
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct gte: FieldT{
-    using FieldT::FieldT;
-    using index_type = gte<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = gte<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<gte<FieldT>> val = udho::hazo::element_t<gte<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<gte<FieldT>> gte<FieldT>::val;
-
-/**
- * @brief NotLike
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct not_like: FieldT{
-    using FieldT::FieldT;
-    using index_type = not_like<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = not_like<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<not_like<FieldT>> val = udho::hazo::element_t<not_like<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<not_like<FieldT>> not_like<FieldT>::val;
-
-/**
- * @brief Like
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct like: FieldT{
-    using FieldT::FieldT;
-    using index_type = like<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = like<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<like<FieldT>> val = udho::hazo::element_t<like<FieldT>>();
-    /**
-     * @brief Not Like
-     * 
-     */
-    typedef not_like<FieldT> no;
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<like<FieldT>> like<FieldT>::val;
-
-/**
- * @brief IsNot
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct is_not: FieldT{
-    using FieldT::FieldT;
-    using index_type = is_not<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = is_not<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<is_not<FieldT>> val = udho::hazo::element_t<is_not<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<is_not<FieldT>> is_not<FieldT>::val;
-
-/**
- * @brief Is
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct is: FieldT{
-    using FieldT::FieldT;
-    using index_type = is<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = is<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<is<FieldT>> val = udho::hazo::element_t<is<FieldT>>();
-    
-    typedef is_not<FieldT> no;
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<is<FieldT>> is<FieldT>::val;
-
-/**
- * @brief NotIn
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct not_in: FieldT{
-    using FieldT::FieldT;
-    using index_type = not_in<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = not_in<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<not_in<FieldT>> val = udho::hazo::element_t<not_in<FieldT>>();
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<not_in<FieldT>> not_in<FieldT>::val;
-
-/**
- * @brief In
- * @tparam FieldT 
- */
-template <typename FieldT>
-struct in: FieldT{
-    using FieldT::FieldT;
-    using index_type = in<typename detail::infer_index_type<FieldT>::type>;
-    template <template <typename> class MappingT>
-    using attach = in<typename FieldT::template attach<MappingT>>;
-    
-    const static constexpr udho::hazo::element_t<in<FieldT>> val = udho::hazo::element_t<in<FieldT>>();
-    /**
-     * @brief Not In
-     * 
-     */
-    typedef not_in<FieldT> no;
-};
-
-template <typename FieldT>
-const udho::hazo::element_t<in<FieldT>> in<FieldT>::val;
-    
 }
 
 }
