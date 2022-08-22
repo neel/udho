@@ -32,6 +32,9 @@
 #include <udho/db/common/result.h>
 #include <udho/db/common/none.h>
 
+#include <udho/db/pg/generators/set.h>
+#include <udho/db/pg/generators/where.h>
+
 namespace udho{
 namespace db{
 namespace pg{

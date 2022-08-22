@@ -31,6 +31,11 @@
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/generators/fwd.h>
+#include <udho/db/pg/generators/where.h>
+#include <udho/db/pg/generators/values.h>
+#include <udho/db/pg/generators/limit.h>
+#include <udho/db/pg/generators/order.h>
+#include <udho/db/pg/generators/group.h>
 #include <udho/db/pg/crud/fwd.h>
 #include <udho/db/pg/crud/limit.h>
 #include <udho/db/pg/crud/order.h>
