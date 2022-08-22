@@ -131,9 +131,9 @@ struct collector: std::enable_shared_from_this<collector<ContextT, Activities...
     context_type _context;
 #endif 
     template <typename... X>
-    friend class accessor;
+    friend struct accessor;
     
-    friend class accessor_of<collector<ContextT, Activities...>>;
+    friend struct accessor_of<collector<ContextT, Activities...>>;
 
     template <typename U>
     friend collector<ContextT, Activities...>& operator<<(collector<ContextT, Activities...>& h, const U& data){

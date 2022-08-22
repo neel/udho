@@ -95,11 +95,14 @@ struct conversion<ThatT, TargetT, SourceT, false>{
  * @ingroup db
  */
 template <typename ThatT, typename TargetT, typename SourceT = TargetT>
-struct transform: std::unary_function<const SourceT&, TargetT>, private detail::conversion<ThatT, TargetT, SourceT>{
+struct transform: private detail::conversion<ThatT, TargetT, SourceT>{
     typedef ThatT   that_type;
     typedef TargetT target_type;
     typedef SourceT source_type;
     typedef detail::conversion<ThatT, TargetT, SourceT> converter_type;
+
+    typedef const SourceT& argument_type;
+    typedef TargetT result_type;
     
     transform(const that_type& that): converter_type(that){}
     target_type operator()(const source_type& source) const{
@@ -116,10 +119,13 @@ struct transform: std::unary_function<const SourceT&, TargetT>, private detail::
  * @ingroup db
  */
 template <typename ThatT, typename TargetT>
-struct transform<ThatT, TargetT, TargetT>: std::unary_function<const TargetT&, TargetT>{
+struct transform<ThatT, TargetT, TargetT> {
     typedef ThatT   that_type;
     typedef TargetT target_type;
     typedef TargetT source_type;
+
+    typedef const TargetT& argument_type;
+    typedef TargetT result_type;
     
     const that_type& _that;
     

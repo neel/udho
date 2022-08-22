@@ -32,6 +32,7 @@
 #include <map>
 #include <chrono>
 #include <cstdint>
+#include <fstream>
 #include <boost/asio/ip/address.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/uuid/uuid.hpp>
