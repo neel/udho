@@ -179,6 +179,26 @@ using uuid        = types::uuid;             ///< @copydoc types::uuid convenien
 } // db
 } // udho
 
-OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar")
+OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar");
+
+
+namespace ozo{
+
+inline bool operator==(std::string const& l, udho::db::pg::oz::varchar const& r){ return l == r.get(); }
+inline bool operator!=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l != r.get(); }
+inline bool operator< (std::string const& l, udho::db::pg::oz::varchar const& r){ return l <  r.get(); }
+inline bool operator<=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l <= r.get(); }
+inline bool operator> (std::string const& l, udho::db::pg::oz::varchar const& r){ return l >  r.get(); }
+inline bool operator>=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l >= r.get(); }
+
+inline bool operator==(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() == r; }
+inline bool operator!=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() != r; }
+inline bool operator< (udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() <  r; }
+inline bool operator<=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() <= r; }
+inline bool operator> (udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() >  r; }
+inline bool operator>=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() >= r; }
+
+}
+
 
 #endif // UDHO_DB_PG_CONSTRUCTS_TYPES_H
