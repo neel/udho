@@ -81,6 +81,8 @@ struct field_lhs{
     typedef FieldT field_type;
     
     enum {detached = true};
+
+    using valueable = std::true_type;
     
     template <typename PgType>
     using cast = pg::cast<FieldT, PgType>;
@@ -97,20 +99,44 @@ struct field_lhs{
     
     template <template <typename> class MappingT>
     using attach = typename attached<FieldT, lookup<MappingT>>::type;
-    
-    typedef op::eq<FieldT>       eq;
-    typedef op::neq<FieldT>      neq;
-    typedef op::lt<FieldT>       lt;
-    typedef op::gt<FieldT>       gt;
-    typedef op::lte<FieldT>      lte;
-    typedef op::gte<FieldT>      gte;
-    typedef op::like<FieldT>     like;
-    typedef op::not_like<FieldT> not_like;
-    typedef op::is<FieldT>       is;
-    typedef op::is_not<FieldT>   is_not;
-    typedef op::in<FieldT>       in;
-    typedef op::not_in<FieldT>   not_in;
-    
+
+    template <typename ColumnT>
+    using eq_ = op::eq_<FieldT, ColumnT>;
+    using eq  = eq_<void>;
+    template <typename ColumnT>
+    using neq_ = op::neq_<FieldT, ColumnT>;
+    using neq  = neq_<void>;
+    template <typename ColumnT>
+    using lt_ = op::lt_<FieldT, ColumnT>;
+    using lt  = lt_<void>;
+    template <typename ColumnT>
+    using gt_ = op::gt_<FieldT, ColumnT>;
+    using gt  = gt_<void>;
+    template <typename ColumnT>
+    using lte_ = op::lte_<FieldT, ColumnT>;
+    using lte  = lte_<void>;
+    template <typename ColumnT>
+    using gte_ = op::gte_<FieldT, ColumnT>;
+    using gte  = gte_<void>;
+    template <typename ColumnT>
+    using like_ = op::like_<FieldT, ColumnT>;
+    using like  = like_<void>;
+    template <typename ColumnT>
+    using not_like_ = op::not_like_<FieldT, ColumnT>;
+    using not_like  = not_like_<void>;
+    template <typename ColumnT>
+    using is_ = op::is_<FieldT, ColumnT>;
+    using is  = is_<void>;
+    template <typename ColumnT>
+    using is_not_ = op::is_not_<FieldT, ColumnT>;
+    using is_not  = is_not_<void>;
+    template <typename ColumnT>
+    using in_ = op::in_<FieldT, ColumnT>;
+    using in  = in_<void>;
+    template <typename ColumnT>
+    using not_in_ = op::not_in_<FieldT, ColumnT>;
+    using not_in  = not_in_<void>;
+
     typedef pg::count<FieldT>    count;
     typedef pg::min<FieldT>      min;
     typedef pg::max<FieldT>      max;
@@ -157,31 +183,31 @@ struct field_lhs{
 #define OZO_LITERAL(TEXT) TEXT ## _SQL
 /**
  * @def PG_ELEMENT(Name, Type)
- * @brief Define a postgresql Field which is a subclass of @ref field_lhs 
+ * @brief Define a postgresql Field which is a subclass of @ref field_lhs
  * @param Name Name for the column
  * @param Type type of the column
  *
  * A postgresql field is declared using `PG_ELEMENT` macro as shown below.
- * @code 
+ * @code
  * PG_ELEMENT(id,          pg::types::integer);
  * PG_ELEMENT(first_name,  pg::types::varchar);
  * PG_ELEMENT(last_name,   pg::types::varchar);
- * @endcode 
+ * @endcode
  * The generated `Name` contains one `ozo_name()` method which returns the
  * field name as OZO string.
- * 
+ *
  * By field uses @ref udho::db::pg::detail::field_lhs mixin
- * 
+ *
  * @note The macro actually defines a template `Name_<T>` and a typedef `Name`
- *       which is an alias of `Name<Type>` by using `Type` as the template 
- *       parameter `T`. 
- * 
+ *       which is an alias of `Name<Type>` by using `Type` as the template
+ *       parameter `T`.
+ *
  * <hr />
- * 
+ *
  * @note `Name` provides a typedef `Name::alter<X>` which is an alias of `Name_<X>`
- *       where `X` is a PostgreSQL type different from `Type`. This is useful for 
+ *       where `X` is a PostgreSQL type different from `Type`. This is useful for
  *       type casting.
- * 
+ *
  * @ingroup schema
  */
 #define PG_ELEMENT(Name, Type, ...)                                          \
