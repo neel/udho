@@ -56,11 +56,75 @@ struct relation_of_helper<SchemaT, FieldT, false>{
     
 /**
  * @brief FROM clause, often the start point for building the query.
+ * @ingroup crud
+ * Given a relation defined the following 
  * @code 
- * using all = pg::from<users>
- *     ::fetch
- *     ::all
- *     ::apply;
+ * PG_ELEMENT(id,          pg::types::integer);
+ * PG_ELEMENT(first_name,  pg::types::varchar);
+ * PG_ELEMENT(last_name,   pg::types::varchar);
+ *
+ * struct table: pg::relation<table, id, first_name, last_name>{
+ *     PG_NAME(users)
+ *     using readonly = pg::readonly<id>;
+ * };
+ * @endcode 
+ * The following code generates an async activity that performs `SELECT * FROM users` SQL query and returns result asynchronously.
+ * @code 
+ * using all = pg::from<table>
+ *     ::fetch                        // Use retrieve if expecting 0 or 1 rows in the resultset
+ *     ::all                          // Specify schema of the resultset
+ *     ::apply;                       // Generate Async Activity for this query
+ * @endcode 
+ * `::fetch` or `::retrieve` specifies how many rows are expected in the resultset. `::fetch` implies there can be 0..N rows whereas
+ * `::retrieve` implies that there can be 0..1 rows in the resultset. `::retrieve` is used for queries that have a where clause 
+ * that returns exactly one row if found, e.g. WHERE id=XYZ. 
+ *
+ * `::all` or `::only` specifies the schema of the resultset. `::all` implies that all fields in the relation has to be included in the
+ * resultset e.g. SELECT * FROM users. `::only<X, Y, Z>` on the other hand specifies a subset a subset of fields that are expected to be
+ * present in the resultset. 
+ * @code 
+ * using all = pg::from<table>
+ *     ::retrieve 
+ *     ::all 
+ *     ::by<id>                // specify where clause
+ *     ::apply; 
+ * @endcode 
+ * A more complicated example would look like the following. 
+ * @code
+ * 
+ * namespace students{
+ *      PG_ELEMENT(id,          pg::types::integer);
+ *      PG_ELEMENT(first_name,  pg::types::varchar);
+ *      PG_ELEMENT(last_name,   pg::types::varchar);
+ *      
+ *      struct table: pg::relation<table, id, first_name, last_name>{
+ *          PG_NAME(users)
+ *          using readonly = pg::readonly<id>;
+ *      };
+ * }
+ * 
+ * namespace projects{
+ *      PG_ELEMENT(id,          pg::types::integer);
+ *      PG_ELEMENT(student,     pg::types::integer);
+ *      PG_ELEMENT(name,        pg::types::varchar);
+ *      
+ *      struct table: pg::relation<table, id, student, name>{
+ *          PG_NAME(projects)
+ *          using readonly = pg::readonly<id>;
+ *      };
+ * }
+ * 
+ * using by_id = pg::from<students::table>
+ *  ::join<projects::table>::inner::on<students::id, projects::student>
+ *  ::retrieve
+ *  ::only<students::table::all>
+ *  ::include<
+ *      projects::id,
+ *      projects::name
+ *  >
+ *  ::by<students::id>
+ *  ::group_by<students::id, projects::id>
+ *  ::apply;
  * @endcode 
  * @tparam FromRelationT 
  */
@@ -104,13 +168,29 @@ struct from{
         
         using apply = typename fields::apply;
         
+        /**
+         * @brief Ascending
+         * 
+         * @tparam FieldT 
+         */
         template <typename FieldT>
         using descending = typename fields::template descending<typename FieldT::template attach<relation_of>>;
+        /**
+         * @brief Descending
+         * 
+         * @tparam FieldT 
+         */
         template <typename FieldT>
         using ascending  = typename fields::template ascending<typename FieldT::template attach<relation_of>>;
         
         template <int Limit, int Offset = 0>
         using limit = typename fields::template limit<Limit, Offset>;
+
+        // template <typename... GroupColumn>
+        // using group = typename fields::template group<GroupColumn...>;
+        template <typename... GroupColumn>
+        using group = typename fields::template group<typename GroupColumn::template attach<relation_of>...>;
+
         
         /**
          * @brief Construct an where clause with conjunction of the fields provided
@@ -126,8 +206,11 @@ struct from{
             template <typename FieldT>
             using ascending  = typename where::template ascending<typename FieldT::template attach<relation_of>>;
             
+            // template <typename... GroupColumn>
+            // using group = typename where::template group<GroupColumn...>;
             template <typename... GroupColumn>
-            using group = typename where::template group<GroupColumn...>;
+            using group = typename where::template group<typename GroupColumn::template attach<relation_of>...>;
+
         };
         
         template <typename... X>
@@ -138,7 +221,7 @@ struct from{
     
     /**
      * @brief Fetch zero or more records 
-     * 
+     * use `::all` to specify the full schema in the resultset. User `::only` to specify a subset.
      */
     struct fetch{
         /**
@@ -157,7 +240,7 @@ struct from{
     
     /**
      * @brief fetch zero or one record
-     * 
+     * use `::all` to specify the full schema in the resultset. User `::only` to specify a subset.
      */
     struct retrieve{
         /**
