@@ -62,6 +62,8 @@ using space  = string<' '>;   ///< space ( )
 using hyphen = string<'-'>;   ///< hyphen (-)
 using comma  = string<','>;   ///< comma (,)
 using dot    = string<'.'>;   ///< dot (.)
+using null   = string<'n', 'u', 'l', 'l'>;   ///< null
+using now    = string<'n', 'o', 'w', '(', ')'>;   ///< now()
 
 /**
  * @brief quoted versions of frequently used characters

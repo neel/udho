@@ -243,7 +243,7 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
     using unallocated_students = pg::from<students::table>
                           ::retrieve
                           ::all
-                          ::by<students::project::is_<pg::null>>
+                          ::by<students::project::is_null>
                           ::apply;
 
     auto unallocated_students_collector = udho::activities::collect<unallocated_students>(ctx);

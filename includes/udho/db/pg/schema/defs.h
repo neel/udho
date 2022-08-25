@@ -38,6 +38,7 @@
 #include <udho/db/pg/schema/fwd.h>
 #include <udho/pretty/type.h>
 #include <boost/algorithm/string/replace.hpp>
+#include <udho/db/pg/schema/detail.h>
 
 namespace udho{
 namespace db{
@@ -137,6 +138,8 @@ struct field_lhs{
     using not_in_ = op::not_in_<FieldT, ColumnT>;
     using not_in  = not_in_<void>;
 
+    using is_null  = is_<pg::constants::null>;
+
     typedef pg::count<FieldT>    count;
     typedef pg::min<FieldT>      min;
     typedef pg::max<FieldT>      max;
@@ -180,7 +183,6 @@ struct field_lhs{
 }
 }
 
-#define OZO_LITERAL(TEXT) TEXT ## _SQL
 /**
  * @def PG_ELEMENT(Name, Type)
  * @brief Define a postgresql Field which is a subclass of @ref field_lhs

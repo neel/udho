@@ -37,15 +37,4 @@
 #include <udho/db/pg/schema/defs.h>
 #include <udho/hazo/seq/seq.h>
 
-namespace udho{
-namespace db{
-namespace pg{
-
-PG_ELEMENT(null, std::nullptr_t);
-
-}
-}
-}
-
-
 #endif // UDHO_DB_PG_SCHEMA_FIELD_H

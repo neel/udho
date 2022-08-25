@@ -32,27 +32,21 @@
 #include <udho/db/pg/generators/fwd.h>
 #include <udho/db/pg/schema/column.h>
 #include <ozo/query_builder.h>
-
-
-/**
- * @brief need to remove thsi and use OZO_LITERAL defined in defs.h However be careful about circular include
- * 
- */
-#define OZO_LITERAL_2(TEXT) TEXT ## _SQL
+#include <udho/db/pg/schema/detail.h>
 
 #define GENERATE_OPERATOR(OPCODE, OPSYM)                                   \
     template <typename FieldT, typename ColumnT>                           \
     struct op<pg::op:: OPCODE ## _ <FieldT, ColumnT>>{                     \
         static auto apply(){                                               \
             using namespace ozo::literals;                                 \
-            return OZO_LITERAL_2(#OPSYM) + " "_SQL + std::move(ColumnT::ozo_name()); \
+            return OZO_LITERAL(#OPSYM) + " "_SQL + std::move(detail::query_rhs<ColumnT>::apply()); \
         }                                                                  \
     };                                                                     \
     template <typename FieldT>                                             \
     struct op<pg::op:: OPCODE ## _ <FieldT, void>>{                        \
         static auto apply(){                                               \
             using namespace ozo::literals;                                 \
-            return OZO_LITERAL_2(#OPSYM);                                  \
+            return OZO_LITERAL(#OPSYM);                                  \
         }                                                                  \
     }                                                                      \
 
