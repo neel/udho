@@ -48,13 +48,7 @@ namespace constants{
  * @tparam C... 
  */
 template <char... C>
-using string = ozo::query_builder<
-    boost::hana::tuple<
-        ozo::query_element<
-            boost::hana::string<C...>, 
-        ozo::query_text_tag> 
-    > 
->;
+using string = boost::hana::string<C...>;
 
 
 using empty  = string<>;      ///< empty ozo string

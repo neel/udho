@@ -52,7 +52,7 @@ namespace articles{
     PG_ELEMENT(title,     pg::types::varchar);
     PG_ELEMENT(author,    pg::types::bigint);
     PG_ELEMENT(project,   pg::types::bigint);
-    PG_ELEMENT(published, pg::types::timestamp);
+    PG_ELEMENT(published, pg::types::timestamp, pg::traits::not_null, pg::traits::def<pg::constants::now>::value);
     PG_ELEMENT(content,   pg::types::text);
 
     struct table: pg::relation<table, id, title, author, project, published, content>{

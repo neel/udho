@@ -56,10 +56,16 @@ struct query_rhs{
     }
 };
 
-template <typename Q>
-struct query_rhs<ozo::query_builder<Q>>{
+template <char... C>
+struct query_rhs<boost::hana::string<C...>>{
     static auto apply(){
-        return ozo::query_builder<Q>{};
+        return ozo::query_builder<
+            boost::hana::tuple<
+                ozo::query_element<
+                    boost::hana::string<C...>,
+                ozo::query_text_tag>
+            >
+        >{};
     }
 };
     
