@@ -178,30 +178,6 @@ struct field_lhs{
 };
     
 }
-
-namespace traits{
-    /**
-     * @brief PostgreSQL field Mixin.
-     *
-     * @tparam FieldT
-     * @tparam ValueT
-     *
-     * @ingroup schema
-     */
-    template <typename FieldT, typename ValueT>
-    struct not_null{
-        enum {
-            not_null_ = true
-        };
-    };
-    template <typename Constant>
-    struct def{
-        template <typename FieldT, typename ValueT>
-        struct value{
-            static constexpr auto str() { Constant c; return c.text(); }
-        };
-    };
-}
     
 }
 }
