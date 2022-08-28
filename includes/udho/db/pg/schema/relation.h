@@ -31,6 +31,7 @@
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/schema/readonly.h>
+#include <udho/db/pg/schema/primary.h>
 #include <udho/db/pg/crud/builder.h>
 #include <udho/db/pg/crud/from.h>
 #include <udho/db/pg/crud/many.h>
@@ -120,6 +121,11 @@ struct relation{
      * @brief Hide the default readonly typedef and specify the readonly fields in the derived class.
      */
     using readonly = pg::readonly<>;
+
+    /**
+     * @brief The primary key
+     */
+    using primary  = pg::primary<>;
 };
     
 }

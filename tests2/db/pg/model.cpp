@@ -58,6 +58,7 @@ namespace articles{
     struct table: pg::relation<table, id, title, author, project, published, content>{
         PG_NAME(articles)
         using readonly = pg::readonly<id>;
+        using primary  = pg::primary<id>;
     };
 
 }
