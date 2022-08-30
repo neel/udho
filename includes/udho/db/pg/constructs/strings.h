@@ -96,6 +96,8 @@ namespace square{
     using close = string<']'>;                  ///< square brace close (])
 }
 
+using not_null = string<'n', 'o', 't', ' ', 'n', 'u', 'l', 'l'>;
+
 }
     
 /**

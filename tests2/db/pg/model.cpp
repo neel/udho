@@ -52,7 +52,7 @@ namespace articles{
     PG_ELEMENT(title,     pg::types::varchar);
     PG_ELEMENT(author,    pg::types::bigint);
     PG_ELEMENT(project,   pg::types::bigint);
-    PG_ELEMENT(published, pg::types::timestamp, pg::traits::not_null, pg::traits::default_<pg::constants::now>::value);
+    PG_ELEMENT(published, pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
     PG_ELEMENT(content,   pg::types::text);
 
     struct table: pg::relation<table, id, title, author, project, published, content>{
@@ -140,10 +140,10 @@ auto pool = ozo::connection_pool(conn_info, dbconfig);
 
 TEST_CASE("postgresql SELECT query", "[pg]") {
 
-    std::cout << "pg::traits::has::not_null<articles::published>::value "      << pg::traits::has::not_null<articles::published>::value      << std::endl;
-    std::cout << "pg::traits::has::not_null<articles::project>::value   "      << pg::traits::has::not_null<articles::project>::value        << std::endl;
-    std::cout << "pg::traits::has::default_value<articles::published>::value " << pg::traits::has::default_value<articles::published>::value << std::endl;
-    std::cout << "pg::traits::has::default_value<articles::project>::value   " << pg::traits::has::default_value<articles::project>::value   << std::endl;
+    std::cout << "pg::constraints::has::not_null<articles::published>::value "      << pg::constraints::has::not_null<articles::published>::value      << std::endl;
+    std::cout << "pg::constraints::has::not_null<articles::project>::value   "      << pg::constraints::has::not_null<articles::project>::value        << std::endl;
+    std::cout << "pg::constraints::has::default_value<articles::published>::value " << pg::constraints::has::default_value<articles::published>::value << std::endl;
+    std::cout << "pg::constraints::has::default_value<articles::project>::value   " << pg::constraints::has::default_value<articles::project>::value   << std::endl;
 
     using all_students = pg::from<students::table>
                            ::fetch
