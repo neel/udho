@@ -29,8 +29,8 @@ stages:
 #   dependencies:
 #     - build:arch
     
-build:ubuntu:hirsute:
-  image: ubuntu:21.04
+build:ubuntu:lunar:
+  image: ubuntu:23.04
   stage: build
   variables:
     DEBIAN_FRONTEND: "noninteractive"
@@ -51,8 +51,8 @@ build:ubuntu:hirsute:
     paths:
       - build
     
-test:ubuntu:hirsute:
-  image: ubuntu:21.04
+test:ubuntu:lunar:
+  image: ubuntu:23.04
   stage: test
   variables:
     DEBIAN_FRONTEND: "noninteractive"
@@ -68,6 +68,6 @@ test:ubuntu:hirsute:
     - cd build
     - ctest
   dependencies:
-    - build:ubuntu:hirsute
+    - build:ubuntu:lunar
 
     
