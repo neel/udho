@@ -28,9 +28,11 @@
 #ifndef UDHO_DB_PG_GENERATORS_PARTS_DDL_H
 #define UDHO_DB_PG_GENERATORS_PARTS_DDL_H
 
+#include <type_traits>
 #include <ozo/query_builder.h>
 #include <udho/db/pg/generators/fwd.h>
-#include <udo/db/pg/schema/traits.h>
+// #include <udo/db/pg/schema/traits.h>
+#include <udho/db/pg/schema/constraints.h>
 
 
 namespace udho{
@@ -42,10 +44,15 @@ namespace generators{
 
 template <typename FieldT>
 struct create_field{
-    using not_null = std::conditinal<
-        pg::traits::has::not_null<FieldT>::value,
-        pg::constants::not_null,
-        pg::constants::empty
+    using not_null = std::conditional<
+        pg::constraints::has::not_null<FieldT>::value,
+            pg::constants::not_null,
+            pg::constants::empty
+    >;
+    using unique = std::conditional<
+        pg::constraints::has::unique<FieldT>::value,
+            pg::constants::unique,
+            pg::constants::empty
     >;
 };
 

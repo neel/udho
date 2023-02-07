@@ -1,6 +1,8 @@
 #ifndef UDHO_DB_PG_SCHEMA_CONSTRAINTS_H
 #define UDHO_DB_PG_SCHEMA_CONSTRAINTS_H
 
+#include <type_traits>
+
 namespace udho{
 namespace db{
 namespace pg{

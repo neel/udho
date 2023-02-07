@@ -97,6 +97,9 @@ namespace square{
 }
 
 using not_null = string<'n', 'o', 't', ' ', 'n', 'u', 'l', 'l'>;
+using unique   = string<'u', 'n', 'i', 'q', 'u', 'e'>;
+using defaultv = string<'d', 'e', 'f', 'a', 'u', 'l', 't'>;
+using primary  = string<'p', 'r', 'i', 'm', 'a', 'r', 'y', ' ', 'k', 'e', 'y'>;
 
 }
     

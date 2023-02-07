@@ -27,6 +27,8 @@
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include <udho/db/pg/generators/ddl.h>
+
 namespace db = udho::db;
 namespace pg = db::pg;
 
