@@ -49,7 +49,7 @@ namespace students{
 namespace articles{
 
     PG_ELEMENT(id,        pg::types::bigint);
-    PG_ELEMENT(title,     pg::types::varchar);
+    PG_ELEMENT(title,     pg::types::varchar, pg::constraints::unique);
     PG_ELEMENT(author,    pg::types::bigint);
     PG_ELEMENT(project,   pg::types::bigint);
     PG_ELEMENT(published, pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
