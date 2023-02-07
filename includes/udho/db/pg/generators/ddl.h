@@ -31,7 +31,6 @@
 #include <type_traits>
 #include <ozo/query_builder.h>
 #include <udho/db/pg/generators/fwd.h>
-// #include <udo/db/pg/schema/traits.h>
 #include <udho/db/pg/schema/constraints.h>
 
 
