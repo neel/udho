@@ -58,9 +58,10 @@ test:ubuntu:lunar:
     DEBIAN_FRONTEND: "noninteractive"
     LANG: en_US.utf8
   before_script:
-    - apt-get update
     - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+    - apt-get update
     - apt-get install -y locales && rm -rf /var/lib/apt/lists/* localedef -i en_US -f UTF-8 /usr/share/locale/locale.alias en_US.UTF-8
+    - apt-get update
     - apt-get upgrade -y
     - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
     - apt-get install -y tzdata
