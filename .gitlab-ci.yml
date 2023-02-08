@@ -68,8 +68,8 @@ test:ubuntu:lunar:
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev catch2 doxygen
     - apt-get install -y postgresql postgresql-client libpq-dev postgresql-contrib postgresql-server-dev-all
-    - sed -E "s/local\s+postgres(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf
-    - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf
+    - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf > /tmp/pg_hba.conf
+    - cp /tmp/pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
     - service postgresql start
     - service postgresql status
   script:
