@@ -137,7 +137,7 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);
 
     ozo::connection_pool_config dbconfig;
-    ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres");
+    ozo::connection_info<> conn_info("dbname=postgres user=postgres");
     auto pool = ozo::connection_pool(conn_info, dbconfig);
 
     SECTION("Using udho::activities"){
@@ -225,6 +225,7 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
         insert->_first = "Neel";
         insert->_last  = "Basu";
 
+        std::cout << "here 2" << std::endl;
         start();
 
         io.run();
