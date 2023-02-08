@@ -64,6 +64,8 @@ test:ubuntu:lunar:
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
     - apt-get install -y libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev libpq-dev postgresql-server-dev-all catch2 doxygen
+    - systemctl start postgresql
+    - systemctl status postgresql
   script:
     - cd build
     - ctest

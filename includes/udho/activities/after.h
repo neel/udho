@@ -64,7 +64,7 @@ namespace detail{
 
 template <template <typename, typename...> class SubtaskT, typename HeadT, typename... TailT>
 struct basic_after: private basic_after<SubtaskT, TailT...>{
-    basic_after(HeadT& head, TailT&... tail): _head(head), basic_after<SubtaskT, TailT...>(tail...){}
+    basic_after(HeadT& head, TailT&... tail): basic_after<SubtaskT, TailT...>(tail...), _head(head){}
     
     template <typename ActivityT, typename... Args>
     SubtaskT<ActivityT, typename HeadT::activity_type, typename TailT::activity_type...> perform(Args&&... args){
