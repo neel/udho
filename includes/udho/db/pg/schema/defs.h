@@ -229,6 +229,7 @@ struct Name ## _                                                             \
     >;                                                                       \
     using base::base;                                                        \
     using base::operator=;                                                   \
+    typedef T pg_data_type;                                                  \
     template <typename X>                                                    \
     using alter = Name ## _ <X>;                                             \
     static constexpr auto key() {                                            \

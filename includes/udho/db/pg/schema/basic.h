@@ -189,6 +189,18 @@ struct basic_schema: udho::hazo::map_d<Fields...>{
     auto conditions_except(PrefixT prefix) const {
         return map_type::decorate(decorators::conditions::except<T...>::prefixed(std::move(prefix)));
     }
+
+    auto definitions() const {
+        return map_type::decorate(decorators::definitions{});
+    }
+    template <typename... T>
+    auto definition_only() const {
+        return map_type::decorate(decorators::definitions::only<T...>{});
+    }
+    template <typename... T>
+    auto definition_except() const {
+        return map_type::decorate(decorators::definitions::except<T...>{});
+    }
 };
 
 template <typename... Fields, typename T>

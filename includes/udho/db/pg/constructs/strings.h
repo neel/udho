@@ -51,13 +51,17 @@ template <char... C>
 using string = boost::hana::string<C...>;
 
 
-using empty  = string<>;      ///< empty ozo string
-using space  = string<' '>;   ///< space ( )
-using hyphen = string<'-'>;   ///< hyphen (-)
-using comma  = string<','>;   ///< comma (,)
-using dot    = string<'.'>;   ///< dot (.)
-using null   = string<'n', 'u', 'l', 'l'>;   ///< null
-using now    = string<'n', 'o', 'w', '(', ')'>;   ///< now()
+using empty    = string<>;      ///< empty ozo string
+using space    = string<' '>;   ///< space ( )
+using hyphen   = string<'-'>;   ///< hyphen (-)
+using comma    = string<','>;   ///< comma (,)
+using dot      = string<'.'>;   ///< dot (.)
+using newline  = string<'\n'>;   ///< dot (.)
+using null     = string<'n', 'u', 'l', 'l'>;   ///< null
+using now      = string<'n', 'o', 'w', '(', ')'>;   ///< now()
+using cascade  = string<'c', 'a', 's', 'c', 'a', 'd', 'e'>;
+using restrict = string<'r', 'e', 's', 't', 'r', 'i', 'c', 't'>;
+using set_null = string<'s', 'e', 't', ' ', 'n', 'u', 'l', 'l'>;
 
 /**
  * @brief quoted versions of frequently used characters

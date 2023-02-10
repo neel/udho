@@ -40,23 +40,47 @@ namespace pg{
 
 namespace generators{
 
+template <typename RelationT>
+struct create{
+    create(){}
 
-template <typename FieldT>
-struct create_field{
-    using not_null = std::conditional<
-        pg::constraints::has::not_null<FieldT>::value,
-            pg::constants::not_null,
-            pg::constants::empty
-    >;
-    using unique = std::conditional<
-        pg::constraints::has::unique<FieldT>::value,
-            pg::constants::unique,
-            pg::constants::empty
-    >;
+    auto operator()(){
+        return all();
+    }
+
+    auto all(){
+        using namespace ozo::literals;
+        using namespace pg::constants;
+        return "create table "_SQL + std::move(RelationT::name())
+            + "(\n"_SQL
+                    + std::move(_schema.definitions())
+            + "\n)"_SQL;
+    }
+
+    template <typename... OnlyFields>
+    auto only(){
+        using namespace ozo::literals;
+        using namespace pg::constants;
+        return "create table "_SQL + std::move(RelationT::name())
+            + parenthesis::open() + newline()
+                    + _schema.definitions()  + newline()
+            + parenthesis::close();
+    }
+
+    template <typename... ExceptFields>
+    auto except(){
+        using namespace ozo::literals;
+        using namespace pg::constants;
+        return "create table "_SQL + std::move(RelationT::name())
+            + parenthesis::open() + newline()
+                    + _schema.definitions()  + newline()
+            + parenthesis::close();
+    }
+
+    private:
+        typename RelationT::schema _schema;
 };
 
-template <typename RelationT>
-struct create_relation{};
 
 }
 

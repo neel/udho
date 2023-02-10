@@ -27,6 +27,7 @@
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include <udho/db/pg/decorators/definitions.h>
 #include <udho/db/pg/generators/ddl.h>
 
 namespace db = udho::db;
@@ -51,8 +52,8 @@ namespace students{
 namespace articles{
 
     PG_ELEMENT(id,        pg::types::bigint);
-    PG_ELEMENT(title,     pg::types::varchar, pg::constraints::unique);
-    PG_ELEMENT(author,    pg::types::bigint);
+    PG_ELEMENT(title,     pg::types::varchar,   pg::constraints::unique);
+    PG_ELEMENT(author,    pg::types::bigint,    pg::constraints::references<students::table::column<students::id>>::restrict);
     PG_ELEMENT(project,   pg::types::bigint);
     PG_ELEMENT(published, pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
     PG_ELEMENT(content,   pg::types::text);
@@ -146,6 +147,9 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
     std::cout << "pg::constraints::has::not_null<articles::project>::value   "      << pg::constraints::has::not_null<articles::project>::value        << std::endl;
     std::cout << "pg::constraints::has::default_value<articles::published>::value " << pg::constraints::has::default_value<articles::published>::value << std::endl;
     std::cout << "pg::constraints::has::default_value<articles::project>::value   " << pg::constraints::has::default_value<articles::project>::value   << std::endl;
+
+    pg::generators::create<articles::table> creator;
+    std::cout << creator().text().c_str() << std::endl;
 
     using all_students = pg::from<students::table>
                            ::fetch
