@@ -459,6 +459,27 @@ struct basic_join_on{
      */
     template <typename FieldT>
     using relation_of = typename data_of<FieldT>::relation_type;
+
+    template <typename FieldT>
+    struct autojoin{
+        struct source{
+            using relation = relation_of<FieldT>;
+            using field    = FieldT;
+        };
+        struct target{
+            using relation = typename FieldT::referenced::foreign_ref::target::relation_type;
+            using field    = typename FieldT::referenced::foreign_ref::target::field_type;
+        };
+        using inner = basic_join_on<
+            join_types::inner,
+            typename source::relation,
+            typename target::relation,
+            typename source::field,
+            typename target::field,
+            PreviousJoin
+        >;
+
+    };
     
     static std::string pretty(){
         udho::pretty::printer printer;
@@ -958,6 +979,23 @@ template <typename FromRelationT>
 struct attached{
     template <typename RelationT>
     using join = basic_join<FromRelationT, RelationT>;
+
+    template <typename FieldT>
+    struct autojoin{
+        struct target{
+            using relation = typename FieldT::referenced::foreign_ref::target::relation_type;
+            using field    = typename FieldT::referenced::foreign_ref::target::field_type;
+        };
+        using inner = basic_join_on<
+            join_types::inner,
+            FromRelationT,
+            typename target::relation,
+            FieldT,
+            typename target::field,
+            void
+        >;
+
+    };
 };
     
 }

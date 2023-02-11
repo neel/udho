@@ -42,14 +42,22 @@ namespace pg{
 
 namespace detail{
     
+/**
+ * @brief Given a schema and field finds out the relation with which the given field is associated with
+ * @tparam SchemaT The schema may include columns from multiple relations
+ * @tparam FieldT  The field to search for
+ */
 template <typename SchemaT, typename FieldT, bool Exists = SchemaT::template contains<FieldT>::value>
 struct relation_of_helper{
-    typedef typename SchemaT::types::template data_of<FieldT>::relation_type type;
+    /**
+     * @brief relation with which the given field is associated with (void if not found)
+     */
+    using type = typename SchemaT::types::template data_of<FieldT>::relation_type;
 };
 
 template <typename SchemaT, typename FieldT>
 struct relation_of_helper<SchemaT, FieldT, false>{
-    typedef void type;
+    using type = void ;
 };
     
 }
@@ -140,6 +148,9 @@ struct from{
      */
     template <typename ForeignRelationT>
     using join = typename pg::attached<FromRelationT>::template join<ForeignRelationT>;
+
+    template <typename FieldT>
+    using autojoin = typename pg::attached<FromRelationT>::template autojoin<FieldT>;
     /**
      * @brief Given a field returns the column for it.
      * 

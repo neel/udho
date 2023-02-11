@@ -125,7 +125,7 @@ struct relation{
     /**
      * @brief The primary key
      */
-    using primary  = pg::primary<>;
+    // using primary  = pg::primary<>;
 };
     
 }

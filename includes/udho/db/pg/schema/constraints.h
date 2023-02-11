@@ -57,7 +57,7 @@ namespace constraints{
     template <typename ColumnT, typename PolicyT>
     struct references_with_policy{
         template <typename FieldT, typename ValueT>
-        struct on_delete: labels::references{
+        struct referenced: labels::references{
             struct foreign_ref{
                 using target = ColumnT;
                 using policy = PolicyT;
@@ -85,11 +85,11 @@ namespace constraints{
         using column   = pg::column<TargetFieldT, RelationT>;
 
         template <typename FieldT, typename ValueT>
-        using cascade  = typename references_with_policy<column, ref_policies::cascade> ::template on_delete<FieldT, ValueT>;
+        using cascade  = typename references_with_policy<column, ref_policies::cascade> ::template referenced<FieldT, ValueT>;
         template <typename FieldT, typename ValueT>
-        using restrict = typename references_with_policy<column, ref_policies::restrict>::template on_delete<FieldT, ValueT>;
+        using restrict = typename references_with_policy<column, ref_policies::restrict>::template referenced<FieldT, ValueT>;
         template <typename FieldT, typename ValueT>
-        using set_null = typename references_with_policy<column, ref_policies::set_null>::template on_delete<FieldT, ValueT>;
+        using set_null = typename references_with_policy<column, ref_policies::set_null>::template referenced<FieldT, ValueT>;
     };
 
     namespace has{

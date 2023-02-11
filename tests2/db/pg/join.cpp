@@ -472,7 +472,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(
         std::is_same<
             basic_simple_join_3_t,
-            pg::from<articles::table>                               // FROM table (0)
+            pg::from<articles::table>                                   // FROM table (0)
                 ::join<students::table>                                 // JOIN table (1)
                     ::inner::on<articles::author, students::id>         // lhs (0), rhs (1)
                 ::join<memberships::table, students::table>             // JOIN table (2), JOIN table (1)
