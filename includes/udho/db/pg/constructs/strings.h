@@ -100,10 +100,12 @@ namespace square{
     using close = string<']'>;                  ///< square brace close (])
 }
 
-using not_null = string<'n', 'o', 't', ' ', 'n', 'u', 'l', 'l'>;
-using unique   = string<'u', 'n', 'i', 'q', 'u', 'e'>;
-using defaultv = string<'d', 'e', 'f', 'a', 'u', 'l', 't'>;
-using primary  = string<'p', 'r', 'i', 'm', 'a', 'r', 'y', ' ', 'k', 'e', 'y'>;
+namespace db{
+    using _not_null = string<' ', 'n', 'o', 't', ' ', 'n', 'u', 'l', 'l'>;
+    using _unique   = string<' ', 'u', 'n', 'i', 'q', 'u', 'e'>;
+    using _default  = string<' ', 'd', 'e', 'f', 'a', 'u', 'l', 't'>;
+    using _primary  = string<' ', 'p', 'r', 'i', 'm', 'a', 'r', 'y', ' ', 'k', 'e', 'y'>;
+}
 
 }
     

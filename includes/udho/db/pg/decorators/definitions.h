@@ -54,7 +54,7 @@ template <typename FieldT>
 struct extract_default_value<FieldT, true>{
     using h_default_value = typename FieldT::field_type::default_value;
     static constexpr auto value() {
-        return pg::constants::defaultv() + pg::constants::space() + h_default_value();
+        return pg::constants::db::_default() + pg::constants::space() + h_default_value();
     }
 };
 
@@ -70,25 +70,34 @@ template <typename FieldT>
 struct extract_reference<FieldT, true>{
     static constexpr auto str() {
         using namespace ozo::literals;
-        return "references "_SQL + FieldT::field_type::foreign_ref::str();
+        return " references "_SQL + FieldT::field_type::foreign_ref::str();
     }
 };
 
 
 template <typename FieldT>
 struct field_constraints{
+    using h_primary = typename std::conditional<
+        pg::constraints::has::primary<typename FieldT::field_type>::value,
+            pg::constants::db::_primary,
+            pg::constants::empty
+    >::type;
     using h_not_null = typename std::conditional<
         pg::constraints::has::not_null<typename FieldT::field_type>::value,
-            pg::constants::not_null,
+            pg::constants::db::_not_null,
             pg::constants::empty
     >::type;
     using h_unique = typename std::conditional<
         pg::constraints::has::unique<typename FieldT::field_type>::value,
-            pg::constants::unique,
+            pg::constants::db::_unique,
             pg::constants::empty
     >::type;
     using h_default_value = extract_default_value<FieldT, pg::constraints::has::default_value<typename FieldT::field_type>::value>;
     using h_references    = extract_reference<FieldT, pg::constraints::has::references<typename FieldT::field_type>::value>;
+
+    static constexpr auto primary(){
+        return ozo::make_query_builder(boost::hana::make_tuple(ozo::make_query_text(h_primary())));
+    }
 
     static constexpr auto not_null(){
         return ozo::make_query_builder(boost::hana::make_tuple(ozo::make_query_text(h_not_null())));
@@ -117,10 +126,11 @@ struct basic_definitions: private traits::fields::unqualified{
     template <typename FieldT>
     decltype(auto) operator()(const FieldT& f){
         using namespace ozo::literals;
-        return "    "_SQL + traits::fields::unqualified::apply(f)   + " "_SQL + FieldT::field_type::pg_data_type::name()  + " "_SQL
-          + field_constraints<FieldT>::not_null()      + " "_SQL
-          + field_constraints<FieldT>::unique()        + " "_SQL
-          + field_constraints<FieldT>::default_value() + " "_SQL
+        return "    "_SQL + traits::fields::unqualified::apply(f)   + " "_SQL + FieldT::field_type::pg_data_type::name()
+          + field_constraints<FieldT>::primary()
+          + field_constraints<FieldT>::not_null()
+          + field_constraints<FieldT>::unique()
+          + field_constraints<FieldT>::default_value()
           + field_constraints<FieldT>::references();
     }
     template <typename FieldT, typename ResultT>
@@ -147,10 +157,11 @@ struct selected_definitions: private traits::fields::unqualified{
     template <typename FieldT, typename = typename enable<FieldT>::type>
     auto operator()(const FieldT& f){
         using namespace ozo::literals;
-        return "    "_SQL + traits::fields::unqualified::apply(f)   + " "_SQL + FieldT::field_type::pg_data_type::name()  + " "_SQL
-          + field_constraints<FieldT>::not_null()      + " "_SQL
-          + field_constraints<FieldT>::unique()        + " "_SQL
-          + field_constraints<FieldT>::default_value() + " "_SQL
+        return "    "_SQL + traits::fields::unqualified::apply(f)   + " "_SQL + FieldT::field_type::pg_data_type::name()
+          + field_constraints<FieldT>::primary()
+          + field_constraints<FieldT>::not_null()
+          + field_constraints<FieldT>::unique()
+          + field_constraints<FieldT>::default_value()
           + field_constraints<FieldT>::references();
     }
     template <typename FieldT, typename ResultT, typename = typename enable<FieldT>::type>

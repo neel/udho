@@ -194,11 +194,11 @@ struct basic_schema: udho::hazo::map_d<Fields...>{
         return map_type::decorate(decorators::definitions{});
     }
     template <typename... T>
-    auto definition_only() const {
+    auto definitions_only() const {
         return map_type::decorate(decorators::definitions::only<T...>{});
     }
     template <typename... T>
-    auto definition_except() const {
+    auto definitions_except() const {
         return map_type::decorate(decorators::definitions::except<T...>{});
     }
 };

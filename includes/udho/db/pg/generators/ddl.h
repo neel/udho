@@ -50,7 +50,6 @@ struct create{
 
     auto all(){
         using namespace ozo::literals;
-        using namespace pg::constants;
         return "create table "_SQL + std::move(RelationT::name())
             + "(\n"_SQL
                     + std::move(_schema.definitions())
@@ -60,21 +59,19 @@ struct create{
     template <typename... OnlyFields>
     auto only(){
         using namespace ozo::literals;
-        using namespace pg::constants;
         return "create table "_SQL + std::move(RelationT::name())
-            + parenthesis::open() + newline()
-                    + _schema.definitions()  + newline()
-            + parenthesis::close();
+            + "(\n"_SQL
+                    + std::move(_schema.template definitions_only<OnlyFields...>())
+            + "\n)"_SQL;
     }
 
     template <typename... ExceptFields>
     auto except(){
         using namespace ozo::literals;
-        using namespace pg::constants;
         return "create table "_SQL + std::move(RelationT::name())
-            + parenthesis::open() + newline()
-                    + _schema.definitions()  + newline()
-            + parenthesis::close();
+            + "(\n"_SQL
+                    + std::move(_schema.template definitions_except<ExceptFields...>())
+            + "\n)"_SQL;
     }
 
     private:

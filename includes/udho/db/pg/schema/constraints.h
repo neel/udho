@@ -13,6 +13,7 @@ namespace pg{
 namespace constraints{
 
     namespace labels{
+        struct primary{};
         struct not_null{};
         struct default_value{};
         struct unique{};
@@ -31,6 +32,8 @@ namespace constraints{
         };
     };
 
+    template <typename FieldT, typename ValueT>
+    struct primary: labels::primary{};
 
     template <typename FieldT, typename ValueT>
     struct not_null: labels::not_null{};
@@ -90,6 +93,8 @@ namespace constraints{
     };
 
     namespace has{
+        template<typename FieldT>
+        using primary       = std::is_base_of<pg::constraints::labels::primary,       FieldT>;
         template<typename FieldT>
         using not_null      = std::is_base_of<pg::constraints::labels::not_null,      FieldT>;
         template<typename FieldT>
