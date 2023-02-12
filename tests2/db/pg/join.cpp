@@ -30,29 +30,15 @@ using namespace boost::hana::literals;
 
 namespace students{
 
-PG_ELEMENT(id,       std::int64_t);
+PG_ELEMENT(id,       std::int64_t, pg::constraints::primary);
 PG_ELEMENT(name,     std::string);
-PG_ELEMENT(project,  std::int64_t);
 PG_ELEMENT(marks,    std::int64_t);
+
 PG_ELEMENT(projects_associated, std::int64_t);
 PG_ELEMENT(articles_published, std::int64_t);
 
-struct table: pg::relation<table, id, name, project, marks>{
+struct table: pg::relation<table, id, name, marks>{
     PG_NAME(students)
-    using readonly = pg::readonly<id>;
-};
-
-}
-
-namespace articles{
-
-PG_ELEMENT(id,      std::int64_t);
-PG_ELEMENT(title,   std::string);
-PG_ELEMENT(author,  std::int64_t);
-PG_ELEMENT(project, std::int64_t);
-
-struct table: pg::relation<table, id, title, author, project>{
-    PG_NAME(articles)
     using readonly = pg::readonly<id>;
 };
 
@@ -60,9 +46,9 @@ struct table: pg::relation<table, id, title, author, project>{
 
 namespace projects{
 
-PG_ELEMENT(id,     std::int64_t);
-PG_ELEMENT(title,  std::string);
-PG_ELEMENT(admin,  std::int64_t);
+PG_ELEMENT(id,     std::int64_t, pg::constraints::primary);
+PG_ELEMENT(title,  std::string,  pg::constraints::unique);
+PG_ELEMENT(admin,  std::int64_t, pg::constraints::references<students::table::column<students::id>>::restrict);
 
 struct table: pg::relation<table, id, title, admin>{
     PG_NAME(projects)
@@ -71,11 +57,25 @@ struct table: pg::relation<table, id, title, admin>{
 
 }
 
+namespace articles{
+
+PG_ELEMENT(id,      std::int64_t, pg::constraints::primary);
+PG_ELEMENT(title,   std::string,  pg::constraints::unique);
+PG_ELEMENT(author,  std::int64_t, pg::constraints::references<students::table::column<students::id>>::restrict);
+PG_ELEMENT(project, std::int64_t, pg::constraints::references<projects::table::column<projects::id>>::restrict);
+
+struct table: pg::relation<table, id, title, author, project>{
+    PG_NAME(articles)
+    using readonly = pg::readonly<id>;
+};
+
+}
+
 namespace memberships{
 
-PG_ELEMENT(id,      std::int64_t);
-PG_ELEMENT(student, std::int64_t);
-PG_ELEMENT(project, std::int64_t);
+PG_ELEMENT(id,      std::int64_t, pg::constraints::primary);
+PG_ELEMENT(student, std::int64_t, pg::constraints::references<students::table::column<students::id>>::restrict);
+PG_ELEMENT(project, std::int64_t, pg::constraints::references<projects::table::column<projects::id>>::restrict);
 
 struct table: pg::relation<table, id, student, project>{
     PG_NAME(memberships)
@@ -133,6 +133,15 @@ TEST_CASE("postgresql crud join", "[pg]"){
     ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres");
     auto pool = ozo::connection_pool(conn_info, dbconfig);
 
+    using autojoin_test = pg::from<articles::table>
+                            ::autojoin<articles::project>::inner
+                            ::autojoin<articles::author>::inner
+                            ::fetch
+                            ::all
+                            ::apply;
+    auto autojoin_test_collector = udho::activities::collect<autojoin_test>(ctx);
+    std::cout << autojoin_test(autojoin_test_collector, pool, io).sql().text().c_str() << std::endl;
+
     using basic_simple_join_1_t = pg::basic_join_on<
         pg::join_types::inner,
         articles::table,
@@ -157,7 +166,6 @@ TEST_CASE("postgresql crud join", "[pg]"){
             articles.project,                   \
             students.id,                        \
             students.name,                      \
-            students.project,                   \
             students.marks                      \
         from articles                           \
         inner join students                     \
@@ -220,7 +228,6 @@ TEST_CASE("postgresql crud join", "[pg]"){
             projects.admin,                       \
             students.id,                          \
             students.name,                        \
-            students.project,                     \
             students.marks                        \
         from articles                             \
         inner join projects                       \
@@ -259,6 +266,15 @@ TEST_CASE("postgresql crud join", "[pg]"){
                     ::inner::on<articles::project, projects::id>            // lhs (0), rhs (1)
                 ::join<students::table>                                     // JOIN table (2) 
                     ::inner::on<articles::author, students::id>             // lhs (0), rhs (2)
+        >::value
+    );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_2_t,
+            pg::from<articles::table>
+                ::autojoin<articles::project>::inner
+                ::autojoin<articles::author>::inner
         >::value
     );
 
@@ -301,7 +317,6 @@ TEST_CASE("postgresql crud join", "[pg]"){
             projects.admin,                       \
             students.id,                          \
             students.name,                        \
-            students.project,                     \
             students.marks                        \
         from articles                             \
         inner join projects                       \
@@ -335,13 +350,14 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(
         std::is_same<
             basic_simple_join_2a_t,
-            pg::from<articles::table>                               // FROM table (0)
+            pg::from<articles::table>                                   // FROM table (0)
                 ::join<projects::table>                                 // JOIN table (1)
                     ::inner::on<articles::project, projects::id>        // lhs (0), rhs (1)
                 ::join<students::table, projects::table>                // JOIN table (2), JOIN table (1)
                     ::inner::on<projects::admin, students::id>          // lhs (1), rhs (2)
         >::value
     );
+
     
 
     // !MALFORMED 
@@ -427,7 +443,6 @@ TEST_CASE("postgresql crud join", "[pg]"){
             articles.project,                          \
             students.id,                               \
             students.name,                             \
-            students.project,                          \
             students.marks,                            \
             memberships.id,                            \
             memberships.student,                       \
@@ -481,4 +496,5 @@ TEST_CASE("postgresql crud join", "[pg]"){
                     ::inner::on<memberships::project, projects::id>     // lhs (2), rhs (3)
         >::value
     );
+
 }

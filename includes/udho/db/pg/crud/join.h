@@ -476,7 +476,7 @@ struct basic_join_on{
             typename target::relation,
             typename source::field,
             typename target::field,
-            PreviousJoin
+            type
         >;
 
     };
