@@ -31,6 +31,7 @@
 #include <udho/hazo.h>
 #include <udho/db/pg/schema/fwd.h>
 #include <udho/db/pg/decorators.h>
+#include <udho/db/pg/schema/constraints.h>
 
 namespace udho{
 namespace db{
@@ -71,6 +72,9 @@ struct basic_schema: udho::hazo::map_d<Fields...>{
     using has = typename map_type::template has<KeyT>;
     using indices = typename map_type::indices;
     using keys = typename map_type::keys;
+
+    template <typename FieldT>
+    using referenced_by = typename pg::constraints::referenced_by<FieldT, Fields...>;
     
     template <typename K>
     decltype(auto) operator()(const K& k) const { return map_type::data(k);}

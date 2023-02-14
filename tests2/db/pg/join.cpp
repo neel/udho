@@ -123,6 +123,7 @@ std::ostream& operator<<(std::ostream& stream, const sql& s){
 
 #define SQL_EXPECT_SAME(x, y) CHECK(sql() % x.text().c_str() == y % sql())
 
+
 TEST_CASE("postgresql crud join", "[pg]"){
     boost::asio::io_service io;
     udho::servers::quiet::stateless::request_type req;
@@ -141,6 +142,29 @@ TEST_CASE("postgresql crud join", "[pg]"){
                             ::apply;
     auto autojoin_test_collector = udho::activities::collect<autojoin_test>(ctx);
     std::cout << autojoin_test(autojoin_test_collector, pool, io).sql().text().c_str() << std::endl;
+
+    CHECK(std::is_same<
+        pg::constraints::referenced_by_helper<students::id, students::table::column<students::marks>, students::table::column<students::id>, students::table::column<students::name>>::target,
+        students::table::column<students::id>
+    >::value);
+    CHECK(std::is_same<
+        pg::constraints::referenced_by<memberships::student, students::table::column<students::marks>, students::table::column<students::id>, students::table::column<students::name>>::target,
+        students::table::column<students::id>
+    >::value);
+
+
+
+    using autojoin_test2 = pg::from<articles::table>
+                ::autojoin<articles::author>::inner
+                ::r_autojoin<memberships::student, memberships::table>::inner
+                ::autojoin<memberships::project>::inner
+                ::fetch
+                ::all
+                ::apply;
+
+    auto autojoin_test2_collector = udho::activities::collect<autojoin_test2>(ctx);
+    std::cout << autojoin_test2(autojoin_test2_collector, pool, io).sql().text().c_str() << std::endl;
+
 
     using basic_simple_join_1_t = pg::basic_join_on<
         pg::join_types::inner,
@@ -494,6 +518,16 @@ TEST_CASE("postgresql crud join", "[pg]"){
                     ::inner::on<students::id, memberships::student>     // lhs (1), rhs (2)
                 ::join<projects::table, memberships::table>             // JOIN table (3), JOIN table (2)
                     ::inner::on<memberships::project, projects::id>     // lhs (2), rhs (3)
+        >::value
+    );
+
+    CHECK(
+        std::is_same<
+            basic_simple_join_3_t,
+            pg::from<articles::table>
+                ::autojoin<articles::author>::inner
+                ::r_autojoin<memberships::student, memberships::table>::inner
+                ::autojoin<memberships::project>::inner
         >::value
     );
 

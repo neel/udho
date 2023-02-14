@@ -31,7 +31,7 @@
 #include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/schema/column.h>
 #include <udho/db/pg/schema/readonly.h>
-#include <udho/db/pg/schema/primary.h>
+// #include <udho/db/pg/schema/primary.h>
 #include <udho/db/pg/crud/builder.h>
 #include <udho/db/pg/crud/from.h>
 #include <udho/db/pg/crud/many.h>

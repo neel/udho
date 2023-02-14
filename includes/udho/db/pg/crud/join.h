@@ -478,7 +478,30 @@ struct basic_join_on{
             typename target::field,
             type
         >;
+    };
 
+    template <typename FieldT, typename RelT>
+    struct r_autojoin{
+        using ref_by = typename schema::template referenced_by<FieldT>;
+        static_assert(!std::is_void<typename ref_by::target>());
+        static_assert(!std::is_void<typename ref_by::relation>());
+        static_assert(!std::is_void<typename ref_by::field>());
+        struct source{
+            using relation = typename ref_by::relation;
+            using field    = typename ref_by::field;
+        };
+        struct target{
+            using relation = RelT;
+            using field    = FieldT;
+        };
+        using inner = basic_join_on<
+            join_types::inner,
+            typename source::relation,
+            typename target::relation,
+            typename source::field,
+            typename target::field,
+            type
+        >;
     };
     
     static std::string pretty(){

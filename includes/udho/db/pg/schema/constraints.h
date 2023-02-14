@@ -104,6 +104,44 @@ namespace constraints{
         template<typename FieldT>
         using references    = std::is_base_of<pg::constraints::labels::references,    FieldT>;
     }
+
+    template <typename FieldT, bool HasReference = pg::constraints::has::references<FieldT>::value>
+    struct reference_target;
+
+    template <typename FieldT>
+    struct reference_target<FieldT, true>{
+        using relation = typename FieldT::referenced::foreign_ref::target::relation_type;
+        using field    = typename FieldT::referenced::foreign_ref::target::field_type;
+    };
+
+    template <typename FieldT>
+    struct reference_target<FieldT, false>{
+        using relation = void;
+        using field    = void;
+    };
+
+    template <typename FieldT, typename ReferencedByT=void, typename... Fields>
+    struct referenced_by_helper{
+        using target   = typename referenced_by_helper<FieldT, Fields...>::target;
+    };
+
+    template <typename ReferencedByT, typename... Fields>
+    struct referenced_by_helper<typename ReferencedByT::field_type, ReferencedByT, Fields...>{
+        using target   = ReferencedByT;
+    };
+
+    template <typename FieldT, typename... Fields>
+    struct referenced_by_helper<FieldT, void, Fields...>{
+        using target   = void;
+    };
+
+    template <typename FieldT, typename... Fields>
+    struct referenced_by{
+        using target   = typename referenced_by_helper<typename reference_target<FieldT>::field, Fields...>::target;
+        using relation = typename target::relation_type;
+        using field    = typename target::field_type;
+    };
+
 }
 
 
