@@ -25,81 +25,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_GENERATORS_PARTS_DDL_H
-#define UDHO_DB_PG_GENERATORS_PARTS_DDL_H
+#ifndef UDHO_DB_PG_CRUD_DDL_H
+#define UDHO_DB_PG_CRUD_DDL_H
 
-#include <type_traits>
+
 #include <ozo/query_builder.h>
-#include <udho/db/pg/generators/fwd.h>
-#include <udho/db/pg/schema/constraints.h>
-
+#include <udho/db/pg/crud/join.h>
+#include <udho/db/pg/schema/column.h>
 
 namespace udho{
 namespace db{
 namespace pg{
 
-namespace generators{
-
+/**
+ * @brief DDL query.
+ * @ingroup crud
+ * @tparam RelationT
+ */
 template <typename RelationT>
-struct create{
-    create(){}
-
-    auto operator()(){
-        return all();
-    }
-
-    auto all(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.definitions())
-            + "\n)"_SQL;
-    }
-
-    template <typename... OnlyFields>
-    auto only(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.template definitions_only<OnlyFields...>())
-            + "\n)"_SQL;
-    }
-
-    template <typename... ExceptFields>
-    auto except(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.template definitions_except<ExceptFields...>())
-            + "\n)"_SQL;
-    }
-
-    private:
-        typename RelationT::schema _schema;
+struct ddl{
+    using relation = RelationT;
+    using schema = typename RelationT::schema;
+    using builder_type = typename RelationT::builder_type;
 };
 
-
-template <typename RelationT>
-struct drop{
-    drop(){}
-
-    auto operator()(){
-        return if_exists();
-    }
-
-    auto if_exists(){
-        using namespace ozo::literals;
-        return "drop table if exists "_SQL + std::move(RelationT::name());
-    }
-
-
-};
-
-
-}
-
 }
 }
 }
 
-#endif // UDHO_DB_PG_GENERATORS_PARTS_DDL_H
+
+#endif // UDHO_DB_PG_CRUD_DDL_H
