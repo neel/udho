@@ -33,6 +33,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <cstdint>
 #include <boost/optional.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/shared_ptr.hpp>

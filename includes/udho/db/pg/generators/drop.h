@@ -25,56 +25,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_CRUD_DDL_H
-#define UDHO_DB_PG_CRUD_DDL_H
+#ifndef UDHO_DB_PG_GENERATORS_PARTS_DROP_H
+#define UDHO_DB_PG_GENERATORS_PARTS_DROP_H
 
+#include <type_traits>
 #include <ozo/query_builder.h>
-#include <udho/db/pg/crud/join.h>
-#include <udho/db/pg/schema/column.h>
+#include <udho/db/pg/generators/fwd.h>
+#include <udho/db/pg/schema/constraints.h>
 
 
 namespace udho{
 namespace db{
 namespace pg{
 
+namespace generators{
 
-/**
- * @brief DDL query.
- * @ingroup crud
- * @tparam RelationT
- */
+
 template <typename RelationT>
-struct ddl{
-    using relation = RelationT;
-    using schema = typename RelationT::schema;
+struct drop{
+    drop(){}
 
-    struct create{
-        struct if_exists{
-            struct drop{
-                template <typename DerivedT>
-                struct activity: insert_::template activity<DerivedT>{
-                    typedef typename insert_::template activity<DerivedT> base;
-                    typedef typename insert_::template generators<RelationT> generators;
+    auto operator()(){
+        return if_exists();
+    }
 
-                    generators generate;
+    auto if_exists(){
+        using namespace ozo::literals;
+        return "drop table if exists "_SQL + std::move(RelationT::name());
+    }
 
-                    template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
-                    template <typename ContextT, typename... T, typename... Args>
-                    activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema()) {}
 
-                    using base::operator();
-                };
-
-            };
-            struct skip{};
-        };
-    };
 };
 
+
+}
+
 }
 }
 }
 
+#endif // UDHO_DB_PG_GENERATORS_PARTS_DROP_H
 
-#endif // UDHO_DB_PG_CRUD_DDL_H

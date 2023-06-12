@@ -7,6 +7,9 @@
 #include <string>
 #include <tuple>
 #include <regex>
+
+#include "common.h"
+
 #include <udho/db/pg/activities/basic.h>
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/pg/activities/after.h>
@@ -28,7 +31,7 @@
 #include <boost/algorithm/string/trim.hpp>
 
 #include <udho/db/pg/decorators/definitions.h>
-#include <udho/db/pg/generators/ddl.h>
+#include <udho/db/pg/crud/create.h>
 
 namespace db = udho::db;
 namespace pg = db::pg;
@@ -94,43 +97,6 @@ namespace memberships{
 
 // } relations
 
-struct sql{
-    std::string _query;
-
-    sql() = default;
-    explicit sql(const char* q): _query(q) {}
-    sql(const sql&) = default;
-
-    std::string query() const { 
-        std::string q = boost::algorithm::trim_copy(_query);
-        return std::regex_replace(q, std::regex("\\s+"), " ");
-    }
-
-    friend bool operator==(const sql& lhs, const sql& rhs);
-    friend std::ostream& operator<<(std::ostream& stream, const sql& s);
-    friend sql operator%(const sql&, const char* str);
-    friend sql operator%(const char* str, const sql&);
-};
-
-bool operator==(const sql& lhs, const sql& rhs){
-    return lhs.query() == rhs.query();
-}
-
-sql operator%(const sql&, const char* str){
-    return sql(str);
-}
-
-sql operator%(const char* str, const sql&){
-    return sql(str);
-}
-
-std::ostream& operator<<(std::ostream& stream, const sql& s){
-    stream << s.query();
-    return stream;
-}
-
-#define SQL_EXPECT_SAME(x, y) CHECK(sql() % x.text().c_str() == y % sql())
-#define SQL_EXPECT(x, y, T) CHECK(sql() % x.text().c_str() == y % sql()); CHECK((x.params() == T))
 
 boost::asio::io_service io;
 udho::servers::quiet::stateless::request_type req;
@@ -141,15 +107,93 @@ ozo::connection_pool_config dbconfig;
 ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres");
 auto pool = ozo::connection_pool(conn_info, dbconfig);
 
+TEST_CASE("postgresql CREATE query", "[pg]") {
+    using create_articles_after_drop = pg::ddl<articles::table>
+                                         ::create
+                                         ::if_exists
+                                         ::drop
+                                         ::apply;
+
+    auto create_articles_after_drop_collector = udho::activities::collect<create_articles_after_drop>(ctx);
+    SQL_EXPECT_SAME(
+        create_articles_after_drop(create_articles_after_drop_collector, pool, io).sql(),
+        "drop table if exists articles                                      \
+         create table if not exists articles(                               \
+            id bigint primary key,                                          \
+            title varchar unique,                                           \
+            author bigint references students(id) on delete restrict,       \
+            project bigint,                                                 \
+            published timestamp without time zone not null default now(),   \
+            content text                                                    \
+        )"
+    );
+
+    using create_articles_after_skip = pg::ddl<articles::table>
+                                         ::create
+                                         ::if_exists
+                                         ::skip
+                                         ::apply;
+
+    auto create_articles_after_skip_collector = udho::activities::collect<create_articles_after_skip>(ctx);
+    SQL_EXPECT_SAME(
+        create_articles_after_skip(create_articles_after_skip_collector, pool, io).sql(),
+        "create table if not exists articles(                               \
+            id bigint primary key,                                          \
+            title varchar unique,                                           \
+            author bigint references students(id) on delete restrict,       \
+            project bigint,                                                 \
+            published timestamp without time zone not null default now(),   \
+            content text                                                    \
+        )"
+    );
+
+    using create_articles_except_after_drop = pg::ddl<articles::table>
+                                                ::create
+                                                ::except<articles::content>
+                                                ::if_exists
+                                                ::drop
+                                                ::apply;
+
+    auto create_articles_except_after_drop_collector = udho::activities::collect<create_articles_except_after_drop>(ctx);
+    SQL_EXPECT_SAME(
+        create_articles_except_after_drop(create_articles_except_after_drop_collector, pool, io).sql(),
+        "drop table if exists articles                                      \
+         create table if not exists articles(                               \
+            id bigint primary key,                                          \
+            title varchar unique,                                           \
+            author bigint references students(id) on delete restrict,       \
+            project bigint,                                                 \
+            published timestamp without time zone not null default now()    \
+        )"
+    );
+
+    using create_articles_only_after_drop = pg::ddl<articles::table>
+                                              ::create
+                                              ::only<articles::id, articles::title, articles::author, articles::project, articles::published>
+                                              ::if_exists
+                                              ::drop
+                                              ::apply;
+
+    auto create_articles_only_after_drop_collector = udho::activities::collect<create_articles_only_after_drop>(ctx);
+    SQL_EXPECT_SAME(
+        create_articles_only_after_drop(create_articles_only_after_drop_collector, pool, io).sql(),
+        "drop table if exists articles                                      \
+         create table if not exists articles(                               \
+            id bigint primary key,                                          \
+            title varchar unique,                                           \
+            author bigint references students(id) on delete restrict,       \
+            project bigint,                                                 \
+            published timestamp without time zone not null default now()    \
+        )"
+    );
+}
+
 TEST_CASE("postgresql SELECT query", "[pg]") {
 
     std::cout << "pg::constraints::has::not_null<articles::published>::value "      << pg::constraints::has::not_null<articles::published>::value      << std::endl;
     std::cout << "pg::constraints::has::not_null<articles::project>::value   "      << pg::constraints::has::not_null<articles::project>::value        << std::endl;
     std::cout << "pg::constraints::has::default_value<articles::published>::value " << pg::constraints::has::default_value<articles::published>::value << std::endl;
     std::cout << "pg::constraints::has::default_value<articles::project>::value   " << pg::constraints::has::default_value<articles::project>::value   << std::endl;
-
-    pg::generators::create<articles::table> create;
-    std::cout << create.except<articles::content>().text().c_str() << std::endl;
 
     using all_students = pg::from<students::table>
                            ::fetch

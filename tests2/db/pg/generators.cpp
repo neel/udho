@@ -6,6 +6,7 @@
 #include <udho/server.h>
 #include <string>
 #include <tuple>
+#include "common.h"
 #include <boost/hana/string.hpp>
 #include <udho/db/pg/schema/defs.h>
 #include <udho/db/pg/schema/field.h>
@@ -16,6 +17,8 @@
 #include <udho/db/pg/generators/set.h>
 #include <udho/db/pg/generators/where.h>
 #include <udho/db/pg/generators/returning.h>
+#include <udho/db/pg/generators/create.h>
+#include <udho/db/pg/generators/drop.h>
 
 using namespace udho::db;
 using namespace ozo::literals;
@@ -31,6 +34,22 @@ PG_ELEMENT(marks, std::int64_t);
 struct table: pg::relation<table, id, name, grade, marks>{
     PG_NAME("students")
 };
+
+}
+
+namespace articles{
+
+    PG_ELEMENT(id,        pg::types::bigserial, pg::constraints::primary);
+    PG_ELEMENT(title,     pg::types::varchar,   pg::constraints::unique);
+    PG_ELEMENT(author,    pg::types::bigint,    pg::constraints::references<students::table::column<students::id>>::restrict);
+    PG_ELEMENT(project,   pg::types::bigint);
+    PG_ELEMENT(published, pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
+    PG_ELEMENT(content,   pg::types::text);
+
+    struct table: pg::relation<table, id, title, author, project, published, content>{
+        PG_NAME(articles)
+        using readonly = pg::readonly<id>;
+    };
 
 }
 
@@ -133,4 +152,50 @@ TEST_CASE("postgresql query generators", "[pg]") {
         
         CHECK(std::string(returning.except<students::grade>().text().c_str()) == "returning id, name, marks");
     }
+
+    SECTION("postgres generators create"){
+        pg::generators::create<articles::table> create;
+
+        SQL_EXPECT_SAME(
+            (create.all()),
+            "create table if not exists articles(                               \
+                id bigserial primary key,                                       \
+                title varchar unique,                                           \
+                author bigint references \"students\"(id) on delete restrict,   \
+                project bigint,                                                 \
+                published timestamp without time zone not null default now(),   \
+                content text                                                    \
+            )"
+        );
+
+        SQL_EXPECT_SAME(
+            (create.except<articles::content>()),
+            "create table if not exists articles(                             \
+                id bigserial primary key,                                     \
+                title varchar unique,                                         \
+                author bigint references \"students\"(id) on delete restrict, \
+                project bigint,                                               \
+                published timestamp without time zone not null default now()  \
+            )"
+        );
+
+        SQL_EXPECT_SAME(
+            (create.only<articles::id, articles::title, articles::author, articles::project, articles::published>()),
+            "create table if not exists articles(                             \
+                id bigserial primary key,                                     \
+                title varchar unique,                                         \
+                author bigint references \"students\"(id) on delete restrict, \
+                project bigint,                                               \
+                published timestamp without time zone not null default now()  \
+            )"
+        );
+    }
+
+    SECTION("postgres generators drop"){
+        pg::generators::drop<articles::table> drop;
+
+        SQL_EXPECT_SAME(drop(), "drop table if exists articles");
+    }
+
 }
+

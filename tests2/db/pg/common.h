@@ -25,81 +25,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_DB_PG_GENERATORS_PARTS_DDL_H
-#define UDHO_DB_PG_GENERATORS_PARTS_DDL_H
-
-#include <type_traits>
-#include <ozo/query_builder.h>
-#include <udho/db/pg/generators/fwd.h>
-#include <udho/db/pg/schema/constraints.h>
-
+#ifndef UDHO_DB_PG_TESTS_COMMON_H
+#define UDHO_DB_PG_TESTS_COMMON_H
 
 namespace udho{
 namespace db{
 namespace pg{
+namespace tests{
 
-namespace generators{
+struct sql{
+    std::string _query;
 
-template <typename RelationT>
-struct create{
-    create(){}
+    sql() = default;
+    explicit sql(const char* q): _query(q) {}
+    sql(const sql&) = default;
 
-    auto operator()(){
-        return all();
+    std::string query() const {
+        std::string q = boost::algorithm::trim_copy(_query);
+        return std::regex_replace(q, std::regex("\\s+"), " ");
     }
 
-    auto all(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.definitions())
-            + "\n)"_SQL;
-    }
-
-    template <typename... OnlyFields>
-    auto only(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.template definitions_only<OnlyFields...>())
-            + "\n)"_SQL;
-    }
-
-    template <typename... ExceptFields>
-    auto except(){
-        using namespace ozo::literals;
-        return "create table if not exists "_SQL + std::move(RelationT::name())
-            + "(\n"_SQL
-                    + std::move(_schema.template definitions_except<ExceptFields...>())
-            + "\n)"_SQL;
-    }
-
-    private:
-        typename RelationT::schema _schema;
+    friend bool operator==(const sql& lhs, const sql& rhs);
+    friend std::ostream& operator<<(std::ostream& stream, const sql& s);
+    friend sql operator%(const sql&, const char* str);
+    friend sql operator%(const char* str, const sql&);
 };
 
+bool operator==(const sql& lhs, const sql& rhs){
+    return lhs.query() == rhs.query();
+}
 
-template <typename RelationT>
-struct drop{
-    drop(){}
+sql operator%(const sql&, const char* str){
+    return sql(str);
+}
 
-    auto operator()(){
-        return if_exists();
-    }
+sql operator%(const char* str, const sql&){
+    return sql(str);
+}
 
-    auto if_exists(){
-        using namespace ozo::literals;
-        return "drop table if exists "_SQL + std::move(RelationT::name());
-    }
-
-
-};
-
-
+std::ostream& operator<<(std::ostream& stream, const sql& s){
+    stream << s.query();
+    return stream;
 }
 
 }
 }
 }
+}
 
-#endif // UDHO_DB_PG_GENERATORS_PARTS_DDL_H
+#define SQL_EXPECT_SAME(x, y) CHECK(udho::db::pg::tests::sql() % x.text().c_str() == y % udho::db::pg::tests::sql())
+#define SQL_EXPECT(x, y, T) CHECK(udho::db::pg::tests::sql() % x.text().c_str() == y % udho::db::pg::tests::sql()); CHECK((x.params() == T))
+
+
+#endif // UDHO_DB_PG_TESTS_COMMON_H
