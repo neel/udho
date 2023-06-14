@@ -38,7 +38,8 @@ namespace pg{
 namespace generators{
     
 /**
- * values ([value]*) part of the insert query
+ * @brief values ([value]*) part of the insert query
+ * @ingroup generators
  */
 template <typename... Fields>
 struct values<pg::basic_schema<Fields...>>{

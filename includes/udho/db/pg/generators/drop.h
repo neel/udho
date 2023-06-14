@@ -40,7 +40,10 @@ namespace pg{
 
 namespace generators{
 
-
+/**
+ * @brief generator for drop query
+ * @ingroup generators
+ */
 template <typename RelationT>
 struct drop{
     drop(){}

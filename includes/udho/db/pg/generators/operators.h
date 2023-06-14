@@ -34,6 +34,14 @@
 #include <ozo/query_builder.h>
 #include <udho/db/pg/schema/detail.h>
 
+
+/**
+ * @brief create a generator for a postgresql operator
+ * @param OPCODE C++ name of teh operator
+ * @param OPSYM  actual postgresql symbol for the operator
+ * @note Requires the operator to be declared using @ref DECLARE_OPERATOR before using @ref GENERATE_OPERATOR
+ * @ingroup generators
+ */
 #define GENERATE_OPERATOR(OPCODE, OPSYM)                                   \
     template <typename FieldT, typename ColumnT>                           \
     struct op<pg::op:: OPCODE ## _ <FieldT, ColumnT>>{                     \

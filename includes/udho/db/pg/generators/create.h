@@ -89,6 +89,10 @@ struct create_{
 };
 
 
+/**
+ * @brief generator for create query
+ * @ingroup generators
+ */
 template <typename RelationT>
 struct create{
     create(){}

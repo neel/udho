@@ -39,9 +39,9 @@ namespace pg{
 namespace generators{
     
 /**
- * @brief into part of the query
- * 
+ * @brief generator for the into part of the query
  * @tparam RelationT 
+ * @ingroup generators
  */
 template <typename RelationT>
 struct into<pg::from<RelationT>>{
