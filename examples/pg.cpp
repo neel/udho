@@ -71,7 +71,7 @@ struct table: pg::relation<table, id, title, started>{
 }
 
 namespace students{
-    
+
 using destruct = pg::ddl<students::table>
                  ::drop
                  ::apply;
@@ -100,7 +100,7 @@ using by_id = pg::from<students::table>
     ::apply;
 
 PG_ERROR_CODE(by_id, boost::beast::http::status::forbidden)
-    
+
 using fullname = pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>;
 using like = pg::from<students::table>
     ::fetch
@@ -108,7 +108,7 @@ using like = pg::from<students::table>
     ::include<fullname::as<students::name>>
     ::by<students::id::gte, fullname::like>
     ::apply;
-       
+
 using create = pg::into<students::table>
     ::insert
     ::only<students::first_name, students::last_name>
@@ -118,7 +118,7 @@ using create = pg::into<students::table>
 }
 
 namespace articles{
-    
+
 using destruct = pg::ddl<articles::table>
                  ::drop
                  ::apply;
@@ -144,7 +144,7 @@ using create = pg::into<articles::table>
     ::only<articles::title, articles::author>
     ::returning<articles::id>
     ::apply;
-    
+
 }
 
 template <typename FieldT>
@@ -153,7 +153,7 @@ using relation_of = typename pg::from<students::table>::relation_of<FieldT>;
 int main(){
     typedef udho::contexts::stateless context_type;
     typedef udho::servers::quiet::stateless server_type;
-    
+
     pg::connection::config dbconfig;
     pg::connection::info conn_info("host=localhost dbname=postgres user=postgres");
     auto pool = pg::connection::pool(conn_info, dbconfig);
@@ -163,7 +163,7 @@ int main(){
     context_type::request_type req;
     server_type::attachment_type attachment(io);
     context_type ctx(attachment.aux(), req, attachment);
-    
+
     auto start = pg::start<articles::destruct, students::destruct, articles::construct, students::construct, students::all, students::like, students::by_id, articles::all, students::create, articles::create>::with(ctx, pool);
     auto drop_articles   = pg::after(start).perform<articles::destruct>(start);
     auto drop_students   = pg::after(drop_articles).perform<students::destruct>(start);
@@ -180,7 +180,7 @@ int main(){
     auto students_like   = pg::after(fetch_student).perform<students::like>(start);
     students_like[students::id::gte::val] = 2;
     students_like[students::fullname::like::val] = std::string("Hello");
-    
+
     pg::after(fetch_students, fetch_articles, create_student).finish(start, [&](const pg::data<students::all, articles::all, students::create>& d){
         if(d.failed<students::all>()){
             const auto& failure = d.failure<students::all>();
@@ -195,7 +195,7 @@ int main(){
                 std::cout << result[students::id::val] << " " << result[students::first_name::text::val] << " " << result[students::last_name::text::val] << std::endl;
             }
         }
-        
+
         if(d.failed<articles::all>()){
             const auto& failure = d.failure<articles::all>();
             std::cout << failure.reason << std::endl;
@@ -209,7 +209,7 @@ int main(){
                 std::cout << result << std::endl;
             }
         }
-        
+
         if(d.failed<students::create>()){
             const auto& failure = d.failure<students::create>();
             std::cout << failure.reason << std::endl;
@@ -218,11 +218,12 @@ int main(){
             std::cout << "student created " << result[students::id::val] << std::endl;
         }
     });
-    
-    
+
+
     start();
-    
+
     io.run();
-    
+
     return 0;
 }
+

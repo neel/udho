@@ -83,8 +83,9 @@ struct decorator{
     template <typename FieldT>
     decltype(auto) operator()(const FieldT& f){
         nlohmann::json j;
+        auto relation_name = io::detail::extract_relation_name<FieldT>::apply();
         nlohmann::json value = {
-            {"relation", io::detail::extract_relation_name<FieldT>::apply().text().c_str()},
+            {"relation", io::detail::compiled_str_to_str::apply(relation_name)},
             {"value", f.value()}
         };
         const char* key = f.detached ? f.key().c_str() : f.ozo_name().text().c_str();
@@ -93,8 +94,9 @@ struct decorator{
     }
     template <typename FieldT, typename ResultT>
     decltype(auto) operator()(const FieldT& f, ResultT res){
+        auto relation_name = io::detail::extract_relation_name<FieldT>::apply();
         nlohmann::json value = {
-            {"relation", io::detail::extract_relation_name<FieldT>::apply().text().c_str()},
+            {"relation", io::detail::compiled_str_to_str::apply(relation_name)},
             {"value", f.value()}
         };
         const char* key = f.detached ? f.key().c_str() : f.ozo_name().text().c_str();

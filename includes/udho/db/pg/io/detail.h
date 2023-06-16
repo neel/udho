@@ -30,6 +30,7 @@
 
 #include <udho/db/pg/constructs/functions.h>
 #include <udho/db/pg/constructs/strings.h>
+#include <boost/hana/string.hpp>
 
 namespace udho{
 namespace db{
@@ -55,6 +56,17 @@ template <typename FieldT>
 struct extract_relation_name<FieldT, false>{
     static auto apply(){
         return FieldT::relation_type::name();
+    }
+};
+
+struct compiled_str_to_str{
+    template <char... X>
+    static std::string apply(const boost::hana::string<X...>& s){
+        return std::string(s.c_str());
+    }
+    template <typename ElementsT>
+    static std::string apply(const ozo::query_builder<ElementsT>& s){
+        return std::string(s.text().c_str());
     }
 };
 
