@@ -56,7 +56,7 @@ struct ddl{
                     using namespace ozo::literals;
                     drop_generator d;
                     create_type    c;
-                    return d() + " "_SQL + c();
+                    return d() + "; "_SQL + c();
                 }
             };
         };

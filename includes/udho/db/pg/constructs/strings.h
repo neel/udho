@@ -107,6 +107,11 @@ namespace db{
     using _primary  = string<' ', 'p', 'r', 'i', 'm', 'a', 'r', 'y', ' ', 'k', 'e', 'y'>;
 }
 
+template <char... C>
+auto literal(const boost::hana::string<C...>& s){
+    return ozo::make_query_builder(boost::hana::make_tuple(ozo::make_query_text(s)));
+}
+
 }
     
 /**

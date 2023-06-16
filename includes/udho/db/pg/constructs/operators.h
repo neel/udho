@@ -38,6 +38,23 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <udho/db/pg/schema/column.h>
 
+/**
+ * @brief PostgreSQL Operators
+ * @note The operator must be declared inside udho::db::pg::op namespace
+ * @code
+ * namespace udho{
+ * namespace db{
+ * namespace pg{
+ * namespace op{
+ *     DECLARE_OPERATOR(near);
+ * }
+ * }
+ * }
+ * }
+ * @endcode
+ * @note A generator has to be created using @ref GENERATE_OPERATOR
+ * @ingroup pg
+ */
 #define DECLARE_OPERATOR(OPCODE)                                                                                                                                                                                            \
     template <typename FieldT, typename ColumnT = void>                                                                                                                                                                     \
     struct OPCODE ## _ : FieldT{                                                                                                                                                                                            \
@@ -60,23 +77,6 @@ namespace udho{
 namespace db{
 namespace pg{
  
-/**
- * @brief PostgreSQL Operators
- * @note The operator must be declared inside udho::db::pg::op namespace
- * @code
- * namespace udho{
- * namespace db{
- * namespace pg{
- * namespace op{
- *     DECLARE_OPERATOR(near);
- * }
- * }
- * }
- * }
- * @endcode
- * @note A generator has to be created using @ref GENERATE_OPERATOR
- * @ingroup pg
- */
 namespace op{
 
 DECLARE_OPERATOR(lt);
