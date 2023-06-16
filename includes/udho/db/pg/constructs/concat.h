@@ -60,23 +60,23 @@ template <char... C>
 struct stringify<constants::string<C...>>{
     static constexpr decltype(auto) ozo_name() {
         using namespace ozo::literals;
-        return constants::string<C...>(); 
+        return constants::literal(constants::string<C...>());
     }
     template <typename RelT>
     static constexpr auto relate(RelT) {
         using namespace ozo::literals;
-        return constants::string<C...>(); 
+        return constants::literal(constants::string<C...>());
     }
 };
 
 template <typename H, typename... T>
 struct implode{
     static auto ozo_name(){
-        return stringify<H>::ozo_name() + constants::comma() + implode<T...>::ozo_name();
+        return stringify<H>::ozo_name() + constants::literal(constants::comma()) + implode<T...>::ozo_name();
     }
     template <typename RelT>
     static constexpr auto relate(RelT rel) {
-        return stringify<H>::relate(rel) + constants::comma() + implode<T...>::relate(rel);
+        return stringify<H>::relate(rel) + constants::literal(constants::comma()) + implode<T...>::relate(rel);
     }
 };
 
@@ -113,7 +113,7 @@ struct concat: udho::hazo::element<concat<X...>, std::string>{
     using base = udho::hazo::element<concat<X...>, std::string>;
     
     using base::base;
-    
+
     typedef op::eq<concat<X...>>       eq;
     typedef op::neq<concat<X...>>      neq;
     typedef op::lt<concat<X...>>       lt;

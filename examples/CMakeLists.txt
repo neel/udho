@@ -31,3 +31,6 @@ TARGET_LINK_LIBRARIES(udho-example-activities udho)
 
 ADD_EXECUTABLE(udho-example-form form)
 TARGET_LINK_LIBRARIES(udho-example-form udho)
+
+ADD_EXECUTABLE(udho-example-pg pg.cpp)
+TARGET_LINK_LIBRARIES(udho-example-pg udho)
