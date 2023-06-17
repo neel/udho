@@ -16,26 +16,29 @@ where `Fields...` are the fields inside that relation.
 @code {.cpp}
 
 namespace authors{
-    PG_ELEMENT(id,          pg::types::integer);
-    PG_ELEMENT(first_name,  pg::types::varchar);
-    PG_ELEMENT(last_name,   pg::types::varchar);
+  PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
+  PG_ELEMENT(first_name,  pg::types::varchar,   pg::constraints::not_null);
+  PG_ELEMENT(last_name,   pg::types::varchar);
 
-   struct table: pg::relation<table, id, first_name, last_name>{
-        PG_NAME(users)
-        using readonly = pg::readonly<id>;
-    };
+  struct table: pg::relation<table, id, first_name, last_name>{
+      PG_NAME(users)
+      using readonly = pg::readonly<id>;
+  };
 
 }
 
 namespace articles{
-    PG_ELEMENT(id,          pg::types::integer);
-    PG_ELEMENT(author,      pg::types::integer);
-    PG_ELEMENT(title,       pg::types::varchar);
-    
-    struct table: pg::relation<table, id, author, title>{
-        PG_NAME(users)
-        using readonly = pg::readonly<id>;
-    };
+  PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
+  PG_ELEMENT(title,       pg::types::varchar,   pg::constraints::unique,   pg::constraints::not_null);
+  PG_ELEMENT(abstract,    pg::types::text);
+  PG_ELEMENT(author,      pg::types::bigint,    pg::constraints::not_null, pg::constraints::references<students::table::column<students::id>>::restrict);
+  PG_ELEMENT(project,     pg::types::bigint);
+  PG_ELEMENT(created,     pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
+
+  struct table: pg::relation<table, id, title, abstract, author, project, created>{
+      PG_NAME(articles)
+      using readonly = pg::readonly<id, created>;
+  };
 
 }
 

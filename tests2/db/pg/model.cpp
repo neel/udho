@@ -40,12 +40,15 @@ namespace pg = db::pg;
 
 namespace students{
 
-    PG_ELEMENT(id,       pg::types::bigint);
-    PG_ELEMENT(name,     pg::types::varchar);
-    PG_ELEMENT(project,  pg::types::bigint);
-    PG_ELEMENT(marks,    pg::types::real);
+    PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
+    PG_ELEMENT(first_name,  pg::types::varchar, pg::constraints::not_null);
+    PG_ELEMENT(last_name,   pg::types::varchar);
+    PG_ELEMENT(marks,       pg::types::integer);
+    PG_ELEMENT(age,         pg::types::integer);
+    PG_ELEMENT(writer,      pg::types::bigint);
+    PG_ELEMENT(name,        pg::types::text);
 
-    struct table: pg::relation<table, id, name, project, marks>{
+    struct table: pg::relation<table, id, first_name, last_name, marks, age>{
         PG_NAME(students)
         using readonly = pg::readonly<id>;
     };
@@ -54,7 +57,7 @@ namespace students{
 
 namespace articles{
 
-    PG_ELEMENT(id,        pg::types::bigint,    pg::constraints::primary);
+    PG_ELEMENT(id,        pg::types::bigserial, pg::constraints::primary);
     PG_ELEMENT(title,     pg::types::varchar,   pg::constraints::unique);
     PG_ELEMENT(author,    pg::types::bigint,    pg::constraints::references<students::table::column<students::id>>::restrict);
     PG_ELEMENT(project,   pg::types::bigint);
@@ -64,18 +67,18 @@ namespace articles{
     struct table: pg::relation<table, id, title, author, project, published, content>{
         PG_NAME(articles)
         using readonly = pg::readonly<id>;
-        // using primary  = pg::primary<id>;
     };
 
 }
 
 namespace projects{
 
-    PG_ELEMENT(id,     pg::types::bigint);
-    PG_ELEMENT(title,  pg::types::varchar);
-    PG_ELEMENT(admin,  pg::types::bigint);
+    PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
+    PG_ELEMENT(title,       pg::types::varchar);
+    PG_ELEMENT(started,     pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
+    PG_ELEMENT(admin,       pg::types::bigint);
 
-    struct table: pg::relation<table, id, title, admin>{
+    struct table: pg::relation<table, id, title, started, admin>{
         PG_NAME(projects)
         using readonly = pg::readonly<id>;
     };
@@ -84,9 +87,9 @@ namespace projects{
 
 namespace memberships{
 
-    PG_ELEMENT(id,      pg::types::bigint);
-    PG_ELEMENT(student, pg::types::bigint);
-    PG_ELEMENT(project, pg::types::bigint);
+    PG_ELEMENT(id,      pg::types::bigserial, pg::constraints::primary);
+    PG_ELEMENT(student, pg::types::bigint, pg::constraints::references<students::table::column<students::id>>::restrict);
+    PG_ELEMENT(project, pg::types::bigint, pg::constraints::references<projects::table::column<projects::id>>::restrict);
 
     struct table: pg::relation<table, id, student, project>{
         PG_NAME(memberships)
@@ -108,26 +111,6 @@ ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres")
 auto pool = ozo::connection_pool(conn_info, dbconfig);
 
 TEST_CASE("postgresql CREATE query", "[pg]") {
-    using create_articles_after_drop = pg::ddl<articles::table>
-                                         ::create
-                                         ::if_exists
-                                         ::drop
-                                         ::apply;
-
-    auto create_articles_after_drop_collector = udho::activities::collect<create_articles_after_drop>(ctx);
-    SQL_EXPECT_SAME(
-        create_articles_after_drop(create_articles_after_drop_collector, pool, io).sql(),
-        "drop table if exists articles                                      \
-         create table if not exists articles(                               \
-            id bigint primary key,                                          \
-            title varchar unique,                                           \
-            author bigint references students(id) on delete restrict,       \
-            project bigint,                                                 \
-            published timestamp without time zone not null default now(),   \
-            content text                                                    \
-        )"
-    );
-
     using create_articles_after_skip = pg::ddl<articles::table>
                                          ::create
                                          ::if_exists
@@ -138,7 +121,7 @@ TEST_CASE("postgresql CREATE query", "[pg]") {
     SQL_EXPECT_SAME(
         create_articles_after_skip(create_articles_after_skip_collector, pool, io).sql(),
         "create table if not exists articles(                               \
-            id bigint primary key,                                          \
+            id bigserial primary key,                                          \
             title varchar unique,                                           \
             author bigint references students(id) on delete restrict,       \
             project bigint,                                                 \
@@ -147,19 +130,18 @@ TEST_CASE("postgresql CREATE query", "[pg]") {
         )"
     );
 
-    using create_articles_except_after_drop = pg::ddl<articles::table>
+    using create_articles_except_after_skip = pg::ddl<articles::table>
                                                 ::create
                                                 ::except<articles::content>
                                                 ::if_exists
-                                                ::drop
+                                                ::skip
                                                 ::apply;
 
-    auto create_articles_except_after_drop_collector = udho::activities::collect<create_articles_except_after_drop>(ctx);
+    auto create_articles_except_after_skip_collector = udho::activities::collect<create_articles_except_after_skip>(ctx);
     SQL_EXPECT_SAME(
-        create_articles_except_after_drop(create_articles_except_after_drop_collector, pool, io).sql(),
-        "drop table if exists articles                                      \
-         create table if not exists articles(                               \
-            id bigint primary key,                                          \
+        create_articles_except_after_skip(create_articles_except_after_skip_collector, pool, io).sql(),
+        "create table if not exists articles(                               \
+            id bigserial primary key,                                          \
             title varchar unique,                                           \
             author bigint references students(id) on delete restrict,       \
             project bigint,                                                 \
@@ -167,19 +149,18 @@ TEST_CASE("postgresql CREATE query", "[pg]") {
         )"
     );
 
-    using create_articles_only_after_drop = pg::ddl<articles::table>
+    using create_articles_only_after_skip = pg::ddl<articles::table>
                                               ::create
                                               ::only<articles::id, articles::title, articles::author, articles::project, articles::published>
                                               ::if_exists
-                                              ::drop
+                                              ::skip
                                               ::apply;
 
-    auto create_articles_only_after_drop_collector = udho::activities::collect<create_articles_only_after_drop>(ctx);
+    auto create_articles_only_after_skip_collector = udho::activities::collect<create_articles_only_after_skip>(ctx);
     SQL_EXPECT_SAME(
-        create_articles_only_after_drop(create_articles_only_after_drop_collector, pool, io).sql(),
-        "drop table if exists articles                                      \
-         create table if not exists articles(                               \
-            id bigint primary key,                                          \
+        create_articles_only_after_skip(create_articles_only_after_skip_collector, pool, io).sql(),
+        "create table if not exists articles(                               \
+            id bigserial primary key,                                          \
             title varchar unique,                                           \
             author bigint references students(id) on delete restrict,       \
             project bigint,                                                 \
@@ -202,33 +183,53 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
     auto all_students_collector = udho::activities::collect<all_students>(ctx);
     SQL_EXPECT_SAME(
         all_students(all_students_collector, pool, io).sql(),
-        "select                \
-            students.id,       \
-            students.name,     \
-            students.project,  \
-            students.marks     \
-        from students          \
+        "select                  \
+            students.id,         \
+            students.first_name, \
+            students.last_name,  \
+            students.marks,      \
+            students.age         \
+        from students            \
+        "
+    );
+
+    using all_students_name = pg::from<students::table>
+                           ::fetch
+                           ::all
+                           ::exclude<students::first_name, students::last_name>
+                           ::include<pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>::as<students::name>>
+                           ::apply;
+    auto all_students_name_collector = udho::activities::collect<all_students_name>(ctx);
+    SQL_EXPECT_SAME(
+        all_students_name(all_students_name_collector, pool, io).sql(),
+        "select                  \
+            students.id,         \
+            students.marks,      \
+            students.age,        \
+            concat(students.first_name,' ',students.last_name) as name  \
+        from students            \
         "
     );
 
     using search_students = pg::from<students::table>
                            ::fetch
                            ::all
-                           ::by<students::name::not_like>
+                           ::by<students::first_name::not_like>
                            ::apply;
     auto search_students_collector = udho::activities::collect<search_students>(ctx);
     search_students act_search_students(search_students_collector, pool, io);
-    act_search_students[students::name::not_like::val] = pg::oz::varchar("Neel");
+    act_search_students[students::first_name::not_like::val] = pg::oz::varchar("Neel");
     SQL_EXPECT(
         act_search_students.sql(),
-        "select                \
-            students.id,       \
-            students.name,     \
-            students.project,  \
-            students.marks     \
-        from students          \
+        "select                  \
+            students.id,         \
+            students.first_name, \
+            students.last_name,  \
+            students.marks,      \
+            students.age         \
+        from students            \
         where                          \
-            students.name not like $1  \
+            students.first_name not like $1  \
         ",
         boost::hana::make_tuple(pg::oz::varchar("Neel"))
     );
@@ -241,13 +242,14 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
     auto all_students_limited_collector = udho::activities::collect<all_students_limited>(ctx);
     SQL_EXPECT(
         all_students_limited(all_students_limited_collector, pool, io).sql(),
-        "select                \
-            students.id,       \
-            students.name,     \
-            students.project,  \
-            students.marks     \
-        from students          \
-        limit $1 offset $2     \
+        "select                  \
+            students.id,         \
+            students.first_name, \
+            students.last_name,  \
+            students.marks,      \
+            students.age         \
+        from students            \
+        limit $1 offset $2       \
         ",
         (boost::hana::make_tuple(5, 0))
     );
@@ -261,15 +263,16 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
     auto all_students_top5_collector = udho::activities::collect<all_students_top5>(ctx);
     SQL_EXPECT(
         all_students_top5(all_students_top5_collector, pool, io).sql(),
-        "select                 \
-            students.id,        \
-            students.name,      \
-            students.project,   \
-            students.marks      \
-        from students           \
-        order by                \
-            students.marks desc \
-        limit $1 offset $2      \
+        "select                  \
+            students.id,         \
+            students.first_name, \
+            students.last_name,  \
+            students.marks,      \
+            students.age         \
+        from students            \
+        order by                 \
+            students.marks desc  \
+        limit $1 offset $2       \
         ",
         (boost::hana::make_tuple(5, 0))
     );
@@ -287,9 +290,10 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
         act_one_student.sql(),
         "select                     \
             students.id,            \
-            students.name,          \
-            students.project,       \
-            students.marks          \
+            students.first_name,    \
+            students.last_name,     \
+            students.marks,         \
+            students.age            \
         from students               \
             where                   \
                 students.id = $1    \
@@ -297,31 +301,32 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
         (boost::hana::make_tuple(42))
     );
 
-    using unallocated_students = pg::from<students::table>
+    using noage_students = pg::from<students::table>
                           ::retrieve
                           ::all
-                          ::by<students::project::is_null>
+                          ::by<students::age::is_null>
                           ::apply;
 
-    auto unallocated_students_collector = udho::activities::collect<unallocated_students>(ctx);
-    unallocated_students act_unallocated_students(unallocated_students_collector, pool, io);
+    auto noage_students_collector = udho::activities::collect<noage_students>(ctx);
+    noage_students act_noage_students(noage_students_collector, pool, io);
     SQL_EXPECT_SAME(
-        act_unallocated_students.sql(),
+        act_noage_students.sql(),
         "select                          \
             students.id,                 \
-            students.name,               \
-            students.project,            \
-            students.marks               \
+            students.first_name,         \
+            students.last_name,          \
+            students.marks,              \
+            students.age                 \
         from students                    \
             where                        \
-                students.project is null \
+                students.age is null     \
         "
     );
 
     using special_students = pg::from<students::table>
                           ::retrieve
                           ::all
-                          ::by<students::project::eq_<students::table::column<students::marks>>>
+                          ::by<students::age::eq_<students::table::column<students::marks>>>
                           ::apply;
 
     auto special_students_collector = udho::activities::collect<special_students>(ctx);
@@ -330,12 +335,13 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
         act_special_students.sql(),
         "select                                    \
             students.id,                           \
-            students.name,                         \
-            students.project,                      \
-            students.marks                         \
+            students.first_name,                   \
+            students.last_name,                    \
+            students.marks,                        \
+            students.age                           \
         from students                              \
             where                                  \
-                students.project = students.marks  \
+                students.age = students.marks  \
         "
     );
 
@@ -428,38 +434,38 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
 
     using students_project_avg = pg::from<students::table>
                                    ::fetch
-                                   ::only<students::project, pg::avg<students::marks>>
-                                   ::group<students::project>
+                                   ::only<students::first_name, pg::avg<students::marks>>
+                                   ::group<students::first_name>
                                    ::apply;
     auto students_project_avg_collector = udho::activities::collect<students_project_avg>(ctx);
     SQL_EXPECT_SAME(
         students_project_avg(students_project_avg_collector, pool, io).sql(),
         "select                       \
-            students.project,         \
+            students.first_name,      \
             AVG(students.marks)       \
         from students                 \
-        group by students.project     \
+        group by students.first_name  \
         "
     );
 
     using students_project_avg_by = pg::from<students::table>
                                       ::fetch
-                                      ::only<students::project, pg::avg<students::marks>>
-                                      ::by<students::project::gte>
-                                      ::group<students::project>
+                                      ::only<students::first_name, pg::avg<students::marks>>
+                                      ::by<students::marks::gte>
+                                      ::group<students::first_name>
                                       ::apply;
     auto students_project_avg_by_collector = udho::activities::collect<students_project_avg_by>(ctx);
     students_project_avg_by act_students_project_avg_by(students_project_avg_by_collector, pool, io);
-    act_students_project_avg_by[students::project::gte::val] = 2;
+    act_students_project_avg_by[students::marks::gte::val] = 2;
     SQL_EXPECT(
         act_students_project_avg_by.sql(),
         "select                        \
-            students.project,          \
+            students.first_name,       \
             AVG(students.marks)        \
         from students                  \
             where                      \
-                students.project >= $1 \
-        group by students.project      \
+                students.marks >= $1   \
+        group by students.first_name   \
         ",
         boost::hana::make_tuple(2)
     );
@@ -473,17 +479,18 @@ TEST_CASE("postgresql INSERT query", "[pg]") {
                           ::apply;
     auto student_add_collector = udho::activities::collect<student_add>(ctx);
     student_add act_student_add(student_add_collector, pool, io);
-    act_student_add[students::name::val] = pg::oz::varchar("Neel Basu");
-    act_student_add[students::project::val] = 5;
+    act_student_add[students::first_name::val] = pg::oz::varchar("Neel");
+    act_student_add[students::last_name::val] = pg::oz::varchar("Basu");
     act_student_add[students::marks::val] = 80;
+    act_student_add[students::age::val] = 20;
     SQL_EXPECT(
         act_student_add.sql(),
         "insert into students       \
-            (name, project, marks)  \
+            (first_name, last_name, marks, age)  \
         values                      \
-            ($1, $2, $3)            \
+            ($1, $2, $3, $4)            \
         ",
-        boost::hana::make_tuple(pg::oz::varchar("Neel Basu"), 5, 80)
+        boost::hana::make_tuple(pg::oz::varchar("Neel"), pg::oz::varchar("Basu"), 80, 20)
     );
 
     using student_add_returning = pg::into<students::table>
@@ -493,18 +500,19 @@ TEST_CASE("postgresql INSERT query", "[pg]") {
                           ::apply;
     auto student_add_returning_collector = udho::activities::collect<student_add_returning>(ctx);
     student_add_returning act_student_returning_add(student_add_returning_collector, pool, io);
-    act_student_returning_add[students::name::val] = pg::oz::varchar("Neel Basu");
-    act_student_returning_add[students::project::val] = 5;
+    act_student_returning_add[students::first_name::val] = pg::oz::varchar("Neel");
+    act_student_returning_add[students::last_name::val]  = pg::oz::varchar("Basu");
     act_student_returning_add[students::marks::val] = 80;
+    act_student_returning_add[students::age::val] = 20;
     SQL_EXPECT(
         act_student_returning_add.sql(),
         "insert into students       \
-            (name, project, marks)  \
+            (first_name, last_name, marks, age)  \
         values                      \
-            ($1, $2, $3)            \
+            ($1, $2, $3, $4)            \
         returning id                \
         ",
-        boost::hana::make_tuple(pg::oz::varchar("Neel Basu"), 5, 80)
+        boost::hana::make_tuple(pg::oz::varchar("Neel"), pg::oz::varchar("Basu"), 80, 20)
     );
 
     using student_add_all_returning = pg::into<students::table>
@@ -515,38 +523,40 @@ TEST_CASE("postgresql INSERT query", "[pg]") {
     auto student_add_all_returning_collector = udho::activities::collect<student_add_all_returning>(ctx);
     student_add_all_returning act_student_returning_add_all(student_add_all_returning_collector, pool, io);
     act_student_returning_add_all[students::id::val] = 1;
-    act_student_returning_add_all[students::name::val] = pg::oz::varchar("Neel Basu");
-    act_student_returning_add_all[students::project::val] = 5;
+    act_student_returning_add_all[students::first_name::val] = pg::oz::varchar("Neel");
+    act_student_returning_add_all[students::last_name::val]  = pg::oz::varchar("Basu");
     act_student_returning_add_all[students::marks::val] = 80;
+    act_student_returning_add_all[students::age::val] = 20;
     SQL_EXPECT(
         act_student_returning_add_all.sql(),
         "insert into students           \
-            (id, name, project, marks)  \
+            (id, first_name, last_name, marks, age)  \
         values                          \
-            ($1, $2, $3, $4)            \
+            ($1, $2, $3, $4, $5)            \
         returning id, marks             \
         ",
-        boost::hana::make_tuple(1, pg::oz::varchar("Neel Basu"), 5, 80)
+        boost::hana::make_tuple(1, pg::oz::varchar("Neel"), pg::oz::varchar("Basu"), 80, 20)
     );
 
     using student_add_some_returning = pg::into<students::table>
                           ::insert
-                          ::only<students::name, students::marks>
-                          ::returning<students::id, students::project>
+                          ::only<students::first_name, students::last_name, students::marks>
+                          ::returning<students::id, students::age>
                           ::apply;
     auto student_add_some_returning_collector = udho::activities::collect<student_add_some_returning>(ctx);
     student_add_some_returning act_student_returning_add_some(student_add_some_returning_collector, pool, io);
-    act_student_returning_add_some[students::name::val]  = "Neel Basu";
+    act_student_returning_add_some[students::first_name::val] = pg::oz::varchar("Neel");
+    act_student_returning_add_some[students::last_name::val]  = pg::oz::varchar("Basu");
     act_student_returning_add_some[students::marks::val] = 80;
     SQL_EXPECT(
         act_student_returning_add_some.sql(),
         "insert into students   \
-            (name, marks)       \
+            (first_name, last_name, marks)       \
         values                  \
-            ($1, $2)            \
-        returning id, project   \
+            ($1, $2, $3)            \
+        returning id, age     \
         ",
-        boost::hana::make_tuple(pg::oz::varchar("Neel Basu"), 80)
+        boost::hana::make_tuple(pg::oz::varchar("Neel"), pg::oz::varchar("Basu"), 80)
     );
     
 }
@@ -560,19 +570,21 @@ TEST_CASE("postgresql UPDATE query", "[pg]") {
                           ::apply;
     auto student_update_collector = udho::activities::collect<student_update>(ctx);
     student_update act_student_update(student_update_collector, pool, io);
-    act_student_update[students::id::val]      = 1;
-    act_student_update[students::name::val]    = pg::oz::varchar("Sunanda Bose");
-    act_student_update[students::project::val] = 4;
-    act_student_update[students::marks::val]   = 90;
+    act_student_update[students::id::val]          = 1;
+    act_student_update[students::first_name::val]  = pg::oz::varchar("Sunanda");
+    act_student_update[students::last_name::val]   = pg::oz::varchar("Bose");
+    act_student_update[students::age::val]         = 4;
+    act_student_update[students::marks::val]       = 90;
     SQL_EXPECT(
         act_student_update.sql(),
         "update students       \
-            set name    = $1,  \
-                project = $2,  \
-                marks   = $3   \
-            where id    = $4   \
+            set first_name = $1,  \
+                last_name  = $2,  \
+                marks      = $3,  \
+                age        = $4   \
+            where id       = $5   \
         ",
-        boost::hana::make_tuple(pg::oz::varchar("Sunanda Bose"), 4, 90, 1)
+        boost::hana::make_tuple(pg::oz::varchar("Sunanda"), pg::oz::varchar("Bose"), 90, 4, 1)
     );
 
     using student_update_all = pg::into<students::table>
@@ -581,19 +593,21 @@ TEST_CASE("postgresql UPDATE query", "[pg]") {
                           ::apply;
     auto student_update_all_collector = udho::activities::collect<student_update_all>(ctx);
     student_update_all act_student_update_all(student_update_all_collector, pool, io);
-    act_student_update_all[students::id::val]      = 1;
-    act_student_update_all[students::name::val]    = pg::oz::varchar("Sunanda Bose");
-    act_student_update_all[students::project::val] = 4;
-    act_student_update_all[students::marks::val]   = 90;
+    act_student_update_all[students::id::val]          = 1;
+    act_student_update_all[students::first_name::val]  = pg::oz::varchar("Sunanda");
+    act_student_update_all[students::last_name::val]   = pg::oz::varchar("Bose");
+    act_student_update_all[students::age::val]         = 4;
+    act_student_update_all[students::marks::val]       = 90;
     SQL_EXPECT(
         act_student_update_all.sql(),
         "update students       \
-            set id      = $1,  \
-                name    = $2,  \
-                project = $3,  \
-                marks   = $4   \
+            set id         = $1,  \
+                first_name = $2,  \
+                last_name  = $3,  \
+                marks      = $4,  \
+                age        = $5   \
         ",
-        boost::hana::make_tuple(1, pg::oz::varchar("Sunanda Bose"), 4, 90)
+        boost::hana::make_tuple(1, pg::oz::varchar("Sunanda"), pg::oz::varchar("Bose"), 90, 4)
     );
     
 }
