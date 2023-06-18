@@ -26,7 +26,9 @@ auto start = pg::start<
 >::with(ctx, pool);
 @endcode
 
-@note The activities are defined @ref PgSubtasks_activities "below"
+@note The activities are defined in the @ref PgSubtasks_activities "Appendix"
+
+@par If one activity fails then all activities that depend on it will also be cancelled.
 
 The `start` mentioned above creates a collector and an initial activity works as an empty subtask but
 doesn't perform any SQL query.
