@@ -105,6 +105,18 @@ TEST_CASE("postgresql CREATE query", "[pg]") {
     );
 }
 
+TEST_CASE("postgresql DROP query", "[pg]") {
+    using drop_students = pg::ddl<students::table>
+                            ::drop
+                            ::apply;
+
+    auto drop_students_collector = udho::activities::collect<drop_students>(ctx);
+    SQL_EXPECT_SAME(
+        drop_students(drop_students_collector, pool, io).sql(),
+        "drop table if exists students"
+    );
+}
+
 TEST_CASE("postgresql SELECT query", "[pg]") {
 
     std::cout << "pg::constraints::has::not_null<articles::published>::value "      << pg::constraints::has::not_null<articles::published>::value      << std::endl;
@@ -277,7 +289,7 @@ TEST_CASE("postgresql SELECT query", "[pg]") {
             students.age                           \
         from students                              \
             where                                  \
-                students.age = students.marks  \
+                students.age = students.marks      \
         "
     );
 
@@ -546,4 +558,21 @@ TEST_CASE("postgresql UPDATE query", "[pg]") {
         boost::hana::make_tuple(1, pg::oz::varchar("Sunanda"), pg::oz::varchar("Bose"), 90, 4)
     );
     
+}
+
+TEST_CASE("postgresql REMOVE query", "[pg]") {
+
+    using student_remove = pg::from<students::table>
+                          ::remove
+                          ::by<students::id>
+                          ::apply;
+    auto student_remove_collector = udho::activities::collect<student_remove>(ctx);
+    student_remove act_student_remove(student_remove_collector, pool, io);
+    act_student_remove[students::id::val] = 1;
+    SQL_EXPECT(
+        act_student_remove.sql(),
+        "delete from students where id = $1",
+        boost::hana::make_tuple(1)
+    );
+
 }

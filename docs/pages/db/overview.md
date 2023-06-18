@@ -1,8 +1,5 @@
-Database 
+Pg Overview {#PgOverview}
 ===================
-
-Declaration
-------------
 
 A field has a name and is associated with a PostgreSQL data type. The postgresql type has
 a C++ type associated with it. Get and Set operations on that field expects the value operand
@@ -48,6 +45,8 @@ namespace articles{
       necessary. Usercode may even reuse one field for multiple relations. But such practice may reduce 
       readability of the code.
 
+See more on @ref PgRelations
+
 
 Query
 ------
@@ -62,7 +61,7 @@ using all = pg::from<authors::table>
    ::apply;
 @endcode
 
-
+See more on @ref PgActivities
 
 Connection
 -----------
