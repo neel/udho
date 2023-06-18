@@ -106,7 +106,7 @@ namespace visual{
          */
         template <typename T>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request) const{
-            visual::page p = page(request.target().to_string());
+            visual::page p = page(std::string(request.target()));
             decorate(p);
 
             boost::beast::http::response<boost::beast::http::string_body> res{_status, request.version()};
@@ -145,7 +145,7 @@ namespace visual{
          */
         template <typename T, typename RouterT>
         boost::beast::http::response<boost::beast::http::string_body> response(const boost::beast::http::request<T>& request, RouterT& router) const{
-            visual::page p = page(request.target().to_string());
+            visual::page p = page(std::string(request.target()));
             std::string routes = "<div class='routes'>"+internal::html_summary(router)+"</div>";
             visual::block routing("routes", routes);
             p.add_block(routing);

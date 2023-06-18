@@ -39,7 +39,8 @@ namespace pg{
 namespace generators{
     
 /**
- * order by field asc part of the select query
+ * @brief order by field asc part of the select query
+ * @ingroup generators
  */
 template <typename FieldT>
 struct order<pg::ascending<FieldT, true>>{

@@ -31,15 +31,34 @@
 #include <udho/hazo.h>
 #include <udho/db/pg/schema/fwd.h>
 #include <udho/db/pg/decorators.h>
+#include <udho/db/pg/schema/constraints.h>
 
 namespace udho{
 namespace db{
 namespace pg{
    
+/**
+ * @brief Typesafe container to define a projection.
+ * @tparam Fields...
+ * 
+ * A schema is a type safe heterogenous container that defines a projection.
+ * It is used to define the subset of columns in a query. A schema can also
+ * contain values corresponding to each of these columns. Usually the fields
+ * inside a schama are created using @ref PG_ELEMENT and have a PostgreSQL 
+ * type associated with it.
+ * 
+ * It can be used as an associative container to set and get the values for 
+ * each of the fields in the schema. It will raise compile time error if the 
+ * requested field is not part of the schema or a value of an unexpected type
+ * is being set for a field. 
+ *  
+ * @ingroup schema
+ */
 template <typename... Fields>
-struct basic_schema: udho::hazo::map_v<Fields...>{
-    typedef udho::hazo::map_v<Fields...> map_type;
+struct basic_schema: udho::hazo::map_d<Fields...>{
+    typedef udho::hazo::map_d<Fields...> map_type;
     using map_type::map_type;
+
     
     template <template <typename> class ConditionT>
     using exclude_if = typename map_type::template exclude_if<ConditionT>::template translate<basic_schema>;
@@ -53,6 +72,9 @@ struct basic_schema: udho::hazo::map_v<Fields...>{
     using has = typename map_type::template has<KeyT>;
     using indices = typename map_type::indices;
     using keys = typename map_type::keys;
+
+    template <typename FieldT>
+    using referenced_by = typename pg::constraints::referenced_by<FieldT, Fields...>;
     
     template <typename K>
     decltype(auto) operator()(const K& k) const { return map_type::data(k);}
@@ -170,6 +192,18 @@ struct basic_schema: udho::hazo::map_v<Fields...>{
     template <typename... T, typename PrefixT>
     auto conditions_except(PrefixT prefix) const {
         return map_type::decorate(decorators::conditions::except<T...>::prefixed(std::move(prefix)));
+    }
+
+    auto definitions() const {
+        return map_type::decorate(decorators::definitions{});
+    }
+    template <typename... T>
+    auto definitions_only() const {
+        return map_type::decorate(decorators::definitions::only<T...>{});
+    }
+    template <typename... T>
+    auto definitions_except() const {
+        return map_type::decorate(decorators::definitions::except<T...>{});
     }
 };
 

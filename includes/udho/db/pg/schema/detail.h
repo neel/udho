@@ -29,6 +29,9 @@
 #define UDHO_DB_PG_SCHEMA_DETAIL_H
 
 #include <udho/hazo/node/fwd.h>
+#include <ozo/query_builder.h>
+
+#define OZO_LITERAL(TEXT) TEXT ## _SQL
 
 namespace udho{
 namespace db{
@@ -44,6 +47,26 @@ struct infer_index_type{
 template <typename FieldT>
 struct infer_index_type<FieldT, false>{
     typedef FieldT type;
+};
+
+template <typename RhsT>
+struct query_rhs{
+    static auto apply(){
+        return RhsT::ozo_name();
+    }
+};
+
+template <char... C>
+struct query_rhs<boost::hana::string<C...>>{
+    static auto apply(){
+        return ozo::query_builder<
+            boost::hana::tuple<
+                ozo::query_element<
+                    boost::hana::string<C...>,
+                ozo::query_text_tag>
+            >
+        >{};
+    }
 };
     
 }

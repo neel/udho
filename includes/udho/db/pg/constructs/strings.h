@@ -34,50 +34,90 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief handful of frequently used ozo string constants 
+ * @ingroup pg
+ */
 namespace constants{
     
+/**
+ * @brief Declare an ozo string
+ * @code 
+ * typedef udho::db::pg::constants::string<'h', 'e', 'l', 'l', 'o'> hello;
+ * @endcode 
+ * @tparam C... 
+ */
 template <char... C>
-using string = ozo::query_builder<
-    boost::hana::tuple<
-        ozo::query_element<
-            boost::hana::string<C...>, 
-        ozo::query_text_tag> 
-    > 
->;
+using string = boost::hana::string<C...>;
 
-using empty  = string<>;
-using space  = string<' '>;
-using hyphen = string<'-'>;
-using comma  = string<','>;
-using dot    = string<'.'>;
 
+using empty    = string<>;      ///< empty ozo string
+using space    = string<' '>;   ///< space ( )
+using hyphen   = string<'-'>;   ///< hyphen (-)
+using comma    = string<','>;   ///< comma (,)
+using dot      = string<'.'>;   ///< dot (.)
+using newline  = string<'\n'>;   ///< dot (.)
+using null     = string<'n', 'u', 'l', 'l'>;   ///< null
+using now      = string<'n', 'o', 'w', '(', ')'>;   ///< now()
+using cascade  = string<'c', 'a', 's', 'c', 'a', 'd', 'e'>;
+using restrict = string<'r', 'e', 's', 't', 'r', 'i', 'c', 't'>;
+using set_null = string<'s', 'e', 't', ' ', 'n', 'u', 'l', 'l'>;
+
+/**
+ * @brief quoted versions of frequently used characters
+ */
 namespace quoted{
     
-    using empty  = string<>;
-    using space  = string<'\'', ' ', '\''>;
-    using hyphen = string<'\'', '-', '\''>;
-    using comma  = string<'\'', ',', '\''>;
-    using dot    = string<'\'', '.', '\''>;
+    using empty  = string<>;                    ///< empty
+    using space  = string<'\'', ' ', '\''>;     ///< quoted space (' ')
+    using hyphen = string<'\'', '-', '\''>;     ///< quoted hyphen ('-')
+    using comma  = string<'\'', ',', '\''>;     ///< quoted comma (',')
+    using dot    = string<'\'', '.', '\''>;     ///< quoted dot ('.')
     
 }
 
+/**
+ * @brief parenthesis characters
+ */
 namespace parenthesis{
-    using open  = string<'('>;
-    using close = string<')'>;
+    using open  = string<'('>;                  ///< parenthesis open (()
+    using close = string<')'>;                  ///< parenthesis close ())
 }
 
+/**
+ * @brief curly brace characters
+ */
 namespace curly{
-    using open  = string<'{'>;
-    using close = string<'}'>;
+    using open  = string<'{'>;                  ///< curly brace open ({)
+    using close = string<'}'>;                  ///< curly brace clone (})
 }
 
+/**
+ * @brief square brace characters
+ */
 namespace square{
-    using open  = string<'['>;
-    using close = string<']'>;
+    using open  = string<'['>;                  ///< square brace open ([)
+    using close = string<']'>;                  ///< square brace close (])
+}
+
+namespace db{
+    using _not_null = string<' ', 'n', 'o', 't', ' ', 'n', 'u', 'l', 'l'>;
+    using _unique   = string<' ', 'u', 'n', 'i', 'q', 'u', 'e'>;
+    using _default  = string<' ', 'd', 'e', 'f', 'a', 'u', 'l', 't'>;
+    using _primary  = string<' ', 'p', 'r', 'i', 'm', 'a', 'r', 'y', ' ', 'k', 'e', 'y'>;
+}
+
+template <char... C>
+auto literal(const boost::hana::string<C...>& s){
+    return ozo::make_query_builder(boost::hana::make_tuple(ozo::make_query_text(s)));
 }
 
 }
     
+/**
+ * @}
+ */
+
 }
 }
 }

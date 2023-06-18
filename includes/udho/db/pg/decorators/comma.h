@@ -38,6 +38,12 @@ namespace pg{
 
 namespace decorators{
     
+/**
+ * @ingroup decorators
+ * @addtogroup helpers
+ * @{
+ */
+
 template <typename InitialT, typename LeftT, typename RightT>
 struct comma_helper{
     comma_helper(const InitialT&){}
@@ -59,6 +65,34 @@ constexpr decltype(auto) comma(InitialT initial, LeftT&& l, RightT&& r){
     comma_helper<InitialT, LeftT, RightT> helper(initial);
     return helper(std::forward<LeftT>(l), std::forward<RightT>(r));
 }
+
+///
+
+template <typename InitialT, typename LeftT, typename RightT>
+struct newline_helper{
+    newline_helper(const InitialT&){}
+    constexpr decltype(auto) operator()(LeftT l, RightT r){
+        using namespace ozo::literals;
+        return ""_SQL + std::move(l) + ", \n"_SQL + std::move(r);
+    }
+};
+template <typename InitialT, typename LeftT>
+struct newline_helper<InitialT, LeftT, InitialT>{
+    newline_helper(const InitialT&){}
+    constexpr decltype(auto) operator()(LeftT&& l, InitialT&&){
+        return std::forward<LeftT>(l);
+    }
+};
+
+template <typename InitialT, typename LeftT, typename RightT>
+constexpr decltype(auto) newline(InitialT initial, LeftT&& l, RightT&& r){
+    newline_helper<InitialT, LeftT, RightT> helper(initial);
+    return helper(std::forward<LeftT>(l), std::forward<RightT>(r));
+}
+
+/**
+ * @}
+ */
 
 }
 

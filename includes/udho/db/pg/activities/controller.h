@@ -40,9 +40,14 @@ namespace activities{
     
 /**
  * @brief Controls one or more pg activities
- * 
+ * Contains a reference to connection pool, and boost io service and copies the context.
+ * Generally a controller is passed to the constructor of an activity insted of passing
+ * the collector, io service, connector seperately. The controller serves the collector
+ * through the underlying init activity.
+ * @see udho::activities::init
  * @tparam ContextT 
  * @tparam T... Activity types that are to be performed. 
+ * @ingroup pg
  */
 template <typename ContextT, typename... Activities>
 struct controller: udho::db::pg::activities::subtask<udho::activities::init<ContextT, Activities...>>{

@@ -59,6 +59,10 @@ struct join<join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, 
     }
 };
 
+/**
+ * @brief generators for join clause
+ * @ingroup generators
+ */
 template <typename JoinType, typename RelationL, typename RelationR, typename FieldL, typename FieldR, typename CurrentJoin, typename RestJoin>
 struct join<join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, join_clause<CurrentJoin, RestJoin>>>{
     typedef join<joined<JoinType, RelationL, RelationR, FieldL, FieldR>> head;

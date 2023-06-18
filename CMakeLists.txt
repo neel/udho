@@ -25,10 +25,14 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE
 
 option(UDHO_BUILD_TESTS "Build the unit tests" ON)
 option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
-option(UDHO_USE_ICU "Build with ICU" ON)
+option(UDHO_USE_ICU "Build with ICU" OFF)
 option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
 option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
 option(UDHO_HEADER_ONLY "Use Udho as Header Only Library" ON)
+
+IF(UNIX AND APPLE)
+    SET(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl@3/3.0.1")
+ENDIF()
 
 if(UDHO_HEADER_ONLY)
     add_compile_definitions(UDHO_HEADER_ONLY)
@@ -74,8 +78,8 @@ SET(UDHO_SOURCES
     sources/udho/page.cpp
 )
 
-# ADD_EXECUTABLE(sandbox sandbox.cpp)
-# TARGET_LINK_LIBRARIES(sandbox udho)
+ADD_EXECUTABLE(sandbox sandbox.cpp)
+TARGET_LINK_LIBRARIES(sandbox udho)
 
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
@@ -114,6 +118,11 @@ if(UDHO_BUILD_TESTS)
    enable_testing()
    add_subdirectory(tests)
    add_subdirectory(tests2)
+endif()
+
+if(UNIX AND APPLE)
+    target_link_libraries(udho PUBLIC "-framework Security")
+    target_link_libraries(udho PUBLIC "-framework CoreServices")
 endif()
 
 add_subdirectory(docs)

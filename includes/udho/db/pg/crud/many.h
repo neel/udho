@@ -35,6 +35,11 @@ namespace udho{
 namespace db{
 namespace pg{
 
+/**
+ * @brief Dataset having zero or more rows with the specified fields
+ * @ingroup crud
+ * @tparam Fields...
+ */
 template <typename... Fields>
 struct many{
     typedef pg::schema<Fields...> schema_type;

@@ -186,6 +186,7 @@ namespace on{
     
     /**
      * Specialize this template to customize error message on SQL failure
+     * @ingroup pg
      */
     template <typename ActivityT>
     struct failure{
@@ -209,6 +210,7 @@ namespace on{
 
     /**
      * Specialize this template to customize error message on error (unexpected response from SQL query)
+     * @ingroup pg
      */
     template <typename ActivityT>
     struct error{

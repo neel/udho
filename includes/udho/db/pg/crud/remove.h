@@ -37,7 +37,8 @@ namespace db{
 namespace pg{
     
 /**
- * remove returning none 
+ * @brief remove returning none 
+ * @ingroup crud
  * modifiable pg::schema<Fields...> for where query
  */
 template <typename... Fields>
@@ -78,6 +79,11 @@ struct basic_remove{
     };
 };
     
+/**
+ * @brief REMOVE query
+ * @ingroup crud
+ * @tparam Fields...
+ */
 template <typename... Fields>
 using remove = basic_remove<Fields...>;
 

@@ -48,6 +48,10 @@ namespace oz{
     OZO_STRONG_TYPEDEF(std::string, varchar)
 }
     
+/**
+ * @brief PostgreSQL datatypes
+ * @ingroup pg
+ */
 namespace types{
 
 #define _OZO_LITERAL_(TEXT) TEXT ## _SQL
@@ -91,6 +95,24 @@ struct timestamp_tz{
 
 }
 
+/**
+ * @brief A postgresql datatype.
+ * @tparam ValueT C++ type
+ * @tparam NameT A struct specifying a postgresql type as compile time string
+ *
+ * A postgresql type is defined by a C++ datatype and a postgresql type name expressed as a C++ class that provides
+ * a public static function named `name()` which returns a complie time string representing the postgresql type.
+ * @code 
+ * struct bigint{
+ *     static auto name() { 
+ *         using namespace ozo::literals;
+ *         return "bigint"_SQL;
+ *     }
+ * };
+ * using bigint = type<std::int64_t, names::bigint>;
+ * @endcode 
+ * @ingroup types
+ */
 template <typename ValueT, typename NameT>
 struct type{
     using value_type = ValueT;
@@ -99,20 +121,26 @@ struct type{
         return NameT::name();
     }
 };
-    
-using bigint      = type<ozo::pg::bigint, names::bigint>;
-using integer     = type<ozo::pg::int4, names::integer>;
-using smallint    = type<ozo::pg::int2, names::smallint>;
-using bigserial   = type<ozo::pg::bigint, names::bigserial>;
-using serial      = type<ozo::pg::int4, names::serial>;
-using smallserial = type<ozo::pg::int2, names::smallserial>;
-using real        = type<ozo::pg::float4, names::real>;
-using float8      = type<ozo::pg::float8, names::float8>;
-using varchar     = type<udho::db::pg::oz::varchar, names::varchar>;
-using boolean     = type<bool, names::boolean>;
-using text        = type<std::string, names::text>;
-using timestamp   = type<ozo::pg::timestamp, names::timestamp>;
-using uuid        = type<ozo::pg::uuid, names::uuid>;
+
+using bigint      = type<ozo::pg::bigint, names::bigint>;               ///< Postgresql Type bigint
+using integer     = type<ozo::pg::int4, names::integer>;                ///< Postgresql Type integer
+using smallint    = type<ozo::pg::int2, names::smallint>;               ///< Postgresql Type smallint
+using bigserial   = type<ozo::pg::bigint, names::bigserial>;            ///< Postgresql Type bigserial
+using serial      = type<ozo::pg::int4, names::serial>;                 ///< Postgresql Type serial
+using smallserial = type<ozo::pg::int2, names::smallserial>;            ///< Postgresql Type smallserial
+using real        = type<ozo::pg::float4, names::real>;                 ///< Postgresql Type real
+using float8      = type<ozo::pg::float8, names::float8>;               ///< Postgresql Type float8
+using varchar     = type<udho::db::pg::oz::varchar, names::varchar>;    ///< Postgresql Type varchar
+using boolean     = type<bool, names::boolean>;                         ///< Postgresql Type boolean
+using text        = type<std::string, names::text>;                     ///< Postgresql Type text
+using timestamp   = type<ozo::pg::timestamp, names::timestamp>;         ///< Postgresql Type timestamp
+using uuid        = type<ozo::pg::uuid, names::uuid>;                   ///< Postgresql Type uuid
+#ifdef __DOXYGEN__
+using json        = type<implementation-defined, names::json>;          ///< Postgresql Type json @warning If nlohmann json is unavailable then std::string is used to store the json data. Otherwise nlohmann json is used
+#endif 
+
+
+#ifndef __DOXYGEN__
 
 #ifdef WITH_JSON_NLOHMANN
 using json        = type<nlohmann::json, names::json>;
@@ -120,28 +148,57 @@ using json        = type<nlohmann::json, names::json>;
 using json        = type<ozo::pg::json, names::json>;
 #endif 
 
-}
- 
-using bigint      = types::bigint;
-using integer     = types::integer;
-using smallint    = types::smallint;
-using bigserial   = types::bigserial;
-using serial      = types::serial;
-using smallserial = types::smallserial;
-using real        = types::real;
-using float8      = types::float8;
-using varchar     = types::varchar;
-using boolean     = types::boolean;
-using text        = types::text;
-using timestamp   = types::timestamp;
-using json        = types::json;
-using uuid        = types::uuid;
- 
-}
+#endif // __DOXYGEN__
 
 }
+ 
+/**
+ * @ingroup types
+ * @{
+ */
+using bigint      = types::bigint;           ///< @copydoc types::bigint convenient typedef in `udho::db::pg` namespace
+using integer     = types::integer;          ///< @copydoc types::integer convenient typedef in `udho::db::pg` namespace
+using smallint    = types::smallint;         ///< @copydoc types::smallint convenient typedef in `udho::db::pg` namespace
+using bigserial   = types::bigserial;        ///< @copydoc types::bigserial convenient typedef in `udho::db::pg` namespace
+using serial      = types::serial;           ///< @copydoc types::serial convenient typedef in `udho::db::pg` namespace
+using smallserial = types::smallserial;      ///< @copydoc types::smallserial convenient typedef in `udho::db::pg` namespace
+using real        = types::real;             ///< @copydoc types::real convenient typedef in `udho::db::pg` namespace
+using float8      = types::float8;           ///< @copydoc types::float8 convenient typedef in `udho::db::pg` namespace
+using varchar     = types::varchar;          ///< @copydoc types::varchar convenient typedef in `udho::db::pg` namespace
+using boolean     = types::boolean;          ///< @copydoc types::boolean convenient typedef in `udho::db::pg` namespace
+using text        = types::text;             ///< @copydoc types::text convenient typedef in `udho::db::pg` namespace
+using timestamp   = types::timestamp;        ///< @copydoc types::timestamp convenient typedef in `udho::db::pg` namespace
+using json        = types::json;             ///< @copydoc types::json convenient typedef in `udho::db::pg` namespace
+using uuid        = types::uuid;             ///< @copydoc types::uuid convenient typedef in `udho::db::pg` namespace
+/**
+ * @}
+ */
+
+}  // pg
+
+} // db
+} // udho
+
+OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar");
+
+
+namespace ozo{
+
+inline bool operator==(std::string const& l, udho::db::pg::oz::varchar const& r){ return l == r.get(); }
+inline bool operator!=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l != r.get(); }
+inline bool operator< (std::string const& l, udho::db::pg::oz::varchar const& r){ return l <  r.get(); }
+inline bool operator<=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l <= r.get(); }
+inline bool operator> (std::string const& l, udho::db::pg::oz::varchar const& r){ return l >  r.get(); }
+inline bool operator>=(std::string const& l, udho::db::pg::oz::varchar const& r){ return l >= r.get(); }
+
+inline bool operator==(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() == r; }
+inline bool operator!=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() != r; }
+inline bool operator< (udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() <  r; }
+inline bool operator<=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() <= r; }
+inline bool operator> (udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() >  r; }
+inline bool operator>=(udho::db::pg::oz::varchar const& l, std::string const& r){ return l.get() >= r; }
+
 }
 
-OZO_PG_BIND_TYPE(udho::db::pg::oz::varchar, "varchar")
 
 #endif // UDHO_DB_PG_CONSTRUCTS_TYPES_H

@@ -38,17 +38,21 @@ namespace db{
 namespace detail{
 
 /**
- * @brief Converts an object of source type SourceT to target type TargetT using a converter ThatT.
- * ThatT should provide an operator() overload that returns a TargetT when called with a SourceT.
- * @internal However if SourceT is convertible to TargetT that ThatT is not used for conversion.
+ * @brief Converts an object of source type SourceT to target type TargetT.
+ * If the SourceT is implicitely convertible to TargetT then expects an `ThatT` to provide
+ * a `ThatT::operator()` overload which returns a TargetT when called with a `SourceT`.
  * 
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
+ * @ingroup db
  */
-template <typename ThatT, typename TargetT, typename SourceT, bool convertible = std::is_convertible<SourceT, TargetT>::value>
-struct conversion{
+template <typename ThatT, typename TargetT, typename SourceT, bool convertible = std::is_convertible<const SourceT&, TargetT>::value>
+struct conversion;
+
+template <typename ThatT, typename TargetT, typename SourceT>
+struct conversion<ThatT, TargetT, SourceT, true>{
     const ThatT& _that;
     
     conversion(const ThatT& that): _that(that){}
@@ -59,18 +63,21 @@ struct conversion{
 };
 
 /**
- * @brief Converts an object of source type SourceT to target type TargetT using a converter ThatT.
- * ThatT should provide an operator() overload that returns a TargetT when called with a SourceT.
- * @internal However if SourceT is convertible to TargetT that ThatT is not used for conversion.
+ * @brief Converts an object of source type SourceT to target type TargetT.
+ * If the SourceT is implicitely convertible to TargetT then expects an `ThatT` to provide
+ * a `ThatT::operator()` overload which returns a TargetT when called with a `SourceT`.
  * 
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT, typename SourceT>
 struct conversion<ThatT, TargetT, SourceT, false>{
     const ThatT& _that;
+
+    // static_assert(std::is_invocable_v<decltype(&ThatT::operator()), ThatT&, const SourceT&>, "ThatT must provide operator()(const SourceT&) overload that returns TargetT");
     
     conversion(const ThatT& that): _that(that){}
     TargetT operator()(const SourceT& source) const{
@@ -79,18 +86,23 @@ struct conversion<ThatT, TargetT, SourceT, false>{
 };
 
 /**
- * @brief An unary function object to transform an object of source type to target type
- * 
+ * @brief An unary function object to transform an object of source type to target type using @ref conversion 
+ * @note used in combination with `boost::transform_iterator` in `basic_activity` to convert an intermediate 
+ *       row (usually a tuple like object) to the intended object.
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT, typename SourceT = TargetT>
-struct transform: std::unary_function<const SourceT&, TargetT>, private detail::conversion<ThatT, TargetT, SourceT>{
+struct transform: private detail::conversion<ThatT, TargetT, SourceT>{
     typedef ThatT   that_type;
     typedef TargetT target_type;
     typedef SourceT source_type;
     typedef detail::conversion<ThatT, TargetT, SourceT> converter_type;
+
+    typedef const SourceT& argument_type;
+    typedef TargetT result_type;
     
     transform(const that_type& that): converter_type(that){}
     target_type operator()(const source_type& source) const{
@@ -99,16 +111,21 @@ struct transform: std::unary_function<const SourceT&, TargetT>, private detail::
 };
 
 /**
- * @brief When the SourceT and TargetT are same
- * 
+ * @brief An unary function object to transform an object of source type to target type using @ref conversion 
+ * @note used in combination with `boost::transform_iterator` in `basic_activity` to convert an intermediate 
+ *       row (usually a tuple like object) to the intended object
  * @tparam ThatT 
  * @tparam TargetT 
+ * @ingroup db
  */
 template <typename ThatT, typename TargetT>
-struct transform<ThatT, TargetT, TargetT>: std::unary_function<const TargetT&, TargetT>{
+struct transform<ThatT, TargetT, TargetT> {
     typedef ThatT   that_type;
     typedef TargetT target_type;
     typedef TargetT source_type;
+
+    typedef const TargetT& argument_type;
+    typedef TargetT result_type;
     
     const that_type& _that;
     
@@ -118,6 +135,17 @@ struct transform<ThatT, TargetT, TargetT>: std::unary_function<const TargetT&, T
     }
 };
 
+/**
+ * @brief processes SuccessT into ThatT 
+ * - Takes a reference to a ThatT object, which is expected to provide an operator() overload for the specific SuccessT.
+ * - The default template ignores SuccessT, while expecting that the ThatT::operator() will take the pair of iterators 
+ *   as arguments and construct itself.
+ * - In other specializations the SuccessT is used as an intermediate container between the iterator pair and the ThatT.
+ * 
+ * @tparam ThatT 
+ * @tparam SuccessT 
+ * @ingroup db
+ */
 template <typename ThatT, typename SuccessT>
 struct processor{
     typedef ThatT    that_type;
@@ -131,6 +159,17 @@ struct processor{
         _that(begin, end);
     }
 };
+
+/**
+ * @brief processor specialization to process a db::results<DataT> into ThatT
+ * - creates an intermediate db::results<DataT> data structure and writes deferenced values of [begin, end) into it.
+ * - expects that the iterator pair can be dereferenced and inserted into a db::results<DataT> data structure without any explicit conversion.
+ * - passes the intermediate db::results to ThatT::operator() for further processing.
+ *
+ * @tparam ThatT 
+ * @tparam DataT 
+ * @ingroup db
+ */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::results<DataT>>{
     typedef ThatT    that_type;
@@ -147,6 +186,16 @@ struct processor<ThatT, db::results<DataT>>{
     }
 };
 
+/**
+ * @brief processor specialization to process a db::result into ThatT
+ * - creates an intermediate db::result<DataT> data structure 
+ * - passes the deferenced value of begin to it's operator().
+ * - passes the intermediate db::result to ThatT::operator() for further processing.
+ * 
+ * @tparam ThatT 
+ * @tparam DataT 
+ * @ingroup db
+ */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::result<DataT>>{
     typedef ThatT    that_type;
@@ -165,6 +214,12 @@ struct processor<ThatT, db::result<DataT>>{
     }
 };
 
+/**
+ * @brief Checks whether the provided struct T has a `data_type` typedef 
+ * 
+ * @tparam T 
+ * @ingroup db
+ */
 template< typename T >
 struct HasDataType{
   typedef char                 yes;

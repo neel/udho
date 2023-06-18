@@ -34,14 +34,21 @@
 #include <udho/db/pg/generators/fwd.h>
 #include <udho/db/pg/crud/fwd.h>
 
+#include <udho/db/pg/generators/into.h>
+#include <udho/db/pg/generators/keys.h>
+#include <udho/db/pg/generators/values.h>
+#include <udho/db/pg/generators/returning.h>
+
 namespace udho{
 namespace db{
 namespace pg{
     
 /**
+ * @brief INSERT query builder.
+ * @ingroup crud
  * insert returning one pg::schema<Fields...> (e.g. the record just inserted)
  * modifiable pg::schema<Fields...> for assignments using [] 
- * no where query
+ * @note no where query
  */
 template <typename SchemaT>
 struct basic_insert{

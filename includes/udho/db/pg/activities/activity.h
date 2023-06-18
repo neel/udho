@@ -44,6 +44,7 @@ namespace pg{
  * @tparam DerivedT The Derived activity class 
  * @tparam SuccessT Type of success result, defaults to db::none, If the provided SuccessT has a typedef `data_type` then that SuccessT is used to store the successful result(s) of the activity. Otherwise the type db::result<SuccessT> is used
  * @tparam RowT By default RowT is  same as SuccessT. However usercode may provide a custom RowT
+ * @ingroup pg 
  */
 template <typename DerivedT, typename SuccessT = db::none, typename RowT = typename std::conditional<db::detail::HasDataType<SuccessT>::value, SuccessT, db::result<SuccessT>>::type::data_type>
 struct activity: basic_activity<DerivedT, SuccessT, RowT>{

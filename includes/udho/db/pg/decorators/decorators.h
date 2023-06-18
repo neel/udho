@@ -37,5 +37,6 @@
 #include <udho/db/pg/decorators/assignments.h>
 #include <udho/db/pg/decorators/conditions.h>
 #include <udho/db/pg/decorators/logical.h>
+#include <udho/db/pg/decorators/definitions.h>
 
 #endif // UDHO_DB_PG_DECORATORS_DECORATORS_H

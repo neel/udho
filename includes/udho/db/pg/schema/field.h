@@ -35,7 +35,7 @@
 #include <udho/db/pg/constructs/alias.h>
 #include <udho/db/pg/constructs/functions.h>
 #include <udho/db/pg/schema/defs.h>
+#include <udho/db/pg/schema/constraints.h>
 #include <udho/hazo/seq/seq.h>
-
 
 #endif // UDHO_DB_PG_SCHEMA_FIELD_H

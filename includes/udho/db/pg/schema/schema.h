@@ -42,6 +42,12 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief Define projection of a PostgreSQL relation.
+ * @see basic_schema
+ * @tparam T... 
+ * @ingroup schema
+ */
 template <typename... T>
 using schema = typename udho::hazo::operations::flatten<basic_schema, T...>::type;
     

@@ -168,25 +168,25 @@ UDHO_DETAIL_DB_PRETTY_PG_OP(not_in);
 UDHO_DETAIL_DB_PRETTY_PG_OP(in);
 
 
-template <char... C>
-struct type<udho::db::pg::constants::string<C...>, false>{
-    static std::string name([[maybe_unused]] const printer& p = printer()){
-        char const str[] = { C... };
-        std::string base = "udho::db::pg::constants::string<";
-        for(std::size_t i = 0; i != sizeof(str); ++i){
-            if(i != 0) 
-                base.append(", ");
-            base.push_back('\'');
-            if(str[i] == '\'') 
-                base.append("\\'");
-            else 
-                base.push_back(str[i]);
-            base.push_back('\'');
-        }
-        base.append(">");
-        return base;
-    }
-};
+// template <char... C>
+// struct type<udho::db::pg::constants::string<C...>, false>{
+//     static std::string name([[maybe_unused]] const printer& p = printer()){
+//         char const str[] = { C... };
+//         std::string base = "udho::db::pg::constants::string<";
+//         for(std::size_t i = 0; i != sizeof(str); ++i){
+//             if(i != 0)
+//                 base.append(", ");
+//             base.push_back('\'');
+//             if(str[i] == '\'')
+//                 base.append("\\'");
+//             else
+//                 base.push_back(str[i]);
+//             base.push_back('\'');
+//         }
+//         base.append(">");
+//         return base;
+//     }
+// };
 
 template <typename... X>
 struct type<udho::db::pg::concat<X...>, false>{

@@ -126,7 +126,8 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
         _time = boost::posix_time::second_clock::local_time();
         
         std::string path;
-        std::stringstream path_stream(_req.target().to_string());
+        std::string target_str(_req.target());
+        std::stringstream path_stream(target_str);
         std::getline(path_stream, path, '?');
         auto start = std::chrono::high_resolution_clock::now();
         try{
@@ -137,8 +138,8 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
             do{
                 if(ctx.rerouted()){
                     if(!ctx.reroutes()){
-                        _attachment << udho::logging::messages::formatted::error("router", "Error expecting rerouted context but got empty stack while serving %1%") % _req.target().to_string();
-                        throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error expecting rerouted context but got empty stack while serving %1%") % _req.target().to_string()).str());
+                        _attachment << udho::logging::messages::formatted::error("router", "Error expecting rerouted context but got empty stack while serving %1%") % std::string(_req.target());
+                        throw exceptions::http_error(boost::beast::http::status::internal_server_error, (boost::format("Error expecting rerouted context but got empty stack while serving %1%") % std::string(_req.target())).str());
                     }
                     
                     udho::detail::route last = ctx.top();
@@ -233,7 +234,8 @@ class connection : public std::enable_shared_from_this<connection<RouterT, Attac
     }
     void respond(udho::defs::response_type& msg){
         std::string path;
-        std::stringstream path_stream(_req.target().to_string());
+        std::string target_str(_req.target());
+        std::stringstream path_stream(target_str);
         std::getline(path_stream, path, '?');
         
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() - _time;

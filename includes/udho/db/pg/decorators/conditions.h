@@ -42,15 +42,32 @@ namespace pg{
 
 namespace decorators{
 
+/**
+ * @ingroup decorators
+ * @addtogroup conditions
+ * @{
+ */
+
 template <typename FieldTraitT>
 struct basic_conditions: private FieldTraitT{
     template <typename... Args>
     basic_conditions(Args&&... args): FieldTraitT(std::forward<Args>(args)...){}
     
-    template <typename FieldT>
+    template <typename FieldT, typename RelationT>
+    decltype(auto) operator()(const pg::column<FieldT, RelationT>& f){
+        using namespace ozo::literals;
+        return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply()) + " "_SQL + std::move(f.value());
+    }
+
+    template <typename FieldT, std::enable_if_t<FieldT::valueable::value, bool> = true>
     decltype(auto) operator()(const FieldT& f){
         using namespace ozo::literals;
         return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply()) + " "_SQL + std::move(f.value());
+    }
+    template <typename FieldT, std::enable_if_t<!FieldT::valueable::value, bool> = true>
+    decltype(auto) operator()(const FieldT& f){
+        using namespace ozo::literals;
+        return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply());
     }
     template <typename FieldT, typename ResultT>
     decltype(auto) operator()(const FieldT& f, ResultT res){
@@ -73,10 +90,21 @@ struct selected_conditions: private FieldTraitT{
     template <typename... Args>
     selected_conditions(Args&&... args): FieldTraitT(std::forward<Args>(args)...){}
     
-    template <typename FieldT, typename = typename enable<FieldT>::type>
-    auto operator()(const FieldT& f){
+    template <typename FieldT, typename RelationT>
+    decltype(auto) operator()(const pg::column<FieldT, RelationT>& f){
         using namespace ozo::literals;
         return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply()) + " "_SQL + std::move(f.value());
+    }
+
+    template <typename FieldT, std::enable_if_t<FieldT::valueable::value, bool> = true>
+    decltype(auto) operator()(const FieldT& f){
+        using namespace ozo::literals;
+        return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply()) + " "_SQL + std::move(f.value());
+    }
+    template <typename FieldT, std::enable_if_t<!FieldT::valueable::value, bool> = true>
+    decltype(auto) operator()(const FieldT& f){
+        using namespace ozo::literals;
+        return FieldTraitT::apply(f) + " "_SQL + std::move(pg::generators::op<FieldT>::apply());
     }
     template <typename FieldT, typename ResultT, typename = typename enable<FieldT>::type>
     auto operator()(const FieldT& f, ResultT res){
@@ -132,6 +160,10 @@ struct conditions: basic_conditions<traits::fields::transparent>{
         return conditions_prefixed<PrefixT>(std::forward<PrefixT>(k));
     }
 };
+
+/**
+ * @}
+ */
 
 }
 

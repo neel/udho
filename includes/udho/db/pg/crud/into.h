@@ -36,6 +36,11 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief INTO query.
+ * @ingroup crud
+ * @tparam RelationT 
+ */
 template <typename RelationT>
 struct into{
     using relation = RelationT;

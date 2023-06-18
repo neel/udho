@@ -31,20 +31,63 @@
 namespace udho{
 namespace db{
 
+/**
+ * @brief wrapper around a single row result.
+ * Intended to be used for queries where 0 or 1 record is expected to be in the resultset.
+ * @ingroup db
+ * @tparam DataT specifies schema of a row
+ */
 template <typename DataT>
 struct result{
     typedef DataT data_type;
        
+    /**
+     * @brief Construct a new result object
+     * @note marks the result as empty which is changed once a value is set
+     */
     result(): _empty(true){}
 
+    /**
+     * @brief get the const reference to the record inside the result
+     * 
+     * @return const data_type& 
+     */
     const data_type& get() const { return _result; }
+    /**
+     * @brief get pointer to the record inside the result
+     * @see get 
+     * @return const data_type* 
+     */
     const data_type* operator->() const { return &get(); }
+    /**
+     * @brief dereference operator to get the const reference to the record inside the result
+     * @see get 
+     * @return const data_type& 
+     */
     const data_type& operator*() const  { return get(); }
+    /**
+     * @brief check for emptyness
+     * 
+     * @return true 
+     * @return false 
+     */
     bool empty() const { return _empty; }
     
+    /**
+     * @brief returns const reference to the value for the specified column
+     * 
+     * @tparam T 
+     * @param arg 
+     * @return const auto& 
+     */
     template <typename T>
     const auto& operator[](const T& arg) const { return _result[arg]; }
     
+    /**
+     * @brief sets the record in teh result
+     * 
+     * @param result 
+     */
     void operator()(const data_type& result){ _result = result; _empty = false; }
        
     private:
@@ -52,6 +95,15 @@ struct result{
         bool      _empty;
 };
 
+/**
+ * @brief operator to write a record to result
+ * 
+ * @tparam DataT 
+ * @param res 
+ * @param data 
+ * @return result<DataT>& 
+ * @ingroup db
+ */
 template <typename DataT>
 result<DataT>& operator<<(result<DataT>& res, const DataT& data){
     res(data);

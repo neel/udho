@@ -33,6 +33,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <cstdint>
 #include <boost/optional.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/shared_ptr.hpp>
@@ -170,7 +171,7 @@ struct context_impl: interaction_{
         return "";
     }
     std::string target() const{
-        return _request.target().to_string();
+        return std::string(_request.target());
     }
     std::string path() const{
         std::string path; 

@@ -7,6 +7,10 @@
 #include <boost/hana/string.hpp>
 #include <string>
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 namespace h = udho::hazo;
 
 HAZO_ELEMENT(first_name, std::string);
@@ -600,7 +604,11 @@ TEST_CASE("sequence hana functionalities", "[hazo]") {
         return -x;
     };
     CHECK(hana::adjust(h::make_seq_v(1, 4, 9, 2, 3, 4), 4, negate) == h::make_seq_v(1, -4, 9, 2, 3, -4));
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-comparison"
     BOOST_HANA_RUNTIME_CHECK(hana::fill(h::make_seq_v(1, '2', 3.3, nullptr), 'x') == h::make_seq_v('x', 'x', 'x', 'x'), "");
+    #pragma GCC diagnostic pop
+
 }
 
 TEST_CASE("sequence proxy functionalities", "[hazo]") {

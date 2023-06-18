@@ -32,6 +32,31 @@
 #include <udho/db/pg/generators/fwd.h>
 #include <udho/db/pg/schema/column.h>
 #include <ozo/query_builder.h>
+#include <udho/db/pg/schema/detail.h>
+
+
+/**
+ * @brief create a generator for a postgresql operator
+ * @param OPCODE C++ name of teh operator
+ * @param OPSYM  actual postgresql symbol for the operator
+ * @note Requires the operator to be declared using @ref DECLARE_OPERATOR before using @ref GENERATE_OPERATOR
+ * @ingroup generators
+ */
+#define GENERATE_OPERATOR(OPCODE, OPSYM)                                   \
+    template <typename FieldT, typename ColumnT>                           \
+    struct op<pg::op:: OPCODE ## _ <FieldT, ColumnT>>{                     \
+        static auto apply(){                                               \
+            using namespace ozo::literals;                                 \
+            return OZO_LITERAL(#OPSYM) + " "_SQL + std::move(detail::query_rhs<ColumnT>::apply()); \
+        }                                                                  \
+    };                                                                     \
+    template <typename FieldT>                                             \
+    struct op<pg::op:: OPCODE ## _ <FieldT, void>>{                        \
+        static auto apply(){                                               \
+            using namespace ozo::literals;                                 \
+            return OZO_LITERAL(#OPSYM);                                  \
+        }                                                                  \
+    }                                                                      \
 
 namespace udho{
 namespace db{
@@ -47,94 +72,19 @@ struct op{
     }
 };
 
-template <typename FieldT>
-struct op<pg::op::eq<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "="_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::neq<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "!="_SQL;
-    }
-};
 
-template <typename FieldT>
-struct op<pg::op::lt<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "<"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::gt<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return ">"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::lte<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "<="_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::gte<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return ">="_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::is<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "is"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::is_not<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "is"_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::like<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "like"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::not_like<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "not like"_SQL;
-    }
-};
-
-template <typename FieldT>
-struct op<pg::op::in<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "in"_SQL;
-    }
-};
-template <typename FieldT>
-struct op<pg::op::not_in<FieldT>>{
-    static auto apply(){
-        using namespace ozo::literals;
-        return "not in"_SQL;
-    }
-};
+GENERATE_OPERATOR(lt, <);
+GENERATE_OPERATOR(lte, <=);
+GENERATE_OPERATOR(gt, >);
+GENERATE_OPERATOR(gte, >=);
+GENERATE_OPERATOR(eq, =);
+GENERATE_OPERATOR(neq, !=);
+GENERATE_OPERATOR(is, is);
+GENERATE_OPERATOR(is_not, is not);
+GENERATE_OPERATOR(like, like);
+GENERATE_OPERATOR(not_like, not like);
+GENERATE_OPERATOR(in, in);
+GENERATE_OPERATOR(not_in, not in);
 
 template <typename FieldOPT, typename RelationT>
 struct op<pg::column<FieldOPT, RelationT>>: op<FieldOPT>{};

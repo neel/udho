@@ -42,6 +42,66 @@ namespace pg{
 
 namespace decorators{
 
+/**
+ * @ingroup decorators
+ * @addtogroup assignments
+ * @brief decorates a schema as comma separeted assignments
+ * Given the following:
+ * @code 
+ * namespace students{
+ *   PG_ELEMENT(id,    std::int64_t);
+ *   PG_ELEMENT(name,  std::string);
+ *   PG_ELEMENT(grade, std::int64_t);
+ *   PG_ELEMENT(marks, std::int64_t);
+ *   
+ *   struct table: pg::relation<table, id, name, grade, marks>{
+ *       static auto name(){
+ *           return "students"_SQL;
+ *       }
+ *   };
+ * }
+ * @endcode 
+ * Different assignment decorators produces different outputs when applied on the schema. The decorate
+ * method returns an OZO string that has `text()` and `params()` method. The `text()` method produces 
+ * `boost::hana::string` with placeholders and the `params()` produces a tuple with values. Following
+ * are the examples of applying the decorators in the schema mentioned above.
+ * @code 
+ * student.decorate(pg::decorators::assignments{});
+ * // .text():   students.id = $1, students.name = $2, students.grade = $3, students.marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::unqualified{});
+ * // .text():   id = $1, name = $2, grade = $3, marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.grade = $3, s.marks = $4
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t, std::int64_t>(42, "Neel Basu", 1, 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>{});
+ * // .text():   students.id = $1, students.name = $2, students.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>::unqualified{});
+ * // .text():   id = $1, name = $2, marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::only<students::id, students::name, students::marks>::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>{});
+ * // .text():   students.id = $1, students.name = $2, students.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>::unqualified{});
+ * // .text():   id = $1, name = $2, marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * student.decorate(pg::decorators::assignments::except<students::grade>::prefixed("s"_SQL));
+ * // .text():   s.id = $1, s.name = $2, s.marks = $3
+ * // .params(): boost::hana::tuple<std::int64_t, std::string, std::int64_t>(42, "Neel Basu", 100)
+ * @endcode 
+ * @{
+ */
+
+
+/**
+ * @brief Decorate the schema as comma separeted assignments while using the given field trait.
+ * @tparam FieldTraitT The field decoration @ref traits "trait"
+ */
 template <typename FieldTraitT>
 struct basic_assignments: private FieldTraitT{
     template <typename... Args>
@@ -64,6 +124,17 @@ struct basic_assignments: private FieldTraitT{
     }
 };
 
+/**
+ * @brief Decorate a subset of the schema as comma separeted assignments while using the given field trait.
+ * @tparam FieldTraitT The field decoration @ref traits "trait"
+ * @tparam Enabler To decide whether to include a given field or not. Usually one of the following:
+ *         - @ref udho::db::pg::decorators::logical_and "logical_and" 
+ *         - @ref udho::db::pg::decorators::logical_or "logical_or"
+ *         - @ref udho::db::pg::decorators::logical_or "logical_nor"
+ *         - @ref udho::db::pg::decorators::logical_or "logical_nand"
+ *         .
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename FieldTraitT, template <bool...> class Enabler, typename... Fields>
 struct selected_assignments: private FieldTraitT{
     template <typename SubjectT>
@@ -100,10 +171,25 @@ struct selected_assignments: private FieldTraitT{
     }
 };
     
+/**
+ * @brief Decorate the schema as assignment, using unqualified field names, while considering only the fields provided.
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename... Fields>
 using assignments_only_unqualified = selected_assignments<traits::fields::unqualified, logical_or, Fields...>;
+
+/**
+ * @brief Similar to @ref assignments_only_unqualified while using prefixed trait for fields
+ * @tparam PrefixT Compile time string to be prefixed with each field e.g. an alias of a relation
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename PrefixT, typename... Fields>
 using assignments_only_prefixed = selected_assignments<traits::fields::prefixed<PrefixT>, logical_or, Fields...>;
+
+/**
+ * @brief Decorate the schema as assignment, while considering only the fields provided.
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename... Fields>
 struct assignments_only: selected_assignments<traits::fields::transparent, logical_or, Fields...>{
     template <typename PrefixT>
@@ -113,10 +199,25 @@ struct assignments_only: selected_assignments<traits::fields::transparent, logic
     using unqualified = assignments_only_unqualified<Fields...>;
 };
 
+/**
+ * @brief Decorate the schema as assignment, using unqualified field names, while excluding the fields specified.
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename... Fields>
 using assignments_except_unqualified = selected_assignments<traits::fields::unqualified, logical_nor, Fields...>;
+
+/**
+ * @brief Similar to @ref assignments_except_unqualified while using prefixed trait for fields
+ * @tparam PrefixT Compile time string to be prefixed with each field e.g. an alias of a relation
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename PrefixT, typename... Fields>
 using assignments_except_prefixed = selected_assignments<traits::fields::prefixed<PrefixT>, logical_nor, Fields...>;
+
+/**
+ * @brief Decorate the schema as assignment, while excluding the fields specified.
+ * @tparam Fields... The subset of fields of the schema.
+ */
 template <typename... Fields>
 struct assignments_except: selected_assignments<traits::fields::transparent, logical_nor, Fields...>{
     template <typename PrefixT>
@@ -126,27 +227,60 @@ struct assignments_except: selected_assignments<traits::fields::transparent, log
     using unqualified = assignments_except_unqualified<Fields...>;
 };
 
+/**
+ * @brief Decorate the schema as assignment, using unqualified field trait, while using all fields in the schema.
+ */
 struct assignments_unqualified: basic_assignments<traits::fields::unqualified>{
     template <typename... Fields>
     using only = assignments_only_unqualified<Fields...>;
     template <typename... Fields>
     using except = assignments_except_unqualified<Fields...>;
 };
+/**
+ * @brief Similar to @ref assignments_unqualified while using prefixed trait for fields
+ * @tparam PrefixT Compile time string to be prefixed with each field e.g. an alias of a relation
+ */
 template <typename PrefixT>
 using assignments_prefixed = basic_assignments<traits::fields::prefixed<PrefixT>>;
 
+/**
+ * @brief Decorate the schema as assignment, while using all fields in the schema.
+ */
 struct assignments: basic_assignments<traits::fields::transparent>{
+    /**
+     * @brief include only a subset of fields
+     * @tparam Fields... Subset of fields to include
+     */
     template <typename... Fields>
     using only = assignments_only<Fields...>;
+    /**
+     * @brief include only a subset of fields
+     * @tparam Fields... Subset of fields to exclude
+     */
     template <typename... Fields>
     using except = assignments_except<Fields...>;
     
+    /**
+     * @brief Use a the provided string as a prefix.
+     * 
+     * @tparam PrefixT Compile time OZO string
+     * @param k Compile time OZO string
+     * @return constexpr assignments_prefixed<PrefixT> 
+     */
     template <typename PrefixT>
     static constexpr assignments_prefixed<PrefixT> prefixed(PrefixT&& k) {
         return assignments_prefixed<PrefixT>(std::forward<PrefixT>(k));
     }
+
+    /**
+     * @brief force the field names to be unqualified even if the fields are columns.
+     */
     using unqualified = assignments_unqualified;
 };
+
+/**
+ * @)
+ */
 
 }
 

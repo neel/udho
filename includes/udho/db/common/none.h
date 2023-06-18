@@ -31,12 +31,23 @@
 namespace udho{
 namespace db{
 
+/**
+ * @brief A none result implies that the query does not yield any result
+ * @ingroup db
+ */
 struct none{
     typedef void data_type;
     
     inline bool empty() const { return true; }
 };
 
+/**
+ * @brief an operator to write to the nnone result is provided but that performs no operation
+ * 
+ * @tparam DataT 
+ * @param res 
+ * @return none& 
+ */
 template <typename DataT>
 none& operator<<(none& res, const DataT&){
     return res;

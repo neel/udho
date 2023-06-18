@@ -38,7 +38,8 @@ namespace pg{
 namespace generators{
     
 /**
- * set [field = value]* part of the update query
+ * @brief set [field = value]* part of the update query
+ * @ingroup generators
  */
 template <typename... Fields>
 struct set<pg::basic_schema<Fields...>>{

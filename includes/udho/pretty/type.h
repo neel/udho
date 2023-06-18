@@ -87,7 +87,7 @@ std::string indent(const printer& p = printer()){
     
     std::set<std::string> inline_types;
     inline_types.insert("boost::hana::string");
-    inline_types.insert("udho::db::pg::constants::string");
+//     inline_types.insert("udho::db::pg::constants::string");
     inline_types.insert("udho::db::pg::column");
     inline_types.insert("udho::db::pg::max");
     inline_types.insert("udho::db::pg::min");

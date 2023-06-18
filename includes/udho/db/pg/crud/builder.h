@@ -41,12 +41,29 @@ namespace udho{
 namespace db{
 namespace pg{
     
+/**
+ * @brief SQL Query builder.
+ * @ingroup crud
+ * @tparam RelationT can be a single relation or a chain of one or more joins using @ref basic_join_on
+ */
 template <typename RelationT>
 struct builder{
+    /**
+     * @brief Builder for SELECT query.
+     * 
+     * @tparam SuccessT Either pg::one<SchemaT> or pg::many<SchemaT> where SchemaT is pg::schema<Fields...>
+     */
     template <typename SuccessT>
     struct select{
         typedef typename pg::select<SuccessT> select_;
         
+        /**
+         * @brief Plain SELECT query containing plain SELECT generators. 
+         * Derive from this class if you need to write a custom query (assisted by the generators). The 
+         * derived class DerivedT must provide an operator() overload.
+         * 
+         * @tparam DerivedT 
+         */
         template <typename DerivedT>
         struct activity: select_::template activity<DerivedT>{
             typedef typename select_::template activity<DerivedT> base;
@@ -199,7 +216,7 @@ struct builder{
                 template <typename CollectorT, typename... Args>
                 activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): group_activity(collector, pool, io, args...), generate(group_activity::result) {}
                 template <typename ContextT, typename... T, typename... Args>
-                activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): group_activity(ctrl, args...), generate(group_activity::result, group_activity::with()){}
+                activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): group_activity(ctrl, args...), generate(group_activity::result){}
                 
                 using group_activity::operator();
             };
