@@ -5,7 +5,6 @@ Given the following model.
 
 @code {.cpp}
 
-
 namespace students{
 
     PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);

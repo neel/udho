@@ -61,7 +61,7 @@ using all = pg::from<authors::table>
    ::apply;
 @endcode
 
-See more on @ref PgActivities
+See more on @ref PgActivities @ref PgSubtasks
 
 Connection
 -----------
@@ -74,7 +74,8 @@ const auto oid_map = ozo::register_types<>();
 ozo::connection_info<> conn_info("host=localhost dbname=DBNAME user=USERNAME password=PASSWORD");
 auto pool = ozo::connection_pool(conn_info, dbconfig);
 @endcode
-Activity 
+
+Activity
 --------- 
 
 @code {.cpp}

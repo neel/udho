@@ -1,5 +1,5 @@
 Pg Activity {#PgActivities}
-===================
+=====================
 
 There can be various types of SQL queries.
 
