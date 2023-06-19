@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2020, <copyright holder> <email>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of the <organization> nor the
  *     names of its contributors may be used to endorse or promote products
  *     derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY <copyright holder> <email> ''AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,55 +25,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_NODE_FWD_H
-#define UDHO_HAZO_NODE_FWD_H
+#ifndef UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
+#define UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
 
+#include <utility>
+#include <functional>
 #include <type_traits>
-#include <udho/hazo/detail/has_member.h>
-#include <udho/hazo/detail/has_member_type.h>
+#include <udho/hazo/detail/indices.h>
+#include <udho/hazo/detail/extraction_helper.h>
+#include <udho/hazo/node/fwd.h>
 
 namespace udho{
 namespace hazo{
 
-#ifndef __DOXYGEN__
-
 namespace detail{
-GENERATE_HAS_MEMBER(key);
-GENERATE_HAS_MEMBER(value);
-GENERATE_HAS_MEMBER_TYPE(index_type);
-GENERATE_HAS_MEMBER_TYPE(value_type);
+
+    /**
+     * extract the function signature
+     */
+    template <typename T>
+    struct function_signature: function_signature<typename T::function_type>{};
+
+    template <typename R, typename... Args>
+    struct function_signature<R (*)(Args...)>{
+        typedef R                                   return_type;
+        typedef std::tuple<std::decay_t<Args>...>   arguments_type;
+    };
+
 }
-    
-template <typename HeadT, typename TailT = void>
-struct basic_node;
-
-template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
-class capsule;
-
-/**
- * \brief Forward declaration of an internal struct used to analyze the encapsulated type of the capsule.
- * Given any type DataT detects three characteristics
- * 
- * * Whether DataT has a public member function named `key()`.
- * * Whether DataT has a public member function named `value()` and a public typedef `value_type`.
- * * Whether DataT has a public typedef `index_type`
- * 
- * based on these three characteristics different specializations of encapsulate is used.
- * 
- * \tparam DataT type of data to be encapsulated
- * \ingroup encapsulate
- */
-template <
-    typename DataT, 
-    bool HasKey   = detail::has_member_key<DataT>::value, 
-    bool HasValue = detail::has_member_value<DataT>::value && detail::has_member_type_value_type<DataT>::value,
-    bool HasIndex = detail::has_member_type_index_type<DataT>::value
->
-struct encapsulate;
-
-#endif // __DOXYGEN__
 
 }
 }
 
-#endif // UDHO_HAZO_NODE_FWD_H
+#endif // UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
