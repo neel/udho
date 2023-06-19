@@ -43,14 +43,46 @@ namespace detail{
     /**
      * extract the function signature
      */
-    template <typename T>
-    struct function_signature: function_signature<typename T::function_type>{};
+    template <typename F>
+    struct function_signature_;
 
     template <typename R, typename... Args>
-    struct function_signature<R (*)(Args...)>{
-        typedef R                                   return_type;
-        typedef std::tuple<std::decay_t<Args>...>   arguments_type;
+    struct function_signature_<R (*)(Args...)>{
+        typedef R                     return_type;
+        typedef void                  object_type;
+        typedef std::tuple<Args...>   arguments_type;
     };
+
+    template <typename R, typename... Args>
+    struct function_signature_<R (Args...)>{
+        typedef R                     return_type;
+        typedef void                  object_type;
+        typedef std::tuple<Args...>   arguments_type;
+    };
+
+    template <typename R, typename C, typename... Args>
+    struct function_signature_<R (C::*)(Args...)>{
+        typedef R                     return_type;
+        typedef C                     object_type;
+        typedef std::tuple<Args...>   arguments_type;
+    };
+
+    template <typename R, typename C, typename... Args>
+    struct function_signature_<R (C::*)(Args...) const>{
+        typedef R                     return_type;
+        typedef const C               object_type;
+        typedef std::tuple<Args...>   arguments_type;
+    };
+
+    template <typename F>
+    function_signature_<F> function_signature(const F&){
+        return function_signature_<F>{};
+    }
+
+    template <typename F>
+    function_signature_<F> function_signature(const F&, typename function_signature_<F>::object_type*){
+        return function_signature_<F>{};
+    }
 
 }
 
