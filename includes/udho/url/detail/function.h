@@ -25,19 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
-#define UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
+#ifndef UDHO_URL_DETAIL_FUNCTION_H
+#define UDHO_URL_DETAIL_FUNCTION_H
 
 #include <utility>
 #include <functional>
 #include <type_traits>
-#include <udho/hazo/detail/indices.h>
-#include <udho/hazo/detail/extraction_helper.h>
-#include <udho/hazo/node/fwd.h>
 #include <boost/lexical_cast.hpp>
 
 namespace udho{
-namespace hazo{
+namespace url{
 
 namespace detail{
 
@@ -125,6 +122,14 @@ namespace detail{
         using object_type            = typename signature::object_type;
         using decayed_arguments_type = typename signature::decayed_arguments_type;
 
+        enum {
+            args = std::tuple_size<arguments_type>::value
+        };
+        template <int N>
+        using arg = typename std::tuple_element<N, arguments_type>::type;
+        template <int N>
+        using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
+
         encapsulate_mem_function(F f, object_type* that): _f(f), _that(that) {}
         return_type operator()(decayed_arguments_type&& args){
             return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
@@ -133,14 +138,18 @@ namespace detail{
             return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
         }
         template <typename IteratorT>
-        return_type operator()(IteratorT begin, IteratorT end){
+        decayed_arguments_type prepare(IteratorT begin, IteratorT end){
             decayed_arguments_type decayed_args;
             auto nargs = std::distance(begin, end);
-            if(nargs != std::tuple_size_v<decayed_arguments_type>()){
-                throw std::out_of_range("expects " + std::to_string(std::tuple_size_v<decayed_arguments_type>()) + " args but called with " + nargs + " arguments");
+            if(nargs != std::tuple_size<decayed_arguments_type>::value){
+                throw std::out_of_range("expects " + std::to_string(std::tuple_size<decayed_arguments_type>::value) + " args but called with " + std::to_string(nargs) + " arguments");
             }
             arguments_to_tuple(decayed_args, begin);
-            return operator()(decayed_args);
+            return decayed_args;
+        }
+        template <typename IteratorT>
+        return_type operator()(IteratorT begin, IteratorT end){
+            return operator()(prepare(begin, end));
         }
         private:
             F _f;
@@ -153,6 +162,14 @@ namespace detail{
         using arguments_type         = typename signature::arguments_type;
         using decayed_arguments_type = typename signature::decayed_arguments_type;
 
+        enum {
+            args = std::tuple_size<arguments_type>::value
+        };
+        template <int N>
+        using arg = typename std::tuple_element<N, arguments_type>::type;
+        template <int N>
+        using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
+
         encapsulate_function(F f): _f(f) {}
         return_type operator()(decayed_arguments_type&& args){
             return std::apply(_f, args);
@@ -161,14 +178,18 @@ namespace detail{
             return std::apply(_f, args);
         }
         template <typename IteratorT>
-        return_type operator()(IteratorT begin, IteratorT end){
+        decayed_arguments_type prepare(IteratorT begin, IteratorT end){
             decayed_arguments_type decayed_args;
             auto nargs = std::distance(begin, end);
             if(nargs != std::tuple_size<decayed_arguments_type>::value){
                 throw std::out_of_range("expects " + std::to_string(std::tuple_size<decayed_arguments_type>::value) + " args but called with " + std::to_string(nargs) + " arguments");
             }
             arguments_to_tuple(decayed_args, begin);
-            return operator()(decayed_args);
+            return decayed_args;
+        }
+        template <typename IteratorT>
+        return_type operator()(IteratorT begin, IteratorT end){
+            return operator()(prepare(begin, end));
         }
         private:
             F _f;
@@ -189,4 +210,4 @@ namespace detail{
 }
 }
 
-#endif // UDHO_HAZO_DETAIL_HELPER_FUNCTION_H
+#endif // UDHO_URL_DETAIL_FUNCTION_H

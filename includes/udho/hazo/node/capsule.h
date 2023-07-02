@@ -481,7 +481,7 @@ class capsule<DataT, true>: public encapsulate<DataT>{
      */
     typedef typename encapsulate<DataT>::index_type index_type;
     
-    static_assert(std::is_default_constructible<value_type>::value, "capsule<DataT> default constructor requires DataT::value_type to be default constructible");
+    // static_assert(std::is_default_constructible<value_type>::value, "capsule<DataT> default constructor requires DataT::value_type to be default constructible");
     static_assert(std::is_copy_constructible<data_type>::value, "capsule<DataT> constructor requires DataT to be copy constructible");
     static_assert(std::is_constructible<data_type, value_type>::value, "capsule<DataT> default constructor requires DataT to be constructible through DataT::value_type");
 
