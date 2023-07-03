@@ -76,7 +76,7 @@ int main(){
         f(args.begin(), args.end());
     // }
 
-    // X x;
+    X x;
     // const X& y=x;
     //
     // {
@@ -88,13 +88,17 @@ int main(){
     using namespace udho::hazo::string::literals;
 
     auto chain = udho::hazo::make_seq_d(
-        udho::url::action(udho::url::detail::encapsulate_function(f0), std::regex("f0"), "f0"_h),
-        udho::url::action(udho::url::detail::encapsulate_function(f1), std::regex("f1"), "f1"_h),
-        udho::url::action(udho::url::detail::encapsulate_function(f2), std::regex("f2"), "f2"_h)
+        udho::url::action(&f0, std::regex("f0"), "f0"_h, "/f0"),
+        udho::url::action(&f1, std::regex("f1"), "f1"_h) = "/f1/{}/{}/{}",
+        udho::url::action(&f2, std::regex("f2"), "f2"_h, "/f2"),
+        udho::url::action(&X::f1, &x, std::regex("xf1"), "xf1"_h) = "/x/f1"
     );
     auto f1_ = chain["f1"_h];
     std::cout << "---" << std::endl;
     f1_(args.begin(), args.end());
+    auto results = f1_.match("f1");
+    std::cout << "results.matched: " << results.matched() << std::endl;
+    std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
 
     // udho::hazo::seq_d<int, nodef, std::string> tt(2, nodef(2), "Hello");
 
