@@ -31,118 +31,123 @@
 #include <udho/url/detail/function.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/pattern.h>
-#include <udho/url/detail/format.h>
 
 namespace udho{
 namespace url{
 
+template <typename F, typename CharT, CharT... C>
+struct basic_slot;
 
-template <typename FunctionT, typename SearchT, typename StrT>
+template <typename F, typename CharT, CharT... C>
+struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
+    using function_type          = F;
+    using key_type               = udho::hazo::string::str<CharT, C...>;
+    using return_type            = typename function_type::return_type;
+    using arguments_type         = typename function_type::arguments_type;
+    using decayed_arguments_type = typename function_type::decayed_arguments_type;
+
+    enum {
+        args = function_type::args
+    };
+    template <int N>
+    using arg = typename function_type::template arg<N>;
+    template <int N>
+    using decayed_arg = typename function_type::template decayed_arg<N>;
+
+    basic_slot(function_type&& f): _fnc(std::move(f)) {}
+    return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
+    return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
+    template <typename IteratorT>
+    decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
+    template <typename IteratorT>
+    return_type operator()(IteratorT begin, IteratorT end) { return _fnc(begin, end); }
+    static constexpr key_type key() { return key_type{}; }
+
+    private:
+        function_type _fnc;
+};
+
+template <typename FunctionT, typename StrT, typename MatchT>
 struct basic_action;
 
-template <typename F, typename SearchT, typename CharT, CharT... C>
-struct basic_action<udho::url::detail::encapsulate_function<F>, SearchT, udho::hazo::string::str<CharT, C...>>{
-    using function_type          = udho::url::detail::encapsulate_function<F>;
+template <typename F, typename CharT, CharT... C, typename MatchT>
+struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot<F, udho::hazo::string::str<CharT, C...>>{
+    using slot_type              = basic_slot<F, udho::hazo::string::str<CharT, C...>>;
+    using function_type          = F;
     using key_type               = udho::hazo::string::str<CharT, C...>;
     using return_type            = typename function_type::return_type;
     using arguments_type         = typename function_type::arguments_type;
     using decayed_arguments_type = typename function_type::decayed_arguments_type;
-    using pattern_type           = SearchT;
-    using match_type             = udho::url::pattern::match<pattern_type>;
-    using results_type           = typename match_type::results_type;
+    using match_type             = MatchT;
+    using pattern_type           = typename match_type::pattern_type;
 
-    enum {
-        args = function_type::args
-    };
-    template <int N>
-    using arg = typename function_type::template arg<N>;
-    template <int N>
-    using decayed_arg = typename function_type::template decayed_arg<N>;
+    basic_action(function_type&& f, const match_type& match): slot_type(std::move(f)), _match(match) {}
+    basic_action(slot_type&& slot, match_type&& match): slot_type(std::move(slot)), _match(match) {}
+    using slot_type::operator();
 
-    basic_action(function_type&& f, const pattern_type& pattern, const std::string& format): _fnc(std::move(f)), _pattern(pattern), _match(pattern), _format(format) {}
-    return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
-    return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
-    template <typename IteratorT>
-    decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
-    template <typename IteratorT>
-    return_type operator()(IteratorT begin, IteratorT end) { return _fnc(begin, end); }
-    static constexpr key_type key() { return key_type{}; }
-
-    const pattern_type& pattern() const { return _pattern; }
-    results_type match(const std::string& subject) const{ return _match(subject); }
-
-    std::string fill(const decayed_arguments_type& args) const { return format(_format, args); }
-
-    basic_action& operator=(const std::string& label){
-        _format = label;
-        return *this;
+    /**
+     * checks whether this action matches with the pattern provided
+     */
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& pattern) const{
+        decayed_arguments_type tuple;
+        bool found = _match.find(pattern, tuple);
+        return found;
+    }
+    /**
+     * invokes the function with the captured arguments if this action matches with the pattern provided
+     */
+    template <typename Ch>
+    bool invoke(const std::basic_string<Ch>& pattern){
+        decayed_arguments_type tuple;
+        bool found = _match.find(pattern, tuple);
+        if(found){
+            operator()(std::move(tuple));
+        }
+        return found;
     }
 
-    private:
-        function_type _fnc;
-        pattern_type  _pattern;
-        match_type    _match;
-        std::string   _format;
-};
-
-template <typename F, typename SearchT, typename CharT, CharT... C>
-struct basic_action<udho::url::detail::encapsulate_mem_function<F>, SearchT, udho::hazo::string::str<CharT, C...>>{
-    using function_type          = udho::url::detail::encapsulate_mem_function<F>;
-    using key_type               = udho::hazo::string::str<CharT, C...>;
-    using return_type            = typename function_type::return_type;
-    using arguments_type         = typename function_type::arguments_type;
-    using object_type            = typename function_type::object_type;
-    using decayed_arguments_type = typename function_type::decayed_arguments_type;
-    using pattern_type           = SearchT;
-    using match_type             = udho::url::pattern::match<pattern_type>;
-    using results_type           = typename match_type::results_type;
-
-    enum {
-        args = function_type::args
-    };
-    template <int N>
-    using arg = typename function_type::template arg<N>;
-    template <int N>
-    using decayed_arg = typename function_type::template decayed_arg<N>;
-
-    basic_action(function_type&& f, const pattern_type& pattern, const std::string& format): _fnc(std::move(f)), _pattern(pattern), _match(pattern), _format(format) {}
-    return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
-    return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
-    template <typename IteratorT>
-    decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
-    template <typename IteratorT>
-    return_type operator()(IteratorT begin, IteratorT end) { return _fnc(begin, end); }
-    static constexpr key_type key() { return key_type{}; }
-
-    const pattern_type& pattern() const { return _pattern; }
-    results_type match(const std::string& subject) const{ return _match(subject); }
-
-    std::string fill(const decayed_arguments_type& args) const { return format(_format, args); }
-
-    basic_action& operator=(const std::string& label){
-        _format = label;
-        return *this;
-    }
+    std::string fill(const decayed_arguments_type& args) const { return _match.replace(args); }
 
     private:
-        function_type _fnc;
-        pattern_type  _pattern;
         match_type    _match;
-        std::string   _format;
 };
 
-template <typename FunctionT, typename SearchT, typename CharT, CharT... C>
-basic_action<udho::url::detail::encapsulate_function<FunctionT>, SearchT, udho::hazo::string::str<CharT, C...>>
-action(FunctionT&& function, const SearchT& pattern, udho::hazo::string::str<CharT, C...>, const std::string& label = ""){
-    using action_type = basic_action<udho::url::detail::encapsulate_function<FunctionT>, SearchT, udho::hazo::string::str<CharT, C...>>;
-    return action_type(detail::encapsulate_function<FunctionT>(std::move(function)), pattern, label);
+template <typename F, typename CharT, CharT... C, typename MatchT>
+basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<=(basic_slot<F, udho::hazo::string::str<CharT, C...>>&& slot, MatchT&& match){
+    return basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>(std::move(slot), std::move(match));
 }
 
-template <typename FunctionT, typename SearchT, typename CharT, CharT... C>
-basic_action<udho::url::detail::encapsulate_mem_function<FunctionT>, SearchT, udho::hazo::string::str<CharT, C...>>
-action(FunctionT&& function, typename detail::function_signature_<FunctionT>::object_type* that, const SearchT& pattern, udho::hazo::string::str<CharT, C...>, const std::string& label = ""){
-    using action_type = basic_action<udho::url::detail::encapsulate_mem_function<FunctionT>, SearchT, udho::hazo::string::str<CharT, C...>>;
-    return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), pattern, label);
+template <typename FunctionT, typename CharT, CharT... C>
+basic_slot<
+    udho::url::detail::encapsulate_function<FunctionT>,
+    udho::hazo::string::str<CharT, C...>
+> slot(udho::hazo::string::str<CharT, C...>, FunctionT&& function){
+    using slot_type = basic_slot<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>>;
+    return slot_type(detail::encapsulate_function<FunctionT>(std::move(function)));
+}
+
+template <typename FunctionT, typename CharT, CharT... C>
+basic_slot<
+    udho::url::detail::encapsulate_mem_function<FunctionT>,
+    udho::hazo::string::str<CharT, C...>
+> slot(udho::hazo::string::str<CharT, C...>, FunctionT&& function, typename detail::function_signature_<FunctionT>::object_type* that){
+    using slot_type = basic_slot<udho::url::detail::encapsulate_mem_function<FunctionT>, udho::hazo::string::str<CharT, C...>>;
+    return slot_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that));
+}
+
+template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
+basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
+action(FunctionT&& function, udho::hazo::string::str<CharT, C...>, const MatchT& match){
+    using action_type = basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>;
+    return action_type(detail::encapsulate_function<FunctionT>(std::move(function)), match);
+}
+
+template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
+basic_action<udho::url::detail::encapsulate_mem_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
+action(FunctionT&& function, typename detail::function_signature_<FunctionT>::object_type* that, udho::hazo::string::str<CharT, C...>, const MatchT& match){
+    using action_type = basic_action<udho::url::detail::encapsulate_mem_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>;
+    return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), match);
 }
 
 

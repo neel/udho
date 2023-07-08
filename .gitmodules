@@ -13,3 +13,6 @@
 [submodule "vendor/fmt"]
 	path = vendor/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "vendor/scnlib"]
+	path = vendor/scnlib
+	url = https://github.com/eliaskosunen/scnlib.git
