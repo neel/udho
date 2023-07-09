@@ -101,22 +101,22 @@ int main(){
         // std::cout << "results.matched: " << results.matched() << std::endl;
         bool found = f1_.invoke(std::string("f1/23/325/23/1"));
         std::cout << "found: " << found << std::endl;
-        std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
+        std::cout << f1_.fill(std::make_tuple(24,"world", 2.4, 0)) << std::endl;
     }{
         std::cout << "--------" << std::endl;
 
         using namespace udho::hazo::string::literals;
 
         auto chain =
-            udho::url::slot("f0"_h, &f0)         << udho::url::match("f0")                    |
-            udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{:[^/]}/{}/{}")   |
-            udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")                    |
+            udho::url::slot("f0"_h, &f0)         << udho::url::match("f0")               |
+            udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{}/{}/{}")   |
+            udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")               |
             udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match("xf1");
         auto f1_ = chain["f1"_h];
         f1_(args.begin(), args.end());
         // auto results = f1_.match("f1");
         // std::cout << "results.matched: " << results.matched() << std::endl;
-        bool found = f1_.invoke(std::string("f1/23/325/23/1"));
+        bool found = f1_.invoke(std::string("f1/23/hello/23/1"));
         std::cout << "found: " << found << std::endl;
         std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
     }
@@ -138,24 +138,26 @@ int main(){
     //     std::cout << "user_id: " << user_id << std::endl;
     // }
     //
-    {
-        std::tuple<std::uint32_t, std::string,std::uint32_t> tuple;
-        auto result = scn::make_result("/posts/623635/user/neel/view/23");
-
-        std::tuple<decltype(result.range()), std::string> subject_format(result.range(), "/posts/{}/user/{:[^/]}/view/{}");
-        auto args = std::tuple_cat(subject_format, tuple);
-        result = std::apply(scn::scan<decltype(result.range()), std::string, std::uint32_t, std::string, std::uint32_t>, args);
-
-        std::cout << "result:  " << std::boolalpha << (bool) result << std::endl;
-        std::cout << "post_id: " << std::get<2>(args) << std::endl;
-        std::cout << "user_id: " << std::get<3>(args) << std::endl;
-    }
+    // {
+    //     std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
+    //     auto result = scn::make_result("/posts/623635/user/neel/view/23");
+    //
+    //     std::tuple<decltype(result.range()), std::string> subject_format(result.range(), "/posts/{}/user/{}/view/{}");
+    //     auto args = std::tuple_cat(subject_format, tuple);
+    //     result = std::apply(scn::scan<decltype(result.range()), std::string, std::uint32_t, std::string, std::uint32_t>, args);
+    //
+    //     std::cout << "result:  " << std::boolalpha << (bool) result << std::endl;
+    //     std::cout << "post_id: " << std::get<2>(args) << std::endl;
+    //     std::cout << "user_id: " << std::get<3>(args) << std::endl;
+    // }
 
     std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
-    std::string format  = "path/{}/{:[^/]}/{}";
-    std::string subject = "path/23/66/8";
+    std::string format  = "path/{}/{}/{}";
+    std::string subject = "path/23/hello/8";
     auto res = udho::url::pattern::detail::scan_helper::apply(subject, format, tuple);
     std::cout << "res: " << (bool) res << std::endl;
-    std::cout << "post_id: " << std::get<2>(tuple) << std::endl;
+    std::cout << "0: " << std::get<0>(tuple) << std::endl;
+    std::cout << "1: " << std::get<1>(tuple) << std::endl;
+    std::cout << "2: " << std::get<2>(tuple) << std::endl;
     return 0;
 }

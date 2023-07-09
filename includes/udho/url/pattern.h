@@ -10,9 +10,11 @@
 #include <udho/url/detail/format.h>
 #include <scn/scn.h>
 #include <scn/tuple_return.h>
+#include <udho/url/word.h>
 
 namespace udho{
 namespace url{
+
 namespace pattern{
 
 namespace detail{
@@ -36,13 +38,25 @@ namespace detail{
         return tuple_trim<L,0>(t);
     }
 
+    template <typename T>
+    struct sanitize{
+        using type = T;
+    };
+
+    template <typename CharT>
+    struct sanitize<std::basic_string<CharT>>{
+        using type = udho::url::basic_word<CharT>;
+    };
+
     struct scan_helper{
         template <typename... Args>
         static auto apply(const std::string& subject, const std::string& format, std::tuple<Args...>& tuple){
+            using sanitized_tuple_type = std::tuple<typename sanitize<Args>::type...>;
+            sanitized_tuple_type sanitized(tuple);
             auto result = scn::make_result(subject);
             std::tuple<decltype(result.range()), std::string> subject_format(result.range(), format);
-            auto args = std::tuple_cat(subject_format, tuple);
-            result = std::apply(scn::scan<decltype(result.range()), std::string, Args...>, args);
+            auto args = std::tuple_cat(subject_format, sanitized);
+            result = std::apply(scn::scan<decltype(result.range()), std::string, typename sanitize<Args>::type...>, args);
             tuple = tuple_trim_left<2>(args);
             return result;
         }
@@ -110,5 +124,8 @@ struct pattern::match<std::string> match(const std::string& format){
 
 }
 }
+
+
+
 
 #endif // UDHO_URL_PATTERN_H
