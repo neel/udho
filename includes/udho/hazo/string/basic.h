@@ -67,6 +67,12 @@ constexpr str<CharT, C...> operator""_h(){
 
 }
 
+template <typename StreamT, typename CharT, CharT... C>
+StreamT& operator<<(StreamT& stream, const str<CharT, C...>& s){
+    stream << s.c_str();
+    return stream;
+}
+
 
 }
 }

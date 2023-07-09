@@ -68,8 +68,11 @@ struct match{
     using string_type  = std::string;
     using pattern_type = std::string;
 
-    match(const pattern_type& format): _format(format) {}
+    match(const pattern_type& format, const pattern_type& replace = ""): _format(format), _replace(!replace.empty() ? replace : format) {}
     const pattern_type format() const { return _format; }
+    std::string pattern() const { return format(); }
+    std::string replacement() const { return _replace; }
+    std::string str() const { return pattern() == replacement() ? pattern() : pattern()+" -> "+replacement(); }
     template <typename TupleT>
     bool find(const string_type& subject, TupleT& tuple) {
         auto result = detail::scan_helper::apply(subject, _format, tuple);
@@ -77,10 +80,11 @@ struct match{
     }
 
     template <typename... Args>
-    std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_format, args); }
+    std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
 
     private:
         pattern_type _format;
+        pattern_type _replace;
 };
 
 template <typename CharT>
@@ -91,6 +95,9 @@ struct match<std::basic_regex<CharT>>{
 
     match(const regex_type& regex, const std::string& replace): _regex(regex), _replace(replace) {}
     const regex_type regex() const { return _regex; }
+    std::string pattern() const { return "NOT PRINTABLE"; }
+    std::string replacement() const { return _replace; }
+    std::string str() const { return pattern() + " -> " + replacement(); }
     template <typename TupleT>
     bool find(const string_type& subject, TupleT& tuple) {
         std::smatch matches;

@@ -109,7 +109,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     }
 
     std::string fill(const decayed_arguments_type& args) const { return _match.replace(args); }
-
+    const match_type& match() const { return _match; }
     private:
         match_type    _match;
 };
@@ -164,6 +164,31 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
     return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), match);
 }
 
+
+template <typename StreamT, typename FunctionT, typename MatchT, typename StrT, typename... TailT>
+StreamT& operator<<(StreamT& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
+    chain.write(stream);
+    return stream;
+}
+
+template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
+StreamT& operator<<(StreamT& stream, const udho::hazo::capsule<basic_action<FunctionT, StrT, MatchT>>& capsule){
+    stream << std::endl << capsule.data();
+    return stream;
+}
+
+template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
+StreamT& operator<<(StreamT& stream, const basic_action<FunctionT, StrT, MatchT>& action){
+    std::string args_str;
+    for(int i=0; i != basic_action<FunctionT, StrT, MatchT>::args; ++i){
+        if(i > 0)
+            args_str += ",";
+        args_str += format("${}", i);
+    }
+    std::string label(StrT().c_str());
+    stream << format("{} f({})", label, args_str) << " <= " << action.match().str();
+    return stream;
+}
 
 }
 }

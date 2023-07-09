@@ -95,6 +95,9 @@ int main(){
             udho::url::slot("f1"_h, &f1)         << udho::url::match(std::regex("f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)"), "/f1/{}/{}/{}")      |
             udho::url::slot("f2"_h, &f2)         << udho::url::match(std::regex("f2"), "/f2")                                           |
             udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match(std::regex("xf1"), "/x/f1");
+
+        std::cout << chain << std::endl;
+
         auto f1_ = chain["f1"_h];
         f1_(args.begin(), args.end());
         // auto results = f1_.match("f1");
@@ -112,11 +115,14 @@ int main(){
             udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{}/{}/{}")   |
             udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")               |
             udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match("xf1");
+
+        std::cout << chain << std::endl;
+
         auto f1_ = chain["f1"_h];
         f1_(args.begin(), args.end());
         // auto results = f1_.match("f1");
         // std::cout << "results.matched: " << results.matched() << std::endl;
-        bool found = f1_.invoke(std::string("f1/23/hello/23/1"));
+        bool found = f1_.invoke(std::string("f1/23/hello/24/1"));
         std::cout << "found: " << found << std::endl;
         std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
     }
