@@ -31,6 +31,7 @@
 #include <udho/url/detail/function.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/pattern.h>
+#include <udho/hazo/seq/seq.h>
 
 namespace udho{
 namespace url{
@@ -114,7 +115,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
 };
 
 template <typename F, typename CharT, CharT... C, typename MatchT>
-basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<=(basic_slot<F, udho::hazo::string::str<CharT, C...>>&& slot, MatchT&& match){
+basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<(basic_slot<F, udho::hazo::string::str<CharT, C...>>&& slot, MatchT&& match){
     return basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>(std::move(slot), std::move(match));
 }
 
@@ -135,6 +136,19 @@ basic_slot<
     using slot_type = basic_slot<udho::url::detail::encapsulate_mem_function<FunctionT>, udho::hazo::string::str<CharT, C...>>;
     return slot_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that));
 }
+
+template <typename LFunctionT, typename LStrT, typename LMatchT, typename RFunctionT, typename RStrT, typename RMatchT>
+auto operator|(basic_action<LFunctionT, LStrT, LMatchT>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
+    return udho::hazo::make_seq_d(std::move(left), std::move(right));
+}
+
+template <typename... Args, typename RFunctionT, typename RStrT, typename RMatchT>
+auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
+    using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, Args...>;
+    using rhs_type = basic_action<RFunctionT, RStrT, RMatchT>;
+    return typename lhs_type::template extend<rhs_type>(left, std::move(right));
+}
+
 
 template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
 basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>

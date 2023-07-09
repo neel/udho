@@ -90,12 +90,11 @@ int main(){
     {
         using namespace udho::hazo::string::literals;
 
-        auto chain = udho::hazo::make_seq_d(
-            udho::url::slot("f0"_h, &f0)         <<= udho::url::match(std::regex("f0"), "/f0"),
-            udho::url::slot("f1"_h, &f1)         <<= udho::url::match(std::regex("f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)"), "/f1/{}/{}/{}"),
-            udho::url::slot("f2"_h, &f2)         <<= udho::url::match(std::regex("f2"), "/f2"),
-            udho::url::slot("xf1"_h, &X::f1, &x) <<= udho::url::match(std::regex("xf1"), "/x/f1")
-        );
+        auto chain =
+            udho::url::slot("f0"_h, &f0)         << udho::url::match(std::regex("f0"), "/f0")                                           |
+            udho::url::slot("f1"_h, &f1)         << udho::url::match(std::regex("f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)"), "/f1/{}/{}/{}")      |
+            udho::url::slot("f2"_h, &f2)         << udho::url::match(std::regex("f2"), "/f2")                                           |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match(std::regex("xf1"), "/x/f1");
         auto f1_ = chain["f1"_h];
         f1_(args.begin(), args.end());
         // auto results = f1_.match("f1");
@@ -108,12 +107,11 @@ int main(){
 
         using namespace udho::hazo::string::literals;
 
-        auto chain = udho::hazo::make_seq_d(
-            udho::url::slot("f0"_h, &f0)         <<= udho::url::match("f0"),
-            udho::url::slot("f1"_h, &f1)         <<= udho::url::match("f1/{}/{}/{}/{}"),
-            udho::url::slot("f2"_h, &f2)         <<= udho::url::match("f2"),
-            udho::url::slot("xf1"_h, &X::f1, &x) <<= udho::url::match("xf1")
-        );
+        auto chain =
+            udho::url::slot("f0"_h, &f0)         << udho::url::match("f0")                    |
+            udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{:[^/]}/{}/{}")   |
+            udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")                    |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match("xf1");
         auto f1_ = chain["f1"_h];
         f1_(args.begin(), args.end());
         // auto results = f1_.match("f1");

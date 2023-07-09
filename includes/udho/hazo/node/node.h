@@ -135,6 +135,16 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      */
     template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same<self_type, basic_node<OtherHeadT, OtherTailT>>::value, bool> = true>
     basic_node(const basic_node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
+
+        /**
+     * Construct from a node having different head and tail
+     * @param other another noode of different type
+     */
+    template <typename OtherTailT, typename LeafT, std::enable_if_t<!std::is_same<self_type, basic_node<HeadT, OtherTailT>>::value && !std::is_void<OtherTailT>::value, bool> = true>
+    basic_node(const basic_node<HeadT, OtherTailT>& l, const LeafT& r): tail_type(l.tail(), r), _capsule(l.front()) { }
+
+    template <typename LeafT, std::enable_if_t<!std::is_same<self_type, basic_node<HeadT, void>>::value, bool> = true>
+    basic_node(const basic_node<HeadT, void>& l, const LeafT& r): tail_type(r), _capsule(l.front()) { }
     /// @}
     
     /**
