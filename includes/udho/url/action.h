@@ -58,6 +58,10 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     basic_slot(function_type&& f): _fnc(std::move(f)) {}
     return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
     return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
+    // template <typename... Args, typename TupleT>
+    // return_type operator()(Args... args, const TupleT& tuple){
+    //     return operator()(std::tuple_cat(std::make_tuple(args...), tuple));
+    // }
     template <typename IteratorT>
     decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
     template <typename IteratorT>
