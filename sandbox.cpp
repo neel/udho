@@ -1,228 +1,169 @@
 #include <iostream>
-#include <udho/db/pg.h>
-#include <udho/db/pg/schema/relation.h>
-#include <udho/db/pg/crud/limit.h>
-#include <udho/db/pg/crud/order.h>
-#include <udho/db/pg/activities/start.h>
-#include <udho/db/pg/activities/after.h>
-#include <udho/db/pg/activities/data.h>
-#include <udho/context.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
-#include <udho/activities.h>
-#include <boost/hana.hpp>
-#include <udho/db/pg/crud/join.h>
-#include <udho/db/pg/crud/create.h>
-#include <udho/db/pg/crud/from.h>
-#include <udho/db/pg/crud/into.h>
-#include <udho/db/pg/constructs/types.h>
-#include <udho/db/pg/constructs/alias.h>
-#include <udho/db/pg/constructs/functions.h>
-#include <udho/db/pg/constructs/concat.h>
-#include <udho/db/pg/generators/generators.h>
-#include <udho/db/pg/io/json.h>
-#include <udho/db/pg/ozo/io.h>
-#include <udho/pretty/pretty.h>
+#include <typeinfo>
+#include <udho/url/detail/function.h>
+#include <udho/url/action.h>
+// #include <udho/url/list.h>
+#include <udho/hazo/string/basic.h>
+#include <udho/hazo/seq/seq.h>
+#include <scn/scn.h>
+#include <scn/tuple_return.h>
 
-namespace pg = udho::db::pg;
-
-namespace students{
-
-PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
-PG_ELEMENT(first_name,  pg::types::varchar, pg::constraints::not_null);
-PG_ELEMENT(last_name,   pg::types::varchar);
-PG_ELEMENT(writer,      pg::types::bigint);
-PG_ELEMENT(name,        pg::types::text);
-
-struct table: pg::relation<table, id, first_name, last_name>{
-    PG_NAME(students)
-    using readonly = pg::readonly<id>;
+struct nodef{
+    nodef() = delete;
+    nodef(int) {}
 };
 
+void f0(int a, const std::string& b, const double& c, bool d){
+    return;
 }
 
-namespace articles{
+int f1(int a, const std::string& b, const double& c, bool d){
+    std::cout << a << " " << b << " " << c << " " << d << std::endl;
+    return 42;
+}
 
-PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
-PG_ELEMENT(title,       pg::types::varchar, pg::constraints::unique, pg::constraints::not_null);
-PG_ELEMENT(abstract,    pg::types::text);
-PG_ELEMENT(author,      pg::types::bigint, pg::constraints::not_null, pg::constraints::references<students::table::column<students::id>>::restrict);
-PG_ELEMENT(project,     pg::types::bigint);
-PG_ELEMENT(created,     pg::types::timestamp, pg::constraints::not_null, pg::constraints::default_<pg::constants::now>::value);
+std::string f2(int a, const std::string& b, const double& c, bool d){
+    return "42";
+}
 
-struct table: pg::relation<table, id, title, abstract, author, project, created>{
-    PG_NAME(articles)
-    using readonly = pg::readonly<id, created>;
+struct X{
+    void f0(int a, const std::string& b, const double& c, bool d){
+        return;
+    }
+
+    int f1(int a, const std::string& b, const double& c, bool d){
+        return 42;
+    }
+
+    std::string f2(int a, const std::string& b, const double& c, bool d){
+        return "42";
+    }
+
+    int f3(int a, const std::string& b, const double& c, bool d) const{
+        return 84;
+    }
 };
-
-}
-
-namespace projects{
-
-PG_ELEMENT(id,          pg::types::bigserial, pg::constraints::primary);
-PG_ELEMENT(title,       pg::types::varchar);
-PG_ELEMENT(started,     pg::types::timestamp);
-
-struct table: pg::relation<table, id, title, started>{
-    PG_NAME(projects)
-    using readonly = pg::readonly<id, started>;
-};
-
-}
-
-namespace students{
-    
-using destruct = pg::ddl<students::table>
-                 ::drop
-                 ::apply;
-
-using construct = pg::ddl<students::table>
-                 ::create
-                 ::if_exists
-                 ::skip
-                 ::apply;
-
-using all = pg::from<students::table>
-    ::fetch
-    ::all
-    ::exclude<students::first_name, students::last_name>
-    ::include<students::first_name::text, students::last_name::text>
-    ::include<pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>::as<students::name>>
-    ::apply;
-
-using by_id = pg::from<students::table>
-    ::retrieve
-    ::all
-    ::exclude<students::first_name, students::last_name>
-    ::include<students::first_name::text, students::last_name::text>
-    ::include<pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>::as<students::name>>
-    ::by<students::id>
-    ::apply;
-
-PG_ERROR_CODE(by_id, boost::beast::http::status::forbidden)
-    
-using fullname = pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>;
-using like = pg::from<students::table>
-    ::fetch
-    ::all
-    ::include<fullname::as<students::name>>
-    ::by<students::id::gte, fullname::like>
-    ::apply;
-       
-using create = pg::into<students::table>
-    ::insert
-    ::only<students::first_name, students::last_name>
-    ::returning<students::id>
-    ::apply;
-
-}
-
-namespace articles{
-    
-using destruct = pg::ddl<articles::table>
-                 ::drop
-                 ::apply;
-
-using construct = pg::ddl<articles::table>
-                 ::create
-                 ::if_exists
-                 ::skip
-                 ::apply;
-
-using all = pg::from<students::table>
-    ::join<articles::table>::inner::on<students::id, articles::author>
-    ::fetch
-    ::only<articles::table::all>
-    ::exclude<articles::created, articles::title>
-    ::include<articles::title::text>
-    ::include<students::id::as<students::writer>>
-    ::include<students::first_name::text, students::last_name::text>
-    ::apply;
-
-using create = pg::into<articles::table>
-    ::insert
-    ::only<articles::title, articles::author>
-    ::returning<articles::id>
-    ::apply;
-    
-}
-
-template <typename FieldT>
-using relation_of = typename pg::from<students::table>::relation_of<FieldT>;
 
 int main(){
-    typedef udho::contexts::stateless context_type;
-    typedef udho::servers::quiet::stateless server_type;
-    
-    pg::connection::config dbconfig;
-    pg::connection::info conn_info("host=localhost dbname=postgres user=postgres");
-    auto pool = pg::connection::pool(conn_info, dbconfig);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f1))::return_type, int>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f2))::return_type, std::string>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f2))::return_type, std::string>);
 
-    boost::asio::io_service io;
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f1))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
 
-    context_type::request_type req;
-    server_type::attachment_type attachment(io);
-    context_type ctx(attachment.aux(), req, attachment);
-    
-    auto start = pg::start<articles::destruct, students::destruct, articles::construct, students::construct, students::all, students::like, students::by_id, articles::all, students::create, articles::create>::with(ctx, pool);
-    auto drop_articles   = pg::after(start).perform<articles::destruct>(start);
-    auto drop_students   = pg::after(drop_articles).perform<students::destruct>(start);
-    auto create_students = pg::after(drop_articles, drop_students).perform<students::construct>(start);
-    auto create_articles = pg::after(drop_articles, drop_students).perform<articles::construct>(start);
-    auto fetch_students  = pg::after(create_articles, create_students).perform<students::all>(start);
-    auto create_student  = pg::after(fetch_students).perform<students::create>(start, pg::types::varchar::val("Neel"), pg::types::varchar::val("Basu"));
-    create_student[students::first_name::val] = pg::oz::varchar("NeeleX");
-    create_student->element(students::last_name::val).null(true);
-    auto create_article  = pg::after(create_student).perform<articles::create>(start, pg::types::varchar::val("Article Title"), 1);
-    auto fetch_articles  = pg::after(create_article).perform<articles::all>(start);
-    auto fetch_student   = pg::after(create_student).perform<students::by_id>(start);
-    fetch_student[students::id::val] = 1;
-    auto students_like   = pg::after(fetch_student).perform<students::like>(start);
-    students_like[students::id::gte::val] = 2;
-    students_like[students::fullname::like::val] = std::string("Hello");
-    
-    pg::after(fetch_students, fetch_articles, create_student).finish(start, [&](const pg::data<students::all, articles::all, students::create>& d){
-        if(d.failed<students::all>()){
-            const auto& failure = d.failure<students::all>();
-            std::cout << failure.reason << std::endl;
-        }else{
-            const auto& results = d.success<students::all>();
-            nlohmann::json json = results;
-            std::cout << json << std::endl;
-            std::cout << results.count() << " records" << std::endl;
-            for(const auto& result: results){
-                result[students::id::val];
-                std::cout << result[students::id::val] << " " << result[students::first_name::text::val] << " " << result[students::last_name::text::val] << std::endl;
-            }
-        }
-        
-        if(d.failed<articles::all>()){
-            const auto& failure = d.failure<articles::all>();
-            std::cout << failure.reason << std::endl;
-        }else{
-            const auto& results = d.success<articles::all>();
-            nlohmann::json json = results;
-            std::cout << json << std::endl;
-            std::cout << results.count() << " records" << std::endl;
-            for(const auto& result: results){
-                std::cout << result[articles::id::val].value() << " " << result[articles::author::val] << " " << result[students::writer::val] << " " << result[students::first_name::text::val] << " " << result[students::last_name::text::val] << std::endl;
-                std::cout << result << std::endl;
-            }
-        }
-        
-        if(d.failed<students::create>()){
-            const auto& failure = d.failure<students::create>();
-            std::cout << failure.reason << std::endl;
-        }else{
-            const auto& result = *d.success<students::create>();
-            std::cout << "student created " << result[students::id::val] << std::endl;
-        }
-    });
-    
-    
-    start();
-    
-    io.run();
-    
+    std::string str = "hello";
+    double d = 2.4;
+
+    // {
+        std::vector<std::string> args;
+        args.push_back("24");
+        args.push_back("world");
+        args.push_back("2.42");
+        args.push_back("0");
+
+        auto f = udho::url::detail::encapsulate_function(f1);
+        // std::cout << f(decltype(f)::decayed_arguments_type()) << std::endl;
+        // std::cout << f(decltype(f)::arguments_type(0, str, d, false)) << std::endl;
+
+        std::cout << f.args << std::endl;
+
+        f(args.begin(), args.end());
+    // }
+
+    X x;
+    // const X& y=x;
+    //
+    // {
+    //     auto f = udho::url::detail::encapsulate_mem_function(&X::f3, &y);
+    //     std::cout << f(decltype(f)::decayed_arguments_type()) << std::endl;
+    //     std::cout << f(decltype(f)::arguments_type(0, str, d, false)) << std::endl;
+    // }
+
+    {
+        using namespace udho::hazo::string::literals;
+
+        auto chain =
+            udho::url::slot("f0"_h, &f0)         << udho::url::match(std::regex("f0"), "/f0")                                           |
+            udho::url::slot("f1"_h, &f1)         << udho::url::match(std::regex("f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)"), "/f1/{}/{}/{}")      |
+            udho::url::slot("f2"_h, &f2)         << udho::url::match(std::regex("f2"), "/f2")                                           |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match(std::regex("xf1"), "/x/f1");
+
+        std::cout << chain << std::endl;
+
+        auto f1_ = chain["f1"_h];
+        f1_(args.begin(), args.end());
+        // auto results = f1_.match("f1");
+        // std::cout << "results.matched: " << results.matched() << std::endl;
+        bool found = f1_.invoke(std::string("f1/23/325/23/1"));
+        std::cout << "found: " << found << std::endl;
+        std::cout << f1_.fill(std::make_tuple(24,"world", 2.4, 0)) << std::endl;
+    }{
+        std::cout << "--------" << std::endl;
+
+        using namespace udho::hazo::string::literals;
+
+        auto chain =
+            udho::url::slot("f0"_h, &f0)         << udho::url::match("f0")               |
+            udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{}/{}/{}")   |
+            udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")               |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match("xf1");
+
+        std::cout << chain << std::endl;
+
+        auto f1_ = chain["f1"_h];
+        f1_(args.begin(), args.end());
+        // auto results = f1_.match("f1");
+        // std::cout << "results.matched: " << results.matched() << std::endl;
+        bool found = f1_.invoke(std::string("f1/23/hello/24/1"));
+        std::cout << "found: " << found << std::endl;
+        std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
+    }
+
+    // udho::hazo::seq_d<int, nodef, std::string> tt(2, nodef(2), "Hello");
+
+    // {
+    //     std::uint32_t post_id, user_id;
+    //     auto result = scn::scan("/posts/623635/user/42/view", "/posts/{}/user/{}/view", post_id, user_id);
+    //     std::cout << "result:  " << (bool) result << std::endl;
+    //     std::cout << "post_id: " << post_id << std::endl;
+    //     std::cout << "user_id: " << user_id << std::endl;
+    // }
+    //
+    // {
+    //     auto [result, post_id, user_id] = scn::scan_tuple<std::uint32_t, std::uint32_t>("/posts/623635/user/42/view", "/posts/{}/user/{}/view");
+    //     std::cout << "result:  " << (bool) result << std::endl;
+    //     std::cout << "post_id: " << post_id << std::endl;
+    //     std::cout << "user_id: " << user_id << std::endl;
+    // }
+    //
+    // {
+    //     std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
+    //     auto result = scn::make_result("/posts/623635/user/neel/view/23");
+    //
+    //     std::tuple<decltype(result.range()), std::string> subject_format(result.range(), "/posts/{}/user/{}/view/{}");
+    //     auto args = std::tuple_cat(subject_format, tuple);
+    //     result = std::apply(scn::scan<decltype(result.range()), std::string, std::uint32_t, std::string, std::uint32_t>, args);
+    //
+    //     std::cout << "result:  " << std::boolalpha << (bool) result << std::endl;
+    //     std::cout << "post_id: " << std::get<2>(args) << std::endl;
+    //     std::cout << "user_id: " << std::get<3>(args) << std::endl;
+    // }
+
+    std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
+    std::string format  = "path/{}/{}/{}";
+    std::string subject = "path/23/hello/8";
+    auto res = udho::url::pattern::detail::scan_helper::apply(subject, format, tuple);
+    std::cout << "res: " << (bool) res << std::endl;
+    std::cout << "0: " << std::get<0>(tuple) << std::endl;
+    std::cout << "1: " << std::get<1>(tuple) << std::endl;
+    std::cout << "2: " << std::get<2>(tuple) << std::endl;
     return 0;
 }

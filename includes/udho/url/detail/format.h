@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2020, <copyright holder> <email>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of the <organization> nor the
  *     names of its contributors may be used to endorse or promote products
  *     derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY <copyright holder> <email> ''AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,55 +25,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_HAZO_NODE_FWD_H
-#define UDHO_HAZO_NODE_FWD_H
+#ifndef UDHO_URL_FORMAT_H
+#define UDHO_URL_FORMAT_H
 
-#include <type_traits>
-#include <udho/hazo/detail/has_member.h>
-#include <udho/hazo/detail/has_member_type.h>
+#include <tuple>
+
+#if __cplusplus < 202002L
+    #include <fmt/format.h>
+#else
+    #include <format>
+#endif
 
 namespace udho{
-namespace hazo{
+namespace url{
 
-#ifndef __DOXYGEN__
+#if __cplusplus < 202002L
+    template <typename... Args>
+    using format_string = fmt::format_string<Args...>;
+
+    template<typename... Args>
+    auto format(format_string<Args...> fmt, Args&&... args){
+        return fmt::format(fmt, std::move(args)...);
+    }
+#else
+    template <typename... Args>
+    using format_string = std::format_string<Args...>;
+
+    template<typename... Args>
+    std::string format(format_string<Args...> fmt, Args&&... args){
+        return std::format(fmt, std::forward(args)...);
+    }
+#endif
 
 namespace detail{
-GENERATE_HAS_MEMBER(key);
-GENERATE_HAS_MEMBER(value);
-GENERATE_HAS_MEMBER_TYPE(index_type);
-GENERATE_HAS_MEMBER_TYPE(value_type);
+
+template <typename Tuple, std::size_t... Indices>
+std::string format_with_tuple_impl(const std::string& formatString, const Tuple& tuple, std::index_sequence<Indices...>){
+    return format(formatString, std::get<Indices>(tuple)...);
 }
-    
-template <typename HeadT, typename TailT = void>
-struct basic_node;
 
-template <typename ValueT, bool IsClass = std::is_class<ValueT>::value>
-class capsule;
+template <typename... Args>
+std::string format_with_tuple(const std::string& formatString, const std::tuple<Args...>& tuple){
+    return format_with_tuple_impl(formatString, tuple, std::make_index_sequence<sizeof...(Args)>{});
+}
 
-/**
- * \brief Forward declaration of an internal struct used to analyze the encapsulated type of the capsule.
- * Given any type DataT detects three characteristics
- * 
- * * Whether DataT has a public member function named `key()`.
- * * Whether DataT has a public member function named `value()` and a public typedef `value_type`.
- * * Whether DataT has a public typedef `index_type`
- * 
- * based on these three characteristics different specializations of encapsulate is used.
- * 
- * \tparam DataT type of data to be encapsulated
- * \ingroup encapsulate
- */
-template <
-    typename DataT, 
-    bool HasKey   = detail::has_member_key<DataT>::value, 
-    bool HasValue = detail::has_member_value<DataT>::value && detail::has_member_type_value_type<DataT>::value,
-    bool HasIndex = detail::has_member_type_index_type<DataT>::value
->
-struct encapsulate;
+}
 
-#endif // __DOXYGEN__
+template<typename... Args>
+std::string format(const std::string& fmt, const std::tuple<Args...>& tuple){
+    return detail::format_with_tuple(fmt, tuple);
+}
 
 }
 }
 
-#endif // UDHO_HAZO_NODE_FWD_H
+#endif // UDHO_URL_FORMAT_H
