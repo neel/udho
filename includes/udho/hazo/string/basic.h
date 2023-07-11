@@ -37,6 +37,17 @@ namespace udho{
 namespace hazo{
 namespace string{
 
+namespace detail{
+    template <int X>
+    struct is_zero: std::false_type{};
+
+    template <>
+    struct is_zero<0>: std::true_type{};
+
+    template <typename CharT, CharT X, CharT Y>
+    struct is_same: is_zero<X-Y>{};
+};
+
 namespace tags{
     struct literal{};
 }
@@ -48,9 +59,26 @@ struct basic{
     enum {
         length = sizeof... (C)
     };
-    static const CharT* c_str(){ return _str.data(); }
-    static bool empty() { return length == 0; }
+
+    template <CharT... X>
+    struct compare{
+        enum {
+            value = (sizeof... (X) == length) && std::conjunction_v<detail::is_zero<C - X>...>
+        };
+    };
+
+    constexpr static bool empty() { return length == 0; }
+    template <typename OtherTag, typename OtherCharT, OtherCharT... X>
+    constexpr bool operator==(const basic<OtherTag, CharT, X...>&) const {
+        return std::is_same_v<Tag, OtherTag> && std::is_same_v<CharT, OtherCharT> && compare<X...>::value;
+    }
+    template <typename OtherTag, typename OtherCharT, OtherCharT... X>
+    constexpr bool operator!=(const basic<OtherTag, CharT, X...>& other) const {
+        return !operator==(other);
+    }
+
     static CharT at(int i) { return _str[i]; }
+    static const CharT* c_str(){ return _str.data(); }
     private:
         static constexpr std::array<CharT, length+1> _str = {C..., 0};
 };

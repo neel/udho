@@ -56,4 +56,10 @@ TEST_CASE("url common functionalities", "[url]") {
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
 
+    using namespace udho::hazo::string::literals;
+
+    auto slot_f0 = udho::url::slot("f0"_h, &f0);
+
+    CHECK(slot_f0.args == 4);
+    CHECK(slot_f0.key() == "f0"_h);
 }
