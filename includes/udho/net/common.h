@@ -13,6 +13,16 @@ namespace udho{
 namespace net{
 namespace types{
 
+enum class stages{
+    accepted,
+    headers_read,
+    body_read,
+    body_skipped,
+    headers_written,
+    body_written,
+    closed
+};
+
 namespace headers{
     using request  = boost::beast::http::message<true,  boost::beast::http::fields>;
     using response = boost::beast::http::message<false, boost::beast::http::fields>;

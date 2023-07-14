@@ -12,16 +12,6 @@
 namespace udho{
 namespace net{
 
-enum class stages{
-    accepted,
-    headers_read,
-    body_read,
-    body_skipped,
-    headers_written,
-    body_written,
-    closed
-};
-
 template <typename ProtocolT>
 struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
@@ -34,7 +24,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
     using writer_type   = typename protocol_type::writer_type;
     using clock_type    = std::chrono::time_point<std::chrono::system_clock>;
 
-    connection(boost::asio::io_service& service, socket_type socket): _service(service), _socket(std::move(socket)), _strand(service), _stage(stages::accepted){}
+    connection(boost::asio::io_service& service, socket_type socket): _service(service), _socket(std::move(socket)), _strand(service), _stage(types::stages::accepted){}
     void start(){
         _start = std::chrono::system_clock::now();
     }
@@ -48,7 +38,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         udho::net::types::headers::request _request;
         udho::net::types::headers::request _response;
         clock_type _start, _end;
-        stages _stage;
+        types::stages _stage;
         protocol_type _protocol;
 };
 
