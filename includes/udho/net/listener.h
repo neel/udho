@@ -6,6 +6,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <udho/configuration.h>
+#include <udho/net/common.h>
 
 namespace udho{
 namespace net{
@@ -23,13 +24,15 @@ class listener : public std::enable_shared_from_this<listener<ConnectionT>>{
 #endif
 
 
-    typedef listener<ConnectionT> self_type;
-    typedef ConnectionT connection_type;
+    using self_type        = listener<ConnectionT>;
+    using connection_type  = ConnectionT;
+    using processer_type   = std::function<void (boost::asio::ip::address, udho::net::types::headers::request)>;
 
-    boost::asio::io_service& _service;
-    boost::asio::ip::tcp::acceptor _acceptor;
-    socket_type _socket;
-    boost::asio::signal_set _signals;
+    boost::asio::io_service&        _service;
+    boost::asio::ip::tcp::acceptor  _acceptor;
+    socket_type                     _socket;
+    boost::asio::signal_set         _signals;
+    processer_type                  _processor;
   public:
     /**
      * @brief Construct a socket listener that accepts an incoming connection into a socket and moves it into a newly constructed ConnectionT object and then call's it's start method to start parsing the received message.
@@ -63,27 +66,37 @@ class listener : public std::enable_shared_from_this<listener<ConnectionT>>{
     /**
      * starts the async accept loop
      */
-    void run(){
+    void listen(processer_type&& processor){
+        _processor = std::move(processor);
         if(! _acceptor.is_open())
             return;
         accept();
     }
-    /**
-     * accept an incomming connection
-     */
-    void accept(){
-        _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
-    }
-    void on_accept(boost::system::error_code ec){
-        boost::asio::ip::address remote_address = _socket.remote_endpoint().address();
-        if(ec){
-            // TODO failed to accept
-        }else{
-            std::shared_ptr<connection_type> conn = std::make_shared<connection_type>(_service, std::move(_socket));
-            conn->start();
+    private:
+        auto shared_from_this(){
+            return std::enable_shared_from_this<listener<ConnectionT>>::shared_from_this();
         }
-        accept();
-    }
+        /**
+         * accept an incomming connection
+         */
+        void accept(){
+            _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
+        }
+        void on_accept(boost::system::error_code ec){
+            boost::asio::ip::address remote_address = _socket.remote_endpoint().address();
+            if(ec){
+                // TODO failed to accept
+            }else{
+                std::shared_ptr<connection_type> conn = std::make_shared<connection_type>(_service, std::move(_socket));
+                conn->start(std::bind(&self_type::on_ready, shared_from_this(), remote_address, std::placeholders::_1));
+            }
+            accept();
+        }
+        void on_ready(boost::asio::ip::address address, udho::net::types::headers::request request){
+            _service.post([=](){
+                _processor(address, request);
+            });
+        }
 };
 
 }

@@ -20,13 +20,16 @@ enum class stages{
     body_skipped,
     headers_written,
     body_written,
-    closed
+    closed,
+    rejected
 };
 
 namespace headers{
-    using request  = boost::beast::http::message<true,  boost::beast::http::fields>;
-    using response = boost::beast::http::message<false, boost::beast::http::fields>;
+    using request  = boost::beast::http::header<true,  boost::beast::http::fields>;
+    using response = boost::beast::http::header<false, boost::beast::http::fields>;
 }
+
+
 
 }
 }
