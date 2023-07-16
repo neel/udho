@@ -84,6 +84,7 @@ class listener : public std::enable_shared_from_this<listener<ConnectionT>>{
         }
         void on_accept(boost::system::error_code ec){
             boost::asio::ip::address remote_address = _socket.remote_endpoint().address();
+            std::cout << "accepted " << remote_address << std::endl;
             if(ec){
                 // TODO failed to accept
             }else{

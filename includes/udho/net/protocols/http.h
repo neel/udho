@@ -34,13 +34,14 @@ struct http_reader: public std::enable_shared_from_this<http_reader>{
             if(!ec){
                 _request = _parser.release();
                 std::cout << "finished" << std::endl;
+                std::cout << "buffer: " << std::endl << boost::beast::buffers_to_string(_buffer.data()) << std::endl;
             }
             _handler(ec, bytes_transferred);
         }
     private:
         udho::net::types::headers::request& _request;
         http_request_parser_type            _parser;
-        boost::beast::static_buffer<4096>   _buffer;
+        boost::beast::flat_buffer           _buffer;
         handler_type                        _handler;
 };
 
