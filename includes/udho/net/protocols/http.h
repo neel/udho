@@ -33,8 +33,7 @@ struct http_reader: public std::enable_shared_from_this<http_reader>{
         void finished(boost::system::error_code ec, std::size_t bytes_transferred){
             if(!ec){
                 _request = _parser.release();
-                std::cout << "finished" << std::endl;
-                std::cout << "buffer: " << std::endl << boost::beast::buffers_to_string(_buffer.data()) << std::endl;
+                std::cout << "request parsed" << std::endl << _request << std::endl;
             }
             _handler(ec, bytes_transferred);
         }
@@ -45,8 +44,38 @@ struct http_reader: public std::enable_shared_from_this<http_reader>{
         handler_type                        _handler;
 };
 
+struct http_writer: public std::enable_shared_from_this<http_writer>{
+    using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
+    using response_type   = boost::beast::http::response<boost::beast::http::empty_body>;
+    using serializer_type = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
+
+    explicit http_writer(const types::headers::response& headers): _headers(headers), _response(headers), _serializer(_response) {}
+
+    template <typename StreamT, typename Handler>
+    void start(StreamT& stream, Handler&& handler){
+        _handler = std::move(handler);
+        boost::beast::http::async_write_header(
+            stream, _serializer,
+            std::bind(&http_writer::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+        );
+    }
+    private:
+        void finished(boost::system::error_code ec, std::size_t bytes_transferred){
+            if(!ec){
+                std::cout << "finished" << std::endl;
+            }
+            _handler(ec, bytes_transferred);
+        }
+    private:
+        const udho::net::types::headers::response& _headers;
+        response_type                              _response;
+        serializer_type                            _serializer;
+        handler_type                               _handler;
+};
+
 struct http{
     using reader = http_reader;
+    using writer = http_writer;
 };
 
 }

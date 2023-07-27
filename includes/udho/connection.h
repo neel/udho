@@ -38,7 +38,7 @@ namespace http = boost::beast::http;
  * \ingroup server
  */
 template <typename RouterT, typename AttachmentT>
-class connection : public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{
+class connection: public std::enable_shared_from_this<connection<RouterT, AttachmentT>>{
     typedef typename AttachmentT::auxiliary_type auxiliary_type;
 #if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
     typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;

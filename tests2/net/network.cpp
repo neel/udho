@@ -18,12 +18,19 @@ TEST_CASE("udho network", "[net]") {
 
     boost::asio::io_service service;
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address("0.0.0.0"), 9000);
-    auto listner = std::make_shared<scgi_listener>(service, endpoint);
-    listner->listen([](boost::asio::ip::address address, udho::net::types::headers::request request){
-        std::cout << address << std::endl;
-        std::cout << request << std::endl;
-        std::cout << request.target() << std::endl;
+    auto listner = std::make_shared<http_listener>(service, endpoint);
+    listner->listen([](boost::asio::ip::address address, udho::net::context&& context){
+        std::cout << "remote: " << address << std::endl;
+        std::cout << context.request() << std::endl;
+        std::cout << context.request().target() << std::endl;
+
+        auto request = context.request();
+
         std::cout << request[boost::beast::http::field::user_agent] << std::endl;
+
+        context << "Hello World";
+
+        context.flush();
     });
 
     service.run();

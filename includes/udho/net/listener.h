@@ -1,12 +1,15 @@
 #ifndef UDHO_NET_LISTENER_H
 #define UDHO_NET_LISTENER_H
 
+#include <boost/enable_shared_from_this.hpp>
+#include <udho/configuration.h>
+#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+#include <udho/net/common.h>
+#include <udho/net/context.h>
 #include <udho/connection.h>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <udho/configuration.h>
-#include <udho/net/common.h>
+
 
 namespace udho{
 namespace net{
@@ -16,17 +19,11 @@ namespace net{
  * \ingroup server
  */
 template <typename ConnectionT>
-class listener : public std::enable_shared_from_this<listener<ConnectionT>>{
-#if (BOOST_VERSION / 1000 >=1 && BOOST_VERSION / 100 % 1000 >= 70)
-    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
-#else
-    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> socket_type;
-#endif
-
-
+class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
+    using socket_type      = udho::net::types::socket;
     using self_type        = listener<ConnectionT>;
     using connection_type  = ConnectionT;
-    using processer_type   = std::function<void (boost::asio::ip::address, udho::net::types::headers::request)>;
+    using processer_type   = std::function<void (boost::asio::ip::address, udho::net::context&&)>;
 
     boost::asio::io_service&        _service;
     boost::asio::ip::tcp::acceptor  _acceptor;
@@ -93,9 +90,9 @@ class listener : public std::enable_shared_from_this<listener<ConnectionT>>{
             }
             accept();
         }
-        void on_ready(boost::asio::ip::address address, udho::net::types::headers::request request){
-            _service.post([=](){
-                _processor(address, request);
+        void on_ready(boost::asio::ip::address address, udho::net::context&& context){
+            _service.post([address, context = std::move(context), this] () mutable {
+                _processor(address, std::move(context));
             });
         }
 };
