@@ -22,16 +22,17 @@ class context{
     friend struct udho::net::connection;
 
     boost::asio::io_service&            _service;
-    udho::net::bridge&                  _bridge;
+    udho::net::bridge                   _bridge;
 
     context() = delete;
     context(const context&) = delete;
-    inline context(boost::asio::io_service& io, udho::net::bridge& bridge)
-        : _service(io), _bridge(bridge)
+
+    inline context(boost::asio::io_service& io, udho::net::bridge&& bridge)
+        : _service(io), _bridge(std::move(bridge))
         { }
 
     public:
-        context(context&& other) = default;
+        context(context&&) = default;
 
         inline const udho::net::types::headers::request& request() const { return _bridge.request(); }
         inline udho::net::types::headers::response& response() { return _bridge.response(); }

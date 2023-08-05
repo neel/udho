@@ -19,15 +19,15 @@ struct bridge{
 
     const udho::net::types::headers::request&  _request;
     udho::net::types::headers::response&       _response;
-    boost::asio::streambuf&                    _streambuf;
-    std::ostream                               _stream;
+    std::ostream&                              _stream;
     flash_callback                             _flush;
 
-    inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, boost::asio::streambuf& streambuf, flash_callback&& flush)
-        : _request(request), _response(response), _streambuf(streambuf), _stream(&streambuf), _flush(std::move(flush))
+    inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, std::ostream& stream, flash_callback&& flush)
+        : _request(request), _response(response), _stream(stream), _flush(std::move(flush))
         {}
 
-    bridge(const bridge& other) = delete;
+    bridge(const bridge&) = delete;
+    bridge(bridge&&) = default;
 
     const udho::net::types::headers::request& request() const { return _request; }
     udho::net::types::headers::response& response() const { return _response; }

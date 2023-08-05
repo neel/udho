@@ -49,20 +49,31 @@ struct http_writer: public std::enable_shared_from_this<http_writer>{
     using response_type   = boost::beast::http::response<boost::beast::http::empty_body>;
     using serializer_type = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
 
-    explicit http_writer(const types::headers::response& headers): _headers(headers), _response(headers), _serializer(_response) {}
+    explicit http_writer(const types::headers::response& headers): _headers(headers), _response(headers), _serializer(_response) {
+        // _serializer.split(true);
+    }
+    http_writer(const http_writer&) = delete;
+    ~http_writer() { std::cout << "http_writer dtor" << std::endl; }
 
     template <typename StreamT, typename Handler>
-    void start(StreamT& stream, Handler&& handler){
+    void start(udho::net::types::strand& strand, StreamT& stream, Handler&& handler){
         _handler = std::move(handler);
         boost::beast::http::async_write_header(
             stream, _serializer,
-            std::bind(&http_writer::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+            boost::asio::bind_executor(strand, std::bind(&http_writer::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2))
         );
+        // boost::system::error_code ec;
+        // auto bytes_transferred = boost::beast::http::write_header(stream, _serializer, ec);
+        // finished(ec, bytes_transferred);
     }
     private:
         void finished(boost::system::error_code ec, std::size_t bytes_transferred){
+            std::cout << "_serializer.is_header_done(): " << _serializer.is_header_done() << std::endl;
+            std::cout << "bytes_transferred: " << bytes_transferred << std::endl;
             if(!ec){
                 std::cout << "finished" << std::endl;
+            }else{
+                std::cout << "error: " << ec << std::endl;
             }
             _handler(ec, bytes_transferred);
         }

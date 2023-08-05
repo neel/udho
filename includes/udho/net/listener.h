@@ -93,6 +93,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
         void on_ready(boost::asio::ip::address address, udho::net::context&& context){
             _service.post([address, context = std::move(context), this] () mutable {
                 _processor(address, std::move(context));
+                std::cout << __FILE__ << " :" << __LINE__ << std::endl;
             });
         }
 };

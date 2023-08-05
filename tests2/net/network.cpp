@@ -30,7 +30,7 @@ TEST_CASE("udho network", "[net]") {
 
         context << "Hello World";
 
-        context.flush();
+        context.flush(true);
     });
 
     service.run();
