@@ -25,12 +25,13 @@ TEST_CASE("udho network", "[net]") {
         std::cout << context.request().target() << std::endl;
 
         auto request = context.request();
+        context.set(boost::beast::http::field::server, "udho");
 
         std::cout << request[boost::beast::http::field::user_agent] << std::endl;
 
         context << "Hello World";
 
-        context.flush(true);
+        context.flush();
     });
 
     service.run();

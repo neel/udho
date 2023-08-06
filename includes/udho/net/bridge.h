@@ -51,6 +51,10 @@ struct bridge{
         write_latter<CharT>(std::basic_string<CharT>(str));
         return *this;
     }
+    template <typename ValueT>
+    void set(const boost::beast::http::field& field, const ValueT& value){
+        _response.set(field, value);
+    }
     void flush(bool only_headers = false){
         _flush(only_headers);
     }

@@ -15,8 +15,6 @@
 namespace udho{
 namespace net{
 
-// boost::asio::bind_executor(_strand, std::bind(&self_type::on_read_header, shared_from_this(), std::placeholders::_1, std::placeholders::_2))
-
 class context{
     template <typename ProtocolT>
     friend struct udho::net::connection;
@@ -46,6 +44,10 @@ class context{
         context& operator<<(const StrT& str){
              _bridge << str;
             return *this;
+        }
+        template <typename ValueT>
+        void set(const boost::beast::http::field& field, const ValueT& value){
+            _bridge.set(field, value);
         }
         void flush(bool only_headers = false){
             _bridge.flush(only_headers);

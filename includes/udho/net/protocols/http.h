@@ -49,26 +49,24 @@ struct http_writer: public std::enable_shared_from_this<http_writer>{
     using response_type   = boost::beast::http::response<boost::beast::http::empty_body>;
     using serializer_type = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
 
-    explicit http_writer(const types::headers::response& headers): _headers(headers), _response(headers), _serializer(_response) {
-        // _serializer.split(true);
-    }
+    explicit http_writer(const types::headers::response& headers): _headers(headers) {}
     http_writer(const http_writer&) = delete;
     ~http_writer() { std::cout << "http_writer dtor" << std::endl; }
 
     template <typename StreamT, typename Handler>
     void start(udho::net::types::strand& strand, StreamT& stream, Handler&& handler){
+        std::cout << "_headers" << std::endl << _headers << std::endl;
+        _response = std::make_shared<response_type>(_headers);
+        _serializer = std::make_shared<serializer_type>(*_response);
         _handler = std::move(handler);
         boost::beast::http::async_write_header(
-            stream, _serializer,
+            stream, *_serializer,
             boost::asio::bind_executor(strand, std::bind(&http_writer::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2))
         );
-        // boost::system::error_code ec;
-        // auto bytes_transferred = boost::beast::http::write_header(stream, _serializer, ec);
-        // finished(ec, bytes_transferred);
     }
     private:
         void finished(boost::system::error_code ec, std::size_t bytes_transferred){
-            std::cout << "_serializer.is_header_done(): " << _serializer.is_header_done() << std::endl;
+            std::cout << "_serializer.is_header_done(): " << _serializer->is_header_done() << std::endl;
             std::cout << "bytes_transferred: " << bytes_transferred << std::endl;
             if(!ec){
                 std::cout << "finished" << std::endl;
@@ -79,8 +77,8 @@ struct http_writer: public std::enable_shared_from_this<http_writer>{
         }
     private:
         const udho::net::types::headers::response& _headers;
-        response_type                              _response;
-        serializer_type                            _serializer;
+        std::shared_ptr<response_type>             _response;
+        std::shared_ptr<serializer_type>           _serializer;
         handler_type                               _handler;
 };
 

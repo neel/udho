@@ -23,13 +23,14 @@ namespace net{
  */
 template <typename ProtocolT>
 struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
-    using protocol_type  = ProtocolT;
-    using reader_type    = typename protocol_type::reader;
-    using writer_type    = typename protocol_type::writer;
-    using clock_type     = std::chrono::time_point<std::chrono::system_clock>;
-    using self_type      = connection<ProtocolT>;
-    using processer_type = std::function<void (udho::net::context&&)>;
-    using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
+    using protocol_type   = ProtocolT;
+    using reader_type     = typename protocol_type::reader;
+    using writer_type     = typename protocol_type::writer;
+    using clock_type      = std::chrono::time_point<std::chrono::system_clock>;
+    using self_type       = connection<ProtocolT>;
+    using connection_type = connection<ProtocolT>;
+    using processer_type  = std::function<void (udho::net::context&&)>;
+    // using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
 
 
     connection(boost::asio::io_service& service, udho::net::types::socket socket)
@@ -38,9 +39,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         _reader(std::make_shared<reader_type>(_request)), _writer(std::make_shared<writer_type>(_response)),
         _stream(&_streambuf)
     {}
-    ~connection() {
-        std::cout << "~dtor" << std::endl;
-    }
     void start(processer_type&& processor){
         _processor = std::move(processor);
         _start = std::chrono::system_clock::now();
@@ -50,6 +48,23 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         );
     }
     private:
+        template <typename Handler>
+        struct on_flush_header{
+            connection_type& _connection;
+            Handler          _handler;
+
+            on_flush_header(connection_type& conn, Handler&& handler): _connection(conn), _handler(std::move(handler)) {}
+            void operator()(boost::system::error_code ec, std::size_t bytes_transferred){
+                if(ec){
+                    _connection._stage = types::stages::error;
+                    return;
+                }
+                _connection._stage = types::stages::headers_written;
+                _connection._bytes_written += bytes_transferred;
+                _handler(ec, bytes_transferred);
+            }
+        };
+
         auto shared_from_this() {
             return std::enable_shared_from_this<self_type>::shared_from_this();
         }
@@ -71,34 +86,44 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
             );
             udho::net::context context(_io, std::move(bridge));
             _processor(std::move(context));
-            // flush_headers();
         }
 
+        void prepare_headers(bool only_headers){
+            auto transfer_encoding = _response[boost::beast::http::field::transfer_encoding];
+            // transfer encoding not specified
+            // transfer encoding     specified but doesn't contain 'chunked'
+            //                       while body is empty (which implies body will be written in future)
+            // set transfer encoding to chunked
+            if((only_headers && transfer_encoding.empty()) || (transfer_encoding.find("chunked") == boost::beast::string_view::npos && _streambuf.size() == 0)){
+                std::string value = transfer_encoding;
+                if(!value.empty()){
+                    value = value + ", ";
+                }
+                value = value + "chunked";
+                _response.set(boost::beast::http::field::transfer_encoding, value);
+            }else if(!only_headers && _streambuf.size() != 0){
+                _response.set(boost::beast::http::field::content_length, std::to_string(_streambuf.size()));
+            }
+        }
+        template <typename Handler>
+        void flush_headers(Handler&& handler){
+            _writer->start(_strand, _socket, on_flush_header<Handler>(*this, std::move(handler)));
+        }
         void flush_headers(){
             _writer->start(
                 _strand, _socket,
-                std::bind(&self_type::on_flush_header, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+                std::bind(&self_type::on_flush_header_end, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
             );
         }
 
-        void on_flush_header(boost::system::error_code ec, std::size_t bytes_transferred){
+        void on_flush_header_end(boost::system::error_code ec, std::size_t bytes_transferred){
             if(ec){
                 _stage = types::stages::error;
                 return;
             }
             _stage = types::stages::headers_written;
             _bytes_written += bytes_transferred;
-            std::cout << __FILE__ << " :" << __LINE__ << std::endl;
-            if(_then){
-                std::cout << __FILE__ << " :" << __LINE__ << std::endl;
-                _then(ec, _bytes_written);
-            }
         }
-
-        // template <typename CharT>
-        // void write_latter(const std::string_view& str){
-        //     std::copy(str.begin(), str.end(), std::ostream_iterator<CharT>(_stream));
-        // }
 
         void flush_body(){
             boost::asio::async_write(
@@ -107,12 +132,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
             );
         }
 
-        // template <typename CharT>
-        // void write(const std::string_view& str){
-        //     // write_latter<CharT>(str);
-        //     flush_body();
-        // }
-
         void on_write(boost::system::error_code ec, std::size_t bytes_transferred){
             if(ec){
                 _stage = types::stages::error;
@@ -120,33 +139,16 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
             }
             _stage = types::stages::body_written;
             _bytes_written += bytes_transferred;
-            if(_then){
-                _then(ec, _bytes_written);
-            }
         }
 
-        void then(handler_type&& handler){
-            _then = std::move(handler);
-        }
-
-        // --------
-
-        // template <typename ValueT>
-        // self_type& operator<<(const std::pair<boost::beast::http::field, ValueT>& header){
-        //     _response[header.first] = header.second;
-        //     return *this;
-        // }
-        // template <typename StrT>
-        // self_type& operator<<(const StrT& str){
-        //     write_latter(str);
-        //     return *this;
-        // }
         void flush(bool only_headers = false){
             if(_stage < types::stages::headers_written){
+                prepare_headers(only_headers);
                 if(!only_headers){
-                    then(std::bind(&self_type::flush_body, shared_from_this()));
+                    flush_headers(std::bind(&self_type::flush_body, shared_from_this()));
+                }else{
+                    flush_headers();
                 }
-                flush_headers();
             }else{
                 flush_body();
             }
@@ -157,7 +159,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         clock_type                          _start, _end;
         boost::asio::io_service&            _io;
         processer_type                      _processor;
-        handler_type                        _then;
         udho::net::types::socket            _socket;
         udho::net::types::strand            _strand;
         udho::net::types::headers::request  _request;
@@ -166,7 +167,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         std::shared_ptr<writer_type>        _writer;
         boost::asio::streambuf              _streambuf;
         std::ostream                        _stream;
-        // std::shared_ptr<bridge>             _bridge;
 };
 
 
