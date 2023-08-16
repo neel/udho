@@ -16,20 +16,26 @@ namespace udho{
 namespace net{
 
 class context{
+    using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
+
     template <typename ProtocolT>
     friend struct udho::net::connection;
 
     boost::asio::io_service&            _service;
-    udho::net::bridge                   _bridge;
+    udho::net::bridge&                  _bridge;
 
     context() = delete;
-    context(const context&) = delete;
 
-    inline context(boost::asio::io_service& io, udho::net::bridge&& bridge)
-        : _service(io), _bridge(std::move(bridge))
+    inline context(boost::asio::io_service& io, udho::net::bridge& bridge)
+        : _service(io), _bridge(bridge)
         { }
 
+    struct noop{
+        void operator()(boost::system::error_code, std::size_t){}
+    };
+
     public:
+        context(const context&) = default;
         context(context&&) = default;
 
         inline const udho::net::types::headers::request& request() const { return _bridge.request(); }
@@ -49,8 +55,11 @@ class context{
         void set(const boost::beast::http::field& field, const ValueT& value){
             _bridge.set(field, value);
         }
+        void flush(handler_type&& handler, bool only_headers = false){
+            _bridge.flush(std::move(handler), only_headers);
+        }
         void flush(bool only_headers = false){
-            _bridge.flush(only_headers);
+            flush(noop{}, only_headers);
         }
 };
 

@@ -31,7 +31,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
     using connection_type = connection<ProtocolT>;
     using processer_type  = std::function<void (udho::net::context&&)>;
     using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
-
+    using bridge_ptr      = std::shared_ptr<udho::net::bridge>;
 
     connection(boost::asio::io_service& service, udho::net::types::socket socket)
       : _stage(types::stages::accepted), _bytes_read(0), _bytes_written(0),
@@ -48,12 +48,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         );
     }
     private:
-        enum class stages{ size, body, crlf };
-
-        struct noop{
-            void operator()(boost::system::error_code, std::size_t){}
-        };
-
         template <typename Handler>
         struct on_flush_header{
             connection_type& _connection;
@@ -122,9 +116,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         struct flush_body_{
             connection_type& _connection;
             Handler          _handler;
-            stages           _stage;
 
-            flush_body_(connection_type& conn, Handler&& handler, stages stage): _connection(conn), _handler(std::move(handler)), _stage(stage) {}
+            flush_body_(connection_type& conn, Handler&& handler): _connection(conn), _handler(std::move(handler)) {}
 
             void operator()(boost::system::error_code ec, std::size_t bytes_transferred){
                 _connection._bytes_written += bytes_transferred;
@@ -132,34 +125,38 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
                     _connection._io.post(boost::asio::bind_executor(_connection._strand, std::bind(std::move(_handler), ec, bytes_transferred)));
                     // _handler(ec, bytes_transferred);
                 }else{
-                    // static std::array<char, 2> crlf = {'\r', '\n'};
-                    // _connection._chunk_buffer.clear();
-                    // auto size = _connection._streambuf.size();
-                    // std::string chunk_header = (boost::format("%x") % size).str() + "\r\n";
-                    // std::copy(chunk_header.cbegin(), chunk_header.cend(), std::back_inserter(_connection._chunk_buffer));
-                    // std::copy_n(boost::asio::buffer_cast<const std::uint8_t*>(_connection._streambuf.data()), size, std::back_inserter(_connection._chunk_buffer));
-
-
-                    std::cout << "flush_body: " << (int)_stage << std::endl;
-                    if(_stage == stages::size){
-                        static std::string size_buffer = (boost::format("%x") % _connection._streambuf.size()).str() + "\r\n";
-                        boost::asio::async_write(
-                            _connection._socket, boost::asio::buffer(size_buffer),
-                            boost::asio::bind_executor(_connection._strand, flush_body_<Handler>(_connection, std::move(_handler), stages::body))
-                        );
-                    } else if (_stage == stages::body) {
-                        boost::asio::async_write(
-                            _connection._socket, _connection._streambuf,
-                            boost::asio::bind_executor(_connection._strand, flush_body_<Handler>(_connection, std::move(_handler), stages::crlf))
-                        );
-                    } else if (_stage == stages::crlf) {
-                        static std::array<char, 2> crlf = {'\r', '\n'};
-                        boost::asio::async_write(
-                            _connection._socket, boost::asio::buffer(crlf, 2),
-                            boost::asio::bind_executor(_connection._strand, on_flush_body<Handler>(_connection, std::move(_handler)))
-                        );
+                    if(_connection.chunked()){
+                        send_chunk();
+                    }else{
+                        send_all();
                     }
                 }
+            }
+            void send_chunk(){
+                static std::array<char, 2> crlf = {'\r', '\n'};
+                _connection._chunk_buffer.clear();
+                // { CS critical section with write operation on streambuf
+                auto size = _connection._streambuf.size();
+                std::string chunk_header = (boost::format("%x") % size).str() + "\r\n";
+                std::copy(chunk_header.cbegin(), chunk_header.cend(), std::back_inserter(_connection._chunk_buffer));
+                std::copy_n(boost::asio::buffer_cast<const std::uint8_t*>(_connection._streambuf.data()), size, std::back_inserter(_connection._chunk_buffer));
+                _connection._streambuf.consume(size);
+                // } CS
+                std::vector<boost::asio::const_buffer> chunk{
+                    boost::asio::buffer(_connection._chunk_buffer),
+                    boost::asio::buffer(crlf)
+                };
+
+                boost::asio::async_write(
+                    _connection._socket, chunk,
+                    boost::asio::bind_executor(_connection._strand, on_flush_body<Handler>(_connection, std::move(_handler)))
+                );
+            }
+            void send_all(){
+                boost::asio::async_write(
+                    _connection._socket, _connection._streambuf,
+                    boost::asio::bind_executor(_connection._strand, on_flush_body<Handler>(_connection, std::move(_handler)))
+                );
             }
         };
 
@@ -178,11 +175,11 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         }
 
         void process(){
-            udho::net::bridge bridge(
+            _bridge_ptr = std::make_shared<udho::net::bridge>(
                 _request, _response, _stream,
-                std::bind(&self_type::flush, shared_from_this(), std::placeholders::_1)
+                std::bind(&self_type::flush_<handler_type>, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
             );
-            udho::net::context context(_io, std::move(bridge));
+            udho::net::context context(_io, *_bridge_ptr);
             _processor(std::move(context));
         }
 
@@ -283,29 +280,19 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         void flush_(Handler&& handler, bool only_headers = false){
             if(_stage < types::stages::headers_written){
                 prepare_headers(only_headers);
-                stages stage = stages::body;
-                if(chunked()){
-                    stage = stages::size;
-                }
                 if(!only_headers){
                     // flush_headers(std::bind(static_cast<void(self_type::*)(void)>(&self_type::flush_body), shared_from_this()));
-                    _header_flusher(flush_body_<Handler>(*this, std::move(handler), stage));
+                    _header_flusher(flush_body_<Handler>(*this, std::move(handler)));
                 }else{
                     // flush_headers();
                     _header_flusher(std::move(handler));
                 }
             }else{
-                stages stage = stages::body;
-                if(chunked()){
-                    stage = stages::size;
-                }
+
                 // flush_body();
-                flush_body_<Handler> body_flusher(*this, std::move(handler), stage);
+                flush_body_<Handler> body_flusher(*this, std::move(handler));
                 body_flusher(boost::system::error_code(), 0);
             }
-        }
-        void flush(bool only_headers = false){
-            flush_<noop>(noop{}, only_headers);
         }
     private:
         udho::net::types::stages            _stage;
@@ -323,8 +310,9 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         std::ostream                        _stream;
         flush_header_                       _header_flusher;
         bool                                _chunked;
-        std::string                         _size_buffer;
+        // std::string                         _size_buffer;
         std::basic_string<std::uint8_t>     _chunk_buffer;
+        bridge_ptr                          _bridge_ptr;
 };
 
 

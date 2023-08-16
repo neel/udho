@@ -13,13 +13,18 @@ using scgi_connection = udho::net::connection<udho::net::protocols::scgi>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
+void chunk2(udho::net::context context){
+    context << "Hello Mars";
+    context.flush();
+}
+
 TEST_CASE("udho network", "[net]") {
     CHECK(1 == 1);
 
     boost::asio::io_service service;
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address("0.0.0.0"), 9000);
     auto listner = std::make_shared<http_listener>(service, endpoint);
-    listner->listen([](boost::asio::ip::address address, udho::net::context&& context){
+    listner->listen([](boost::asio::ip::address address, udho::net::context context){
         std::cout << "remote: " << address << std::endl;
         std::cout << context.request() << std::endl;
         std::cout << context.request().target() << std::endl;
@@ -31,7 +36,7 @@ TEST_CASE("udho network", "[net]") {
 
         context << "Hello World";
 
-        context.flush();
+        context.flush(std::bind(&chunk2, context));
     });
 
     service.run();
