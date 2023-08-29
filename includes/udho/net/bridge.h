@@ -15,16 +15,18 @@ namespace net{
 
 
 struct bridge{
-    using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
-    using flush_callback = std::function<void (handler_type, bool)>;
+    using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
+    using flush_callback  = std::function<void (handler_type, bool)>;
+    using finish_callback = std::function<void ()>;
 
     const udho::net::types::headers::request&  _request;
     udho::net::types::headers::response&       _response;
     std::ostream&                              _stream;
     flush_callback                             _flush;
+    finish_callback                            _finish;
 
-    inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, std::ostream& stream, flush_callback&& flush)
-        : _request(request), _response(response), _stream(stream), _flush(std::move(flush))
+    inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, std::ostream& stream, flush_callback&& flush, finish_callback&& finish)
+        : _request(request), _response(response), _stream(stream), _flush(std::move(flush)), _finish(finish)
         {}
 
     bridge(const bridge&) = delete;
@@ -58,6 +60,9 @@ struct bridge{
     }
     void flush(handler_type&& handler, bool only_headers = false){
         _flush(handler, only_headers);
+    }
+    void finish(){
+        _finish();
     }
 };
 

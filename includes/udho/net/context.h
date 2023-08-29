@@ -61,6 +61,12 @@ class context{
         void flush(bool only_headers = false){
             flush(noop{}, only_headers);
         }
+        void finish(){
+            _bridge.finish();
+        }
+        void end(){
+            flush();
+        }
 };
 
 }

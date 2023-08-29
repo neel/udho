@@ -13,9 +13,13 @@ using scgi_connection = udho::net::connection<udho::net::protocols::scgi>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
+void chunk3(udho::net::context context){
+    context.finish();
+}
+
 void chunk2(udho::net::context context){
     context << "Hello Mars";
-    context.flush();
+    context.flush(std::bind(&chunk3, context));
 }
 
 TEST_CASE("udho network", "[net]") {

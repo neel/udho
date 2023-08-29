@@ -177,7 +177,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
         void process(){
             _bridge_ptr = std::make_shared<udho::net::bridge>(
                 _request, _response, _stream,
-                std::bind(&self_type::flush_<handler_type>, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+                std::bind(&self_type::flush_<handler_type>, shared_from_this(), std::placeholders::_1, std::placeholders::_2),
+                std::bind(&self_type::finish, shared_from_this())
             );
             udho::net::context context(_io, *_bridge_ptr);
             _processor(std::move(context));
@@ -293,6 +294,35 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>{
                 flush_body_<Handler> body_flusher(*this, std::move(handler));
                 body_flusher(boost::system::error_code(), 0);
             }
+        }
+
+        void finish(){
+            static std::array<char, 5> end = {'0', '\r', '\n', '\r', '\n'};
+
+            auto transfer_encoding = _response[boost::beast::http::field::transfer_encoding];
+            auto is_chunked = transfer_encoding.find("chunked") != boost::beast::string_view::npos;
+            if(is_chunked){
+                boost::asio::async_write(
+                    _socket, boost::asio::buffer(end),
+                    boost::asio::bind_executor(
+                        _strand,
+                        std::bind(&self_type::on_finish, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+                    )
+                );
+            }else{
+                _io.post(
+                    boost::asio::bind_executor(
+                        _strand,
+                        std::bind(&self_type::on_finish, shared_from_this(), boost::system::error_code(), 0)
+                    )
+                );
+            }
+        }
+        void on_finish(boost::system::error_code ec, std::size_t bytes_transferred){
+            boost::ignore_unused(bytes_transferred);
+
+            boost::system::error_code error;
+            _socket.shutdown(tcp::socket::shutdown_send, error);
         }
     private:
         udho::net::types::stages            _stage;
