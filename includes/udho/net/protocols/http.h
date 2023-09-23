@@ -126,12 +126,6 @@ struct http_writer: public std::enable_shared_from_this<http_writer<StreamT>>{
         stream_type&                               _stream;
 };
 
-template <typename StreamT>
-struct http{
-    using reader = http_reader<StreamT>;
-    using writer = http_writer<StreamT>;
-};
-
 }
 }
 }

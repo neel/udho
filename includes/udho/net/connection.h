@@ -294,6 +294,9 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             }
             if(_stage < types::stages::headers_written){
                 types::transfer_encoding::prepare(_response);
+                if(!chunked()){
+                    _response.set(boost::beast::http::field::content_length, std::to_string(payload_size));
+                }
                 flush_header();
             }
             if(!only_headers && payload_size > 0){
@@ -307,6 +310,11 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
          * @note Expects that the write buffer is empty.
          */
         void finish(){
+            if(_streambuf.size() != 0){
+                // TODO need to flush if there is something pending in the buffer
+                flush(std::bind(&self_type::finish, shared_from_this()));
+                return;
+            }
             if(chunked()){
                 auto handler = std::bind(&self_type::on_finish, shared_from_this(), std::placeholders::_1, std::placeholders::_2);
                 flush_body<decltype(handler)> body_flusher(_io, _stat_strand, _socket, _buffers, encoding(), stat(), std::move(handler));
@@ -317,7 +325,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
                     )
                 );
             }else{
-                prepare_headers();
+                // prepare_headers();
                 _io.post(
                     boost::asio::bind_executor(
                         _write_strand,              // why ?

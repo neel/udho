@@ -3,8 +3,7 @@
 #include <string>
 #include <udho/net/listener.h>
 #include <udho/net/connection.h>
-#include <udho/net/protocols/http.h>
-#include <udho/net/protocols/scgi.h>
+#include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
 #include <type_traits>
 
@@ -17,6 +16,7 @@ using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
 void chunk3(udho::net::context context){
+    context << "Hello Jupiter";
     context.finish();
 }
 
@@ -47,6 +47,7 @@ TEST_CASE("udho network", "[net]") {
         context << "Hello World";
 
         context.flush(std::bind(&chunk2, context));
+        // context.finish();
     });
 
     service.run();

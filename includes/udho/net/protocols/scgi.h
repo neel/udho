@@ -91,10 +91,6 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
         field_map_type                      _field_map;
 };
 
-template <typename StreamT>
-struct scgi{
-    using reader = scgi_reader<StreamT>;
-};
 
 }
 }
