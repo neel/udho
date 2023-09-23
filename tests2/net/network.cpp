@@ -8,8 +8,11 @@
 #include <udho/net/common.h>
 #include <type_traits>
 
-using http_connection = udho::net::connection<udho::net::protocols::http>;
-using scgi_connection = udho::net::connection<udho::net::protocols::scgi>;
+using socket_type     = udho::net::types::socket;
+using http_protocol   = udho::net::protocols::http<socket_type>;
+using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
+using http_connection = udho::net::connection<http_protocol>;
+using scgi_connection = udho::net::connection<scgi_protocol>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
@@ -19,8 +22,11 @@ void chunk3(udho::net::context context){
 
 void chunk2(udho::net::context context){
     context << "Hello Mars";
+    std::cout << "chunk 2" << std::endl;
     context.flush(std::bind(&chunk3, context));
 }
+
+void f(int){}
 
 TEST_CASE("udho network", "[net]") {
     CHECK(1 == 1);
@@ -32,7 +38,7 @@ TEST_CASE("udho network", "[net]") {
         std::cout << "remote: " << address << std::endl;
         std::cout << context.request() << std::endl;
         std::cout << context.request().target() << std::endl;
-
+        context.encoding(udho::net::types::transfer::encoding::chunked);
         auto request = context.request();
         context.set(boost::beast::http::field::server, "udho");
 

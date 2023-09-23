@@ -2,11 +2,9 @@
 #define UDHO_NET_LISTENER_H
 
 #include <boost/enable_shared_from_this.hpp>
-#include <udho/configuration.h>
 #define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
 #include <udho/net/common.h>
 #include <udho/net/context.h>
-#include <udho/connection.h>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 
@@ -48,7 +46,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
         _acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
         if(ec) throw std::runtime_error((boost::format("Failed to listen %1%") % ec.message()).str());
 
-        _signals.async_wait(boost::bind(&self_type::stop, this));
+        _signals.async_wait(std::bind(&self_type::stop, this));
     }
     /**
      * stops accepting incomming connections

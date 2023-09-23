@@ -1,11 +1,9 @@
 #ifndef UDHO_NET_CONTEXT_H
 #define UDHO_NET_CONTEXT_H
 
-#include <udho/connection.h>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <udho/configuration.h>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <udho/net/common.h>
@@ -65,8 +63,15 @@ class context{
             _bridge.finish();
         }
         void end(){
-            flush();
+            _bridge.flush(std::bind(&context::finish_, this, std::placeholders::_1, std::placeholders::_2));
         }
+        void finish_(boost::system::error_code, std::size_t){
+            finish();
+        }
+        inline void encoding(types::transfer::encoding enc) { _bridge.encoding(enc); }
+        inline types::transfer::encoding encoding() const { return _bridge.encoding(); }
+        inline void compression(types::transfer::compression compress) { _bridge.compression(compress); }
+        inline types::transfer::compression compression() const { return _bridge.compression(); }
 };
 
 }

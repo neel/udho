@@ -2,11 +2,9 @@
 #define UDHO_NET_PROTOCOL_SCGI_H
 
 #include <iterator>
-#include <udho/connection.h>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <udho/configuration.h>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <udho/net/common.h>
@@ -18,11 +16,13 @@ namespace udho{
 namespace net{
 namespace protocols{
 
-struct scgi_reader: public std::enable_shared_from_this<scgi_reader>{
+template <typename StreamT>
+struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
     using handler_type     = std::function<void (boost::system::error_code, std::size_t)>;
-    using field_map_type   = std::map<std::string, boost::beast::http::field> ;
+    using field_map_type   = std::map<std::string, boost::beast::http::field>;
+    using stream_type      = StreamT;
 
-    inline explicit scgi_reader(types::headers::request& request): _request(request){
+    inline explicit scgi_reader(types::headers::request& request, stream_type& stream): _request(request), _stream(stream) {
         _field_map = {
             {"HTTP-USER-AGENT",     boost::beast::http::field::user_agent},
             {"HTTP-CONNECTION",     boost::beast::http::field::connection},
@@ -33,12 +33,12 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader>{
         };
     }
 
-    template <typename StreamT, typename Handler>
-    void start(StreamT& stream, Handler&& handler){
+    template <typename Handler>
+    void start(Handler&& handler){
         std::cout << "started reading" << std::endl;
         boost::asio::async_read_until(
-            stream, _buffer, "\0,",
-            std::bind(&scgi_reader::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+            _stream, _buffer, "\0,",
+            std::bind(&scgi_reader::finished, std::enable_shared_from_this<scgi_reader<StreamT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
         );
         _handler = std::move(handler);
     }
@@ -87,11 +87,13 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader>{
         udho::net::types::headers::request& _request;
         boost::asio::streambuf              _buffer;
         handler_type                        _handler;
+        stream_type&                        _stream;
         field_map_type                      _field_map;
 };
 
+template <typename StreamT>
 struct scgi{
-    using reader = scgi_reader;
+    using reader = scgi_reader<StreamT>;
 };
 
 }
