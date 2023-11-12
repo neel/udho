@@ -348,6 +348,7 @@ TEST_CASE("hazo legacy", "[hazo]") {
         typedef map_v<first_name, last_name, age> map_type;
         
         map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+        std::cout << m1 << std::endl;
         
         CHECK(m1["first_name"_s] == "Neel");
         CHECK(m1["last_name"_s] == "Basu");
@@ -358,6 +359,8 @@ TEST_CASE("hazo legacy", "[hazo]") {
         typedef map_d<first_name, last_name, age> map_type;
         
         map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+
+        std::cout << m1 << std::endl;
         
         CHECK(m1["first_name"_s] == first_name("Neel"));
         CHECK(m1["last_name"_s] == last_name("Basu"));

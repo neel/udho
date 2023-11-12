@@ -11,11 +11,17 @@
 #include <scn/scn.h>
 #include <scn/tuple_return.h>
 #include <udho/url/word.h>
+#include <udho/url/verb.h>
 
 namespace udho{
 namespace url{
 
 namespace pattern{
+
+enum class formats{
+    p1729, // Specs: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p1729r2.html using library https://github.com/eliaskosunen/scnlib
+    regex
+};
 
 namespace detail{
     // https://stackoverflow.com/a/17856366
@@ -63,12 +69,15 @@ namespace detail{
     };
 }
 
-template <typename SearchT>
-struct match{
-    using string_type  = std::string;
-    using pattern_type = std::string;
+template <pattern::formats format, typename CharT = char>
+struct match;
 
-    match(const pattern_type& format, const pattern_type& replace = ""): _format(format), _replace(!replace.empty() ? replace : format) {}
+template <typename CharT>
+struct match<pattern::formats::p1729, CharT>{
+    using string_type  = std::basic_string<CharT>;
+    using pattern_type = std::basic_string<CharT>;
+
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) {}
     const pattern_type format() const { return _format; }
     std::string pattern() const { return format(); }
     std::string replacement() const { return _replace; }
@@ -81,21 +90,22 @@ struct match{
 
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
-
+    udho::url::verb method() const { return _method; }
     private:
+        udho::url::verb _method;
         pattern_type _format;
         pattern_type _replace;
 };
 
 template <typename CharT>
-struct match<std::basic_regex<CharT>>{
+struct match<pattern::formats::regex, CharT>{
     using string_type  = std::basic_string<CharT>;
     using regex_type   = std::basic_regex<CharT>;
     using pattern_type = regex_type;
 
-    match(const regex_type& regex, const std::string& replace): _regex(regex), _replace(replace) {}
+    match(udho::url::verb method, const string_type& pattern, const std::string& replace): _method(method), _regex(pattern), _pattern(pattern), _replace(replace) {}
     const regex_type regex() const { return _regex; }
-    std::string pattern() const { return "NOT PRINTABLE"; }
+    std::string pattern() const { return _pattern; }
     std::string replacement() const { return _replace; }
     std::string str() const { return pattern() + " -> " + replacement(); }
     template <typename TupleT>
@@ -112,22 +122,34 @@ struct match<std::basic_regex<CharT>>{
 
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return format(_replace, args); }
-
+    udho::url::verb method() const { return _method; }
     private:
+        udho::url::verb _method;
         regex_type  _regex;
+        std::string _pattern;
         std::string _replace;
 };
 
 }
 
 template <typename CharT>
-struct pattern::match<std::basic_regex<CharT>> match(const std::basic_regex<CharT>& regex, const std::string& replace){
-    return pattern::match<std::basic_regex<CharT>>{regex, replace};
+struct pattern::match<pattern::formats::regex, CharT> regx(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::regex, CharT>{method, pattern, replace};
+}
+template <typename CharT, std::size_t M, std::size_t N>
+struct pattern::match<pattern::formats::regex, CharT> regx(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::regex, CharT>{method, pattern, replace};
 }
 
-struct pattern::match<std::string> match(const std::string& format){
-    return pattern::match<std::string>{format};
+template <typename CharT>
+struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
 }
+template <typename CharT, std::size_t M, std::size_t N>
+struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
+}
+
 
 }
 }

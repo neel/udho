@@ -2,7 +2,6 @@
 #define UDHO_NET_LISTENER_H
 
 #include <boost/enable_shared_from_this.hpp>
-#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
 #include <udho/net/common.h>
 #include <udho/net/context.h>
 #include <boost/asio.hpp>

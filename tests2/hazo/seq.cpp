@@ -566,6 +566,19 @@ TEST_CASE("sequence specific functionalities", "[hazo]") {
         });
         CHECK(unsigned(out*10) == 2052);
     }
+
+    SECTION("concat") {
+        typedef h::seq_d<int, double> seq1_type;
+        typedef h::seq_d<first_name> seq2_type;
+
+        seq1_type seq1{42, 4.2};
+        seq2_type seq2{"Neel Basu"};
+
+        auto seq3 = seq1.concat(seq2);
+        std::cout << seq3 << std::endl;
+
+        // decltype(seq3)::x;
+    }
 }
 
 TEST_CASE("sequence hana functionalities", "[hazo]") {

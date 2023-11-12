@@ -6,6 +6,7 @@
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
 #include <type_traits>
+#include <curl/curl.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;

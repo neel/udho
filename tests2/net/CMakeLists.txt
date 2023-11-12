@@ -8,8 +8,11 @@ find_package(Catch2 REQUIRED)
 include(CTest)
 include(Catch)
 
+
+find_package(CURL REQUIRED)
+
 add_executable(network network.cpp)
-target_link_libraries(network PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(network PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho CURL::libcurl)
 
 catch_discover_tests(network)
 

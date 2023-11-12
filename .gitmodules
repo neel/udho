@@ -16,3 +16,6 @@
 [submodule "vendor/scnlib"]
 	path = vendor/scnlib
 	url = https://github.com/eliaskosunen/scnlib.git
+[submodule "vendor/tabulate"]
+	path = vendor/tabulate
+	url = https://github.com/p-ranav/tabulate.git

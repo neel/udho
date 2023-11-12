@@ -86,6 +86,9 @@ namespace detail{
         arg_to_tuple<TupleT>::convert(tuple, begin, end);
     }
 
+    template <typename IteratorT>
+    void arguments_to_tuple(std::tuple<>& tuple, IteratorT begin, IteratorT end){}
+
     /**
      * extract the function signature
      */
@@ -132,6 +135,17 @@ namespace detail{
         using object_type            = typename signature::object_type;
         using decayed_arguments_type = typename signature::decayed_arguments_type;
 
+        template <typename T>
+        using valid_args             = std::conditional_t<
+                                            std::is_same_v<arguments_type, T>,
+                                            arguments_type,
+                                            std::conditional_t<
+                                                std::is_same_v<decayed_arguments_type, T>,
+                                                decayed_arguments_type,
+                                                void
+                                            >
+                                        >;
+
         enum {
             args = std::tuple_size<arguments_type>::value
         };
@@ -141,10 +155,14 @@ namespace detail{
         using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
 
         encapsulate_mem_function(F f, object_type* that): _f(f), _that(that) {}
-        return_type operator()(decayed_arguments_type&& args){
-            return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
-        }
-        return_type operator()(arguments_type&& args){
+        // return_type operator()(decayed_arguments_type&& args){
+        //     return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
+        // }
+        // return_type operator()(arguments_type&& args){
+        //     return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
+        // }
+        template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
+        return_type operator()(T&& args){
             return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
         }
         template <typename IteratorT>
@@ -154,7 +172,7 @@ namespace detail{
             if(nargs != std::tuple_size<decayed_arguments_type>::value){
                 throw std::out_of_range("expects " + std::to_string(std::tuple_size<decayed_arguments_type>::value) + " args but called with " + std::to_string(nargs) + " arguments");
             }
-            arguments_to_tuple(decayed_args, begin);
+            arguments_to_tuple(decayed_args, begin, end);
             return decayed_args;
         }
         template <typename IteratorT>
@@ -172,6 +190,17 @@ namespace detail{
         using arguments_type         = typename signature::arguments_type;
         using decayed_arguments_type = typename signature::decayed_arguments_type;
 
+        template <typename T>
+        using valid_args             = std::conditional_t<
+                                            std::is_same_v<arguments_type, T>,
+                                            arguments_type,
+                                            std::conditional_t<
+                                                std::is_same_v<decayed_arguments_type, T>,
+                                                decayed_arguments_type,
+                                                void
+                                            >
+                                        >;
+
         enum {
             args = std::tuple_size<arguments_type>::value
         };
@@ -181,10 +210,14 @@ namespace detail{
         using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
 
         encapsulate_function(F f): _f(f) {}
-        return_type operator()(decayed_arguments_type&& args){
-            return std::apply(_f, args);
-        }
-        return_type operator()(arguments_type&& args){
+        // return_type operator()(decayed_arguments_type&& args){
+        //     return std::apply(_f, args);
+        // }
+        // return_type operator()(arguments_type&& args){
+        //     return std::apply(_f, args);
+        // }
+        template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
+        return_type operator()(T&& args){
             return std::apply(_f, args);
         }
         template <typename IteratorT>

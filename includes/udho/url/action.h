@@ -28,16 +28,16 @@
 #ifndef UDHO_URL_ACTION_H
 #define UDHO_URL_ACTION_H
 
+#include <udho/url/fwd.h>
 #include <udho/url/detail/function.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/pattern.h>
 #include <udho/hazo/seq/seq.h>
+#include <udho/url/tabulate.h>
+#include <boost/hana/concat.hpp>
 
 namespace udho{
 namespace url{
-
-template <typename F, typename CharT, CharT... C>
-struct basic_slot;
 
 template <typename F, typename CharT, CharT... C>
 struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
@@ -46,6 +46,19 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     using return_type            = typename function_type::return_type;
     using arguments_type         = typename function_type::arguments_type;
     using decayed_arguments_type = typename function_type::decayed_arguments_type;
+    template <typename T>
+    using valid_args             = typename function_type::template valid_args<T>;
+
+    // template <typename T>
+    // using valid_args             = std::conditional_t<
+    //                                     std::is_same_v<arguments_type, T>,
+    //                                     arguments_type,
+    //                                     std::conditional_t<
+    //                                         std::is_same_v<decayed_arguments_type, T>,
+    //                                         decayed_arguments_type,
+    //                                         void
+    //                                     >
+    //                                 >;
 
     enum {
         args = function_type::args
@@ -56,12 +69,14 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     using decayed_arg = typename function_type::template decayed_arg<N>;
 
     basic_slot(function_type&& f): _fnc(std::move(f)) {}
-    return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
-    return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
+    // return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
+    // return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
     // template <typename... Args, typename TupleT>
     // return_type operator()(Args... args, const TupleT& tuple){
     //     return operator()(std::tuple_cat(std::make_tuple(args...), tuple));
     // }
+    template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
+    return_type operator()(T&& args){ return _fnc(std::move(args)); }
     template <typename IteratorT>
     decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
     template <typename IteratorT>
@@ -71,9 +86,6 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     private:
         function_type _fnc;
 };
-
-template <typename FunctionT, typename StrT, typename MatchT>
-struct basic_action;
 
 template <typename F, typename CharT, CharT... C, typename MatchT>
 struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot<F, udho::hazo::string::str<CharT, C...>>{
@@ -110,6 +122,10 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
             operator()(std::move(tuple));
         }
         return found;
+    }
+    template <typename... X>
+    std::string operator()(X&&... x) const {
+        return fill(decayed_arguments_type(x...));
     }
 
     std::string fill(const decayed_arguments_type& args) const { return _match.replace(args); }
@@ -153,6 +169,15 @@ auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, basic
     return typename lhs_type::template extend<rhs_type>(left, std::move(right));
 }
 
+template <typename... ArgsL, typename... ArgsR>
+auto operator|(const udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>& left, const udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>& right){
+    // using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>;
+    // using rhs_type = udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>;
+    // return typename lhs_type::template extend<ArgsR...>(left, std::move(right));
+
+    return left.concat(right);
+}
+
 
 template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
 basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
@@ -171,28 +196,39 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
 
 template <typename StreamT, typename FunctionT, typename MatchT, typename StrT, typename... TailT>
 StreamT& operator<<(StreamT& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
-    chain.write(stream);
-    return stream;
-}
-
-template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
-StreamT& operator<<(StreamT& stream, const udho::hazo::capsule<basic_action<FunctionT, StrT, MatchT>>& capsule){
-    stream << std::endl << capsule.data();
-    return stream;
-}
-
-template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
-StreamT& operator<<(StreamT& stream, const basic_action<FunctionT, StrT, MatchT>& action){
-    std::string args_str;
-    for(int i=0; i != basic_action<FunctionT, StrT, MatchT>::args; ++i){
-        if(i > 0)
-            args_str += ",";
-        args_str += format("${}", i);
+    // chain.write(stream);
+    tabulate::Table table;
+    table.add_row({"method", "label", "args", "pattern", "replacement"});
+    for(size_t i = 0; i < 5; ++i) {
+        table[0][i].format().font_color(tabulate::Color::yellow).font_style({tabulate::FontStyle::bold});
     }
-    std::string label(StrT().c_str());
-    stream << format("{} f({})", label, args_str) << " <= " << action.match().str();
+    tabulize tab(table);
+    chain.visit(tab);
+    for(size_t i = 0; i < table.size(); ++i) {
+        table[i][1].format().font_style({tabulate::FontStyle::bold});
+    }
+    stream << table;
     return stream;
 }
+
+// template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
+// StreamT& operator<<(StreamT& stream, const udho::hazo::capsule<basic_action<FunctionT, StrT, MatchT>>& capsule){
+//     stream << std::endl << capsule.data();
+//     return stream;
+// }
+//
+// template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
+// StreamT& operator<<(StreamT& stream, const basic_action<FunctionT, StrT, MatchT>& action){
+//     std::string args_str;
+//     for(int i=0; i != basic_action<FunctionT, StrT, MatchT>::args; ++i){
+//         if(i > 0)
+//             args_str += ",";
+//         args_str += format("${}", i);
+//     }
+//     std::string label(StrT().c_str());
+//     stream << format("{} f({})", label, args_str) << " <= " << action.match().str();
+//     return stream;
+// }
 
 }
 }
