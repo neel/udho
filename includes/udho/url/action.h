@@ -171,10 +171,6 @@ auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, basic
 
 template <typename... ArgsL, typename... ArgsR>
 auto operator|(const udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>& left, const udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>& right){
-    // using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>;
-    // using rhs_type = udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>;
-    // return typename lhs_type::template extend<ArgsR...>(left, std::move(right));
-
     return left.concat(right);
 }
 

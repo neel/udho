@@ -12,6 +12,7 @@
 #include <scn/tuple_return.h>
 #include <udho/url/word.h>
 #include <udho/url/verb.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace udho{
 namespace url{
@@ -20,7 +21,8 @@ namespace pattern{
 
 enum class formats{
     p1729, // Specs: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p1729r2.html using library https://github.com/eliaskosunen/scnlib
-    regex
+    regex,
+    fixed
 };
 
 namespace detail{
@@ -97,6 +99,32 @@ struct match<pattern::formats::p1729, CharT>{
         pattern_type _replace;
 };
 
+
+template <typename CharT>
+struct match<pattern::formats::fixed, CharT>{
+    using string_type  = std::basic_string<CharT>;
+    using pattern_type = std::basic_string<CharT>;
+
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) {}
+    const pattern_type format() const { return _format; }
+    std::string pattern() const { return format(); }
+    std::string replacement() const { return _replace; }
+    std::string str() const { return pattern() == replacement() ? pattern() : pattern()+" -> "+replacement(); }
+    template <typename TupleT>
+    bool find(const string_type& subject, TupleT&) {
+        auto result = boost::starts_with(subject, _format);
+        return (bool) result;
+    }
+
+    template <typename... Args>
+    std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
+    udho::url::verb method() const { return _method; }
+    private:
+        udho::url::verb _method;
+        pattern_type _format;
+        pattern_type _replace;
+};
+
 template <typename CharT>
 struct match<pattern::formats::regex, CharT>{
     using string_type  = std::basic_string<CharT>;
@@ -148,6 +176,15 @@ struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::v
 template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
+}
+
+template <typename CharT>
+struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
+}
+template <typename CharT, std::size_t M, std::size_t N>
+struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
 }
 
 

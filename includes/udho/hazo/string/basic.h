@@ -60,6 +60,13 @@ struct basic{
         length = sizeof... (C)
     };
 
+    using container_type    = std::array<CharT, length+1>;
+    using difference_type   = typename container_type::difference_type;
+    using value_type        = typename container_type::value_type;
+    using reference         = typename container_type::const_reference;
+    using pointer           = typename container_type::const_pointer;
+    using iterator          = typename container_type::const_iterator;
+
     template <CharT... X>
     struct compare{
         enum {
@@ -79,6 +86,11 @@ struct basic{
 
     static CharT at(int i) { return _str[i]; }
     static const CharT* c_str(){ return _str.data(); }
+    static std::string str() { return std::string{_str.data()}; }
+
+    iterator begin() const { return _str.begin(); }
+    iterator end() const { return _str.end(); }
+
     private:
         static constexpr std::array<CharT, length+1> _str = {C..., 0};
 };
