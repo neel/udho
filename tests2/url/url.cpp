@@ -94,7 +94,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
         udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed(udho::url::verb::get, "x/f0", "x/f0")                                       |
         udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx(udho::url::verb::get,  "x/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "x/f1/{}/{}/{}");
 
-    std::cout << chain << std::endl;
+    // std::cout << chain << std::endl;
     {
         auto f0_ = chain["f0"_h];
         // CHECK(f0_(args.begin(), args.end()) == int(24+5+2.42+0));
@@ -136,7 +136,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
 
     auto chain3 = chain | chain2;
     // chain3.xyz;
-    std::cout << chain3 << std::endl;
+    // std::cout << chain3 << std::endl;
 
     {
         udho::url::mount_point mount_point{"chain"_h, "chain/", std::move(chain)};
@@ -153,18 +153,22 @@ TEST_CASE("url common functionalities using regex", "[url]") {
         CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "chain/f1/24/world/2.4");
         CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "chain/f1/24/world/2.4");
 
+        // std::cout << mount_point << std::endl;
+        auto chain4 = udho::url::mount_point("root"_h, "/", std::move(chain3)) | std::move(mount_point);
+        std::cout << chain4 << std::endl;
+
     }
     // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
 
-    void (X::* pFunc)() = &X::f0;
-    void* ptr = (void*&)pFunc;
-
-    Dl_info f0_info, f1_info, xf0_info;
-    dladdr(reinterpret_cast<void *>(&f0), &f0_info);
-    dladdr(reinterpret_cast<void *>(&f1), &f1_info);
-    dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
-
-    std::cout << abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    std::cout << abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    std::cout << abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL) << std::endl;
+    // void (X::* pFunc)() = &X::f0;
+    // void* ptr = (void*&)pFunc;
+    //
+    // Dl_info f0_info, f1_info, xf0_info;
+    // dladdr(reinterpret_cast<void *>(&f0), &f0_info);
+    // dladdr(reinterpret_cast<void *>(&f1), &f1_info);
+    // dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
+    //
+    // std::cout << abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL) << std::endl;
+    // std::cout << abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL) << std::endl;
+    // std::cout << abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL) << std::endl;
 }

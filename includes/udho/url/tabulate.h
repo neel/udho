@@ -27,6 +27,11 @@ struct tabulize{
             action.symbol()
         });
     }
+
+    template<typename StrT, typename ActionsT>
+    void operator()(const mount_point<StrT, ActionsT>& point){
+        _table << point;
+    }
 };
 
 // template<typename FunctionT, typename StrT, typename MatchT>

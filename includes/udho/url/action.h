@@ -174,10 +174,8 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
 }
 
 
-template <typename StreamT, typename FunctionT, typename MatchT, typename StrT, typename... TailT>
-StreamT& operator<<(StreamT& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
-    // chain.write(stream);
-    tabulate::Table table;
+template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
+tabulate::Table& operator<<(tabulate::Table& table, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
     table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
     for(size_t i = 0; i < 6; ++i) {
         table[0][i].format().font_color(tabulate::Color::yellow).font_style({tabulate::FontStyle::bold});
@@ -187,6 +185,13 @@ StreamT& operator<<(StreamT& stream, const udho::hazo::basic_seq_d<basic_action<
     for(size_t i = 0; i < table.size(); ++i) {
         table[i][1].format().font_style({tabulate::FontStyle::bold});
     }
+    return table;
+}
+
+template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
+std::ostream& operator<<(std::ostream& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
+    tabulate::Table table;
+    table << chain;
     stream << table;
     return stream;
 }

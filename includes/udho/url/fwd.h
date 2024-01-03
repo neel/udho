@@ -38,6 +38,9 @@ struct basic_slot;
 template <typename FunctionT, typename StrT, typename MatchT>
 struct basic_action;
 
+template <typename StrT, typename ActionsT>
+struct mount_point;
+
 }
 }
 
