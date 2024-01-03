@@ -34,6 +34,9 @@
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 #include <udho/url/detail/format.h>
+#include <boost/algorithm/string/replace.hpp>
+#include <dlfcn.h>
+#include <cxxabi.h>
 
 namespace udho{
 namespace url{
@@ -154,13 +157,10 @@ namespace detail{
         template <int N>
         using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
 
-        encapsulate_mem_function(F f, object_type* that): _f(f), _that(that) {}
-        // return_type operator()(decayed_arguments_type&& args){
-        //     return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
-        // }
-        // return_type operator()(arguments_type&& args){
-        //     return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
-        // }
+        encapsulate_mem_function(F f, object_type* that): _f(f), _that(that) {
+            _fptr = (void*&)_f;
+            dladdr(reinterpret_cast<void *>(_fptr), &_info);
+        }
         template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
         return_type operator()(T&& args){
             return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
@@ -179,9 +179,17 @@ namespace detail{
         return_type operator()(IteratorT begin, IteratorT end){
             return operator()(prepare(begin, end));
         }
+        std::string symbol_name() const{
+            std::string symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            static std::string cxx_string_expanded_type = "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >";
+            boost::replace_all(symbol, cxx_string_expanded_type, "std::string");
+            return symbol;
+        }
         private:
             F _f;
             object_type* _that;
+            void* _fptr;
+            Dl_info _info;
     };
     template <typename F>
     struct encapsulate_function{
@@ -209,13 +217,9 @@ namespace detail{
         template <int N>
         using decayed_arg = typename std::tuple_element<N, decayed_arguments_type>::type;
 
-        encapsulate_function(F f): _f(f) {}
-        // return_type operator()(decayed_arguments_type&& args){
-        //     return std::apply(_f, args);
-        // }
-        // return_type operator()(arguments_type&& args){
-        //     return std::apply(_f, args);
-        // }
+        encapsulate_function(F f): _f(f) {
+            dladdr(reinterpret_cast<void *>(f), &_info);
+        }
         template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
         return_type operator()(T&& args){
             return std::apply(_f, args);
@@ -234,8 +238,15 @@ namespace detail{
         return_type operator()(IteratorT begin, IteratorT end){
             return operator()(prepare(begin, end));
         }
+        std::string symbol_name() const{
+            std::string symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            static std::string cxx_string_expanded_type = "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >";
+            boost::replace_all(symbol, cxx_string_expanded_type, "std::string");
+            return symbol;
+        }
         private:
             F _f;
+            Dl_info _info;
     };
 
     template <typename F>

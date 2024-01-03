@@ -23,7 +23,8 @@ struct tabulize{
             boost::lexical_cast<std::string>(action.match().method()),
             StrT().c_str(),
             std::to_string(action.args),
-            action.match().pattern(), action.match().replacement()
+            action.match().pattern(), action.match().replacement(),
+            action.symbol()
         });
     }
 };

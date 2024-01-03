@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <udho/hazo.h>
 #include <iostream>
 #include <boost/lexical_cast.hpp>

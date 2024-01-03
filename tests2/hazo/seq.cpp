@@ -1,12 +1,12 @@
 #define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/hana.h>
 #include <udho/hazo/seq.h>
 #include <udho/hazo/seq/hana.h>
 #include <boost/hana/string.hpp>
 #include <string>
-
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"

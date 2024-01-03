@@ -9,6 +9,6 @@ include(CTest)
 include(Catch)
 
 add_executable(url url.cpp)
-target_link_libraries(url PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(url PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 catch_discover_tests(url)

@@ -468,7 +468,7 @@ struct basic_node: private TailT /*basic_node<typename TailT::data_type, typenam
      * Finds data of an element by key
      */
     template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
-    data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     /**
      * Finds data of an element by key
      */

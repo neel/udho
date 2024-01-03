@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <udho/hazo/node/node.h>
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/hana.h>

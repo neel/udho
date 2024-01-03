@@ -6,7 +6,7 @@
 #include <udho/net/context.h>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
-
+#include <iostream>
 
 namespace udho{
 namespace net{

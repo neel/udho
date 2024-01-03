@@ -12,7 +12,8 @@
 #include <scn/tuple_return.h>
 #include <udho/url/word.h>
 #include <udho/url/verb.h>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
+#include <exception>
 
 namespace udho{
 namespace url{
@@ -79,13 +80,13 @@ struct match<pattern::formats::p1729, CharT>{
     using string_type  = std::basic_string<CharT>;
     using pattern_type = std::basic_string<CharT>;
 
-    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) {}
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) { check(); }
     const pattern_type format() const { return _format; }
     std::string pattern() const { return format(); }
     std::string replacement() const { return _replace; }
     std::string str() const { return pattern() == replacement() ? pattern() : pattern()+" -> "+replacement(); }
     template <typename TupleT>
-    bool find(const string_type& subject, TupleT& tuple) {
+    bool find(const string_type& subject, TupleT& tuple) const {
         auto result = detail::scan_helper::apply(subject, _format, tuple);
         return (bool) result;
     }
@@ -93,6 +94,17 @@ struct match<pattern::formats::p1729, CharT>{
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
     udho::url::verb method() const { return _method; }
+
+    private:
+        void check(){
+            if(_format.empty()){
+                throw std::invalid_argument(udho::url::format("empty format not allowed"));
+            }
+
+            if(_format.front() == '/' || _replace.front() == '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _format, _replace));
+            }
+        }
     private:
         udho::url::verb _method;
         pattern_type _format;
@@ -105,13 +117,13 @@ struct match<pattern::formats::fixed, CharT>{
     using string_type  = std::basic_string<CharT>;
     using pattern_type = std::basic_string<CharT>;
 
-    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) {}
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) { check(); }
     const pattern_type format() const { return _format; }
     std::string pattern() const { return format(); }
     std::string replacement() const { return _replace; }
     std::string str() const { return pattern() == replacement() ? pattern() : pattern()+" -> "+replacement(); }
     template <typename TupleT>
-    bool find(const string_type& subject, TupleT&) {
+    bool find(const string_type& subject, TupleT&) const {
         auto result = boost::starts_with(subject, _format);
         return (bool) result;
     }
@@ -119,6 +131,17 @@ struct match<pattern::formats::fixed, CharT>{
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
     udho::url::verb method() const { return _method; }
+
+    private:
+        void check(){
+            if(_format.empty()){
+                throw std::invalid_argument(udho::url::format("empty format not allowed"));
+            }
+
+            if(_format.front() == '/' || _replace.front() == '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _format, _replace));
+            }
+        }
     private:
         udho::url::verb _method;
         pattern_type _format;
@@ -131,13 +154,13 @@ struct match<pattern::formats::regex, CharT>{
     using regex_type   = std::basic_regex<CharT>;
     using pattern_type = regex_type;
 
-    match(udho::url::verb method, const string_type& pattern, const std::string& replace): _method(method), _regex(pattern), _pattern(pattern), _replace(replace) {}
+    match(udho::url::verb method, const string_type& pattern, const std::string& replace): _method(method), _regex(pattern), _pattern(pattern), _replace(replace) { check(); }
     const regex_type regex() const { return _regex; }
     std::string pattern() const { return _pattern; }
     std::string replacement() const { return _replace; }
     std::string str() const { return pattern() + " -> " + replacement(); }
     template <typename TupleT>
-    bool find(const string_type& subject, TupleT& tuple) {
+    bool find(const string_type& subject, TupleT& tuple) const {
         std::smatch matches;
         bool found = std::regex_match(subject, matches, _regex);
         if(found){
@@ -151,6 +174,17 @@ struct match<pattern::formats::regex, CharT>{
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return format(_replace, args); }
     udho::url::verb method() const { return _method; }
+
+    private:
+        void check(){
+            if(_pattern.empty()){
+                throw std::invalid_argument(udho::url::format("empty format not allowed"));
+            }
+
+            if(_pattern.front() == '/' || _replace.front() == '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _pattern, _replace));
+            }
+        }
     private:
         udho::url::verb _method;
         regex_type  _regex;

@@ -9,16 +9,16 @@ include(CTest)
 include(Catch)
 
 add_executable(data data.cpp)
-target_link_libraries(data PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(data PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 add_executable(activity activity.cpp)
-target_link_libraries(activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 add_executable(subtask subtask.cpp)
-target_link_libraries(subtask PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(subtask PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 add_executable(application application.cpp)
-target_link_libraries(application PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho)
+target_link_libraries(application PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 catch_discover_tests(data)
 catch_discover_tests(activity)

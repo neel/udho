@@ -10,7 +10,7 @@
 #include <udho/configuration.h>
 #include <udho/activities.h>
 #define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #define SMALL_TIMEOUT 1
 #define LARGE_TIMEOUT 2

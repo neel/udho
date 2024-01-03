@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 #include <udho/net/listener.h>
 #include <udho/net/connection.h>

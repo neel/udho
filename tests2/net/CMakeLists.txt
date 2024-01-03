@@ -12,7 +12,7 @@ include(Catch)
 find_package(CURL REQUIRED)
 
 add_executable(network network.cpp)
-target_link_libraries(network PRIVATE ${Boost_LIBRARIES} Catch2::Catch2 udho CURL::libcurl)
+target_link_libraries(network PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho CURL::libcurl)
 
 catch_discover_tests(network)
 

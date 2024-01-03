@@ -49,17 +49,6 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     template <typename T>
     using valid_args             = typename function_type::template valid_args<T>;
 
-    // template <typename T>
-    // using valid_args             = std::conditional_t<
-    //                                     std::is_same_v<arguments_type, T>,
-    //                                     arguments_type,
-    //                                     std::conditional_t<
-    //                                         std::is_same_v<decayed_arguments_type, T>,
-    //                                         decayed_arguments_type,
-    //                                         void
-    //                                     >
-    //                                 >;
-
     enum {
         args = function_type::args
     };
@@ -69,12 +58,6 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     using decayed_arg = typename function_type::template decayed_arg<N>;
 
     basic_slot(function_type&& f): _fnc(std::move(f)) {}
-    // return_type operator()(decayed_arguments_type&& args){ return _fnc(std::move(args)); }
-    // return_type operator()(arguments_type&& args){ return _fnc(std::move(args)); }
-    // template <typename... Args, typename TupleT>
-    // return_type operator()(Args... args, const TupleT& tuple){
-    //     return operator()(std::tuple_cat(std::make_tuple(args...), tuple));
-    // }
     template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
     return_type operator()(T&& args){ return _fnc(std::move(args)); }
     template <typename IteratorT>
@@ -82,6 +65,7 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     template <typename IteratorT>
     return_type operator()(IteratorT begin, IteratorT end) { return _fnc(begin, end); }
     static constexpr key_type key() { return key_type{}; }
+    std::string symbol() const { return _fnc.symbol_name(); }
 
     private:
         function_type _fnc;
@@ -194,8 +178,8 @@ template <typename StreamT, typename FunctionT, typename MatchT, typename StrT, 
 StreamT& operator<<(StreamT& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
     // chain.write(stream);
     tabulate::Table table;
-    table.add_row({"method", "label", "args", "pattern", "replacement"});
-    for(size_t i = 0; i < 5; ++i) {
+    table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
+    for(size_t i = 0; i < 6; ++i) {
         table[0][i].format().font_color(tabulate::Color::yellow).font_style({tabulate::FontStyle::bold});
     }
     tabulize tab(table);
