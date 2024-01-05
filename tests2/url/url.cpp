@@ -157,8 +157,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     auto chain4 = udho::url::mount_point("root"_h, "/", std::move(chain3)) | std::move(mount_point);
 
     auto router = udho::url::router(std::move(chain4));
-    auto c = router["chain"_h];
-    std::cout << c["f0"_h].symbol() << std::endl;
+    std::cout << router["chain"_h]["f0"_h].symbol() << std::endl;
 
     // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
 

@@ -62,6 +62,7 @@ namespace transfer{
             switch(e){
                 case encoding::plain:   return "plain";     break;
                 case encoding::chunked: return "chunked";   break;
+                default: __builtin_unreachable();
             }
         }
         std::string operator[](compression c) const {
@@ -70,6 +71,7 @@ namespace transfer{
                 case compression::compress: return "compress"; break;
                 case compression::deflate:  return "deflate"; break;
                 case compression::gzip:     return "gzip"; break;
+                default: __builtin_unreachable();
             }
         }
     };
