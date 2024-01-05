@@ -49,7 +49,7 @@ endif()
 
 if(UDHO_USE_PUGIXML)
     add_definitions(-DWITH_PUGI)
-    FIND_PACKAGE(PugiXML REQUIRED)
+    FIND_PACKAGE(PUGIXML REQUIRED)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
