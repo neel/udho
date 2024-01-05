@@ -41,7 +41,7 @@ build:ubuntu:lunar:
     - apt-get install -y tzdata
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev 
-    - apt-get install -y libboost-all-dev cmake gcc clang git curl libcurl-dev wget libssl-dev libpugixml-dev nlohmann-json3-dev libpq-dev postgresql-server-dev-all catch2 doxygen
+    - apt-get install -y libboost-all-dev cmake gcc clang git curl libcurl4-gnutls-dev wget libssl-dev libpugixml-dev nlohmann-json3-dev libpq-dev postgresql-server-dev-all catch2 doxygen
   script:
     - mkdir build
     - cd build
