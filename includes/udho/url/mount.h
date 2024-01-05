@@ -22,8 +22,10 @@ template <typename StrT, typename ActionsT>
 struct mount_point{
     using actions_type = ActionsT;
     using name_type    = StrT;
+    using key_type     = StrT;
 
     mount_point(name_type&& name, const std::string& path, actions_type&& actions): _name(std::move(name)), _path(path), _actions(std::move(actions)) { check(); }
+    static constexpr key_type key() { return key_type{}; }
     const name_type& name() const { return _name; }
     const std::string& path() const { return _path; }
     const actions_type& actions() const { return _actions; }

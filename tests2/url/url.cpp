@@ -3,6 +3,7 @@
 #include <string>
 #include <udho/url/action.h>
 #include <udho/url/mount.h>
+#include <udho/url/router.h>
 #include <type_traits>
 #include <dlfcn.h>
 #include <cxxabi.h>
@@ -91,7 +92,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
         udho::url::slot("f0"_h,  &f0)         << udho::url::regx(udho::url::verb::get, "f0", "f0")                                           |
         udho::url::slot("f1"_h,  &f1)         << udho::url::regx(udho::url::verb::get, "f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "f1/{}/{}/{}")      |
         udho::url::slot("f2"_h,  &f2)         << udho::url::regx(udho::url::verb::get, "f2-(\\d+)/(\\w+)", "f2-{}/{}")                       |
-        udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed(udho::url::verb::get, "x/f0", "x/f0")                                       |
+        udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed(udho::url::verb::get, "x/f0", "x/f0")                                      |
         udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx(udho::url::verb::get,  "x/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "x/f1/{}/{}/{}");
 
     // std::cout << chain << std::endl;
@@ -138,26 +139,27 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     // chain3.xyz;
     // std::cout << chain3 << std::endl;
 
-    {
-        udho::url::mount_point mount_point{"chain"_h, "chain/", std::move(chain)};
-        CHECK(mount_point.find(std::string("chain/f0")) == true);
-        CHECK(mount_point.find(std::string("chain/f1/23/hello/24/1")) == true);
-        CHECK(mount_point.find(std::string("chain/f1")) == false);
-        CHECK(mount_point.find(std::string("chain/f0/23/hello/24/1")) == false);
-        CHECK(mount_point.invoke(std::string("chain/f0")) == true);
-        CHECK(mount_point.invoke(std::string("chain/f1/23/hello/24/1")) == true);
-        CHECK(mount_point.invoke(std::string("chain/f1")) == false);
-        CHECK(mount_point.invoke(std::string("chain/f0/23/hello/24/1")) == false);
-        auto f0_ = mount_point["f0"_h];
-        CHECK(f0_() == "f0");
-        CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "chain/f1/24/world/2.4");
-        CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "chain/f1/24/world/2.4");
+    udho::url::mount_point mount_point{"chain"_h, "pchain/", std::move(chain)};
+    CHECK(mount_point.find(std::string("pchain/f0")) == true);
+    CHECK(mount_point.find(std::string("pchain/f1/23/hello/24/1")) == true);
+    CHECK(mount_point.find(std::string("pchain/f1")) == false);
+    CHECK(mount_point.find(std::string("pchain/f0/23/hello/24/1")) == false);
+    CHECK(mount_point.invoke(std::string("pchain/f0")) == true);
+    CHECK(mount_point.invoke(std::string("pchain/f1/23/hello/24/1")) == true);
+    CHECK(mount_point.invoke(std::string("pchain/f1")) == false);
+    CHECK(mount_point.invoke(std::string("pchain/f0/23/hello/24/1")) == false);
+    auto f0_ = mount_point["f0"_h];
+    CHECK(f0_() == "f0");
+    CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "pchain/f1/24/world/2.4");
+    CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "pchain/f1/24/world/2.4");
 
-        // std::cout << mount_point << std::endl;
-        auto chain4 = udho::url::mount_point("root"_h, "/", std::move(chain3)) | std::move(mount_point);
-        std::cout << chain4 << std::endl;
+    // std::cout << mount_point << std::endl;
+    auto chain4 = udho::url::mount_point("root"_h, "/", std::move(chain3)) | std::move(mount_point);
 
-    }
+    auto router = udho::url::router(std::move(chain4));
+    auto c = router["chain"_h];
+    std::cout << c["f0"_h].symbol() << std::endl;
+
     // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
 
     // void (X::* pFunc)() = &X::f0;
