@@ -8,6 +8,10 @@ find_package(Catch2 REQUIRED)
 include(CTest)
 include(Catch)
 
+if(Catch2_VERSION_MAJOR LESS 3)
+    add_definitions(-DWITH_CATCH_VERSION_2)
+endif()
+
 add_executable(meta meta.cpp)
 target_link_libraries(meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 

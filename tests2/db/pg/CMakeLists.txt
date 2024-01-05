@@ -8,6 +8,11 @@ find_package(Catch2 REQUIRED)
 include(CTest)
 include(Catch)
 
+
+if(Catch2_VERSION_MAJOR LESS 3)
+    add_definitions(-DWITH_CATCH_VERSION_2)
+endif()
+
 add_executable(pg_basic_activity basic_activity.cpp)
 target_link_libraries(pg_basic_activity PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 

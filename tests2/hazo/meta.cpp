@@ -2,7 +2,11 @@
 #include "udho/hazo/node/fwd.h"
 #include <type_traits>
 #define CATCH_CONFIG_MAIN
+#if WITH_CATCH_VERSION_2
+#include <catch2/catch.hpp>
+#else
 #include <catch2/catch_all.hpp>
+#endif
 #include <udho/hazo/node/node.h>
 #include <udho/hazo/node/meta.h>
 #include <string>

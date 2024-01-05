@@ -1,5 +1,10 @@
 #define CATCH_CONFIG_MAIN
+
+#if WITH_CATCH_VERSION_2
+#include <catch2/catch.hpp>
+#else
 #include <catch2/catch_all.hpp>
+#endif
 #include <string>
 #include <udho/net/listener.h>
 #include <udho/net/connection.h>
