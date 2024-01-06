@@ -39,29 +39,19 @@ struct mount_point{
 
     template <typename Ch>
     bool find(const std::basic_string<Ch>& pattern) const {
-        auto pos = find_name<Ch>(pattern);
-        if(pos == pattern.npos)
-            return false;
-        auto rest = pattern.substr(pos);
-
         bool found = false;
-        _actions.visit([&rest, &found](const auto& action){
+        _actions.visit([&pattern, &found](const auto& action){
             if(found) return;
-            found = action.find(rest);
+            found = action.find(pattern);
         });
         return found;
     }
     template <typename Ch>
     bool invoke(const std::basic_string<Ch>& pattern) {
-        auto pos = find_name<Ch>(pattern);
-        if(pos == pattern.npos)
-            return false;
-        auto rest = pattern.substr(pos);
-
         bool found = false;
-        _actions.visit([&rest, &found](auto& action){
+        _actions.visit([&pattern, &found](auto& action){
             if(found) return;
-            found = action.invoke(rest);
+            found = action.invoke(pattern);
         });
         return found;
     }
@@ -77,17 +67,6 @@ struct mount_point{
     }
 
     private:
-        /**
-         * if the pattern starts with _name followed by a slash then return the rest of the pattern including the slash.
-         * returns an empty string otherwise.
-         * @param pattern
-         */
-        template <typename Ch>
-        typename std::basic_string<Ch>::size_type find_name(const std::basic_string<Ch>& pattern) const {
-            bool prefixed = boost::starts_with(pattern, _path);
-            return prefixed ? _path.size() : std::basic_string<Ch>::npos;
-        }
-
         void check(){
             if(_path.back() != '/'){
                 throw std::invalid_argument(format("the mountpoint path ({}) must end with a /", _path));

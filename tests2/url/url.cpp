@@ -146,24 +146,26 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     // std::cout << chain3 << std::endl;
 
     udho::url::mount_point mount_point{"chain"_h, "pchain/", std::move(chain)};
-    CHECK(mount_point.find(std::string("pchain/f0")) == true);
-    CHECK(mount_point.find(std::string("pchain/f1/23/hello/24/1")) == true);
-    CHECK(mount_point.find(std::string("pchain/f1")) == false);
-    CHECK(mount_point.find(std::string("pchain/f0/23/hello/24/1")) == false);
-    CHECK(mount_point.invoke(std::string("pchain/f0")) == true);
-    CHECK(mount_point.invoke(std::string("pchain/f1/23/hello/24/1")) == true);
-    CHECK(mount_point.invoke(std::string("pchain/f1")) == false);
-    CHECK(mount_point.invoke(std::string("pchain/f0/23/hello/24/1")) == false);
+    CHECK(mount_point.find(std::string("f0")) == true);
+    CHECK(mount_point.find(std::string("f1/23/hello/24/1")) == true);
+    CHECK(mount_point.find(std::string("f1")) == false);
+    CHECK(mount_point.find(std::string("f0/23/hello/24/1")) == false);
+    CHECK(mount_point.invoke(std::string("f0")) == true);
+    CHECK(mount_point.invoke(std::string("f1/23/hello/24/1")) == true);
+    CHECK(mount_point.invoke(std::string("f1")) == false);
+    CHECK(mount_point.invoke(std::string("f0/23/hello/24/1")) == false);
     auto f0_ = mount_point["f0"_h];
     CHECK(f0_() == "f0");
     CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "pchain/f1/24/world/2.4");
     CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "pchain/f1/24/world/2.4");
 
     // std::cout << mount_point << std::endl;
-    auto chain4 = udho::url::mount_point("root"_h, "/", std::move(chain3)) | std::move(mount_point);
+    auto chain4 = std::move(mount_point) | udho::url::mount_point("root"_h, "/", std::move(chain3));
 
     auto router = udho::url::router(std::move(chain4));
     std::cout << router["chain"_h]["f0"_h].symbol() << std::endl;
+
+    std::cout << router.invoke(std::string("pchain/f1/23/hello/24/1")) << std::endl;
 
     // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
 
