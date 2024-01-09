@@ -28,30 +28,30 @@ struct router{
     const auto& operator[](XStrT&& xstr) const { return _mountpoints[std::move(xstr)]; }
 
     template <typename Ch>
-    bool find(const std::basic_string<Ch>& pattern) const {
+    bool find(const std::basic_string<Ch>& subject) const {
         bool found = false;
-        _mountpoints.visit([&pattern, &found](const auto& mointpoint){
+        _mountpoints.visit([&subject, &found](const auto& mointpoint){
             if(found)
                 return;
             auto path = mointpoint.path();
-            if(!boost::starts_with(pattern, path))
+            if(!boost::starts_with(subject, path))
                 return;
-            auto rest = pattern.substr(path.size());
+            auto rest = path == "/" ? subject : subject.substr(path.size());
             found = mointpoint.find(rest);
         });
         return found;
     }
 
     template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& pattern) {
+    bool invoke(const std::basic_string<Ch>& subject) {
         bool found = false;
-        _mountpoints.visit([&pattern, &found](auto& mointpoint){
+        _mountpoints.visit([&subject, &found](auto& mointpoint){
             if(found)
                 return;
             auto path = mointpoint.path();
-            if(!boost::starts_with(pattern, path))
+            if(!boost::starts_with(subject, path))
                 return;
-            auto rest = pattern.substr(path.size());
+            auto rest = path == "/" ? subject : subject.substr(path.size());
             found = mointpoint.invoke(rest);
         });
         return found;

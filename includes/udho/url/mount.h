@@ -38,20 +38,20 @@ struct mount_point{
     const auto& operator[](XStrT&& xstr) const { return _actions[std::move(xstr)]; }
 
     template <typename Ch>
-    bool find(const std::basic_string<Ch>& pattern) const {
+    bool find(const std::basic_string<Ch>& subject) const {
         bool found = false;
-        _actions.visit([&pattern, &found](const auto& action){
+        _actions.visit([&subject, &found](const auto& action){
             if(found) return;
-            found = action.find(pattern);
+            found = action.find(subject);
         });
         return found;
     }
     template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& pattern) {
+    bool invoke(const std::basic_string<Ch>& subject) {
         bool found = false;
-        _actions.visit([&pattern, &found](auto& action){
+        _actions.visit([&subject, &found](auto& action){
             if(found) return;
-            found = action.invoke(pattern);
+            found = action.invoke(subject);
         });
         return found;
     }
@@ -68,8 +68,11 @@ struct mount_point{
 
     private:
         void check(){
-            if(_path.back() != '/'){
-                throw std::invalid_argument(format("the mountpoint path ({}) must end with a /", _path));
+            if(_path.front() != '/'){
+                throw std::invalid_argument(format("the mountpoint path ({}) must start with /", _path));
+            }
+            if(_path.size() > 1 && _path.back() == '/'){
+                throw std::invalid_argument(format("the mountpoint path ({}) must not end with a /", _path));
             }
         }
     private:

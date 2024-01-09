@@ -90,18 +90,18 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      * checks whether this action matches with the pattern provided
      */
     template <typename Ch>
-    bool find(const std::basic_string<Ch>& pattern) const{
+    bool find(const std::basic_string<Ch>& subject) const{
         decayed_arguments_type tuple;
-        bool found = _match.find(pattern, tuple);
+        bool found = _match.find(subject, tuple);
         return found;
     }
     /**
      * invokes the function with the captured arguments if this action matches with the pattern provided
      */
     template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& pattern){
+    bool invoke(const std::basic_string<Ch>& subject){
         decayed_arguments_type tuple;
-        bool found = _match.find(pattern, tuple);
+        bool found = _match.find(subject, tuple);
         if(found){
             operator()(std::move(tuple));
         }

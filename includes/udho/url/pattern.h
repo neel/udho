@@ -101,8 +101,8 @@ struct match<pattern::formats::p1729, CharT>{
                 throw std::invalid_argument(udho::url::format("empty format not allowed"));
             }
 
-            if(_format.front() == '/' || _replace.front() == '/'){
-                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _format, _replace));
+            if(_format.front() != '/' || _replace.front() != '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must begin with / character", _format, _replace));
             }
         }
     private:
@@ -138,8 +138,8 @@ struct match<pattern::formats::fixed, CharT>{
                 throw std::invalid_argument(udho::url::format("empty format not allowed"));
             }
 
-            if(_format.front() == '/' || _replace.front() == '/'){
-                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _format, _replace));
+            if(_format.front() != '/' || _replace.front() != '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must begin with / character", _format, _replace));
             }
         }
     private:
@@ -181,8 +181,8 @@ struct match<pattern::formats::regex, CharT>{
                 throw std::invalid_argument(udho::url::format("empty format not allowed"));
             }
 
-            if(_pattern.front() == '/' || _replace.front() == '/'){
-                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must not begin with / character, while the mount points must end with a /", _pattern, _replace));
+            if(_pattern.front() != '/' || _replace.front() != '/'){
+                throw std::invalid_argument(udho::url::format("the format ({}) and the replacement ({}) must begin with / character", _pattern, _replace));
             }
         }
     private:
