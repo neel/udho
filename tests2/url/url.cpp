@@ -7,9 +7,7 @@
 #endif
 
 #include <string>
-#include <udho/url/action.h>
-#include <udho/url/mount.h>
-#include <udho/url/router.h>
+#include <udho/url/url.h>
 #include <type_traits>
 #include <dlfcn.h>
 #include <cxxabi.h>
@@ -95,7 +93,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     CHECK(xf1_(args.begin(), args.end()) == int(24+5+2.42+0));
 
     auto chain =
-        udho::url::slot("f0"_h,  &f0)         << udho::url::regx(udho::url::verb::get, "/f0", "/f0")                                           |
+        udho::url::slot("f0"_h,  &f0)         << udho::url::home(udho::url::verb::get)                                                         |
         udho::url::slot("f1"_h,  &f1)         << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
         udho::url::slot("f2"_h,  &f2)         << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")                       |
         udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed(udho::url::verb::get, "/x/f0", "/x/f0")                                      |
@@ -105,9 +103,9 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     {
         auto f0_ = chain["f0"_h];
         // CHECK(f0_(args.begin(), args.end()) == int(24+5+2.42+0));
-        CHECK(f0_.invoke(std::string("/f0")) == true);
-        CHECK(f0_.fill(std::tuple<>()) == "/f0");
-        CHECK(f0_() == "/f0");
+        CHECK(f0_.invoke(std::string("/")) == true);
+        CHECK(f0_.fill(std::tuple<>()) == "/");
+        CHECK(f0_() == "/");
         CHECK(f0_.symbol() == "f0()");
 
         auto f1_ = chain["f1"_h];
@@ -138,24 +136,24 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     }
 
     auto chain2 =
-        udho::url::slot("xf2"_h, &X::f0, &x)  << udho::url::regx(udho::url::verb::get, "/x/f2-(\\d+)/(\\w+)", "/x/f2-{}/{}")                           |
-        udho::url::slot("xf3"_h, &X::f1, &x)  << udho::url::regx(udho::url::verb::get, "/x/f3/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/x/f3/{}/{}/{}");
+        udho::url::regx(udho::url::verb::get, "/x/f2-(\\d+)/(\\w+)", "/x/f2-{}/{}")                  >> udho::url::slot("xf2"_h, &X::f0, &x)  |
+        udho::url::regx(udho::url::verb::get, "/x/f3/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/x/f3/{}/{}/{}") >> udho::url::slot("xf3"_h, &X::f1, &x);
 
     auto chain3 = chain | chain2;
     // chain3.xyz;
     // std::cout << chain3 << std::endl;
 
     udho::url::mount_point mount_point{"chain"_h, "/pchain", std::move(chain)};
-    CHECK(mount_point.find(std::string("/f0")) == true);
+    CHECK(mount_point.find(std::string("/")) == true);
     CHECK(mount_point.find(std::string("/f1/23/hello/24/1")) == true);
     CHECK(mount_point.find(std::string("/f1")) == false);
     CHECK(mount_point.find(std::string("/f0/23/hello/24/1")) == false);
-    CHECK(mount_point.invoke(std::string("/f0")) == true);
+    CHECK(mount_point.invoke(std::string("/")) == true);
     CHECK(mount_point.invoke(std::string("/f1/23/hello/24/1")) == true);
     CHECK(mount_point.invoke(std::string("/f1")) == false);
     CHECK(mount_point.invoke(std::string("/f0/23/hello/24/1")) == false);
     auto f0_ = mount_point["f0"_h];
-    CHECK(f0_() == "/f0");
+    CHECK(f0_() == "/");
     CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "/pchain/f1/24/world/2.4");
     CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "/pchain/f1/24/world/2.4");
 
@@ -166,10 +164,12 @@ TEST_CASE("url common functionalities using regex", "[url]") {
 
     auto router = udho::url::router(std::move(chain4));
 
-    CHECK(router["chain"_h]["f0"_h].symbol()                  == "f0()");
+    CHECK(router["chain"_h]["f0"_h].symbol()                   == "f0()");
+    CHECK(router.find(std::string("/pchain/"))                 == true);
+    CHECK(router.find(std::string("/pchain"))                  == true);
     CHECK(router.find(std::string("/pchain/f1/23/hello/24/1")) == true);
-    CHECK(router.find(std::string("/f1/23/hello/24/1"))       == true);
-    CHECK(router.find(std::string("f1/23/hello/24/1"))        == false);
+    CHECK(router.find(std::string("/f1/23/hello/24/1"))        == true);
+    CHECK(router.find(std::string("f1/23/hello/24/1"))         == false);
 
 
 

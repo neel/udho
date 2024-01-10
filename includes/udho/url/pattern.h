@@ -23,7 +23,8 @@ namespace pattern{
 enum class formats{
     p1729, // Specs: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p1729r2.html using library https://github.com/eliaskosunen/scnlib
     regex,
-    fixed
+    fixed,
+    home
 };
 
 namespace detail{
@@ -148,6 +149,29 @@ struct match<pattern::formats::fixed, CharT>{
         pattern_type _replace;
 };
 
+template <>
+struct match<pattern::formats::home, char>{
+    using string_type  = std::basic_string<char>;
+    using pattern_type = std::basic_string<char>;
+
+    match(udho::url::verb method): _method(method) {  }
+    std::string pattern() const { return "/"; }
+    std::string replacement() const { return "/"; }
+
+    template <typename TupleT>
+    bool find(const string_type& subject, TupleT&) const {
+        auto result = subject.empty() || subject == "/";
+        return (bool) result;
+    }
+
+    template <typename... Args>
+    std::string replace(const std::tuple<Args...>&) const { return "/"; }
+    udho::url::verb method() const { return _method; }
+
+    private:
+        udho::url::verb _method;
+};
+
 template <typename CharT>
 struct match<pattern::formats::regex, CharT>{
     using string_type  = std::basic_string<CharT>;
@@ -219,6 +243,10 @@ struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::
 template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
+}
+
+struct pattern::match<pattern::formats::home, char> home(boost::beast::http::verb method){
+    return pattern::match<pattern::formats::home, char>{method};
 }
 
 

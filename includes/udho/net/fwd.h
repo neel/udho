@@ -16,6 +16,9 @@ struct connection;
 
 class context;
 
+template <typename RouterT>
+struct handle;
+
 }
 }
 

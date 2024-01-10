@@ -25,27 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_URL_FWD_H
-#define UDHO_URL_FWD_H
+#ifndef UDHO_URL_URL_H
+#define UDHO_URL_URL_H
 
+#include <udho/url/action.h>
+#include <udho/url/mount.h>
+#include <udho/url/router.h>
+#include <udho/url/operators.h>
+#include <udho/url/io.h>
 
-namespace udho{
-namespace url{
-
-template <typename F, typename CharT, CharT... C>
-struct basic_slot;
-
-template <typename FunctionT, typename StrT, typename MatchT>
-struct basic_action;
-
-template <typename StrT, typename ActionsT>
-struct mount_point;
-
-template <typename MountPointsT>
-struct router;
-
-}
-}
-
-
-#endif // UDHO_URL_FWD_H
+#endif // UDHO_URL_URL_H

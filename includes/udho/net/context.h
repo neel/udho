@@ -13,6 +13,14 @@
 namespace udho{
 namespace net{
 
+/**
+ * @brief context is a copiable handle that bridges with the connection object associated with the http request
+ * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
+ * transfer encoding of the response. The equest and the response objects can be accessed through the connection.
+ * @note the context object may be copied across multiple callbacks while using chunked transfer encoding.
+ *       from callback1 one may call `context.flush(std::bind(&callback2, context))` which will call the callback2
+ *       function once the already written contents are flushed out.
+ */
 class context{
     using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
 
@@ -24,9 +32,7 @@ class context{
 
     context() = delete;
 
-    inline context(boost::asio::io_service& io, udho::net::bridge& bridge)
-        : _service(io), _bridge(bridge)
-        { }
+    inline context(boost::asio::io_service& io, udho::net::bridge& bridge) : _service(io), _bridge(bridge) { }
 
     struct noop{
         void operator()(boost::system::error_code, std::size_t){}

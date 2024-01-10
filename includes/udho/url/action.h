@@ -32,8 +32,6 @@
 #include <udho/url/detail/function.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/pattern.h>
-#include <udho/hazo/seq/seq.h>
-#include <udho/url/tabulate.h>
 #include <boost/hana/concat.hpp>
 
 namespace udho{
@@ -123,6 +121,11 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<(basic_s
     return basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>(std::move(slot), std::move(match));
 }
 
+template <typename F, typename CharT, CharT... C, typename MatchT>
+basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator>>(MatchT&& match, basic_slot<F, udho::hazo::string::str<CharT, C...>>&& slot){
+    return basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>(std::move(slot), std::move(match));
+}
+
 template <typename FunctionT, typename CharT, CharT... C>
 basic_slot<
     udho::url::detail::encapsulate_function<FunctionT>,
@@ -141,23 +144,6 @@ basic_slot<
     return slot_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that));
 }
 
-template <typename LFunctionT, typename LStrT, typename LMatchT, typename RFunctionT, typename RStrT, typename RMatchT>
-auto operator|(basic_action<LFunctionT, LStrT, LMatchT>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
-    return udho::hazo::make_seq_d(std::move(left), std::move(right));
-}
-
-template <typename... Args, typename RFunctionT, typename RStrT, typename RMatchT>
-auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
-    using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, Args...>;
-    using rhs_type = basic_action<RFunctionT, RStrT, RMatchT>;
-    return typename lhs_type::template extend<rhs_type>(left, std::move(right));
-}
-
-template <typename... ArgsL, typename... ArgsR>
-auto operator|(const udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>& left, const udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>& right){
-    return left.concat(right);
-}
-
 
 template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
 basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
@@ -173,47 +159,6 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
     return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), match);
 }
 
-
-template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
-tabulate::Table& operator<<(tabulate::Table& table, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
-    table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
-    for(size_t i = 0; i < 6; ++i) {
-        table[0][i].format().font_color(tabulate::Color::yellow).font_style({tabulate::FontStyle::bold});
-    }
-    tabulize tab(table);
-    chain.visit(tab);
-    for(size_t i = 0; i < table.size(); ++i) {
-        table[i][1].format().font_style({tabulate::FontStyle::bold});
-    }
-    return table;
-}
-
-template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
-std::ostream& operator<<(std::ostream& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
-    tabulate::Table table;
-    table << chain;
-    stream << table;
-    return stream;
-}
-
-// template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
-// StreamT& operator<<(StreamT& stream, const udho::hazo::capsule<basic_action<FunctionT, StrT, MatchT>>& capsule){
-//     stream << std::endl << capsule.data();
-//     return stream;
-// }
-//
-// template <typename StreamT, typename FunctionT, typename MatchT, typename StrT>
-// StreamT& operator<<(StreamT& stream, const basic_action<FunctionT, StrT, MatchT>& action){
-//     std::string args_str;
-//     for(int i=0; i != basic_action<FunctionT, StrT, MatchT>::args; ++i){
-//         if(i > 0)
-//             args_str += ",";
-//         args_str += format("${}", i);
-//     }
-//     std::string label(StrT().c_str());
-//     stream << format("{} f({})", label, args_str) << " <= " << action.match().str();
-//     return stream;
-// }
 
 }
 }
