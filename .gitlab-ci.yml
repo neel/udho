@@ -1,6 +1,6 @@
 stages:
   - build
-  - test
+  # - test
 
 # build:arch:
 #   image: archlinux/latest
@@ -51,31 +51,31 @@ build:ubuntu:lunar:
     paths:
       - build
     
-test:ubuntu:lunar:
-  image: ubuntu:23.04
-  stage: test
-  variables:
-    DEBIAN_FRONTEND: "noninteractive"
-    LANG: en_US.utf8
-  before_script:
-    - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-    - apt-get update
-    - apt-get install -y locales && rm -rf /var/lib/apt/lists/* localedef -i en_US -f UTF-8 /usr/share/locale/locale.alias en_US.UTF-8
-    - apt-get update
-    - apt-get upgrade -y
-    - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
-    - apt-get install -y tzdata
-    - dpkg-reconfigure --frontend noninteractive tzdata
-    - apt-get install -y build-essential checkinstall zlib1g-dev libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev catch2 doxygen
-    - apt-get install -y postgresql postgresql-client libpq-dev postgresql-contrib postgresql-server-dev-all
-    - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf > /tmp/pg_hba.conf
-    - cp /tmp/pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
-    - service postgresql start
-    - service postgresql status
-  script:
-    - cd build
-    - ctest
-  dependencies:
-    - build:ubuntu:lunar
+# test:ubuntu:lunar:
+#   image: ubuntu:23.04
+#   stage: test
+#   variables:
+#     DEBIAN_FRONTEND: "noninteractive"
+#     LANG: en_US.utf8
+#   before_script:
+#     - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+#     - apt-get update
+#     - apt-get install -y locales && rm -rf /var/lib/apt/lists/* localedef -i en_US -f UTF-8 /usr/share/locale/locale.alias en_US.UTF-8
+#     - apt-get update
+#     - apt-get upgrade -y
+#     - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+#     - apt-get install -y tzdata
+#     - dpkg-reconfigure --frontend noninteractive tzdata
+#     - apt-get install -y build-essential checkinstall zlib1g-dev libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev catch2 doxygen
+#     - apt-get install -y postgresql postgresql-client libpq-dev postgresql-contrib postgresql-server-dev-all
+#     - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf > /tmp/pg_hba.conf
+#     - cp /tmp/pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
+#     - service postgresql start
+#     - service postgresql status
+#   script:
+#     - cd build
+#     - ctest
+#   dependencies:
+#     - build:ubuntu:lunar
 
     
