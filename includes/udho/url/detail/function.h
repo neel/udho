@@ -162,7 +162,7 @@ namespace detail{
             dladdr(reinterpret_cast<void *>(_fptr), &_info);
         }
         template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
-        return_type operator()(T&& args){
+        return_type operator()(T&& args) const {
             return std::apply(_f, std::tuple_cat(std::make_tuple(_that), args));
         }
         template <typename IteratorT>
@@ -221,7 +221,7 @@ namespace detail{
             dladdr(reinterpret_cast<void *>(f), &_info);
         }
         template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
-        return_type operator()(T&& args){
+        return_type operator()(T&& args) const{
             return std::apply(_f, args);
         }
         template <typename IteratorT>

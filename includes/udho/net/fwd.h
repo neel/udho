@@ -14,6 +14,9 @@ namespace net{
 template <typename ProtocolT>
 struct connection;
 
+template <typename ListenerT, typename RouterT>
+struct server_;
+
 class context;
 
 template <typename RouterT>

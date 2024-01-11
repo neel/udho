@@ -42,23 +42,25 @@ struct router{
         return found;
     }
 
-    template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& subject) {
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
         bool found = false;
-        _mountpoints.visit([&subject, &found](auto& mointpoint){
+        _mountpoints.visit([&subject, &found, &args...](const auto& mointpoint){
             if(found)
                 return;
             auto path = mointpoint.path();
             if(!boost::starts_with(subject, path))
                 return;
             auto rest = path == "/" ? subject : subject.substr(path.size());
-            found = mointpoint.invoke(rest);
+            found = mointpoint.invoke(rest, std::forward<Args>(args)...);
         });
         return found;
     }
 
-    private:
-
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const {
+        return invoke(url, std::forward<Args>(args)...);
+    }
 
     private:
         mountpoints_type _mountpoints;

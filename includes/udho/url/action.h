@@ -37,6 +37,25 @@
 namespace udho{
 namespace url{
 
+namespace detail{
+
+    template <typename T, typename HeadT, std::size_t... I>
+    T fill_in(HeadT&& head, std::index_sequence<I...>){
+        constexpr std::size_t head_size = std::tuple_size<HeadT>::value;
+        auto rest = std::make_tuple(std::tuple_element_t<I+head_size, T>()...);
+        return std::tuple_cat(std::move(head), std::move(rest));
+    }
+
+    template <typename T, typename... Args>
+    T fill(Args&&... args){
+        return fill_in<T>(std::make_tuple(args...), std::make_index_sequence<std::tuple_size<T>::value - sizeof...(args)>());
+    }
+
+    template <typename T>
+    T fill(){return T();}
+
+}
+
 template <typename F, typename CharT, CharT... C>
 struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
     using function_type          = F;
@@ -57,7 +76,7 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
 
     basic_slot(function_type&& f): _fnc(std::move(f)) {}
     template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
-    return_type operator()(T&& args){ return _fnc(std::move(args)); }
+    return_type operator()(T&& args) const { return _fnc(std::move(args)); }
     template <typename IteratorT>
     decayed_arguments_type prepare(IteratorT begin, IteratorT end){ return _fnc.prepare(begin, end); }
     template <typename IteratorT>
@@ -96,12 +115,12 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     /**
      * invokes the function with the captured arguments if this action matches with the pattern provided
      */
-    template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& subject){
-        decayed_arguments_type tuple;
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const{
+        decayed_arguments_type tuple = detail::fill<decayed_arguments_type>(std::forward<Args>(args)...);
         bool found = _match.find(subject, tuple);
         if(found){
-            operator()(std::move(tuple));
+            slot_type::operator()(std::move(tuple));
         }
         return found;
     }

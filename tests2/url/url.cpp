@@ -18,6 +18,7 @@ struct nodef{
 };
 
 void f0(){
+    std::cout << "f0" << std::endl;
     return;
 }
 

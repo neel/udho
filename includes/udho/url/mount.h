@@ -46,12 +46,12 @@ struct mount_point{
         });
         return found;
     }
-    template <typename Ch>
-    bool invoke(const std::basic_string<Ch>& subject) {
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
         bool found = false;
-        _actions.visit([&subject, &found](auto& action){
+        _actions.visit([&subject, &found, &args...](auto& action){
             if(found) return;
-            found = action.invoke(subject);
+            found = action.invoke(subject, std::forward<Args>(args)...);
         });
         return found;
     }
@@ -83,8 +83,8 @@ struct mount_point{
 
 
 template <typename ActionsT, typename CharT, CharT... C>
-mount_point<udho::hazo::string::str<CharT, C...>, ActionsT> mount(udho::hazo::string::str<CharT, C...>&& name, ActionsT&& actions){
-    return mount_point<udho::hazo::string::str<CharT, C...>, ActionsT>{std::move(name), std::move(actions)};
+mount_point<udho::hazo::string::str<CharT, C...>, ActionsT> mount(udho::hazo::string::str<CharT, C...>&& name, const std::string& path, ActionsT&& actions){
+    return mount_point<udho::hazo::string::str<CharT, C...>, ActionsT>{std::move(name), path, std::move(actions)};
 }
 
 
