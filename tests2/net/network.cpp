@@ -37,13 +37,13 @@ void chunk2(udho::net::context context){
 void f(int){}
 
 void f0(udho::net::context context){
-    context << "Hello X::f0";
+    context << "Hello f0";
     context.finish();
 }
 
 int f1(udho::net::context context, int a, const std::string& b, const double& c){
-        context << "Hello f1";
-        context << std::to_string(a+b.size()+c);
+        context << "Hello f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
         return a+b.size()+c;
 }
@@ -55,8 +55,8 @@ struct X{
     }
 
     int f1(udho::net::context context, int a, const std::string& b, const double& c){
-        context << "Hello X::f1";
-        context << std::to_string(a+b.size()+c);
+        context << "Hello X::f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
         return a+b.size()+c;
     }
@@ -76,7 +76,7 @@ TEST_CASE("udho network", "[net]") {
         udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
         udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\w+)/(\\w+)/(\\d+)", "/x/f1/{}/{}/{}");
 
-    auto mountpoints = udho::url::mount("a"_h, "/a", std::move(a)) | udho::url::mount("b"_h, "/b", std::move(a));
+    auto mountpoints = udho::url::root(std::move(a)) | udho::url::mount("b"_h, "/b", std::move(b));
     auto router = udho::url::router(std::move(mountpoints));
 
     boost::asio::io_service service;

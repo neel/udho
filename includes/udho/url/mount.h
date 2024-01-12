@@ -87,6 +87,12 @@ mount_point<udho::hazo::string::str<CharT, C...>, ActionsT> mount(udho::hazo::st
     return mount_point<udho::hazo::string::str<CharT, C...>, ActionsT>{std::move(name), path, std::move(actions)};
 }
 
+template <typename ActionsT>
+mount_point<udho::hazo::string::str<char, 'r', 'o', 'o', 't'>, ActionsT> root(ActionsT&& actions){
+    using namespace udho::hazo::string::literals;
+    return mount_point<udho::hazo::string::str<char, 'r', 'o', 'o', 't'>, ActionsT>{"root"_h, "/", std::move(actions)};
+}
+
 
 }
 }

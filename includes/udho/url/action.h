@@ -39,20 +39,30 @@ namespace url{
 
 namespace detail{
 
-    template <typename T, typename HeadT, std::size_t... I>
-    T fill_in(HeadT&& head, std::index_sequence<I...>){
-        constexpr std::size_t head_size = std::tuple_size<HeadT>::value;
-        auto rest = std::make_tuple(std::tuple_element_t<I+head_size, T>()...);
-        return std::tuple_cat(std::move(head), std::move(rest));
+    // template <typename T, typename HeadT, std::size_t... I>
+    // T fill_in(HeadT&& head, std::index_sequence<I...>){
+    //     constexpr std::size_t head_size = std::tuple_size<HeadT>::value;
+    //     auto rest = std::make_tuple(std::tuple_element_t<I+head_size, T>()...);
+    //     return std::tuple_cat(std::move(head), std::move(rest));
+    // }
+    //
+    // template <typename T, typename... Args>
+    // T fill(Args&&... args){
+    //     return fill_in<T>(std::make_tuple(std::move(args)...), std::make_index_sequence<std::tuple_size<T>::value - sizeof...(args)>());
+    // }
+    //
+    // template <typename T>
+    // T fill(){return T();}
+
+    template <typename T, std::size_t After, std::size_t... I>
+    auto rest(std::index_sequence<I...>){
+        return std::make_tuple(std::tuple_element_t<I+After, T>()...);
     }
 
-    template <typename T, typename... Args>
-    T fill(Args&&... args){
-        return fill_in<T>(std::make_tuple(args...), std::make_index_sequence<std::tuple_size<T>::value - sizeof...(args)>());
+    template <typename T, std::size_t After>
+    auto rest(){
+        return rest<T, After>(std::make_index_sequence<std::tuple_size<T>::value - After>());
     }
-
-    template <typename T>
-    T fill(){return T();}
 
 }
 
@@ -108,8 +118,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      */
     template <typename Ch>
     bool find(const std::basic_string<Ch>& subject) const{
-        decayed_arguments_type tuple;
-        bool found = _match.find(subject, tuple);
+        bool found = _match.find(subject);
         return found;
     }
     /**
@@ -117,9 +126,11 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      */
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const{
-        decayed_arguments_type tuple = detail::fill<decayed_arguments_type>(std::forward<Args>(args)...);
-        bool found = _match.find(subject, tuple);
+        // decayed_arguments_type tuple = detail::fill<decayed_arguments_type>(std::forward<Args>(args)...);
+        auto rest = detail::rest<decayed_arguments_type, sizeof...(args)>();
+        bool found = _match.find(subject, rest);
         if(found){
+            decayed_arguments_type tuple = std::tuple_cat(std::make_tuple(std::move(args)...), rest);
             slot_type::operator()(std::move(tuple));
         }
         return found;

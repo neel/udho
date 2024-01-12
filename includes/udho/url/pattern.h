@@ -14,6 +14,7 @@
 #include <udho/url/verb.h>
 #include <boost/algorithm/string.hpp>
 #include <exception>
+#include <iostream>
 
 namespace udho{
 namespace url{
@@ -128,6 +129,10 @@ struct match<pattern::formats::fixed, CharT>{
         auto result = boost::starts_with(subject, _format);
         return (bool) result;
     }
+    bool find(const string_type& subject) const {
+        auto result = boost::starts_with(subject, _format);
+        return (bool) result;
+    }
 
     template <typename... Args>
     std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
@@ -163,6 +168,10 @@ struct match<pattern::formats::home, char>{
         auto result = subject.empty() || subject == "/";
         return (bool) result;
     }
+    bool find(const string_type& subject) const {
+        auto result = subject.empty() || subject == "/";
+        return (bool) result;
+    }
 
     template <typename... Args>
     std::string replace(const std::tuple<Args...>&) const { return "/"; }
@@ -192,6 +201,11 @@ struct match<pattern::formats::regex, CharT>{
             ++begin;
             udho::url::detail::arguments_to_tuple(tuple, begin, end);
         }
+        return found;
+    }
+    bool find(const string_type& subject) const {
+        std::smatch matches;
+        bool found = std::regex_match(subject, matches, _regex);
         return found;
     }
 
