@@ -28,7 +28,7 @@ namespace detail{
 
         on_flush_header(detail::connection_stat& stat): _stat(stat) {}
         void operator()(boost::system::error_code ec, std::size_t bytes_transferred){
-            std::cout << "on_flush_header::operator()" << std::endl;
+            // std::cout << "on_flush_header::operator()" << std::endl;
             if(ec){
                 _stat._stage = types::stages::error;
                 return;
@@ -48,7 +48,7 @@ namespace detail{
             : _io(io), _stat(stat), _handler(std::move(handler))
         {}
         void operator()(boost::system::error_code ec, std::size_t bytes_transferred){
-            std::cout << "on_flush_body::operator()" << std::endl;
+            // std::cout << "on_flush_body::operator()" << std::endl;
             if(ec){
                 _stat._stage = types::stages::error;
                 std::cout << "error: " << ec << std::endl;
@@ -89,7 +89,7 @@ namespace detail{
          * Otherwise prepares the buffer to be sent and the starts the async write operation while passing the handler as callback.
          */
         void operator()(boost::system::error_code ec = boost::system::error_code(), std::size_t bytes_transferred = 0){
-            std::cout << "flush_body::operator()" << std::endl;
+            // std::cout << "flush_body::operator()" << std::endl;
             _stat._bytes_written += bytes_transferred;
             if(ec){
                 _io.post(std::bind(std::move(_handler), ec, bytes_transferred));
@@ -122,7 +122,7 @@ namespace detail{
             _io(io), _strand(strand), _buffer(std::move(buffer)), _compressed(compressed), _transfer_encoding(transfer_encoding), _buffers(buffers), _handler(std::move(handler))
         {}
         void operator()(){
-            std::cout << "preprocess::operator()" << std::endl;
+            // std::cout << "preprocess::operator()" << std::endl;
             compress();
         }
         void compress(){
@@ -156,7 +156,7 @@ namespace detail{
             std::string compressed_print;
             std::copy(_compressed.begin(), _compressed.end(), std::back_inserter(compressed_print));
 
-            std::cout << "preprocess::finish() " << compressed_print << std::endl;
+            // std::cout << "preprocess::finish() " << compressed_print << std::endl;
             _io.post(boost::asio::bind_executor(_strand, std::bind(std::move(_handler))));
         }
     };
@@ -336,7 +336,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         }
         void on_finish(boost::system::error_code ec, std::size_t bytes_transferred){
             boost::ignore_unused(bytes_transferred);
-            std::cout << "socket close" << std::endl;
+            // std::cout << "socket close" << std::endl;
             boost::system::error_code error;
             _socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, error);
         }

@@ -23,6 +23,10 @@ struct server_{
         _listener->listen(std::bind(&server_type::serve, this, std::placeholders::_1, std::placeholders::_2));
     }
 
+    void stop(){
+        _listener->stop();
+    }
+
     private:
         void prepare(boost::asio::ip::address address, udho::net::context context){
             context.set(boost::beast::http::field::server, "udho");
@@ -37,22 +41,24 @@ struct server_{
                     throw udho::http::error(address, context, boost::beast::http::status::not_found);
                 }
             } catch(std::exception& ex) {
-                error(address, context, ex);
+                fail(address, context, ex);
             } catch(udho::http::exception& ex) {
-                error(context, ex);
+                fail(context, ex);
+            } catch(udho::http::error& error) {
+                fail(context, error);
             }
         }
-        void error(udho::net::context context, const udho::http::exception& ex){
-            try{
-                const udho::http::error& error = dynamic_cast<const udho::http::error&>(ex);
-                context.response().result(error.status());
-                context << udho::url::format("Error: {} \n {}", error.reason(), ex.what());
-            }catch(const std::bad_cast&){
-                context << udho::url::format("Error: {}", ex.what());
-            }
+        void fail(udho::net::context context, const udho::http::exception& ex){
+            context << udho::url::format("Error: {}", ex.what());
             context.finish();
         }
-        void error(boost::asio::ip::address address, udho::net::context context, const std::exception& ex){
+        void fail(udho::net::context context, const udho::http::error& ex){
+            const udho::http::error& error = dynamic_cast<const udho::http::error&>(ex);
+            context.response().result(error.status());
+            context << udho::url::format("Error: {}", error.reason());
+            context.finish();
+        }
+        void fail(boost::asio::ip::address address, udho::net::context context, const std::exception& ex){
             context << udho::url::format("Error: {}", ex.what());
             context.finish();
         }

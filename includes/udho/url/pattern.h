@@ -258,6 +258,10 @@ template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
 }
+template <typename CharT, std::size_t M>
+struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M]){
+    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, pattern};
+}
 
 struct pattern::match<pattern::formats::home, char> home(boost::beast::http::verb method){
     return pattern::match<pattern::formats::home, char>{method};
