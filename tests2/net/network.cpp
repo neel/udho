@@ -125,7 +125,7 @@ TEST_CASE("udho network", "[net]") {
         ) |
         udho::url::mount("b"_h, "/b",
             udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
-            udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\w+)/(\\w+)/(\\d+)", "/x/f1/{}/{}/{}")
+            udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
         )
     );
 
@@ -144,6 +144,32 @@ TEST_CASE("udho network", "[net]") {
     CURL* curl;
     curl = curl_easy_init();
     CHECK(curl != 0x0);
+
+    SECTION("HTTP Response home") {
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/");
+        CHECK(results.code == 200);
+        CHECK(results.body == "Hello f0");
+        CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+    }
+
+    SECTION("HTTP Response home") {
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/x/f0");
+        CHECK(results.code == 200);
+        CHECK(results.body == "Hello X::f0");
+        CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+    }
+
+    SECTION("HTTP Response from mountpoint") {
+        http_results results_f1 = curl_fetch(curl, "GET", "http://localhost:9000/b/f1/10/hello/42");
+        CHECK(results_f1.code == 200);
+        CHECK(results_f1.body == "Hello f1 a: 10, b: hello, c: 42");
+        CHECK(results_f1.headers["Transfer-Encoding"] == "plain,plain");
+
+        http_results results_xf1 = curl_fetch(curl, "GET", "http://localhost:9000/b/x/f1/567/ping/42.8");
+        CHECK(results_xf1.code == 200);
+        CHECK(results_xf1.body == "Hello X::f1 a: 567, b: ping, c: 42.8");
+        CHECK(results_xf1.headers["Transfer-Encoding"] == "plain,plain");
+    }
 
     SECTION("HTTP Chunked Response") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunk");
