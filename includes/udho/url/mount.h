@@ -63,7 +63,7 @@ struct mount_point{
 
     template <typename XStrT, typename... X>
     std::string fill(XStrT&& xstr, std::tuple<X...>&& x) const {
-        return format("{}{}", _path, operator[](std::move(xstr)).fill(x));
+        return format("{}{}", _path, operator[](std::move(xstr)).fill(std::move(x)));
     }
 
     private:

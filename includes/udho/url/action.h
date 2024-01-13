@@ -137,10 +137,11 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     }
     template <typename... X>
     std::string operator()(X&&... x) const {
-        return fill(decayed_arguments_type(x...));
+        return fill(std::make_tuple(std::move(x)...));
     }
 
-    std::string fill(const decayed_arguments_type& args) const { return _match.replace(args); }
+    template <typename... X>
+    std::string fill(std::tuple<X...>&& args) const { return _match.replace(std::move(args)); }
     const match_type& match() const { return _match; }
     private:
         match_type    _match;
