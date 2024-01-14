@@ -34,3 +34,5 @@ TARGET_LINK_LIBRARIES(udho-example-activities udho)
 
 ADD_EXECUTABLE(udho-example-pg pg.cpp)
 TARGET_LINK_LIBRARIES(udho-example-pg udho)
+
+add_subdirectory(simple)

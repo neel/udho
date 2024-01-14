@@ -126,11 +126,11 @@ struct match<pattern::formats::fixed, CharT>{
     std::string str() const { return pattern() == replacement() ? pattern() : pattern()+" -> "+replacement(); }
     template <typename TupleT>
     bool find(const string_type& subject, TupleT&) const {
-        auto result = boost::starts_with(subject, _format);
+        auto result = subject == _format;
         return (bool) result;
     }
     bool find(const string_type& subject) const {
-        auto result = boost::starts_with(subject, _format);
+        auto result = subject == _format;
         return (bool) result;
     }
 
@@ -249,6 +249,10 @@ template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
 }
+template <typename CharT, std::size_t M>
+struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M]){
+    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, pattern};
+}
 
 template <typename CharT>
 struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
@@ -263,7 +267,7 @@ struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::
     return pattern::match<pattern::formats::fixed, CharT>{method, pattern, pattern};
 }
 
-struct pattern::match<pattern::formats::home, char> home(boost::beast::http::verb method){
+inline struct pattern::match<pattern::formats::home, char> home(boost::beast::http::verb method){
     return pattern::match<pattern::formats::home, char>{method};
 }
 

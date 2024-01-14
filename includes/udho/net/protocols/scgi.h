@@ -1,6 +1,7 @@
 #ifndef UDHO_NET_PROTOCOL_SCGI_H
 #define UDHO_NET_PROTOCOL_SCGI_H
 
+#include <map>
 #include <iterator>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>

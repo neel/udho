@@ -17,6 +17,9 @@ namespace url{
  */
 template <typename MountPointsT>
 struct router{
+    template <typename Mountpoints>
+    friend std::ostream& operator<<(std::ostream&, const router<Mountpoints>&);
+
     using mountpoints_type = MountPointsT;
 
     router(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {}

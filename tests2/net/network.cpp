@@ -129,6 +129,8 @@ TEST_CASE("udho network", "[net]") {
         )
     );
 
+    std::cout << router << std::endl;
+
     CHECK(router["b"_h]("f1"_h, 24, "Hello", 42) == "/b/f1/24/Hello/42");
 
     boost::asio::io_service service;
