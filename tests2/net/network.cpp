@@ -152,7 +152,7 @@ TEST_CASE("udho network", "[net]") {
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
     }
 
-    SECTION("HTTP Response home") {
+    SECTION("HTTP Response") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/x/f0");
         CHECK(results.code == 200);
         CHECK(results.body == "Hello X::f0");
