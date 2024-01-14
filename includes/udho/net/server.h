@@ -33,7 +33,8 @@ struct server_{
         }
         void serve(boost::asio::ip::address address, udho::net::context&& context){
             prepare(address, context);
-            std::string target = context.request().target();
+            boost::beast::string_view tgt = context.request().target();
+            std::string target(tgt.begin(), tgt.end());
             bool found = false;
             try{
                 found = _router(target, context);
