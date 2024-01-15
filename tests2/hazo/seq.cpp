@@ -1,12 +1,16 @@
 #define CATCH_CONFIG_MAIN
+#if WITH_CATCH_VERSION_2
 #include <catch2/catch.hpp>
+#else
+#include <catch2/catch_all.hpp>
+#endif
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/hana.h>
 #include <udho/hazo/seq.h>
 #include <udho/hazo/seq/hana.h>
 #include <boost/hana/string.hpp>
 #include <string>
-
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -565,6 +569,19 @@ TEST_CASE("sequence specific functionalities", "[hazo]") {
             return out;
         });
         CHECK(unsigned(out*10) == 2052);
+    }
+
+    SECTION("concat") {
+        typedef h::seq_d<int, double> seq1_type;
+        typedef h::seq_d<first_name> seq2_type;
+
+        seq1_type seq1{42, 4.2};
+        seq2_type seq2{"Neel Basu"};
+
+        auto seq3 = seq1.concat(seq2);
+        std::cout << seq3 << std::endl;
+
+        // decltype(seq3)::x;
     }
 }
 

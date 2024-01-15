@@ -66,11 +66,12 @@ namespace detail{
  * @ingroup node
  */
 template <typename HeadT, typename TailT>
-struct basic_node: private basic_node<typename TailT::data_type, typename TailT::tail_type>{
+struct basic_node: private TailT /*basic_node<typename TailT::data_type, typename TailT::tail_type>*/{
     /**
      * tail of the node
      */
-    typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    // typedef basic_node<typename TailT::data_type, typename TailT::tail_type> tail_type;
+    typedef TailT tail_type;
     /**
      * type assistance through basic_node
      */
@@ -101,6 +102,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     typedef typename capsule_type::key_type key_type;
 
     typedef basic_node<HeadT, TailT> self_type;
+
+    // template <typename OtherNode>
+    // using concat_type = basic_node<HeadT, typename TailT::template concat_type<OtherNode>>;
     
     enum { depth = tail_type::depth +1 };
 
@@ -136,7 +140,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     template <typename OtherHeadT, typename OtherTailT, std::enable_if_t<!std::is_same<self_type, basic_node<OtherHeadT, OtherTailT>>::value, bool> = true>
     basic_node(const basic_node<OtherHeadT, OtherTailT>& other): tail_type(other) { _capsule.set(other.template data<index_type>()); }
 
-        /**
+    /**
      * Construct from a node having different head and tail
      * @param other another noode of different type
      */
@@ -147,6 +151,9 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
     basic_node(const basic_node<HeadT, void>& l, const LeafT& r): tail_type(r), _capsule(l.front()) { }
     /// @}
     
+    // template <typename OtherNode>
+    // concat_type<OtherNode> concat_(const OtherNode& x){ return concat_type<OtherNode>{_capsule, tail().concat_(x)}; }
+
     /**
      * Front of the chain of nodes
      * @return the capsule of the current node
@@ -461,7 +468,7 @@ struct basic_node: private basic_node<typename TailT::data_type, typename TailT:
      * Finds data of an element by key
      */
     template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
-    data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
+    const data_type& operator[](const KeyT& k) const { return data<KeyT>(k); }
     /**
      * Finds data of an element by key
      */
@@ -579,6 +586,9 @@ struct basic_node<HeadT, void>{
      */
     typedef typename capsule_type::index_type index_type;
     typedef basic_node<HeadT, void> self_type;
+
+    // template <typename OtherNode>
+    // using concat_type = basic_node<HeadT, OtherNode>;
     
     enum { 
         /**
@@ -620,6 +630,9 @@ struct basic_node<HeadT, void>{
      * @}
      */
     
+    // template <typename OtherNode>
+    // concat_type<OtherNode> concat_(const OtherNode& x){ return concat_type<OtherNode>{_capsule, x}; }
+
     /**
      * Capsule in the front of the chain (the only capsule for the terminal node)
      */

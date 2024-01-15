@@ -1,5 +1,9 @@
 #define CATCH_CONFIG_MAIN
+#if WITH_CATCH_VERSION_2
 #include <catch2/catch.hpp>
+#else
+#include <catch2/catch_all.hpp>
+#endif
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/hana.h>
 #include <udho/hazo/map.h>

@@ -65,6 +65,8 @@ struct basic_seq: basic_node<H, basic_seq<Policy, X...>>{
     using exclude_if = typename operations::exclude_if<basic_seq<Policy, H, X...>, ConditionT>::type;
     template <template <typename> class F>
     using transform = basic_seq<Policy, F<H>, F<X>...>;
+    template <typename OtherNode>
+    using concat_type = basic_seq<Policy, H, typename basic_seq<Policy, X...>::template concat_type<OtherNode>>;
     
     using node_type::node_type;
     template <typename FunctionT>
@@ -76,6 +78,15 @@ struct basic_seq: basic_node<H, basic_seq<Policy, X...>>{
     decltype(auto) unpack(FunctionT&& f){
         call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
+    }
+
+    // template <typename OtherNode>
+    // concat_type<OtherNode> concat(const OtherNode& x){ return concat_type<OtherNode>{node_type::front(), node_type::tail_type::concat(x)}; }
+
+    template <typename... U>
+    extend<U...> concat(const basic_seq<Policy, U...>& u) const {
+        // node_type::xyz();
+        return extend<U...>{node_type::front(), node_type::tail().concat(u)};
     }
 };
 
@@ -101,6 +112,8 @@ struct basic_seq<Policy, H>: basic_node<H, void>{
     using exclude_if = typename operations::exclude_if<basic_seq<Policy, H>, ConditionT>::type;
     template <template <typename> class F>
     using transform = basic_seq<Policy, F<H>>;
+    template <typename OtherNode>
+    using concat_type = basic_seq<Policy, H, OtherNode>;
     
     using node_type::node_type;
     template <typename FunctionT>
@@ -112,6 +125,14 @@ struct basic_seq<Policy, H>: basic_node<H, void>{
     decltype(auto) unpack(FunctionT&& f){
         call_helper<Policy, node_type, typename build_indices<1>::indices_type> helper(*this);
         return helper.apply(std::forward<FunctionT>(f));
+    }
+
+    // template <typename OtherNode>
+    // concat_type<OtherNode> concat(const OtherNode& x){ return concat_type<OtherNode>{node_type::front(), x}; }
+
+    template <typename... U>
+    extend<U...> concat(const basic_seq<Policy, U...>& u) const {
+        return extend<U...>{node_type::front(), u};
     }
 };
 

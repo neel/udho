@@ -1,5 +1,9 @@
 #define CATCH_CONFIG_MAIN
+#if WITH_CATCH_VERSION_2
 #include <catch2/catch.hpp>
+#else
+#include <catch2/catch_all.hpp>
+#endif
 #include <udho/hazo.h>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -348,6 +352,7 @@ TEST_CASE("hazo legacy", "[hazo]") {
         typedef map_v<first_name, last_name, age> map_type;
         
         map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+        std::cout << m1 << std::endl;
         
         CHECK(m1["first_name"_s] == "Neel");
         CHECK(m1["last_name"_s] == "Basu");
@@ -358,6 +363,8 @@ TEST_CASE("hazo legacy", "[hazo]") {
         typedef map_d<first_name, last_name, age> map_type;
         
         map_type m1(first_name("Neel"), last_name("Basu"), age(32));
+
+        std::cout << m1 << std::endl;
         
         CHECK(m1["first_name"_s] == first_name("Neel"));
         CHECK(m1["last_name"_s] == last_name("Basu"));

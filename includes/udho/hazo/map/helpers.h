@@ -52,11 +52,20 @@ struct map_by_key_helper<by_data>{
 };
 template <>
 struct map_by_key_helper<by_value>{
-    template <typename DataT>
+    template <typename DataT, std::enable_if_t< std::is_trivial_v<DataT> || std::is_same_v<std::string, DataT>, bool > = true >
+    static DataT& apply(DataT& d){
+        return d;
+    }
+    template <typename DataT, std::enable_if_t< std::is_trivial_v<DataT> || std::is_same_v<std::string, DataT>, bool > = true >
+    static const DataT& apply(const DataT& d){
+        return d;
+    }
+
+    template <typename DataT, std::enable_if_t< !std::is_same_v<std::string, DataT>, bool > = true >
     static typename DataT::value_type& apply(DataT& d){
         return d.value();
     }
-    template <typename DataT>
+    template <typename DataT, std::enable_if_t< !std::is_same_v<std::string, DataT>, bool > = true >
     static const typename DataT::value_type& apply(const DataT& d){
         return d.value();
     }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <udho/url/detail/function.h>
-#include <udho/url/action.h>
+#include <udho/url/url.h>
 // #include <udho/url/list.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/hazo/seq/seq.h>
@@ -91,10 +91,10 @@ int main(){
         using namespace udho::hazo::string::literals;
 
         auto chain =
-            udho::url::slot("f0"_h, &f0)         << udho::url::match(std::regex("f0"), "/f0")                                           |
-            udho::url::slot("f1"_h, &f1)         << udho::url::match(std::regex("f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)"), "/f1/{}/{}/{}")      |
-            udho::url::slot("f2"_h, &f2)         << udho::url::match(std::regex("f2"), "/f2")                                           |
-            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match(std::regex("xf1"), "/x/f1");
+            udho::url::slot("f0"_h, &f0)         << udho::url::regx(udho::url::verb::get, "f0", "/f0")                                           |
+            udho::url::slot("f1"_h, &f1)         << udho::url::regx(udho::url::verb::get, "f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+            udho::url::slot("f2"_h, &f2)         << udho::url::regx(udho::url::verb::get, "f2", "/f2")                                           |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::regx(udho::url::verb::get, "xf1", "/x/f1");
 
         std::cout << chain << std::endl;
 
@@ -111,10 +111,10 @@ int main(){
         using namespace udho::hazo::string::literals;
 
         auto chain =
-            udho::url::slot("f0"_h, &f0)         << udho::url::match("f0")               |
-            udho::url::slot("f1"_h, &f1)         << udho::url::match("f1/{}/{}/{}/{}")   |
-            udho::url::slot("f2"_h, &f2)         << udho::url::match("f2")               |
-            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::match("xf1");
+            udho::url::slot("f0"_h, &f0)         << udho::url::scan(udho::url::verb::get, "f0", "/f0")                         |
+            udho::url::slot("f1"_h, &f1)         << udho::url::scan(udho::url::verb::get, "f1/{}/{}/{}/{}",  "/f1/{}/{}/{}")   |
+            udho::url::slot("f2"_h, &f2)         << udho::url::scan(udho::url::verb::get, "f2", "/f2")                         |
+            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::scan(udho::url::verb::get, "xf1", "/x/f1");
 
         std::cout << chain << std::endl;
 

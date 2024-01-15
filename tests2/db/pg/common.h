@@ -28,6 +28,8 @@
 #ifndef UDHO_DB_PG_TESTS_COMMON_H
 #define UDHO_DB_PG_TESTS_COMMON_H
 
+#include <regex>
+
 namespace udho{
 namespace db{
 namespace pg{
