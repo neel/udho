@@ -1,5 +1,17 @@
 #include <iostream>
 #include <udho/view/shortcode_parser.h>
+#include <stdio.h>
+#include <string.h>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
+
+static char buffer[] = R"TEMPLATE(
+<? codode 1 ?>Once upon a time there was a
+time when there was no time at all.<? code 2
+
+?>
+A quick brown dinosaur jumped over a lazy unicorn.
+)TEMPLATE";
 
 int main(){
 
@@ -27,4 +39,13 @@ int main(){
     }
 
     std::cout << "hello world" << std::endl;
+
+    FILE* fptr = fmemopen(buffer, strlen (buffer), "r");
+    int posix_handle = fileno(fptr);
+    boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
+    boost::iostreams::stream stream(descriptor);
+
+    udho::view::sections::parser parser;
+    parser.open("<?").close("?>");
+
 }

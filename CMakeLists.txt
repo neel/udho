@@ -53,7 +53,7 @@ if(UDHO_USE_PUGIXML)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization iostreams REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
 
 IF(UDHO_USE_NLOHMANN_JSON)
