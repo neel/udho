@@ -114,9 +114,10 @@ struct nvp<K, T, std::enable_if_t< std::is_const_v<std::remove_reference_t<T>> >
     static_assert(detail::is_wrappable<T>::value);
 
     using name_type             = K;
-    using value_type            = detail::value_wrapper<T>;
-    using reference_type        = typename value_type::reference_type;
-    using const_reference_type  = typename value_type::const_reference_type;
+    using wrapper_type          = detail::value_wrapper<T>;
+    using value_type            = typename wrapper_type::type;
+    using reference_type        = typename wrapper_type::reference_type;
+    using const_reference_type  = typename wrapper_type::const_reference_type;
 
     nvp(name_type&& name, T&& v): _name(std::move(name)), _value(std::forward<T>(v)) {}
     const name_type& name() const { return _name; }
@@ -129,7 +130,7 @@ struct nvp<K, T, std::enable_if_t< std::is_const_v<std::remove_reference_t<T>> >
     }
     private:
         name_type  _name;
-        value_type _value;
+        wrapper_type _value;
 };
 
 template <typename K, typename T>
@@ -137,9 +138,10 @@ struct nvp<K, T, std::enable_if_t< !std::is_const_v<std::remove_reference_t<T>> 
     static_assert(detail::is_wrappable<T>::value);
 
     using name_type             = K;
-    using value_type            = detail::value_wrapper<T>;
-    using reference_type        = typename value_type::reference_type;
-    using const_reference_type  = typename value_type::const_reference_type;
+    using wrapper_type          = detail::value_wrapper<T>;
+    using value_type            = typename wrapper_type::type;
+    using reference_type        = typename wrapper_type::reference_type;
+    using const_reference_type  = typename wrapper_type::const_reference_type;
 
     nvp(name_type&& name, T&& v): _name(std::move(name)), _value(std::forward<T>(v)) {}
     const name_type& name() const { return _name; }
@@ -152,7 +154,7 @@ struct nvp<K, T, std::enable_if_t< !std::is_const_v<std::remove_reference_t<T>> 
     }
     private:
         name_type _name;
-        value_type  _value;
+        wrapper_type  _value;
 };
 
 
