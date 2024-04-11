@@ -1,7 +1,8 @@
 #include <iostream>
 #include <udho/view/shortcode_parser.h>
-#include <udho/view/scope.h>
-#include <udho/view/reflect.h>
+// #include <udho/view/scope.h>
+// #include <udho/view/reflect.h>
+#include <udho/view/interop.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
 #include <complex>
@@ -9,9 +10,27 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
-template <typename K, typename T>
-void const_check(const udho::view::data::nvp<K, T>& nvp){
-    std::cout << nvp << std::endl;
+// template <typename K, typename T>
+// void const_check(const udho::view::data::nvp<K, T>& nvp){
+//     std::cout << nvp << std::endl;
+// }
+
+struct python{
+    template <typename T>
+    void operator()(T value){
+
+    }
+};
+
+namespace udho::view::data{
+
+template <typename T>
+struct foreign<python, T>{
+    foreign(T v): _value(v) {}
+
+    T _value;
+};
+
 }
 
 static char buffer[] = R"TEMPLATE(
@@ -58,21 +77,28 @@ int main(){
     parser.open("<?").close("?>");
 
 
-    using namespace udho::hazo::string::literals;
 
-    std::string name = "hello";
-    auto name_v = udho::view::data::make_nvp("name", name);
-    // std::cout << name_v << std::endl;
-    const_check(name_v);
-    *name_v = "Something Else";
-    // std::cout << name_v << std::endl;
-    const_check(name_v);
+    // using namespace udho::hazo::string::literals;
+    // std::string name = "hello";
+    // auto name_v = udho::view::data::make_nvp("name", name);
+    // // std::cout << name_v << std::endl;
+    // const_check(name_v);
+    // *name_v = "Something Else";
+    // // std::cout << name_v << std::endl;
+    // const_check(name_v);
+    //
+    // auto number_v = udho::view::data::make_nvp("number"_h, 42);
+    // const_check(number_v);
+    //
+    // std::complex<double> complex;
+    // std::uint32_t dbl;
+    //
+    // udho::view::data::reflect(dbl);
 
-    auto number_v = udho::view::data::make_nvp("number"_h, 42);
-    const_check(number_v);
+    std::uint32_t x;
+    auto reflected = udho::view::data::reflect(udho::view::data::bridges::python{}, "hello", x);
 
-    std::complex<double> complex;
-    std::uint32_t dbl;
+    python resolver;
 
-    udho::view::data::reflect(dbl);
+    reflected.resolve(resolver);
 }
