@@ -32,10 +32,6 @@
 
 namespace udho{
 namespace view{
-
-struct python{};
-
-
 namespace data{
 
 template <typename Bridge>
@@ -43,15 +39,6 @@ struct bridge;
 
 template <typename Bridge, typename T>
 struct foreign;
-
-template <>
-struct bridge<udho::view::python>{};
-
-namespace bridges{
-
-    using python = udho::view::data::bridge<udho::view::python>;
-
-}
 
 template <typename Bridge>
 struct generator;

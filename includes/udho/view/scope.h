@@ -32,6 +32,7 @@
 #include <utility>
 #include <type_traits>
 
+
 namespace udho{
 namespace view{
 namespace data{
@@ -39,15 +40,17 @@ namespace data{
 namespace detail{
 
 template <typename T, typename Enable = void>
-struct value;
+struct value_wrapper{
+    using type = void;
+};
 
 template <typename T>
-struct value<T, std::enable_if_t< !std::is_reference_v<T> && !std::is_pointer_v<T> >>{
+struct value_wrapper<T, std::enable_if_t< !std::is_reference_v<T> && !std::is_pointer_v<T> && !std::is_array_v<T> && (std::is_arithmetic_v<T>) >>{
     using type                  = T;
     using reference_type        = type &;
     using const_reference_type  = const type &;
 
-    value(T&& v): _v(std::move(v)) {}
+    value_wrapper(T&& v): _v(std::move(v)) {}
     const_reference_type v() const { return _v; }
     const_reference_type operator*() const { return v(); }
     private:
@@ -55,12 +58,25 @@ struct value<T, std::enable_if_t< !std::is_reference_v<T> && !std::is_pointer_v<
 };
 
 template <typename T>
-struct value<T, std::enable_if_t< std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>> >>{
+struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_pointer_v<T> && std::is_array_v<std::remove_reference_t<T>> >>{
+    using type                  = T;
+    using reference_type        = type &;
+    using const_reference_type  = const type &;
+
+    value_wrapper(T&& v): _v(std::move(v)) {}
+    const_reference_type v() const { return _v; }
+    const_reference_type operator*() const { return v(); }
+    private:
+        T _v;
+};
+
+template <typename T>
+struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>> && !std::is_array_v<std::remove_reference_t<T>> >>{
     using type                  = std::remove_reference_t<std::remove_const_t<T>>;
     using reference_type        = type &;
     using const_reference_type  = const type &;
 
-    value(T v): _v(v) {}
+    value_wrapper(T v): _v(v) {}
     const_reference_type v() const { return _v; }
     const_reference_type operator*() const { return v(); }
     private:
@@ -68,12 +84,12 @@ struct value<T, std::enable_if_t< std::is_reference_v<T> && std::is_const_v<std:
 };
 
 template <typename T>
-struct value<T, std::enable_if_t< std::is_reference_v<T> && !std::is_const_v<std::remove_reference_t<T>> >>{
+struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_const_v<std::remove_reference_t<T>> && !std::is_array_v<std::remove_reference_t<T>> >>{
     using type                  = std::remove_reference_t<T>;
     using reference_type        = type &;
     using const_reference_type  = const type &;
 
-    value(T v): _v(v) {}
+    value_wrapper(T v): _v(v) {}
     const_reference_type v() const { return _v; }
     reference_type v() { return _v; }
     const_reference_type operator*() const { return v(); }
@@ -82,6 +98,12 @@ struct value<T, std::enable_if_t< std::is_reference_v<T> && !std::is_const_v<std
         T _v;
 };
 
+template <typename T, typename = void>
+struct is_wrappable : std::false_type {};
+
+template <typename T>
+struct is_wrappable<T, std::enable_if_t<!std::is_void<typename value_wrapper<T>::type>::value>> : std::true_type {};
+
 }
 
 template <typename K, typename T, typename Enable = void>
@@ -89,8 +111,10 @@ struct nvp;
 
 template <typename K, typename T>
 struct nvp<K, T, std::enable_if_t< std::is_const_v<std::remove_reference_t<T>> > >{
+    static_assert(detail::is_wrappable<T>::value);
+
     using name_type             = K;
-    using value_type            = detail::value<T>;
+    using value_type            = detail::value_wrapper<T>;
     using reference_type        = typename value_type::reference_type;
     using const_reference_type  = typename value_type::const_reference_type;
 
@@ -110,8 +134,10 @@ struct nvp<K, T, std::enable_if_t< std::is_const_v<std::remove_reference_t<T>> >
 
 template <typename K, typename T>
 struct nvp<K, T, std::enable_if_t< !std::is_const_v<std::remove_reference_t<T>> > >{
+    static_assert(detail::is_wrappable<T>::value);
+
     using name_type             = K;
-    using value_type            = detail::value<T>;
+    using value_type            = detail::value_wrapper<T>;
     using reference_type        = typename value_type::reference_type;
     using const_reference_type  = typename value_type::const_reference_type;
 
@@ -143,58 +169,58 @@ nvp<K, T> make_nvp(K&& name, T&& v){
 
 // iterators
 
-template <typename K, typename IteratorT, typename Enable = void>
-struct nip {
-    using name_type             = K;
-    using iterator_type         = IteratorT;
-    using iterator_traits       = std::iterator_traits<iterator_type>;
-    using value_type            = typename iterator_traits::value_type;
-    using difference_type       = typename iterator_traits::difference_type;
-    using size_type             = difference_type;
-    using reference_type        = typename iterator_traits::reference;
-    using const_reference_type  = const typename iterator_traits::reference;
-
-    nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
-
-    iterator_type begin() { return _begin; }
-    iterator_type end() { return _end; }
-
-    size_type size() const { return std::distance(_begin, _end); }
-
-    private:
-        name_type     _name;
-        iterator_type _begin, _end;
-};
-
-template <typename K, typename IteratorT>
-struct nip<K, IteratorT, std::enable_if_t<std::is_same<typename std::iterator_traits<IteratorT>::iterator_category, std::random_access_iterator_tag>::value>> {
-    using name_type             = K;
-    using iterator_type         = IteratorT;
-    using iterator_traits       = std::iterator_traits<iterator_type>;
-    using value_type            = typename iterator_traits::value_type;
-    using difference_type       = typename iterator_traits::difference_type;
-    using size_type             = difference_type;
-    using reference_type        = typename iterator_traits::reference;
-    using const_reference_type  = const typename iterator_traits::reference;
-
-    nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
-
-    iterator_type begin() { return _begin; }
-    iterator_type end() { return _end; }
-
-    size_type size() const { return (_end - _begin);}
-    reference_type operator[](size_type index) { return *(_begin + index); }
-    const_reference_type operator[](size_type index) const { return *(_begin + index); }
-
-    private:
-        name_type     _name;
-        iterator_type _begin, _end;
-};
-
-template <typename K, typename IteratorT>
-nip<K, IteratorT> make_nvp(K&& name, IteratorT begin, IteratorT end){
-    return nip<K, IteratorT>(std::move(name), begin, end);
-}
+// template <typename K, typename IteratorT, typename Enable = void>
+// struct nip {
+//     using name_type             = K;
+//     using iterator_type         = IteratorT;
+//     using iterator_traits       = std::iterator_traits<iterator_type>;
+//     using value_type            = typename iterator_traits::value_type;
+//     using difference_type       = typename iterator_traits::difference_type;
+//     using size_type             = difference_type;
+//     using reference_type        = typename iterator_traits::reference;
+//     using const_reference_type  = const typename iterator_traits::reference;
+//
+//     nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
+//
+//     iterator_type begin() { return _begin; }
+//     iterator_type end() { return _end; }
+//
+//     size_type size() const { return std::distance(_begin, _end); }
+//
+//     private:
+//         name_type     _name;
+//         iterator_type _begin, _end;
+// };
+//
+// template <typename K, typename IteratorT>
+// struct nip<K, IteratorT, std::enable_if_t<std::is_same<typename std::iterator_traits<IteratorT>::iterator_category, std::random_access_iterator_tag>::value>> {
+//     using name_type             = K;
+//     using iterator_type         = IteratorT;
+//     using iterator_traits       = std::iterator_traits<iterator_type>;
+//     using value_type            = typename iterator_traits::value_type;
+//     using difference_type       = typename iterator_traits::difference_type;
+//     using size_type             = difference_type;
+//     using reference_type        = typename iterator_traits::reference;
+//     using const_reference_type  = const typename iterator_traits::reference;
+//
+//     nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
+//
+//     iterator_type begin() { return _begin; }
+//     iterator_type end() { return _end; }
+//
+//     size_type size() const { return (_end - _begin);}
+//     reference_type operator[](size_type index) { return *(_begin + index); }
+//     const_reference_type operator[](size_type index) const { return *(_begin + index); }
+//
+//     private:
+//         name_type     _name;
+//         iterator_type _begin, _end;
+// };
+//
+// template <typename K, typename IteratorT>
+// nip<K, IteratorT> make_nvp(K&& name, IteratorT begin, IteratorT end){
+//     return nip<K, IteratorT>(std::move(name), begin, end);
+// }
 
 }
 }

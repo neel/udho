@@ -1,8 +1,7 @@
 #include <iostream>
 #include <udho/view/shortcode_parser.h>
-// #include <udho/view/scope.h>
-// #include <udho/view/reflect.h>
-#include <udho/view/interop.h>
+#include <udho/view/scope.h>
+#include <udho/view/reflect.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
 #include <complex>
@@ -10,28 +9,22 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
-// template <typename K, typename T>
-// void const_check(const udho::view::data::nvp<K, T>& nvp){
-//     std::cout << nvp << std::endl;
-// }
-
-struct python{
-    template <typename T>
-    void operator()(T value){
-
-    }
-};
-
-namespace udho::view::data{
-
-template <typename T>
-struct foreign<python, T>{
-    foreign(T v): _value(v) {}
-
-    T _value;
-};
-
+template <typename K, typename T>
+void const_check(const udho::view::data::nvp<K, T>& nvp){
+    std::cout << nvp << std::endl;
 }
+
+struct X{
+    friend auto reflect(X& x){
+        using namespace udho::hazo::string::literals;
+
+        // reflect("name", name);
+        // reflect("age", age);
+    }
+
+    std::string name;
+    std::uint32_t age;
+};
 
 static char buffer[] = R"TEMPLATE(
 <? codode 1 ?>Once upon a time there was a
@@ -78,27 +71,25 @@ int main(){
 
 
 
-    // using namespace udho::hazo::string::literals;
-    // std::string name = "hello";
-    // auto name_v = udho::view::data::make_nvp("name", name);
-    // // std::cout << name_v << std::endl;
-    // const_check(name_v);
-    // *name_v = "Something Else";
-    // // std::cout << name_v << std::endl;
-    // const_check(name_v);
-    //
-    // auto number_v = udho::view::data::make_nvp("number"_h, 42);
-    // const_check(number_v);
-    //
-    // std::complex<double> complex;
-    // std::uint32_t dbl;
-    //
-    // udho::view::data::reflect(dbl);
+    using namespace udho::hazo::string::literals;
+    std::string name = "hello";
+    auto name_v = udho::view::data::make_nvp("name", name);
+    std::cout << name_v << std::endl;
+    const_check(name_v);
+    *name_v = "Something Else";
+    std::cout << name_v << std::endl;
+    const_check(name_v);
 
-    std::uint32_t x;
-    auto reflected = udho::view::data::reflect(udho::view::data::bridges::python{}, "hello", x);
+    auto ll = udho::view::data::make_nvp("name", "ll");
+    auto xyz = *ll;
+    std::cout << xyz << std::endl;
 
-    python resolver;
+    std::uint32_t val = 42;
+    auto number_v = udho::view::data::make_nvp("number"_h, 42);
+    const_check(number_v);
 
-    reflected.resolve(resolver);
+    std::complex<double> complex;
+    std::uint32_t dbl;
+
+    udho::view::data::reflect(dbl);
 }
