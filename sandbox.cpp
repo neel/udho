@@ -14,6 +14,8 @@ void const_check(const udho::view::data::nvp<K, T>& nvp){
     std::cout << nvp << std::endl;
 }
 
+int foo(){ return 42; }
+
 struct X{
     friend auto reflect(X& x){
         using namespace udho::hazo::string::literals;
@@ -92,4 +94,24 @@ int main(){
     std::uint32_t dbl;
 
     udho::view::data::reflect(dbl);
+
+    auto assoc = udho::view::data::associative(
+        udho::view::data::make_nvp("one", 1),
+        udho::view::data::make_nvp("two", 2),
+        udho::view::data::make_nvp("tree", 3)
+    );
+
+    std::cout << assoc.apply([](auto nvp){
+        std::cout << nvp << std::endl;
+    }) << std::endl;
+
+
+    auto assoc_singular = udho::view::data::associative(
+        udho::view::data::make_nvp("one", 10),
+        udho::view::data::make_nvp("two", &foo)
+    );
+
+    std::cout << assoc_singular.apply([](auto nvp){
+        std::cout << nvp << std::endl;
+    }) << std::endl;
 }

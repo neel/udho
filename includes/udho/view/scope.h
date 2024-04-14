@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include <type_traits>
-
+// #include <udho/hazo/seq/seq.h>
 
 namespace udho{
 namespace view{
@@ -39,16 +39,42 @@ namespace data{
 
 namespace detail{
 
+/**
+ * Value traits define how to expose these values to the foreign language.
+ * A value can be scalar, range, vector, function, dict
+ * A scalar value can be composed of const or non-const reference to a variable or constant expression or a pair of getter and setter.
+ * A range is composed of a pair of itarators. These itarators can be passed by value or by function that returns an iterator.
+ * A vector is a standard stl container.
+ * A function is a C++ function.
+ */
+enum class value_category{ unknown, scalar, range, vector, function, dict };
+enum class value_method{ unknown, constant, reference, functional };
+
+template <value_category Category, value_method Method>
+struct value_trait{
+    constexpr static const value_category category = Category;
+    constexpr static const value_method   method   = Method;
+};
+
 template <typename T, typename Enable = void>
 struct value_wrapper{
     using type = void;
 };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t< !std::is_reference_v<T> && !std::is_pointer_v<T> && !std::is_array_v<T> && (std::is_arithmetic_v<T>) >>{
+struct value_wrapper<T, std::enable_if_t<
+                            !std::is_reference_v<T> &&
+                            !std::is_pointer_v<T> &&
+                            !std::is_function_v<T> &&
+                            !std::is_array_v<T> && (
+                                std::is_arithmetic_v<T>
+                            )
+>>
+{
     using type                  = T;
     using reference_type        = type &;
     using const_reference_type  = const type &;
+    using trait                 = value_trait<value_category::scalar, value_method::constant>;
 
     value_wrapper(T&& v): _v(std::move(v)) {}
     const_reference_type v() const { return _v; }
@@ -58,10 +84,19 @@ struct value_wrapper<T, std::enable_if_t< !std::is_reference_v<T> && !std::is_po
 };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_pointer_v<T> && std::is_array_v<std::remove_reference_t<T>> >>{
+struct value_wrapper<T, std::enable_if_t<
+                             std::is_reference_v<T> &&
+                            !std::is_function_v<T> &&
+                            !std::is_pointer_v<T> && (
+                                std::is_array_v<std::remove_reference_t<T>> &&
+                                std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_reference_t<T>>>, char>
+                            )
+                        >>
+{
     using type                  = T;
     using reference_type        = type &;
     using const_reference_type  = const type &;
+    using trait                 = value_trait<value_category::scalar, value_method::constant>;
 
     value_wrapper(T&& v): _v(std::move(v)) {}
     const_reference_type v() const { return _v; }
@@ -71,10 +106,17 @@ struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_poi
 };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>> && !std::is_array_v<std::remove_reference_t<T>> >>{
+struct value_wrapper<T, std::enable_if_t<
+                             std::is_reference_v<T> &&
+                            !std::is_function_v<std::remove_reference_t<T>> &&
+                             std::is_const_v<std::remove_reference_t<T>> &&
+                            !std::is_array_v<std::remove_reference_t<T>>
+                        >>
+{
     using type                  = std::remove_reference_t<std::remove_const_t<T>>;
     using reference_type        = type &;
     using const_reference_type  = const type &;
+    using trait                 = value_trait<value_category::scalar, value_method::reference>;
 
     value_wrapper(T v): _v(v) {}
     const_reference_type v() const { return _v; }
@@ -84,10 +126,17 @@ struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && std::is_cons
 };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_const_v<std::remove_reference_t<T>> && !std::is_array_v<std::remove_reference_t<T>> >>{
+struct value_wrapper<T, std::enable_if_t<
+                             std::is_reference_v<T> &&
+                            !std::is_function_v<std::remove_reference_t<T>> &&
+                            !std::is_const_v<std::remove_reference_t<T>> &&
+                            !std::is_array_v<std::remove_reference_t<T>>
+                        >>
+{
     using type                  = std::remove_reference_t<T>;
     using reference_type        = type &;
     using const_reference_type  = const type &;
+    using trait                 = value_trait<value_category::scalar, value_method::reference>;
 
     value_wrapper(T v): _v(v) {}
     const_reference_type v() const { return _v; }
@@ -97,6 +146,33 @@ struct value_wrapper<T, std::enable_if_t< std::is_reference_v<T> && !std::is_con
     private:
         T _v;
 };
+
+template <typename T>
+struct value_wrapper<T, std::enable_if_t< (
+                                std::is_reference_v<T> &&
+                                std::is_function_v<std::remove_reference_t<T>>
+                            ) || (
+                                std::is_pointer_v<T> &&
+                                std::is_function_v<std::remove_pointer_t<T>>
+                            )
+                        >>
+{
+    using type  = T;
+    using reference_type        = type &;
+    using const_reference_type  = const type &;
+    using trait = value_trait<value_category::scalar, value_method::functional>;
+
+    value_wrapper(T&& v): _v(std::move(v)) {}
+    const_reference_type v() const { std::cout << "SEE ME" << std::endl; return _v; }
+    const_reference_type operator*() const { return v(); }
+    private:
+        T _v;
+};
+
+template <typename T>
+value_wrapper<T> wrap(T&& v){
+    return value_wrapper<T>{std::forward<T>(v)};
+}
 
 template <typename T, typename = void>
 struct is_wrappable : std::false_type {};
@@ -169,60 +245,141 @@ nvp<K, T> make_nvp(K&& name, T&& v){
     return nvp<K, T>(std::move(name), std::forward<T>(v));
 }
 
-// iterators
 
-// template <typename K, typename IteratorT, typename Enable = void>
-// struct nip {
-//     using name_type             = K;
-//     using iterator_type         = IteratorT;
-//     using iterator_traits       = std::iterator_traits<iterator_type>;
-//     using value_type            = typename iterator_traits::value_type;
-//     using difference_type       = typename iterator_traits::difference_type;
-//     using size_type             = difference_type;
-//     using reference_type        = typename iterator_traits::reference;
-//     using const_reference_type  = const typename iterator_traits::reference;
-//
-//     nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
-//
-//     iterator_type begin() { return _begin; }
-//     iterator_type end() { return _end; }
-//
-//     size_type size() const { return std::distance(_begin, _end); }
-//
-//     private:
-//         name_type     _name;
-//         iterator_type _begin, _end;
-// };
-//
-// template <typename K, typename IteratorT>
-// struct nip<K, IteratorT, std::enable_if_t<std::is_same<typename std::iterator_traits<IteratorT>::iterator_category, std::random_access_iterator_tag>::value>> {
-//     using name_type             = K;
-//     using iterator_type         = IteratorT;
-//     using iterator_traits       = std::iterator_traits<iterator_type>;
-//     using value_type            = typename iterator_traits::value_type;
-//     using difference_type       = typename iterator_traits::difference_type;
-//     using size_type             = difference_type;
-//     using reference_type        = typename iterator_traits::reference;
-//     using const_reference_type  = const typename iterator_traits::reference;
-//
-//     nip(name_type&& name, iterator_type begin, iterator_type end): _name(std::move(name)), _begin(begin), _end(end) {}
-//
-//     iterator_type begin() { return _begin; }
-//     iterator_type end() { return _end; }
-//
-//     size_type size() const { return (_end - _begin);}
-//     reference_type operator[](size_type index) { return *(_begin + index); }
-//     const_reference_type operator[](size_type index) const { return *(_begin + index); }
-//
-//     private:
-//         name_type     _name;
-//         iterator_type _begin, _end;
-// };
-//
-// template <typename K, typename IteratorT>
-// nip<K, IteratorT> make_nvp(K&& name, IteratorT begin, IteratorT end){
-//     return nip<K, IteratorT>(std::move(name), begin, end);
+// template <typename LK, typename LT, typename RK, typename RT>
+// auto operator,(nvp<LK, LT>&& left, nvp<RK, RT>&& right){
+//     return udho::hazo::make_seq_d(std::move(left), std::move(right));
 // }
+//
+// template <typename... Args, typename RK, typename RT>
+// auto operator,(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, nvp<RK, RT>&& right){
+//     using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, Args...>;
+//     using rhs_type = nvp<RK, RT>;
+//     return typename lhs_type::template extend<rhs_type>(left, std::move(right));
+// }
+
+
+namespace detail{
+
+template <typename Head = void, typename Tail = void>
+struct associative;
+
+template <typename KeyT, typename ValueT, typename Tail>
+struct associative<nvp<KeyT, ValueT>, Tail>{
+    using head_type = nvp<KeyT, ValueT>;
+    using tail_type = Tail;
+
+    associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
+
+    template <typename Function, typename MatchT>
+    std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
+        if(match(_head)){
+            f(_head);
+        }
+        return _tail.invoke(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
+    }
+
+    private:
+        head_type _head;
+        tail_type _tail;
+};
+
+template <typename KeyT, typename ValueT>
+struct associative<nvp<KeyT, ValueT>, void>{
+    using head_type = nvp<KeyT, ValueT>;
+    using tail_type = void;
+
+    associative(head_type&& head): _head(std::move(head)) {}
+
+    template <typename Function, typename MatchT>
+    std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
+        if(match(_head)){
+            f(_head);
+        }
+        return count+1;
+    }
+
+    private:
+        head_type _head;
+};
+
+template <>
+struct associative<void, void>{
+    using head_type = void;
+    using tail_type = void;
+
+    template <typename Function, typename MatchT>
+    std::size_t invoke(Function&&, MatchT&&, std::size_t count = 0){
+        return count;
+    }
+
+};
+
+}
+
+namespace detail{
+    template <typename Function>
+    struct extractor_f{
+        extractor_f(Function&& f): _f(std::move(f)) {}
+
+        template <typename KeyT, typename ValueT>
+        void operator()(nvp<KeyT, ValueT>& nvp){
+            return _f(nvp);
+        }
+
+        Function _f;
+    };
+    template <typename KeyT, bool Once = false>
+    struct match_f{
+        match_f(KeyT&& key): _key(std::move(key)), _count(0) {}
+        template <typename ValueT>
+        bool operator()(const nvp<KeyT, ValueT>& nvp){
+            if(Once && _count > 1){
+                return false;
+            }
+
+            bool res = nvp.name() == _key;
+            _count = _count + res;
+            return res;
+        }
+        template <typename OtherKeyT, typename ValueT>
+        bool operator()(const nvp<OtherKeyT, ValueT>& nvp){
+            return false;
+        }
+
+        KeyT _key;
+        std::size_t _count;
+    };
+
+    struct match_all{
+        template <typename KeyT, typename ValueT>
+        bool operator()(const nvp<KeyT, ValueT>&){
+            return true;
+        }
+    };
+}
+
+template <typename X = void, typename... Xs>
+struct associative: detail::associative<X, associative<Xs...>> {
+    associative(X&& x, Xs&&... xs): base(std::move(x), associative<Xs...>(std::forward<Xs>(xs)...)) {}
+    template <typename KeyT, typename Function>
+    std::size_t apply(KeyT&& key, Function&& f){
+        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_f<KeyT>{std::forward<KeyT>(key)});
+    }
+    template <typename KeyT, typename Function>
+    std::size_t apply_once(KeyT&& key, Function&& f){
+        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_f<KeyT, true>{std::forward<KeyT>(key)});
+    }
+    template <typename Function>
+    std::size_t apply(Function&& f){
+        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_all{});
+    }
+    private:
+        using base = detail::associative<X, associative<Xs...>>;
+};
+
+template <>
+struct associative<void>: detail::associative<void, void> {};
 
 }
 }
