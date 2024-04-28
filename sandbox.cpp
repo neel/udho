@@ -28,6 +28,26 @@ struct X{
     std::uint32_t age;
 };
 
+template <typename T>
+void bar(T&& v){
+    // T::x;
+    auto flags = std::cout.flags();
+    std::cout << std::boolalpha << v << std::endl;
+    std::cout << "is_plain_v:    " << udho::view::data::traits::is_plain_v<T> << std::endl;
+    std::cout << "is_string_v:   " << udho::view::data::traits::is_string_v<T> << std::endl;
+    std::cout << "is_linked_v:   " << udho::view::data::traits::is_linked_v<T> << std::endl;
+    std::cout << "is_function_v: " << udho::view::data::traits::is_function_v<T> << std::endl;
+    std::cout << "is_mutable_v:  " << udho::view::data::traits::is_mutable_v<T> << std::endl;
+    std::cout.flags(flags);
+}
+
+template <typename T>
+void baz(T&& w){
+    std::cout << "assignable " << w.assignable << std::endl;
+    std::cout << "getter     " << w.getter << std::endl;
+    std::cout << "setter     " << w.setter << std::endl;
+}
+
 static char buffer[] = R"TEMPLATE(
 <? codode 1 ?>Once upon a time there was a
 time when there was no time at all.<? code 2
@@ -73,45 +93,70 @@ int main(){
 
 
 
-    using namespace udho::hazo::string::literals;
-    std::string name = "hello";
-    auto name_v = udho::view::data::make_nvp("name", name);
-    std::cout << name_v << std::endl;
-    const_check(name_v);
-    *name_v = "Something Else";
-    std::cout << name_v << std::endl;
-    const_check(name_v);
-
-    auto ll = udho::view::data::make_nvp("name", "ll");
-    auto xyz = *ll;
-    std::cout << xyz << std::endl;
-
+    // using namespace udho::hazo::string::literals;
+    // std::string name = "hello";
+    // auto name_v = udho::view::data::make_nvp("name", name);
+    // std::cout << name_v << std::endl;
+    // const_check(name_v);
+    // *name_v = "Something Else";
+    // std::cout << name_v << std::endl;
+    // const_check(name_v);
+    //
+    // auto ll = udho::view::data::make_nvp("name", "ll");
+    // auto xyz = *ll;
+    // std::cout << xyz << std::endl;
+    //
     std::uint32_t val = 42;
-    auto number_v = udho::view::data::make_nvp("number"_h, 42);
-    const_check(number_v);
-
-    std::complex<double> complex;
+    // auto number_v = udho::view::data::make_nvp("number"_h, 42);
+    // const_check(number_v);
+    //
+    // std::complex<double> complex;
     std::uint32_t dbl;
+    //
+    // udho::view::data::reflect(dbl);
+    //
+    // auto assoc = udho::view::data::associative(
+    //     udho::view::data::make_nvp("one", 1),
+    //     udho::view::data::make_nvp("two", 2),
+    //     udho::view::data::make_nvp("tree", 3)
+    // );
+    //
+    // std::cout << assoc.apply([](auto nvp){
+    //     std::cout << nvp << std::endl;
+    // }) << std::endl;
+    //
+    //
+    // auto assoc_singular = udho::view::data::associative(
+    //     udho::view::data::make_nvp("one", 10),
+    //     udho::view::data::make_nvp("two", &foo)
+    // );
+    //
+    // std::cout << assoc_singular.apply([](auto nvp){
+    //     std::cout << nvp << std::endl;
+    // }) << std::endl;
+    //
+    const char* str = "hello";
+    auto astr = "hello";
+    //
+    // bar(43);
+    // bar("hello");
+    // bar(astr);
+    // bar(str);
+    // bar(val);
+    //
+    // // std::cout << std::is_const_v<std::remove_pointer_t<std::remove_reference_t<const char*&>>> << std::endl;
+    //
+    // baz(udho::view::data::wrap(str));
 
-    udho::view::data::reflect(dbl);
+    using namespace udho::view::data;
 
-    auto assoc = udho::view::data::associative(
-        udho::view::data::make_nvp("one", 1),
-        udho::view::data::make_nvp("two", 2),
-        udho::view::data::make_nvp("tree", 3)
+    wrap(str);
+    make_nvp(policies::property{}, "name", str);
+
+    assoc(
+        make_nvp(policies::property{}, "name", str),
+        make_nvp(policies::property{}, "name", astr),
+        make_nvp(policies::property{}, "number", 42),
+        make_nvp(policies::property{}, "value", val)
     );
-
-    std::cout << assoc.apply([](auto nvp){
-        std::cout << nvp << std::endl;
-    }) << std::endl;
-
-
-    auto assoc_singular = udho::view::data::associative(
-        udho::view::data::make_nvp("one", 10),
-        udho::view::data::make_nvp("two", &foo)
-    );
-
-    std::cout << assoc_singular.apply([](auto nvp){
-        std::cout << nvp << std::endl;
-    }) << std::endl;
 }

@@ -31,206 +31,220 @@
 #include <string>
 #include <utility>
 #include <type_traits>
-// #include <udho/hazo/seq/seq.h>
+#include <udho/hazo/seq/seq.h>
 
 namespace udho{
 namespace view{
 namespace data{
 
-namespace detail{
 
-/**
- * Value traits define how to expose these values to the foreign language.
- * A value can be scalar, range, vector, function, dict
- * A scalar value can be composed of const or non-const reference to a variable or constant expression or a pair of getter and setter.
- * A range is composed of a pair of itarators. These itarators can be passed by value or by function that returns an iterator.
- * A vector is a standard stl container.
- * A function is a C++ function.
- */
-enum class value_category{ unknown, scalar, range, vector, function, dict };
-enum class value_method{ unknown, constant, reference, functional };
+namespace traits{
 
-template <value_category Category, value_method Method>
-struct value_trait{
-    constexpr static const value_category category = Category;
-    constexpr static const value_method   method   = Method;
+template<class T>
+struct is_numeric : std::integral_constant<bool, std::is_arithmetic_v<std::remove_reference_t<T>>> {};
+template<class T>
+struct is_string  : std::integral_constant<bool,
+   (std::is_reference_v<T> && std::is_array_v<std::remove_reference_t<T>>   && std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_reference_t<T>>>,  char>) ||
+   (std::is_reference_v<T> && std::is_pointer_v<std::remove_reference_t<T>> && std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_pointer_t<std::remove_reference_t<T>>>>,  char>) ||
+   (std::is_same_v<std::remove_const_t<std::remove_reference_t<T>>, std::string>)
+> {};
+template<class T>
+struct is_plain:    std::integral_constant<bool, is_numeric<T>::value || is_string<T>::value > {};
+template <class T>
+struct is_linked:   std::integral_constant<bool,
+    (std::is_reference_v<T> && !std::is_array_v<std::remove_reference_t<T>> && is_plain<std::remove_reference_t<T>>::value)  ||
+    (std::is_pointer_v<std::remove_reference_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>, char>)
+> {};
+template <class T>
+struct is_function:   std::integral_constant<bool,
+    (std::is_reference_v<T> && std::is_function_v<std::remove_reference_t<T>>)  ||
+    (std::is_pointer_v<T>   && std::is_function_v<std::remove_pointer_t<T>>)
+> {};
+template<class T>
+struct is_mutable:    std::integral_constant<bool, is_linked<T>::value && !std::is_const_v<std::remove_reference_t<T>> > {};
+
+template<class T>
+inline constexpr bool is_numeric_v = is_numeric<T>::value;
+
+template<class T>
+inline constexpr bool is_string_v = is_string<T>::value;
+
+template<class T>
+inline constexpr bool is_plain_v = is_plain<T>::value;
+
+template<class T>
+inline constexpr bool is_linked_v = is_linked<T>::value;
+
+template<class T>
+inline constexpr bool is_function_v = is_function<T>::value;
+
+template<class T>
+inline constexpr bool is_mutable_v = is_mutable<T>::value;
+
+}
+
+template <typename T>
+struct immutable_value{
+    using value_type  = T;
+    using result_type = std::add_const_t<std::add_lvalue_reference_t<T>>;
+    using const_result_type = result_type;
+
+    static constexpr const bool assignable = false;
+    static constexpr const bool getter = false;
+    static constexpr const bool setter = false;
+
+    immutable_value(value_type v): _value(v) {}
+    const_result_type operator*() const { return _value; }
+
+    private:
+        value_type _value;
 };
+
+template <typename T>
+struct mutable_value{
+    using value_type  = T;
+    using result_type = std::add_lvalue_reference_t<T>;
+    using const_result_type = std::add_const_t<result_type>;
+
+    static constexpr const bool assignable = true;
+    static constexpr const bool getter = false;
+    static constexpr const bool setter = false;
+
+    mutable_value(T& v): _value(v) {}
+    const_result_type operator*() const { return _value; }
+    result_type operator*(){ return _value; }
+
+    private:
+        value_type _value;
+};
+
+template <typename T>
+struct getter_value{
+    using callback_type  = T;
+
+    static constexpr const bool assignable = false;
+    static constexpr const bool getter = true;
+    static constexpr const bool setter = false;
+
+    getter_value(T&& v): _callback(std::move(v)) {}
+    callback_type operator*() const { return _callback; }
+
+    private:
+        callback_type _callback;
+};
+
+template <typename T>
+struct setter_value{
+    using callback_type  = T;
+
+    static constexpr const bool assignable = true;
+    static constexpr const bool getter = false;
+    static constexpr const bool setter = true;
+
+    setter_value(T&& v): _callback(std::move(v)) {}
+    callback_type operator*() const { return _callback; }
+
+    private:
+        callback_type _callback;
+};
+
 
 template <typename T, typename Enable = void>
-struct value_wrapper{
-    using type = void;
-};
+struct wrapper1;
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t<
-                            !std::is_reference_v<T> &&
-                            !std::is_pointer_v<T> &&
-                            !std::is_function_v<T> &&
-                            !std::is_array_v<T> && (
-                                std::is_arithmetic_v<T>
-                            )
->>
-{
-    using type                  = T;
-    using reference_type        = type &;
-    using const_reference_type  = const type &;
-    using trait                 = value_trait<value_category::scalar, value_method::constant>;
-
-    value_wrapper(T&& v): _v(std::move(v)) {}
-    const_reference_type v() const { return _v; }
-    const_reference_type operator*() const { return v(); }
-    private:
-        T _v;
-};
+struct wrapper1<T, std::enable_if_t<
+                        ((std::is_reference_v<T> && std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T>>>) || !std::is_reference_v<T>) &&
+                        traits::is_plain<T>::value
+                >> : immutable_value<T> {
+                    using immutable_value<T>::immutable_value;
+                };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t<
-                             std::is_reference_v<T> &&
-                            !std::is_function_v<T> &&
-                            !std::is_pointer_v<T> && (
-                                std::is_array_v<std::remove_reference_t<T>> &&
-                                std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_reference_t<T>>>, char>
-                            )
-                        >>
-{
-    using type                  = T;
-    using reference_type        = type &;
-    using const_reference_type  = const type &;
-    using trait                 = value_trait<value_category::scalar, value_method::constant>;
-
-    value_wrapper(T&& v): _v(std::move(v)) {}
-    const_reference_type v() const { return _v; }
-    const_reference_type operator*() const { return v(); }
-    private:
-        T _v;
-};
+struct wrapper1<T, std::enable_if_t<
+                        !std::is_pointer_v<std::remove_reference_t<T>> && traits::is_mutable<T>::value
+                >> : mutable_value<T> {
+                    using mutable_value<T>::mutable_value;
+                };
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t<
-                             std::is_reference_v<T> &&
-                            !std::is_function_v<std::remove_reference_t<T>> &&
-                             std::is_const_v<std::remove_reference_t<T>> &&
-                            !std::is_array_v<std::remove_reference_t<T>>
-                        >>
-{
-    using type                  = std::remove_reference_t<std::remove_const_t<T>>;
-    using reference_type        = type &;
-    using const_reference_type  = const type &;
-    using trait                 = value_trait<value_category::scalar, value_method::reference>;
+struct wrapper1<T, std::enable_if_t<
+                        traits::is_function<T>::value
+                >>: getter_value<T> {
+                     using getter_value<T>::getter_value;
+                };
 
-    value_wrapper(T v): _v(v) {}
-    const_reference_type v() const { return _v; }
-    const_reference_type operator*() const { return v(); }
-    private:
-        T _v;
-};
+template <typename U, typename V, typename Enable = void>
+struct wrapper2;
 
-template <typename T>
-struct value_wrapper<T, std::enable_if_t<
-                             std::is_reference_v<T> &&
-                            !std::is_function_v<std::remove_reference_t<T>> &&
-                            !std::is_const_v<std::remove_reference_t<T>> &&
-                            !std::is_array_v<std::remove_reference_t<T>>
-                        >>
-{
-    using type                  = std::remove_reference_t<T>;
-    using reference_type        = type &;
-    using const_reference_type  = const type &;
-    using trait                 = value_trait<value_category::scalar, value_method::reference>;
+template <typename U, typename V>
+struct wrapper2<U, V, std::enable_if_t<
+                        traits::is_function<U>::value && traits::is_function<V>::value
+                >> : getter_value<U>, setter_value<V> {
+                    wrapper2(U&& u, V&& v): getter_value<U>(std::move(u)), setter_value<V>(std::move(v)) {}
+                };
 
-    value_wrapper(T v): _v(v) {}
-    const_reference_type v() const { return _v; }
-    reference_type v() { return _v; }
-    const_reference_type operator*() const { return v(); }
-    reference_type operator*() { return v(); }
-    private:
-        T _v;
-};
+template <typename... X>
+struct wrapper;
 
 template <typename T>
-struct value_wrapper<T, std::enable_if_t< (
-                                std::is_reference_v<T> &&
-                                std::is_function_v<std::remove_reference_t<T>>
-                            ) || (
-                                std::is_pointer_v<T> &&
-                                std::is_function_v<std::remove_pointer_t<T>>
-                            )
-                        >>
-{
-    using type  = T;
-    using reference_type        = type &;
-    using const_reference_type  = const type &;
-    using trait = value_trait<value_category::scalar, value_method::functional>;
-
-    value_wrapper(T&& v): _v(std::move(v)) {}
-    const_reference_type v() const { std::cout << "SEE ME" << std::endl; return _v; }
-    const_reference_type operator*() const { return v(); }
-    private:
-        T _v;
+struct wrapper<T>: wrapper1<T>{
+    using wrapper1<T>::wrapper1;
 };
 
-template <typename T>
-value_wrapper<T> wrap(T&& v){
-    return value_wrapper<T>{std::forward<T>(v)};
+template <typename U, typename V>
+struct wrapper<U, V>: wrapper2<U, V>{
+    using wrapper2<U, V>::wrapper2;
+};
+
+template <typename... X>
+wrapper<X...> wrap(X&&... x){
+    return wrapper<X...>{std::forward<X>(x)...};
 }
 
-template <typename T, typename = void>
-struct is_wrappable : std::false_type {};
-
-template <typename T>
-struct is_wrappable<T, std::enable_if_t<!std::is_void<typename value_wrapper<T>::type>::value>> : std::true_type {};
-
+namespace detail{
+    template <typename T>
+    class wrappable{
+        template <typename Dummy = wrapper<T>>
+        static constexpr bool check(int){ return true; }
+        static constexpr bool check(char){ return false; }
+        // static constexpr bool check(char a){ return check_foreign(a); }
+        // template <typename Dummy = decltype(foreign(declval<T>()))>
+        // static constexpr bool check_foreign(int){ return true; }
+        // static constexpr bool check_foreign(char a){ return false; }
+        static constexpr bool check() { return check(42); }
+        public:
+            using type = std::integral_constant<bool, check()>;
+    };
 }
 
-template <typename K, typename T, typename Enable = void>
+template <typename T>
+using is_wrappable = typename detail::wrappable<T>::type;
+
+template<class T>
+inline constexpr bool is_wrappable_v = is_wrappable<T>::value;
+
+template <typename PolicyT, typename KeyT, typename... X>
 struct nvp;
 
-template <typename K, typename T>
-struct nvp<K, T, std::enable_if_t< std::is_const_v<std::remove_reference_t<T>> > >{
-    static_assert(detail::is_wrappable<T>::value);
+namespace policies{
+    struct property{};
+    struct function{};
+}
 
-    using name_type             = K;
-    using wrapper_type          = detail::value_wrapper<T>;
-    using value_type            = typename wrapper_type::type;
-    using reference_type        = typename wrapper_type::reference_type;
-    using const_reference_type  = typename wrapper_type::const_reference_type;
+template <typename PolicyT, typename KeyT, typename... X>
+struct nvp<PolicyT, KeyT, wrapper<X...>>{
+    using policy_type           = PolicyT;
+    using name_type             = KeyT;
+    using wrapper_type          = wrapper<X...>;
 
-    nvp(name_type&& name, T&& v): _name(std::move(name)), _value(std::forward<T>(v)) {}
+    nvp(name_type&& name, wrapper_type&& wrapper): _name(std::move(name)), _wrapper(std::forward<wrapper_type>(wrapper)) {}
     const name_type& name() const { return _name; }
+    wrapper_type& wrapper() { return _wrapper; }
 
-    const_reference_type operator*() const { return *_value; }
-
-    friend std::ostream& operator<< (std::ostream& stream, const nvp& nvp) {
-        stream << nvp._name << ": " << *nvp._value;
-        return stream;
-    }
     private:
-        name_type  _name;
-        wrapper_type _value;
-};
-
-template <typename K, typename T>
-struct nvp<K, T, std::enable_if_t< !std::is_const_v<std::remove_reference_t<T>> > >{
-    static_assert(detail::is_wrappable<T>::value);
-
-    using name_type             = K;
-    using wrapper_type          = detail::value_wrapper<T>;
-    using value_type            = typename wrapper_type::type;
-    using reference_type        = typename wrapper_type::reference_type;
-    using const_reference_type  = typename wrapper_type::const_reference_type;
-
-    nvp(name_type&& name, T&& v): _name(std::move(name)), _value(std::forward<T>(v)) {}
-    const name_type& name() const { return _name; }
-    const_reference_type operator*() const { return *_value; }
-    reference_type operator*(){ return *_value; }
-
-    friend std::ostream& operator<< (std::ostream& stream, const nvp& nvp) {
-        stream << nvp._name << ": " << *nvp._value;
-        return stream;
-    }
-    private:
-        name_type _name;
-        wrapper_type  _value;
+        name_type    _name;
+        wrapper_type _wrapper;
 };
 
 
@@ -240,11 +254,10 @@ struct nvp<K, T, std::enable_if_t< !std::is_const_v<std::remove_reference_t<T>> 
  * @tparam v value
  *
  */
-template <typename K, typename T>
-nvp<K, T> make_nvp(K&& name, T&& v){
-    return nvp<K, T>(std::move(name), std::forward<T>(v));
+template <typename P, typename K, typename... X>
+nvp<P, K, wrapper<X...>> make_nvp(P, K&& name, X&&... v){
+    return nvp<P, K, wrapper<X...>>(std::move(name), wrap(std::forward<X>(v)...));
 }
-
 
 // template <typename LK, typename LT, typename RK, typename RT>
 // auto operator,(nvp<LK, LT>&& left, nvp<RK, RT>&& right){
@@ -264,9 +277,9 @@ namespace detail{
 template <typename Head = void, typename Tail = void>
 struct associative;
 
-template <typename KeyT, typename ValueT, typename Tail>
-struct associative<nvp<KeyT, ValueT>, Tail>{
-    using head_type = nvp<KeyT, ValueT>;
+template <typename PolicyT, typename KeyT, typename ValueT, typename Tail>
+struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
+    using head_type = nvp<PolicyT, KeyT, ValueT>;
     using tail_type = Tail;
 
     associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
@@ -284,9 +297,9 @@ struct associative<nvp<KeyT, ValueT>, Tail>{
         tail_type _tail;
 };
 
-template <typename KeyT, typename ValueT>
-struct associative<nvp<KeyT, ValueT>, void>{
-    using head_type = nvp<KeyT, ValueT>;
+template <typename PolicyT, typename KeyT, typename ValueT>
+struct associative<nvp<PolicyT, KeyT, ValueT>, void>{
+    using head_type = nvp<PolicyT, KeyT, ValueT>;
     using tail_type = void;
 
     associative(head_type&& head): _head(std::move(head)) {}
@@ -380,6 +393,12 @@ struct associative: detail::associative<X, associative<Xs...>> {
 
 template <>
 struct associative<void>: detail::associative<void, void> {};
+
+template <typename... Xs>
+associative<Xs...> assoc(Xs&&... xs){
+    return associative<Xs...>{std::forward<Xs>(xs)...};
+}
+
 
 }
 }

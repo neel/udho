@@ -30,46 +30,65 @@
 
 #include <string>
 #include <nlohmann/json.hpp>
-#include <udho/view/interop.h>
+#include <sol/sol.hpp>
+#include <udho/view/scope.h>
 
 namespace udho{
 namespace view{
 namespace data{
-
-
-struct json{
-    template <typename T>
-    void operator()(T&& v){
-        v.xyz;
-    }
-};
-struct python{};
-struct lua{};
-struct chai{};
-
-template <>
-struct bridge<json>{};
-template <>
-struct bridge<python>{};
-template <>
-struct bridge<lua>{};
-template <>
-struct bridge<chai>{};
-
-template <typename T>
-struct foreign<python, T>{
-    foreign(T v): _value(v) {}
-
-    T _value;
-};
-
 namespace bridges{
-    using json      = bridge<json>;
-    using python    = bridge<python>;
-    using lua       = bridge<lua>;
-    using chai      = bridge<chai>;
-}
 
+
+struct lua{
+    template <typename X>
+    struct binder{
+        using user_type = sol::usertype<X>;
+
+        binder(sol::table& table, const std::string& name): _type(table.new_usertype<X>(name)) {}
+
+        template <typename KeyT, typename T>
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property, KeyT, udho::view::data::wrapper<T>>& nvp){
+            auto& w = nvp.wrapper();
+            if(w.assignable){
+                _type.set(nvp.name(), *w);
+            }else{
+                _type.set(nvp.name(), sol::readonly(*w));
+            }
+            return *this;
+        }
+        template <typename KeyT, typename U, typename V>
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property, KeyT, udho::view::data::wrapper<U, V>>& nvp){
+            auto& w = nvp.wrapper();
+            _type.set_property(nvp.name(),
+                *static_cast<udho::view::data::getter_value<U>&>(w),
+                *static_cast<udho::view::data::setter_value<V>&>(w)
+            );
+            return *this;
+        }
+        private:
+            user_type _type;
+    };
+
+    lua() {
+        _state.open_libraries(sol::lib::base);
+    }
+    void init(){
+        _udho = _state["udho"].get_or_create<sol::table>();
+    }
+
+    template <typename ClassT, typename... Xs>
+    void bind(const std::string& name, udho::view::data::associative<Xs...>& assoc){
+        binder<ClassT> user_type(_udho, name);
+        assoc.apply(user_type);
+    }
+
+    private:
+        sol::state _state;
+        sol::table _udho;
+};
+
+
+}
 }
 }
 }

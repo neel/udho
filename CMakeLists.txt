@@ -19,7 +19,7 @@ update_submodule(${PROJECT_SOURCE_DIR}/vendor/)
 
 SET(CMAKE_CXX_STANDARD 14)
 #SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
-SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
+SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 -fdiagnostics-color=always -fdiagnostics-show-template-tree  ${CMAKE_CXX_FLAGS}")
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
@@ -120,6 +120,8 @@ if(nlohmann_json_FOUND)
     TARGET_LINK_LIBRARIES(udho PUBLIC nlohmann_json::nlohmann_json)
     target_compile_definitions(udho PUBLIC WITH_JSON_NLOHMANN)
 endif()
+
+TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
 
 if(UDHO_BUILD_TESTS)
    enable_testing()
