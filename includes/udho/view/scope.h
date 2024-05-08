@@ -37,52 +37,6 @@ namespace udho{
 namespace view{
 namespace data{
 
-
-namespace traits{
-
-template<class T>
-struct is_numeric : std::integral_constant<bool, std::is_arithmetic_v<std::remove_reference_t<T>>> {};
-template<class T>
-struct is_string  : std::integral_constant<bool,
-   (std::is_reference_v<T> && std::is_array_v<std::remove_reference_t<T>>   && std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_reference_t<T>>>,  char>) ||
-   (std::is_reference_v<T> && std::is_pointer_v<std::remove_reference_t<T>> && std::is_same_v<std::remove_const_t<std::remove_extent_t<std::remove_pointer_t<std::remove_reference_t<T>>>>,  char>) ||
-   (std::is_same_v<std::remove_const_t<std::remove_reference_t<T>>, std::string>)
-> {};
-template<class T>
-struct is_plain:    std::integral_constant<bool, is_numeric<T>::value || is_string<T>::value > {};
-template <class T>
-struct is_linked:   std::integral_constant<bool,
-    (std::is_reference_v<T> && !std::is_array_v<std::remove_reference_t<T>> && is_plain<std::remove_reference_t<T>>::value)  ||
-    (std::is_pointer_v<std::remove_reference_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>, char>)
-> {};
-template <class T>
-struct is_function:   std::integral_constant<bool,
-    (std::is_reference_v<T> && std::is_function_v<std::remove_reference_t<T>>)  ||
-    (std::is_pointer_v<T>   && std::is_function_v<std::remove_pointer_t<T>>)
-> {};
-template<class T>
-struct is_mutable:    std::integral_constant<bool, is_linked<T>::value && !std::is_const_v<std::remove_reference_t<T>> > {};
-
-template<class T>
-inline constexpr bool is_numeric_v = is_numeric<T>::value;
-
-template<class T>
-inline constexpr bool is_string_v = is_string<T>::value;
-
-template<class T>
-inline constexpr bool is_plain_v = is_plain<T>::value;
-
-template<class T>
-inline constexpr bool is_linked_v = is_linked<T>::value;
-
-template<class T>
-inline constexpr bool is_function_v = is_function<T>::value;
-
-template<class T>
-inline constexpr bool is_mutable_v = is_mutable<T>::value;
-
-}
-
 template <typename X>
 struct member_variable;
 
@@ -141,6 +95,7 @@ struct setter_value: member_function<V>{
     using member_function<V>::member_function;
 };
 
+namespace detail{
 
 template <typename T>
 struct wrapper1;
@@ -163,24 +118,26 @@ struct wrapper1<T (Class::*)() const>: const_member_function<T (Class::*)() cons
 template <typename U, typename V>
 struct wrapper2;
 
-template <typename Class, typename T, typename Res>
-struct wrapper2<T (Class::*)() const, Res (Class::*)(T)>: getter_value<T (Class::*)() const>, setter_value<Res (Class::*)(T)> {
-    wrapper2(T (Class::*u)() const, Res (Class::*v)(T))
-        : getter_value<T (Class::*)() const>    (std::move(u)),
-          setter_value<Res (Class::*)(T)>       (std::move(v)) {}
+template <typename Class, typename U, typename V, typename Res>
+struct wrapper2<U (Class::*)() const, Res (Class::*)(V)>: getter_value<U (Class::*)() const>, setter_value<Res (Class::*)(V)> {
+    wrapper2(U (Class::*u)() const, Res (Class::*v)(V))
+        : getter_value<U (Class::*)() const>    (std::move(u)),
+          setter_value<Res (Class::*)(V)>       (std::move(v)) {}
 };
+
+}
 
 template <typename... X>
 struct wrapper;
 
 template <typename T>
-struct wrapper<T>: wrapper1<T>{
-    using wrapper1<T>::wrapper1;
+struct wrapper<T>: detail::wrapper1<T>{
+    using detail::wrapper1<T>::wrapper1;
 };
 
 template <typename U, typename V>
-struct wrapper<U, V>: wrapper2<U, V>{
-    using wrapper2<U, V>::wrapper2;
+struct wrapper<U, V>: detail::wrapper2<U, V>{
+    using detail::wrapper2<U, V>::wrapper2;
 };
 
 template <typename... X>
