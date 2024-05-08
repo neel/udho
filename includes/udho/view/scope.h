@@ -83,106 +83,92 @@ inline constexpr bool is_mutable_v = is_mutable<T>::value;
 
 }
 
-template <typename T>
-struct immutable_value{
-    using value_type  = T;
-    using result_type = std::add_const_t<std::add_lvalue_reference_t<T>>;
-    using const_result_type = result_type;
+template <typename X>
+struct member_variable;
 
-    static constexpr const bool assignable = false;
-    static constexpr const bool getter = false;
-    static constexpr const bool setter = false;
+template <typename X>
+struct const_member_function;
 
-    immutable_value(value_type v): _value(v) {}
-    const_result_type operator*() const { return _value; }
+template <typename X>
+struct member_function;
+
+template <typename Class, typename T>
+struct member_variable<T Class::*>{
+    using member_type = T Class::*;
+    using result_type = T;
+    using class_type  = Class;
+
+    member_variable(member_type&& member): _member(std::move(member)) {}
+    member_type operator*() { return _member; }
 
     private:
-        value_type _value;
+        member_type _member;
 };
 
-template <typename T>
-struct mutable_value{
-    using value_type  = T;
-    using result_type = std::add_lvalue_reference_t<T>;
-    using const_result_type = std::add_const_t<result_type>;
+template <typename Class, typename T>
+struct const_member_function<T (Class::*)() const>{
+    using member_type = T (Class::*)() const;
+    using result_type = T;
+    using class_type  = Class;
 
-    static constexpr const bool assignable = true;
-    static constexpr const bool getter = false;
-    static constexpr const bool setter = false;
-
-    mutable_value(T& v): _value(v) {}
-    const_result_type operator*() const { return _value; }
-    result_type operator*(){ return _value; }
+    const_member_function(member_type&& member): _member(std::move(member)) {}
+    member_type operator*() { return _member; }
 
     private:
-        value_type _value;
+        member_type _member;
 };
 
-template <typename T>
-struct getter_value{
-    using callback_type  = T;
+template <typename Class, typename T, typename Res>
+struct member_function<Res (Class::*)(T)>{
+    using member_type = Res (Class::*)(T);
+    using result_type = Res;
+    using class_type  = Class;
 
-    static constexpr const bool assignable = false;
-    static constexpr const bool getter = true;
-    static constexpr const bool setter = false;
-
-    getter_value(T&& v): _callback(std::move(v)) {}
-    callback_type operator*() const { return _callback; }
+    member_function(member_type&& member): _member(std::move(member)) {}
+    member_type operator*() { return _member; }
 
     private:
-        callback_type _callback;
+        member_type _member;
 };
 
-template <typename T>
-struct setter_value{
-    using callback_type  = T;
+template <typename U>
+struct getter_value: const_member_function<U>{
+    using const_member_function<U>::const_member_function;
+};
 
-    static constexpr const bool assignable = true;
-    static constexpr const bool getter = false;
-    static constexpr const bool setter = true;
-
-    setter_value(T&& v): _callback(std::move(v)) {}
-    callback_type operator*() const { return _callback; }
-
-    private:
-        callback_type _callback;
+template <typename V>
+struct setter_value: member_function<V>{
+    using member_function<V>::member_function;
 };
 
 
-template <typename T, typename Enable = void>
+template <typename T>
 struct wrapper1;
 
-template <typename T>
-struct wrapper1<T, std::enable_if_t<
-                        ((std::is_reference_v<T> && std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T>>>) || !std::is_reference_v<T>) &&
-                        traits::is_plain<T>::value
-                >> : immutable_value<T> {
-                    using immutable_value<T>::immutable_value;
-                };
+template <typename Class, typename T>
+struct wrapper1<T Class::*>: member_variable<T Class::*> {
+    using member_variable<T Class::*>::member_variable;
+};
 
-template <typename T>
-struct wrapper1<T, std::enable_if_t<
-                        !std::is_pointer_v<std::remove_reference_t<T>> && traits::is_mutable<T>::value
-                >> : mutable_value<T> {
-                    using mutable_value<T>::mutable_value;
-                };
+template <typename Res, typename Class, typename T>
+struct wrapper1<Res (Class::*)(T)>: member_function<Res (Class::*)(T)> {
+    using member_function<Res (Class::*)(T)>::member_function;
+};
 
-template <typename T>
-struct wrapper1<T, std::enable_if_t<
-                        traits::is_function<T>::value
-                >>: getter_value<T> {
-                     using getter_value<T>::getter_value;
-                };
-
-template <typename U, typename V, typename Enable = void>
-struct wrapper2;
+template <typename Class, typename T>
+struct wrapper1<T (Class::*)() const>: const_member_function<T (Class::*)() const> {
+    using const_member_function<T (Class::*)() const>::const_member_function;
+};
 
 template <typename U, typename V>
-struct wrapper2<U, V, std::enable_if_t<
-                        traits::is_function<U>::value && traits::is_function<V>::value
-                >> : getter_value<U>, setter_value<V> {
-                    wrapper2(U&& u, V&& v): getter_value<U>(std::move(u)), setter_value<V>(std::move(v)) {}
-                };
+struct wrapper2;
+
+template <typename Class, typename T, typename Res>
+struct wrapper2<T (Class::*)() const, Res (Class::*)(T)>: getter_value<T (Class::*)() const>, setter_value<Res (Class::*)(T)> {
+    wrapper2(T (Class::*u)() const, Res (Class::*v)(T))
+        : getter_value<T (Class::*)() const>    (std::move(u)),
+          setter_value<Res (Class::*)(T)>       (std::move(v)) {}
+};
 
 template <typename... X>
 struct wrapper;
@@ -228,7 +214,13 @@ template <typename PolicyT, typename KeyT, typename... X>
 struct nvp;
 
 namespace policies{
+    struct readonly{};
+    struct writable{};
+    struct functional{};
+
+    template <typename T>
     struct property{};
+
     struct function{};
 }
 
@@ -335,8 +327,8 @@ namespace detail{
     struct extractor_f{
         extractor_f(Function&& f): _f(std::move(f)) {}
 
-        template <typename KeyT, typename ValueT>
-        void operator()(nvp<KeyT, ValueT>& nvp){
+        template <typename PolicyT, typename KeyT, typename ValueT>
+        decltype(auto) operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
             return _f(nvp);
         }
 
@@ -355,8 +347,8 @@ namespace detail{
             _count = _count + res;
             return res;
         }
-        template <typename OtherKeyT, typename ValueT>
-        bool operator()(const nvp<OtherKeyT, ValueT>& nvp){
+        template <typename OtherPolicyT, typename OtherKeyT, typename ValueT>
+        bool operator()(const nvp<OtherPolicyT, OtherKeyT, ValueT>& nvp){
             return false;
         }
 
@@ -365,12 +357,15 @@ namespace detail{
     };
 
     struct match_all{
-        template <typename KeyT, typename ValueT>
-        bool operator()(const nvp<KeyT, ValueT>&){
+        template <typename PolicyT, typename KeyT, typename ValueT>
+        bool operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
             return true;
         }
     };
 }
+
+template <typename AssociativeT>
+struct metatype;
 
 template <typename X = void, typename... Xs>
 struct associative: detail::associative<X, associative<Xs...>> {
@@ -387,6 +382,10 @@ struct associative: detail::associative<X, associative<Xs...>> {
     std::size_t apply(Function&& f){
         return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_all{});
     }
+
+    metatype<associative<X, Xs...>> as(const std::string& name){
+        return metatype<associative<X, Xs...>>{name, std::move(*this)};
+    }
     private:
         using base = detail::associative<X, associative<Xs...>>;
 };
@@ -399,6 +398,40 @@ associative<Xs...> assoc(Xs&&... xs){
     return associative<Xs...>{std::forward<Xs>(xs)...};
 }
 
+template <typename... Xs>
+struct metatype<associative<Xs...>>{
+    using members_type = associative<Xs...>;
+
+    metatype(const std::string& name, members_type&& members): _name(name), _members(std::move(members)) {}
+
+    const std::string& name() const { return _name; }
+    members_type& members() { return _members; }
+
+    template <typename Function>
+    std::size_t operator()(Function&& f){
+        return _members.template apply<Function>(std::forward<Function>(f));
+    }
+
+    private:
+        std::string  _name;
+        members_type _members;
+};
+
+template <typename Class>
+struct type{};
+
+// template <class X>
+// struct foreign;
+
+template <class ClassT>
+auto prototype(udho::view::data::type<ClassT>){
+    static_assert("prototype method not overloaded");
+}
+
+// template <typename X>
+// struct view{
+//
+// };
 
 }
 }

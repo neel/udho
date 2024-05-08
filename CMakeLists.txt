@@ -121,6 +121,8 @@ if(nlohmann_json_FOUND)
     target_compile_definitions(udho PUBLIC WITH_JSON_NLOHMANN)
 endif()
 
+find_package(Lua REQUIRED)
+TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
 TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
 
 if(UDHO_BUILD_TESTS)

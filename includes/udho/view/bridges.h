@@ -47,45 +47,99 @@ struct lua{
         binder(sol::table& table, const std::string& name): _type(table.new_usertype<X>(name)) {}
 
         template <typename KeyT, typename T>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property, KeyT, udho::view::data::wrapper<T>>& nvp){
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
             auto& w = nvp.wrapper();
-            if(w.assignable){
-                _type.set(nvp.name(), *w);
-            }else{
-                _type.set(nvp.name(), sol::readonly(*w));
-            }
+            _type.set(nvp.name(), *w);
+            return *this;
+        }
+        template <typename KeyT, typename T>
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
+            auto& w = nvp.wrapper();
+            _type.set(nvp.name(), sol::readonly(*w));
             return *this;
         }
         template <typename KeyT, typename U, typename V>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property, KeyT, udho::view::data::wrapper<U, V>>& nvp){
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
             auto& w = nvp.wrapper();
-            _type.set_property(nvp.name(),
+            _type.set(nvp.name(), sol::property(
                 *static_cast<udho::view::data::getter_value<U>&>(w),
                 *static_cast<udho::view::data::setter_value<V>&>(w)
-            );
+            ));
+            return *this;
+        }
+        template <typename KeyT, typename T>
+        binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
+            auto& w = nvp.wrapper();
+            _type.set(nvp.name(), *w);
             return *this;
         }
         private:
             user_type _type;
     };
 
-    lua() {
+    inline lua() {
         _state.open_libraries(sol::lib::base);
     }
-    void init(){
+    inline void init(){
         _udho = _state["udho"].get_or_create<sol::table>();
     }
 
     template <typename ClassT, typename... Xs>
-    void bind(const std::string& name, udho::view::data::associative<Xs...>& assoc){
-        binder<ClassT> user_type(_udho, name);
-        assoc.apply(user_type);
+    void bind(udho::view::data::metatype<udho::view::data::associative<Xs...>>& type){
+        bind<ClassT>(type.name(), type.members());
     }
+
+    template <typename ClassT>
+    void bind(udho::view::data::type<ClassT> handle){
+        auto meta = prototype(handle);
+        bind<ClassT>(meta);
+    }
+
+    inline void shell();
+
+    private:
+        template <typename ClassT, typename... Xs>
+        void bind(const std::string& name, udho::view::data::associative<Xs...>& assoc){
+            binder<ClassT> user_type(_udho, name);
+            assoc.apply(std::move(user_type));
+            _state.script(R"(
+                print("Inspecting table 'udho':")
+                for key, value in pairs(udho) do
+                    print(key, type(value))
+                end
+                local obj = udho.info.new()
+                print(obj.name)
+                print(obj.value)
+            )");
+        }
 
     private:
         sol::state _state;
         sol::table _udho;
 };
+
+void lua::shell(){
+    std::string line;
+    std::cout << "Enter Lua commands or 'exit' to quit." << std::endl;
+    while (true) {
+        std::cout << "> ";
+        std::getline(std::cin, line);
+
+        if (line == "exit") {
+            break;
+        }
+
+        try {
+            sol::protected_function_result result = _state.script(line, sol::script_default_on_error);
+            if (!result.valid()) {
+                sol::error err = result;
+                std::cerr << "Error executing Lua script: " << err.what() << std::endl;
+            }
+        } catch (const sol::error& err) {
+            std::cerr << "Exception: " << err.what() << std::endl;
+        }
+    }
+}
 
 
 }

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <udho/view/shortcode_parser.h>
 #include <udho/view/scope.h>
+#include <udho/view/bridges.h>
 #include <udho/view/reflect.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <udho/view/resources.h>
 
 template <typename K, typename T>
 void const_check(const udho::view::data::nvp<K, T>& nvp){
@@ -47,6 +49,36 @@ void baz(T&& w){
     std::cout << "getter     " << w.getter << std::endl;
     std::cout << "setter     " << w.setter << std::endl;
 }
+
+struct info{
+    std::string name;
+    double      value;
+    std::uint32_t _x;
+
+    inline const std::uint32_t& x() const { return _x; }
+    inline void setx(const std::uint32_t& v) { _x = v; }
+
+    inline info() {
+        name = "Hello";
+        value = 42;
+        _x = 43;
+    }
+
+    void print(){
+
+    }
+
+    friend auto prototype(udho::view::data::type<info>){
+        using namespace udho::view::data;
+
+        return assoc(
+            make_nvp(policies::property<policies::writable>{}, "name",  &info::name),
+            make_nvp(policies::property<policies::readonly>{}, "value", &info::value),
+            make_nvp(policies::property<policies::functional>{}, "x", &info::x, &info::setx),
+            make_nvp(policies::function{}, "print", &info::print)
+        ).as("info");
+    }
+};
 
 static char buffer[] = R"TEMPLATE(
 <? codode 1 ?>Once upon a time there was a
@@ -150,13 +182,18 @@ int main(){
 
     using namespace udho::view::data;
 
-    wrap(str);
-    make_nvp(policies::property{}, "name", str);
+    // wrap(str);
+    // make_nvp(policies::property{}, "name", str);
+    //
+    // assoc(
+    //     make_nvp(policies::property{}, "name", str),
+    //     make_nvp(policies::property{}, "name", astr),
+    //     make_nvp(policies::property{}, "number", 42),
+    //     make_nvp(policies::property{}, "value", val)
+    // ).as("classname");
 
-    assoc(
-        make_nvp(policies::property{}, "name", str),
-        make_nvp(policies::property{}, "name", astr),
-        make_nvp(policies::property{}, "number", 42),
-        make_nvp(policies::property{}, "value", val)
-    );
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<info>{});
+    // lua.shell();
 }
