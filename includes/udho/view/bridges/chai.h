@@ -25,63 +25,63 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_H
-#define UDHO_VIEW_BRIDGES_LUA_H
+#ifndef UDHO_VIEW_BRIDGES_CHAI_H
+#define UDHO_VIEW_BRIDGES_CHAI_H
 
 #include <string>
 #include <nlohmann/json.hpp>
-#include <sol/sol.hpp>
 #include <udho/view/scope.h>
+#include <chaiscript/chaiscript.hpp>
 
 namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
 
+struct chai{
 
-struct lua{
     template <typename X>
     struct binder{
-        using user_type = sol::usertype<X>;
 
-        binder(sol::table& table, const std::string& name): _type(table.new_usertype<X>(name)) {}
+        binder(chaiscript::ChaiScript& chai, const std::string& name): _chai(chai) {
+            _chai.add(chaiscript::constructor<X ()>(), name);
+            _chai.add(chaiscript::constructor<X (const X&)>(), name);
+            _chai.add(chaiscript::user_type<X>(), name);
+        }
 
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
             auto& w = nvp.wrapper();
-            _type.set(nvp.name(), *w);
+            _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
             auto& w = nvp.wrapper();
-            _type.set(nvp.name(), sol::readonly(*w));
+            _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename U, typename V>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
             auto& w = nvp.wrapper();
-            _type.set(nvp.name(), sol::property(
-                *static_cast<udho::view::data::getter_value<U>&>(w),
-                *static_cast<udho::view::data::setter_value<V>&>(w)
-            ));
+            // _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
             auto& w = nvp.wrapper();
-            _type.set(nvp.name(), *w);
+            _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         private:
-            user_type _type;
+            chaiscript::ChaiScript& _chai;
     };
 
-    inline lua() {
-        _state.open_libraries(sol::lib::base);
+    inline chai() {
+
     }
     inline void init(){
-        _udho = _state["udho"].get_or_create<sol::table>();
+
     }
 
     template <typename ClassT, typename... Xs>
@@ -95,57 +95,29 @@ struct lua{
         bind<ClassT>(meta);
     }
 
-    inline void shell();
-
     private:
         template <typename ClassT, typename... Xs>
         void bind(const std::string& name, udho::view::data::associative<Xs...>& assoc){
-            binder<ClassT> user_type(_udho, name);
+            binder<ClassT> user_type(_state, name);
             assoc.apply(std::move(user_type));
-            _state.script(R"(
-                print("begin lua")
-                print("Inspecting table 'udho':")
-                for key, value in pairs(udho) do
-                    print(key, type(value))
-                end
-                local obj = udho.info.new()
-                print(obj.name)
-                print(obj.value)
+            _state.eval(R"(
+                print("begin chai");
+                var obj = info();
+                print(obj.name);
+                print(obj.value);
 
-                obj.name = "changed"
-                obj:print()
-                print("end lua")
+                obj.name = "changed";
+                obj.value = 100;
+                obj.print();
+                print("end chai");
             )");
         }
 
     private:
-        sol::state _state;
-        sol::table _udho;
+        chaiscript::ChaiScript _state;
+
 };
 
-void lua::shell(){
-    std::string line;
-    std::cout << "Enter Lua commands or 'exit' to quit." << std::endl;
-    while (true) {
-        std::cout << "> ";
-        std::getline(std::cin, line);
-
-        if (line == "exit") {
-            break;
-        }
-
-        try {
-            sol::protected_function_result result = _state.script(line, sol::script_default_on_error);
-            if (!result.valid()) {
-                sol::error err = result;
-                std::cerr << "Error executing Lua script: " << err.what() << std::endl;
-            }
-        } catch (const sol::error& err) {
-            std::cerr << "Exception: " << err.what() << std::endl;
-        }
-    }
-}
-
 
 }
 }
@@ -153,5 +125,5 @@ void lua::shell(){
 }
 
 
-#endif // UDHO_VIEW_BRIDGES_LUA_H
+#endif // UDHO_VIEW_BRIDGES_CHAI_H
 

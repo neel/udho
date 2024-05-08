@@ -1,7 +1,7 @@
 #include <iostream>
 #include <udho/view/shortcode_parser.h>
 #include <udho/view/scope.h>
-#include <udho/view/bridges/lua.h>
+#include <udho/view/bridges.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
 #include <complex>
@@ -25,7 +25,7 @@ struct info{
     }
 
     void print(){
-
+        std::cout << "name: " << name << " value: " << value  << std::endl;
     }
 
     friend auto prototype(udho::view::data::type<info>){
@@ -87,5 +87,10 @@ int main(){
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<info>{});
+    // lua.shell();
+
+    udho::view::data::bridges::chai chai;
+    chai.init();
+    chai.bind(udho::view::data::type<info>{});
     // lua.shell();
 }

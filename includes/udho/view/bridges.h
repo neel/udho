@@ -30,7 +30,7 @@
 
 #include <string>
 #include <udho/view/bridges/lua.h>
-
+#include <udho/view/bridges/chai.h>
 
 
 #endif // UDHO_VIEW_BRIDGES_H

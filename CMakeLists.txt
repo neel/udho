@@ -124,6 +124,7 @@ endif()
 find_package(Lua REQUIRED)
 TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
 TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
+TARGET_LINK_LIBRARIES(udho PUBLIC sol2 chaiscript)
 
 if(UDHO_BUILD_TESTS)
    enable_testing()
