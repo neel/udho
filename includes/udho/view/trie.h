@@ -1,12 +1,12 @@
-#ifndef UDHO_VIEW_SHORTCODE_PARSER_H
-#define UDHO_VIEW_SHORTCODE_PARSER_H
+#ifndef UDHO_VIEW_TRIE_H
+#define UDHO_VIEW_TRIE_H
 
 #include <istream>
 #include <memory>
 #include <map>
 #include <cstdint>
 #include <iterator>
-#include <boost/iostreams/device/mapped_file.hpp>
+
 
 namespace udho{
 namespace view{
@@ -111,83 +111,7 @@ class trie{
 };
 
 }
-
-namespace sections{
-
-struct section {
-    enum types { none, root, code, text };
-
-    inline explicit section(types t): _type(t) {}
-    inline section(types t, const std::string& content): _type(t), _content(content) {}
-    template <typename InputIt>
-    inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {}
-
-    inline types type() const { return _type; }
-    inline void content(const std::string& c) { _content = c; }
-    inline const std::string& content() const { return _content; }
-
-    private:
-        types _type;
-        std::string _content;
-};
-
-struct parser{
-    static constexpr std::uint32_t tag_open   = 101;
-    static constexpr std::uint32_t tag_close  = 301;
-
-    inline explicit parser() {}
-    inline parser& open(const std::string& tag) { _open = tag; return *this; }
-    inline const std::string& open() const { return _open; }
-    inline parser& close(const std::string& tag) { _close = tag; return *this; }
-    inline const std::string& close() const { return _close; }
-
-    template <typename OutputIt>
-    inline void parse(const std::string& file, OutputIt out) const {
-        std::string buffer;
-        boost::iostreams::mapped_file mmap(file, boost::iostreams::mapped_file::readonly);
-        auto begin = mmap.const_data();
-        auto end   = begin + mmap.size();
-        parse(begin, end, out);
-    }
-    template <typename InputIt, typename OutputIt>
-    inline void parse(InputIt begin, InputIt end, OutputIt out) const {
-        detail::trie trie;
-        trie.add(_open,  tag_open);
-        trie.add(_close, tag_close);
-
-        InputIt last_open = begin, last_close = begin;
-        std::uint32_t nested_open = 0;
-
-        auto pos = begin;
-        while(pos != end){
-            auto it = trie.next(pos, end);
-            pos = it.first;
-            std::uint32_t id = it.second;
-            if(id == tag_open){
-                if(last_open == begin){
-                    out++ = section{section::text, last_close, pos-trie[it.second].size()};
-                    last_open = pos;
-                }else{
-                    ++nested_open;
-                }
-            }
-
-            if(id == tag_close){
-                if(nested_open > 0){
-                    --nested_open;
-                }else{
-                    out++ = section{section::code, last_open, pos-trie[it.second].size()};
-                }
-            }
-
-            std::cout << trie[it.second] << std::endl;
-        }
-    }
-    std::string _open, _close;
-};
-
-}
 }
 }
 
-#endif // UDHO_VIEW_SHORTCODE_PARSER_H
+#endif // UDHO_VIEW_TRIE_H

@@ -1,6 +1,8 @@
 #include <iostream>
-#include <udho/view/shortcode_parser.h>
+#include <udho/view/trie.h>
+#include <udho/view/sections.h>
 #include <udho/view/scope.h>
+#include <udho/view/resources.h>
 #include <udho/view/bridges.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
@@ -41,7 +43,7 @@ struct info{
 };
 
 static char buffer[] = R"TEMPLATE(
-<? codode 1 ?>Once upon a time there was a
+t<? codode 1 ?>Once upon a time there was a
 time when there was no time at all.<? code 2
 
 ?>
@@ -75,13 +77,17 @@ int main(){
 
     std::cout << "hello world" << std::endl;
 
-    FILE* fptr = fmemopen(buffer, strlen (buffer), "r");
-    int posix_handle = fileno(fptr);
-    boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
-    boost::iostreams::stream stream(descriptor);
+    // FILE* fptr = fmemopen(buffer, strlen (buffer), "r");
+    // int posix_handle = fileno(fptr);
+    // boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
+    // boost::iostreams::stream stream(descriptor);
 
+    std::vector<udho::view::sections::section> sections;
     udho::view::sections::parser parser;
-    parser.open("<?").close("?>");
+    parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
+    for(const udho::view::sections::section& section: sections){
+        std::cout  << section << std::endl;
+    }
 
 
     udho::view::data::bridges::lua lua;
@@ -93,4 +99,6 @@ int main(){
     chai.init();
     chai.bind(udho::view::data::type<info>{});
     // lua.shell();
+
+    udho::view::data::resources resources;
 }

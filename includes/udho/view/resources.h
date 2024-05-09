@@ -34,7 +34,7 @@
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
-
+#include <udho/url/detail/format.h>
 
 namespace udho{
 namespace view{
@@ -195,6 +195,32 @@ struct bundle{
         resource_set _resources;
 };
 
+struct resources{
+    static constexpr const char* primary_bundle_name = "primary";
+
+    inline resources() {
+        bundle(primary_bundle_name);
+    }
+    inline udho::view::data::bundle& bundle(const std::string& name) {
+        auto it = _bundles.find(name);
+        if(it == _bundles.end()){
+            auto result = _bundles.emplace(name, udho::view::data::bundle{name});
+            it = result.first;
+        }
+        return it->second;
+    }
+    inline const udho::view::data::bundle& bundle(const std::string& name) const {
+        auto it = _bundles.find(name);
+        if(it != _bundles.end()){
+            return it->second;
+        }
+        throw std::invalid_argument{udho::url::format("No such bundle named {}", name)};
+    }
+    inline udho::view::data::bundle& primary() { return bundle(primary_bundle_name); }
+    inline const udho::view::data::bundle& primary() const { return bundle(primary_bundle_name); }
+    private:
+        std::map<std::string, data::bundle> _bundles;
+};
 
 }
 }
