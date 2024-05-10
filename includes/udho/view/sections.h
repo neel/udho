@@ -6,6 +6,9 @@
 #include <map>
 #include <cstdint>
 #include <iterator>
+#include <random>
+#include <functional>
+#include <algorithm>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/view/trie.h>
 #include <boost/algorithm/string/trim_all.hpp>
@@ -30,19 +33,23 @@ struct section {
         text     = 300
     };
 
-    inline explicit section(types t): _type(t) {}
+    inline explicit section(types t): _type(t) {
+        _id = random_string(16);
+    }
     inline section(types t, const std::string& content): _type(t), _content(content) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
+        _id = random_string(16);
     }
     template <typename InputIt>
     inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
+        _id = random_string(16);
     }
-
+    inline std::string id() const { return _id; }
     inline types type() const { return _type; }
     inline void content(const std::string& c) { _content = c; }
     inline const std::string& content() const { return _content; }
@@ -63,11 +70,36 @@ struct section {
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const section& s){
-        stream << "section " << section::name(s._type) << " >" << s._content << "< " << std::endl;
+        stream << "section " << s.id() << " type " << section::name(s._type) << " >" << s._content << "< " << std::endl;
         return stream;
     }
 
     private:
+        std::string random_string(std::size_t len) {
+            static constexpr const char charset[] = {   '0','1','2','3','4',
+                                                        '5','6','7','8','9',
+                                                        'A','B','C','D','E','F',
+                                                        'G','H','I','J','K',
+                                                        'L','M','N','O','P',
+                                                        'Q','R','S','T','U',
+                                                        'V','W','X','Y','Z',
+                                                        'a','b','c','d','e','f',
+                                                        'g','h','i','j','k',
+                                                        'l','m','n','o','p',
+                                                        'q','r','s','t','u',
+                                                        'v','w','x','y','z'
+                                                    };
+
+            static std::default_random_engine rng(std::random_device{}());
+            static std::uniform_int_distribution<> dist(0, sizeof(charset)-1);
+            static auto lambda = []() -> char{ return charset[dist(rng)]; };
+
+            std::string str(len, 0);
+            std::generate_n(str.begin(), len, lambda);
+            return str;
+        }
+    private:
+        std::string _id;
         types _type;
         std::string _content;
 };

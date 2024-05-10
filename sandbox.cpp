@@ -93,7 +93,7 @@ int main(){
     udho::view::sections::parser parser;
     parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
     for(const udho::view::sections::section& section: sections){
-        std::cout  << section << std::endl;
+        std::cout << section << std::endl;
     }
 
 

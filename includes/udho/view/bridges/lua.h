@@ -29,53 +29,96 @@
 #define UDHO_VIEW_BRIDGES_LUA_H
 
 #include <string>
+#include <sstream>
 #include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
 #include <udho/view/scope.h>
+#include <udho/view/sections.h>
+#include <udho/url/detail/format.h>
 
 namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
 
+template <typename X>
+struct lua_binder{
+    using user_type = sol::usertype<X>;
+
+    lua_binder(sol::table& table, const std::string& name): _type(table.new_usertype<X>(name)) {}
+
+    template <typename KeyT, typename T>
+    lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
+        auto& w = nvp.wrapper();
+        _type.set(nvp.name(), *w);
+        return *this;
+    }
+    template <typename KeyT, typename T>
+    lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
+        auto& w = nvp.wrapper();
+        _type.set(nvp.name(), sol::readonly(*w));
+        return *this;
+    }
+    template <typename KeyT, typename U, typename V>
+    lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
+        auto& w = nvp.wrapper();
+        _type.set(nvp.name(), sol::property(
+            *static_cast<udho::view::data::getter_value<U>&>(w),
+            *static_cast<udho::view::data::setter_value<V>&>(w)
+        ));
+        return *this;
+    }
+    template <typename KeyT, typename T>
+    lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
+        auto& w = nvp.wrapper();
+        _type.set(nvp.name(), *w);
+        return *this;
+    }
+    private:
+        user_type _type;
+};
+
+struct lua_script{
+    inline explicit lua_script(const std::string& name): _name(name) {}
+    inline void add_section(const udho::view::sections::section& section){
+        switch(section.type()){
+            case udho::view::sections::section::text:
+            case udho::view::sections::section::verbatim:
+            case udho::view::sections::section::echo:
+                add_echo_section(section);
+                break;
+            case udho::view::sections::section::eval:
+                add_eval_section(section);
+                break;
+            default:
+                break;
+        }
+    }
+    inline void operator()(const udho::view::sections::section& section){
+        add_section(section);
+    }
+    std::string body() const {
+        return _stream.str();
+    }
+    private:
+        inline void add_eval_section(const udho::view::sections::section& section){
+            _stream << section.content();
+        }
+        inline void add_echo_section(const udho::view::sections::section& section){
+            _stream << "do -- " << udho::url::format("{}/{}", udho::view::sections::section::name(section.type()), section.id()) << std::endl;
+            _stream << "\t" << udho::url::format("local ustr_{} = [=====[", section.id()) << section.content() << "]=====]" << std::endl;
+            _stream << "\t" << udho::url::format("print(ustr_{})", section.id());
+            _stream << "end" << std::endl;
+        }
+        inline void discard_section(const udho::view::sections::section&){}
+    private:
+        std::string _name;
+        std::stringstream _stream;
+};
 
 struct lua{
     template <typename X>
-    struct binder{
-        using user_type = sol::usertype<X>;
-
-        binder(sol::table& table, const std::string& name): _type(table.new_usertype<X>(name)) {}
-
-        template <typename KeyT, typename T>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
-            _type.set(nvp.name(), *w);
-            return *this;
-        }
-        template <typename KeyT, typename T>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
-            _type.set(nvp.name(), sol::readonly(*w));
-            return *this;
-        }
-        template <typename KeyT, typename U, typename V>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-            auto& w = nvp.wrapper();
-            _type.set(nvp.name(), sol::property(
-                *static_cast<udho::view::data::getter_value<U>&>(w),
-                *static_cast<udho::view::data::setter_value<V>&>(w)
-            ));
-            return *this;
-        }
-        template <typename KeyT, typename T>
-        binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
-            _type.set(nvp.name(), *w);
-            return *this;
-        }
-        private:
-            user_type _type;
-    };
+    using binder = lua_binder<X>;
 
     inline lua() {
         _state.open_libraries(sol::lib::base);
@@ -93,6 +136,10 @@ struct lua{
     void bind(udho::view::data::type<ClassT> handle){
         auto meta = prototype(handle);
         bind<ClassT>(meta);
+    }
+
+    lua_script script(const std::string& name){
+        return lua_script{name};
     }
 
     inline void shell();
