@@ -43,14 +43,18 @@ struct info{
 };
 
 static char buffer[] = R"TEMPLATE(
-t<?codode 1?>Once upon a time there was a
-time when there was no time at all.<? code 2?><#comment <? hello ?> #>
-A quick brown dinosaur jumped over a lazy unicorn.
-<@
-This is a verbatim block
-<?= Any code here ?> will be interpreted as
-<# text block. You can have unclosed <? open blocks here.
-@> Hello
+<?! register "views.user.badge"; lang "lua" ?>
+
+<? d = udho.view() ?>
+
+Hello <?= d.world ?>
+
+<?:score udho.view() ?>
+
+<# Some comments that will be ignored #>
+
+<@ verbatim block @>
+
 )TEMPLATE";
 
 int main(){

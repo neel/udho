@@ -8,6 +8,7 @@
 #include <iterator>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/view/trie.h>
+#include <boost/algorithm/string/trim_all.hpp>
 
 namespace udho{
 namespace view{
@@ -30,9 +31,17 @@ struct section {
     };
 
     inline explicit section(types t): _type(t) {}
-    inline section(types t, const std::string& content): _type(t), _content(content) {}
+    inline section(types t, const std::string& content): _type(t), _content(content) {
+        if(_type != text && _type != verbatim){
+            boost::algorithm::trim_all(_content);
+        }
+    }
     template <typename InputIt>
-    inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {}
+    inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {
+        if(_type != text && _type != verbatim){
+            boost::algorithm::trim_all(_content);
+        }
+    }
 
     inline types type() const { return _type; }
     inline void content(const std::string& c) { _content = c; }
@@ -123,6 +132,7 @@ struct parser{
         auto end   = begin + mmap.size();
         parse(begin, end, out);
     }
+
     template <typename InputIt, typename OutputIt>
     inline void parse(InputIt begin, InputIt end, OutputIt out) const {
         detail::trie trie = make_trie();
@@ -130,14 +140,16 @@ struct parser{
         InputIt last_open = begin, last_close = begin;
         std::uint32_t block_open = 0;
 
-        std::uint32_t last_tag = 0;
+        std::uint32_t last_tag = sections::section::text;
 
         auto pos = begin;
         while(pos != end){
             auto it = trie.next(pos, end);
             pos = it.first;
             if(pos == end) {
-                out++ = section{section::text, last_close, end};
+                auto scope_begin = (last_tag == sections::section::text) ? last_close : last_open;
+                auto scope_end   = (it.second == 0) ? end : (pos-trie[it.second].size());
+                out++ = section{type(last_tag), scope_begin, scope_end};
                 break;
             }
 
@@ -146,7 +158,7 @@ struct parser{
                 if(block_open == 0){
                     auto scope_end = pos - trie[it.second].size();
                     if((scope_end - last_close) > 0){
-                        out++ = section{section::text, last_close, pos-trie[it.second].size()};
+                        out++ = section{section::text, last_close, scope_end};
                     }
                     last_open = pos;
                     last_tag  = id;
@@ -157,13 +169,13 @@ struct parser{
             if(id > 400 && id < 500){
                 if(block_open == 1){
                     if (
-                        (id == tag_close          && (last_tag > 100 && last_tag  < 200))             ||
+                        (id == tag_close          && (last_tag > 100 && last_tag  < 200))     ||
                         (id == tag_close_comment  && last_tag == sections::section::comment)  ||
                         (id == tag_close_verbatim && last_tag == sections::section::verbatim)
                     ){
                         out++ = section{type(last_tag), last_open, pos-trie[it.second].size()};
                         last_close = pos;
-                        last_tag   = 0;
+                        last_tag   = sections::section::text;
                         block_open = 0;
                     }
                 }
