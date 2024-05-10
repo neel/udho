@@ -105,9 +105,10 @@ struct lua_script{
             _stream << section.content();
         }
         inline void add_echo_section(const udho::view::sections::section& section){
+            _stream << std::endl;
             _stream << "do -- " << udho::url::format("{}/{}", udho::view::sections::section::name(section.type()), section.id()) << std::endl;
             _stream << "\t" << udho::url::format("local ustr_{} = [=====[", section.id()) << section.content() << "]=====]" << std::endl;
-            _stream << "\t" << udho::url::format("print(ustr_{})", section.id());
+            _stream << "\t" << udho::url::format("print(ustr_{})", section.id()) << std::endl;
             _stream << "end" << std::endl;
         }
         inline void discard_section(const udho::view::sections::section&){}

@@ -92,19 +92,19 @@ int main(){
     std::vector<udho::view::sections::section> sections;
     udho::view::sections::parser parser;
     parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
-    for(const udho::view::sections::section& section: sections){
-        std::cout << section << std::endl;
-    }
-
-
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<info>{});
+    auto script = lua.script("script.lua");
+    for(const udho::view::sections::section& section: sections){
+        script(section);
+    }
+    std::cout << script.body() << std::endl;
     // lua.shell();
 
-    udho::view::data::bridges::chai chai;
-    chai.init();
-    chai.bind(udho::view::data::type<info>{});
+    // udho::view::data::bridges::chai chai;
+    // chai.init();
+    // chai.bind(udho::view::data::type<info>{});
     // lua.shell();
 
     udho::view::data::resources resources;
