@@ -47,9 +47,12 @@ struct info{
 static char buffer[] = R"TEMPLATE(
 <?! register "views.user.badge"; lang "lua" ?>
 
-<#
-<? d = udho.view() ?>
-#>
+<? if jit then ?>
+LuaJIT is being used
+LuaJIT version: <?= jit.version ?>
+<? else ?>
+LuaJIT is not being used
+<? end ?>
 
 Hello <?= d.name ?>
 
@@ -109,14 +112,24 @@ int main(){
     inf.name = "NAME";
     inf.value = 42.42;
     inf._x    = 42;
-    auto tstart = std::chrono::high_resolution_clock::now();
-    std::string output = lua.exec("script.lua", inf);
-    auto tend = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> duration = tend - tstart;
 
-    // std::string output = lua.eval("script.lua", inf);
-    std::cout << output << std::endl;
-    std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
+    {
+        auto tstart = std::chrono::high_resolution_clock::now();
+        std::string output = lua.exec("script.lua", inf);
+        auto tend = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = tend - tstart;
+        // std::string output = lua.eval("script.lua", inf);
+        std::cout << output << std::endl;
+        std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
+    }{
+        auto tstart = std::chrono::high_resolution_clock::now();
+        std::string output = lua.exec("script.lua", inf);
+        auto tend = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = tend - tstart;
+        // std::string output = lua.eval("script.lua", inf);
+        std::cout << output << std::endl;
+        std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
+    }
     // lua.shell();
 
     // udho::view::data::bridges::chai chai;

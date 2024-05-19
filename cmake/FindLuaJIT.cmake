@@ -10,6 +10,7 @@
 #  #include <lua/lua.h>
 # This is because, the lua location is not standardized and may exist
 # in locations other than lua/
+
 #=============================================================================
 # Copyright 2007-2009 Kitware, Inc.
 #
@@ -29,7 +30,7 @@
 FIND_PATH(LUAJIT_INCLUDE_DIR lua.h
   HINTS
   $ENV{LUAJIT_DIR}
-  PATH_SUFFIXES luajit-2.0 luajit2.0 luajit luajit-2.1
+  PATH_SUFFIXES include/luajit-2.0 include/luajit2.0 include/luajit-2.1 include/luajit2.1 include/luajit include
   PATHS
   ~/Library/Frameworks
   /Library/Frameworks
@@ -40,8 +41,9 @@ FIND_PATH(LUAJIT_INCLUDE_DIR lua.h
   /opt/csw # Blastwave
   /opt
 )
+
 FIND_LIBRARY(LUAJIT_LIBRARY
-  NAMES libluajit-51.a libluajit-5.1.a libluajit.a libluajit-5.1.so
+  NAMES luajit-51 luajit-5.1 luajit
   HINTS
   $ENV{LUAJIT_DIR}
   PATH_SUFFIXES lib64 lib
@@ -55,17 +57,22 @@ FIND_LIBRARY(LUAJIT_LIBRARY
   /opt/csw
   /opt
 )
+
 IF(LUAJIT_LIBRARY)
+  # include the math library for Unix
   IF(UNIX AND NOT APPLE)
     FIND_LIBRARY(LUAJIT_MATH_LIBRARY m)
-	FIND_LIBRARY(LUAJIT_DL_LIBRARY dl)
-	SET( LUAJIT_LIBRARIES "${LUAJIT_LIBRARY};${LUAJIT_DL_LIBRARY};${LUAJIT_MATH_LIBRARY}" CACHE STRING "Lua Libraries")
+    SET( LUAJIT_LIBRARIES "${LUAJIT_LIBRARY};${LUAJIT_MATH_LIBRARY}" CACHE STRING "Lua Libraries")
+  # For Windows and Mac, don't need to explicitly include the math library
   ELSE(UNIX AND NOT APPLE)
     SET( LUAJIT_LIBRARIES "${LUAJIT_LIBRARY}" CACHE STRING "Lua Libraries")
   ENDIF(UNIX AND NOT APPLE)
 ENDIF(LUAJIT_LIBRARY)
+
 INCLUDE(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set LUAJIT_FOUND to TRUE if
 # all listed variables are TRUE
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LuaJIT  DEFAULT_MSG  LUAJIT_LIBRARIES LUAJIT_INCLUDE_DIR)
+
 MARK_AS_ADVANCED(LUAJIT_INCLUDE_DIR LUAJIT_LIBRARIES LUAJIT_LIBRARY LUAJIT_MATH_LIBRARY)
+
