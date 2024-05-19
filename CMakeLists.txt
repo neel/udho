@@ -122,7 +122,13 @@ if(nlohmann_json_FOUND)
 endif()
 
 find_package(Lua REQUIRED)
-TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
+find_package(LuaJIT REQUIRED)
+if(LuaJIT_FOUND)
+    TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
+else()
+    TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
+endif()
+
 TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
 TARGET_LINK_LIBRARIES(udho PUBLIC sol2 chaiscript)
 

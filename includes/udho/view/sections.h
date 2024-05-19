@@ -33,27 +33,22 @@ struct section {
         text     = 300
     };
 
-    inline explicit section(types t): _type(t) {
-        _id = random_string(16);
-    }
+    inline explicit section(types t): _type(t) {}
     inline section(types t, const std::string& content): _type(t), _content(content) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
-        _id = random_string(16);
     }
     template <typename InputIt>
     inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
-        _id = random_string(16);
     }
-    inline std::string id() const { return _id; }
     inline types type() const { return _type; }
     inline void content(const std::string& c) { _content = c; }
     inline const std::string& content() const { return _content; }
-
+    inline const std::size_t size() const { return _content.size(); }
     inline static std::string name(const section::types type){
         switch(type){
             case section::meta:     return "meta";
@@ -70,7 +65,7 @@ struct section {
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const section& s){
-        stream << "section " << s.id() << " type " << section::name(s._type) << " >" << s._content << "< " << std::endl;
+        stream << "section " << section::name(s._type) << " >" << s._content << "< " << std::endl;
         return stream;
     }
 
@@ -99,7 +94,6 @@ struct section {
             return str;
         }
     private:
-        std::string _id;
         types _type;
         std::string _content;
 };
@@ -156,17 +150,17 @@ struct parser{
     inline parser& close_verbatim(const std::string& tag) { _close_verbatim = tag; return *this; }
     inline const std::string& close_verbatim() const { return _close_verbatim; }
 
-    template <typename OutputIt>
-    inline void parse(const std::string& file, OutputIt out) const {
+    template <typename Function>
+    inline void parse(const std::string& file, Function&& fptr) const {
         std::string buffer;
         boost::iostreams::mapped_file mmap(file, boost::iostreams::mapped_file::readonly);
         auto begin = mmap.const_data();
         auto end   = begin + mmap.size();
-        parse(begin, end, out);
+        parse(begin, end, std::forward<Function>(fptr));
     }
 
-    template <typename InputIt, typename OutputIt>
-    inline void parse(InputIt begin, InputIt end, OutputIt out) const {
+    template <typename InputIt, typename Function>
+    inline void parse(InputIt begin, InputIt end, Function&& fptr) const {
         detail::trie trie = make_trie();
 
         InputIt last_open = begin, last_close = begin;
@@ -181,7 +175,7 @@ struct parser{
             if(pos == end) {
                 auto scope_begin = (last_tag == sections::section::text) ? last_close : last_open;
                 auto scope_end   = (it.second == 0) ? end : (pos-trie[it.second].size());
-                out++ = section{type(last_tag), scope_begin, scope_end};
+                fptr(section{type(last_tag), scope_begin, scope_end});
                 break;
             }
 
@@ -190,7 +184,7 @@ struct parser{
                 if(block_open == 0){
                     auto scope_end = pos - trie[it.second].size();
                     if((scope_end - last_close) > 0){
-                        out++ = section{section::text, last_close, scope_end};
+                        fptr(section{section::text, last_close, scope_end});
                     }
                     last_open = pos;
                     last_tag  = id;
@@ -205,7 +199,7 @@ struct parser{
                         (id == tag_close_comment  && last_tag == sections::section::comment)  ||
                         (id == tag_close_verbatim && last_tag == sections::section::verbatim)
                     ){
-                        out++ = section{type(last_tag), last_open, pos-trie[it.second].size()};
+                        fptr(section{type(last_tag), last_open, pos-trie[it.second].size()});
                         last_close = pos;
                         last_tag   = sections::section::text;
                         block_open = 0;

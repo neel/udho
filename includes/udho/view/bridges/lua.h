@@ -29,6 +29,8 @@
 #define UDHO_VIEW_BRIDGES_LUA_H
 
 #include <string>
+#include <vector>
+#include <functional>
 #include <sstream>
 #include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
@@ -40,6 +42,43 @@ namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
+
+struct lua_string_buffer{
+    inline explicit lua_string_buffer(): _len(0) {}
+
+    inline std::size_t write(const sol::string_view& lua_string) {
+        _buffer.emplace_back(lua_string);
+        std::size_t size = lua_string.size();
+        _len += size;
+        return size;
+    }
+
+    inline std::size_t str(std::string& result) const {
+        result.clear();
+        result.reserve(_len);
+
+        for (const sol::string_view& view : _buffer) {
+            result.append(view.data(), view.size());
+        }
+
+        return _len;
+    }
+
+    inline std::size_t size() const { return _len; }
+    inline void clear() { _buffer.clear(); }
+
+    inline static sol::usertype<lua_string_buffer> apply(sol::table& table, const std::string& name = "lua_string_buffer"){
+        return table.new_usertype<lua_string_buffer>(name,
+            "write", &lua_string_buffer::write,
+            "size",  &lua_string_buffer::size,
+            "clear", &lua_string_buffer::clear
+        );
+    }
+
+    private:
+        std::vector<sol::string_view> _buffer;
+        std::size_t _len;
+};
 
 template <typename X>
 struct lua_binder{
@@ -79,7 +118,10 @@ struct lua_binder{
 };
 
 struct lua_script{
-    inline explicit lua_script(const std::string& name): _name(name) {}
+    inline explicit lua_script(const std::string& name): _name(name) {
+        append("return function(d, stream)");
+        append_newline();
+    }
     inline void add_section(const udho::view::sections::section& section){
         switch(section.type()){
             case udho::view::sections::section::text:
@@ -97,24 +139,42 @@ struct lua_script{
     inline void operator()(const udho::view::sections::section& section){
         add_section(section);
     }
+    std::string name() const { return _name; }
     std::string body() const {
-        return _stream.str();
+        return std::string(_buffer.begin(), _buffer.end());
+    }
+    const char* data() const { return _buffer.data(); }
+    std::size_t size() const { return _buffer.size(); }
+    void finish(){
+        append("end");
     }
     private:
-        inline void add_eval_section(const udho::view::sections::section& section){
-            _stream << section.content();
+        inline void add_eval_section(const udho::view::sections::section& section) {
+            const std::string& content = section.content();
+            _buffer.insert(_buffer.end(), content.begin(), content.end());
         }
-        inline void add_echo_section(const udho::view::sections::section& section){
-            _stream << std::endl;
-            _stream << "do -- " << udho::url::format("{}/{}", udho::view::sections::section::name(section.type()), section.id()) << std::endl;
-            _stream << "\t" << udho::url::format("local ustr_{} = [=====[", section.id()) << section.content() << "]=====]" << std::endl;
-            _stream << "\t" << udho::url::format("print(ustr_{})", section.id()) << std::endl;
-            _stream << "end" << std::endl;
+
+        inline void add_echo_section(const udho::view::sections::section& section) {
+            if (section.size() > 0) {
+                append_newline();
+                append("do -- " + udho::url::format("{}", udho::view::sections::section::name(section.type())) + "\n");
+                if (section.type() == udho::view::sections::section::echo) {
+                    append("\t" + udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], {})", section.content()) + "\n");
+                } else {
+                    append("\t" + udho::url::format("local udho_view_str_ = [=====[{}]=====]", section.content()) + "\n");
+                }
+                append("\tstream:write(udho_view_str_)\n");
+                append("end\n");
+            }
         }
+
         inline void discard_section(const udho::view::sections::section&){}
     private:
+        void append(const std::string& str) { _buffer.insert(_buffer.end(), str.begin(), str.end()); }
+        void append_newline() { _buffer.push_back('\n'); }
+    private:
         std::string _name;
-        std::stringstream _stream;
+        std::vector<char> _buffer;
 };
 
 struct lua{
@@ -122,10 +182,11 @@ struct lua{
     using binder = lua_binder<X>;
 
     inline lua() {
-        _state.open_libraries(sol::lib::base);
+        _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
     }
     inline void init(){
         _udho = _state["udho"].get_or_create<sol::table>();
+        lua_string_buffer::apply(_udho);
     }
 
     template <typename ClassT, typename... Xs>
@@ -139,8 +200,62 @@ struct lua{
         bind<ClassT>(meta);
     }
 
-    lua_script script(const std::string& name){
-        return lua_script{name};
+    /**
+     * Creates an empty lua script. Reference to that script is supposed to be passed to the parser
+     * @code
+     * udho::view::data::bridges::lua_script script = lua.script("script.lua");
+     * udho::view::sections::parser parser;
+     * parser.parse(buffer, buffer+sizeof(buffer), script);
+     * @endcode
+     * It's the way of begining registration of a view.
+     */
+    lua_script script(const std::string& name){ return lua_script{name}; }
+
+    /**
+     * Compiles a lua_script. Assumes that the script is already parsed. Stores the lua function inside a map.
+     */
+    bool compile(lua_script& script){
+        sol::load_result load_result = _state.load_buffer(script.data(), script.size());
+        if (!load_result.valid()) {
+            sol::error err = load_result;
+            throw std::runtime_error("Error loading script: " + std::string(err.what()));
+        }
+
+        sol::protected_function view =  load_result.get<sol::protected_function>();
+        sol::protected_function_result view_result = view();
+        if (!view_result.valid()) {
+            sol::error err = view_result;
+            throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
+        }
+
+        sol::protected_function view_fnc = view_result;
+        auto it = _views.insert(std::make_pair(script.name(), view_fnc));
+        return it.second;
+    }
+
+    /**
+     * Executes the lua function from the map by the script name.
+     */
+    template <typename T>
+    std::string exec(const std::string& name, const T& data){
+        if(!_views.count(name)){
+            std::cout << "View not found " << name << std::endl;
+            return std::string{};
+        }
+
+        sol::protected_function view = _views[name];
+        lua_string_buffer buffer;
+        sol::protected_function_result result = view(data, buffer);
+
+        if (!result.valid()) {
+            sol::error err = result;
+            std::cout << "Error executing function from " << name << ": " << err.what() << std::endl;
+            return std::string{};
+        }
+
+        std::string output;
+        std::size_t size = buffer.str(output);
+        return output;
     }
 
     inline void shell();
@@ -150,25 +265,12 @@ struct lua{
         void bind(const std::string& name, udho::view::data::associative<Xs...>& assoc){
             binder<ClassT> user_type(_udho, name);
             assoc.apply(std::move(user_type));
-            _state.script(R"(
-                print("begin lua")
-                print("Inspecting table 'udho':")
-                for key, value in pairs(udho) do
-                    print(key, type(value))
-                end
-                local obj = udho.info.new()
-                print(obj.name)
-                print(obj.value)
-
-                obj.name = "changed"
-                obj:print()
-                print("end lua")
-            )");
         }
 
     private:
         sol::state _state;
         sol::table _udho;
+        std::map<std::string, sol::protected_function> _views;
 };
 
 void lua::shell(){

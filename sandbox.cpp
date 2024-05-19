@@ -7,6 +7,8 @@
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
 #include <complex>
+#include <chrono>
+#include <iomanip>
 #include <string.h>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -45,9 +47,11 @@ struct info{
 static char buffer[] = R"TEMPLATE(
 <?! register "views.user.badge"; lang "lua" ?>
 
+<#
 <? d = udho.view() ?>
+#>
 
-Hello <?= d.world ?>
+Hello <?= d.name ?>
 
 <?:score udho.view() ?>
 
@@ -89,17 +93,30 @@ int main(){
     // boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
     // boost::iostreams::stream stream(descriptor);
 
-    std::vector<udho::view::sections::section> sections;
-    udho::view::sections::parser parser;
-    parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
+    // std::vector<udho::view::sections::section> sections;
+    // parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<info>{});
-    auto script = lua.script("script.lua");
-    for(const udho::view::sections::section& section: sections){
-        script(section);
-    }
+    udho::view::data::bridges::lua_script script = lua.script("script.lua");
+    udho::view::sections::parser parser;
+    parser.parse(buffer, buffer+sizeof(buffer), script);
+    script.finish();
     std::cout << script.body() << std::endl;
+    bool res = lua.compile(script);
+    // std::cout << "compilation result " << res << std::endl;
+    info inf;
+    inf.name = "NAME";
+    inf.value = 42.42;
+    inf._x    = 42;
+    auto tstart = std::chrono::high_resolution_clock::now();
+    std::string output = lua.exec("script.lua", inf);
+    auto tend = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = tend - tstart;
+
+    // std::string output = lua.eval("script.lua", inf);
+    std::cout << output << std::endl;
+    std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
     // lua.shell();
 
     // udho::view::data::bridges::chai chai;
