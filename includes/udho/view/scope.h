@@ -189,7 +189,7 @@ struct nvp<PolicyT, KeyT, wrapper<X...>>{
 
     nvp(name_type&& name, wrapper_type&& wrapper): _name(std::move(name)), _wrapper(std::forward<wrapper_type>(wrapper)) {}
     const name_type& name() const { return _name; }
-    wrapper_type& wrapper() { return _wrapper; }
+    wrapper_type& value() { return _wrapper; }
 
     private:
         name_type    _name;

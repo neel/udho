@@ -105,7 +105,7 @@ int main(){
     udho::view::sections::parser parser;
     parser.parse(buffer, buffer+sizeof(buffer), script);
     script.finish();
-    std::cout << script.body() << std::endl;
+    // std::cout << script.body() << std::endl;
     bool res = lua.compile(script);
     // std::cout << "compilation result " << res << std::endl;
     info inf;

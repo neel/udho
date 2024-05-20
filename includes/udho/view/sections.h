@@ -48,6 +48,8 @@ struct section {
     inline types type() const { return _type; }
     inline void content(const std::string& c) { _content = c; }
     inline const std::string& content() const { return _content; }
+    inline std::string::const_iterator begin() const { return _content.begin(); }
+    inline std::string::const_iterator end() const { return _content.end(); }
     inline const std::size_t size() const { return _content.size(); }
     inline static std::string name(const section::types type){
         switch(type){

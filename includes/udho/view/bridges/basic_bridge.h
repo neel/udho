@@ -25,25 +25,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_H
-#define UDHO_VIEW_BRIDGES_H
+#ifndef UDHO_VIEW_BRIDGES_BASIC_H
+#define UDHO_VIEW_BRIDGES_BASIC_H
 
 #include <string>
-#include <udho/view/bridges/lua.h>
+#include <udho/view/scope.h>
 
 namespace udho{
 namespace view{
+namespace data{
+namespace bridges{
 
+template <typename Bridge>
+struct basic_bridge{
+    using script_type = typename Bridge::script_type;
 
+    explicit basic_bridge(const std::string& name): _name(name) {}
 
-template <typename... Bridges>
-struct bridge{
+    template <typename T>
+    void bind(){ self().bind(udho::view::data::type<T>{}); }
+    script_type prepare(const std::string& name) { return self().script(name); }
+    bool compile(script_type& script){ return self().compile(script); }
+    template <typename T>
+    std::string exec(const std::string& name, const T& data){ return self().exec(name, data); }
 
+    private:
+        Bridge& self() { return static_cast<Bridge&>(*this); }
+    private:
+        std::string _name;
 };
 
-
+}
+}
 }
 }
 
-
-#endif // UDHO_VIEW_BRIDGES_H
+#endif // UDHO_VIEW_BRIDGES_BASIC_H

@@ -27,15 +27,16 @@
 # ################
 # 2010 - modified for cronkite to find luajit instead of lua, as it was before.
 #
-FIND_PATH(LUAJIT_INCLUDE_DIR lua.h
+
+FIND_PATH(LUAJIT_INCLUDE_DIR luajit.h
   HINTS
   $ENV{LUAJIT_DIR}
-  PATH_SUFFIXES include/luajit-2.0 include/luajit2.0 include/luajit-2.1 include/luajit2.1 include/luajit include
+  PATH_SUFFIXES luajit-2.0 luajit2.0 luajit-2.1 luajit2.1 luajit
   PATHS
   ~/Library/Frameworks
   /Library/Frameworks
   /usr/local
-  /usr
+  /usr/include
   /sw # Fink
   /opt/local # DarwinPorts
   /opt/csw # Blastwave
@@ -75,4 +76,5 @@ INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LuaJIT  DEFAULT_MSG  LUAJIT_LIBRARIES LUAJIT_INCLUDE_DIR)
 
 MARK_AS_ADVANCED(LUAJIT_INCLUDE_DIR LUAJIT_LIBRARIES LUAJIT_LIBRARY LUAJIT_MATH_LIBRARY)
+
 

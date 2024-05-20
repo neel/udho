@@ -51,25 +51,25 @@ struct chai{
 
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
+            auto& w = nvp.value();
             _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
+            auto& w = nvp.value();
             _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename U, typename V>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-            auto& w = nvp.wrapper();
+            auto& w = nvp.value();
             // _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }
         template <typename KeyT, typename T>
         binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
-            auto& w = nvp.wrapper();
+            auto& w = nvp.value();
             _chai.add(chaiscript::fun(*w), nvp.name());
             return *this;
         }

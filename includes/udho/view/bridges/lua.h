@@ -33,6 +33,10 @@
 #include <functional>
 #include <sstream>
 #include <nlohmann/json.hpp>
+// #ifdef WITH_LUA_JIT
+// #define SOL_LUAJIT 1
+// #define SOL_USING_CXX_LUAJIT 1
+// #endif
 #include <sol/sol.hpp>
 #include <udho/view/scope.h>
 #include <udho/view/sections.h>
@@ -88,19 +92,19 @@ struct lua_binder{
 
     template <typename KeyT, typename T>
     lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.wrapper();
+        auto& w = nvp.value();
         _type.set(nvp.name(), *w);
         return *this;
     }
     template <typename KeyT, typename T>
     lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.wrapper();
+        auto& w = nvp.value();
         _type.set(nvp.name(), sol::readonly(*w));
         return *this;
     }
     template <typename KeyT, typename U, typename V>
     lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-        auto& w = nvp.wrapper();
+        auto& w = nvp.value();
         _type.set(nvp.name(), sol::property(
             *static_cast<udho::view::data::getter_value<U>&>(w),
             *static_cast<udho::view::data::setter_value<V>&>(w)
@@ -109,7 +113,7 @@ struct lua_binder{
     }
     template <typename KeyT, typename T>
     lua_binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.wrapper();
+        auto& w = nvp.value();
         _type.set(nvp.name(), *w);
         return *this;
     }
@@ -187,6 +191,17 @@ struct lua{
     inline void init(){
         _udho = _state["udho"].get_or_create<sol::table>();
         lua_string_buffer::apply(_udho);
+
+        std::string script = R"(
+            if jit then
+                print("LuaJIT is being used")
+                print("LuaJIT version: " .. jit.version)
+            else
+                print("LuaJIT is not being used")
+            end
+        )";
+
+        _state.script(script);
     }
 
     template <typename ClassT, typename... Xs>
