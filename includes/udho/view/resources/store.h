@@ -76,6 +76,7 @@ struct store{
 template <typename BridgeT>
 struct store: detail::store<BridgeT>{
     using bridge_type = BridgeT;
+    using bundle_proxy_view = typename detail::store<BridgeT>::bundle_type::bundle_proxy_view;
 
     store(bridge_type& bridge): detail::store<BridgeT>(bridge), views(detail::store<BridgeT>::primary().views) {}
     friend store& operator<<(store& s, const resource& res){
@@ -83,7 +84,7 @@ struct store: detail::store<BridgeT>{
         return s;
     }
 
-    detail::bundle_view_proxy<bridge_type>& views;
+    bundle_proxy_view& views;
 };
 
 }

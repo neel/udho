@@ -104,17 +104,16 @@ template <typename BridgeT>
 struct bundle;
 
 namespace detail {
-    template<typename BundleT, typename ProxyT, resource::resource_type type>
+    template<typename BundleT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resource::resource_type type>
     struct bundle_proxy;
 
-    template<typename BridgeT, typename ProxyT, resource::resource_type type>
-    struct bundle_proxy<bundle<BridgeT>, ProxyT, type> {
+    template<typename BridgeT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resource::resource_type type>
+    struct bundle_proxy<bundle<BridgeT>, ProxyT, TypeIndex, CompositeIndex, type> {
         using bundle_type        = bundle<BridgeT>;
         using proxy_type         = ProxyT;
-        using resource_set       = typename bundle_type::resource_set;
-        using type_iterator      = typename bundle_type::type_const_iterator;
-        using composite_iterator = typename bundle_type::composite_const_iterator;
-        using size_type          = typename bundle_type::size_type;
+        using type_iterator      = typename TypeIndex::const_iterator;
+        using composite_iterator = typename CompositeIndex::const_iterator;
+        using size_type          = typename TypeIndex::size_type;
 
         bundle_proxy(bundle_type& bundle) : _bundle(bundle) { }
         bundle_proxy(const bundle_proxy& other) = default;
@@ -146,6 +145,12 @@ namespace detail {
                 throw std::out_of_range("Resource with name '" + name + "' not found");
             }
         }
+        template <typename T>
+        view::results operator()(const std::string& name, T&& arg){
+            typename proxy_type::result_type v = operator[](name);
+            return v(std::forward<T>(arg));
+        }
+
     private:
         bundle_type& _bundle;
     };
@@ -162,12 +167,6 @@ namespace detail {
             const resource& _res;
             bridge_type&    _bridge;
     };
-
-    template<typename BridgeT>
-    using bundle_view_proxy = bundle_proxy<bundle<BridgeT>, view_proxy<bundle<BridgeT>>, resource::resource_type::view>;
-
-    // template<typename BridgeT>
-    // using bundle_asset_proxy = bundle_proxy<bundle<BridgeT>, asset::proxy, resource::resource_type::assets>;
 }
 
 template <typename BridgeT>
@@ -175,8 +174,6 @@ struct bundle{
     using bridge_type = BridgeT;
     using self_type   = bundle<bridge_type>;
     using view_proxy  = view::proxy<bridge_type>;
-
-    friend detail::bundle_view_proxy<bridge_type>;
 
     struct tags{
         struct type{};
@@ -218,9 +215,21 @@ struct bundle{
     using composite_const_iterator = typename resource_set::template index<typename tags::composite>::type::const_iterator;
     using size_type                = typename resource_set::size_type;
 
+    template <resource::resource_type type>
+    using bundle_proxy = detail::bundle_proxy<
+        self_type,
+        detail::view_proxy<self_type>,
+        type_index,
+        composite_index,
+        type
+    >;
+
+    using bundle_proxy_view = bundle_proxy<resource::resource_type::view>;
+
+    friend bundle_proxy_view;
+
     explicit bundle(bridge_type& bridge, const std::string& prefix): _bridge(bridge), _prefix(prefix), views(*this) {}
     bundle(const bundle&) = delete;
-    // bundle(const bundle& other): _bridge(other._bridge), _prefix(other._prefix), _resources(other._resources), views(*this) { }
 
     void add(const resource& res) {
         _resources.insert(res);
@@ -266,7 +275,7 @@ struct bundle{
         std::string  _prefix;
         resource_set _resources;
     public:
-        detail::bundle_view_proxy<bridge_type> views;
+        bundle_proxy_view views;
         // detail::bundle_asset_proxy<bridge_type> assets;
 };
 
