@@ -2,17 +2,18 @@
 #include <udho/view/trie.h>
 #include <udho/view/sections.h>
 #include <udho/view/scope.h>
-#include <udho/view/resources.h>
-#include <udho/view/bridges.h>
+#include <udho/view/resources/store.h>
+#include <udho/view/bridges/lua.h>
 #include <udho/hazo/string/basic.h>
 #include <stdio.h>
 #include <complex>
 #include <chrono>
+#include <fstream>
 #include <iomanip>
 #include <string.h>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <udho/view/resources.h>
+#include <boost/filesystem.hpp>
 
 struct info{
     std::string name;
@@ -101,11 +102,11 @@ int main(){
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<info>{});
-    udho::view::data::bridges::lua_script script = lua.script("script.lua");
+    udho::view::data::bridges::lua::script_type script = lua.create("script.lua");
     udho::view::sections::parser parser;
     parser.parse(buffer, buffer+sizeof(buffer), script);
     script.finish();
-    // std::cout << script.body() << std::endl;
+    std::cout << script.body() << std::endl;
     bool res = lua.compile(script);
     // std::cout << "compilation result " << res << std::endl;
     info inf;
@@ -115,7 +116,8 @@ int main(){
 
     {
         auto tstart = std::chrono::high_resolution_clock::now();
-        std::string output = lua.exec("script.lua", inf);
+        std::string output;
+        lua.exec("script.lua", inf, output);
         auto tend = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = tend - tstart;
         // std::string output = lua.eval("script.lua", inf);
@@ -123,7 +125,8 @@ int main(){
         std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
     }{
         auto tstart = std::chrono::high_resolution_clock::now();
-        std::string output = lua.exec("script.lua", inf);
+        std::string output;
+        lua.exec("script.lua", inf, output);
         auto tend = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = tend - tstart;
         // std::string output = lua.eval("script.lua", inf);
@@ -137,5 +140,23 @@ int main(){
     // chai.bind(udho::view::data::type<info>{});
     // lua.shell();
 
-    udho::view::data::resources resources;
+    boost::filesystem::path temp = boost::filesystem::unique_path();
+    {
+        std::ofstream temp_stream(temp.c_str());
+        temp_stream << buffer;
+        temp_stream.close();
+    }
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    auto& primary = resources.primary();
+    resources << udho::view::resources::resource::view("temp", temp);
+
+
+    std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
+    std::cout << "resources.views[temp](inf).str() " << std::endl;
+    std::cout << resources.views["temp"](inf).str() << std::endl;
+    std::cout << "see views below " << resources.views.count() << std::endl;
+    for(const auto& res: resources.views){
+        std::cout << res.name() << std::endl;
+    }
 }

@@ -25,20 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_RESOURCES_H
-#define UDHO_VIEW_RESOURCES_H
+#ifndef UDHO_VIEW_RESOURCES_RESOURCE_H
+#define UDHO_VIEW_RESOURCES_RESOURCE_H
 
 #include <string>
 #include <boost/filesystem/path.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/mem_fun.hpp>
 #include <udho/url/detail/format.h>
 
 namespace udho{
 namespace view{
-namespace data{
+namespace resources{
 
 /**
  * @brief Represents a resource with a specific type, name, and path.
@@ -73,6 +69,9 @@ struct resource {
      * @return The type of the resource.
      */
     inline resource_type type() const { return _type; }
+
+    inline bool is_view() const { return _type == resource_type::view; }
+    inline bool is_asset() const { return _type == resource_type::asset; }
 
     /**
      * @brief Returns the name of the resource.
@@ -136,94 +135,8 @@ struct resource {
         boost::filesystem::path _path; ///< The path to the resource.
 };
 
-struct bundle{
-    struct tags{
-        struct type{};
-        struct name{};
-    };
-
-    using resource_set = boost::multi_index_container<
-        resource,
-        boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique<boost::multi_index::identity<resource>>,
-            boost::multi_index::ordered_unique<
-                boost::multi_index::tag<tags::name>,
-                boost::multi_index::const_mem_fun<resource, std::string, &resource::name>
-            >,
-            boost::multi_index::ordered_non_unique<
-                boost::multi_index::tag<tags::type>,
-                boost::multi_index::const_mem_fun<resource, resource::resource_type, &resource::type>
-            >
-        >
-    >;
-
-    inline explicit bundle(const std::string& prefix): _prefix(prefix) {}
-
-    inline void add(const resource& res) { _resources.insert(res); }
-    inline resource_set::index<tags::type>::type::iterator lower(resource::resource_type type) { return _resources.get<tags::type>().lower_bound(type); }
-    inline resource_set::index<tags::type>::type::iterator upper(resource::resource_type type) { return _resources.get<tags::type>().upper_bound(type); }
-    inline resource_set::index<tags::type>::type::iterator find(resource::resource_type type) { return _resources.get<tags::type>().find(type); }
-    inline resource_set::index<tags::type>::type::size_type count(resource::resource_type type) { return _resources.get<tags::type>().count(type); }
-
-    inline resource_set::index<tags::type>::type::iterator lower(resource::resource_type type) const { return _resources.get<tags::type>().lower_bound(type); }
-    inline resource_set::index<tags::type>::type::iterator upper(resource::resource_type type) const { return _resources.get<tags::type>().upper_bound(type); }
-    inline resource_set::index<tags::type>::type::iterator find(resource::resource_type type) const { return _resources.get<tags::type>().find(type); }
-    inline resource_set::index<tags::type>::type::size_type count(resource::resource_type type) const { return _resources.get<tags::type>().count(type); }
-
-    inline resource_set::iterator begin() { return _resources.begin(); }
-    inline resource_set::iterator end() { return _resources.end(); }
-
-    inline resource_set::iterator begin() const { return _resources.begin(); }
-    inline resource_set::iterator end() const { return _resources.end(); }
-
-    inline resource_set::size_type size() const { return _resources.size(); }
-
-    inline std::string prefix() const { return _prefix; }
-
-    inline const resource& operator[](const std::string& name){
-        auto& name_index = _resources.get<tags::name>();
-        auto it = name_index.find(name);
-        if (it != name_index.end()) {
-            return *it;
-        } else {
-            throw std::out_of_range("Resource with name '" + name + "' not found");
-        }
-    }
-
-    private:
-        std::string  _prefix;
-        resource_set _resources;
-};
-
-struct resources{
-    static constexpr const char* primary_bundle_name = "primary";
-
-    inline resources() {
-        bundle(primary_bundle_name);
-    }
-    inline udho::view::data::bundle& bundle(const std::string& name) {
-        auto it = _bundles.find(name);
-        if(it == _bundles.end()){
-            auto result = _bundles.emplace(name, udho::view::data::bundle{name});
-            it = result.first;
-        }
-        return it->second;
-    }
-    inline const udho::view::data::bundle& bundle(const std::string& name) const {
-        auto it = _bundles.find(name);
-        if(it != _bundles.end()){
-            return it->second;
-        }
-        throw std::invalid_argument{udho::url::format("No such bundle named {}", name)};
-    }
-    inline udho::view::data::bundle& primary() { return bundle(primary_bundle_name); }
-    inline const udho::view::data::bundle& primary() const { return bundle(primary_bundle_name); }
-    private:
-        std::map<std::string, data::bundle> _bundles;
-};
-
 }
 }
 }
 
-#endif // UDHO_VIEW_RESOURCES_H
+#endif // UDHO_VIEW_RESOURCES_RESOURCE_H
