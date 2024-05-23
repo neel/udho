@@ -154,7 +154,7 @@ int main(){
 
     // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
     std::cout << "resources.views[temp](inf).str() " << std::endl;
-    std::cout << resources.views("temp", inf).str() << std::endl;
+    std::cout << primary.views("temp", inf).str() << std::endl;
     std::cout << "see views below " << resources.views.count() << std::endl;
     for(const auto& res: resources.views){
         std::cout << res.name() << std::endl;

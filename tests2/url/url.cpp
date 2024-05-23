@@ -30,6 +30,10 @@ std::string f2(int a, const std::string& b){
     return std::to_string(a+b.size());
 }
 
+std::string f_nodef(nodef, int a){
+    return "hello";
+}
+
 struct X{
     void f0(){
         return;
@@ -47,6 +51,123 @@ struct X{
         return 84;
     }
 };
+
+TEST_CASE("Regex matching operations", "[regex_match]") {
+    udho::url::pattern::match<udho::url::pattern::formats::regex, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
+
+    SECTION("Successful match") {
+        std::string subject = "/user/alexa/12345";
+        REQUIRE(match.find(subject) == true);
+    }
+
+    SECTION("Unsuccessful match") {
+        std::string subject = "/user/abc/def";
+        REQUIRE(match.find(subject) == false);
+    }
+
+    SECTION("Successful capture") {
+        std::string subject = "/user/alexa/12345";
+        std::tuple<std::string, std::uint32_t> args;
+        REQUIRE(match.find(subject, args) == true);
+        REQUIRE(std::get<0>(args) == "alexa");
+        REQUIRE(std::get<1>(args) == 12345);
+    }
+
+    SECTION("Unsuccessful capture") {
+        std::string subject = "/user/alexa/robot";
+        std::tuple<std::string, std::uint32_t> args;
+        REQUIRE(match.find(subject, args) == false);
+        REQUIRE(std::get<0>(args) != "alexa");
+        REQUIRE(std::get<1>(args) != 12345);
+    }
+
+    SECTION("Pattern replacement") {
+        REQUIRE(match.replace(std::make_tuple("alexa", 12345)) == "/user/alexa/12345");
+    }
+}
+
+TEST_CASE("String matching operations using p1729 format", "[string_match]") {
+    udho::url::pattern::match<udho::url::pattern::formats::p1729, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
+
+    SECTION("Successful string match and extraction") {
+        std::string subject = "/user/john/12345";
+        std::tuple<std::string, int> args;
+        REQUIRE(matcher.find(subject, args) == true);
+        REQUIRE(std::get<0>(args) == "john");
+        REQUIRE(std::get<1>(args) == 12345);
+    }
+
+    SECTION("Unsuccessful string match due to format mismatch") {
+        std::string subject = "/user/john/abc";
+        std::tuple<std::string, int> args;
+        REQUIRE(matcher.find(subject, args) == false);
+    }
+
+    SECTION("Pattern and replacement equality when replacement is omitted") {
+        udho::url::pattern::match<udho::url::pattern::formats::p1729, char> simple_matcher(udho::url::verb::get, "/user/{}/{:d}");
+        REQUIRE(simple_matcher.pattern() == "/user/{}/{:d}");
+        REQUIRE(simple_matcher.replacement() == "/user/{}/{:d}");
+        REQUIRE(simple_matcher.replace(std::make_tuple("john", 12345)) == "/user/john/12345");
+    }
+
+    SECTION("Pattern replacement") {
+        std::tuple<std::string, int> args = std::make_tuple("john", 12345);
+        REQUIRE(matcher.replace(args) == "/user/john/12345");
+    }
+}
+
+TEST_CASE("Fixed string matching operations", "[fixed_string_match]") {
+    udho::url::pattern::match<udho::url::pattern::formats::fixed, char> matcher(udho::url::verb::get, "/example/path", "/example/path");
+
+    SECTION("Successful string match") {
+        std::string subject = "/example/path";
+        REQUIRE(matcher.find(subject) == true);
+    }
+
+    SECTION("Unsuccessful string match due to different string") {
+        std::string subject = "/another/path";
+        REQUIRE(matcher.find(subject) == false);
+    }
+
+    SECTION("Pattern and replacement distinction") {
+        REQUIRE(matcher.pattern() == "/example/path");
+        REQUIRE(matcher.replacement() == "/example/path");
+    }
+
+    SECTION("Pattern replacement with arguments") {
+        std::tuple<std::string, int> args = std::make_tuple("ignored", 123);
+        REQUIRE(matcher.replace(args) == "/example/path");
+    }
+}
+
+TEST_CASE("Home pattern matching operations", "[home_pattern_match]") {
+    udho::url::pattern::match<udho::url::pattern::formats::home, char> matcher(udho::url::verb::get);
+
+    SECTION("Match explicit home pattern") {
+        std::string subject = "/";
+        REQUIRE(matcher.find(subject) == true);
+    }
+
+    SECTION("Match empty string as home") {
+        std::string subject = "";
+        REQUIRE(matcher.find(subject) == true);
+    }
+
+    SECTION("Unsuccessful match with non-home URL") {
+        std::string subject = "/about";
+        REQUIRE(matcher.find(subject) == false);
+    }
+
+    SECTION("Pattern and replacement output") {
+        REQUIRE(matcher.pattern() == "/");
+        REQUIRE(matcher.replacement() == "/");
+    }
+
+    SECTION("URL generation should always return home") {
+        std::tuple<std::string, int> args = std::make_tuple("any", 123);  // Arguments should be ignored
+        REQUIRE(matcher.replace(args) == "/");
+    }
+}
 
 
 TEST_CASE("url common functionalities using regex", "[url]") {
@@ -135,6 +256,9 @@ TEST_CASE("url common functionalities using regex", "[url]") {
         CHECK(xf1_(24, "world", 2.4, 0) == "/x/f1/24/world/2.4");
         CHECK(xf1_.symbol() == "X::f1(int, std::string const&, double const&, bool)");
     }
+
+    auto ft_ = udho::url::detail::encapsulate_function(&f_nodef);
+    CHECK(f_nodef(nodef(2), 42) == "hello");
 
     auto chain2 =
         udho::url::regx(udho::url::verb::get, "/x/f2-(\\d+)/(\\w+)", "/x/f2-{}/{}")                  >> udho::url::slot("xf2"_h, &X::f0, &x)  |
