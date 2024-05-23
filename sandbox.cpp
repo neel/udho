@@ -37,10 +37,10 @@ struct info{
         using namespace udho::view::data;
 
         return assoc(
-            make_nvp(policies::property<policies::writable>{}, "name",  &info::name),
-            make_nvp(policies::property<policies::readonly>{}, "value", &info::value),
-            make_nvp(policies::property<policies::functional>{}, "x", &info::x, &info::setx),
-            make_nvp(policies::function{}, "print", &info::print)
+            mvar("name",  &info::name),
+            cvar("value", &info::value),
+            fvar("x",     &info::x, &info::setx),
+            func("print", &info::print)
         ).as("info");
     }
 };

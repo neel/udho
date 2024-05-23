@@ -208,6 +208,26 @@ nvp<P, K, wrapper<X...>> make_nvp(P, K&& name, X&&... v){
     return nvp<P, K, wrapper<X...>>(std::move(name), wrap(std::forward<X>(v)...));
 }
 
+template <typename K, typename... X>
+nvp< policies::property<policies::writable>, K, wrapper<X...> > mvar(K&& name, X&&... v){
+    return make_nvp(policies::property<policies::writable>{}, std::forward<K>(name), std::forward<X>(v)...);
+}
+
+template <typename K, typename... X>
+nvp< policies::property<policies::readonly>, K, wrapper<X...> > cvar(K&& name, X&&... v){
+    return make_nvp(policies::property<policies::readonly>{}, std::forward<K>(name), std::forward<X>(v)...);
+}
+
+template <typename K, typename... X>
+nvp< policies::property<policies::functional>, K, wrapper<X...> > fvar(K&& name, X&&... v){
+    return make_nvp(policies::property<policies::functional>{}, std::forward<K>(name), std::forward<X>(v)...);
+}
+
+template <typename K, typename... X>
+nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
+    return make_nvp(policies::function{}, std::forward<K>(name), std::forward<X>(v)...);
+}
+
 // template <typename LK, typename LT, typename RK, typename RT>
 // auto operator,(nvp<LK, LT>&& left, nvp<RK, RT>&& right){
 //     return udho::hazo::make_seq_d(std::move(left), std::move(right));
