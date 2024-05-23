@@ -1,169 +1,162 @@
 #include <iostream>
-#include <typeinfo>
-#include <udho/url/detail/function.h>
-#include <udho/url/url.h>
-// #include <udho/url/list.h>
+#include <udho/view/trie.h>
+#include <udho/view/sections.h>
+#include <udho/view/scope.h>
+#include <udho/view/resources/store.h>
+#include <udho/view/bridges/lua.h>
 #include <udho/hazo/string/basic.h>
-#include <udho/hazo/seq/seq.h>
-#include <scn/scn.h>
-#include <scn/tuple_return.h>
+#include <stdio.h>
+#include <complex>
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <string.h>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/filesystem.hpp>
 
-struct nodef{
-    nodef() = delete;
-    nodef(int) {}
+struct info{
+    std::string name;
+    double      value;
+    std::uint32_t _x;
+
+    inline double x() const { return _x; }
+    inline void setx(const std::uint32_t& v) { _x = v; }
+
+    inline info() {
+        name = "Hello";
+        value = 42;
+        _x = 43;
+    }
+
+    void print(){
+        std::cout << "name: " << name << " value: " << value  << std::endl;
+    }
+
+    friend auto prototype(udho::view::data::type<info>){
+        using namespace udho::view::data;
+
+        return assoc(
+            mvar("name",  &info::name),
+            cvar("value", &info::value),
+            fvar("x",     &info::x, &info::setx),
+            func("print", &info::print)
+        ).as("info");
+    }
 };
 
-void f0(int a, const std::string& b, const double& c, bool d){
-    return;
-}
+static char buffer[] = R"TEMPLATE(
+<?! register "views.user.badge"; lang "lua" ?>
 
-int f1(int a, const std::string& b, const double& c, bool d){
-    std::cout << a << " " << b << " " << c << " " << d << std::endl;
-    return 42;
-}
+<? if jit then ?>
+LuaJIT is being used
+LuaJIT version: <?= jit.version ?>
+<? else ?>
+LuaJIT is not being used
+<? end ?>
 
-std::string f2(int a, const std::string& b, const double& c, bool d){
-    return "42";
-}
+Hello <?= d.name ?>
 
-struct X{
-    void f0(int a, const std::string& b, const double& c, bool d){
-        return;
-    }
+<?:score udho.view() ?>
 
-    int f1(int a, const std::string& b, const double& c, bool d){
-        return 42;
-    }
+<# Some comments that will be ignored #>
 
-    std::string f2(int a, const std::string& b, const double& c, bool d){
-        return "42";
-    }
+<@ verbatim block @>
 
-    int f3(int a, const std::string& b, const double& c, bool d) const{
-        return 84;
-    }
-};
+)TEMPLATE";
 
 int main(){
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f1))::return_type, int>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f2))::return_type, std::string>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f2))::return_type, std::string>);
 
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f1))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
-    static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f2))::arguments_type, std::tuple<int, const std::string&, const double&, bool>>);
+    udho::view::detail::trie trie;
 
-    std::string str = "hello";
-    double d = 2.4;
+    std::string ab = "ab",
+                abc = "abc",
+                abcdef = "abcdef",
+                xycdef = "xycdef";
 
-    // {
-        std::vector<std::string> args;
-        args.push_back("24");
-        args.push_back("world");
-        args.push_back("2.42");
-        args.push_back("0");
+    trie.add(ab, 101);
+    trie.add(abc, 102);
+    trie.add(abcdef, 103);
+    trie.add(xycdef, 104);
 
-        auto f = udho::url::detail::encapsulate_function(f1);
-        // std::cout << f(decltype(f)::decayed_arguments_type()) << std::endl;
-        // std::cout << f(decltype(f)::arguments_type(0, str, d, false)) << std::endl;
+    std::string subject = "hello ab I am a string abcd abcdef and then abcxycdef";
+    auto begin = subject.begin();
+    auto end = subject.end();
 
-        std::cout << f.args << std::endl;
-
-        f(args.begin(), args.end());
-    // }
-
-    X x;
-    // const X& y=x;
-    //
-    // {
-    //     auto f = udho::url::detail::encapsulate_mem_function(&X::f3, &y);
-    //     std::cout << f(decltype(f)::decayed_arguments_type()) << std::endl;
-    //     std::cout << f(decltype(f)::arguments_type(0, str, d, false)) << std::endl;
-    // }
-
-    {
-        using namespace udho::hazo::string::literals;
-
-        auto chain =
-            udho::url::slot("f0"_h, &f0)         << udho::url::regx(udho::url::verb::get, "f0", "/f0")                                           |
-            udho::url::slot("f1"_h, &f1)         << udho::url::regx(udho::url::verb::get, "f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-            udho::url::slot("f2"_h, &f2)         << udho::url::regx(udho::url::verb::get, "f2", "/f2")                                           |
-            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::regx(udho::url::verb::get, "xf1", "/x/f1");
-
-        std::cout << chain << std::endl;
-
-        auto f1_ = chain["f1"_h];
-        f1_(args.begin(), args.end());
-        // auto results = f1_.match("f1");
-        // std::cout << "results.matched: " << results.matched() << std::endl;
-        bool found = f1_.invoke(std::string("f1/23/325/23/1"));
-        std::cout << "found: " << found << std::endl;
-        std::cout << f1_.fill(std::make_tuple(24,"world", 2.4, 0)) << std::endl;
-    }{
-        std::cout << "--------" << std::endl;
-
-        using namespace udho::hazo::string::literals;
-
-        auto chain =
-            udho::url::slot("f0"_h, &f0)         << udho::url::scan(udho::url::verb::get, "f0", "/f0")                         |
-            udho::url::slot("f1"_h, &f1)         << udho::url::scan(udho::url::verb::get, "f1/{}/{}/{}/{}",  "/f1/{}/{}/{}")   |
-            udho::url::slot("f2"_h, &f2)         << udho::url::scan(udho::url::verb::get, "f2", "/f2")                         |
-            udho::url::slot("xf1"_h, &X::f1, &x) << udho::url::scan(udho::url::verb::get, "xf1", "/x/f1");
-
-        std::cout << chain << std::endl;
-
-        auto f1_ = chain["f1"_h];
-        f1_(args.begin(), args.end());
-        // auto results = f1_.match("f1");
-        // std::cout << "results.matched: " << results.matched() << std::endl;
-        bool found = f1_.invoke(std::string("f1/23/hello/24/1"));
-        std::cout << "found: " << found << std::endl;
-        std::cout << f1_.fill(std::make_tuple(24, "world", 2.4, 0)) << std::endl;
+    auto pos = begin;
+    while(pos != end){
+        auto it = trie.next(pos, end);
+        pos = it.first;
+        std::cout << trie[it.second] << std::endl;
     }
 
-    // udho::hazo::seq_d<int, nodef, std::string> tt(2, nodef(2), "Hello");
+    std::cout << "hello world" << std::endl;
 
-    // {
-    //     std::uint32_t post_id, user_id;
-    //     auto result = scn::scan("/posts/623635/user/42/view", "/posts/{}/user/{}/view", post_id, user_id);
-    //     std::cout << "result:  " << (bool) result << std::endl;
-    //     std::cout << "post_id: " << post_id << std::endl;
-    //     std::cout << "user_id: " << user_id << std::endl;
-    // }
-    //
-    // {
-    //     auto [result, post_id, user_id] = scn::scan_tuple<std::uint32_t, std::uint32_t>("/posts/623635/user/42/view", "/posts/{}/user/{}/view");
-    //     std::cout << "result:  " << (bool) result << std::endl;
-    //     std::cout << "post_id: " << post_id << std::endl;
-    //     std::cout << "user_id: " << user_id << std::endl;
-    // }
-    //
-    // {
-    //     std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
-    //     auto result = scn::make_result("/posts/623635/user/neel/view/23");
-    //
-    //     std::tuple<decltype(result.range()), std::string> subject_format(result.range(), "/posts/{}/user/{}/view/{}");
-    //     auto args = std::tuple_cat(subject_format, tuple);
-    //     result = std::apply(scn::scan<decltype(result.range()), std::string, std::uint32_t, std::string, std::uint32_t>, args);
-    //
-    //     std::cout << "result:  " << std::boolalpha << (bool) result << std::endl;
-    //     std::cout << "post_id: " << std::get<2>(args) << std::endl;
-    //     std::cout << "user_id: " << std::get<3>(args) << std::endl;
-    // }
+    // FILE* fptr = fmemopen(buffer, strlen (buffer), "r");
+    // int posix_handle = fileno(fptr);
+    // boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
+    // boost::iostreams::stream stream(descriptor);
 
-    std::tuple<std::uint32_t, std::string, std::uint32_t> tuple;
-    std::string format  = "path/{}/{}/{}";
-    std::string subject = "path/23/hello/8";
-    auto res = udho::url::pattern::detail::scan_helper::apply(subject, format, tuple);
-    std::cout << "res: " << (bool) res << std::endl;
-    std::cout << "0: " << std::get<0>(tuple) << std::endl;
-    std::cout << "1: " << std::get<1>(tuple) << std::endl;
-    std::cout << "2: " << std::get<2>(tuple) << std::endl;
-    return 0;
+    // std::vector<udho::view::sections::section> sections;
+    // parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<info>{});
+    udho::view::data::bridges::lua::script_type script = lua.create("script.lua");
+    udho::view::sections::parser parser;
+    parser.parse(buffer, buffer+sizeof(buffer), script);
+    script.finish();
+    std::cout << script.body() << std::endl;
+    bool res = lua.compile(script);
+    // std::cout << "compilation result " << res << std::endl;
+    info inf;
+    inf.name = "NAME";
+    inf.value = 42.42;
+    inf._x    = 42;
+
+    {
+        auto tstart = std::chrono::high_resolution_clock::now();
+        std::string output;
+        lua.exec("script.lua", inf, output);
+        auto tend = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = tend - tstart;
+        // std::string output = lua.eval("script.lua", inf);
+        std::cout << output << std::endl;
+        std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
+    }{
+        auto tstart = std::chrono::high_resolution_clock::now();
+        std::string output;
+        lua.exec("script.lua", inf, output);
+        auto tend = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = tend - tstart;
+        // std::string output = lua.eval("script.lua", inf);
+        std::cout << output << std::endl;
+        std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
+    }
+    // lua.shell();
+
+    // udho::view::data::bridges::chai chai;
+    // chai.init();
+    // chai.bind(udho::view::data::type<info>{});
+    // lua.shell();
+
+    boost::filesystem::path temp = boost::filesystem::unique_path();
+    {
+        std::ofstream temp_stream(temp.c_str());
+        temp_stream << buffer;
+        temp_stream.close();
+    }
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    auto& primary = resources.primary();
+    resources << udho::view::resources::resource::view("temp", temp);
+
+
+    // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
+    std::cout << "resources.views[temp](inf).str() " << std::endl;
+    std::cout << primary.views("temp", inf).str() << std::endl;
+    std::cout << "see views below " << resources.views.count() << std::endl;
+    for(const auto& res: resources.views){
+        std::cout << res.name() << std::endl;
+    }
 }

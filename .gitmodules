@@ -19,3 +19,6 @@
 [submodule "vendor/tabulate"]
 	path = vendor/tabulate
 	url = https://github.com/p-ranav/tabulate.git
+[submodule "vendor/sol2"]
+	path = vendor/sol2
+	url = https://github.com/ThePhD/sol2
