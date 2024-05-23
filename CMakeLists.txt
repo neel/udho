@@ -139,7 +139,7 @@ else()
     TARGET_LINK_LIBRARIES(udho PUBLIC ${LUA_LIBRARIES})
 endif()
 
-TARGET_LINK_LIBRARIES(udho PUBLIC sol2 chaiscript)
+TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
 
 if(UDHO_BUILD_TESTS)
    enable_testing()

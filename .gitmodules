@@ -22,6 +22,3 @@
 [submodule "vendor/sol2"]
 	path = vendor/sol2
 	url = https://github.com/ThePhD/sol2
-[submodule "vendor/ChaiScript"]
-	path = vendor/ChaiScript
-	url = https://github.com/ChaiScript/ChaiScript.git
