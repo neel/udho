@@ -131,6 +131,11 @@ TEST_CASE("udho network", "[net]") {
 
     std::cout << router << std::endl;
 
+    udho::url::summary::router summary = router.summary();
+    std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"]["f1"]("hello", "world", 42) << std::endl;
+    std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"_h]["f1"_h]("hello", "world", 42) << std::endl;
+
+
     CHECK(router["b"_h]("f1"_h, 24, "Hello", 42) == "/b/f1/24/Hello/42");
 
     boost::asio::io_service service;

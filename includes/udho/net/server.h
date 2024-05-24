@@ -5,6 +5,7 @@
 #include <udho/net/fwd.h>
 #include <udho/net/context.h>
 #include <udho/exceptions/exceptions.h>
+#include <udho/url/summary.h>
 
 namespace udho{
 namespace net{
@@ -15,8 +16,8 @@ struct server_{
     using router_type   = RouterT;
     using server_type   = server_<ListenerT, RouterT>;
 
-    server_(boost::asio::io_service& io, const router_type& router, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _router(router), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
-        _listener = std::make_shared<listener_type>(_io, _endpoint);
+    server_(boost::asio::io_service& io, const router_type& router, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _router(router), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)), _summary(router.summary()) {
+        _listener = std::make_shared<listener_type>(_io, _endpoint, _summary);
     }
 
     void run(){
@@ -64,10 +65,11 @@ struct server_{
             context.finish();
         }
     private:
-        boost::asio::io_service&       _io;
-        const router_type&             _router;
-        boost::asio::ip::tcp::endpoint _endpoint;
-        std::shared_ptr<listener_type> _listener;
+        boost::asio::io_service&          _io;
+        const router_type&                _router;
+        boost::asio::ip::tcp::endpoint    _endpoint;
+        std::shared_ptr<listener_type>    _listener;
+        const udho::url::summary::router& _summary;
 };
 
 template <typename ListenerT, typename RouterT>

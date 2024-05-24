@@ -7,6 +7,7 @@
 #include <udho/hazo/seq/seq.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
+#include <udho/url/summary.h>
 
 namespace udho{
 namespace url{
@@ -22,7 +23,9 @@ struct router{
 
     using mountpoints_type = MountPointsT;
 
-    router(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {}
+    router(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {
+        summarize();
+    }
 
     template <typename XStrT>
     auto& operator[](XStrT&& xstr) { return _mountpoints[std::move(xstr)]; }
@@ -65,8 +68,17 @@ struct router{
         return invoke(url, std::forward<Args>(args)...);
     }
 
+    const summary::router& summary() const { return _summary; }
+
+    private:
+        void summarize(){
+            _mountpoints.visit([this](const auto& m){
+                _summary.add(m);
+            });
+        }
     private:
         mountpoints_type _mountpoints;
+        summary::router  _summary;
 };
 
 }

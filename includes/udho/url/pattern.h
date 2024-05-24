@@ -543,7 +543,7 @@ struct match<pattern::formats::regex, CharT>{
      * @return A string with the replaced content.
      */
     template <typename... Args>
-    std::string replace(const std::tuple<Args...>& args) const { return format(_replace, args); }
+    std::string replace(const std::tuple<Args...>& args) const { return udho::url::format(_replace, args); }
 
     /**
      * @brief Returns the HTTP method associated with this pattern.

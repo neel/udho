@@ -9,6 +9,8 @@
 #include <udho/net/common.h>
 #include <udho/net/bridge.h>
 #include <udho/net/fwd.h>
+#include <udho/url/summary.h>
+#include <udho/hazo/string/basic.h>
 
 namespace udho{
 namespace net{
@@ -29,10 +31,11 @@ class context{
 
     boost::asio::io_service&            _service;
     udho::net::bridge&                  _bridge;
+    const udho::url::summary::router&   _summary;
 
     context() = delete;
 
-    inline context(boost::asio::io_service& io, udho::net::bridge& bridge) : _service(io), _bridge(bridge) { }
+    inline context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary) : _service(io), _bridge(bridge), _summary(summary) { }
 
     struct noop{
         void operator()(boost::system::error_code, std::size_t){}
@@ -59,25 +62,37 @@ class context{
         void set(const boost::beast::http::field& field, const ValueT& value){
             _bridge.set(field, value);
         }
-        void flush(handler_type&& handler, bool only_headers = false){
+        inline void flush(handler_type&& handler, bool only_headers = false){
             _bridge.flush(std::move(handler), only_headers);
         }
-        void flush(bool only_headers = false){
+        inline void flush(bool only_headers = false){
             flush(noop{}, only_headers);
         }
-        void finish(){
+        inline void finish(){
             _bridge.finish();
         }
-        void end(){
+        inline void end(){
             _bridge.flush(std::bind(&context::finish_, this, std::placeholders::_1, std::placeholders::_2));
         }
-        void finish_(boost::system::error_code, std::size_t){
+        inline void finish_(boost::system::error_code, std::size_t){
             finish();
         }
         inline void encoding(types::transfer::encoding enc) { _bridge.encoding(enc); }
         inline types::transfer::encoding encoding() const { return _bridge.encoding(); }
         inline void compression(types::transfer::compression compress) { _bridge.compression(compress); }
         inline types::transfer::compression compression() const { return _bridge.compression(); }
+    public:
+        inline const udho::url::summary::mount_point& route(const std::string& name) const {
+            return _summary[name];
+        }
+        template <typename Char, Char... C>
+        const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
+            return route(hstr.str());
+        }
+        template <typename XArg>
+        const udho::url::summary::mount_point& operator[](XArg&& xarg) const {
+            return route(std::forward<XArg>(xarg));
+        }
 };
 
 }

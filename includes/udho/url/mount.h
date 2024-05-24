@@ -5,10 +5,12 @@
 #define UDHO_URL_MOUNT_H
 
 #include <string>
+#include <udho/url/fwd.h>
 #include <udho/hazo/string/basic.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
 #include <udho/url/action.h>
+#include <udho/url/summary.h>
 
 namespace udho{
 namespace url{
@@ -42,7 +44,10 @@ struct mount_point{
      * @param path Base URL path to which this mount point is mapped.
      * @param actions Actions associated with this mount point.
      */
-    mount_point(name_type&& name, const std::string& path, actions_type&& actions): _name(std::move(name)), _path(path), _actions(std::move(actions)) { check(); }
+    mount_point(name_type&& name, const std::string& path, actions_type&& actions): _name(std::move(name)), _path(path), _actions(std::move(actions)), _summary(name.c_str()) {
+        check();
+        summarize();
+    }
 
     /**
      * Retrieves the compile-time key of the mount_point.
@@ -165,7 +170,14 @@ struct mount_point{
         return format("{}{}", _path, operator[](std::move(xstr)).fill(std::move(x)));
     }
 
+    const summary::mount_point& summary() const { return _summary; }
     private:
+        void summarize(){
+            auto& replacements = _summary._replacements;
+            _actions.visit([&replacements](auto& action){
+                replacements.emplace(action.key().c_str(), action.match().replacement());
+            });
+        }
         void check(){
             if(_path.front() != '/'){
                 throw std::invalid_argument(format("the mountpoint path ({}) must start with /", _path));
@@ -178,6 +190,7 @@ struct mount_point{
         name_type    _name;
         std::string  _path;
         actions_type _actions;
+        summary::mount_point _summary;
 };
 
 /**
