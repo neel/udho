@@ -96,7 +96,7 @@ struct bridge{
     /**
      * Compiles a lua_script. Assumes that the script is already parsed. Stores the lua function inside a map.
      */
-    bool compile(script_type& script){
+    bool compile(script_type& script, const std::string& prefix){
         sol::load_result load_result = _state.load_buffer(script.data(), script.size());
         if (!load_result.valid()) {
             sol::error err = load_result;
@@ -111,7 +111,7 @@ struct bridge{
         }
 
         sol::protected_function view_fnc = view_result;
-        auto it = _views.insert(std::make_pair(script.name(), view_fnc));
+        auto it = _views.insert(std::make_pair(udho::url::format(":{}/{}", prefix, script.name()), view_fnc));
         return it.second;
     }
 
@@ -119,19 +119,20 @@ struct bridge{
      * Executes the lua function from the map by the script name.
      */
     template <typename T>
-    std::size_t exec(const std::string& name, const T& data, std::string& output){
-        if(!_views.count(name)){
-            std::cout << "View not found " << name << std::endl;
+    std::size_t exec(const std::string& name, const std::string& prefix, const T& data, std::string& output){
+        std::string view_index = udho::url::format(":{}/{}", prefix, name);
+        if(!_views.count(view_index)){
+            std::cout << "View not found " << view_index << std::endl;
             return 0;
         }
 
-        sol::protected_function view = _views[name];
+        sol::protected_function view = _views[view_index];
         buffer_type buff;
         sol::protected_function_result result = view(data, buff);
 
         if (!result.valid()) {
             sol::error err = result;
-            std::cout << "Error executing function from " << name << ": " << err.what() << std::endl;
+            std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
             return 0;
         }
 

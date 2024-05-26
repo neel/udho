@@ -1,102 +1,39 @@
 #ifndef UDHO_NET_CONTEXT_H
 #define UDHO_NET_CONTEXT_H
 
-#include <boost/asio.hpp>
-#include <boost/format.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/beast/http/message.hpp>
-#include <boost/beast/http/fields.hpp>
+#include <udho/net/fwd.h>
 #include <udho/net/common.h>
 #include <udho/net/bridge.h>
-#include <udho/net/fwd.h>
+#include <udho/net/stream.h>
 #include <udho/url/summary.h>
-#include <udho/hazo/string/basic.h>
 
 namespace udho{
 namespace net{
 
-/**
- * @brief context is a copiable handle that bridges with the connection object associated with the http request
- * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
- * transfer encoding of the response. The equest and the response objects can be accessed through the connection.
- * @note the context object may be copied across multiple callbacks while using chunked transfer encoding.
- *       from callback1 one may call `context.flush(std::bind(&callback2, context))` which will call the callback2
- *       function once the already written contents are flushed out.
- */
-class context{
-    using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
+template <typename ViewBridgeT>
+struct basic_context<udho::view::resources::store<ViewBridgeT>>: public udho::net::stream{
+    using resource_store = udho::view::resources::store<ViewBridgeT>;
 
-    template <typename ProtocolT>
-    friend struct udho::net::connection;
+    context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary, const resource_store& rosources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
 
-    boost::asio::io_service&            _service;
-    udho::net::bridge&                  _bridge;
-    const udho::url::summary::router&   _summary;
+    inline const udho::url::summary::mount_point& route(const std::string& name) const {
+        return _summary[name];
+    }
+    template <typename Char, Char... C>
+    const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
+        return route(hstr.str());
+    }
+    template <typename XArg>
+    const udho::url::summary::mount_point& operator[](XArg&& xarg) const {
+        return route(std::forward<XArg>(xarg));
+    }
 
-    context() = delete;
-
-    inline context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary) : _service(io), _bridge(bridge), _summary(summary) { }
-
-    struct noop{
-        void operator()(boost::system::error_code, std::size_t){}
-    };
-
-    public:
-        context(const context&) = default;
-        context(context&&) = default;
-
-        inline const udho::net::types::headers::request& request() const { return _bridge.request(); }
-        inline udho::net::types::headers::response& response() { return _bridge.response(); }
-
-        template <typename ValueT>
-        context& operator<<(const std::pair<boost::beast::http::field, ValueT>& header){
-            _bridge << header;
-            return *this;
-        }
-        template <typename StrT>
-        context& operator<<(const StrT& str){
-             _bridge << str;
-            return *this;
-        }
-        template <typename ValueT>
-        void set(const boost::beast::http::field& field, const ValueT& value){
-            _bridge.set(field, value);
-        }
-        inline void flush(handler_type&& handler, bool only_headers = false){
-            _bridge.flush(std::move(handler), only_headers);
-        }
-        inline void flush(bool only_headers = false){
-            flush(noop{}, only_headers);
-        }
-        inline void finish(){
-            _bridge.finish();
-        }
-        inline void end(){
-            _bridge.flush(std::bind(&context::finish_, this, std::placeholders::_1, std::placeholders::_2));
-        }
-        inline void finish_(boost::system::error_code, std::size_t){
-            finish();
-        }
-        inline void encoding(types::transfer::encoding enc) { _bridge.encoding(enc); }
-        inline types::transfer::encoding encoding() const { return _bridge.encoding(); }
-        inline void compression(types::transfer::compression compress) { _bridge.compression(compress); }
-        inline types::transfer::compression compression() const { return _bridge.compression(); }
-    public:
-        inline const udho::url::summary::mount_point& route(const std::string& name) const {
-            return _summary[name];
-        }
-        template <typename Char, Char... C>
-        const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
-            return route(hstr.str());
-        }
-        template <typename XArg>
-        const udho::url::summary::mount_point& operator[](XArg&& xarg) const {
-            return route(std::forward<XArg>(xarg));
-        }
+    private:
+        const udho::url::summary::router&   _summary;
+        const resource_store&               _resources;
 };
 
 }
 }
-
 
 #endif // UDHO_NET_CONTEXT_H

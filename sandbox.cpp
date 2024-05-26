@@ -14,6 +14,71 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/filesystem.hpp>
+#include <udho/net/artifacts.h>
+#include <udho/url/url.h>
+#include <udho/net/listener.h>
+#include <udho/net/connection.h>
+#include <udho/net/protocols/protocols.h>
+#include <udho/net/common.h>
+#include <udho/net/server.h>
+#include <type_traits>
+#include <curl/curl.h>
+#include <udho/url/url.h>
+#include <boost/algorithm/string.hpp>
+#include <udho/net/artifacts.h>
+
+using socket_type     = udho::net::types::socket;
+using http_protocol   = udho::net::protocols::http<socket_type>;
+using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
+using http_connection = udho::net::connection<http_protocol>;
+using scgi_connection = udho::net::connection<scgi_protocol>;
+using http_listener   = udho::net::listener<http_connection>;
+using scgi_listener   = udho::net::listener<scgi_connection>;
+using http_server     = udho::net::server<http_listener>;
+using scgi_server     = udho::net::server<scgi_listener>;
+
+void chunk3(udho::net::stream context){
+    context << "Chunk 3 (Final)";
+    context.finish();
+}
+
+void chunk2(udho::net::stream context){
+    context << "chunk 2";
+    context.flush(std::bind(&chunk3, context));
+}
+
+void chunk(udho::net::stream context){
+    context.encoding(udho::net::types::transfer::encoding::chunked);
+    context << "Chunk 1";
+    context.flush(std::bind(&chunk2, context));
+}
+
+void f0(udho::net::stream context){
+    context << "Hello f0";
+    context.finish();
+}
+
+int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+}
+
+struct X{
+    void f0(udho::net::stream context){
+        context << "Hello X::f0";
+        context.finish();
+    }
+
+    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello X::f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+    }
+};
+
 
 struct info{
     std::string name;
@@ -107,7 +172,7 @@ int main(){
     parser.parse(buffer, buffer+sizeof(buffer), script);
     script.finish();
     std::cout << script.body() << std::endl;
-    bool res = lua.compile(script);
+    bool res = lua.compile(script, "");
     // std::cout << "compilation result " << res << std::endl;
     info inf;
     inf.name = "NAME";
@@ -117,7 +182,7 @@ int main(){
     {
         auto tstart = std::chrono::high_resolution_clock::now();
         std::string output;
-        lua.exec("script.lua", inf, output);
+        lua.exec("script.lua", "", inf, output);
         auto tend = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = tend - tstart;
         // std::string output = lua.eval("script.lua", inf);
@@ -126,7 +191,7 @@ int main(){
     }{
         auto tstart = std::chrono::high_resolution_clock::now();
         std::string output;
-        lua.exec("script.lua", inf, output);
+        lua.exec("script.lua", "", inf, output);
         auto tend = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = tend - tstart;
         // std::string output = lua.eval("script.lua", inf);
@@ -159,4 +224,28 @@ int main(){
     for(const auto& res: resources.views){
         std::cout << res.name() << std::endl;
     }
+
+    using namespace udho::hazo::string::literals;
+
+
+    X x;
+    auto router = udho::url::router(
+        udho::url::root(
+            udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
+            udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
+            udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+        ) |
+        udho::url::mount("b"_h, "/b",
+            udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
+            udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+        )
+    );
+
+    boost::asio::io_service service;
+    auto server     = http_server{service, 9000};
+    auto artifacts  = udho::net::artifacts{router, resources};
+    server.run(artifacts);
+
+    service.run();
+
 }

@@ -5,7 +5,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <udho/net/common.h>
-#include <udho/net/context.h>
+#include <udho/net/stream.h>
 #include <udho/net/bridge.h>
 #include <udho/net/fwd.h>
 #include <chrono>
@@ -179,7 +179,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
     using clock_type      = std::chrono::time_point<std::chrono::system_clock>;
     using self_type       = connection<ProtocolT>;
     using connection_type = connection<ProtocolT>;
-    using processer_type  = std::function<void (udho::net::context&&)>;
+    using processer_type  = std::function<void (udho::net::stream&&)>;
     using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
     using bridge_ptr      = std::shared_ptr<udho::net::bridge>;
     using buffer_type     = std::basic_string<std::uint8_t>;
@@ -204,10 +204,10 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
     template <typename Handler>
     using preprocess      = detail::preprocess<Handler>;
 
-    connection(boost::asio::io_service& service, const udho::url::summary::router& summary, udho::net::types::socket socket)
+    connection(boost::asio::io_service& service, udho::net::types::socket socket)
       : _io(service), _socket(std::move(socket)), _compression_strand(_socket.get_executor()), _write_strand(_socket.get_executor()), _stat_strand(_socket.get_executor()),
         _reader(std::make_shared<reader_type>(_request, _socket)), _writer(std::make_shared<writer_type>(_response, _socket)),
-        _stream(&_streambuf), _summary(summary)
+        _stream(&_streambuf)
     {}
     void start(processer_type&& processor){
         _processor = std::move(processor);
@@ -237,7 +237,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
                 std::bind(&self_type::flush<handler_type>, shared_from_this(), std::placeholders::_1, std::placeholders::_2),
                 std::bind(&self_type::finish, shared_from_this())
             );
-            udho::net::context context(_io, *_bridge_ptr, _summary);
+            udho::net::stream context(_io, *_bridge_ptr);
             _processor(std::move(context));
         }
 
@@ -359,7 +359,6 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         bridge_ptr                          _bridge_ptr;
         buffer_type                         _compressed;
         buffers_type                        _buffers;
-        const udho::url::summary::router&   _summary;
 };
 
 

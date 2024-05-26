@@ -3,25 +3,25 @@
 
 #include <udho/url/fwd.h>
 #include <udho/net/fwd.h>
-#include <udho/net/context.h>
+#include <udho/net/stream.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/url/summary.h>
 
 namespace udho{
 namespace net{
 
-template <typename ListenerT, typename RouterT>
-struct server_{
+template <typename ListenerT>
+struct server{
     using listener_type = ListenerT;
-    using router_type   = RouterT;
-    using server_type   = server_<ListenerT, RouterT>;
+    using server_type   = server<ListenerT>;
 
-    server_(boost::asio::io_service& io, const router_type& router, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _router(router), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)), _summary(router.summary()) {
-        _listener = std::make_shared<listener_type>(_io, _endpoint, _summary);
+    server(boost::asio::io_service& io, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
+        _listener = std::make_shared<listener_type>(_io, _endpoint);
     }
 
-    void run(){
-        _listener->listen(std::bind(&server_type::serve, this, std::placeholders::_1, std::placeholders::_2));
+    template <typename ArtifactsT>
+    void run(const ArtifactsT& artifacts){
+        _listener->listen(std::bind(&server_type::serve<ArtifactsT>, this, std::placeholders::_1, std::placeholders::_2, artifacts));
     }
 
     void stop(){
@@ -29,53 +29,55 @@ struct server_{
     }
 
     private:
-        void prepare(boost::asio::ip::address address, udho::net::context context){
+        void prepare(boost::asio::ip::address address, udho::net::stream context){
             context.set(boost::beast::http::field::server, "udho");
         }
-        void serve(boost::asio::ip::address address, udho::net::context&& context){
-            prepare(address, context);
-            boost::beast::string_view tgt = context.request().target();
+        template <typename ArtifactsT>
+        void serve(boost::asio::ip::address address, udho::net::stream&& stream, const ArtifactsT& artifacts){
+            using router_type = typename ArtifactsT::router_type;
+            const router_type& router = artifacts.router();
+
+            prepare(address, stream);
+            boost::beast::string_view tgt = stream.request().target();
             std::string target(tgt.begin(), tgt.end());
             bool found = false;
             try{
-                found = _router(target, context);
+                found = router(target, stream);
                 if(!found){
-                    throw udho::http::error(address, context, boost::beast::http::status::not_found);
+                    throw udho::http::error(address, stream, boost::beast::http::status::not_found);
                 }
             } catch(std::exception& ex) {
-                fail(address, context, ex);
+                fail(address, stream, ex);
             } catch(udho::http::exception& ex) {
-                fail(context, ex);
+                fail(stream, ex);
             } catch(udho::http::error& error) {
-                fail(context, error);
+                fail(stream, error);
             }
         }
-        void fail(udho::net::context context, const udho::http::exception& ex){
-            context << udho::url::format("Error: {}", ex.what());
-            context.finish();
+        void fail(udho::net::stream stream, const udho::http::exception& ex){
+            stream << udho::url::format("Error: {}", ex.what());
+            stream.finish();
         }
-        void fail(udho::net::context context, const udho::http::error& ex){
+        void fail(udho::net::stream stream, const udho::http::error& ex){
             const udho::http::error& error = dynamic_cast<const udho::http::error&>(ex);
-            context.response().result(error.status());
-            context << udho::url::format("Error: {}", error.reason());
-            context.finish();
+            stream.response().result(error.status());
+            stream << udho::url::format("Error: {}", error.reason());
+            stream.finish();
         }
-        void fail(boost::asio::ip::address address, udho::net::context context, const std::exception& ex){
+        void fail(boost::asio::ip::address address, udho::net::stream context, const std::exception& ex){
             context << udho::url::format("Error: {}", ex.what());
             context.finish();
         }
     private:
         boost::asio::io_service&          _io;
-        const router_type&                _router;
         boost::asio::ip::tcp::endpoint    _endpoint;
         std::shared_ptr<listener_type>    _listener;
-        const udho::url::summary::router& _summary;
 };
 
-template <typename ListenerT, typename RouterT>
-server_<ListenerT, RouterT> server(boost::asio::io_service& io, const RouterT& router, std::uint32_t port, const std::string& ip = "0.0.0.0"){
-    return server_<ListenerT, RouterT>(io, router, port, ip);
-}
+// template <typename ListenerT>
+// basic_server<ListenerT> server(boost::asio::io_service& io,  std::uint32_t port, const std::string& ip = "0.0.0.0"){
+//     return basic_server<ListenerT>(io, port, ip);
+// }
 
 }
 }

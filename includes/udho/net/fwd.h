@@ -5,7 +5,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <udho/net/common.h>
-#include <udho/net/context.h>
+#include <udho/net/stream.h>
 #include <chrono>
 
 namespace udho{
@@ -14,13 +14,16 @@ namespace net{
 template <typename ProtocolT>
 struct connection;
 
-template <typename ListenerT, typename RouterT>
-struct server_;
+template <typename ListenerT>
+struct server;
 
-class context;
+class stream;
 
-template <typename RouterT>
-struct handle;
+// template <typename RouterT>
+// struct handle;
+
+template <typename ResourceStoreT>
+struct basic_context;
 
 }
 }

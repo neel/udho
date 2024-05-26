@@ -76,14 +76,14 @@ template <typename BridgeT>
 struct proxy{
     using bridge_type = BridgeT;
 
-    proxy(const std::string& name, bridge_type& bridge): _name(name), _bridge(bridge) {}
+    proxy(const std::string& name, const std::string& prefix, bridge_type& bridge): _name(name), _prefix(prefix), _bridge(bridge) {}
 
     inline std::string name() const { return _name; }
 
     template <typename T>
     view::results eval(T&& data){
         results res(_name);
-        std::size_t size = _bridge.exec(_name, std::forward<T>(data), res.output());
+        std::size_t size = _bridge.exec(_name, _prefix, std::forward<T>(data), res.output());
         res.size(size);
         return res;
     }
@@ -95,6 +95,7 @@ struct proxy{
 
     private:
         std::string  _name;
+        std::string  _prefix;
         bridge_type& _bridge;
 };
 
@@ -160,12 +161,13 @@ namespace detail {
         using bridge_type = typename BundleT::bridge_type;
         using result_type = view::proxy<bridge_type>;
 
-        view_proxy(const resource& res, BundleT& bundle): _res(res), _bridge(bundle.bridge()) {}
-        result_type operator()() { return result_type{_res.name(), _bridge}; }
+        view_proxy(const resource& res, BundleT& bundle): _res(res), _bridge(bundle.bridge()), _prefix(bundle.prefix()) {}
+        result_type operator()() { return result_type{_res.name(), _prefix, _bridge}; }
 
         private:
             const resource& _res;
             bridge_type&    _bridge;
+            std::string     _prefix;
     };
 }
 
@@ -254,7 +256,7 @@ struct bundle{
     view_proxy view(const std::string& name){
         auto it = by_composite().find(boost::make_tuple(resource::resource_type::view, name));
         if (it != by_composite().end()) {
-            return view_proxy{name, _bridge};
+            return view_proxy{name, _prefix, _bridge};
         } else {
             throw std::out_of_range("Resource with name '" + name + "' not found");
         }
@@ -268,7 +270,7 @@ struct bundle{
             udho::view::sections::parser parser;
             parser.parse(res.path().string(), script);
             script.finish();
-            return _bridge.compile(script);
+            return _bridge.compile(script, _prefix);
         }
     private:
         bridge_type& _bridge;

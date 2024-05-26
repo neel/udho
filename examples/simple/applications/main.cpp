@@ -3,12 +3,12 @@
 
 #include "main.h"
 
-void simple::apps::main::home(udho::net::context context){
+void simple::apps::main::home(udho::net::stream context){
     context << __PRETTY_FUNCTION__;
     context.finish();
 }
 
-void simple::apps::main::contact(udho::net::context context){
+void simple::apps::main::contact(udho::net::stream context){
     context << __PRETTY_FUNCTION__;
     context.finish();
 }

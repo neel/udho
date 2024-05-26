@@ -15,6 +15,9 @@
 #include <curl/curl.h>
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
+#include <udho/net/artifacts.h>
+#include <udho/view/resources/store.h>
+#include <udho/view/bridges/lua.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -24,28 +27,28 @@ using scgi_connection = udho::net::connection<scgi_protocol>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
-void chunk3(udho::net::context context){
+void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
     context.finish();
 }
 
-void chunk2(udho::net::context context){
+void chunk2(udho::net::stream context){
     context << "chunk 2";
     context.flush(std::bind(&chunk3, context));
 }
 
-void chunk(udho::net::context context){
+void chunk(udho::net::stream context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
     context.flush(std::bind(&chunk2, context));
 }
 
-void f0(udho::net::context context){
+void f0(udho::net::stream context){
     context << "Hello f0";
     context.finish();
 }
 
-int f1(udho::net::context context, int a, const std::string& b, const double& c){
+int f1(udho::net::stream context, int a, const std::string& b, const double& c){
         context << "Hello f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -53,12 +56,12 @@ int f1(udho::net::context context, int a, const std::string& b, const double& c)
 }
 
 struct X{
-    void f0(udho::net::context context){
+    void f0(udho::net::stream context){
         context << "Hello X::f0";
         context.finish();
     }
 
-    int f1(udho::net::context context, int a, const std::string& b, const double& c){
+    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
         context << "Hello X::f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -140,9 +143,13 @@ TEST_CASE("udho network", "[net]") {
 
     boost::asio::io_service service;
 
-    auto server = udho::net::server<http_listener>(service, std::move(router), 9000);
+    auto server = udho::net::server<http_listener>(service, 9000);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    auto artifacts  = udho::net::artifacts{router, resources};
 
-    server.run();
+    server.run(artifacts);
 
     std::thread thread([&]{
         service.run();

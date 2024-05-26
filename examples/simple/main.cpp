@@ -13,16 +13,16 @@ using http_connection = udho::net::connection<http_protocol>;
 using http_listener   = udho::net::listener<http_connection>;
 
 int main(int, char**){
-    simple::manifest manifest;
-    auto router = manifest.router();
-
-    std::cout << router << std::endl;
-
-    boost::asio::io_service io;
-    auto server = udho::net::server<http_listener>(io, router, 9000);
-    server.run();
-
-    io.run();
+    // simple::manifest manifest;
+    // auto router = manifest.router();
+    //
+    // std::cout << router << std::endl;
+    //
+    // boost::asio::io_service io;
+    // auto server = udho::net::server<http_listener>(io, router, 9000);
+    // server.run();
+    //
+    // io.run();
 
     return 0;
 }
