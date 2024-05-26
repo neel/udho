@@ -29,110 +29,107 @@
 #define UDHO_VIEW_RESOURCES_RESOURCE_H
 
 #include <string>
+#include <fstream>
 #include <boost/filesystem/path.hpp>
 #include <udho/url/detail/format.h>
+#include <boost/iostreams/device/mapped_file.hpp>
 
 namespace udho{
 namespace view{
 namespace resources{
 
-/**
- * @brief Represents a resource with a specific type, name, and path.
- */
-struct resource {
-    /**
-     * @brief The type of the resource.
-     */
-    enum class resource_type {
-        none, ///< No specific type.
-        view, ///< Resource is a view.
-        asset ///< Resource is an asset.
-    };
+enum class type {
+    none, ///< No specific type.
+    view, ///< Resource is a view.
+    asset ///< Resource is an asset.
+};
 
-    /**
-     * @brief Constructs a resource with the specified type, name, and path.
-     * @param type The type of the resource.
-     * @param name The name of the resource.
-     * @param path The path to the resource.
-     */
-    inline resource(resource_type type, const std::string& name, const boost::filesystem::path& path): _type(type), _name(name), _path(path) {}
+struct resource_info{
+    inline explicit resource_info(udho::view::resources::type type, const std::string& name): _type(type), _name(name) {}
+    inline udho::view::resources::type type() const { return _type; }
+    inline std::string name() const { return _name; }
+    private:
+        udho::view::resources::type _type;
+        std::string _name;
+};
 
-    /**
-     * @brief Constructs a resource with the specified type and path. Derives the name from the filename of the path.
-     * @param type The type of the resource.
-     * @param path The path to the resource.
-     */
-    inline resource(resource_type type, const boost::filesystem::path& path): _type(type), _name(path.filename().string()), _path(path) {}
+template <type R, typename IteratorT>
+struct resource_buffer{
+    enum {type = R};
+    using iterator_type = IteratorT;
 
-    /**
-     * @brief Returns the type of the resource.
-     * @return The type of the resource.
-     */
-    inline resource_type type() const { return _type; }
-
-    inline bool is_view() const { return _type == resource_type::view; }
-    inline bool is_asset() const { return _type == resource_type::asset; }
+    resource_buffer(const std::string& name, iterator_type begin, iterator_type end): _name(name), _begin(begin), _end(end) {}
 
     /**
      * @brief Returns the name of the resource.
      * @return The name of the resource.
      */
-    inline std::string name() const { return _name; }
+    std::string name() const { return _name; }
+    iterator_type begin() const { return _begin; }
+    iterator_type end() const { return _end; }
 
-    /**
-     * @brief Returns the path to the resource.
-     * @return The path to the resource.
-     */
-    inline const boost::filesystem::path& path() const { return _path; }
-
-    /**
-     * @brief Creates and returns a view resource with the specified name and path.
-     * @param name The name of the view resource.
-     * @param path The path to the view resource.
-     * @return A view resource.
-     */
-    inline static resource view(const std::string& name, const boost::filesystem::path& path){
-        return resource{resource_type::view, name, path};
-    }
-
-    /**
-     * @brief Creates and returns an asset resource with the specified name and path.
-     * @param name The name of the asset resource.
-     * @param path The path to the asset resource.
-     * @return An asset resource.
-     */
-    inline static resource asset(const std::string& name, const boost::filesystem::path& path){
-        return resource{resource_type::asset, name, path};
-    }
-
-    /**
-     * @brief Creates and returns a view resource with the specified path.
-     * Derives the name from the filename of the path.
-     * @param path The path to the view resource.
-     * @return A view resource.
-     */
-    inline static resource view(const boost::filesystem::path& path){
-        return resource{resource_type::view, path};
-    }
-
-    /**
-     * @brief Creates and returns an asset resource with the specified path.
-     * Derives the name from the filename of the path.
-     * @param path The path to the asset resource.
-     * @return An asset resource.
-     */
-    inline static resource asset(const boost::filesystem::path& path){
-        return resource{resource_type::asset, path};
-    }
-
-    inline bool operator<(const resource& other) const {
-        return _name < other._name;
+    resource_info info() const {
+        return resource_info{type, _name};
     }
 
     private:
-        resource_type _type; ///< The type of the resource.
         std::string _name; ///< The name of the resource.
-        boost::filesystem::path _path; ///< The path to the resource.
+        iterator_type _begin, _end;
+};
+
+
+template <type R>
+struct resource_file{
+    static constexpr udho::view::resources::type type = R;
+    using iterator_type = const char*;
+
+    template <typename PathT = boost::filesystem::path>
+    resource_file(const std::string& name, const PathT& path): _name(name), _mmap(path.c_str(), boost::iostreams::mapped_file::readonly){}
+
+    /**
+     * @brief Returns the name of the resource.
+     * @return The name of the resource.
+     */
+    std::string name() const { return _name; }
+    iterator_type begin() const { return _mmap.const_data(); }
+    iterator_type end() const { return begin() + _mmap.size(); }
+
+    resource_info info() const {
+        return resource_info{type, _name};
+    }
+
+    private:
+        std::string _name; ///< The name of the resource.
+        boost::iostreams::mapped_file _mmap;
+};
+
+// template <type R, typename IteratorT>
+// resource_buffer<R, IteratorT> resource(const std::string& name, IteratorT begin, IteratorT end){
+//     return resource_buffer<R, IteratorT>{name, begin, end};
+// }
+//
+// template <type R, typename PathT = boost::filesystem::path>
+// resource_file<R> resource(const std::string& name, const PathT& path){
+//     return resource_file<R>{name, path};
+// }
+
+namespace resource{
+    template <typename IteratorT>
+    static resource_buffer<udho::view::resources::type::view, IteratorT> view(const std::string& name, IteratorT begin, IteratorT end){
+        return resource_buffer<type::view, IteratorT>{name, begin, end};
+    }
+    template <typename IteratorT>
+    static resource_buffer<udho::view::resources::type::asset, IteratorT> asset(const std::string& name, IteratorT begin, IteratorT end){
+        return resource_buffer<type::asset, IteratorT>{name, begin, end};
+    }
+    template <typename PathT = boost::filesystem::path>
+    static resource_file<udho::view::resources::type::view> view(const std::string& name, const PathT& path){
+        return resource_file<type::view>{name, path};
+    }
+    template <typename PathT = boost::filesystem::path>
+    static resource_file<udho::view::resources::type::asset> asset(const std::string& name, const PathT& path){
+        return resource_file<type::asset>{name, path};
+    }
 };
 
 }

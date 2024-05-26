@@ -105,10 +105,10 @@ template <typename BridgeT>
 struct bundle;
 
 namespace detail {
-    template<typename BundleT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resource::resource_type type>
+    template<typename BundleT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resources::type type>
     struct bundle_proxy;
 
-    template<typename BridgeT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resource::resource_type type>
+    template<typename BridgeT, typename ProxyT, typename TypeIndex, typename CompositeIndex, resources::type type>
     struct bundle_proxy<bundle<BridgeT>, ProxyT, TypeIndex, CompositeIndex, type> {
         using bundle_type        = bundle<BridgeT>;
         using proxy_type         = ProxyT;
@@ -161,16 +161,22 @@ namespace detail {
         using bridge_type = typename BundleT::bridge_type;
         using result_type = view::proxy<bridge_type>;
 
-        view_proxy(const resource& res, BundleT& bundle): _res(res), _bridge(bundle.bridge()), _prefix(bundle.prefix()) {}
+        view_proxy(const resource_info& res, BundleT& bundle): _res(res), _bridge(bundle.bridge()), _prefix(bundle.prefix()) {}
         result_type operator()() { return result_type{_res.name(), _prefix, _bridge}; }
 
         private:
-            const resource& _res;
-            bridge_type&    _bridge;
-            std::string     _prefix;
+            const resource_info& _res;
+            bridge_type&        _bridge;
+            std::string         _prefix;
     };
 }
 
+/**
+ * @brief resource store stores the resources like views, assets etc..
+ * It doesn't actually store any resource except it's name, rather it passes the resources to the
+ * bridge with the bundle name as prefix. For the assets it passes them to the dispatcher. Latter
+ * when requested bundle acts as a proxy between the bridge and the dispatcher.
+ */
 template <typename BridgeT>
 struct bundle{
     using bridge_type = BridgeT;
@@ -184,23 +190,23 @@ struct bundle{
     };
 
     using resource_set = boost::multi_index_container<
-        resource,
+        resource_info,
         boost::multi_index::indexed_by<
             boost::multi_index::ordered_unique<
                 boost::multi_index::tag<typename tags::composite>,
                 boost::multi_index::composite_key<
-                    resource,
-                    boost::multi_index::const_mem_fun<resource, resource::resource_type, &resource::type>,
-                    boost::multi_index::const_mem_fun<resource, std::string, &resource::name>
+                    resource_info,
+                    boost::multi_index::const_mem_fun<resource_info, resources::type, &resource_info::type>,
+                    boost::multi_index::const_mem_fun<resource_info, std::string, &resource_info::name>
                 >
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::name>,
-                boost::multi_index::const_mem_fun<resource, std::string, &resource::name>
+                boost::multi_index::const_mem_fun<resource_info, std::string, &resource_info::name>
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::type>,
-                boost::multi_index::const_mem_fun<resource, resource::resource_type, &resource::type>
+                boost::multi_index::const_mem_fun<resource_info, resources::type, &resource_info::type>
             >
         >
     >;
@@ -217,7 +223,7 @@ struct bundle{
     using composite_const_iterator = typename resource_set::template index<typename tags::composite>::type::const_iterator;
     using size_type                = typename resource_set::size_type;
 
-    template <resource::resource_type type>
+    template <resources::type type>
     using bundle_proxy = detail::bundle_proxy<
         self_type,
         detail::view_proxy<self_type>,
@@ -226,19 +232,14 @@ struct bundle{
         type
     >;
 
-    using bundle_proxy_view = bundle_proxy<resource::resource_type::view>;
+    using bundle_proxy_view = bundle_proxy<resources::type::view>;
 
     friend bundle_proxy_view;
+
 
     explicit bundle(bridge_type& bridge, const std::string& prefix): _bridge(bridge), _prefix(prefix), views(*this) {}
     bundle(const bundle&) = delete;
 
-    void add(const resource& res) {
-        _resources.insert(res);
-        if(res.is_view()){
-            prepare_view(res);
-        }
-    }
 
     template <typename Tag>
     typename resource_set::template index<Tag>::type& by() { return _resources.template get<Tag>(); }
@@ -246,15 +247,33 @@ struct bundle{
     typename resource_set::template index<typename tags::name>::type& by_name() { return by<typename tags::name>(); }
     typename resource_set::template index<typename tags::composite>::type& by_composite() { return by<typename tags::composite>(); }
 
+
+    template <typename IteratorT>
+    void add(const resource_buffer<udho::view::resources::type::view, IteratorT>& res) {
+        _resources.insert(res.info());
+        prepare_view(res);
+    }
+    void add(const resource_file<udho::view::resources::type::view>& res) {
+        _resources.insert(res.info());
+        prepare_view(res);
+    }
+
     std::string prefix() const { return _prefix; }
 
-    friend bundle& operator<<(bundle& b, const resource& res){
+    template <udho::view::resources::type type, typename IteratorT>
+    friend bundle& operator<<(bundle& b, resource_buffer<type, IteratorT>& res){
+        b.add(res);
+        return b;
+    }
+
+    template <udho::view::resources::type type>
+    friend bundle& operator<<(bundle& b, const resource_file<type>& res){
         b.add(res);
         return b;
     }
 
     view_proxy view(const std::string& name){
-        auto it = by_composite().find(boost::make_tuple(resource::resource_type::view, name));
+        auto it = by_composite().find(boost::make_tuple(resources::type::view, name));
         if (it != by_composite().end()) {
             return view_proxy{name, _prefix, _bridge};
         } else {
@@ -265,10 +284,11 @@ struct bundle{
     bridge_type& bridge() { return _bridge; }
 
     private:
-        bool prepare_view(const resource& res){
+        template <typename ResourceT>
+        bool prepare_view(const ResourceT& res){
             typename bridge_type::script_type script = _bridge.create(res.name());
             udho::view::sections::parser parser;
-            parser.parse(res.path().string(), script);
+            parser.parse(res.begin(), res.end(), script);
             script.finish();
             return _bridge.compile(script, _prefix);
         }

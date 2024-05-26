@@ -150,9 +150,12 @@ int main(){
 
     auto pos = begin;
     while(pos != end){
-        auto it = trie.next(pos, end);
-        pos = it.first;
-        std::cout << trie[it.second] << std::endl;
+        auto tpos = trie.next(pos, end);
+        pos = tpos.token_end;
+        std::cout << trie[tpos.token_id] << std::endl;
+        std::string buff;
+        std::copy(tpos.token_begin, tpos.token_end, std::back_inserter(buff));
+        std::cout << "buff: " << std::distance(tpos.token_begin, tpos.token_end) << " " << buff << std::endl;
     }
 
     std::cout << "hello world" << std::endl;
@@ -216,17 +219,17 @@ int main(){
     auto& primary = resources.primary();
     resources << udho::view::resources::resource::view("temp", temp);
 
-
-    // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
-    std::cout << "resources.views[temp](inf).str() " << std::endl;
-    std::cout << primary.views("temp", inf).str() << std::endl;
     std::cout << "see views below " << resources.views.count() << std::endl;
     for(const auto& res: resources.views){
         std::cout << res.name() << std::endl;
     }
+    // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
+    auto temp_view = primary.views["temp"];
+    auto results = temp_view(inf);
+    std::cout << "resources.views[temp](inf).str() " << std::endl;
+    std::cout << primary.views("temp", inf).str() << std::endl;
 
     using namespace udho::hazo::string::literals;
-
 
     X x;
     auto router = udho::url::router(

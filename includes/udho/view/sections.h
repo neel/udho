@@ -152,14 +152,14 @@ struct parser{
     inline parser& close_verbatim(const std::string& tag) { _close_verbatim = tag; return *this; }
     inline const std::string& close_verbatim() const { return _close_verbatim; }
 
-    template <typename Function>
-    inline void parse(const std::string& file, Function&& fptr) const {
-        std::string buffer;
-        boost::iostreams::mapped_file mmap(file, boost::iostreams::mapped_file::readonly);
-        auto begin = mmap.const_data();
-        auto end   = begin + mmap.size();
-        parse(begin, end, std::forward<Function>(fptr));
-    }
+    // template <typename Function>
+    // inline void parse(const std::string& file, Function&& fptr) const {
+    //     std::string buffer;
+    //     boost::iostreams::mapped_file mmap(file, boost::iostreams::mapped_file::readonly);
+    //     auto begin = mmap.const_data();
+    //     auto end   = begin + mmap.size();
+    //     parse(begin, end, std::forward<Function>(fptr));
+    // }
 
     template <typename InputIt, typename Function>
     inline void parse(InputIt begin, InputIt end, Function&& fptr) const {

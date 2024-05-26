@@ -79,7 +79,8 @@ struct store: detail::store<BridgeT>{
     using bundle_proxy_view = typename detail::store<BridgeT>::bundle_type::bundle_proxy_view;
 
     store(bridge_type& bridge): detail::store<BridgeT>(bridge), views(detail::store<BridgeT>::primary().views) {}
-    friend store& operator<<(store& s, const resource& res){
+    template <typename ResourceT>
+    friend store& operator<<(store& s, const ResourceT& res){
         s.primary() << res;
         return s;
     }
