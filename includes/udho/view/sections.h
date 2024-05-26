@@ -172,20 +172,21 @@ struct parser{
 
         auto pos = begin;
         while(pos != end){
-            auto it = trie.next(pos, end);
-            pos = it.first;
+            auto tpos = trie.next(pos, end);
+            // auto token_len = trie[tpos.token_id].size();
+            pos = tpos.token_end;
             if(pos == end) {
                 auto scope_begin = (last_tag == sections::section::text) ? last_close : last_open;
-                auto scope_end   = (it.second == 0) ? end : (pos-trie[it.second].size());
+                auto scope_end   = (tpos.token_id == 0) ? end : tpos.token_begin;
                 fptr(section{type(last_tag), scope_begin, scope_end});
                 break;
             }
 
-            std::uint32_t id = it.second;
+            std::uint32_t id = tpos.token_id;
             if(id > 100 && id < 300){   // open tag
                 if(block_open == 0){
-                    auto scope_end = pos - trie[it.second].size();
-                    if((scope_end - last_close) > 0){
+                    auto scope_end = tpos.token_begin;
+                    if(std::distance(last_close, scope_end) > 0){
                         fptr(section{section::text, last_close, scope_end});
                     }
                     last_open = pos;
@@ -201,7 +202,7 @@ struct parser{
                         (id == tag_close_comment  && last_tag == sections::section::comment)  ||
                         (id == tag_close_verbatim && last_tag == sections::section::verbatim)
                     ){
-                        fptr(section{type(last_tag), last_open, pos-trie[it.second].size()});
+                        fptr(section{type(last_tag), last_open, tpos.token_begin});
                         last_close = pos;
                         last_tag   = sections::section::text;
                         block_open = 0;
