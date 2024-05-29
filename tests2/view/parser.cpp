@@ -7,6 +7,7 @@
 #endif
 
 #include <udho/view/sections.h>
+#include <udho/view/parser.h>
 
 struct parsed_document{
     using const_iterator = std::vector<udho::view::sections::section>::const_iterator;

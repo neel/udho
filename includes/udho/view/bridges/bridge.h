@@ -34,6 +34,7 @@
 #include <sol/sol.hpp>
 #include <udho/url/detail/format.h>
 #include <udho/view/sections.h>
+#include <udho/view/parser.h>
 #include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/lua/buffer.h>
 #include <udho/view/bridges/lua/binder.h>

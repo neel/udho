@@ -34,7 +34,7 @@
 #include <vector>
 #include <iomanip>
 #include <stdexcept>
-#include <udho/view/scope.h>
+#include <udho/view/metatype.h>
 #include <udho/view/sections.h>
 
 namespace udho{

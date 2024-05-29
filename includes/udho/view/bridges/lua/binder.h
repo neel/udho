@@ -32,7 +32,7 @@
 #include <vector>
 #include <functional>
 #include <sol/sol.hpp>
-#include <udho/view/scope.h>
+#include <udho/view/metatype.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/state.h>
 
