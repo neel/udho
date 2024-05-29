@@ -53,9 +53,9 @@ struct resource_info{
         std::string _name;
 };
 
-template <type R, typename IteratorT>
+template <resources::type R, typename IteratorT>
 struct resource_buffer{
-    enum {type = R};
+    static constexpr udho::view::resources::type type = R;
     using iterator_type = IteratorT;
 
     resource_buffer(const std::string& name, iterator_type begin, iterator_type end): _name(name), _begin(begin), _end(end) {}

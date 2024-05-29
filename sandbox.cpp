@@ -160,22 +160,10 @@ int main(){
 
     std::cout << "hello world" << std::endl;
 
-    // FILE* fptr = fmemopen(buffer, strlen (buffer), "r");
-    // int posix_handle = fileno(fptr);
-    // boost::iostreams::file_descriptor_source descriptor(posix_handle, boost::iostreams::close_handle);
-    // boost::iostreams::stream stream(descriptor);
-
-    // std::vector<udho::view::sections::section> sections;
-    // parser.parse(buffer, buffer+sizeof(buffer), std::back_inserter(sections));
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<info>{});
-    udho::view::data::bridges::lua::script_type script = lua.create("script.lua");
-    udho::view::sections::parser parser;
-    parser.parse(buffer, buffer+sizeof(buffer), script);
-    script.finish();
-    std::cout << script.body() << std::endl;
-    bool res = lua.compile(script, "");
+    bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
     // std::cout << "compilation result " << res << std::endl;
     info inf;
     inf.name = "NAME";
@@ -201,12 +189,7 @@ int main(){
         std::cout << output << std::endl;
         std::cout << "Execution time: " << std::fixed << std::setprecision(8) << duration.count() << " seconds" << std::endl;
     }
-    // lua.shell();
 
-    // udho::view::data::bridges::chai chai;
-    // chai.init();
-    // chai.bind(udho::view::data::type<info>{});
-    // lua.shell();
 
     boost::filesystem::path temp = boost::filesystem::unique_path();
     {
@@ -216,7 +199,7 @@ int main(){
     }
 
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
-    auto& primary = resources.primary();
+    // auto& primary = resources.primary();
     resources << udho::view::resources::resource::view("temp", temp);
 
     std::cout << "see views below " << resources.views.count() << std::endl;
@@ -224,10 +207,10 @@ int main(){
         std::cout << res.name() << std::endl;
     }
     // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
-    auto temp_view = primary.views["temp"];
+    auto temp_view = resources.views["temp"];
     auto results = temp_view(inf);
     std::cout << "resources.views[temp](inf).str() " << std::endl;
-    std::cout << primary.views("temp", inf).str() << std::endl;
+    std::cout << resources.views("temp", inf).str() << std::endl;
 
     using namespace udho::hazo::string::literals;
 

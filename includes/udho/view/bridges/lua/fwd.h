@@ -25,31 +25,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_H
-#define UDHO_VIEW_BRIDGES_LUA_H
+#ifndef UDHO_VIEW_BRIDGES_LUA_FWD_H
+#define UDHO_VIEW_BRIDGES_LUA_FWD_H
 
-#include <udho/view/bridges/lua/state.h>
-#include <udho/view/bridges/lua/compiler.h>
-#include <udho/view/bridges/lua/script.h>
-#include <udho/view/bridges/bridge.h>
 
 namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
 
-using lua = udho::view::data::bridges::bridge<
-                detail::lua::state,
-                detail::lua::compiler,
-                detail::lua::script,
-                detail::lua::binder
-            >;
+namespace detail{
+namespace lua{
+
+struct state;
+
+template <typename X>
+struct binder;
+
+struct compiler;
+
+struct script;
+
+}
+}
 
 }
 }
 }
 }
 
-
-#endif // UDHO_VIEW_BRIDGES_LUA_H
-
+#endif // UDHO_VIEW_BRIDGES_LUA_FWD_H

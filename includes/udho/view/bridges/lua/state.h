@@ -25,16 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_BINDER_H
-#define UDHO_VIEW_BRIDGES_LUA_BINDER_H
+#ifndef UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
+#define UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
 
+#include <map>
 #include <string>
-#include <vector>
 #include <functional>
 #include <sol/sol.hpp>
-#include <udho/view/scope.h>
+#include <udho/url/detail/format.h>
 #include <udho/view/bridges/lua/fwd.h>
-#include <udho/view/bridges/lua/state.h>
+#include <udho/view/bridges/lua/buffer.h>
 
 namespace udho{
 namespace view{
@@ -44,41 +44,47 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
-template <typename X>
-struct binder{
-    using user_type = sol::usertype<X>;
+struct state{
+    friend compiler;
+    template <typename X>
+    friend struct binder;
 
-    binder(detail::lua::state& state, const std::string& name): _type(state._udho.new_usertype<X>(name)) {}
+    using buffer_type   = buffer;
 
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), *w);
-        return *this;
+    inline state() {
+        _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
     }
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), sol::readonly(*w));
-        return *this;
+    inline void init(){
+        _udho = _state["udho"].get_or_create<sol::table>();
+        buffer::apply(_udho);
     }
-    template <typename KeyT, typename U, typename V>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), sol::property(
-            *static_cast<udho::view::data::getter_value<U>&>(w),
-            *static_cast<udho::view::data::setter_value<V>&>(w)
-        ));
-        return *this;
+
+    template <typename T>
+    std::size_t exec(const std::string& name, const T& data, std::string& output){
+        std::string view_index = name;
+        if(!_views.count(view_index)){
+            std::cout << "View not found " << view_index << std::endl;
+            return 0;
+        }
+
+        sol::protected_function view = _views[view_index];
+        buffer_type buff;
+        sol::protected_function_result result = view(data, buff);
+
+        if (!result.valid()) {
+            sol::error err = result;
+            std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            return 0;
+        }
+
+        std::size_t size = buff.str(output);
+        return size;
     }
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), *w);
-        return *this;
-    }
+
     private:
-        user_type _type;
+        sol::state _state;
+        sol::table _udho;
+        std::map<std::string, sol::protected_function> _views;
 };
 
 }
@@ -89,4 +95,6 @@ struct binder{
 }
 }
 
-#endif // UDHO_VIEW_BRIDGES_LUA_BINDER_H
+#endif // UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
+
+

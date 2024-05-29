@@ -25,15 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_BINDER_H
-#define UDHO_VIEW_BRIDGES_LUA_BINDER_H
+#ifndef UDHO_VIEW_BRIDGES_LUA_COMPILER_H
+#define UDHO_VIEW_BRIDGES_LUA_COMPILER_H
 
 #include <string>
 #include <vector>
 #include <functional>
 #include <sol/sol.hpp>
-#include <udho/view/scope.h>
+#include <udho/url/detail/format.h>
+#include <udho/view/sections.h>
 #include <udho/view/bridges/lua/fwd.h>
+#include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/lua/state.h>
 
 namespace udho{
@@ -44,43 +46,36 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
-template <typename X>
-struct binder{
-    using user_type = sol::usertype<X>;
+struct compiler{
+    using script_type = lua::script;
 
-    binder(detail::lua::state& state, const std::string& name): _type(state._udho.new_usertype<X>(name)) {}
+    compiler(detail::lua::state& state): _state(state) {}
 
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), *w);
-        return *this;
-    }
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), sol::readonly(*w));
-        return *this;
-    }
-    template <typename KeyT, typename U, typename V>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), sol::property(
-            *static_cast<udho::view::data::getter_value<U>&>(w),
-            *static_cast<udho::view::data::setter_value<V>&>(w)
-        ));
-        return *this;
-    }
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
-        auto& w = nvp.value();
-        _type.set(nvp.name(), *w);
-        return *this;
-    }
+    inline bool operator()(script_type&& script);
+
     private:
-        user_type _type;
+        state& _state;
 };
 
+bool compiler::operator()(script_type&& script){
+    sol::load_result load_result = _state._state.load_buffer(script.data(), script.size());
+    if (!load_result.valid()) {
+        sol::error err = load_result;
+        throw std::runtime_error("Error loading script: " + std::string(err.what()));
+    }
+
+    sol::protected_function view =  load_result.get<sol::protected_function>();
+    sol::protected_function_result view_result = view();
+    if (!view_result.valid()) {
+        sol::error err = view_result;
+        throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
+    }
+
+    sol::protected_function view_fnc = view_result;
+    auto it = _state._views.insert(std::make_pair(script.name(), view_fnc));
+    return it.second;
+}
+
 }
 }
 
@@ -89,4 +84,4 @@ struct binder{
 }
 }
 
-#endif // UDHO_VIEW_BRIDGES_LUA_BINDER_H
+#endif // UDHO_VIEW_BRIDGES_LUA_COMPILER_H

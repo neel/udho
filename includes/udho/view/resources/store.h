@@ -80,8 +80,8 @@ struct store: detail::store<BridgeT>{
 
     store(bridge_type& bridge): detail::store<BridgeT>(bridge), views(detail::store<BridgeT>::primary().views) {}
     template <typename ResourceT>
-    friend store& operator<<(store& s, const ResourceT& res){
-        s.primary() << res;
+    friend store& operator<<(store& s, ResourceT&& res){
+        s.primary() << std::forward<ResourceT>(res);
         return s;
     }
 

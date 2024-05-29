@@ -249,13 +249,13 @@ struct bundle{
 
 
     template <typename IteratorT>
-    void add(const resource_buffer<udho::view::resources::type::view, IteratorT>& res) {
+    void add(resource_buffer<udho::view::resources::type::view, IteratorT>&& res) {
         _resources.insert(res.info());
-        prepare_view(res);
+        prepare_view(std::forward<resource_buffer<udho::view::resources::type::view, IteratorT>>(res));
     }
-    void add(const resource_file<udho::view::resources::type::view>& res) {
+    void add(resource_file<udho::view::resources::type::view>&& res) {
         _resources.insert(res.info());
-        prepare_view(res);
+        prepare_view(std::forward<resource_file<udho::view::resources::type::view>>(res));
     }
 
     std::string prefix() const { return _prefix; }
@@ -267,8 +267,8 @@ struct bundle{
     }
 
     template <udho::view::resources::type type>
-    friend bundle& operator<<(bundle& b, const resource_file<type>& res){
-        b.add(res);
+    friend bundle& operator<<(bundle& b, resource_file<type>&& res){
+        b.add(std::forward<resource_file<type>>(res));
         return b;
     }
 
@@ -285,12 +285,8 @@ struct bundle{
 
     private:
         template <typename ResourceT>
-        bool prepare_view(const ResourceT& res){
-            typename bridge_type::script_type script = _bridge.create(res.name());
-            udho::view::sections::parser parser;
-            parser.parse(res.begin(), res.end(), script);
-            script.finish();
-            return _bridge.compile(script, _prefix);
+        bool prepare_view(ResourceT&& res){
+            return _bridge.compile(std::forward<ResourceT>(res), _prefix);
         }
     private:
         bridge_type& _bridge;
