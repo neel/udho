@@ -4,6 +4,7 @@
 #include <udho/url/fwd.h>
 #include <udho/net/fwd.h>
 #include <udho/net/stream.h>
+#include <udho/net/context.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/url/summary.h>
 
@@ -35,14 +36,19 @@ struct server{
         template <typename ArtifactsT>
         void serve(boost::asio::ip::address address, udho::net::stream&& stream, const ArtifactsT& artifacts){
             using router_type = typename ArtifactsT::router_type;
+            using resource_store_type = typename ArtifactsT::resource_store_type;
+
             const router_type& router = artifacts.router();
 
-            prepare(address, stream);
+            udho::url::summary::router summary = router.summary();
+            udho::net::basic_context<resource_store_type> context{std::move(stream), summary, artifacts.resources()};
+
+            prepare(address, context);
             boost::beast::string_view tgt = stream.request().target();
             std::string target(tgt.begin(), tgt.end());
             bool found = false;
             try{
-                found = router(target, stream);
+                found = router(target, context);
                 if(!found){
                     throw udho::http::error(address, stream, boost::beast::http::status::not_found);
                 }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <udho/view/trie.h>
 #include <udho/view/sections.h>
-#include <udho/view/metatype.h>
+#include <udho/view/data/metatype.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/hazo/string/basic.h>
@@ -21,6 +21,7 @@
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
 #include <udho/net/server.h>
+#include <udho/net/context.h>
 #include <type_traits>
 #include <curl/curl.h>
 #include <udho/url/url.h>
@@ -66,9 +67,11 @@ int f1(udho::net::stream context, int a, const std::string& b, const double& c){
 }
 
 struct X{
-    void f0(udho::net::stream context){
+    void f0(udho::net::basic_context<udho::view::resources::store<udho::view::data::bridges::lua>> context){
         context << "Hello X::f0";
+        context << context.route("f0").name();
         context.finish();
+        std::cout << context.route("f0").name() << std::endl;
     }
 
     int f1(udho::net::stream context, int a, const std::string& b, const double& c){
@@ -169,6 +172,9 @@ int main(){
     inf.name = "NAME";
     inf.value = 42.42;
     inf._x    = 42;
+
+    udho::view::data::from_json(inf, nlohmann::json::parse(R"({"name":"NAME NAME","value":45.42,"x":43.0})"));
+    std::cout << "Look HERE " << udho::view::data::to_json(inf) << std::endl;
 
     {
         auto tstart = std::chrono::high_resolution_clock::now();
