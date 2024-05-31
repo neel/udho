@@ -15,4 +15,8 @@ endif()
 add_executable(view-parser parser.cpp)
 target_link_libraries(view-parser PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
+add_executable(resources resources)
+target_link_libraries(resources PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+
 catch_discover_tests(view-parser)
+catch_discover_tests(resources)

@@ -78,6 +78,41 @@ struct recurse<std::map<KeyT, ValueT>, false>{
     }
 };
 
+
+template <typename Class, typename ResT>
+struct writable_internal_binder{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& w){
+        type.set(name, *w);
+    }
+};
+template <typename Class, typename T>
+struct writable_internal_binder<Class, std::vector<T>>{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+        type.set(name, sol::property(
+            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, d)()); }
+        ));
+    }
+};
+
+template <typename Class, typename ResT>
+struct readonly_internal_binder{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& w){
+        type.set(name, sol::readonly(*w));
+    }
+};
+template <typename Class, typename T>
+struct readonly_internal_binder<Class, std::vector<T>>{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+        type.set(name, sol::property(
+            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, d)())); }
+        ));
+    }
+};
+
 }
 
 template <typename X>
@@ -92,7 +127,7 @@ struct binder{
         helper::recurse<result_type>::apply(_state);
 
         auto& w = nvp.value();
-        _type.set(nvp.name(), *w);
+        helper::writable_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
         return *this;
     }
     template <typename KeyT, typename T>
@@ -101,7 +136,7 @@ struct binder{
         helper::recurse<result_type>::apply(_state);
 
         auto& w = nvp.value();
-        _type.set(nvp.name(), sol::readonly(*w));
+        helper::readonly_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
         return *this;
     }
     template <typename KeyT, typename U, typename V>
