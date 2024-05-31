@@ -67,7 +67,7 @@ int f1(udho::net::stream context, int a, const std::string& b, const double& c){
 }
 
 struct X{
-    void f0(udho::net::basic_context<udho::view::resources::store<udho::view::data::bridges::lua>> context){
+    void f0(udho::net::context<udho::view::data::bridges::lua> context){
         context << "Hello X::f0";
         context << context.route("f0").name();
         context.finish();
@@ -149,35 +149,6 @@ Hello <?= d.sub[1].desc ?>
 )TEMPLATE";
 
 int main(){
-
-    udho::view::detail::trie trie;
-
-    std::string ab = "ab",
-                abc = "abc",
-                abcdef = "abcdef",
-                xycdef = "xycdef";
-
-    trie.add(ab, 101);
-    trie.add(abc, 102);
-    trie.add(abcdef, 103);
-    trie.add(xycdef, 104);
-
-    std::string subject = "hello ab I am a string abcd abcdef and then abcxycdef";
-    auto begin = subject.begin();
-    auto end = subject.end();
-
-    auto pos = begin;
-    while(pos != end){
-        auto tpos = trie.next(pos, end);
-        pos = tpos.token_end;
-        std::cout << trie[tpos.token_id] << std::endl;
-        std::string buff;
-        std::copy(tpos.token_begin, tpos.token_end, std::back_inserter(buff));
-        std::cout << "buff: " << std::distance(tpos.token_begin, tpos.token_end) << " " << buff << std::endl;
-    }
-
-    std::cout << "hello world" << std::endl;
-
     std::cout << "udho::view::data::has_prototype<subinfo>::value " << udho::view::data::has_prototype<subinfo>::value << std::endl;
 
     udho::view::data::bridges::lua lua;

@@ -232,6 +232,9 @@ auto prototype(udho::view::data::type<ClassT>){
     static_assert("prototype method not overloaded");
 }
 
+/**
+ * @brief checks whether a prototype overload exists for a given class
+ */
 template <typename ClassT>
 struct has_prototype: std::integral_constant<bool, !std::is_void_v<decltype(prototype(std::declval<type<ClassT>>()))>>{};
 
@@ -271,12 +274,19 @@ struct binder{
 };
 
 #ifdef WITH_JSON_NLOHMANN
+
+/**
+ * @brief Convert a C++ data object to json assuming the prototype function has been overloaded for it.
+ */
 template <class ClassT>
 nlohmann::json to_json(const ClassT& data){
     auto meta = prototype(udho::view::data::type<ClassT>{});
     return meta.members().json(data);
 }
 
+/**
+ * @brief Loads a C++ data object from json assuming the prototype function has been overloaded for it.
+ */
 template <class ClassT>
 void from_json(ClassT& data, const nlohmann::json& json){
     auto meta = prototype(udho::view::data::type<ClassT>{});

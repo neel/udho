@@ -35,6 +35,9 @@ struct basic_context<udho::view::resources::store<ViewBridgeT>>: public udho::ne
         const resource_store&               _resources;
 };
 
+template <typename ViewBridgeT>
+using context = basic_context<udho::view::resources::store<ViewBridgeT>>;
+
 }
 }
 
