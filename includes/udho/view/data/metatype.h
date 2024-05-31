@@ -177,7 +177,7 @@ struct metatype<associative<Xs...>>{
 };
 
 template <typename Class>
-struct type{};
+struct type;
 
 /**
  * @brief Default prototype function template used when specific type overloads are absent.
@@ -231,6 +231,44 @@ template <class ClassT>
 auto prototype(udho::view::data::type<ClassT>){
     static_assert("prototype method not overloaded");
 }
+
+template <typename ClassT>
+struct has_prototype: std::integral_constant<bool, !std::is_void_v<decltype(prototype(std::declval<type<ClassT>>()))>>{};
+
+template <typename Class>
+struct type {};
+
+template <template<class> class BinderT, typename Class>
+struct binder;
+
+template <typename StateT, typename T>
+struct bindings{
+
+    template <template<class> class BinderT, typename Class>
+    friend struct binder;
+
+    static bool exists() { return _exists; }
+    private:
+        static bool _exists;
+};
+
+template <typename DerivedT, typename T>
+bool bindings<DerivedT, T>::_exists = false;
+
+template <template<class> class BinderT, typename ClassT>
+struct binder{
+    template <typename StateT>
+    static void apply(StateT& state, udho::view::data::type<ClassT> type){
+        if(!udho::view::data::bindings<StateT, ClassT>::exists()){
+            auto meta = prototype(type);
+            std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
+            BinderT<ClassT> binder(state, meta.name());
+            meta.members().apply(std::move(binder));
+
+            bindings<StateT, ClassT>::_exists = true;
+        }
+    }
+};
 
 #ifdef WITH_JSON_NLOHMANN
 template <class ClassT>

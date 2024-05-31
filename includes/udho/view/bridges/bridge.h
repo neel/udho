@@ -45,22 +45,6 @@ namespace view{
 namespace data{
 namespace bridges{
 
-template <typename DerivedT>
-struct common;
-
-template <typename DerivedT, typename T>
-struct bindings{
-    template <typename D>
-    friend struct common;
-
-    static bool exists() { return _exists; }
-    private:
-        static bool _exists;
-};
-
-template <typename DerivedT, typename T>
-bool bindings<DerivedT, T>::_exists = false;
-
 template <typename StateT, typename CompilerT, typename ScriptT, template <class> typename BinderT>
 struct bridge{
     using state_type    = StateT;
@@ -75,9 +59,7 @@ struct bridge{
 
     template <typename ClassT>
     void bind(udho::view::data::type<ClassT> handle){
-        auto meta = prototype(handle);
-        binder_type<ClassT> binder(_state, meta.name());
-        meta.members().apply(std::move(binder));
+        udho::view::data::binder<BinderT, ClassT>::apply(_state, handle);
     }
 
     template <typename IteratorT>
@@ -93,6 +75,9 @@ struct bridge{
 
     template <typename T>
     std::size_t exec(const std::string& name, const std::string& prefix, const T& data, std::string& output){
+        if(!udho::view::data::bindings<StateT, T>::exists()){
+            bind(udho::view::data::type<T>{});
+        }
         return _state.exec(view_key(name, prefix), data, output);
     }
 

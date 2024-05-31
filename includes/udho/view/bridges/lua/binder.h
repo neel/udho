@@ -28,6 +28,7 @@
 #ifndef UDHO_VIEW_BRIDGES_LUA_BINDER_H
 #define UDHO_VIEW_BRIDGES_LUA_BINDER_H
 
+#include <map>
 #include <string>
 #include <vector>
 #include <functional>
@@ -45,25 +46,69 @@ namespace detail{
 namespace lua{
 
 template <typename X>
+struct binder;
+
+namespace helper{
+
+template <typename ResT, bool Enable = has_prototype<ResT>::value>
+struct recurse{
+    static void apply(detail::lua::state& state){
+        using result_type = ResT;
+        udho::view::data::binder<binder, result_type>::apply(state, udho::view::data::type<result_type>{});
+    }
+};
+
+template <typename ResT>
+struct recurse<ResT, false>{
+    static void apply(detail::lua::state&){}
+};
+
+template <typename ResT>
+struct recurse<std::vector<ResT>, false>{
+    static void apply(detail::lua::state& state){
+        recurse<ResT, has_prototype<ResT>::value>::apply(state);
+    }
+};
+
+template <typename KeyT, typename ValueT>
+struct recurse<std::map<KeyT, ValueT>, false>{
+    static void apply(detail::lua::state& state){
+        recurse<KeyT, has_prototype<KeyT>::value>::apply(state);
+        recurse<ValueT, has_prototype<ValueT>::value>::apply(state);
+    }
+};
+
+}
+
+template <typename X>
 struct binder{
     using user_type = sol::usertype<X>;
 
-    binder(detail::lua::state& state, const std::string& name): _type(state._udho.new_usertype<X>(name)) {}
+    binder(detail::lua::state& state, const std::string& name): _state(state), _type(state._udho.new_usertype<X>(name)) {}
 
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
+        using result_type = typename udho::view::data::wrapper<T>::result_type;
+        helper::recurse<result_type>::apply(_state);
+
         auto& w = nvp.value();
         _type.set(nvp.name(), *w);
         return *this;
     }
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
+        using result_type = typename udho::view::data::wrapper<T>::result_type;
+        helper::recurse<result_type>::apply(_state);
+
         auto& w = nvp.value();
         _type.set(nvp.name(), sol::readonly(*w));
         return *this;
     }
     template <typename KeyT, typename U, typename V>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
+        using result_type = typename udho::view::data::wrapper<U, V>::result_type;
+        helper::recurse<result_type>::apply(_state);
+
         auto& w = nvp.value();
         _type.set(nvp.name(), sol::property(
             *static_cast<udho::view::data::getter_value<U>&>(w),
@@ -73,11 +118,15 @@ struct binder{
     }
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
+        using result_type = typename udho::view::data::wrapper<T>::result_type;
+        helper::recurse<result_type>::apply(_state);
+
         auto& w = nvp.value();
         _type.set(nvp.name(), *w);
         return *this;
     }
     private:
+        detail::lua::state& _state;
         user_type _type;
 };
 

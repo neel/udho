@@ -83,10 +83,23 @@ struct X{
 };
 
 
+struct subinfo{
+    std::string desc = "DESC";
+
+    friend auto prototype(udho::view::data::type<subinfo>){
+        using namespace udho::view::data;
+
+        return assoc(
+            mvar("desc",  &subinfo::desc)
+        ).as("subinfo");
+    }
+};
+
 struct info{
     std::string name;
     double      value;
     std::uint32_t _x;
+    std::vector<subinfo> subs;
 
     inline double x() const { return _x; }
     inline void setx(const std::uint32_t& v) { _x = v; }
@@ -95,6 +108,7 @@ struct info{
         name = "Hello";
         value = 42;
         _x = 43;
+        subs.push_back(subinfo{});
     }
 
     void print(){
@@ -108,6 +122,7 @@ struct info{
             mvar("name",  &info::name),
             cvar("value", &info::value),
             fvar("x",     &info::x, &info::setx),
+            mvar("sub",   &info::subs),
             func("print", &info::print)
         ).as("info");
     }
@@ -123,7 +138,7 @@ LuaJIT version: <?= jit.version ?>
 LuaJIT is not being used
 <? end ?>
 
-Hello <?= d.name ?>
+Hello <?= d.sub[1].desc ?>
 
 <?:score udho.view() ?>
 
@@ -163,18 +178,22 @@ int main(){
 
     std::cout << "hello world" << std::endl;
 
+    std::cout << "udho::view::data::has_prototype<subinfo>::value " << udho::view::data::has_prototype<subinfo>::value << std::endl;
+
     udho::view::data::bridges::lua lua;
     lua.init();
-    lua.bind(udho::view::data::type<info>{});
+    // lua.bind(udho::view::data::type<subinfo>{});
+    // lua.bind(udho::view::data::type<info>{});
     bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
     // std::cout << "compilation result " << res << std::endl;
+
     info inf;
     inf.name = "NAME";
     inf.value = 42.42;
     inf._x    = 42;
 
-    udho::view::data::from_json(inf, nlohmann::json::parse(R"({"name":"NAME NAME","value":45.42,"x":43.0})"));
-    std::cout << "Look HERE " << udho::view::data::to_json(inf) << std::endl;
+    // udho::view::data::from_json(inf, nlohmann::json::parse(R"({"name":"NAME NAME","value":45.42,"x":43.0})"));
+    // std::cout << "Look HERE " << udho::view::data::to_json(inf) << std::endl;
 
     {
         auto tstart = std::chrono::high_resolution_clock::now();
