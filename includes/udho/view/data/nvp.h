@@ -33,6 +33,7 @@
 #include <type_traits>
 #include <udho/hazo/seq/seq.h>
 #include <udho/view/data/fwd.h>
+#include <udho/url/detail/function.h>
 
 namespace udho{
 namespace view{
@@ -53,6 +54,8 @@ struct member_variable<T Class::*>{
     using result_type = T;
     using class_type  = Class;
 
+    constexpr static bool is_const() { return false; }
+
     member_variable(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
 
@@ -60,11 +63,14 @@ struct member_variable<T Class::*>{
         member_type _member;
 };
 
-template <typename Class, typename T>
-struct const_member_function<T (Class::*)() const>{
-    using member_type = T (Class::*)() const;
-    using result_type = T;
+template <typename Class, typename Res, typename... X>
+struct const_member_function<Res (Class::*)(X...) const>{
+    using member_type = Res (Class::*)(X...) const;
+    using result_type = Res;
     using class_type  = Class;
+    using function    = udho::url::detail::function_signature_<member_type>;
+
+    constexpr static bool is_const() { return true; }
 
     const_member_function(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
@@ -73,11 +79,14 @@ struct const_member_function<T (Class::*)() const>{
         member_type _member;
 };
 
-template <typename Class, typename T, typename Res>
-struct member_function<Res (Class::*)(T)>{
-    using member_type = Res (Class::*)(T);
+template <typename Class, typename Res, typename... X>
+struct member_function<Res (Class::*)(X...)>{
+    using member_type = Res (Class::*)(X...);
     using result_type = Res;
     using class_type  = Class;
+    using function    = udho::url::detail::function_signature_<member_type>;
+
+    constexpr static bool is_const() { return false; }
 
     member_function(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
@@ -106,14 +115,14 @@ struct wrapper1<T Class::*>: member_variable<T Class::*> {
     using member_variable<T Class::*>::member_variable;
 };
 
-template <typename Res, typename Class, typename T>
-struct wrapper1<Res (Class::*)(T)>: member_function<Res (Class::*)(T)> {
-    using member_function<Res (Class::*)(T)>::member_function;
+template <typename Res, typename Class, typename... Args>
+struct wrapper1<Res (Class::*)(Args...)>: member_function<Res (Class::*)(Args...)> {
+    using member_function<Res (Class::*)(Args...)>::member_function;
 };
 
-template <typename Class, typename T>
-struct wrapper1<T (Class::*)() const>: const_member_function<T (Class::*)() const> {
-    using const_member_function<T (Class::*)() const>::const_member_function;
+template <typename Res, typename Class, typename... Args>
+struct wrapper1<Res (Class::*)(Args...) const>: const_member_function<Res (Class::*)(Args...) const> {
+    using const_member_function<Res (Class::*)(Args...) const>::const_member_function;
 };
 
 template <typename U, typename V>

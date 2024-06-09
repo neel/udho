@@ -96,6 +96,16 @@ struct writable_internal_binder<Class, std::vector<T>>{
     }
 };
 
+template <typename Class, typename K, typename T>
+struct writable_internal_binder<Class, std::map<K, T>>{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+        type.set(name, sol::property(
+            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, d)()); }
+        ));
+    }
+};
+
 template <typename Class, typename ResT>
 struct readonly_internal_binder{
     template <typename Usertype, typename... X>
@@ -105,6 +115,16 @@ struct readonly_internal_binder{
 };
 template <typename Class, typename T>
 struct readonly_internal_binder<Class, std::vector<T>>{
+    template <typename Usertype, typename... X>
+    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+        type.set(name, sol::property(
+            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, d)())); }
+        ));
+    }
+};
+
+template <typename Class, typename K, typename T>
+struct readonly_internal_binder<Class, std::map<K, T>>{
     template <typename Usertype, typename... X>
     static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
@@ -126,6 +146,8 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<result_type>::apply(_state);
 
+        std::cout << "lua binding mutable property: " << nvp.name() << std::endl;
+
         auto& w = nvp.value();
         helper::writable_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
         return *this;
@@ -135,6 +157,8 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<result_type>::apply(_state);
 
+        std::cout << "lua binding immutable property: " << nvp.name() << std::endl;
+
         auto& w = nvp.value();
         helper::readonly_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
         return *this;
@@ -143,6 +167,8 @@ struct binder{
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;
         helper::recurse<result_type>::apply(_state);
+
+        std::cout << "lua binding functional property: " << nvp.name() << std::endl;
 
         auto& w = nvp.value();
         _type.set(nvp.name(), sol::property(
@@ -155,6 +181,8 @@ struct binder{
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<result_type>::apply(_state);
+
+        std::cout << "lua binding function: " << nvp.name() << std::endl;
 
         auto& w = nvp.value();
         _type.set(nvp.name(), *w);

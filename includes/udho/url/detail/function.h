@@ -43,6 +43,20 @@ namespace url{
 
 namespace detail{
 
+    // https://stackoverflow.com/a/28540769
+    template <std::size_t ...I, typename T1, typename T2>
+    void tuple_copy_impl(T1 const & from, T2 & to, std::index_sequence<I...>) {
+        int dummy[] = { (std::get<I>(to) = std::get<I>(from), 0)... };
+        static_cast<void>(dummy);
+    }
+
+    template <typename T1, typename T2>
+    void tuple_copy(T1 const & from, T2 & to) {
+        tuple_copy_impl(
+            from, to,
+            std::make_index_sequence<std::tuple_size<T1>::value>());
+    }
+
     template <typename T, int Index>
     struct cast_optionally{
         template <typename IteratorT>

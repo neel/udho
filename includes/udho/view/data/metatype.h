@@ -125,6 +125,15 @@ struct associative: detail::associative<X, associative<Xs...>> {
         return metatype<associative<X, Xs...>>{name, std::move(*this)};
     }
 
+    template <typename Ret, typename DataT, typename KeyT>
+    std::size_t get(DataT& data, KeyT&& key, Ret& ret){
+        return apply_once(std::forward<KeyT>(key), detail::getter_f<Ret, DataT>(ret, data));
+    }
+    template <typename Ret, typename DataT, typename KeyT, typename... Args>
+    std::size_t call(DataT& data, KeyT&& key, Ret& ret, Args&&... args){
+        return apply_once(std::forward<KeyT>(key), detail::caller_f<Ret, DataT, Args...>(ret, data, std::forward<Args>(args)...));
+    }
+
 #ifdef WITH_JSON_NLOHMANN
 
     template <typename DataT>
@@ -275,13 +284,32 @@ struct binder{
 
 #ifdef WITH_JSON_NLOHMANN
 
+template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
+nlohmann::json to_json_internal(const ClassT& data){
+    return nlohmann::json(data);
+}
+
+template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+nlohmann::json to_json_internal(const ClassT& data){
+    auto meta = prototype(udho::view::data::type<ClassT>{});
+    return meta.members().json(data);
+}
+
+template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+nlohmann::json to_json_internal(const std::vector<ClassT>& data) {
+    nlohmann::json j = nlohmann::json::array();
+    for (const auto& d : data) {
+        j.push_back(to_json(d));
+    }
+    return j;
+}
+
 /**
  * @brief Convert a C++ data object to json assuming the prototype function has been overloaded for it.
  */
 template <class ClassT>
 nlohmann::json to_json(const ClassT& data){
-    auto meta = prototype(udho::view::data::type<ClassT>{});
-    return meta.members().json(data);
+    return to_json_internal(data);
 }
 
 /**

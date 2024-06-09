@@ -42,6 +42,9 @@ struct person{
         return stream.str();
     }
 
+    double add(std::uint32_t a, double b, float c, int d){
+        return a+b+c+d;
+    }
     friend auto prototype(udho::view::data::type<person>){
         using namespace udho::view::data;
 
@@ -73,8 +76,6 @@ Your total debt is <?= d.debt ?>
 
     udho::view::data::bridges::lua lua;
     lua.init();
-    // lua.bind(udho::view::data::type<address>{});
-    // lua.bind(udho::view::data::type<person>{});
     bool res = lua.compile(udho::view::resources::resource::view("user:profile", buffer, buffer+sizeof(buffer)), "");
     REQUIRE(res == true);
 
@@ -85,6 +86,19 @@ Your total debt is <?= d.debt ?>
     p.addresses.push_back(address{"Good locality"});
     p.addresses.push_back(address{"Bad locality"});
     p.addresses.push_back(address{"Far away locality"});
+
+    auto meta = prototype(udho::view::data::type<person>{});
+    std::string name;
+    meta.members().get(p, "name", name);
+    double age = 0;
+    meta.members().get(p, "age", age);
+    std::string printed;
+    meta.members().call(p, "print", printed);
+    double added;
+    meta.members().call(p, "add", added, 2, 3, 4); // added = 9
+    std::cout << "<" << name << "> <" << age << "> <" << printed << "> <" << added << ">" << std::endl;
+
+    // std::cout << udho::view::data::to_json(p) << std::endl;
 
     std::string output;
     lua.exec("user:profile", "", p, output);

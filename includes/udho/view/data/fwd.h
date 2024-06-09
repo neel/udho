@@ -28,12 +28,20 @@
 #ifndef UDHO_VIEW_DATA_FWD_H
 #define UDHO_VIEW_DATA_FWD_H
 
+#include <nlohmann/json.hpp>
+
 namespace udho{
 namespace view{
 namespace data{
 
 template <typename PolicyT, typename KeyT, typename... X>
 struct nvp;
+
+template <class ClassT>
+nlohmann::json to_json(const ClassT& data);
+
+template <class ClassT>
+void from_json(ClassT& data, const nlohmann::json& json);
 
 }
 }
