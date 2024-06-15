@@ -43,31 +43,31 @@ namespace detail{
     struct getter_f{
         getter_f(Ret& ret, DataT& d): _ret(ret), _data(d) {}
 
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret, typename V::result_type> >::type>
+        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret&, typename V::result_type> >::type>
         void operator()(nvp<policies::property<udho::view::data::policies::writable>, K, V>& nvp){
             auto wrapper  = *nvp.value();
             auto function = std::bind(wrapper, _data);
             _ret = function();
         }
 
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret, typename V::result_type> >::type>
+        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret&, typename V::result_type> >::type>
         void operator()(nvp<policies::property<udho::view::data::policies::readonly>, K, V>& nvp){
             auto wrapper  = *nvp.value();
             auto function = std::bind(wrapper, _data);
             _ret = function();
         }
 
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret, typename V::result_type> >::type>
+        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret&, typename V::result_type> >::type>
         void operator()(nvp<policies::property<udho::view::data::policies::functional>, K, V>& nvp){
             auto wrapper  = *nvp.value().getter();
             auto function = std::bind(wrapper, _data);
             _ret = function();
         }
 
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret, typename V::result_type> >::type>
+        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<Ret&, typename V::result_type> >::type>
         void operator()(nvp<policies::function, K, V>&){ }
 
-        template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<Ret, typename V::result_type> >::type>
+        template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<Ret&, typename V::result_type> >::type>
         void operator()(nvp<PolicyT, K, V>&){ }
 
         Ret&   _ret;
@@ -76,22 +76,47 @@ namespace detail{
 
     template <typename Ret, typename DataT, typename... X>
     struct caller_f{
+        using provided_args_type = std::tuple<X...>;
+        static constexpr std::size_t provided_args_size = std::tuple_size_v<provided_args_type>;
+
         caller_f(Ret& ret, DataT& d, X&&... args): _ret(ret), _data(d), _args(std::forward<X>(args)...) {}
         caller_f(Ret& ret, DataT& d, std::tuple<X...> args): _ret(ret), _data(d), _args(args) {}
 
-        template <typename K, typename V, typename std::enable_if_t<std::is_same_v<Ret, typename V::result_type>, int> = 0>
+        template <typename K, typename V, typename std::enable_if_t<std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
         void operator()(nvp<policies::function, K, V>& nvp) {
-            auto wrapper  = *nvp.value();
-            using arguments_type = typename V::function::arguments_type;
-            arguments_type args;
-            udho::url::detail::tuple_copy(_args, args);
-            _ret = std::apply(wrapper, std::tuple_cat(std::make_tuple(_data), args));
+            call(nvp);
         }
 
-        template <typename K, typename V, typename std::enable_if_t<!std::is_same_v<Ret, typename V::result_type>, int> = 0>
-        void operator()(nvp<policies::function, K, V>& nvp) { }
+        template <typename K, typename V, typename std::enable_if_t<!std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
+        void operator()(nvp<policies::function, K, V>&) { }
         template <typename PropertyPolicy, typename K, typename V>
         void operator()(nvp<policies::property<PropertyPolicy>, K, V>&){}
+
+        template <typename K, typename V, typename std::enable_if_t<provided_args_size <= std::tuple_size_v<typename V::function::arguments_type>, int> = 0>
+        void call(nvp<policies::function, K, V>& nvp){
+            static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
+
+            using required_arguments_type     = typename V::function::arguments_type;
+            constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
+            static_assert(provided_args_size <= required_args_size);
+
+            required_arguments_type required_args;
+            udho::url::detail::tuple_copy(_args, required_args);
+
+            auto wrapper  = *nvp.value();
+            _ret = std::apply(wrapper, std::tuple_cat(std::make_tuple(_data), required_args));
+        }
+
+        template <typename K, typename V, typename std::enable_if_t< std::tuple_size_v<typename V::function::arguments_type> < provided_args_size, int> = 0>
+        void call(nvp<policies::function, K, V>& nvp){
+            static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
+
+            using required_arguments_type     = typename V::function::arguments_type;
+            constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
+            static_assert(provided_args_size  > required_args_size);
+
+            throw std::invalid_argument{udho::url::format("function {} called with more arguments than needed", nvp.name())};
+        }
 
         Ret&             _ret;
         DataT&           _data;

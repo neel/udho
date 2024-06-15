@@ -6,9 +6,11 @@
 #include <catch2/catch_all.hpp>
 #endif
 
+#include <udho/view/meta.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>
+#include <boost/variant.hpp>
 
 struct address{
     std::string locality;
@@ -53,7 +55,8 @@ struct person{
             cvar("age",         &person::age),
             fvar("debt",        &person::debt, &person::set_debt),
             mvar("addresses",   &person::addresses),
-            func("print",       &person::print)
+            func("print",       &person::print),
+            func("add",         &person::add)
         ).as("person");
     }
 };
@@ -87,15 +90,17 @@ Your total debt is <?= d.debt ?>
     p.addresses.push_back(address{"Bad locality"});
     p.addresses.push_back(address{"Far away locality"});
 
+    using variant = boost::variant<std::int64_t, double, std::string, bool>;
+
     auto meta = prototype(udho::view::data::type<person>{});
-    std::string name;
+    variant name;
     meta.members().get(p, "name", name);
-    double age = 0;
+    variant age;
     meta.members().get(p, "age", age);
-    std::string printed;
+    variant printed;
     meta.members().call(p, "print", printed);
-    double added;
-    meta.members().call(p, "add", added, 2, 3, 4); // added = 9
+    variant added;
+    meta.members().call(p, "add", added, 2, 3, 4, 5); // added = 9
     std::cout << "<" << name << "> <" << age << "> <" << printed << "> <" << added << ">" << std::endl;
 
     // std::cout << udho::view::data::to_json(p) << std::endl;
@@ -104,4 +109,7 @@ Your total debt is <?= d.debt ?>
     lua.exec("user:profile", "", p, output);
 
     std::cout << output << std::endl;
+
+    std::string input = R"(x.y.z_a ( v1, 'v_2',:keyword); hello ("wor@#%^&*(_-=}|/,k1!ld"); hello_hi(pla_net);feature(on);cache.expire(-42.24);)";
+    udho::view::sections::meta_parser::parse(input);
 }
