@@ -78,7 +78,7 @@ struct bridge{
         if(!udho::view::data::bindings<StateT, T>::exists()){
             bind(udho::view::data::type<T>{});
         }
-        return _state.exec(view_key(name, prefix), data, output);
+        return _state.exec(view_key(name, prefix), std::ref(data), output);
     }
 
     private:

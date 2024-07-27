@@ -55,12 +55,31 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
 
     associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
 
+    template <typename Function>
+    std::size_t apply_(Function& f, std::size_t count = 0){
+        bool res = f(_head);
+        if(!res){
+            return _tail.apply_(f, count +1);
+        } else {
+            return count;
+        }
+
+    }
+
     template <typename Function, typename MatchT>
     std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
         if(match(_head)){
             f(_head);
         }
         return _tail.invoke(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
+    }
+
+    template <typename MatchT>
+    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
+        if(match(_head)){
+            return count;
+        }
+        return _tail.find_recursive(match, count +1);
     }
 
     private:
@@ -75,8 +94,26 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, void>{
 
     associative(head_type&& head): _head(std::move(head)) {}
 
+    template <typename Function>
+    std::size_t apply_(Function& f, std::size_t count = 0){
+        bool res = f(_head);
+        if(!res){
+            return count;
+        } else {
+            return count +1;
+        }
+    }
+
     template <typename Function, typename MatchT>
     std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
+        if(match(_head)){
+            return count;
+        }
+        return count+1;
+    }
+
+    template <typename MatchT>
+    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
         if(match(_head)){
             f(_head);
         }
@@ -92,8 +129,18 @@ struct associative<void, void>{
     using head_type = void;
     using tail_type = void;
 
+    template <typename Function>
+    std::size_t apply_(Function& f, std::size_t count = 0){
+        return count;
+    }
+
     template <typename Function, typename MatchT>
     std::size_t invoke(Function&&, MatchT&&, std::size_t count = 0){
+        return count;
+    }
+
+    template <typename MatchT>
+    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
         return count;
     }
 
@@ -105,7 +152,7 @@ struct associative<void, void>{
 template <typename AssociativeT>
 struct metatype;
 
-template <typename X = void, typename... Xs>
+template <typename X, typename... Xs>
 struct associative: detail::associative<X, associative<Xs...>> {
     associative(X&& x, Xs&&... xs): base(std::move(x), associative<Xs...>(std::forward<Xs>(xs)...)) {}
     template <typename KeyT, typename Function>
@@ -132,6 +179,13 @@ struct associative: detail::associative<X, associative<Xs...>> {
     template <typename Ret, typename DataT, typename KeyT, typename... Args>
     std::size_t call(DataT& data, KeyT&& key, Ret& ret, Args&&... args){
         return apply_once(std::forward<KeyT>(key), detail::caller_f<Ret, DataT, Args...>(ret, data, std::forward<Args>(args)...));
+    }
+
+    template <typename Ret, typename DataT, typename IteratorT>
+    std::size_t getx(DataT& data, IteratorT begin, IteratorT end){
+        if(std::distance(begin, end) > 1){
+            return getx(data, begin +1, end);
+        }
     }
 
 #ifdef WITH_JSON_NLOHMANN
@@ -184,71 +238,6 @@ struct metatype<associative<Xs...>>{
         std::string  _name;
         members_type _members;
 };
-
-template <typename Class>
-struct type;
-
-/**
- * @brief Default prototype function template used when specific type overloads are absent.
- *
- * This function serves as a default implementation of the prototype function for any class type that is not explicitly overloaded.
- * It triggers a static assertion error to indicate the absence of an appropriate overload when attempting to expose a class as
- * the data object of the view in an MVC framework setup. This is part of integrating C++ classes with foreign languages by
- * defining how class members are accessed and manipulated from the foreign environment.
- *
- * @note The purpose of this function is to ensure compile-time errors when no suitable overload is provided for a specific class type,
- * thereby enforcing the requirement that all classes exposed to the view must have an explicit prototype definition.
- *
- * @tparam ClassT The class type for which the prototype function is to be defined.
- * @param data A type tag representing the ClassT, used for specializing the function for different classes.
- * @return returns an instance of metatype
- *
- * @note This function will compile only if there is a specific overload for the type `ClassT`. If not, it will cause a compile-time error.
- *
- * @example
- * struct info {
- *     std::string name;
- *     double value;
- *     std::uint32_t _x;
- *
- *     inline double x() const { return _x; }
- *     inline void setx(const std::uint32_t& v) { _x = v; }
- *
- *     inline info() {
- *         name = "Hello";
- *         value = 42;
- *         _x = 43;
- *     }
- *
- *     void print() {
- *         std::cout << "name: " << name << " value: " << value << std::endl;
- *     }
- *
- *     // Prototype specialization for 'info' type
- *     friend auto prototype(udho::view::data::type<info>) {
- *         using namespace udho::view::data;
- *         return assoc(
- *             mvar("name", &info::name),
- *             cvar("value", &info::value),
- *             fvar("x", &info::x, &info::setx),
- *             func("print", &info::print)
- *         ).as("info");
- *     }
- * };
- */
-template <class ClassT>
-auto prototype(udho::view::data::type<ClassT>){
-    static_assert("prototype method not overloaded");
-}
-
-/**
- * @brief checks whether a prototype overload exists for a given class
- */
-template <typename ClassT>
-struct has_prototype: std::integral_constant<bool, !std::is_void_v<decltype(prototype(std::declval<type<ClassT>>()))>>{};
-
-template <typename Class>
-struct type {};
 
 template <template<class> class BinderT, typename Class>
 struct binder;

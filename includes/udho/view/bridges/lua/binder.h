@@ -91,7 +91,7 @@ struct writable_internal_binder<Class, std::vector<T>>{
     template <typename Usertype, typename... X>
     static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
-            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, d)()); }
+            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, std::ref(d))()); }
         ));
     }
 };
@@ -101,7 +101,7 @@ struct writable_internal_binder<Class, std::map<K, T>>{
     template <typename Usertype, typename... X>
     static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
-            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, d)()); }
+            [w = *wrapper](Class& d) { return sol::as_table(std::bind(w, std::ref(d))()); }
         ));
     }
 };
@@ -118,7 +118,7 @@ struct readonly_internal_binder<Class, std::vector<T>>{
     template <typename Usertype, typename... X>
     static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
-            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, d)())); }
+            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, std::ref(d))())); }
         ));
     }
 };
@@ -128,7 +128,7 @@ struct readonly_internal_binder<Class, std::map<K, T>>{
     template <typename Usertype, typename... X>
     static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
-            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, d)())); }
+            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, std::ref(d))())); }
         ));
     }
 };

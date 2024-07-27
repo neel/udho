@@ -33,11 +33,12 @@ class stream{
 
     stream() = delete;
 
-    inline stream(boost::asio::io_service& io, udho::net::bridge& bridge) : _service(io), _bridge(bridge) { }
+    protected:
+        inline stream(boost::asio::io_service& io, udho::net::bridge& bridge) : _service(io), _bridge(bridge) { }
 
-    struct noop{
-        void operator()(boost::system::error_code, std::size_t){}
-    };
+        struct noop{
+            void operator()(boost::system::error_code, std::size_t){}
+        };
 
     public:
         stream(const stream&) = default;

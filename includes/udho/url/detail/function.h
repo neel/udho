@@ -32,6 +32,7 @@
 #include <functional>
 #include <type_traits>
 #include <sstream>
+#include <chrono>
 #include <boost/lexical_cast.hpp>
 #include <udho/url/detail/format.h>
 #include <boost/algorithm/string/replace.hpp>
@@ -57,6 +58,62 @@ namespace detail{
             std::make_index_sequence<std::tuple_size<T1>::value>());
     }
 
+
+    template <typename T, typename Enable = void>
+    struct convert_str_to_type{
+        static T apply(const std::string&, bool* ok = nullptr){
+            if(ok) *ok = false;
+            return T();
+        }
+    };
+
+    template <typename T>
+    struct convert_str_to_type<T, typename std::enable_if<boost::has_right_shift<std::basic_istream<char>, T >::value>::type>{
+        static T apply(const std::string& str, bool* ok = nullptr){
+            try{
+                if(ok) *ok = true;
+                return boost::lexical_cast<T>(str);
+            }catch(...){
+                if(ok) *ok = false;
+                return T();
+            }
+        }
+    };
+
+
+    template<typename T>
+    struct convert_str_to_type<std::chrono::duration<T>> {
+        static std::chrono::duration<T> apply(const std::string& str, bool* ok = nullptr) {
+            if (!str.empty()) {
+                char unit = str.back(); // Get the last character which should be the unit
+                double value = 0;
+                try {
+                    value = boost::lexical_cast<double>(str.substr(0, str.size() - 1)); // Convert the preceding part to double
+                    if (ok) *ok = true;
+                } catch (...) {
+                    if (ok) *ok = false;
+                    return std::chrono::duration<T>(0);
+                }
+
+                switch (unit) {
+                    case 's':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(value));
+                    case 'm':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::minutes(1).count() * value));
+                    case 'h':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::hours(1).count() * value));
+                    case 'd':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::hours(24).count() * value));
+                    default:
+                        if (ok) *ok = false;
+                        return std::chrono::duration<T>(0);
+                }
+            }
+            if (ok) *ok = false;
+            return std::chrono::duration<T>(0);
+        }
+    };
+
     template <typename T, int Index>
     struct cast_optionally{
         template <typename IteratorT>
@@ -70,12 +127,14 @@ namespace detail{
             IteratorT i = begin;
             std::advance(i, Index);
             std::string argstr = *i;
-            try{
-                return boost::lexical_cast<T>(argstr);
-            }catch(...){
+
+            bool success = false;
+            T res = convert_str_to_type<T>::apply(argstr, &success);
+            if(!success) {
                 throw std::invalid_argument(format("Failed to cast argument {} '{}' to expected type", Index+1, argstr));
-                return T();
             }
+
+            return res;
         }
     };
 

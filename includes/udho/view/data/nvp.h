@@ -30,6 +30,7 @@
 
 #include <string>
 #include <utility>
+#include <cassert>
 #include <type_traits>
 #include <udho/hazo/seq/seq.h>
 #include <udho/view/data/fwd.h>
@@ -59,6 +60,12 @@ struct member_variable<T Class::*>{
     member_variable(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
 
+    result_type& get(Class& d) { return d.*_member; }
+    template <typename V, std::enable_if_t< std::is_assignable_v<std::add_lvalue_reference_t<result_type>, V>, int> = 0>
+    bool set(Class& d, const V& v) { d.*_member = v; return true; }
+    template <typename V, std::enable_if_t< !std::is_assignable_v<std::add_lvalue_reference_t<result_type>, V>, int> = 0>
+    bool set(Class&, const V&) { return false; }
+
     private:
         member_type _member;
 };
@@ -69,11 +76,16 @@ struct const_member_function<Res (Class::*)(X...) const>{
     using result_type = Res;
     using class_type  = Class;
     using function    = udho::url::detail::function_signature_<member_type>;
+    using args_type   = typename function::decayed_arguments_type;
 
     constexpr static bool is_const() { return true; }
 
     const_member_function(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
+
+    result_type call(Class& d, const args_type& args){
+        return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
+    }
 
     private:
         member_type _member;
@@ -85,11 +97,16 @@ struct member_function<Res (Class::*)(X...)>{
     using result_type = Res;
     using class_type  = Class;
     using function    = udho::url::detail::function_signature_<member_type>;
+    using args_type   = typename function::decayed_arguments_type;
 
     constexpr static bool is_const() { return false; }
 
     member_function(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
+
+    result_type call(Class& d, const args_type& args){
+        return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
+    }
 
     private:
         member_type _member;
@@ -137,9 +154,20 @@ struct wrapper2<U (Class::*)() const, Res (Class::*)(V)>: getter_value<U (Class:
     using getter_type = getter_value<U (Class::*)() const>;
     using setter_type = setter_value<Res (Class::*)(V)>;
     using result_type = U;
+    using arg_type    = V;
 
     getter_type& getter() { return *this; }
     setter_type& setter() { return *this; }
+
+    typename getter_type::result_type get(Class& d) { return getter().call(d, std::tuple<>{}); }
+    template <typename ValueT, std::enable_if_t< std::is_assignable_v<std::add_lvalue_reference_t<std::decay_t<V>>, ValueT>, int> = 0>
+    bool set(Class& d, const ValueT& v) {
+        std::tuple<ValueT> arg_tuple{v};
+        setter().call(d, arg_tuple);
+        return true;
+    }
+    template <typename ValueT, std::enable_if_t< !std::is_assignable_v<std::add_lvalue_reference_t<std::decay_t<V>>, ValueT>, int> = 0>
+    bool set(Class&, const ValueT&) { return false; }
 };
 
 }

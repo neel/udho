@@ -69,7 +69,7 @@ struct state{
 
         sol::protected_function view = _views[view_index];
         buffer_type buff;
-        sol::protected_function_result result = view(data, buff);
+        sol::protected_function_result result = view(std::ref(data), buff);
 
         if (!result.valid()) {
             sol::error err = result;
