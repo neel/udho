@@ -61,6 +61,7 @@ struct member_variable<T Class::*>{
     member_type operator*() { return _member; }
 
     result_type& get(Class& d) { return d.*_member; }
+    const result_type& get(const Class& d) const { return d.*_member; }
     template <typename V, std::enable_if_t< std::is_assignable_v<std::add_lvalue_reference_t<result_type>, V>, int> = 0>
     bool set(Class& d, const V& v) { d.*_member = v; return true; }
     template <typename V, std::enable_if_t< !std::is_assignable_v<std::add_lvalue_reference_t<result_type>, V>, int> = 0>
@@ -69,6 +70,7 @@ struct member_variable<T Class::*>{
     private:
         member_type _member;
 };
+
 
 template <typename Class, typename Res, typename... X>
 struct const_member_function<Res (Class::*)(X...) const>{
@@ -84,6 +86,10 @@ struct const_member_function<Res (Class::*)(X...) const>{
     member_type operator*() { return _member; }
 
     result_type call(Class& d, const args_type& args){
+        return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
+    }
+
+    result_type call(const Class& d, const args_type& args){
         return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
     }
 
@@ -160,6 +166,7 @@ struct wrapper2<U (Class::*)() const, Res (Class::*)(V)>: getter_value<U (Class:
     setter_type& setter() { return *this; }
 
     typename getter_type::result_type get(Class& d) { return getter().call(d, std::tuple<>{}); }
+    typename getter_type::result_type get(const Class& d) { return getter().call(d, std::tuple<>{}); }
     template <typename ValueT, std::enable_if_t< std::is_assignable_v<std::add_lvalue_reference_t<std::decay_t<V>>, ValueT>, int> = 0>
     bool set(Class& d, const ValueT& v) {
         std::tuple<ValueT> arg_tuple{v};

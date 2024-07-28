@@ -55,6 +55,9 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
 
     associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
 
+    /**
+     * @brief apply the function f untill it returns true
+     */
     template <typename Function>
     std::size_t apply_(Function& f, std::size_t count = 0){
         bool res = f(_head);
@@ -63,23 +66,14 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
         } else {
             return count;
         }
-
     }
 
     template <typename Function, typename MatchT>
-    std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
+    std::size_t apply_if(Function&& f, MatchT&& match, std::size_t count = 0){
         if(match(_head)){
             f(_head);
         }
-        return _tail.invoke(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
-    }
-
-    template <typename MatchT>
-    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
-        if(match(_head)){
-            return count;
-        }
-        return _tail.find_recursive(match, count +1);
+        return _tail.apply_if(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
     }
 
     private:
@@ -105,20 +99,13 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, void>{
     }
 
     template <typename Function, typename MatchT>
-    std::size_t invoke(Function&& f, MatchT&& match, std::size_t count = 0){
+    std::size_t apply_if(Function&& f, MatchT&& match, std::size_t count = 0){
         if(match(_head)){
             return count;
         }
         return count+1;
     }
 
-    template <typename MatchT>
-    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
-        if(match(_head)){
-            f(_head);
-        }
-        return count+1;
-    }
 
     private:
         head_type _head;
@@ -135,14 +122,10 @@ struct associative<void, void>{
     }
 
     template <typename Function, typename MatchT>
-    std::size_t invoke(Function&&, MatchT&&, std::size_t count = 0){
+    std::size_t apply_if(Function&&, MatchT&&, std::size_t count = 0){
         return count;
     }
 
-    template <typename MatchT>
-    std::size_t find_recursive(MatchT& match, std::size_t count = 0){
-        return count;
-    }
 
 };
 
@@ -155,37 +138,14 @@ struct metatype;
 template <typename X, typename... Xs>
 struct associative: detail::associative<X, associative<Xs...>> {
     associative(X&& x, Xs&&... xs): base(std::move(x), associative<Xs...>(std::forward<Xs>(xs)...)) {}
-    template <typename KeyT, typename Function>
-    std::size_t apply(KeyT&& key, Function&& f){
-        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_f<KeyT>{std::forward<KeyT>(key)});
-    }
-    template <typename KeyT, typename Function>
-    std::size_t apply_once(KeyT&& key, Function&& f){
-        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_f<KeyT, true>{std::forward<KeyT>(key)});
-    }
+
     template <typename Function>
-    std::size_t apply(Function&& f){
-        return base::invoke(detail::extractor_f<Function>{std::forward<Function>(f)}, detail::match_all{});
+    std::size_t apply_all(Function&& f){
+        return base::apply_if(std::forward<Function>(f), detail::match_all{});
     }
 
     metatype<associative<X, Xs...>> as(const std::string& name){
         return metatype<associative<X, Xs...>>{name, std::move(*this)};
-    }
-
-    template <typename Ret, typename DataT, typename KeyT>
-    std::size_t get(DataT& data, KeyT&& key, Ret& ret){
-        return apply_once(std::forward<KeyT>(key), detail::getter_f<Ret, DataT>(ret, data));
-    }
-    template <typename Ret, typename DataT, typename KeyT, typename... Args>
-    std::size_t call(DataT& data, KeyT&& key, Ret& ret, Args&&... args){
-        return apply_once(std::forward<KeyT>(key), detail::caller_f<Ret, DataT, Args...>(ret, data, std::forward<Args>(args)...));
-    }
-
-    template <typename Ret, typename DataT, typename IteratorT>
-    std::size_t getx(DataT& data, IteratorT begin, IteratorT end){
-        if(std::distance(begin, end) > 1){
-            return getx(data, begin +1, end);
-        }
     }
 
 #ifdef WITH_JSON_NLOHMANN
@@ -194,14 +154,14 @@ struct associative: detail::associative<X, associative<Xs...>> {
     nlohmann::json json(const DataT& data) {
         nlohmann::json root = nlohmann::json::object();
         detail::to_json_f jsonifier{root, data};
-        base::invoke(jsonifier, detail::match_all{});
+        base::apply_if(jsonifier, detail::match_all{});
         return root;
     }
 
     template <typename DataT>
     void json(DataT& data, const nlohmann::json& json) {
         detail::from_json_f jsonifier{json, data};
-        base::invoke(jsonifier, detail::match_all{});
+        base::apply_if(jsonifier, detail::match_all{});
     }
 
 #endif
@@ -264,7 +224,7 @@ struct binder{
             auto meta = prototype(type);
             std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
             BinderT<ClassT> binder(state, meta.name());
-            meta.members().apply(std::move(binder));
+            meta.members().apply_all(std::move(binder));
 
             bindings<StateT, ClassT>::_exists = true;
         }
@@ -293,6 +253,26 @@ nlohmann::json to_json_internal(const std::vector<ClassT>& data) {
     return j;
 }
 
+template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
+void from_json_internal(ClassT& data, const nlohmann::json& json){
+    data = json;
+}
+
+template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+void from_json_internal(ClassT& data, const nlohmann::json& json){
+    auto meta = prototype(udho::view::data::type<ClassT>{});
+    return meta.members().json(data, json);
+}
+
+template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+void from_json_internal(std::vector<ClassT>& data, const nlohmann::json& json) {
+    for(const nlohmann::json& j: json){
+        ClassT obj;
+        from_json_internal(obj, j);
+        data.push_back(obj);
+    }
+}
+
 /**
  * @brief Convert a C++ data object to json assuming the prototype function has been overloaded for it.
  */
@@ -306,8 +286,7 @@ nlohmann::json to_json(const ClassT& data){
  */
 template <class ClassT>
 void from_json(ClassT& data, const nlohmann::json& json){
-    auto meta = prototype(udho::view::data::type<ClassT>{});
-    return meta.members().json(data, json);
+    from_json_internal(data, json);
 }
 
 #endif

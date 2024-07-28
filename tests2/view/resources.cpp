@@ -15,6 +15,7 @@
 struct address{
     std::string locality;
 
+    address() = default;
     address(const std::string loc): locality(loc) {}
 
     friend auto prototype(udho::view::data::type<address>){
@@ -95,72 +96,68 @@ Your total debt is <?= d.debt ?>
     p.addresses.emplace_back(address{"Bad locality"});
     p.addresses.emplace_back(address{"Far away locality"});
 
-    using variant = boost::variant<std::int64_t, double, std::string, bool>;
-
+    // using variant = boost::variant<std::int64_t, double, std::string, bool>;
+    //
     auto meta = prototype(udho::view::data::type<person>{});
-    variant name;
-    meta.members().get(p, "name", name);
-    variant age;
-    meta.members().get(p, "age", age);
-    variant printed;
-    meta.members().call(p, "print", printed);
-    variant added;
-    meta.members().call(p, "add", added, 2, 3, 4, 5); // added = 9
-    std::cout << "<" << name << "> <" << age << "> <" << printed << "> <" << added << ">" << std::endl;
 
-    // meta.members().getx(p, "addresses[0].locality");
     {
         udho::view::data::detail::id_ast ast{"debt(60)"};
         bool result;
         udho::view::data::detail::id_value_extractor<bool> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<bool>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "set debt: " << extractor.assigned() << " " << result << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"debt"};
         double result;
         udho::view::data::detail::id_value_extractor<double> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "extracted debt: " << extractor.assigned() << " " << result << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"debt"};
         double value = 70;
         udho::view::data::detail::id_value_manipulator<double> manipulator{value};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_manipulator<double>> finder{ast.root()->children[0], p, manipulator};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "set debt: " << manipulator.assigned() << " " << value << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"debt"};
         double result;
         udho::view::data::detail::id_value_extractor<double> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "extracted debt: " << extractor.assigned() << " " << result << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"addresses[1].locality('Changed Locality')"};
         bool result;
         udho::view::data::detail::id_value_extractor<bool> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<bool>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "extracted locality: " << extractor.assigned() << " " << result << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"addresses[1].locality"};
         std::string result;
         udho::view::data::detail::id_value_extractor<std::string> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<std::string>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "extracted locality: " << extractor.assigned() << " " << result << std::endl;
     }{
         udho::view::data::detail::id_ast ast{"add (1, 2, 3, 4)"};
         double result;
         udho::view::data::detail::id_value_extractor<double> extractor{result};
         udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        meta.members().apply_(finder);
+        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
         std::cout << "extracted add: " << extractor.assigned() << " " << result << std::endl;
     }
 
-    // std::cout << udho::view::data::to_json(p) << std::endl;
+    nlohmann::json p_json = udho::view::data::to_json(p);
+    std::cout << p_json << std::endl;
+    person q;
+    q.age = p.age;
+    udho::view::data::from_json(q, p_json);
+    nlohmann::json q_json = udho::view::data::to_json(q);
+    std::cout << q_json << std::endl;
 
     std::string output;
     lua.exec("user:profile", "", p, output);

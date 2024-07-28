@@ -55,177 +55,178 @@ namespace detail{
      * // Assuming nvp_name is the nvp mapped with the name property of person class
      * \endcode
      */
-    template <typename ValueT, typename DataT>
-    struct getter_f{
-        using value_type  = std::add_lvalue_reference_t<ValueT>;
-        using data_type   = std::add_const_t<std::add_lvalue_reference_t<DataT>>;
+    // template <typename ValueT, typename DataT>
+    // struct getter_f{
+    //     using value_type  = std::add_lvalue_reference_t<ValueT>;
+    //     using data_type   = std::add_const_t<std::add_lvalue_reference_t<DataT>>;
+    //
+    //     enum {
+    //         is_getter = true,
+    //         is_setter = false,
+    //         is_caller = false
+    //     };
+    //
+    //     getter_f(value_type ret, data_type d): _ret(ret), _data(d), _success(false) {}
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::writable>, K, V>& nvp){
+    //         auto wrapper  = *nvp.value();
+    //         auto function = std::bind(wrapper, std::ref(_data));
+    //         _ret = function();
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::readonly>, K, V>& nvp){
+    //         auto wrapper  = *nvp.value();
+    //         auto function = std::bind(wrapper, std::ref(_data));
+    //         _ret = function();
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::functional>, K, V>& nvp){
+    //         auto wrapper  = *nvp.value().getter();
+    //         auto function = std::bind(wrapper, std::ref(_data));
+    //         _ret = function();
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
+    //     void operator()(nvp<policies::function, K, V>&){ }
+    //
+    //     template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<value_type, typename V::result_type> >::type>
+    //     void operator()(nvp<PolicyT, K, V>&){ }
+    //
+    //     bool success() const { return _success; }
+    //     operator bool () const { return success(); }
+    //     bool operator!() const { return !success(); }
+    //
+    //     value_type _ret;
+    //     data_type  _data;
+    //     bool       _success;
+    // };
+    //
+    // template <typename ValueT, typename DataT>
+    // struct setter_f{
+    //     using value_type = std::add_const_t<std::add_lvalue_reference_t<ValueT>>;
+    //     using data_type  = std::add_lvalue_reference_t<DataT>;
+    //
+    //     enum {
+    //         is_getter = false,
+    //         is_setter = true,
+    //         is_caller = false
+    //     };
+    //
+    //     setter_f(value_type v, data_type d): _value(v), _data(d), _success(false) {}
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::writable>, K, V>& nvp){
+    //         auto wrapper  = *nvp.value();
+    //         auto function = std::bind(wrapper, &_data);
+    //         function() = _value;
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::readonly>, K, V>& nvp){ }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
+    //     void operator()(nvp<policies::property<udho::view::data::policies::functional>, K, V>& nvp){
+    //         auto wrapper  = *nvp.value().setter();
+    //         auto function = std::bind(wrapper, &_data, _value);
+    //         function();
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
+    //     void operator()(nvp<policies::function, K, V>&){ }
+    //
+    //     template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
+    //     void operator()(nvp<PolicyT, K, V>&){ }
+    //
+    //     bool success() const { return _success; }
+    //     operator bool () const { return success(); }
+    //     bool operator!() const { return !success(); }
+    //
+    //     value_type _value;
+    //     data_type        _data;
+    //     bool             _success;
+    // };
+    //
+    // template <typename Ret, typename DataT, typename... X>
+    // struct caller_f{
+    //     using provided_args_type = std::tuple<X...>;
+    //     static constexpr std::size_t provided_args_size = std::tuple_size_v<provided_args_type>;
+    //
+    //     enum {
+    //         is_getter = false,
+    //         is_setter = false,
+    //         is_caller = true
+    //     };
+    //
+    //     caller_f(Ret& ret, DataT& d, X&&... args): _ret(ret), _data(d), _args(std::forward<X>(args)...), _success(false) {}
+    //     caller_f(Ret& ret, DataT& d, std::tuple<X...> args): _ret(ret), _data(d), _args(args), _success(false) {}
+    //
+    //     template <typename K, typename V, typename std::enable_if_t<std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
+    //     void operator()(nvp<policies::function, K, V>& nvp) {
+    //         call(nvp);
+    //     }
+    //
+    //     template <typename K, typename V, typename std::enable_if_t<!std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
+    //     void operator()(nvp<policies::function, K, V>&) { }
+    //     template <typename PropertyPolicy, typename K, typename V>
+    //     void operator()(nvp<policies::property<PropertyPolicy>, K, V>&){}
+    //
+    //     template <typename K, typename V, typename std::enable_if_t<provided_args_size <= std::tuple_size_v<typename V::function::arguments_type>, int> = 0>
+    //     void call(nvp<policies::function, K, V>& nvp){
+    //         static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
+    //
+    //         using required_arguments_type     = typename V::function::arguments_type;
+    //         constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
+    //         static_assert(provided_args_size <= required_args_size);
+    //
+    //         required_arguments_type required_args;
+    //         udho::url::detail::tuple_copy(_args, required_args);
+    //
+    //         auto wrapper  = *nvp.value();
+    //         _ret = std::apply(wrapper, std::tuple_cat(std::make_tuple(std::ref(_data)), required_args));
+    //         _success = true;
+    //     }
+    //
+    //     template <typename K, typename V, typename std::enable_if_t< std::tuple_size_v<typename V::function::arguments_type> < provided_args_size, int> = 0>
+    //     void call(nvp<policies::function, K, V>& nvp){
+    //         static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
+    //
+    //         using required_arguments_type     = typename V::function::arguments_type;
+    //         constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
+    //         static_assert(provided_args_size  > required_args_size);
+    //
+    //         throw std::invalid_argument{udho::url::format("function {} called with more arguments than needed", nvp.name())};
+    //     }
+    //
+    //     bool success() const { return _success; }
+    //     operator bool () const { return success(); }
+    //     bool operator!() const { return !success(); }
+    //
+    //     Ret&             _ret;
+    //     DataT&           _data;
+    //     std::tuple<X...> _args;
+    //     bool             _success;
+    // };
 
-        enum {
-            is_getter = true,
-            is_setter = false,
-            is_caller = false
-        };
+    // template <typename Function>
+    // struct extractor_f{
+    //     extractor_f(Function&& f): _f(std::move(f)) {}
+    //
+    //     template <typename PolicyT, typename KeyT, typename ValueT>
+    //     decltype(auto) operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
+    //         return _f(nvp);
+    //     }
+    //
+    //     Function _f;
+    // };
 
-        getter_f(value_type ret, data_type d): _ret(ret), _data(d), _success(false) {}
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::writable>, K, V>& nvp){
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, std::ref(_data));
-            _ret = function();
-            _success = true;
-        }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::readonly>, K, V>& nvp){
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, std::ref(_data));
-            _ret = function();
-            _success = true;
-        }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::functional>, K, V>& nvp){
-            auto wrapper  = *nvp.value().getter();
-            auto function = std::bind(wrapper, std::ref(_data));
-            _ret = function();
-            _success = true;
-        }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<value_type, typename V::result_type> >::type>
-        void operator()(nvp<policies::function, K, V>&){ }
-
-        template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<value_type, typename V::result_type> >::type>
-        void operator()(nvp<PolicyT, K, V>&){ }
-
-        bool success() const { return _success; }
-        operator bool () const { return success(); }
-        bool operator!() const { return !success(); }
-
-        value_type _ret;
-        data_type  _data;
-        bool       _success;
-    };
-
-    template <typename ValueT, typename DataT>
-    struct setter_f{
-        using value_type = std::add_const_t<std::add_lvalue_reference_t<ValueT>>;
-        using data_type  = std::add_lvalue_reference_t<DataT>;
-
-        enum {
-            is_getter = false,
-            is_setter = true,
-            is_caller = false
-        };
-
-        setter_f(value_type v, data_type d): _value(v), _data(d), _success(false) {}
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::writable>, K, V>& nvp){
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, &_data);
-            function() = _value;
-            _success = true;
-        }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::readonly>, K, V>& nvp){ }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
-        void operator()(nvp<policies::property<udho::view::data::policies::functional>, K, V>& nvp){
-            auto wrapper  = *nvp.value().setter();
-            auto function = std::bind(wrapper, &_data, _value);
-            function();
-            _success = true;
-        }
-
-        template <typename K, typename V, typename = typename std::enable_if< std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
-        void operator()(nvp<policies::function, K, V>&){ }
-
-        template <typename PolicyT, typename K, typename V, typename = typename std::enable_if< !std::is_assignable_v<std::add_lvalue_reference_t<typename V::result_type>, value_type> >::type>
-        void operator()(nvp<PolicyT, K, V>&){ }
-
-        bool success() const { return _success; }
-        operator bool () const { return success(); }
-        bool operator!() const { return !success(); }
-
-        value_type _value;
-        data_type        _data;
-        bool             _success;
-    };
-
-    template <typename Ret, typename DataT, typename... X>
-    struct caller_f{
-        using provided_args_type = std::tuple<X...>;
-        static constexpr std::size_t provided_args_size = std::tuple_size_v<provided_args_type>;
-
-        enum {
-            is_getter = false,
-            is_setter = false,
-            is_caller = true
-        };
-
-        caller_f(Ret& ret, DataT& d, X&&... args): _ret(ret), _data(d), _args(std::forward<X>(args)...), _success(false) {}
-        caller_f(Ret& ret, DataT& d, std::tuple<X...> args): _ret(ret), _data(d), _args(args), _success(false) {}
-
-        template <typename K, typename V, typename std::enable_if_t<std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
-        void operator()(nvp<policies::function, K, V>& nvp) {
-            call(nvp);
-        }
-
-        template <typename K, typename V, typename std::enable_if_t<!std::is_assignable_v<Ret&, typename V::result_type>, int> = 0>
-        void operator()(nvp<policies::function, K, V>&) { }
-        template <typename PropertyPolicy, typename K, typename V>
-        void operator()(nvp<policies::property<PropertyPolicy>, K, V>&){}
-
-        template <typename K, typename V, typename std::enable_if_t<provided_args_size <= std::tuple_size_v<typename V::function::arguments_type>, int> = 0>
-        void call(nvp<policies::function, K, V>& nvp){
-            static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
-
-            using required_arguments_type     = typename V::function::arguments_type;
-            constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
-            static_assert(provided_args_size <= required_args_size);
-
-            required_arguments_type required_args;
-            udho::url::detail::tuple_copy(_args, required_args);
-
-            auto wrapper  = *nvp.value();
-            _ret = std::apply(wrapper, std::tuple_cat(std::make_tuple(std::ref(_data)), required_args));
-            _success = true;
-        }
-
-        template <typename K, typename V, typename std::enable_if_t< std::tuple_size_v<typename V::function::arguments_type> < provided_args_size, int> = 0>
-        void call(nvp<policies::function, K, V>& nvp){
-            static_assert(std::is_assignable_v<Ret&, typename V::result_type>);
-
-            using required_arguments_type     = typename V::function::arguments_type;
-            constexpr auto required_args_size = std::tuple_size_v<required_arguments_type>;
-            static_assert(provided_args_size  > required_args_size);
-
-            throw std::invalid_argument{udho::url::format("function {} called with more arguments than needed", nvp.name())};
-        }
-
-        bool success() const { return _success; }
-        operator bool () const { return success(); }
-        bool operator!() const { return !success(); }
-
-        Ret&             _ret;
-        DataT&           _data;
-        std::tuple<X...> _args;
-        bool             _success;
-    };
-
-    template <typename Function>
-    struct extractor_f{
-        extractor_f(Function&& f): _f(std::move(f)) {}
-
-        template <typename PolicyT, typename KeyT, typename ValueT>
-        decltype(auto) operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
-            return _f(nvp);
-        }
-
-        Function _f;
-    };
     template <typename KeyT, bool Once = false>
     struct match_f{
         match_f(KeyT&& key): _key(std::move(key)), _count(0) {}
@@ -680,7 +681,9 @@ namespace detail{
             id_finder<X, Function> finder{id_node, obj, _function};
             auto meta = prototype(udho::view::data::type<X>{});
 
-            return meta.members().find_recursive(finder);
+            meta.members().apply_(finder);
+
+            return true;
         }
 
         template <typename X, typename std::enable_if<!has_prototype<X>::value, int>::type* = nullptr>
@@ -781,35 +784,14 @@ namespace detail{
     struct to_json_f{
         to_json_f(nlohmann::json& root, const DataT& data): _root(root), _data(data) {}
 
-        template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp){
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, _data);
-            auto value    = function();
-            _root.push_back({nvp.name(), udho::view::data::to_json(value)});
+        template <typename PolicyT, typename KeyT, typename ValueT>
+        bool operator()(nvp<udho::view::data::policies::property<PolicyT>, KeyT, ValueT>& nvp){
+            _root.push_back({nvp.name(), udho::view::data::to_json(nvp.value().get(_data))});
             return true;
         }
 
         template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>& nvp){
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, _data);
-            _root.push_back({nvp.name(), function()});
-            return true;
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){
-            auto wrapper  = *nvp.value().getter();
-            auto function = std::bind(wrapper, _data);
-            _root.push_back({nvp.name(), function()});
-            return true;
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool operator()(nvp<policies::function, KeyT, ValueT>& nvp){
-            return false;
-        }
+        bool operator()(nvp<policies::function, KeyT, ValueT>&){ return false; }
 
         nlohmann::json& _root;
         const DataT& _data;
@@ -819,39 +801,21 @@ namespace detail{
     struct from_json_f{
         from_json_f(const nlohmann::json& root, DataT& data): _root(root), _data(data) {}
 
-        template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp){
+        template <typename PolicyT, typename KeyT, typename ValueT, typename std::enable_if<std::is_same_v<PolicyT, udho::view::data::policies::writable> || std::is_same_v<PolicyT, udho::view::data::policies::functional>, int>::type* =  nullptr>
+        bool operator()(nvp<udho::view::data::policies::property<PolicyT>, KeyT, ValueT>& nvp){
             using result_type = typename ValueT::result_type;
-
-            result_type v = _root[nvp.name()].template get<result_type>();
-
-            auto wrapper  = *nvp.value();
-            auto function = std::bind(wrapper, &_data);
-            function() = v;
+            result_type v;
+            udho::view::data::from_json(v, _root[nvp.name()]);
+            nvp.value().set(_data, v);
             return true;
         }
 
-        template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>& nvp){
-            return false;
-        }
 
         template <typename KeyT, typename ValueT>
-        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){
-            using result_type = typename ValueT::result_type;
-
-            result_type v = _root[nvp.name()].template get<result_type>();
-
-            auto wrapper  = *nvp.value().setter();
-            auto function = std::bind(wrapper, &_data, v);
-            function();
-            return true;
-        }
+        bool operator()(nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>&){ return false; }
 
         template <typename KeyT, typename ValueT>
-        bool operator()(nvp<policies::function, KeyT, ValueT>& nvp){
-            return false;
-        }
+        bool operator()(nvp<policies::function, KeyT, ValueT>&){ return false; }
 
         const nlohmann::json& _root;
         DataT& _data;
