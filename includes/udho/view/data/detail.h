@@ -281,14 +281,16 @@ namespace detail{
         struct values:          pegtl::list<value, spaced<pegtl::one<','>> > {};
         struct call:            pegtl::seq<key, whitespace, pegtl::one<'('>, values, pegtl::one<')'>> {};
         struct lookup:          pegtl::sor<call, key> {};
-        struct id;
-        struct index:           pegtl::sor<pegtl::seq<pegtl::one<'.'>, id>, index_seq> {};
-        struct id:              pegtl::seq<lookup, pegtl::star<index>> {};
+        struct statement;
+        struct index:           pegtl::sor<pegtl::seq<pegtl::one<'.'>, statement>, index_seq> {};
+        struct statement:       pegtl::seq<lookup, pegtl::star<index>> {};
+        struct grammar:         pegtl::must<   pegtl::list<  statement, pegtl::seq<spaced<pegtl::opt<pegtl::one<';'>>>>  >   > {};
 
         template<typename Rule>
         struct selector:        pegtl::parse_tree::selector<Rule,
             pegtl::parse_tree::store_content::on<
-                    id,
+                    grammar,
+                    statement,
                     lookup,
                     key,
                     call,
@@ -306,8 +308,7 @@ namespace detail{
 
         inline id_ast(const std::string& id_str): _str(std::move(id_str)), _input(_str, "input") {
             try{
-                _root = pegtl::parse_tree::parse<id, selector>(_input);
-                print_tree(_root);
+                _root = pegtl::parse_tree::parse<grammar, selector>(_input);
             } catch (const pegtl::parse_error& e) {
                 const auto p = e.positions().front();
                 std::cerr << e.what() << '\n' << _input.line_at(p) << std::endl;
@@ -317,21 +318,22 @@ namespace detail{
         const std::unique_ptr<pegtl::parse_tree::node>& root() const { return _root; }
 
         inline static std::string get_node_name(const std::unique_ptr<tao::pegtl::parse_tree::node>& n) {
-            if (n->template is_type<lookup>()) return "lookup";
-            if (n->template is_type<key>()) return "key";
-            if (n->template is_type<call>()) return "call";
-            if (n->template is_type<at>()) return "at";
-            if (n->template is_type<index_seq>()) return "index_seq";
-            if (n->template is_type<index>()) return "index";
-            if (n->template is_type<id>()) return "id";
-            if (n->template is_type<quoted_string>()) return "quoted_string";
-            if (n->template is_type<integer>()) return "integer";
-            if (n->template is_type<real>()) return "real";
-            if (n->template is_type<duration>()) return "duration";
-            if (n->template is_type<boolean>()) return "boolean";
-            if (n->template is_type<reference>()) return "reference";
-            if (n->template is_type<value>()) return "value";
-            if (n->template is_type<values>()) return "values";
+            if (n->template is_type<grammar>())         return "grammar";
+            if (n->template is_type<lookup>())          return "lookup";
+            if (n->template is_type<key>())             return "key";
+            if (n->template is_type<call>())            return "call";
+            if (n->template is_type<at>())              return "at";
+            if (n->template is_type<index_seq>())       return "index_seq";
+            if (n->template is_type<index>())           return "index";
+            if (n->template is_type<statement>())       return "statement";
+            if (n->template is_type<quoted_string>())   return "quoted_string";
+            if (n->template is_type<integer>())         return "integer";
+            if (n->template is_type<real>())            return "real";
+            if (n->template is_type<duration>())        return "duration";
+            if (n->template is_type<boolean>())         return "boolean";
+            if (n->template is_type<reference>())       return "reference";
+            if (n->template is_type<value>())           return "value";
+            if (n->template is_type<values>())          return "values";
             return "unknown";
         }
 
@@ -387,23 +389,32 @@ namespace detail{
             bool _assigned;
     };
 
+    struct id_value_noop{
+        template <typename T>
+        void operator()(const T&){}
+    };
+
     template <typename DataT, typename Function>
     struct id_finder{
-        id_finder(const std::unique_ptr<pegtl::parse_tree::node>& id, DataT& data, Function& function): _id(id), _data(data), _function(function) {}
+        id_finder(const std::unique_ptr<pegtl::parse_tree::node>& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
 
         template <typename PolicyT, typename KeyT, typename ValueT>
         bool operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
             // An id node must have or more children
             // The first child of an id node has to be a lookup node
 
-            assert(_id->template is_type<id_ast::id>());
+            assert(_id->template is_type<id_ast::statement>());
             assert(_id->has_content());
             assert(_id->children.size() > 0);
             const std::unique_ptr<pegtl::parse_tree::node>& lookup_node = _id->children[0];
             assert(lookup_node->template is_type<id_ast::lookup>());
             assert(lookup_node->has_content());
 
-            return match_lookup(lookup_node, 0, nvp);
+            bool success = match_lookup(lookup_node, 0, nvp);
+            if(!_found){
+                _found = success;
+            }
+            return success;
         }
 
         template <typename KeyT, typename ValueT>
@@ -636,7 +647,7 @@ namespace detail{
             if(child->template is_type<id_ast::at>()){
                 // index_at query
                 return match_at(child, i, val);
-            } else if (child->template is_type<id_ast::id>()) {
+            } else if (child->template is_type<id_ast::statement>()) {
                 // dot query
                 return match_object(child, i, val);
             }
@@ -673,7 +684,7 @@ namespace detail{
 
         template <typename X, typename std::enable_if<has_prototype<X>::value, int>::type* = nullptr>
         bool match_object(const std::unique_ptr<pegtl::parse_tree::node>& id_node, std::size_t i, X& obj){
-            assert(id_node->template is_type<id_ast::id>());
+            assert(id_node->template is_type<id_ast::statement>());
             assert(id_node->has_content());
 
             std::string id_str = id_node->string();
@@ -683,7 +694,7 @@ namespace detail{
 
             meta.members().apply_(finder);
 
-            return true;
+            return finder.found();
         }
 
         template <typename X, typename std::enable_if<!has_prototype<X>::value, int>::type* = nullptr>
@@ -765,18 +776,73 @@ namespace detail{
             return counter;
         }
 
+        bool found() const { return _found; }
+
         const std::unique_ptr<pegtl::parse_tree::node>& _id;
         DataT&                                          _data;
         Function&                                       _function;
+        bool                                            _found;
+    };
+
+    template <typename DataT, typename Function, bool ReEntrant>
+    struct meta_basic_executor{
+        using function_type = Function;
+        using finder_type   = id_finder<DataT, function_type>;
+        using meta_type     = decltype(prototype(std::declval<type<DataT>>()));
+        using node_ptr_type = std::unique_ptr<pegtl::parse_tree::node>;
+
+        meta_basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
+            assert(_grammar->template is_type<id_ast::grammar>());
+            assert(_grammar->children.size() > 0);
+        }
+
+        void apply(){
+            std::size_t num_statements = _grammar->children.size();
+            if(!ReEntrant && num_statements > 1){
+                throw std::domain_error{udho::url::format("Meta syntax `{}` executed using NOT ReEntrant callback, hence expecting exactly 1 statement, but got {} statements ", _syntax, num_statements)};
+            }
+
+            for(const node_ptr_type& child: _grammar->children){
+                assert(child->template is_type<id_ast::statement>());
+
+                const node_ptr_type& statement = child;
+                assert(statement->has_content());
+
+                finder_type finder{statement, _data, _function};
+                _meta.members().apply_(finder);
+
+                bool success = finder.found();
+
+                if(!success){
+                    throw std::out_of_range{udho::url::format("Failed to find corresponding NVP in data for statement {}", statement->string())};
+                }
+            }
+        }
+
+        void operator()() { apply(); }
+
+        private:
+            std::string          _syntax;
+            id_ast               _ast;
+            DataT&               _data;
+            meta_type            _meta;
+            function_type&       _function;
+            const node_ptr_type& _grammar;
     };
 
     struct match_all{
         template <typename PolicyT, typename KeyT, typename ValueT>
-        bool operator()(nvp<PolicyT, KeyT, ValueT>& nvp){
+        bool operator()(nvp<PolicyT, KeyT, ValueT>&){
             return true;
         }
     };
 
+    template <typename DataT>
+    using meta_executor = meta_basic_executor<DataT, id_value_noop, true>;
+    template <typename DataT, typename ValueT>
+    using meta_reader = meta_basic_executor<DataT, id_value_extractor<ValueT>, false>;
+    template <typename DataT, typename ValueT>
+    using meta_writer = meta_basic_executor<DataT, id_value_manipulator<ValueT>, false>;
 
 #ifdef WITH_JSON_NLOHMANN
 
@@ -822,6 +888,44 @@ namespace detail{
     };
 
 #endif
+}
+
+namespace meta{
+
+    template <typename DataT>
+    void exec(DataT& data, const std::string& syntax){
+        using executor_type = data::detail::meta_executor<DataT>;
+        using function_type = typename executor_type::function_type;
+
+        function_type function;
+        executor_type executor{syntax, data, function};
+        executor();
+    }
+
+    template <typename DataT, typename ValueT>
+    bool get(DataT& data, const std::string& syntax, ValueT& value){
+        using executor_type = data::detail::meta_reader<DataT, ValueT>;
+        using function_type = typename executor_type::function_type;
+
+        function_type function{value};
+        executor_type executor{syntax, data, function};
+        executor();
+
+        return function.assigned();
+    }
+
+    template <typename DataT, typename ValueT>
+    bool set(DataT& data, const std::string& syntax, const ValueT& value){
+        using executor_type = data::detail::meta_writer<DataT, ValueT>;
+        using function_type = typename executor_type::function_type;
+
+        function_type function{value};
+        executor_type executor{syntax, data, function};
+        executor();
+
+        return function.assigned();
+    }
+
 }
 
 }

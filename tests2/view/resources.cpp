@@ -99,54 +99,36 @@ Your total debt is <?= d.debt ?>
     auto meta = prototype(udho::view::data::type<person>{});
 
     {
-        udho::view::data::detail::id_ast ast{"debt(60)"};
-        bool result;
-        udho::view::data::detail::id_value_extractor<bool> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<bool>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "set debt: " << extractor.assigned() << " " << result << std::endl;
+        udho::view::data::meta::exec(p, "debt(60)");
+        REQUIRE(p.debt() == 60.0f);
     }{
-        udho::view::data::detail::id_ast ast{"debt"};
         double result;
-        udho::view::data::detail::id_value_extractor<double> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "extracted debt: " << extractor.assigned() << " " << result << std::endl;
+        bool success = udho::view::data::meta::get(p, "debt", result);
+
+        REQUIRE(success);
+        REQUIRE(result == 60.0f);
+        REQUIRE(p.debt() == 60.0f);
     }{
-        udho::view::data::detail::id_ast ast{"debt"};
         double value = 70;
-        udho::view::data::detail::id_value_manipulator<double> manipulator{value};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_manipulator<double>> finder{ast.root()->children[0], p, manipulator};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "set debt: " << manipulator.assigned() << " " << value << std::endl;
+        bool success = udho::view::data::meta::set(p, "debt", value);
+
+        REQUIRE(success);
+        REQUIRE(p.debt() == 70.0f);
     }{
-        udho::view::data::detail::id_ast ast{"debt"};
-        double result;
-        udho::view::data::detail::id_value_extractor<double> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "extracted debt: " << extractor.assigned() << " " << result << std::endl;
+        udho::view::data::meta::exec(p, "addresses[1].locality('Changed Locality')");
+        REQUIRE(p.addresses[1].locality == "Changed Locality");
     }{
-        udho::view::data::detail::id_ast ast{"addresses[1].locality('Changed Locality')"};
-        bool result;
-        udho::view::data::detail::id_value_extractor<bool> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<bool>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "extracted locality: " << extractor.assigned() << " " << result << std::endl;
-    }{
-        udho::view::data::detail::id_ast ast{"addresses[1].locality"};
         std::string result;
-        udho::view::data::detail::id_value_extractor<std::string> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<std::string>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "extracted locality: " << extractor.assigned() << " " << result << std::endl;
+        bool success = udho::view::data::meta::get(p, "addresses[1].locality", result);
+
+        REQUIRE(success);
+        REQUIRE(p.addresses[1].locality == "Changed Locality");
     }{
-        udho::view::data::detail::id_ast ast{"add (1, 2, 3, 4)"};
         double result;
-        udho::view::data::detail::id_value_extractor<double> extractor{result};
-        udho::view::data::detail::id_finder<person, udho::view::data::detail::id_value_extractor<double>> finder{ast.root()->children[0], p, extractor};
-        std::cout << "apply_ " << std::endl << meta.members().apply_(finder) << std::endl;
-        std::cout << "extracted add: " << extractor.assigned() << " " << result << std::endl;
+        bool success = udho::view::data::meta::get(p, "add (1, 2, 3, 4)", result);
+
+        REQUIRE(success);
+        REQUIRE(result == 10);
     }
 
     nlohmann::json p_json = udho::view::data::to_json(p);
