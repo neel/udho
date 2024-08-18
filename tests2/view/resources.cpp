@@ -29,7 +29,7 @@ struct address{
 struct person{
     std::string name;
     double      age;
-    std::uint32_t _debt;
+
     std::vector<address> addresses;
 
     person() = default;
@@ -63,12 +63,16 @@ struct person{
             func("print",       &person::print),
             func("add",         &person::add);
     }
+
+    private:
+        std::uint32_t _debt;
 };
 
 TEST_CASE("Tokenizer correctly builds the trie", "[trie]") {
 
     static char buffer[] = R"TEMPLATE(
-<?! data d; bridge 'lua'; lang 'lua' ?>
+<?! view.name("hello"); view.data('d'); view.bridge('lua'); view.cache.expiry(1d) ?>
+
 Hi <?= d.name ?> you are <?= d.age ?> years old.
 You have lived in these localities:
 <? for i, address in ipairs(d.addresses) do ?>
@@ -145,5 +149,7 @@ Your total debt is <?= d.debt ?>
     std::cout << output << std::endl;
 
     std::string input = R"(x.y.z_a('v1', 'v_2',:keyword); hello ("world"); hello_hi('pla_net');feature(on);cache.expire(-42.24);)";
-    udho::view::sections::meta_parser::parse(input);
+    // udho::view::sections::meta_parser::parse(input);
+    udho::view::data::meta::detail::id_ast ast{input};
+    udho::view::data::meta::detail::id_ast::print_tree(ast.root());
 }

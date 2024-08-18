@@ -49,8 +49,8 @@ template <typename Head, typename Tail = void>
 struct associative;
 
 template <typename PolicyT, typename KeyT, typename ValueT, typename Tail>
-struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
-    using head_type = nvp<PolicyT, KeyT, ValueT>;
+struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
+    using head_type = data::nvp<PolicyT, KeyT, ValueT>;
     using tail_type = Tail;
 
     associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
@@ -106,8 +106,8 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
 };
 
 template <typename PolicyT, typename KeyT, typename ValueT>
-struct associative<nvp<PolicyT, KeyT, ValueT>, void>{
-    using head_type = nvp<PolicyT, KeyT, ValueT>;
+struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
+    using head_type = data::nvp<PolicyT, KeyT, ValueT>;
     using tail_type = void;
 
     associative(head_type&& head): _head(std::move(head)) {}
@@ -178,9 +178,9 @@ template <typename Lhs, typename Rhs>
 struct concat_;
 
 template <typename PolicyT1, typename KeyT1, typename ValueT1, typename PolicyT2, typename KeyT2, typename ValueT2>
-struct concat_<nvp<PolicyT1, KeyT1, ValueT1>, nvp<PolicyT2, KeyT2, ValueT2>>{
-    using lhs_type    = nvp<PolicyT1, KeyT1, ValueT1>;
-    using rhs_type    = nvp<PolicyT2, KeyT2, ValueT2>;
+struct concat_<data::nvp<PolicyT1, KeyT1, ValueT1>, data::nvp<PolicyT2, KeyT2, ValueT2>>{
+    using lhs_type    = data::nvp<PolicyT1, KeyT1, ValueT1>;
+    using rhs_type    = data::nvp<PolicyT2, KeyT2, ValueT2>;
     using result_type = associative<rhs_type, associative<lhs_type>>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
@@ -189,9 +189,9 @@ struct concat_<nvp<PolicyT1, KeyT1, ValueT1>, nvp<PolicyT2, KeyT2, ValueT2>>{
 };
 
 template <typename HeadT, typename TailT, typename PolicyT, typename KeyT, typename ValueT>
-struct concat_<associative<HeadT, TailT>, nvp<PolicyT, KeyT, ValueT>>{
+struct concat_<associative<HeadT, TailT>, data::nvp<PolicyT, KeyT, ValueT>>{
     using lhs_type    = associative<HeadT, TailT>;
-    using rhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using rhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using result_type = associative<rhs_type, lhs_type>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
@@ -200,8 +200,8 @@ struct concat_<associative<HeadT, TailT>, nvp<PolicyT, KeyT, ValueT>>{
 };
 
 template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT, typename TailT>
-struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, TailT>>{
-    using lhs_type    = nvp<PolicyT, KeyT, ValueT>;
+struct concat_<data::nvp<PolicyT, KeyT, ValueT>, associative<HeadT, TailT>>{
+    using lhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using rhs_type    = associative<HeadT, TailT>;
     using result_type = associative<HeadT, typename concat_<TailT, lhs_type>::result_type>;
 
@@ -211,8 +211,8 @@ struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, TailT>>{
 };
 
 template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
-struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, void>>{
-    using lhs_type    = nvp<PolicyT, KeyT, ValueT>;
+struct concat_<data::nvp<PolicyT, KeyT, ValueT>, associative<HeadT, void>>{
+    using lhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using rhs_type    = associative<HeadT, void>;
     using result_type = associative<HeadT, lhs_type>;
 
@@ -222,9 +222,9 @@ struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, void>>{
 };
 
 template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
-struct concat_<associative<HeadT, void>, nvp<PolicyT, KeyT, ValueT>>{
+struct concat_<associative<HeadT, void>, data::nvp<PolicyT, KeyT, ValueT>>{
     using lhs_type    = associative<HeadT, void>;
-    using rhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using rhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using result_type = associative<rhs_type, lhs_type>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
@@ -267,18 +267,18 @@ struct concat_<associative<HeadT1, TailT1>, associative<HeadT2, void>>{
 // };
 
 template <typename P1, typename K1, typename V1, typename P2, typename K2, typename V2>
-typename concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::result_type concat(nvp<P1, K1, V1>&& lhs, nvp<P2, K2, V2>&& rhs){
-    return concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::apply(std::forward<nvp<P1, K1, V1>>(lhs), std::forward<nvp<P2, K2, V2>>(rhs));
+typename concat_<data::nvp<P1, K1, V1>, data::nvp<P2, K2, V2>>::result_type concat(data::nvp<P1, K1, V1>&& lhs, data::nvp<P2, K2, V2>&& rhs){
+    return concat_<data::nvp<P1, K1, V1>, data::nvp<P2, K2, V2>>::apply(std::forward<data::nvp<P1, K1, V1>>(lhs), std::forward<data::nvp<P2, K2, V2>>(rhs));
 }
 
 template <typename P, typename K, typename V, typename H, typename T = void>
-typename concat_<nvp<P, K, V>, associative<H, T>>::result_type concat(nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
-    return concat_<nvp<P, K, V>, associative<H, T>>::apply(std::forward<nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
+typename concat_<data::nvp<P, K, V>, associative<H, T>>::result_type concat(data::nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
+    return concat_<data::nvp<P, K, V>, associative<H, T>>::apply(std::forward<data::nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
 }
 
 template <typename P, typename K, typename V, typename H, typename T = void>
-typename concat_<associative<H, T>, nvp<P, K, V>>::result_type concat(associative<H, T>&& lhs, nvp<P, K, V>&& rhs){
-    return concat_<associative<H, T>, nvp<P, K, V>>::apply(std::forward<associative<H, T>>(lhs), std::forward<nvp<P, K, V>>(rhs));
+typename concat_<associative<H, T>, data::nvp<P, K, V>>::result_type concat(associative<H, T>&& lhs, data::nvp<P, K, V>&& rhs){
+    return concat_<associative<H, T>, data::nvp<P, K, V>>::apply(std::forward<associative<H, T>>(lhs), std::forward<data::nvp<P, K, V>>(rhs));
 }
 
 template <typename H1, typename T1, typename H2, typename T2>
@@ -324,9 +324,9 @@ struct concat_<assoc_<associative<HeadT, TailT>>, RhsT>{
 };
 
 template <typename P, typename K, typename V>
-struct concat_<assoc_<void>, nvp<P, K, V>>{
+struct concat_<assoc_<void>, data::nvp<P, K, V>>{
     using lhs_type      = assoc_<void>;
-    using rhs_type      = nvp<P, K, V>;
+    using rhs_type      = data::nvp<P, K, V>;
     using result_type   = assoc_<associative<rhs_type>>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
@@ -353,18 +353,18 @@ typename concat_<assoc_<MembersT>, RhsT>::result_type concat(assoc_<MembersT>&& 
 // operator, {
 
 template <typename P1, typename K1, typename V1, typename P2, typename K2, typename V2>
-typename concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::result_type operator,(nvp<P1, K1, V1>&& lhs, nvp<P2, K2, V2>&& rhs){
-    return concat(std::forward<nvp<P1, K1, V1>>(lhs), std::forward<nvp<P2, K2, V2>>(rhs));
+typename concat_<data::nvp<P1, K1, V1>, data::nvp<P2, K2, V2>>::result_type operator,(data::nvp<P1, K1, V1>&& lhs, data::nvp<P2, K2, V2>&& rhs){
+    return concat(std::forward<data::nvp<P1, K1, V1>>(lhs), std::forward<data::nvp<P2, K2, V2>>(rhs));
 }
 
 template <typename P, typename K, typename V, typename H, typename T = void>
-typename concat_<nvp<P, K, V>, associative<H, T>>::result_type operator,(nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
-    return concat(std::forward<nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
+typename concat_<data::nvp<P, K, V>, associative<H, T>>::result_type operator,(data::nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
+    return concat(std::forward<data::nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
 }
 
 template <typename P, typename K, typename V, typename H, typename T = void>
-typename concat_<associative<H, T>, nvp<P, K, V>>::result_type operator,(associative<H, T>&& lhs, nvp<P, K, V>&& rhs){
-    return concat(std::forward<associative<H, T>>(lhs), std::forward<nvp<P, K, V>>(rhs));
+typename concat_<associative<H, T>, data::nvp<P, K, V>>::result_type operator,(associative<H, T>&& lhs, data::nvp<P, K, V>&& rhs){
+    return concat(std::forward<associative<H, T>>(lhs), std::forward<data::nvp<P, K, V>>(rhs));
 }
 
 template <typename H1, typename T1, typename H2, typename T2>
