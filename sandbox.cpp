@@ -89,9 +89,8 @@ struct subinfo{
     friend auto prototype(udho::view::data::type<subinfo>){
         using namespace udho::view::data;
 
-        return assoc(
-            mvar("desc",  &subinfo::desc)
-        ).as("subinfo");
+        return assoc("subinfo"),
+            mvar("desc",  &subinfo::desc);
     }
 };
 
@@ -118,13 +117,12 @@ struct info{
     friend auto prototype(udho::view::data::type<info>){
         using namespace udho::view::data;
 
-        return assoc(
+        return assoc("info"),
             mvar("name",  &info::name),
             cvar("value", &info::value),
             fvar("x",     &info::x, &info::setx),
             mvar("sub",   &info::subs),
-            func("print", &info::print)
-        ).as("info");
+            func("print", &info::print);
     }
 };
 

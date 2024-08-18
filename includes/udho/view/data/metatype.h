@@ -45,7 +45,7 @@ namespace data{
 
 namespace detail{
 
-template <typename Head = void, typename Tail = void>
+template <typename Head, typename Tail = void>
 struct associative;
 
 template <typename PolicyT, typename KeyT, typename ValueT, typename Tail>
@@ -75,6 +75,30 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, Tail>{
         }
         return _tail.apply_if(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
     }
+
+    template <typename Function>
+    std::size_t apply_all(Function&& f){
+        return apply_if(std::forward<Function>(f), detail::match_all{});
+    }
+
+
+#ifdef WITH_JSON_NLOHMANN
+
+    template <typename DataT>
+    nlohmann::json json(const DataT& data) {
+        nlohmann::json root = nlohmann::json::object();
+        detail::to_json_f jsonifier{root, data};
+        apply_if(jsonifier, detail::match_all{});
+        return root;
+    }
+
+    template <typename DataT>
+    void json(DataT& data, const nlohmann::json& json) {
+        detail::from_json_f jsonifier{json, data};
+        apply_if(jsonifier, detail::match_all{});
+    }
+
+#endif
 
     private:
         head_type _head;
@@ -106,47 +130,11 @@ struct associative<nvp<PolicyT, KeyT, ValueT>, void>{
         return count+1;
     }
 
-
-    private:
-        head_type _head;
-};
-
-template <>
-struct associative<void, void>{
-    using head_type = void;
-    using tail_type = void;
-
-    template <typename Function>
-    std::size_t apply_(Function& f, std::size_t count = 0){
-        return count;
-    }
-
-    template <typename Function, typename MatchT>
-    std::size_t apply_if(Function&&, MatchT&&, std::size_t count = 0){
-        return count;
-    }
-
-
-};
-
-
-}
-
-template <typename AssociativeT>
-struct metatype;
-
-template <typename X, typename... Xs>
-struct associative: detail::associative<X, associative<Xs...>> {
-    associative(X&& x, Xs&&... xs): base(std::move(x), associative<Xs...>(std::forward<Xs>(xs)...)) {}
-
     template <typename Function>
     std::size_t apply_all(Function&& f){
-        return base::apply_if(std::forward<Function>(f), detail::match_all{});
+        return apply_if(std::forward<Function>(f), detail::match_all{});
     }
 
-    metatype<associative<X, Xs...>> as(const std::string& name){
-        return metatype<associative<X, Xs...>>{name, std::move(*this)};
-    }
 
 #ifdef WITH_JSON_NLOHMANN
 
@@ -154,50 +142,248 @@ struct associative: detail::associative<X, associative<Xs...>> {
     nlohmann::json json(const DataT& data) {
         nlohmann::json root = nlohmann::json::object();
         detail::to_json_f jsonifier{root, data};
-        base::apply_if(jsonifier, detail::match_all{});
+        apply_if(jsonifier, detail::match_all{});
         return root;
     }
 
     template <typename DataT>
     void json(DataT& data, const nlohmann::json& json) {
         detail::from_json_f jsonifier{json, data};
-        base::apply_if(jsonifier, detail::match_all{});
+        apply_if(jsonifier, detail::match_all{});
     }
 
 #endif
 
     private:
-        using base = detail::associative<X, associative<Xs...>>;
+        head_type _head;
 };
 
-template <>
-struct associative<void>: detail::associative<void, void> {};
+// template <>
+// struct associative<void, void>{
+//     using head_type = void;
+//     using tail_type = void;
+//
+//     template <typename Function>
+//     std::size_t apply_(Function& f, std::size_t count = 0){
+//         return count;
+//     }
+//
+//     template <typename Function, typename MatchT>
+//     std::size_t apply_if(Function&&, MatchT&&, std::size_t count = 0){
+//         return count;
+//     }
+// };
 
-template <typename... Xs>
-associative<Xs...> assoc(Xs&&... xs){
-    return associative<Xs...>{std::forward<Xs>(xs)...};
+template <typename Lhs, typename Rhs>
+struct concat_;
+
+template <typename PolicyT1, typename KeyT1, typename ValueT1, typename PolicyT2, typename KeyT2, typename ValueT2>
+struct concat_<nvp<PolicyT1, KeyT1, ValueT1>, nvp<PolicyT2, KeyT2, ValueT2>>{
+    using lhs_type    = nvp<PolicyT1, KeyT1, ValueT1>;
+    using rhs_type    = nvp<PolicyT2, KeyT2, ValueT2>;
+    using result_type = associative<rhs_type, associative<lhs_type>>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{associative<rhs_type>{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)}};
+    }
+};
+
+template <typename HeadT, typename TailT, typename PolicyT, typename KeyT, typename ValueT>
+struct concat_<associative<HeadT, TailT>, nvp<PolicyT, KeyT, ValueT>>{
+    using lhs_type    = associative<HeadT, TailT>;
+    using rhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using result_type = associative<rhs_type, lhs_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)};
+    }
+};
+
+template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT, typename TailT>
+struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, TailT>>{
+    using lhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using rhs_type    = associative<HeadT, TailT>;
+    using result_type = associative<HeadT, typename concat_<TailT, lhs_type>::result_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::move(rhs._head), concat_<TailT, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs))};
+    }
+};
+
+template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
+struct concat_<nvp<PolicyT, KeyT, ValueT>, associative<HeadT, void>>{
+    using lhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using rhs_type    = associative<HeadT, void>;
+    using result_type = associative<HeadT, lhs_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::move(rhs._head), std::forward<lhs_type>(lhs)};
+    }
+};
+
+template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
+struct concat_<associative<HeadT, void>, nvp<PolicyT, KeyT, ValueT>>{
+    using lhs_type    = associative<HeadT, void>;
+    using rhs_type    = nvp<PolicyT, KeyT, ValueT>;
+    using result_type = associative<rhs_type, lhs_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)};
+    }
+};
+
+template <typename HeadT1, typename TailT1, typename HeadT2, typename TailT2>
+struct concat_<associative<HeadT1, TailT1>, associative<HeadT2, TailT2>>{
+    using lhs_type      = associative<HeadT1, TailT1>;
+    using rhs_type      = associative<HeadT2, TailT2>;
+    using result_type   = associative<HeadT2, typename concat_<TailT2, lhs_type>::result_type >;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::move(rhs._head), concat_<TailT2, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs)) };
+    }
+};
+
+template <typename HeadT1, typename TailT1, typename HeadT2>
+struct concat_<associative<HeadT1, TailT1>, associative<HeadT2, void>>{
+    using lhs_type      = associative<HeadT1, TailT1>;
+    using rhs_type      = associative<HeadT2, void>;
+    using result_type   = associative<HeadT2, lhs_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::move(rhs._head), std::forward<lhs_type>(lhs)};
+    }
+};
+
+// already covered
+// template <typename HeadT1, typename HeadT2, typename TailT2>
+// struct concat_<associative<HeadT1, void>, associative<HeadT2, TailT2>>{
+//     using lhs_type      = associative<HeadT1, void>;
+//     using rhs_type      = associative<HeadT2, TailT2>;
+//     using result_type   = associative<HeadT2, typename concat_<TailT2, lhs_type>::result_type >;
+//
+//     result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+//         return result_type{std::move(rhs._head), concat_<TailT2, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs)) };
+//     }
+// };
+
+template <typename P1, typename K1, typename V1, typename P2, typename K2, typename V2>
+typename concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::result_type concat(nvp<P1, K1, V1>&& lhs, nvp<P2, K2, V2>&& rhs){
+    return concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::apply(std::forward<nvp<P1, K1, V1>>(lhs), std::forward<nvp<P2, K2, V2>>(rhs));
 }
 
-template <typename... Xs>
-struct metatype<associative<Xs...>>{
-    using members_type = associative<Xs...>;
+template <typename P, typename K, typename V, typename H, typename T = void>
+typename concat_<nvp<P, K, V>, associative<H, T>>::result_type concat(nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
+    return concat_<nvp<P, K, V>, associative<H, T>>::apply(std::forward<nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
+}
 
-    metatype(const std::string& name, members_type&& members): _name(name), _members(std::move(members)) {}
+template <typename P, typename K, typename V, typename H, typename T = void>
+typename concat_<associative<H, T>, nvp<P, K, V>>::result_type concat(associative<H, T>&& lhs, nvp<P, K, V>&& rhs){
+    return concat_<associative<H, T>, nvp<P, K, V>>::apply(std::forward<associative<H, T>>(lhs), std::forward<nvp<P, K, V>>(rhs));
+}
 
+template <typename H1, typename T1, typename H2, typename T2>
+typename concat_<associative<H1, T1>, associative<H2, T2>>::result_type concat(associative<H1, T1>&& lhs, associative<H2, T2>&& rhs){
+    return concat_<associative<H1, T1>, associative<H2, T2>>::apply(std::forward<associative<H1, T1>>(lhs), std::forward<associative<H2, T2>>(rhs));
+}
+
+template <typename MembersT = void>
+struct assoc_;
+
+template <>
+struct assoc_<void>{
+    assoc_(const std::string& name): _name(name) {}
+    const std::string& name() const { return _name; }
+    private:
+        std::string  _name;
+};
+
+template <typename HeadT, typename TailT>
+struct assoc_<associative<HeadT, TailT>>{
+    using members_type = associative<HeadT, TailT>;
+
+    assoc_(const std::string& name, members_type&& members): _name(name), _members(std::move(members)) {}
     const std::string& name() const { return _name; }
 
     members_type& members() { return _members; }
     const members_type& members() const { return _members; }
 
-    template <typename Function>
-    std::size_t operator()(Function&& f){
-        return _members.template apply<Function>(std::forward<Function>(f));
-    }
-
     private:
         std::string  _name;
         members_type _members;
 };
+
+template <typename HeadT, typename TailT, typename RhsT>
+struct concat_<assoc_<associative<HeadT, TailT>>, RhsT>{
+    using lhs_type      = assoc_<associative<HeadT, TailT>>;
+    using rhs_type      = RhsT;
+    using result_type   = assoc_<typename concat_<associative<HeadT, TailT>, rhs_type>::result_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{lhs.name(), concat(std::move(lhs.members()), std::forward<rhs_type>(rhs))};
+    }
+};
+
+template <typename P, typename K, typename V>
+struct concat_<assoc_<void>, nvp<P, K, V>>{
+    using lhs_type      = assoc_<void>;
+    using rhs_type      = nvp<P, K, V>;
+    using result_type   = assoc_<associative<rhs_type>>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{lhs.name(), associative<rhs_type>(std::forward<rhs_type>(rhs))};
+    }
+};
+
+template <typename H, typename T>
+struct concat_<assoc_<void>, associative<H, T>>{
+    using lhs_type      = assoc_<void>;
+    using rhs_type      = associative<H, T>;
+    using result_type   = assoc_<rhs_type>;
+
+    static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{lhs.name(), std::forward<rhs_type>(rhs)};
+    }
+};
+
+template <typename MembersT, typename RhsT>
+typename concat_<assoc_<MembersT>, RhsT>::result_type concat(assoc_<MembersT>&& lhs, RhsT&& rhs){
+    return concat_<assoc_<MembersT>, RhsT>::apply(std::forward<assoc_<MembersT>>(lhs), std::forward<RhsT>(rhs));
+}
+
+// operator, {
+
+template <typename P1, typename K1, typename V1, typename P2, typename K2, typename V2>
+typename concat_<nvp<P1, K1, V1>, nvp<P2, K2, V2>>::result_type operator,(nvp<P1, K1, V1>&& lhs, nvp<P2, K2, V2>&& rhs){
+    return concat(std::forward<nvp<P1, K1, V1>>(lhs), std::forward<nvp<P2, K2, V2>>(rhs));
+}
+
+template <typename P, typename K, typename V, typename H, typename T = void>
+typename concat_<nvp<P, K, V>, associative<H, T>>::result_type operator,(nvp<P, K, V>&& lhs, associative<H, T>&& rhs){
+    return concat(std::forward<nvp<P, K, V>>(lhs), std::forward<associative<H, T>>(rhs));
+}
+
+template <typename P, typename K, typename V, typename H, typename T = void>
+typename concat_<associative<H, T>, nvp<P, K, V>>::result_type operator,(associative<H, T>&& lhs, nvp<P, K, V>&& rhs){
+    return concat(std::forward<associative<H, T>>(lhs), std::forward<nvp<P, K, V>>(rhs));
+}
+
+template <typename H1, typename T1, typename H2, typename T2>
+typename concat_<associative<H1, T1>, associative<H2, T2>>::result_type operator,(associative<H1, T1>&& lhs, associative<H2, T2>&& rhs){
+    return concat(std::forward<associative<H1, T1>>(lhs), std::forward<associative<H2, T2>>(rhs));
+}
+
+template <typename MembersT, typename RhsT>
+typename concat_<assoc_<MembersT>, RhsT>::result_type operator,(assoc_<MembersT>&& lhs, RhsT&& rhs){
+    return concat(std::forward<assoc_<MembersT>>(lhs), std::forward<RhsT>(rhs));
+}
+
+// }
+
+}
+
+detail::assoc_<> assoc(const std::string& name){
+    return detail::assoc_<>{name};
+}
 
 template <template<class> class BinderT, typename Class>
 struct binder;

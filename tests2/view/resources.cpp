@@ -21,9 +21,8 @@ struct address{
     friend auto prototype(udho::view::data::type<address>){
         using namespace udho::view::data;
 
-        return assoc(
-            mvar("locality",  &address::locality)
-        ).as("address");
+        return assoc("address"),
+            mvar("locality",  &address::locality);
     }
 };
 
@@ -56,14 +55,13 @@ struct person{
     friend auto prototype(udho::view::data::type<person>){
         using namespace udho::view::data;
 
-        return assoc(
+        return assoc("person"),
             mvar("name",        &person::name),
             cvar("age",         &person::age),
             fvar("debt",        &person::debt, &person::set_debt),
             mvar("addresses",   &person::addresses),
             func("print",       &person::print),
-            func("add",         &person::add)
-        ).as("person");
+            func("add",         &person::add);
     }
 };
 
