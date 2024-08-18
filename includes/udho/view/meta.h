@@ -116,8 +116,8 @@ namespace detail{
     };
 
     template <typename Ret>
-    struct id_value_extractor{
-        id_value_extractor(Ret& ret): _ret(ret), _assigned(false) {}
+    struct value_reader{
+        value_reader(Ret& ret): _ret(ret), _assigned(false) {}
 
         template <typename T, typename std::enable_if_t<std::is_assignable_v<Ret&, T>>* = nullptr>
         void operator()(const T& v){
@@ -134,8 +134,8 @@ namespace detail{
     };
 
     template <typename Value>
-    struct id_value_manipulator{
-        id_value_manipulator(const Value& value): _value(value), _assigned(false) {}
+    struct value_manipulator{
+        value_manipulator(const Value& value): _value(value), _assigned(false) {}
 
         template <typename T, typename std::enable_if_t<std::is_assignable_v<T&, Value>>* = nullptr>
         void operator()(T& target){
@@ -151,14 +151,14 @@ namespace detail{
             bool _assigned;
     };
 
-    struct id_value_noop{
+    struct value_noop{
         template <typename T>
         void operator()(const T&){}
     };
 
     template <typename DataT, typename Function>
-    struct id_finder{
-        id_finder(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
+    struct visitor{
+        visitor(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
 
         template <typename PolicyT, typename KeyT, typename ValueT>
         bool operator()(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
@@ -451,7 +451,7 @@ namespace detail{
 
             std::string id_str = id_node->string();
 
-            id_finder<X, Function> finder{id_node, obj, _function};
+            visitor<X, Function> finder{id_node, obj, _function};
             auto meta = prototype(udho::view::data::type<X>{});
 
             meta.members().apply_(finder);
@@ -547,13 +547,13 @@ namespace detail{
     };
 
     template <typename DataT, typename Function, bool ReEntrant>
-    struct meta_basic_executor{
+    struct basic_executor{
         using function_type = Function;
-        using finder_type   = id_finder<DataT, function_type>;
+        using finder_type   = visitor<DataT, function_type>;
         using meta_type     = decltype(prototype(std::declval<udho::view::data::type<DataT>>()));
         using node_ptr_type = ast::node_ptr_type;
 
-        meta_basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
+        basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
             assert(_grammar->template is_type<ast::grammar>());
             assert(_grammar->children.size() > 0);
         }
@@ -593,16 +593,16 @@ namespace detail{
     };
 
     template <typename DataT>
-    using meta_executor = meta_basic_executor<DataT, id_value_noop, true>;
+    using executor = basic_executor<DataT, value_noop, true>;
     template <typename DataT, typename ValueT>
-    using meta_reader = meta_basic_executor<DataT, id_value_extractor<ValueT>, false>;
+    using reader   = basic_executor<DataT, value_reader<ValueT>, false>;
     template <typename DataT, typename ValueT>
-    using meta_writer = meta_basic_executor<DataT, id_value_manipulator<ValueT>, false>;
+    using writer   = basic_executor<DataT, value_manipulator<ValueT>, false>;
 }
 
 template <typename DataT>
 void exec(DataT& data, const std::string& syntax){
-    using executor_type = detail::meta_executor<DataT>;
+    using executor_type = detail::executor<DataT>;
     using function_type = typename executor_type::function_type;
 
     function_type function;
@@ -612,7 +612,7 @@ void exec(DataT& data, const std::string& syntax){
 
 template <typename DataT, typename ValueT>
 bool get(DataT& data, const std::string& syntax, ValueT& value){
-    using executor_type = detail::meta_reader<DataT, ValueT>;
+    using executor_type = detail::reader<DataT, ValueT>;
     using function_type = typename executor_type::function_type;
 
     function_type function{value};
@@ -624,7 +624,7 @@ bool get(DataT& data, const std::string& syntax, ValueT& value){
 
 template <typename DataT, typename ValueT>
 bool set(DataT& data, const std::string& syntax, const ValueT& value){
-    using executor_type = detail::meta_writer<DataT, ValueT>;
+    using executor_type = detail::writer<DataT, ValueT>;
     using function_type = typename executor_type::function_type;
 
     function_type function{value};
