@@ -22,7 +22,7 @@ namespace detail{
 
     namespace pegtl = tao::pegtl;
 
-    struct id_ast{
+    struct ast{
         struct at:              pegtl::plus<pegtl::digit> {};
         struct index_seq:       pegtl::seq<pegtl::one<'['>, at, pegtl::one<']'>> {};
         struct key:             pegtl::seq<pegtl::alpha, pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'_'>>>> {};
@@ -66,7 +66,9 @@ namespace detail{
                 >
             > {};
 
-        inline id_ast(const std::string& id_str): _str(std::move(id_str)), _input(_str, "input") {
+        using node_ptr_type = std::unique_ptr<tao::pegtl::parse_tree::node>;
+
+        inline ast(const std::string& id_str): _str(std::move(id_str)), _input(_str, "input") {
             try{
                 _root = pegtl::parse_tree::parse<grammar, selector>(_input);
             } catch (const pegtl::parse_error& e) {
@@ -75,9 +77,9 @@ namespace detail{
             }
         }
 
-        const std::unique_ptr<pegtl::parse_tree::node>& root() const { return _root; }
+        const node_ptr_type& root() const { return _root; }
 
-        inline static std::string get_node_name(const std::unique_ptr<tao::pegtl::parse_tree::node>& n) {
+        inline static std::string get_node_name(const node_ptr_type& n) {
             if (n->template is_type<grammar>())         return "grammar";
             if (n->template is_type<lookup>())          return "lookup";
             if (n->template is_type<key>())             return "key";
@@ -97,20 +99,20 @@ namespace detail{
             return "unknown";
         }
 
-        inline static void print_tree(const std::unique_ptr<tao::pegtl::parse_tree::node>& n, const std::string& indent = "") {
+        inline static void print(const node_ptr_type& n, const std::string& indent = "") {
             if (n->is_root()) {
                 std::cout << indent << "Root" << std::endl;
             } else {
                 std::cout << indent << get_node_name(n) << " : \"" << n->string_view() << "\"" << std::endl;
             }
             for (const auto& child : n->children) {
-                print_tree(child, indent + "  ");
+                print(child, indent + "  ");
             }
         }
 
         std::string _str;
         pegtl::memory_input<> _input;
-        std::unique_ptr<pegtl::parse_tree::node> _root;
+        node_ptr_type _root;
     };
 
     template <typename Ret>
@@ -156,18 +158,18 @@ namespace detail{
 
     template <typename DataT, typename Function>
     struct id_finder{
-        id_finder(const std::unique_ptr<pegtl::parse_tree::node>& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
+        id_finder(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
 
         template <typename PolicyT, typename KeyT, typename ValueT>
         bool operator()(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
             // An id node must have or more children
             // The first child of an id node has to be a lookup node
 
-            assert(_id->template is_type<id_ast::statement>());
+            assert(_id->template is_type<ast::statement>());
             assert(_id->has_content());
             assert(_id->children.size() > 0);
-            const std::unique_ptr<pegtl::parse_tree::node>& lookup_node = _id->children[0];
-            assert(lookup_node->template is_type<id_ast::lookup>());
+            const ast::node_ptr_type& lookup_node = _id->children[0];
+            assert(lookup_node->template is_type<ast::lookup>());
             assert(lookup_node->has_content());
 
             bool success = match_lookup(lookup_node, 0, nvp);
@@ -178,14 +180,14 @@ namespace detail{
         }
 
         template <typename KeyT, typename ValueT>
-        bool match_lookup(const std::unique_ptr<pegtl::parse_tree::node>& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<id_ast::lookup>());
+        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp){
+            assert(lookup_node->template is_type<ast::lookup>());
             assert(lookup_node->children.size() > 0);
 
-            const std::unique_ptr<pegtl::parse_tree::node>& child = lookup_node->children[0];
+            const ast::node_ptr_type& child = lookup_node->children[0];
 
-            if(child->template is_type<id_ast::key>()){
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = child;
+            if(child->template is_type<ast::key>()){
+                const ast::node_ptr_type& key_node = child;
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
@@ -196,8 +198,8 @@ namespace detail{
 
                     if(_id->children.size() > i+1){
                         // child under id implies index queries
-                        const std::unique_ptr<pegtl::parse_tree::node>& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<id_ast::index>());
+                        const ast::node_ptr_type& index_node = _id->children[i+1];
+                        assert(index_node->template is_type<ast::index>());
                         assert(index_node->has_content());
                         return match_index(index_node, i+1, res);
                     } else {
@@ -207,21 +209,21 @@ namespace detail{
                         return true;
                     }
                 }
-            } else if(child->template is_type<id_ast::call>()){
+            } else if(child->template is_type<ast::call>()){
                 // setter intended
-                const std::unique_ptr<pegtl::parse_tree::node>& call_node = child;
+                const ast::node_ptr_type& call_node = child;
                 assert(call_node->children.size() > 1);
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = call_node->children[0];
-                assert(key_node->template is_type<id_ast::key>());
+                const ast::node_ptr_type& key_node = call_node->children[0];
+                assert(key_node->template is_type<ast::key>());
                 assert(key_node->has_content());
 
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
                 } else {
-                    const std::unique_ptr<pegtl::parse_tree::node>& values_node = call_node->children[1];
+                    const ast::node_ptr_type& values_node = call_node->children[1];
 
-                    assert(values_node->template is_type<id_ast::values>());
+                    assert(values_node->template is_type<ast::values>());
                     assert(values_node->has_content());
                     assert(values_node->children.size() == 1); // expecting single argument only as it is treated as an assignment operation not a function call
                     assert(values_node->children[0]->has_content());
@@ -245,14 +247,14 @@ namespace detail{
         }
 
         template <typename KeyT, typename ValueT>
-        bool match_lookup(const std::unique_ptr<pegtl::parse_tree::node>& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<id_ast::lookup>());
+        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>& nvp){
+            assert(lookup_node->template is_type<ast::lookup>());
             assert(lookup_node->children.size() > 0);
 
-            const std::unique_ptr<pegtl::parse_tree::node>& child = lookup_node->children[0];
+            const ast::node_ptr_type& child = lookup_node->children[0];
 
-            if(child->template is_type<id_ast::key>()){
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = child;
+            if(child->template is_type<ast::key>()){
+                const ast::node_ptr_type& key_node = child;
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
@@ -263,8 +265,8 @@ namespace detail{
 
                     if(_id->children.size() > i+1){
                         // child under id implies index queries
-                        const std::unique_ptr<pegtl::parse_tree::node>& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<id_ast::index>());
+                        const ast::node_ptr_type& index_node = _id->children[i+1];
+                        assert(index_node->template is_type<ast::index>());
                         assert(index_node->has_content());
                         return match_index(index_node, i+1, res);
                     } else {
@@ -280,15 +282,15 @@ namespace detail{
         }
 
         template <typename KeyT, typename ValueT>
-        bool match_lookup(const std::unique_ptr<pegtl::parse_tree::node>& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<id_ast::lookup>());
+        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){
+            assert(lookup_node->template is_type<ast::lookup>());
             assert(lookup_node->children.size() > 0);
 
-            const std::unique_ptr<pegtl::parse_tree::node>& child = lookup_node->children[0];
+            const ast::node_ptr_type& child = lookup_node->children[0];
 
-            if(child->template is_type<id_ast::key>()){
+            if(child->template is_type<ast::key>()){
                 // getter intended
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = child;
+                const ast::node_ptr_type& key_node = child;
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
@@ -298,8 +300,8 @@ namespace detail{
 
                     if(_id->children.size() > i+1){
                         // child under id implies index queries
-                        const std::unique_ptr<pegtl::parse_tree::node>& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<id_ast::index>());
+                        const ast::node_ptr_type& index_node = _id->children[i+1];
+                        assert(index_node->template is_type<ast::index>());
                         assert(index_node->has_content());
                         return match_index(index_node, i+1, res);
                     } else {
@@ -316,21 +318,21 @@ namespace detail{
                         return true;
                     }
                 }
-            } else if(child->template is_type<id_ast::call>()){
+            } else if(child->template is_type<ast::call>()){
                 // setter intended
-                const std::unique_ptr<pegtl::parse_tree::node>& call_node = child;
+                const ast::node_ptr_type& call_node = child;
                 assert(call_node->children.size() > 1);
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = call_node->children[0];
-                assert(key_node->template is_type<id_ast::key>());
+                const ast::node_ptr_type& key_node = call_node->children[0];
+                assert(key_node->template is_type<ast::key>());
                 assert(key_node->has_content());
 
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
                 } else {
-                    const std::unique_ptr<pegtl::parse_tree::node>& values_node = call_node->children[1];
+                    const ast::node_ptr_type& values_node = call_node->children[1];
 
-                    assert(values_node->template is_type<id_ast::values>());
+                    assert(values_node->template is_type<ast::values>());
                     assert(values_node->has_content());
                     assert(values_node->children.size() == 1); // expecting single argument only as it is treated as an assignment operation not a function call
                     assert(values_node->children[0]->has_content());
@@ -354,26 +356,26 @@ namespace detail{
         }
 
         template <typename KeyT, typename ValueT>
-        bool match_lookup(const std::unique_ptr<pegtl::parse_tree::node>& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<id_ast::lookup>());
+        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp){
+            assert(lookup_node->template is_type<ast::lookup>());
             assert(lookup_node->children.size() > 0);
 
-            const std::unique_ptr<pegtl::parse_tree::node>& child = lookup_node->children[0];
+            const ast::node_ptr_type& child = lookup_node->children[0];
 
-            if(child->template is_type<id_ast::call>()){
-                const std::unique_ptr<pegtl::parse_tree::node>& call_node = child;
+            if(child->template is_type<ast::call>()){
+                const ast::node_ptr_type& call_node = child;
                 assert(call_node->children.size() > 1);
-                const std::unique_ptr<pegtl::parse_tree::node>& key_node = call_node->children[0];
-                assert(key_node->template is_type<id_ast::key>());
+                const ast::node_ptr_type& key_node = call_node->children[0];
+                assert(key_node->template is_type<ast::key>());
                 assert(key_node->has_content());
 
                 std::string key_name = key_node->string();
                 if(key_name != nvp.name()){
                     return false;
                 } else {
-                    const std::unique_ptr<pegtl::parse_tree::node>& values_node = call_node->children[1];
+                    const ast::node_ptr_type& values_node = call_node->children[1];
 
-                    assert(values_node->template is_type<id_ast::values>());
+                    assert(values_node->template is_type<ast::values>());
                     assert(values_node->has_content());
 
                     std::vector<std::string> provided_args;
@@ -384,8 +386,8 @@ namespace detail{
 
                     if(_id->children.size() > i+1){
                         // child under id implies index queries
-                        const std::unique_ptr<pegtl::parse_tree::node>& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<id_ast::index>());
+                        const ast::node_ptr_type& index_node = _id->children[i+1];
+                        assert(index_node->template is_type<ast::index>());
                         assert(index_node->has_content());
                         return match_index(index_node, i+1, res);
                     } else {
@@ -400,14 +402,14 @@ namespace detail{
         }
 
         template <typename X>
-        bool match_index(const std::unique_ptr<pegtl::parse_tree::node>& index_node, std::size_t i, X& val){
-            assert(index_node->template is_type<id_ast::index>());
+        bool match_index(const ast::node_ptr_type& index_node, std::size_t i, X& val){
+            assert(index_node->template is_type<ast::index>());
             assert(index_node->children.size() == 1);
-            const std::unique_ptr<pegtl::parse_tree::node>& child = index_node->children[0];
-            if(child->template is_type<id_ast::at>()){
+            const ast::node_ptr_type& child = index_node->children[0];
+            if(child->template is_type<ast::at>()){
                 // index_at query
                 return match_at(child, i, val);
-            } else if (child->template is_type<id_ast::statement>()) {
+            } else if (child->template is_type<ast::statement>()) {
                 // dot query
                 return match_object(child, i, val);
             }
@@ -415,8 +417,8 @@ namespace detail{
         }
 
         template <typename X, typename std::enable_if<udho::view::data::detail::has_subscript_operator_v<X>, int>::type* = nullptr>
-        bool match_at(const std::unique_ptr<pegtl::parse_tree::node>& at_node, std::size_t i, X& vec){
-            if(at_node->template is_type<id_ast::at>()){
+        bool match_at(const ast::node_ptr_type& at_node, std::size_t i, X& vec){
+            if(at_node->template is_type<ast::at>()){
                 assert(at_node->has_content());
                 std::string at_str = at_node->string();
                 int at_i = std::stoi(at_str);
@@ -425,8 +427,8 @@ namespace detail{
                 // data item correspondng to the at query retrieved
                 // now traverse to the next sibling
                 if(_id->children.size() > i+1){
-                    const std::unique_ptr<pegtl::parse_tree::node>& index_node = _id->children[i+1];
-                    assert(index_node->template is_type<id_ast::index>());
+                    const ast::node_ptr_type& index_node = _id->children[i+1];
+                    assert(index_node->template is_type<ast::index>());
                     assert(index_node->has_content());
                     return match_index(index_node, i+1, v); // Need to pass the sibling
                 } else {
@@ -440,11 +442,11 @@ namespace detail{
         }
 
         template <typename X, typename std::enable_if<!udho::view::data::detail::has_subscript_operator_v<X>, int>::type* = nullptr>
-        bool match_at(const std::unique_ptr<pegtl::parse_tree::node>&, std::size_t, X&){ return false; }
+        bool match_at(const ast::node_ptr_type&, std::size_t, X&){ return false; }
 
         template <typename X, typename std::enable_if<udho::view::data::has_prototype<X>::value, int>::type* = nullptr>
-        bool match_object(const std::unique_ptr<pegtl::parse_tree::node>& id_node, std::size_t i, X& obj){
-            assert(id_node->template is_type<id_ast::statement>());
+        bool match_object(const ast::node_ptr_type& id_node, std::size_t i, X& obj){
+            assert(id_node->template is_type<ast::statement>());
             assert(id_node->has_content());
 
             std::string id_str = id_node->string();
@@ -458,7 +460,7 @@ namespace detail{
         }
 
         template <typename X, typename std::enable_if<!udho::view::data::has_prototype<X>::value, int>::type* = nullptr>
-        bool match_object(const std::unique_ptr<pegtl::parse_tree::node>&, std::size_t, X&){ return false; }
+        bool match_object(const ast::node_ptr_type&, std::size_t, X&){ return false; }
 
         template <typename PolicyT, typename KeyT, typename ValueT, typename std::enable_if<std::is_same_v<PolicyT, udho::view::data::policies::readonly> || std::is_same_v<PolicyT, udho::view::data::policies::writable>, int>::type* = nullptr>
         std::add_lvalue_reference_t<typename ValueT::result_type> _get(udho::view::data::nvp<udho::view::data::policies::property<PolicyT>, KeyT, ValueT>& nvp){ return nvp.value().get(_data); }
@@ -508,22 +510,22 @@ namespace detail{
             return nvp.value().call(_data, required_args);
         }
 
-        std::size_t _list_args(const std::unique_ptr<pegtl::parse_tree::node>& values_node, std::vector<std::string>& provided_args){
-            assert(values_node->template is_type<id_ast::values>());
+        std::size_t _list_args(const ast::node_ptr_type& values_node, std::vector<std::string>& provided_args){
+            assert(values_node->template is_type<ast::values>());
             assert(values_node->has_content());
 
             std::size_t counter = 0;
-            std::transform(values_node->children.begin(), values_node->children.end(), std::back_inserter(provided_args), [&counter](const std::unique_ptr<pegtl::parse_tree::node>& c){
-                if(c->template is_type<id_ast::integer>() || c->template is_type<id_ast::real>() || c->template is_type<id_ast::duration>()){
+            std::transform(values_node->children.begin(), values_node->children.end(), std::back_inserter(provided_args), [&counter](const ast::node_ptr_type& c){
+                if(c->template is_type<ast::integer>() || c->template is_type<ast::real>() || c->template is_type<ast::duration>()){
                     ++counter;
                     return c->string();
-                } else if (c->template is_type<id_ast::quoted_string>()) {
+                } else if (c->template is_type<ast::quoted_string>()) {
                     std::string q_str = c->string();
                     q_str.erase(0, 1);
                     q_str.erase(q_str.size()-1);
                     ++counter;
                     return q_str;
-                } else if (c->template is_type<id_ast::boolean>()) {
+                } else if (c->template is_type<ast::boolean>()) {
                     std::string q_str = c->string();
                     boost::algorithm::to_lower(q_str);
                     if(q_str == "on"  || q_str == "true")  return std::string{"1"};
@@ -538,7 +540,7 @@ namespace detail{
 
         bool found() const { return _found; }
 
-        const std::unique_ptr<pegtl::parse_tree::node>& _id;
+        const ast::node_ptr_type& _id;
         DataT&                                          _data;
         Function&                                       _function;
         bool                                            _found;
@@ -549,10 +551,10 @@ namespace detail{
         using function_type = Function;
         using finder_type   = id_finder<DataT, function_type>;
         using meta_type     = decltype(prototype(std::declval<udho::view::data::type<DataT>>()));
-        using node_ptr_type = std::unique_ptr<pegtl::parse_tree::node>;
+        using node_ptr_type = ast::node_ptr_type;
 
         meta_basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
-            assert(_grammar->template is_type<id_ast::grammar>());
+            assert(_grammar->template is_type<ast::grammar>());
             assert(_grammar->children.size() > 0);
         }
 
@@ -563,7 +565,7 @@ namespace detail{
             }
 
             for(const node_ptr_type& child: _grammar->children){
-                assert(child->template is_type<id_ast::statement>());
+                assert(child->template is_type<ast::statement>());
 
                 const node_ptr_type& statement = child;
                 assert(statement->has_content());
@@ -583,7 +585,7 @@ namespace detail{
 
         private:
             std::string          _syntax;
-            id_ast               _ast;
+            ast               _ast;
             DataT&               _data;
             meta_type            _meta;
             function_type&       _function;

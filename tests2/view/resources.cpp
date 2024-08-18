@@ -150,6 +150,6 @@ Your total debt is <?= d.debt ?>
 
     std::string input = R"(x.y.z_a('v1', 'v_2',:keyword); hello ("world"); hello_hi('pla_net');feature(on);cache.expire(-42.24);)";
     // udho::view::sections::meta_parser::parse(input);
-    udho::view::data::meta::detail::id_ast ast{input};
-    udho::view::data::meta::detail::id_ast::print_tree(ast.root());
+    udho::view::data::meta::detail::ast ast{input};
+    udho::view::data::meta::detail::ast::print(ast.root());
 }

@@ -125,9 +125,10 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
     template <typename Function, typename MatchT>
     std::size_t apply_if(Function&& f, MatchT&& match, std::size_t count = 0){
         if(match(_head)){
-            return count;
+            f(_head);
+            return count +1;
         }
-        return count+1;
+        return count;
     }
 
     template <typename Function>
@@ -384,98 +385,6 @@ typename concat_<assoc_<MembersT>, RhsT>::result_type operator,(assoc_<MembersT>
 detail::assoc_<> assoc(const std::string& name){
     return detail::assoc_<>{name};
 }
-
-template <template<class> class BinderT, typename Class>
-struct binder;
-
-template <typename StateT, typename T>
-struct bindings{
-
-    template <template<class> class BinderT, typename Class>
-    friend struct binder;
-
-    static bool exists() { return _exists; }
-    private:
-        static bool _exists;
-};
-
-template <typename DerivedT, typename T>
-bool bindings<DerivedT, T>::_exists = false;
-
-template <template<class> class BinderT, typename ClassT>
-struct binder{
-    template <typename StateT>
-    static void apply(StateT& state, udho::view::data::type<ClassT> type){
-        if(!udho::view::data::bindings<StateT, ClassT>::exists()){
-            auto meta = prototype(type);
-            std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
-            BinderT<ClassT> binder(state, meta.name());
-            meta.members().apply_all(std::move(binder));
-
-            bindings<StateT, ClassT>::_exists = true;
-        }
-    }
-};
-
-#ifdef WITH_JSON_NLOHMANN
-
-template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
-nlohmann::json to_json_internal(const ClassT& data){
-    return nlohmann::json(data);
-}
-
-template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
-nlohmann::json to_json_internal(const ClassT& data){
-    auto meta = prototype(udho::view::data::type<ClassT>{});
-    return meta.members().json(data);
-}
-
-template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
-nlohmann::json to_json_internal(const std::vector<ClassT>& data) {
-    nlohmann::json j = nlohmann::json::array();
-    for (const auto& d : data) {
-        j.push_back(to_json(d));
-    }
-    return j;
-}
-
-template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
-void from_json_internal(ClassT& data, const nlohmann::json& json){
-    data = json;
-}
-
-template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
-void from_json_internal(ClassT& data, const nlohmann::json& json){
-    auto meta = prototype(udho::view::data::type<ClassT>{});
-    return meta.members().json(data, json);
-}
-
-template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
-void from_json_internal(std::vector<ClassT>& data, const nlohmann::json& json) {
-    for(const nlohmann::json& j: json){
-        ClassT obj;
-        from_json_internal(obj, j);
-        data.push_back(obj);
-    }
-}
-
-/**
- * @brief Convert a C++ data object to json assuming the prototype function has been overloaded for it.
- */
-template <class ClassT>
-nlohmann::json to_json(const ClassT& data){
-    return to_json_internal(data);
-}
-
-/**
- * @brief Loads a C++ data object from json assuming the prototype function has been overloaded for it.
- */
-template <class ClassT>
-void from_json(ClassT& data, const nlohmann::json& json){
-    from_json_internal(data, json);
-}
-
-#endif
 
 }
 }
