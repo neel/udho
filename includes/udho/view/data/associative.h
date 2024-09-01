@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_METATYPE_H
-#define UDHO_VIEW_METATYPE_H
+#ifndef UDHO_VIEW_DATA_ASSOCIATIVE_H
+#define UDHO_VIEW_DATA_ASSOCIATIVE_H
 
 #include <string>
 #include <utility>
@@ -48,6 +48,14 @@ namespace detail{
 template <typename Head, typename Tail = void>
 struct associative;
 
+/**
+ * @brief A template structure for handling name-value pairs in an associative way, including recursion and JSON serialization (if nlohmann::json is available).
+ *
+ * @tparam PolicyT Type of the policy applied to the nvp (name-value pair).
+ * @tparam KeyT Type of the key in the nvp.
+ * @tparam ValueT Type of the value in the nvp.
+ * @tparam Tail Type of the tail in a recursive structure. 'void' indicates the end of the recursion.
+ */
 template <typename PolicyT, typename KeyT, typename ValueT, typename Tail>
 struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
     using head_type = data::nvp<PolicyT, KeyT, ValueT>;
@@ -59,11 +67,14 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
     template <typename DataT, typename AssociativeT>
     friend struct assign_;
 
-    associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
-
+    associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {} ///< Constructs an associative with head and tail elements.
 
     /**
-     * @brief apply the function f until it returns true
+     * @brief Applies a function to each element until it returns true.
+     *
+     * @param f Function to apply.
+     * @param count Initial count, defaults to 0.
+     * @return std::size_t value representing the count of invocations until the function returns true.
      */
     template <typename Function>
     std::size_t apply_until(Function& f, std::size_t count = 0){
@@ -75,6 +86,14 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
         }
     }
 
+    /**
+     * @brief Applies a function to each element that matches a given condition.
+     *
+     * @param f Function to apply.
+     * @param match Function that determines whether the nvp matches the condition.
+     * @param count Initial count, defaults to 0.
+     * @return std::size_t value representing the number of invocations.
+     */
     template <typename Function, typename MatchT>
     std::size_t apply_if(Function&& f, MatchT&& match, std::size_t count = 0){
         if(match(_head)){
@@ -83,6 +102,12 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
         return _tail.apply_if(std::forward<Function>(f), std::forward<MatchT>(match), count +1);
     }
 
+    /**
+     * @brief Applies a function to all elements.
+     *
+     * @param f Function to apply.
+     * @return std::size_t value representing the number of invocations.
+     */
     template <typename Function>
     std::size_t apply_all(Function&& f){
         return apply_if(std::forward<Function>(f), detail::match_all{});
@@ -91,6 +116,12 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
 
 #ifdef WITH_JSON_NLOHMANN
 
+    /**
+     * @brief Serializes the data into JSON format.
+     *
+     * @param data Data to serialize.
+     * @return nlohmann::json object representing the serialized data.
+     */
     template <typename DataT>
     nlohmann::json json(const DataT& data) {
         nlohmann::json root = nlohmann::json::object();
@@ -99,6 +130,12 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
         return root;
     }
 
+    /**
+     * @brief Deserializes JSON data into the object.
+     *
+     * @param data Object to fill with deserialized data.
+     * @param json JSON object representing the data.
+     */
     template <typename DataT>
     void json(DataT& data, const nlohmann::json& json) {
         detail::from_json_f jsonifier{json, data};
@@ -112,6 +149,14 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
         tail_type _tail;
 };
 
+
+/**
+ * @brief Specialization of the associative structure for when there is no tail element (tail is void).
+ *
+ * @tparam PolicyT Type of the policy applied to the nvp.
+ * @tparam KeyT Type of the key in the nvp.
+ * @tparam ValueT Type of the value in the nvp.
+ */
 template <typename PolicyT, typename KeyT, typename ValueT>
 struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
     using head_type = data::nvp<PolicyT, KeyT, ValueT>;
@@ -532,9 +577,7 @@ std::size_t assign(DataT& data, associative<HeadT, TailT>& assoc, IteratorT begi
 
 }
 
-detail::assoc_<> assoc(const std::string& name){
-    return detail::assoc_<>{name};
-}
+detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; }
 
 /**
  * @brief assigns values to the nvp's of an associative container
@@ -555,12 +598,10 @@ std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
 }
 
 template <typename DataT, typename IteratorT, typename std::enable_if<!udho::view::data::has_prototype<DataT>::value, int>::type* = nullptr>
-std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
-    return 0;
-}
+std::size_t assign(DataT&, IteratorT, IteratorT){ return 0; }
 
 }
 }
 }
 
-#endif // UDHO_VIEW_METATYPE_H
+#endif // UDHO_VIEW_DATA_ASSOCIATIVE_H

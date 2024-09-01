@@ -33,7 +33,7 @@
 #include <vector>
 #include <functional>
 #include <sol/sol.hpp>
-#include <udho/view/data/metatype.h>
+#include <udho/view/data/associative.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/state.h>
 

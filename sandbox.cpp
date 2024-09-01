@@ -1,7 +1,7 @@
 #include <iostream>
 #include <udho/view/trie.h>
 #include <udho/view/sections.h>
-#include <udho/view/data/metatype.h>
+#include <udho/view/data/associative.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/hazo/string/basic.h>
