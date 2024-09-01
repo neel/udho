@@ -6,8 +6,8 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/view/data/data.h>
-#include <udho/view/meta/meta.h>
+#include <udho/view/data.h>
+#include <udho/view/meta.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>

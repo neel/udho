@@ -1,7 +1,7 @@
 #include <iostream>
 #include <udho/view/tmpl/detail/trie.h>
 #include <udho/view/tmpl/sections.h>
-#include <udho/view/data/associative.h>
+#include <udho/view/data/data.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/hazo/string/basic.h>
@@ -178,74 +178,74 @@ void run(sol::protected_function& view_fnc, const Data& data){
 
 int main(){
 
-    sol::state lua;
-    lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
-
-    auto type = lua.new_usertype<MyClass>("MyClass",
-        "modify", &MyClass::modify,
-        "inspect", &MyClass::inspect
-    );
-
-    type.set("value",   &MyClass::value);
-
-    static char buffer[] = R"TEMPLATE(
-    return function(obj)
-        print(obj.value)
-        obj:inspect()
-        print("inspect called")
-        obj:modify()
-        print("modify called")
-        return "hello"
-    end
-    )TEMPLATE";
-
-    sol::load_result load_result = lua.load_buffer(buffer, strlen(buffer));
-    if (!load_result.valid()) {
-        sol::error err = load_result;
-        throw std::runtime_error("Error loading script: " + std::string(err.what()));
-    }
-
-    sol::protected_function view =  load_result.get<sol::protected_function>();
-    sol::protected_function_result view_result = view();
-    if (!view_result.valid()) {
-        sol::error err = view_result;
-        throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
-    }
-
-    sol::protected_function view_fnc = view_result;
-    MyClass data;
-    run(view_fnc, data);
-    // const MyClass data;
-    // sol::protected_function_result result = view_fnc(data);
-    // if (!result.valid()) {
-    //     sol::error err = result;
-    //     throw std::runtime_error("Error during function call: " + std::string(err.what()));
-    // } else {
-    //     // Check if the return value can be converted to a string
-    //     if (result.get_type() == sol::type::string) {
-    //         std::string output = result;
-    //         std::cout << "Function returned: " << output << std::endl;
-    //     } else {
-    //         // Provide more information about the actual type returned
-    //         std::cout << "Function returned a non-string value. Actual type: " << sol::type_name(lua, result.get_type()) << std::endl;
-    //     }
-    // }
-    std::cout << "Lua function called successfully." << std::endl;
-    return 0;
+    // // // sol::state lua;
+    // // // lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
+    // // //
+    // // // auto type = lua.new_usertype<MyClass>("MyClass",
+    // // //     "modify", &MyClass::modify,
+    // // //     "inspect", &MyClass::inspect
+    // // // );
+    // // //
+    // // // type.set("value",   &MyClass::value);
+    // // //
+    // // // static char buffer[] = R"TEMPLATE(
+    // // // return function(obj)
+    // // //     print(obj.value)
+    // // //     obj:inspect()
+    // // //     print("inspect called")
+    // // //     obj:modify()
+    // // //     print("modify called")
+    // // //     return "hello"
+    // // // end
+    // // // )TEMPLATE";
+    // // //
+    // // // sol::load_result load_result = lua.load_buffer(buffer, strlen(buffer));
+    // // // if (!load_result.valid()) {
+    // // //     sol::error err = load_result;
+    // // //     throw std::runtime_error("Error loading script: " + std::string(err.what()));
+    // // // }
+    // // //
+    // // // sol::protected_function view =  load_result.get<sol::protected_function>();
+    // // // sol::protected_function_result view_result = view();
+    // // // if (!view_result.valid()) {
+    // // //     sol::error err = view_result;
+    // // //     throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
+    // // // }
+    // // //
+    // // // sol::protected_function view_fnc = view_result;
+    // // // MyClass data;
+    // // // run(view_fnc, data);
+    // // // // const MyClass data;
+    // // // // sol::protected_function_result result = view_fnc(data);
+    // // // // if (!result.valid()) {
+    // // // //     sol::error err = result;
+    // // // //     throw std::runtime_error("Error during function call: " + std::string(err.what()));
+    // // // // } else {
+    // // // //     // Check if the return value can be converted to a string
+    // // // //     if (result.get_type() == sol::type::string) {
+    // // // //         std::string output = result;
+    // // // //         std::cout << "Function returned: " << output << std::endl;
+    // // // //     } else {
+    // // // //         // Provide more information about the actual type returned
+    // // // //         std::cout << "Function returned a non-string value. Actual type: " << sol::type_name(lua, result.get_type()) << std::endl;
+    // // // //     }
+    // // // // }
+    // // // std::cout << "Lua function called successfully." << std::endl;
+    // // // return 0;
 
     // std::cout << "udho::view::data::has_prototype<subinfo>::value " << udho::view::data::has_prototype<subinfo>::value << std::endl;
     //
-    // udho::view::data::bridges::lua lua;
-    // lua.init();
+    udho::view::data::bridges::lua lua;
+    lua.init();
     // // lua.bind(udho::view::data::type<subinfo>{});
     // // lua.bind(udho::view::data::type<info>{});
     // bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
     // // std::cout << "compilation result " << res << std::endl;
     //
-    // info inf;
-    // inf.name = "NAME";
-    // inf.value = 42.42;
-    // inf._x    = 42;
+    info inf;
+    inf.name = "NAME";
+    inf.value = 42.42;
+    inf._x    = 42;
     //
     // // udho::view::data::from_json(inf, nlohmann::json::parse(R"({"name":"NAME NAME","value":45.42,"x":43.0})"));
     // // std::cout << "Look HERE " << udho::view::data::to_json(inf) << std::endl;
@@ -271,47 +271,47 @@ int main(){
     // }
     //
     //
-    // boost::filesystem::path temp = boost::filesystem::unique_path();
-    // {
-    //     std::ofstream temp_stream(temp.c_str());
-    //     temp_stream << buffer;
-    //     temp_stream.close();
-    // }
+    boost::filesystem::path temp = boost::filesystem::unique_path();
+    {
+        std::ofstream temp_stream(temp.c_str());
+        temp_stream << buffer;
+        temp_stream.close();
+    }
     //
-    // udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
-    // // auto& primary = resources.primary();
-    // resources << udho::view::resources::resource::view("temp", temp);
-    //
-    // std::cout << "see views below " << resources.views.count() << std::endl;
-    // for(const auto& res: resources.views){
-    //     std::cout << res.name() << std::endl;
-    // }
-    // // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
-    // auto temp_view = resources.views["temp"];
-    // auto results = temp_view(inf);
-    // std::cout << "resources.views[temp](inf).str() " << std::endl;
-    // std::cout << resources.views("temp", inf).str() << std::endl;
-    //
-    // using namespace udho::hazo::string::literals;
-    //
-    // X x;
-    // auto router = udho::url::router(
-    //     udho::url::root(
-    //         udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
-    //         udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
-    //         udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
-    //     ) |
-    //     udho::url::mount("b"_h, "/b",
-    //         udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
-    //         udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
-    //     )
-    // );
-    //
-    // boost::asio::io_service service;
-    // auto server     = http_server{service, 9000};
-    // auto artifacts  = udho::net::artifacts{router, resources};
-    // server.run(artifacts);
-    //
-    // service.run();
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    auto& primary = resources.primary();
+    resources << udho::view::resources::resource::view("temp", temp);
+
+    std::cout << "see views below " << resources.views.count() << std::endl;
+    for(const auto& res: resources.views){
+        std::cout << res.name() << std::endl;
+    }
+    // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
+    auto temp_view = resources.views["temp"];
+    auto results = temp_view(inf);
+    std::cout << "resources.views[temp](inf).str() " << std::endl;
+    std::cout << resources.views("temp", inf).str() << std::endl;
+
+    using namespace udho::hazo::string::literals;
+
+    X x;
+    auto router = udho::url::router(
+        udho::url::root(
+            udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
+            udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
+            udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+        ) |
+        udho::url::mount("b"_h, "/b",
+            udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
+            udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+        )
+    );
+
+    boost::asio::io_service service;
+    auto server     = http_server{service, 9000};
+    auto artifacts  = udho::net::artifacts{router, resources};
+    server.run(artifacts);
+
+    service.run();
 
 }

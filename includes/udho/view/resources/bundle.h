@@ -172,7 +172,7 @@ namespace detail {
 }
 
 /**
- * @brief resource store stores the resources like views, assets etc..
+ * @brief stores resources like views, assets etc..
  * It doesn't actually store any resource except it's name, rather it passes the resources to the
  * bridge with the bundle name as prefix. For the assets it passes them to the dispatcher. Latter
  * when requested bundle acts as a proxy between the bridge and the dispatcher.
