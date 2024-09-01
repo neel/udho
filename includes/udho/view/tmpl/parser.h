@@ -15,7 +15,7 @@
 namespace udho{
 namespace view{
 
-namespace sections{
+namespace tmpl{
 
 struct parser{
     static constexpr std::uint32_t tag_close           = 401;
@@ -76,7 +76,7 @@ struct parser{
         InputIt last_open = begin, last_close = begin;
         std::uint32_t block_open = 0;
 
-        std::uint32_t last_tag = sections::section::text;
+        std::uint32_t last_tag = tmpl::section::text;
 
         auto pos = begin;
         while(pos != end){
@@ -84,7 +84,7 @@ struct parser{
             // auto token_len = trie[tpos.token_id].size();
             pos = tpos.token_end;
             if(pos == end) {
-                auto scope_begin = (last_tag == sections::section::text) ? last_close : last_open;
+                auto scope_begin = (last_tag == tmpl::section::text) ? last_close : last_open;
                 auto scope_end   = (tpos.token_id == 0) ? end : tpos.token_begin;
                 fptr(section{type(last_tag), scope_begin, scope_end});
                 break;
@@ -107,12 +107,12 @@ struct parser{
                 if(block_open == 1){
                     if (
                         (id == tag_close          && (last_tag > 100 && last_tag  < 200))     ||
-                        (id == tag_close_comment  && last_tag == sections::section::comment)  ||
-                        (id == tag_close_verbatim && last_tag == sections::section::verbatim)
+                        (id == tag_close_comment  && last_tag == tmpl::section::comment)  ||
+                        (id == tag_close_verbatim && last_tag == tmpl::section::verbatim)
                     ){
                         fptr(section{type(last_tag), last_open, tpos.token_begin});
                         last_close = pos;
-                        last_tag   = sections::section::text;
+                        last_tag   = tmpl::section::text;
                         block_open = 0;
                     }
                 }
@@ -123,12 +123,12 @@ struct parser{
     private:
         detail::trie make_trie() const {
             detail::trie trie;
-            trie.add(_meta,     sections::section::meta);
-            trie.add(_echo,     sections::section::echo);
-            trie.add(_eval,     sections::section::eval);
-            trie.add(_embed,    sections::section::embed);
-            trie.add(_verbatim, sections::section::verbatim);
-            trie.add(_comment,  sections::section::comment);
+            trie.add(_meta,     tmpl::section::meta);
+            trie.add(_echo,     tmpl::section::echo);
+            trie.add(_eval,     tmpl::section::eval);
+            trie.add(_embed,    tmpl::section::embed);
+            trie.add(_verbatim, tmpl::section::verbatim);
+            trie.add(_comment,  tmpl::section::comment);
 
             trie.add(_close,            tag_close);
             trie.add(_close_comment,    tag_close_comment);

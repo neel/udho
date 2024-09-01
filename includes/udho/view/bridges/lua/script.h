@@ -48,7 +48,7 @@ struct script: udho::view::data::bridges::script{
         *this << "return function(d, stream)" << std::endl;
         ++*this;
     }
-    inline void operator()(const udho::view::sections::section& section){
+    inline void operator()(const udho::view::tmpl::section& section){
         add_section(section);
     }
     void finish(){
@@ -56,30 +56,30 @@ struct script: udho::view::data::bridges::script{
         *this << "end";
     }
     private:
-        inline void add_section(const udho::view::sections::section& section){
+        inline void add_section(const udho::view::tmpl::section& section){
             switch(section.type()){
-                case udho::view::sections::section::text:
-                case udho::view::sections::section::verbatim:
-                case udho::view::sections::section::echo:
+                case udho::view::tmpl::section::text:
+                case udho::view::tmpl::section::verbatim:
+                case udho::view::tmpl::section::echo:
                     add_echo_section(section);
                     break;
-                case udho::view::sections::section::eval:
+                case udho::view::tmpl::section::eval:
                     add_eval_section(section);
                     break;
                 default:
                     break;
             }
         }
-        inline void add_eval_section(const udho::view::sections::section& section) {
+        inline void add_eval_section(const udho::view::tmpl::section& section) {
             udho::view::data::bridges::script::accept(section);
         }
 
-        inline void add_echo_section(const udho::view::sections::section& section) {
+        inline void add_echo_section(const udho::view::tmpl::section& section) {
             if (section.size() > 0) {
                 *this << std::endl;
-                *this << "do -- " + udho::url::format("{}", udho::view::sections::section::name(section.type())) << std::endl;
+                *this << "do -- " + udho::url::format("{}", udho::view::tmpl::section::name(section.type())) << std::endl;
                 ++*this;
-                if (section.type() == udho::view::sections::section::echo) {
+                if (section.type() == udho::view::tmpl::section::echo) {
                     *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], {})", section.content()) << std::endl;
                 } else {
                     *this << udho::url::format("local udho_view_str_ = [=====[{}]=====]", section.content()) << std::endl;

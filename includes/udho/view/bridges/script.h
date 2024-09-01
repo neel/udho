@@ -125,8 +125,8 @@ struct script: stream<char, '\t'>{
     explicit script(const std::string& name): stream(), _name(name) {}
     std::string name() const { return _name; }
     protected:
-        inline void accept(const udho::view::sections::section& section){ stream::append(section.begin(), section.end()); }
-        inline void discard(const udho::view::sections::section&){}
+        inline void accept(const udho::view::tmpl::section& section){ stream::append(section.begin(), section.end()); }
+        inline void discard(const udho::view::tmpl::section&){}
     private:
         std::string _name;
 };

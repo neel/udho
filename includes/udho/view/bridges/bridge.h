@@ -88,7 +88,7 @@ struct bridge{
         template <typename IteratorT>
         bool compile(IteratorT begin, IteratorT end, std::string key){
             script_type script{key};
-            udho::view::sections::parser parser;
+            udho::view::tmpl::parser parser;
             parser.parse(begin, end, script);
             script.finish();
             compiler_type compiler{_state};

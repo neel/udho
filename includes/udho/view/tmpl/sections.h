@@ -9,7 +9,7 @@
 namespace udho{
 namespace view{
 
-namespace sections{
+namespace tmpl{
 
 struct section {
     enum types {
