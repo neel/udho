@@ -63,13 +63,13 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
 
 
     /**
-     * @brief apply the function f untill it returns true
+     * @brief apply the function f until it returns true
      */
     template <typename Function>
-    std::size_t apply_(Function& f, std::size_t count = 0){
+    std::size_t apply_until(Function& f, std::size_t count = 0){
         bool res = f(_head);
         if(!res){
-            return _tail.apply_(f, count +1);
+            return _tail.apply_until(f, count +1);
         } else {
             return count;
         }
@@ -126,7 +126,7 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
     associative(head_type&& head): _head(std::move(head)) {}
 
     template <typename Function>
-    std::size_t apply_(Function& f, std::size_t count = 0){
+    std::size_t apply_until(Function& f, std::size_t count = 0){
         bool res = f(_head);
         if(!res){
             return count;

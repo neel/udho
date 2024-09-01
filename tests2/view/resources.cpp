@@ -102,17 +102,23 @@ struct student: person{
 
 TEST_CASE("Tokenizer correctly builds the trie", "[trie]") {
 
+    // View Parameters
+    // name # name of the view
+    // bridge = lua, js etc..
+    // vars: data, context
+    // cache: expiry
+
+
     static char buffer[] = R"TEMPLATE(
-<?! view.name("hello"); view.data('d'); view.bridge('lua'); view.cache.expiry(1d) ?>
+<?! register('cards/student', 'js') vars('d', 'ctx') cache(1d) ?>
 
 Hi <?= d.name ?> you are <?= d.age ?> years old.
-You have lived in these localities:
-<? for i, address in ipairs(d.addresses) do ?>
-    Locality <?= i ?>: <?= address.locality ?>
+<? for i, e in ipairs(d.courses) do ?>
+    Course <?= i ?>: <?= e.course ?> at <?= e.university ?>
 
 <? end ?>
 Your total debt is <?= d.debt ?>
-
+Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
 -----------
 <?= d:print() ?>
     )TEMPLATE";
@@ -191,5 +197,5 @@ Your total debt is <?= d.debt ?>
     std::string input = R"(x.y.z_a('v1', 'v_2',:keyword); hello[24]("world", "pluto"); hello.hi[23]('pla_net'); feature.value[1].bit(on); cache.expire(-42.24)[0];)";
     // udho::view::sections::meta_parser::parse(input);
     udho::view::data::meta::detail::ast ast{input};
-    udho::view::data::meta::detail::ast::print(ast.root());
+    udho::view::data::meta::detail::ast::print(std::cout, ast.root());
 }

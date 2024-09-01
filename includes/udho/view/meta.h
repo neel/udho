@@ -101,14 +101,15 @@ namespace detail{
             return "unknown";
         }
 
-        inline static void print(const node_ptr_type& n, const std::string& indent = "") {
+        inline static void print(std::ostream& stream, const node_ptr_type& n, const std::string& indent = "") {
             if (n->is_root()) {
-                std::cout << indent << "Root" << std::endl;
+                stream << indent << "Root" << std::endl;
             } else {
-                std::cout << indent << get_node_name(n) << " : \"" << n->string_view() << "\"" << std::endl;
+                stream << indent << get_node_name(n) << " : \"" << n->string_view() << "\"" << std::endl;
             }
+
             for (const auto& child : n->children) {
-                print(child, indent + "  ");
+                print(stream, child, indent + "  ");
             }
         }
 
@@ -137,8 +138,8 @@ namespace detail{
     };
 
     template <typename Value>
-    struct value_manipulator{
-        value_manipulator(const Value& value): _value(value), _assigned(false) {}
+    struct value_writer{
+        value_writer(const Value& value): _value(value), _assigned(false) {}
 
         template <typename T, typename std::enable_if_t<std::is_assignable_v<T&, Value>>* = nullptr>
         bool operator()(T& target){
@@ -317,8 +318,6 @@ namespace detail{
             assert(_key->has_content());
 
             _name = _key->string();
-
-            ast::print(_key);
         }
 
         template <typename P, typename K, typename V>
@@ -355,7 +354,6 @@ namespace detail{
                     return visit(index_node, value);
                 }
             } else {
-                typename V::value_type previous = value;
                 bool modified = base::pass(value);
                 if(modified){
                     base::_set(nvp, value);
@@ -404,8 +402,6 @@ namespace detail{
                 assert(index_node->has_content());
                 assert(index_node->children.size() > 0);
 
-                ast::print(index_node);
-
                 const ast::node_ptr_type& child_node = index_node->children[0];
 
                 if(child_node->template is_type<ast::at>()){
@@ -420,8 +416,6 @@ namespace detail{
                 assert(index_node->template is_type<ast::index>());
                 assert(index_node->has_content());
                 assert(index_node->children.size() > 0);
-
-                ast::print(index_node);
 
                 const ast::node_ptr_type& child_node = index_node->children[0];
 
@@ -479,7 +473,7 @@ namespace detail{
             template <typename ValueT, typename VisitorT, typename std::enable_if<udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
             bool apply(VisitorT& visitor){
                 auto meta = prototype(udho::view::data::type<ValueT>{});
-                meta.members().apply_(visitor);
+                meta.members().apply_until(visitor);
 
                 return true;
             }
@@ -539,8 +533,6 @@ namespace detail{
         basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
             assert(_grammar->template is_type<ast::grammar>());
             assert(_grammar->children.size() > 0);
-
-            ast::print(_ast.root());
         }
 
         void apply(){
@@ -556,7 +548,7 @@ namespace detail{
                 assert(statement->has_content());
 
                 finder_type finder{statement, _data, _function};
-                _meta.members().apply_(finder);
+                _meta.members().apply_until(finder);
 
                 bool success = finder.found();
 
@@ -582,7 +574,7 @@ namespace detail{
     template <typename DataT, typename ValueT>
     using reader   = basic_executor<DataT, value_reader<ValueT>, false>;
     template <typename DataT, typename ValueT>
-    using writer   = basic_executor<DataT, value_manipulator<ValueT>, false>;
+    using writer   = basic_executor<DataT, value_writer<ValueT>, false>;
 }
 
 template <typename DataT>
