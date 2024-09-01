@@ -53,7 +53,14 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, Tail>{
     using head_type = data::nvp<PolicyT, KeyT, ValueT>;
     using tail_type = Tail;
 
+    template <typename Lhs, typename Rhs>
+    friend struct concat_;
+
+    template <typename DataT, typename AssociativeT>
+    friend struct assign_;
+
     associative(head_type&& head, tail_type&& tail): _head(std::move(head)), _tail(std::move(tail)) {}
+
 
     /**
      * @brief apply the function f untill it returns true
@@ -110,6 +117,12 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
     using head_type = data::nvp<PolicyT, KeyT, ValueT>;
     using tail_type = void;
 
+    template <typename Lhs, typename Rhs>
+    friend struct concat_;
+
+    template <typename DataT, typename AssociativeT>
+    friend struct assign_;
+
     associative(head_type&& head): _head(std::move(head)) {}
 
     template <typename Function>
@@ -159,22 +172,6 @@ struct associative<data::nvp<PolicyT, KeyT, ValueT>, void>{
         head_type _head;
 };
 
-// template <>
-// struct associative<void, void>{
-//     using head_type = void;
-//     using tail_type = void;
-//
-//     template <typename Function>
-//     std::size_t apply_(Function& f, std::size_t count = 0){
-//         return count;
-//     }
-//
-//     template <typename Function, typename MatchT>
-//     std::size_t apply_if(Function&&, MatchT&&, std::size_t count = 0){
-//         return count;
-//     }
-// };
-
 template <typename Lhs, typename Rhs>
 struct concat_;
 
@@ -182,10 +179,10 @@ template <typename PolicyT1, typename KeyT1, typename ValueT1, typename PolicyT2
 struct concat_<data::nvp<PolicyT1, KeyT1, ValueT1>, data::nvp<PolicyT2, KeyT2, ValueT2>>{
     using lhs_type    = data::nvp<PolicyT1, KeyT1, ValueT1>;
     using rhs_type    = data::nvp<PolicyT2, KeyT2, ValueT2>;
-    using result_type = associative<rhs_type, associative<lhs_type>>;
+    using result_type = associative<lhs_type, associative<rhs_type>>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{associative<rhs_type>{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)}};
+        return result_type{std::forward<lhs_type>(lhs), associative<rhs_type>{std::forward<rhs_type>(rhs)}};
     }
 };
 
@@ -193,10 +190,10 @@ template <typename HeadT, typename TailT, typename PolicyT, typename KeyT, typen
 struct concat_<associative<HeadT, TailT>, data::nvp<PolicyT, KeyT, ValueT>>{
     using lhs_type    = associative<HeadT, TailT>;
     using rhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
-    using result_type = associative<rhs_type, lhs_type>;
+    using result_type = associative<HeadT, typename concat_<TailT, rhs_type>::result_type>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)};
+        return result_type{std::move(lhs._head), concat_<TailT, rhs_type>::apply(std::move(lhs._tail), std::forward<rhs_type>(rhs))};
     }
 };
 
@@ -204,10 +201,10 @@ template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT, type
 struct concat_<data::nvp<PolicyT, KeyT, ValueT>, associative<HeadT, TailT>>{
     using lhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using rhs_type    = associative<HeadT, TailT>;
-    using result_type = associative<HeadT, typename concat_<TailT, lhs_type>::result_type>;
+    using result_type = associative<lhs_type, rhs_type>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{std::move(rhs._head), concat_<TailT, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs))};
+        return result_type{std::forward<lhs_type>(lhs), std::forward<rhs_type>(rhs)};
     }
 };
 
@@ -215,10 +212,10 @@ template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
 struct concat_<data::nvp<PolicyT, KeyT, ValueT>, associative<HeadT, void>>{
     using lhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
     using rhs_type    = associative<HeadT, void>;
-    using result_type = associative<HeadT, lhs_type>;
+    using result_type = associative<lhs_type, rhs_type>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{std::move(rhs._head), std::forward<lhs_type>(lhs)};
+        return result_type{std::forward<lhs_type>(lhs), std::forward<rhs_type>(rhs)};
     }
 };
 
@@ -226,10 +223,10 @@ template <typename PolicyT, typename KeyT, typename ValueT, typename HeadT>
 struct concat_<associative<HeadT, void>, data::nvp<PolicyT, KeyT, ValueT>>{
     using lhs_type    = associative<HeadT, void>;
     using rhs_type    = data::nvp<PolicyT, KeyT, ValueT>;
-    using result_type = associative<rhs_type, lhs_type>;
+    using result_type = associative<HeadT, associative<rhs_type>>;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{std::forward<rhs_type>(rhs), std::forward<lhs_type>(lhs)};
+        return result_type{std::move(lhs._head), associative<rhs_type>{std::forward<rhs_type>(rhs)}};
     }
 };
 
@@ -237,10 +234,10 @@ template <typename HeadT1, typename TailT1, typename HeadT2, typename TailT2>
 struct concat_<associative<HeadT1, TailT1>, associative<HeadT2, TailT2>>{
     using lhs_type      = associative<HeadT1, TailT1>;
     using rhs_type      = associative<HeadT2, TailT2>;
-    using result_type   = associative<HeadT2, typename concat_<TailT2, lhs_type>::result_type >;
+    using result_type   = associative<HeadT1, typename concat_<TailT1, rhs_type>::result_type >;
 
     static result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-        return result_type{std::move(rhs._head), concat_<TailT2, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs)) };
+        return result_type{std::move(lhs._head), concat_<TailT1, rhs_type>::apply(std::move(lhs._tail), std::forward<rhs_type>(rhs)) };
     }
 };
 
@@ -256,16 +253,16 @@ struct concat_<associative<HeadT1, TailT1>, associative<HeadT2, void>>{
 };
 
 // already covered
-// template <typename HeadT1, typename HeadT2, typename TailT2>
-// struct concat_<associative<HeadT1, void>, associative<HeadT2, TailT2>>{
-//     using lhs_type      = associative<HeadT1, void>;
-//     using rhs_type      = associative<HeadT2, TailT2>;
-//     using result_type   = associative<HeadT2, typename concat_<TailT2, lhs_type>::result_type >;
-//
-//     result_type apply(lhs_type&& lhs, rhs_type&& rhs){
-//         return result_type{std::move(rhs._head), concat_<TailT2, lhs_type>::apply(std::move(rhs._tail), std::forward<lhs_type>(lhs)) };
-//     }
-// };
+template <typename HeadT1, typename HeadT2, typename TailT2>
+struct concat_<associative<HeadT1, void>, associative<HeadT2, TailT2>>{
+    using lhs_type      = associative<HeadT1, void>;
+    using rhs_type      = associative<HeadT2, TailT2>;
+    using result_type   = associative<HeadT1, rhs_type>;
+
+    result_type apply(lhs_type&& lhs, rhs_type&& rhs){
+        return result_type{std::move(lhs._head), std::forward<rhs_type>(rhs) };
+    }
+};
 
 template <typename P1, typename K1, typename V1, typename P2, typename K2, typename V2>
 typename concat_<data::nvp<P1, K1, V1>, data::nvp<P2, K2, V2>>::result_type concat(data::nvp<P1, K1, V1>&& lhs, data::nvp<P2, K2, V2>&& rhs){
@@ -380,10 +377,186 @@ typename concat_<assoc_<MembersT>, RhsT>::result_type operator,(assoc_<MembersT>
 
 // }
 
+template <typename DataT, typename AssociativeT>
+struct assign_;
+
+/**
+ * @brief assigns i'th item in the associative container
+ */
+template <typename DataT, typename HeadT, typename TailT>
+struct assign_<DataT, associative<HeadT, TailT>>{
+
+    template <typename OtherDataT, typename AssociativeT>
+    friend struct assign_;
+
+    /**
+     * @brief Assigns i'th item in the associative container
+     * @param assoc reference to the container
+     * @param idx index of the target nvp
+     */
+    assign_(DataT& data, associative<HeadT, TailT>& assoc, std::size_t idx = 0): _data(data), _assoc(assoc), _idx(idx) {}
+
+    std::size_t apply_str(const std::string& str){
+        return apply_str(str, 0);
+    }
+
+    private:
+        /**
+         * @brief assigns a string value by lexically converting it to appropriate value of the nvp. Skips readonly nvps. Hence the requested `target_index` may not match with the infected index
+         * @return returns infected index which is the index of the nvp that has been modified +1. Hence if nothing is modified returns the value of target index which was passed to the constructor.
+         */
+        std::size_t apply_str(const std::string& str, std::size_t c){
+            assert(c <= _idx);
+
+            std::size_t count = c;
+            bool success = (count == _idx) && apply_str(_assoc._head, str);
+            if(!success){
+                assign_<DataT, TailT> assign{_data, _assoc._tail, _idx};
+                return assign.apply_str(str, count+1);
+            } else {
+                return count +1;
+            }
+        }
+
+        template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<data::policies::is_writable_property_v<PolicyT>, int >* = nullptr>
+        bool apply_str(data::nvp<PolicyT, KeyT, ValueT>& head, const std::string& v){
+            bool okay = false;
+            std::decay_t<typename ValueT::value_type> input = udho::url::detail::convert_str_to_type<std::decay_t<typename ValueT::value_type>>::apply(v, &okay);
+            if (okay) {
+                if(!head.value().set(_data, input)){
+                    throw std::invalid_argument{udho::url::format("Failed to set argument {} for nvp {}", v, head.name())};
+                }
+                return true;
+            } else {
+                throw std::invalid_argument{udho::url::format("Failed to lexically convert argument {} for nvp {}", v, head.name())};
+            }
+            return okay;
+        }
+
+        template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<!data::policies::is_writable_property_v<PolicyT>, int >* = nullptr>
+        bool apply_str(data::nvp<PolicyT, KeyT, ValueT>& head, const std::string& v){ return false; }
+
+    private:
+        DataT&                     _data;
+        associative<HeadT, TailT>& _assoc;
+        std::size_t                _idx;
+};
+
+template <typename DataT, typename HeadT>
+struct assign_<DataT, associative<HeadT, void>>{
+
+    template <typename OtherDataT, typename AssociativeT>
+    friend struct assign_;
+
+    /**
+     * @brief Assigns i'th item in the associative container
+     * @param assoc reference to the container
+     * @param idx index of the target nvp
+     */
+    assign_(DataT& data, associative<HeadT, void>& assoc, std::size_t idx = 0): _data(data), _assoc(assoc), _idx(idx) {}
+
+    std::size_t apply_str(const std::string& str){
+        return apply_str(str, 0);
+    }
+
+    private:
+
+        /**
+         * @brief assigns a string value by lexically converting it to appropriate value of the nvp. Skips readonly nvps. Hence the requested `target_index` may not match with the infected index
+         * @return returns infected index which is the index of the nvp that has been modified +1. Hence if nothing is modified returns the value of target index which was passed to the constructor.
+         */
+        std::size_t apply_str(const std::string& str, std::size_t c = 0){
+            assert(c <= _idx);
+
+            std::size_t count = c;
+            bool success = (count == _idx) && apply_str(_assoc._head, str);
+            if(!success){
+                return count;
+            } else {
+                return count +1;
+            }
+        }
+
+        template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<data::policies::is_writable_property_v<PolicyT>, int >* = nullptr>
+        bool apply_str(data::nvp<PolicyT, KeyT, ValueT>& head, const std::string& v){
+            bool okay = false;
+            std::decay_t<typename ValueT::value_type> input = udho::url::detail::convert_str_to_type<std::decay_t<typename ValueT::value_type>>::apply(v, &okay);
+            if (okay) {
+                if(!head.value().set(_data, input)){
+                    throw std::invalid_argument{udho::url::format("Failed to set argument {} for nvp {}", v, head.name())};
+                }
+                return true;
+            } else {
+                throw std::invalid_argument{udho::url::format("Failed to lexically convert argument {} for nvp {}", v, head.name())};
+            }
+            return okay;
+        }
+
+        template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<!data::policies::is_writable_property_v<PolicyT>, int >* = nullptr>
+        bool apply_str(data::nvp<PolicyT, KeyT, ValueT>& head, const std::string& v){ return false; }
+
+    private:
+        DataT&                     _data;
+        associative<HeadT, void>&  _assoc;
+        std::size_t                _idx;
+};
+
+/**
+ * @brief assigns values to the nvp's of an associative container
+ *
+ * @param data  the targeted data object
+ * @param assoc the associative container
+ * @param begin iterator to a string container
+ * @param end   iterator to a string container
+ */
+template <typename DataT, typename HeadT, typename TailT, typename IteratorT>
+std::size_t assign(DataT& data, associative<HeadT, TailT>& assoc, IteratorT begin, IteratorT end){
+    using assigner_type = assign_<DataT, associative<HeadT, TailT>>;
+
+    if(std::distance(begin, end) == 0){
+        return 0;
+    }
+
+    IteratorT i = begin;
+    std::size_t assign_at = 0;
+    std::size_t assignment_count = 0;
+    do {
+        assigner_type assigner{data, assoc, assign_at};
+        std::string str = *i++;
+        assign_at = assigner.apply_str(str);
+        ++assignment_count;
+    } while(i < end);
+
+    return assignment_count;
+}
+
 }
 
 detail::assoc_<> assoc(const std::string& name){
     return detail::assoc_<>{name};
+}
+
+/**
+ * @brief assigns values to the nvp's of an associative container
+ *
+ * @param data  the targeted data object
+ * @param assoc the associative container
+ * @param begin iterator to a string container
+ * @param end   iterator to a string container
+ */
+template <typename DataT, typename IteratorT, typename std::enable_if<udho::view::data::has_prototype<DataT>::value, int>::type* = nullptr>
+std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
+    auto assoc = prototype(udho::view::data::type<DataT>{});
+
+    using assoc_type    = decltype(assoc);
+    using members_type  = typename assoc_type::members_type;
+
+    return detail::assign(data, assoc.members(), begin, end);
+}
+
+template <typename DataT, typename IteratorT, typename std::enable_if<!udho::view::data::has_prototype<DataT>::value, int>::type* = nullptr>
+std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
+    return 0;
 }
 
 }

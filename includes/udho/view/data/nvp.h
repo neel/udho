@@ -54,6 +54,7 @@ struct member_variable<T Class::*>{
     using member_type = T Class::*;
     using result_type = T;
     using class_type  = Class;
+    using value_type  = std::add_lvalue_reference_t<result_type>;
 
     constexpr static bool is_const() { return false; }
 
@@ -79,6 +80,7 @@ struct const_member_function<Res (Class::*)(X...) const>{
     using class_type  = Class;
     using function    = udho::url::detail::function_signature_<member_type>;
     using args_type   = typename function::decayed_arguments_type;
+    using value_type  = result_type;
 
     constexpr static bool is_const() { return true; }
 
@@ -104,6 +106,7 @@ struct member_function<Res (Class::*)(X...)>{
     using class_type  = Class;
     using function    = udho::url::detail::function_signature_<member_type>;
     using args_type   = typename function::decayed_arguments_type;
+    using value_type  = result_type;
 
     constexpr static bool is_const() { return false; }
 
@@ -161,6 +164,7 @@ struct wrapper2<U (Class::*)() const, Res (Class::*)(V)>: getter_value<U (Class:
     using setter_type = setter_value<Res (Class::*)(V)>;
     using result_type = U;
     using arg_type    = V;
+    using value_type  = result_type;
 
     getter_type& getter() { return *this; }
     setter_type& setter() { return *this; }
@@ -227,8 +231,26 @@ namespace policies{
     template <typename T>
     struct property{};
 
+    using rprop = property<readonly>;
+    using wprop = property<writable>;
+    using fprop = property<functional>;
+
+    template <typename PolicyT>
+    using is_readable_property = std::integral_constant<bool, std::is_same<PolicyT, rprop>::value || std::is_same_v<PolicyT, wprop> || std::is_same_v<PolicyT, fprop>>;
+
+    template <typename PolicyT>
+    using is_writable_property = std::integral_constant<bool, std::is_same<PolicyT, fprop>::value || std::is_same_v<PolicyT, wprop>>;
+
+    template<typename PolicyT>
+    inline constexpr bool is_readable_property_v = is_readable_property<PolicyT>::value;
+
+    template<typename PolicyT>
+    inline constexpr bool is_writable_property_v = is_writable_property<PolicyT>::value;
+
     struct function{};
 }
+
+
 
 template <typename PolicyT, typename KeyT, typename... X>
 struct nvp<PolicyT, KeyT, wrapper<X...>>{

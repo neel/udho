@@ -8,6 +8,7 @@
 #include <udho/view/data/fwd.h>
 #include <udho/view/data/nvp.h>
 #include <udho/view/data/detail.h>
+#include <udho/view/data/metatype.h>
 #include <udho/url/detail/format.h>
 #include <iostream>
 #include <chrono>
@@ -39,11 +40,14 @@ namespace detail{
         template <typename Rule>
         using spaced =          pegtl::seq<whitespace, Rule, whitespace>;
         struct values:          pegtl::list<value, spaced<pegtl::one<','>> > {};
-        struct call:            pegtl::seq<key, whitespace, pegtl::one<'('>, values, pegtl::one<')'>> {};
-        struct lookup:          pegtl::sor<call, key> {};
+        struct call:            pegtl::seq<whitespace, pegtl::one<'('>, values, pegtl::one<')'>> {};
         struct statement;
-        struct index:           pegtl::sor<pegtl::seq<pegtl::one<'.'>, statement>, index_seq> {};
-        struct statement:       pegtl::seq<lookup, pegtl::star<index>> {};
+        struct index:           pegtl::sor<
+                                    pegtl::seq<pegtl::one<'.'>, key>,
+                                    index_seq,
+                                    call
+                                > {};
+        struct statement:       pegtl::seq<key, pegtl::star<index>> {};
         struct grammar:         pegtl::must<   pegtl::list<  statement, pegtl::seq<spaced<pegtl::opt<pegtl::one<';'>>>>  >   > {};
 
         template<typename Rule>
@@ -51,7 +55,6 @@ namespace detail{
             pegtl::parse_tree::store_content::on<
                     grammar,
                     statement,
-                    lookup,
                     key,
                     call,
                     values,
@@ -81,7 +84,6 @@ namespace detail{
 
         inline static std::string get_node_name(const node_ptr_type& n) {
             if (n->template is_type<grammar>())         return "grammar";
-            if (n->template is_type<lookup>())          return "lookup";
             if (n->template is_type<key>())             return "key";
             if (n->template is_type<call>())            return "call";
             if (n->template is_type<at>())              return "at";
@@ -120,12 +122,13 @@ namespace detail{
         value_reader(Ret& ret): _ret(ret), _assigned(false) {}
 
         template <typename T, typename std::enable_if_t<std::is_assignable_v<Ret&, T>>* = nullptr>
-        void operator()(const T& v){
+        bool operator()(const T& v){
             _ret = v;
             _assigned = true;
+            return false;
         }
         template <typename T, typename std::enable_if_t<!std::is_assignable_v<Ret&, T>>* = nullptr>
-        void operator()(const T&){}
+        bool operator()(const T&){ return false; }
         bool assigned() const { return _assigned; }
 
         private:
@@ -138,12 +141,13 @@ namespace detail{
         value_manipulator(const Value& value): _value(value), _assigned(false) {}
 
         template <typename T, typename std::enable_if_t<std::is_assignable_v<T&, Value>>* = nullptr>
-        void operator()(T& target){
+        bool operator()(T& target){
             target = _value;
             _assigned = true;
+            return true;
         }
         template <typename T, typename std::enable_if_t<!std::is_assignable_v<T&, Value>>* = nullptr>
-        void operator()(T&){ }
+        bool operator()(T&){ return false; }
         bool assigned() const { return _assigned; }
 
         private:
@@ -153,390 +157,368 @@ namespace detail{
 
     struct value_noop{
         template <typename T>
-        void operator()(const T&){}
+        bool operator()(const T&){ return false; }
+    };
+
+    template <typename DataT, typename Function>
+    struct visitor_key;
+
+    template <typename DataT, typename Function>
+    struct visitor_common{
+        using data_type     = DataT;
+        using function_type = Function;
+
+        visitor_common(data_type& data, function_type& function, const ast::node_ptr_type& statement, std::size_t idx): _data(data), _function(function), _statement(statement), _idx(idx) {
+            assert(_statement->template is_type<ast::statement>());
+            assert(_statement->has_content());
+            assert(_statement->children.size() >= 1);
+        }
+
+        std::size_t idx() const { return _idx; }
+        const ast::node_ptr_type& statement() const { return _statement; }
+        data_type& data() { return _data; }
+
+        protected:
+            function_type& function() { return _function; }
+            template <typename T>
+            bool pass(T& value){
+                return _function(value);
+            }
+        protected:
+            bool has_next() const {
+                // Initially index is 0
+                // _statement->children.size() has to be more than 1 (including the first key node)
+                // Hence indexes_next tells how many sibling indexes (e.g. [], ., ()) to follow
+                // if indexes_next is 0 then there is nothing to folow, it was a simple call to the key
+                // if indexes_next is 1 then it is key1.key2 or key[10] or key(1) hence needs further processing through an index visitor
+
+                std::size_t indexes_next = _statement->children.size() -1;
+                return indexes_next > _idx;
+            }
+            const ast::node_ptr_type& next() {
+                _idx = _idx +1;
+                return _statement->children[_idx];
+            }
+        protected:
+            template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<data::policies::is_readable_property_v<PolicyT>, int >* = nullptr >
+            typename ValueT::value_type extract(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
+                return nvp.value().get(_data);
+            }
+            // template <typename PolicyT, typename KeyT, typename ValueT, std::enable_if_t<std::is_same_v<PolicyT, data::policies::function>, int >* = nullptr >
+            // typename ValueT::value_type extract(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){ }
+        protected:
+            std::size_t _list_args(const ast::node_ptr_type& values_node, std::vector<std::string>& provided_args){
+                assert(values_node->template is_type<ast::values>());
+                assert(values_node->has_content());
+
+                std::size_t counter = 0;
+                std::transform(values_node->children.begin(), values_node->children.end(), std::back_inserter(provided_args), [&counter](const ast::node_ptr_type& c){
+                    if(c->template is_type<ast::integer>() || c->template is_type<ast::real>() || c->template is_type<ast::duration>()){
+                        ++counter;
+                        return c->string();
+                    } else if (c->template is_type<ast::quoted_string>()) {
+                        std::string q_str = c->string();
+                        q_str.erase(0, 1);
+                        q_str.erase(q_str.size()-1);
+                        ++counter;
+                        return q_str;
+                    } else if (c->template is_type<ast::boolean>()) {
+                        std::string q_str = c->string();
+                        boost::algorithm::to_lower(q_str);
+                        if(q_str == "on"  || q_str == "true")  return std::string{"1"};
+                        if(q_str == "off" || q_str == "false") return std::string{"0"};
+                        return std::string{};
+                    } else {
+                        return std::string{};
+                    }
+                });
+                return counter;
+            }
+
+            template <typename KeyT, typename ValueT>
+            typename ValueT::result_type _call(udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp, std::vector<std::string> provided_args){
+                using required_arguments_type = typename ValueT::function::arguments_type;
+                using result_type             = typename ValueT::result_type;
+
+                constexpr std::size_t required_args_count = std::tuple_size<required_arguments_type>::value;
+
+                assert(required_args_count >= provided_args.size());
+
+                required_arguments_type required_args;
+                udho::url::detail::arguments_to_tuple(required_args, provided_args.begin(), provided_args.end());
+
+                return nvp.value().call(data(), required_args);
+            }
+
+            template <typename KeyT, typename ValueT>
+            typename ValueT::result_type _call(udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp, const ast::node_ptr_type& values_node){
+                assert(values_node->template is_type<ast::values>());
+                assert(values_node->has_content());
+                assert(values_node->children.size() > 0); // expecting single argument only as it is treated as an assignment operation not a function call
+                assert(values_node->children[0]->has_content());
+
+                std::vector<std::string> provided_args;
+                std::size_t args_extracted = _list_args(values_node, provided_args);
+                assert(args_extracted == provided_args.size());
+
+                typename ValueT::result_type res = _call(nvp, provided_args);
+
+                return res;
+            }
+            template <typename P, typename KeyT, typename ValueT, std::enable_if_t<data::policies::is_writable_property_v<P>, int>* = nullptr>
+            bool _set_str(udho::view::data::nvp<P, KeyT, ValueT>& nvp, const std::string& v){
+                bool okay = false;
+                std::decay_t<typename ValueT::result_type> input = udho::url::detail::convert_str_to_type<std::decay_t<typename ValueT::result_type>>::apply(v, &okay);
+                if(okay){
+                    bool res = _set(nvp, input);
+                    return res;
+                }else{
+                    return okay;
+                }
+            }
+
+            template <typename P, typename KeyT, typename ValueT, std::enable_if_t<!data::policies::is_writable_property_v<P>, int>* = nullptr>
+            bool _set_str(udho::view::data::nvp<P, KeyT, ValueT>& nvp, const std::string& v){ return false; }
+
+            template <typename PolicyT, typename KeyT, typename ValueT, typename V, std::enable_if_t<data::policies::is_writable_property_v<PolicyT>, int>* = nullptr>
+            bool _set(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp, const V& v){ return nvp.value().set(_data, v); }
+
+            template <typename PolicyT, typename KeyT, typename ValueT, typename V, std::enable_if_t<!data::policies::is_writable_property_v<PolicyT>, int>* = nullptr>
+            bool _set(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp, const V& v){ return false; }
+
+            template <typename ValueT, typename std::enable_if<udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            bool _assign_str(ValueT& target, std::vector<std::string>::const_iterator begin, std::vector<std::string>::const_iterator end){
+                std::size_t assignment_count = udho::view::data::assign(target, begin, end);
+                assert(assignment_count == std::distance(begin, end));
+                return true;
+            }
+
+            template <typename ValueT, typename std::enable_if<!udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            bool _assign_str(ValueT& target, std::vector<std::string>::const_iterator begin, std::vector<std::string>::const_iterator end){ return false; }
+        private:
+            data_type&                _data;
+            function_type&            _function;
+            const ast::node_ptr_type& _statement;
+            std::size_t               _idx;
+
+    };
+
+    template <typename DataT, typename Function>
+    struct visitor_index;
+
+    template <typename DataT, typename Function>
+    struct visitor_key: private visitor_common<DataT, Function>{
+        using function_type = Function;
+        using data_type     = DataT;
+        using base          = visitor_common<DataT, Function>;
+
+        visitor_key(data_type& data, function_type& function, const ast::node_ptr_type& statement, std::size_t idx, const ast::node_ptr_type& key): base(data, function, statement, idx), _key(key) {
+            assert(_key->template is_type<ast::key>());
+            assert(_key->has_content());
+
+            _name = _key->string();
+
+            ast::print(_key);
+        }
+
+        template <typename P, typename K, typename V>
+        bool operator()(udho::view::data::nvp<udho::view::data::policies::property<P>, K, V>& nvp){
+            if(_name != nvp.name()){
+                return false;
+            }
+            typename V::value_type value = base::extract(nvp);
+            if(base::has_next()){
+                const ast::node_ptr_type& index_node = base::next();
+                assert(index_node->template is_type<ast::index>());
+                assert(index_node->has_content());
+                assert(index_node->children.size() > 0);
+
+                const ast::node_ptr_type& child_node = index_node->children[0];
+                if(child_node->template is_type<ast::call>()){
+                    const ast::node_ptr_type& call_node = child_node;
+                    const ast::node_ptr_type& values_node = call_node->children[0];;
+                    // assign
+                    std::vector<std::string> provided_args;
+                    std::size_t args_count = base::_list_args(values_node, provided_args);
+
+                    assert(provided_args.size() == args_count);
+
+                    if(args_count == 1){
+                        // singular assignment
+                        return base::_set_str(nvp, provided_args[0]);
+                    } else {
+                        // multi assign requested
+                        // fetch prototype of the requested object (value)
+                        return base::_assign_str(value, provided_args.begin(), provided_args.end());
+                    }
+                } else {
+                    return visit(index_node, value);
+                }
+            } else {
+                typename V::value_type previous = value;
+                bool modified = base::pass(value);
+                if(modified){
+                    base::_set(nvp, value);
+                }
+                return true;
+            }
+        }
+        template <typename K, typename V>
+        bool operator()(udho::view::data::nvp<udho::view::data::policies::function, K, V>& nvp){
+            if(_name != nvp.name()){
+                return false;
+            }
+            // matched
+            // hence expect index > call syntax next
+            // no need to extract value from nvp
+            if(base::has_next()){
+                const ast::node_ptr_type& index_node = base::next();
+                assert(index_node->template is_type<ast::index>());
+                assert(index_node->has_content());
+                assert(index_node->children.size() > 0);
+
+                const ast::node_ptr_type& call_node = index_node->children[0];
+                assert(call_node->template is_type<ast::call>());
+                assert(call_node->children.size() > 0);
+
+                const ast::node_ptr_type& values_node = call_node->children[0];
+                typename V::result_type res = base::_call(nvp, values_node);
+
+                if(base::has_next()){
+                    const ast::node_ptr_type& next_index_node = base::next();
+                    return visit(next_index_node, res);
+                } else {
+                    base::pass(res);
+                    return true;
+                }
+            } else {
+                // TODO throw exception
+                return false;
+            }
+        }
+
+        private:
+            template <typename ValueT, typename std::enable_if<udho::view::data::detail::has_subscript_operator_v<ValueT>, int>::type* = nullptr>
+            bool visit(const ast::node_ptr_type& index_node, ValueT& value){
+                assert(index_node->template is_type<ast::index>());
+                assert(index_node->has_content());
+                assert(index_node->children.size() > 0);
+
+                ast::print(index_node);
+
+                const ast::node_ptr_type& child_node = index_node->children[0];
+
+                if(child_node->template is_type<ast::at>()){
+                    return at(child_node, value);
+                }
+
+                return false;
+            }
+
+            template <typename ValueT, typename std::enable_if<!udho::view::data::detail::has_subscript_operator_v<ValueT>, int>::type* = nullptr>
+            bool visit(const ast::node_ptr_type& index_node, ValueT& value){
+                assert(index_node->template is_type<ast::index>());
+                assert(index_node->has_content());
+                assert(index_node->children.size() > 0);
+
+                ast::print(index_node);
+
+                const ast::node_ptr_type& child_node = index_node->children[0];
+
+                if(child_node->template is_type<ast::key>()){
+                    using key_visitor_type = visitor_key<ValueT, function_type>;
+                    key_visitor_type visitor{value, base::function(), base::statement(), base::idx(), child_node};
+
+                    return apply<ValueT>(visitor);
+                } else if (child_node->template is_type<ast::call>()) {
+                    // throw std::runtime_error{"Not Implemented"};
+
+                    const ast::node_ptr_type& call_node = child_node;
+                    const ast::node_ptr_type& values_node = call_node->children[0];;
+                    // assign
+                    std::vector<std::string> provided_args;
+                    std::size_t args_count = base::_list_args(values_node, provided_args);
+
+                    assert(provided_args.size() == args_count);
+
+                    // multi assign requested
+                    // fetch prototype of the requested object (value)
+
+                    return base::_assign_str(value, provided_args.begin(), provided_args.end());
+                }
+
+                return false;
+
+            }
+
+            template <typename ValueT>
+            bool at(const ast::node_ptr_type& at_node, ValueT& value){
+                assert(at_node->has_content());
+                std::string at_str = at_node->string();
+                int at_i = std::stoi(at_str);
+                auto& v = value[at_i];
+
+                using v_type = std::decay_t<decltype(v)>;
+
+                if(base::has_next()){
+                    const ast::node_ptr_type& index_node = base::next();
+                    assert(index_node->template is_type<ast::index>());
+                    assert(index_node->has_content());
+                    assert(index_node->children.size() > 0);
+
+                    return visit(index_node, v);
+                } else {
+                    base::pass(v);
+                    return true;
+                }
+            }
+
+            // template <typename ValueT, typename std::enable_if<!udho::view::data::detail::has_subscript_operator_v<ValueT>, int>::type* = nullptr>
+            // bool at(const ast::node_ptr_type& at_node, ValueT& value){ return false; }
+
+            template <typename ValueT, typename VisitorT, typename std::enable_if<udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            bool apply(VisitorT& visitor){
+                auto meta = prototype(udho::view::data::type<ValueT>{});
+                meta.members().apply_(visitor);
+
+                return true;
+            }
+
+            template <typename ValueT, typename VisitorT, typename std::enable_if<!udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            bool apply(VisitorT&){ return false; }
+
+        private:
+            const ast::node_ptr_type& _key;
+            std::string               _name;
     };
 
     template <typename DataT, typename Function>
     struct visitor{
-        visitor(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false) {}
-
-        template <typename PolicyT, typename KeyT, typename ValueT>
-        bool operator()(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
-            // An id node must have or more children
-            // The first child of an id node has to be a lookup node
-
+        visitor(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false), _key_visitor(0x0) {
             assert(_id->template is_type<ast::statement>());
             assert(_id->has_content());
             assert(_id->children.size() > 0);
-            const ast::node_ptr_type& lookup_node = _id->children[0];
-            assert(lookup_node->template is_type<ast::lookup>());
-            assert(lookup_node->has_content());
+            const ast::node_ptr_type& key_node = _id->children[0];
+            assert(key_node->template is_type<ast::key>());
+            assert(key_node->has_content());
 
-            bool success = match_lookup(lookup_node, 0, nvp);
+            _key_visitor = new visitor_key<DataT, Function>{_data, _function, _id, 0, key_node};
+        }
+
+        ~visitor(){
+            if(_key_visitor)
+                delete _key_visitor;
+        }
+
+        template <typename PolicyT, typename KeyT, typename ValueT>
+        bool operator()(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
+            bool success = (*_key_visitor)(nvp);
             if(!_found){
                 _found = success;
             }
             return success;
         }
 
-        template <typename KeyT, typename ValueT>
-        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<ast::lookup>());
-            assert(lookup_node->children.size() > 0);
-
-            const ast::node_ptr_type& child = lookup_node->children[0];
-
-            if(child->template is_type<ast::key>()){
-                const ast::node_ptr_type& key_node = child;
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                }else{
-                    using result_type  = typename ValueT::result_type;
-                    using result_ref_t = std::add_lvalue_reference_t<result_type>;
-                    result_ref_t res   = _get(nvp);
-
-                    if(_id->children.size() > i+1){
-                        // child under id implies index queries
-                        const ast::node_ptr_type& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<ast::index>());
-                        assert(index_node->has_content());
-                        return match_index(index_node, i+1, res);
-                    } else {
-                        // No further subscript to follow
-                        // manipulator allowed
-                        _function(res);
-                        return true;
-                    }
-                }
-            } else if(child->template is_type<ast::call>()){
-                // setter intended
-                const ast::node_ptr_type& call_node = child;
-                assert(call_node->children.size() > 1);
-                const ast::node_ptr_type& key_node = call_node->children[0];
-                assert(key_node->template is_type<ast::key>());
-                assert(key_node->has_content());
-
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                } else {
-                    const ast::node_ptr_type& values_node = call_node->children[1];
-
-                    assert(values_node->template is_type<ast::values>());
-                    assert(values_node->has_content());
-                    assert(values_node->children.size() == 1); // expecting single argument only as it is treated as an assignment operation not a function call
-                    assert(values_node->children[0]->has_content());
-
-                    std::vector<std::string> provided_args;
-                    std::size_t args_extracted = _list_args(values_node, provided_args);
-                    assert(args_extracted == provided_args.size());
-                    assert(1 == provided_args.size());
-
-                    std::string arg_str = provided_args[0];
-
-                    bool res = _set_str(nvp, arg_str);
-                    // manipulator not allowed
-                    _function(res);
-
-                    return true;
-                }
-            }  else {
-                return false;
-            }
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<ast::lookup>());
-            assert(lookup_node->children.size() > 0);
-
-            const ast::node_ptr_type& child = lookup_node->children[0];
-
-            if(child->template is_type<ast::key>()){
-                const ast::node_ptr_type& key_node = child;
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                }else{
-                    using result_type  = typename ValueT::result_type;
-                    using result_ref_t = std::add_lvalue_reference_t<result_type>;
-                    result_ref_t res   = _get(nvp);
-
-                    if(_id->children.size() > i+1){
-                        // child under id implies index queries
-                        const ast::node_ptr_type& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<ast::index>());
-                        assert(index_node->has_content());
-                        return match_index(index_node, i+1, res);
-                    } else {
-                        // No further subscript to follow
-                        // manipulator not allowed
-                        _function(res);
-                        return true;
-                    }
-                }
-            } else {
-                return false;
-            }
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<ast::lookup>());
-            assert(lookup_node->children.size() > 0);
-
-            const ast::node_ptr_type& child = lookup_node->children[0];
-
-            if(child->template is_type<ast::key>()){
-                // getter intended
-                const ast::node_ptr_type& key_node = child;
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                }else{
-                    using result_type = typename ValueT::result_type;
-                    result_type res   = _get(nvp);
-
-                    if(_id->children.size() > i+1){
-                        // child under id implies index queries
-                        const ast::node_ptr_type& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<ast::index>());
-                        assert(index_node->has_content());
-                        return match_index(index_node, i+1, res);
-                    } else {
-                        // No further subscript to follow
-                        // manipulator allowed
-                        result_type previous = res;
-                        _function(res);
-
-                        // although manipulator is allowed the nvp is functional
-                        // modification to res does not reflect to the nvp
-                        if(previous != res){
-                            _set(nvp, res);
-                        }
-                        return true;
-                    }
-                }
-            } else if(child->template is_type<ast::call>()){
-                // setter intended
-                const ast::node_ptr_type& call_node = child;
-                assert(call_node->children.size() > 1);
-                const ast::node_ptr_type& key_node = call_node->children[0];
-                assert(key_node->template is_type<ast::key>());
-                assert(key_node->has_content());
-
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                } else {
-                    const ast::node_ptr_type& values_node = call_node->children[1];
-
-                    assert(values_node->template is_type<ast::values>());
-                    assert(values_node->has_content());
-                    assert(values_node->children.size() == 1); // expecting single argument only as it is treated as an assignment operation not a function call
-                    assert(values_node->children[0]->has_content());
-
-                    std::vector<std::string> provided_args;
-                    std::size_t args_extracted = _list_args(values_node, provided_args);
-                    assert(args_extracted == provided_args.size());
-                    assert(1 == provided_args.size());
-
-                    std::string arg_str = provided_args[0];
-
-                    bool res = _set_str(nvp, arg_str);
-                    // manipulator not allowed
-                    _function(res);
-
-                    return true;
-                }
-            } else {
-                return false;
-            }
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool match_lookup(const ast::node_ptr_type& lookup_node, std::size_t i, udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp){
-            assert(lookup_node->template is_type<ast::lookup>());
-            assert(lookup_node->children.size() > 0);
-
-            const ast::node_ptr_type& child = lookup_node->children[0];
-
-            if(child->template is_type<ast::call>()){
-                const ast::node_ptr_type& call_node = child;
-                assert(call_node->children.size() > 1);
-                const ast::node_ptr_type& key_node = call_node->children[0];
-                assert(key_node->template is_type<ast::key>());
-                assert(key_node->has_content());
-
-                std::string key_name = key_node->string();
-                if(key_name != nvp.name()){
-                    return false;
-                } else {
-                    const ast::node_ptr_type& values_node = call_node->children[1];
-
-                    assert(values_node->template is_type<ast::values>());
-                    assert(values_node->has_content());
-
-                    std::vector<std::string> provided_args;
-                    std::size_t args_extracted = _list_args(values_node, provided_args);
-                    assert(args_extracted == provided_args.size());
-
-                    typename ValueT::result_type res = _call(nvp, provided_args);
-
-                    if(_id->children.size() > i+1){
-                        // child under id implies index queries
-                        const ast::node_ptr_type& index_node = _id->children[i+1];
-                        assert(index_node->template is_type<ast::index>());
-                        assert(index_node->has_content());
-                        return match_index(index_node, i+1, res);
-                    } else {
-                        // manipulator not allowed
-                        _function(res);
-                        return true;
-                    }
-                }
-            } else {
-                return false;
-            }
-        }
-
-        template <typename X>
-        bool match_index(const ast::node_ptr_type& index_node, std::size_t i, X& val){
-            assert(index_node->template is_type<ast::index>());
-            assert(index_node->children.size() == 1);
-            const ast::node_ptr_type& child = index_node->children[0];
-            if(child->template is_type<ast::at>()){
-                // index_at query
-                return match_at(child, i, val);
-            } else if (child->template is_type<ast::statement>()) {
-                // dot query
-                return match_object(child, i, val);
-            }
-            return false;
-        }
-
-        template <typename X, typename std::enable_if<udho::view::data::detail::has_subscript_operator_v<X>, int>::type* = nullptr>
-        bool match_at(const ast::node_ptr_type& at_node, std::size_t i, X& vec){
-            if(at_node->template is_type<ast::at>()){
-                assert(at_node->has_content());
-                std::string at_str = at_node->string();
-                int at_i = std::stoi(at_str);
-                auto& v = vec[at_i];
-
-                // data item correspondng to the at query retrieved
-                // now traverse to the next sibling
-                if(_id->children.size() > i+1){
-                    const ast::node_ptr_type& index_node = _id->children[i+1];
-                    assert(index_node->template is_type<ast::index>());
-                    assert(index_node->has_content());
-                    return match_index(index_node, i+1, v); // Need to pass the sibling
-                } else {
-                    // There are no other subscripts to follow
-                    // manipulator not allowed
-                    _function(v);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        template <typename X, typename std::enable_if<!udho::view::data::detail::has_subscript_operator_v<X>, int>::type* = nullptr>
-        bool match_at(const ast::node_ptr_type&, std::size_t, X&){ return false; }
-
-        template <typename X, typename std::enable_if<udho::view::data::has_prototype<X>::value, int>::type* = nullptr>
-        bool match_object(const ast::node_ptr_type& id_node, std::size_t i, X& obj){
-            assert(id_node->template is_type<ast::statement>());
-            assert(id_node->has_content());
-
-            std::string id_str = id_node->string();
-
-            visitor<X, Function> finder{id_node, obj, _function};
-            auto meta = prototype(udho::view::data::type<X>{});
-
-            meta.members().apply_(finder);
-
-            return finder.found();
-        }
-
-        template <typename X, typename std::enable_if<!udho::view::data::has_prototype<X>::value, int>::type* = nullptr>
-        bool match_object(const ast::node_ptr_type&, std::size_t, X&){ return false; }
-
-        template <typename PolicyT, typename KeyT, typename ValueT, typename std::enable_if<std::is_same_v<PolicyT, udho::view::data::policies::readonly> || std::is_same_v<PolicyT, udho::view::data::policies::writable>, int>::type* = nullptr>
-        std::add_lvalue_reference_t<typename ValueT::result_type> _get(udho::view::data::nvp<udho::view::data::policies::property<PolicyT>, KeyT, ValueT>& nvp){ return nvp.value().get(_data); }
-
-        template <typename KeyT, typename ValueT>
-        typename ValueT::result_type _get(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp){ return nvp.value().get(_data); }
-
-        template <typename PolicyT, typename KeyT, typename ValueT, typename V, typename std::enable_if<std::is_same_v<PolicyT, udho::view::data::policies::functional> || std::is_same_v<PolicyT, udho::view::data::policies::writable>, int>::type* = nullptr>
-        bool _set(udho::view::data::nvp<udho::view::data::policies::property<PolicyT>, KeyT, ValueT>& nvp, const V& v){ return nvp.value().set(_data, v); }
-
-        template <typename KeyT, typename ValueT>
-        bool _set_str(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, ValueT>& nvp, const std::string& v){
-            bool okay = false;
-            std::decay_t<typename ValueT::arg_type> input = udho::url::detail::convert_str_to_type<std::decay_t<typename ValueT::arg_type>>::apply(v, &okay);
-            if(okay){
-                bool res = _set(nvp, input);
-                return res;
-            }else{
-                return okay;
-            }
-        }
-
-        template <typename KeyT, typename ValueT>
-        bool _set_str(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, ValueT>& nvp, const std::string& v){
-            bool okay = false;
-            std::decay_t<typename ValueT::result_type> input = udho::url::detail::convert_str_to_type<std::decay_t<typename ValueT::result_type>>::apply(v, &okay);
-            if(okay){
-                bool res = _set(nvp, input);
-                return res;
-            }else{
-                return okay;
-            }
-        }
-
-        template <typename KeyT, typename ValueT>
-        typename ValueT::result_type _call(udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp, std::vector<std::string> provided_args){
-            using required_arguments_type = typename ValueT::function::arguments_type;
-            using result_type             = typename ValueT::result_type;
-
-            constexpr std::size_t required_args_count = std::tuple_size<required_arguments_type>::value;
-
-            assert(required_args_count >= provided_args.size());
-
-            required_arguments_type required_args;
-            udho::url::detail::arguments_to_tuple(required_args, provided_args.begin(), provided_args.end());
-
-            return nvp.value().call(_data, required_args);
-        }
-
-        std::size_t _list_args(const ast::node_ptr_type& values_node, std::vector<std::string>& provided_args){
-            assert(values_node->template is_type<ast::values>());
-            assert(values_node->has_content());
-
-            std::size_t counter = 0;
-            std::transform(values_node->children.begin(), values_node->children.end(), std::back_inserter(provided_args), [&counter](const ast::node_ptr_type& c){
-                if(c->template is_type<ast::integer>() || c->template is_type<ast::real>() || c->template is_type<ast::duration>()){
-                    ++counter;
-                    return c->string();
-                } else if (c->template is_type<ast::quoted_string>()) {
-                    std::string q_str = c->string();
-                    q_str.erase(0, 1);
-                    q_str.erase(q_str.size()-1);
-                    ++counter;
-                    return q_str;
-                } else if (c->template is_type<ast::boolean>()) {
-                    std::string q_str = c->string();
-                    boost::algorithm::to_lower(q_str);
-                    if(q_str == "on"  || q_str == "true")  return std::string{"1"};
-                    if(q_str == "off" || q_str == "false") return std::string{"0"};
-                    return std::string{};
-                } else {
-                    return std::string{};
-                }
-            });
-            return counter;
-        }
 
         bool found() const { return _found; }
 
@@ -544,6 +526,7 @@ namespace detail{
         DataT&                                          _data;
         Function&                                       _function;
         bool                                            _found;
+        visitor_key<DataT, Function>*                   _key_visitor;
     };
 
     template <typename DataT, typename Function, bool ReEntrant>
@@ -556,6 +539,8 @@ namespace detail{
         basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
             assert(_grammar->template is_type<ast::grammar>());
             assert(_grammar->children.size() > 0);
+
+            ast::print(_ast.root());
         }
 
         void apply(){
@@ -585,7 +570,7 @@ namespace detail{
 
         private:
             std::string          _syntax;
-            ast               _ast;
+            ast                  _ast;
             DataT&               _data;
             meta_type            _meta;
             function_type&       _function;
@@ -620,6 +605,24 @@ bool get(DataT& data, const std::string& syntax, ValueT& value){
     executor();
 
     return function.assigned();
+}
+
+template <typename ValueT, typename DataT>
+ValueT get(DataT& data, const std::string& syntax){
+    using executor_type = detail::reader<DataT, ValueT>;
+    using function_type = typename executor_type::function_type;
+
+    ValueT value;
+
+    function_type function{value};
+    executor_type executor{syntax, data, function};
+    executor();
+
+    if(!function.assigned()){
+        throw std::runtime_error{udho::url::format("Failed to assign value while retrieving `{}`", syntax)};
+    }
+
+    return value;
 }
 
 template <typename DataT, typename ValueT>
