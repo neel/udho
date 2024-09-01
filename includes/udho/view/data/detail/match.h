@@ -25,63 +25,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_COMPILER_H
-#define UDHO_VIEW_BRIDGES_LUA_COMPILER_H
+#ifndef UDHO_VIEW_DATA_DETAIL_MATCH_H
+#define UDHO_VIEW_DATA_DETAIL_MATCH_H
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <sol/sol.hpp>
-#include <udho/url/detail/format.h>
-#include <udho/view/tmpl/sections.h>
-#include <udho/view/bridges/lua/fwd.h>
-#include <udho/view/bridges/lua/script.h>
-#include <udho/view/bridges/lua/state.h>
+#include <udho/view/data/fwd.h>
+#include <udho/view/data/nvp.h>
 
 namespace udho{
 namespace view{
 namespace data{
-namespace bridges{
 
 namespace detail{
-namespace lua{
+    template <typename KeyT, bool Once = false>
+    struct match_f{
+        match_f(KeyT&& key): _key(std::move(key)), _count(0) {}
+        template <typename PolicyT, typename ValueT>
+        bool operator()(const nvp<PolicyT, KeyT, ValueT>& nvp){
+            if(Once && _count > 1){
+                return false;
+            }
 
-struct compiler{
-    using script_type = lua::script;
+            bool res = nvp.name() == _key;
+            _count = _count + res;
+            return res;
+        }
+        template <typename OtherPolicyT, typename OtherKeyT, typename ValueT>
+        bool operator()(const nvp<OtherPolicyT, OtherKeyT, ValueT>& nvp){ return false; }
 
-    compiler(detail::lua::state& state): _state(state) {}
+        KeyT _key;
+        std::size_t _count;
+    };
 
-    inline bool operator()(script_type&& script);
-
-    private:
-        state& _state;
-};
-
-bool compiler::operator()(script_type&& script){
-    sol::load_result load_result = _state._state.load_buffer(script.data(), script.size());
-    if (!load_result.valid()) {
-        sol::error err = load_result;
-        throw std::runtime_error("Error loading script: " + std::string(err.what()));
-    }
-
-    sol::protected_function view =  load_result.get<sol::protected_function>();
-    sol::protected_function_result view_result = view();
-    if (!view_result.valid()) {
-        sol::error err = view_result;
-        throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
-    }
-
-    sol::protected_function view_fnc = view_result;
-    auto it = _state._views.insert(std::make_pair(script.name(), view_fnc));
-    return it.second;
-}
-
-}
+    struct match_all{
+        template <typename PolicyT, typename KeyT, typename ValueT>
+        bool operator()(nvp<PolicyT, KeyT, ValueT>&){
+            return true;
+        }
+    };
 }
 
 }
 }
 }
-}
 
-#endif // UDHO_VIEW_BRIDGES_LUA_COMPILER_H
+#endif // UDHO_VIEW_DATA_DETAIL_MATCH_H
+

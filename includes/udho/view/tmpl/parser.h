@@ -9,8 +9,8 @@
 #include <random>
 #include <functional>
 #include <algorithm>
-#include <udho/view/trie.h>
-#include <udho/view/sections.h>
+#include <udho/view/tmpl/detail/trie.h>
+#include <udho/view/tmpl/sections.h>
 
 namespace udho{
 namespace view{

@@ -6,7 +6,8 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/view/meta.h>
+#include <udho/view/data/data.h>
+#include <udho/view/meta/meta.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>
@@ -118,6 +119,7 @@ Hi <?= d.name ?> you are <?= d.age ?> years old.
 
 <? end ?>
 Your total debt is <?= d.debt ?>
+
 Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
 -----------
 <?= d:print() ?>

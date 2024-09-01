@@ -1,6 +1,6 @@
 #include <iostream>
-#include <udho/view/trie.h>
-#include <udho/view/sections.h>
+#include <udho/view/tmpl/detail/trie.h>
+#include <udho/view/tmpl/sections.h>
 #include <udho/view/data/associative.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/lua.h>

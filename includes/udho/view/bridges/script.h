@@ -35,7 +35,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <udho/view/data/associative.h>
-#include <udho/view/sections.h>
+#include <udho/view/tmpl/sections.h>
 
 namespace udho{
 namespace view{

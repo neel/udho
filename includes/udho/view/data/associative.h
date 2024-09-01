@@ -33,7 +33,9 @@
 #include <type_traits>
 #include <udho/hazo/seq/seq.h>
 #include <udho/view/data/nvp.h>
-#include <udho/view/data/detail.h>
+#include <udho/view/data/type.h>
+#include <udho/view/data/detail/match.h>
+#include <udho/view/data/detail/json.h>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>

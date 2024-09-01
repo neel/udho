@@ -25,63 +25,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_BRIDGES_LUA_COMPILER_H
-#define UDHO_VIEW_BRIDGES_LUA_COMPILER_H
+#ifndef UDHO_VIEW_DATA_BINDINGS_H
+#define UDHO_VIEW_DATA_BINDINGS_H
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <sol/sol.hpp>
-#include <udho/url/detail/format.h>
-#include <udho/view/tmpl/sections.h>
-#include <udho/view/bridges/lua/fwd.h>
-#include <udho/view/bridges/lua/script.h>
-#include <udho/view/bridges/lua/state.h>
+#include <udho/view/data/fwd.h>
+#include <udho/view/data/nvp.h>
+#include <iostream>
+
+#ifdef WITH_JSON_NLOHMANN
+#include <nlohmann/json.hpp>
+#endif
 
 namespace udho{
 namespace view{
 namespace data{
-namespace bridges{
 
-namespace detail{
-namespace lua{
+template <template<class> class BinderT, typename Class>
+struct binder;
 
-struct compiler{
-    using script_type = lua::script;
+template <typename StateT, typename T>
+struct bindings{
 
-    compiler(detail::lua::state& state): _state(state) {}
+    template <template<class> class BinderT, typename Class>
+    friend struct binder;
 
-    inline bool operator()(script_type&& script);
-
+    static bool exists() { return _exists; }
     private:
-        state& _state;
+        static bool _exists;
 };
 
-bool compiler::operator()(script_type&& script){
-    sol::load_result load_result = _state._state.load_buffer(script.data(), script.size());
-    if (!load_result.valid()) {
-        sol::error err = load_result;
-        throw std::runtime_error("Error loading script: " + std::string(err.what()));
+template <typename DerivedT, typename T>
+bool bindings<DerivedT, T>::_exists = false;
+
+template <template<class> class BinderT, typename ClassT>
+struct binder{
+    template <typename StateT>
+    static void apply(StateT& state, udho::view::data::type<ClassT> type){
+        if(!udho::view::data::bindings<StateT, ClassT>::exists()){
+            auto meta = prototype(type);
+            std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
+            BinderT<ClassT> binder(state, meta.name());
+            meta.members().apply_all(std::move(binder));
+
+            bindings<StateT, ClassT>::_exists = true;
+        }
     }
+};
 
-    sol::protected_function view =  load_result.get<sol::protected_function>();
-    sol::protected_function_result view_result = view();
-    if (!view_result.valid()) {
-        sol::error err = view_result;
-        throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
-    }
 
-    sol::protected_function view_fnc = view_result;
-    auto it = _state._views.insert(std::make_pair(script.name(), view_fnc));
-    return it.second;
-}
-
-}
-}
 
 }
 }
 }
-}
 
-#endif // UDHO_VIEW_BRIDGES_LUA_COMPILER_H
+
+#endif // UDHO_VIEW_DATA_BINDINGS_H

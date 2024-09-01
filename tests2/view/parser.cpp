@@ -6,9 +6,9 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/view/sections.h>
-#include <udho/view/parser.h>
-#include <udho/view/trie.h>
+#include <udho/view/tmpl/sections.h>
+#include <udho/view/tmpl/parser.h>
+#include <udho/view/tmpl/detail/trie.h>
 
 struct parsed_document{
     using const_iterator = std::vector<udho::view::sections::section>::const_iterator;

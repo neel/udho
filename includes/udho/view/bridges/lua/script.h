@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include <udho/view/sections.h>
+#include <udho/view/tmpl/sections.h>
 #include <udho/view/bridges/script.h>
 #include <udho/url/detail/format.h>
 
