@@ -9,6 +9,7 @@
 #include <udho/view/data/nvp.h>
 #include <udho/view/data/detail.h>
 #include <udho/view/data/associative.h>
+#include <udho/view/data/operators.h>
 #include <udho/url/detail/format.h>
 #include <iostream>
 #include <chrono>
