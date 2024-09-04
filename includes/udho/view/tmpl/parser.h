@@ -17,11 +17,20 @@ namespace view{
 
 namespace tmpl{
 
+/**
+ * @struct parser
+ * @brief Handles the parsing of template files into sections based on predefined tags and constructs.
+ *
+ * This parser identifies different types of sections such as meta, echo, eval, embed, and more, based on tags defined at construction or via setter methods.
+ */
 struct parser{
     static constexpr std::uint32_t tag_close           = 401;
     static constexpr std::uint32_t tag_close_comment   = 402;
     static constexpr std::uint32_t tag_close_verbatim  = 403;
 
+    /**
+     * @brief Constructs the parser and initializes it with default tags for different sections.
+     */
     inline explicit parser() {
         meta("<?!");
         echo("<?=");
@@ -36,39 +45,123 @@ struct parser{
         close_verbatim("@>");
     }
 
-    // Setter and getter for _meta
+    /**
+     * @brief Sets the tag for meta sections. Defaults to <?!
+     * @param tag String representing the opening tag for meta sections.
+     * @return A reference to this parser.
+     */
     inline parser& meta(const std::string& tag) { _meta = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for meta sections.
+     * @return The tag used for meta sections.
+     */
     inline const std::string& meta() const { return _meta; }
 
-    // Setter and getter for _echo
+    /**
+     * @brief Sets the tag for echo sections. Defaults to <?=.
+     * @param tag String representing the opening tag for echo sections.
+     * @return A reference to this parser.
+     */
     inline parser& echo(const std::string& tag) { _echo = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for echo sections.
+     * @return The tag used for echo sections.
+     */
     inline const std::string& echo() const { return _echo; }
 
-    // Setter and getter for _eval
+    /**
+     * @brief Sets the tag for eval sections. Defaults to <?.
+     * @param tag String representing the opening tag for eval sections.
+     * @return A reference to this parser.
+     */
     inline parser& eval(const std::string& tag) { _eval = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for eval sections.
+     * @return The tag used for eval sections.
+     */
     inline const std::string& eval() const { return _eval; }
 
-    // Setter and getter for _comment
+    /**
+     * @brief Sets the tag for comment sections. Defaults to <#.
+     * @param tag String representing the opening tag for comment sections.
+     * @return A reference to this parser.
+     */
     inline parser& comment(const std::string& tag) { _comment = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for comment sections.
+     * @return The tag used for comment sections.
+     */
     inline const std::string& comment() const { return _comment; }
 
+    /**
+     * @brief Sets the tag for verbatim sections. Defaults to <\@.
+     * @param tag String representing the opening tag for verbatim sections.
+     * @return A reference to this parser.
+     */
     inline parser& verbatim(const std::string& tag) { _verbatim = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for verbatim sections.
+     * @return The tag used for verbatim sections.
+     */
     inline const std::string& verbatim() const { return _verbatim; }
 
-    // Setter and getter for _embed
+    /**
+     * @brief Sets the tag for embed sections. Defaults to <?:.
+     * @param tag String representing the opening tag for embed sections.
+     * @return A reference to this parser.
+     */
     inline parser& embed(const std::string& tag) { _embed = tag; return *this; }
+    /**
+     * @brief Retrieves the tag for embed sections.
+     * @return The tag used for embed sections.
+     */
     inline const std::string& embed() const { return _embed; }
 
-    // Setter and getter for _close
+    /**
+     * @brief Sets the closing tag for general sections. Defaults to ?>.
+     * @param tag String representing the closing tag for general sections.
+     * @return A reference to this parser.
+     */
     inline parser& close(const std::string& tag) { _close = tag; return *this; }
+    /**
+     * @brief Retrieves the closing tag for general sections.
+     * @return The closing tag used for general sections.
+     */
     inline const std::string& close() const { return _close; }
 
+    /**
+     * @brief Sets the closing tag for comment sections. Defaults to #>.
+     * @param tag String representing the closing tag for comment sections.
+     * @return A reference to this parser.
+     */
     inline parser& close_comment(const std::string& tag) { _close_comment = tag; return *this; }
+    /**
+     * @brief Retrieves the closing tag for comment sections.
+     * @return The closing tag used for comment sections.
+     */
     inline const std::string& close_comment() const { return _close_comment; }
 
+    /**
+     * @brief Sets the closing tag for verbatim sections. Defaults to @>.
+     * @param tag String representing the closing tag for verbatim sections.
+     * @return A reference to this parser.
+     */
     inline parser& close_verbatim(const std::string& tag) { _close_verbatim = tag; return *this; }
+    /**
+     * @brief Retrieves the closing tag for verbatim sections.
+     * @return The closing tag used for verbatim sections.
+     */
     inline const std::string& close_verbatim() const { return _close_verbatim; }
 
+    /**
+     * @brief Parses the given range of input iterators and applies the specified function to each parsed section.
+     * @details The parse function uses a trie structure for efficient matching of tags to sections. It distinguishes between different types of sections and invokes the given function with a section object for each detected section.
+     * @param begin Iterator pointing to the beginning of the template data.
+     * @param end Iterator pointing to the end of the template data.
+     * @param fptr Function or functor to call with each parsed section.
+     * @tparam InputIt Type of the input iterator.
+     * @tparam Function Type of the function or functor.
+     */
     template <typename InputIt, typename Function>
     inline void parse(InputIt begin, InputIt end, Function&& fptr) const {
         detail::trie trie = make_trie();
@@ -145,6 +238,7 @@ struct parser{
 };
 
 }
+
 }
 }
 

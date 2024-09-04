@@ -43,21 +43,50 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @class script
+ * @brief Extends the generic script functionality to implement Lua-specific script operations.
+ *
+ * This class generates and manages Lua scripts derived from various sections of a template (view). It processes different types of template sections such as meta, text, echo, and eval etc...
+ */
 struct script: udho::view::data::bridges::script{
+    /**
+     * @brief Constructs a Lua script with a specified name.
+     * @param name The identifier name of the script.
+     */
     inline explicit script(const std::string& name): udho::view::data::bridges::script(name) {
+        // TODO This d should not be constant it should be determined from the variable names inside the meta section.
+        // TODO It should contain additional parameter ctx and the signatre should be function(d, ctx, stream) instead.
+        // TODO The name ctx should not be fixed as well, it should be retrieved from the neta also.
         *this << "return function(d, stream)" << std::endl;
         ++*this;
     }
+
+    /**
+     * @brief Processes a given template section into Lua script format.
+     * @param section The template section to process.
+     */
     inline void operator()(const udho::view::tmpl::section& section){
         add_section(section);
     }
+
+    /**
+     * @brief Finalizes the script, ensuring proper closure in Lua syntax.
+     */
     void finish(){
         --*this;
         *this << "end";
     }
     private:
+        /**
+         * @brief Adds a generic section to the Lua script.
+         * @param section The section to add.
+         */
         inline void add_section(const udho::view::tmpl::section& section){
             switch(section.type()){
+                case udho::view::tmpl::section::meta:
+                    add_meta_section(section);
+                    break;
                 case udho::view::tmpl::section::text:
                 case udho::view::tmpl::section::verbatim:
                 case udho::view::tmpl::section::echo:
@@ -70,10 +99,20 @@ struct script: udho::view::data::bridges::script{
                     break;
             }
         }
+        /**
+         * @brief Adds an evaluation (eval) section from the template into the Lua script.
+         * @details This function directly integrates Lua code found within eval blocks of the template into the script. It encapsulates code meant to be executed during the template rendering process, allowing dynamic content generation based on the evaluation results.
+         * @param section The eval section to add, containing Lua code.
+         */
         inline void add_eval_section(const udho::view::tmpl::section& section) {
             udho::view::data::bridges::script::accept(section);
         }
 
+        /**
+         * @brief Adds an echo section to the Lua script.
+         * @details Echo sections are processed to output text or expressions directly into the rendered template. This method formats these sections into Lua print statements or equivalent, ensuring they are executed and their outputs are captured during the template's rendering.
+         * @param section The echo section containing text or expressions to be output.
+         */
         inline void add_echo_section(const udho::view::tmpl::section& section) {
             if (section.size() > 0) {
                 *this << std::endl;
@@ -88,6 +127,15 @@ struct script: udho::view::data::bridges::script{
                 --*this;
                 *this << "end" << std::endl;
             }
+        }
+
+        /**
+         * @brief Adds a meta section to the Lua script.
+         * @details Meta sections typically contain configuration or directives that influence how the template is processed or how the scripting functions. These sections might modify the script's behavior, set up necessary preconditions, or provide metadata that affects the execution context. The implementation should parse and integrate these directives into the Lua script accordingly.
+         * @param section The meta section to integrate.
+         */
+        inline void add_meta_section(const udho::view::tmpl::section& section) {
+            // TODO implement
         }
 
 };

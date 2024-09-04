@@ -46,11 +46,29 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @struct compiler
+ * @brief Compiles Lua scripts into the Lua environment and manages their registration.
+ *
+ * This structure is responsible for compiling Lua scripts provided as strings and integrating them into a given Lua state managed by `detail::lua::state`. It uses the Sol2 library to load and compile the scripts, handling errors and integrating compiled scripts into the Lua global environment.
+ */
 struct compiler{
     using script_type = lua::script;
 
-    compiler(detail::lua::state& state): _state(state) {}
+    /**
+     * @brief Constructs a compiler linked to a specific Lua state.
+     * @param state Reference to the `detail::lua::state` which will hold the compiled scripts.
+     */
+    inline explicit compiler(detail::lua::state& state): _state(state) {}
 
+    /**
+     * @brief Compiles a Lua script and registers it within the Lua state.
+     * @param script An rvalue reference to a `script_type` object containing the Lua script to compile.
+     * @return True if the script was successfully compiled and registered, false otherwise.
+     *
+     * Attempts to load and compile the script using Sol2's load functionality. If successful, the compiled function is registered in the Lua state under the name provided by the script. If any step fails, a detailed error message is generated and a standard exception is thrown.
+     * @details This function performs the actual compilation work by loading the script into the Lua state, checking for syntax errors, and registering the resulting function. Detailed error handling ensures that any issues during loading or function extraction are clearly reported.
+     */
     inline bool operator()(script_type&& script);
 
     private:

@@ -38,6 +38,18 @@ namespace view{
 namespace data{
 namespace bridges{
 
+/**
+ * @typedef lua
+ * @brief A specialized bridge configured for Lua scripting.
+ *
+ * This type alias represents a specific instantiation of the `bridge` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
+ *
+ * @details The lua type is defined using several Lua-specific components:
+ * - `detail::lua::state`: Manages the state specific to Lua scripts, such as global variables and function registrations.
+ * - `detail::lua::compiler`: Responsible for compiling Lua scripts into a form that can be executed by the Lua interpreter.
+ * - `detail::lua::script`: Handles the generation of Lua scripts from parsed template sections.
+ * - `detail::lua::binder`: Provides mechanisms to bind C++ data structures to Lua scripts, enabling data exchange between C++ and Lua.
+ */
 using lua = udho::view::data::bridges::bridge<
                 detail::lua::state,
                 detail::lua::compiler,

@@ -44,21 +44,50 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @struct state
+ * @brief Manages the Lua scripting environment, including libraries, global variables, and script execution.
+ *
+ * This structure encapsulates the Lua state management using the Sol2 library, providing functionalities for opening libraries, initializing global tables, and executing Lua scripts. It is designed to interact closely with Lua scripts generated from templates, facilitating data binding and script execution within a robust error handling framework.
+ */
 struct state{
-    friend compiler;
+    friend compiler; ///< Allows compiler direct access to internal details for script compilation.
     template <typename X>
-    friend struct binder;
+    friend struct binder;  ///< Allows binder template to access and modify Lua state for type bindings.
 
-    using buffer_type   = buffer;
+    using buffer_type   = buffer; ///< Alias for the buffer type used to handle script outputs.
 
+    /**
+     * @brief Constructs the Lua state and opens necessary Lua libraries.
+     *
+     * Opens essential libraries such as base, string, math, and utf8 to provide a rich standard environment for executing scripts.
+     */
     inline state() {
         _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
     }
+
+    /**
+     * @brief Initializes the Lua environment, setting up necessary tables and applying buffer bindings.
+     *
+     * Creates a 'udho' table in the Lua global environment if it does not exist and binds the buffer class to it. This table acts as a namespace for all operations related to the framework.
+     */
     inline void init(){
         _udho = _state["udho"].get_or_create<sol::table>();
         buffer::apply(_udho);
     }
 
+
+    /**
+     * @brief Executes a Lua script identified by its name, using provided data and capturing the output.
+     *
+     * @param name The identifier of the script to execute.
+     * @param data The data to be passed to the script, typically involving context or configuration.
+     * @param output Reference to a string where the script's output will be stored.
+     * @return The size of the generated output.
+     * @tparam T The type of the data passed to the script.
+     *
+     * Searches for the script in the internal map and executes it if found. If the script execution is successful, captures the output using the provided buffer. Handles and reports errors if the script execution fails.
+     */
     template <typename T>
     std::size_t exec(const std::string& name, const T& data, std::string& output){
         std::string view_index = name;
@@ -82,8 +111,8 @@ struct state{
     }
 
     private:
-        sol::state _state;
-        sol::table _udho;
+        sol::state _state; ///< The underlying Sol2 state object managing the Lua environment.
+        sol::table _udho; ///< A table in the Lua global environment for namespaced operations related to this framework.
         std::map<std::string, sol::protected_function> _views;
 };
 

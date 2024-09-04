@@ -45,6 +45,17 @@ namespace view{
 namespace data{
 namespace bridges{
 
+/**
+ * @class bridge
+ * @brief Manages the compilation and execution of scripts within a template engine framework.
+ *
+ * This template class binds scripting functionality with a state management system, allowing for dynamic compilation and execution of templates.
+ *
+ * @tparam StateT The type representing the scripting engine's state.
+ * @tparam CompilerT The compiler used to compile scripts.
+ * @tparam ScriptT The type of script being compiled and executed.
+ * @tparam BinderT A template template parameter representing the binder used for data bindings.
+ */
 template <typename StateT, typename CompilerT, typename ScriptT, template <class> typename BinderT>
 struct bridge{
     using state_type    = StateT;
@@ -53,26 +64,52 @@ struct bridge{
     template <typename X>
     using binder_type   = BinderT<X>;
 
+    /**
+     * @brief Initializes the scripting engine state.
+     */
     void init(){
         _state.init();
     }
 
+    /**
+     * @brief Binds a data type to the scripting engine, enabling data access within the scripts generated from the templates (view files).
+     * @tparam ClassT The data type to bind.
+     * @param handle A handle representing the data type.
+     */
     template <typename ClassT>
     void bind(udho::view::data::type<ClassT> handle){
         udho::view::data::binder<BinderT, ClassT>::apply(_state, handle);
     }
 
+    /**
+     * @brief Compiles a template (view) from a resource buffer into a script.
+     * @param view The resource buffer containing the template data.
+     * @param prefix A prefix used in the naming of the script.
+     * @return True if compilation was successful, false otherwise.
+     */
     template <typename IteratorT>
     bool compile(resources::resource_buffer<udho::view::resources::type::view, IteratorT>&& view, const std::string& prefix){
         std::string key = view_key(view.name(), prefix);
         return compile(view.begin(), view.end(), key);
     }
 
+    /**
+     * @brief Compiles a template (view) from a resource file into a script.
+     * @param view The resource file containing the template data.
+     * @param prefix A prefix used in the naming of the script.
+     * @return True if compilation was successful, false otherwise.
+     */
     bool compile(resources::resource_file<udho::view::resources::type::view>&& view, const std::string& prefix){
         std::string key = view_key(view.name(), prefix);
         return compile(view.begin(), view.end(), key);
     }
 
+    /**
+     * @brief Compiles a template from a resource file into a script.
+     * @param view The resource file containing the template data.
+     * @param prefix A prefix used in the naming of the script.
+     * @return True if compilation was successful, false otherwise.
+     */
     template <typename T>
     std::size_t exec(const std::string& name, const std::string& prefix, const T& data, std::string& output){
         if(!udho::view::data::bindings<StateT, T>::exists()){
@@ -82,9 +119,25 @@ struct bridge{
     }
 
     private:
+        /**
+         * @brief Generates a key for identifying a view script.
+         * @param name The name of the view.
+         * @param prefix The prefix used in the naming.
+         * @return The generated view key.
+         */
         std::string view_key(const std::string& name, const std::string& prefix) const {
             return udho::url::format(":{}/{}", prefix, name);
         }
+        /**
+         * @brief Compiles a script from a range of iterators that encapsulate template data.
+         * @details This function takes iterators pointing to the beginning and end of a template, generates a script using the specified script handler, and attempts to compile this script using the scripting engine associated with this bridge.
+         *          It processes the template data, transforms it into the scripting language using the provided script handler, and manages the compilation through the scripting engine's compiler.
+         * @param begin Iterator to the beginning of the template data.
+         * @param end Iterator to the end of the template data.
+         * @param key A unique key or identifier for the compiled script, used to store and reference the script within the scripting engine.
+         * @return True if the compilation was successful, false otherwise.
+         * @tparam IteratorT The type of the iterator (e.g., string iterator, file buffer iterator).
+         */
         template <typename IteratorT>
         bool compile(IteratorT begin, IteratorT end, std::string key){
             script_type script{key};

@@ -42,22 +42,47 @@ namespace view{
 namespace data{
 namespace bridges{
 
+/**
+ * @struct stream
+ * @brief A generic text stream class for handling formatted text output with controlled indentation.
+ *
+ * This template class facilitates structured text generation, which is particularly useful for scripting and code generation in various languages. It manages indentation and newlines to produce readable and well-formatted output.
+ *
+ * @tparam CharT Character type for the stream (default: char).
+ * @tparam C Default indentation character (default: tab '\t').
+ */
 template <typename CharT = char, CharT C = '\t'>
 struct stream{
-    using char_type = CharT;
-    static constexpr const char_type indent_char = C;
+    using char_type = CharT; ///< The character type used in the stream.
+    static constexpr const char_type indent_char = C; ///< The character used for indentation.
 
+    /**
+     * @brief Constructs a new stream object with default settings.
+     */
     explicit stream(): _indent(0), _empty_newline(true) {
         std::fill(_indent_str.begin(), _indent_str.end(), indent_char);
     }
 
-    stream(const stream&) = delete;
-    stream& operator=(const stream&) = delete;
+    stream(const stream&) = delete; ///< Copy constructor is deleted.
+    stream& operator=(const stream&) = delete; ///< Copy assignment is deleted.
 
+    /**
+     * @brief Appends a string to the stream.
+     * @param s Reference to the stream.
+     * @param str The string to append.
+     * @return A reference to the modified stream.
+     */
     friend stream& operator<<(stream& s, const std::string& str){
         s.append(str);
         return s;
     }
+
+    /**
+     * @brief Handles manipulators, specifically std::endl to append a newline.
+     * @param s Reference to the stream.
+     * @param manip Manipulator function.
+     * @return A reference to the modified stream.
+     */
     friend stream& operator<<(stream& s, std::ostream& (*manip)(std::ostream&)) {
         if (manip == static_cast<std::ostream& (*)(std::ostream&)>(std::endl)) {
             s.append_newline();
@@ -65,33 +90,62 @@ struct stream{
         return s;
     }
 
+    /**
+     * @brief Prefix increment to increase indentation.
+     */
     stream& operator++() {
         indent(true);
         return *this;
     }
 
+    /**
+     * @brief Postfix increment to increase indentation.
+     */
     stream operator++(int) {
         stream temp = *this;
         indent(true);
         return temp;
     }
 
+    /**
+     * @brief Prefix decrement to decrease indentation.
+     */
     stream& operator--() {
         indent(false);
         return *this;
     }
 
+    /**
+     * @brief Postfix decrement to decrease indentation.
+     */
     stream operator--(int) {
         stream temp = *this;
         indent(false);
         return temp;
     }
 
+    /**
+     * @brief Returns the entire content of the buffer as a standard string.
+     * @return A string containing all characters currently in the buffer.
+     */
     std::string body() const { return std::string(_buffer.begin(), _buffer.end()); }
+    /**
+     * @brief Provides access to the raw data of the buffer.
+     * @return A pointer to the beginning of the data buffer.
+     */
     const char* data() const { return _buffer.data(); }
+    /**
+     * @brief Gets the current size of the buffer.
+     * @return The size of the buffer in characters.
+     */
     std::size_t size() const { return _buffer.size(); }
 
     protected:
+        /**
+         * @brief Adjusts the indentation level of the output.
+         * @param positive If true, increases the indentation level; if false, decreases it.
+         * @throw std::underflow_error If decreasing the indentation would result in a negative indentation level.
+         */
         void indent(bool positive){
             std::int8_t indent = _indent;
             indent += positive ? +1 : -1;
@@ -101,7 +155,18 @@ struct stream{
             _indent = indent;
         }
     protected:
+        /**
+         * @brief Appends a string directly to the buffer.
+         * @param str The string to append to the buffer.
+         */
         void append(const std::string& str) { append(str.begin(), str.end()); }
+        /**
+         * @brief Appends a range of characters to the buffer, applying indentation as necessary.
+         * @tparam Iterator Type of the iterator.
+         * @param begin Iterator pointing to the beginning of the character range.
+         * @param end Iterator pointing to the end of the character range.
+         * @note Inserts indentation characters at the beginning of a new line if the line is currently empty.
+         */
         template <typename Iterator>
         void append(Iterator begin, Iterator end) {
             if(_empty_newline){
@@ -110,22 +175,48 @@ struct stream{
             }
             _buffer.insert(_buffer.end(), begin, end);
         }
+        /**
+         * @brief Appends a newline character to the buffer and resets the line state to empty.
+         * @details This causes the next line of output to begin with the appropriate indentation.
+         */
         void append_newline() {
             _buffer.push_back('\n');
             _empty_newline = true;
         }
     private:
-        std::vector<char_type> _buffer;
-        std::int8_t _indent;
-        bool _empty_newline;
-        std::array<char_type, std::numeric_limits<std::int8_t>::max()> _indent_str;
+        std::vector<char_type> _buffer;  ///< The buffer storing the stream's content.
+        std::int8_t _indent;  ///< Current indentation level.
+        bool _empty_newline;  ///< Flag indicating whether the current line is empty.
+        std::array<char_type, std::numeric_limits<std::int8_t>::max()> _indent_str;  ///< Array used for indentation.
 };
 
+/**
+ * @struct script
+ * @brief A specialized stream for handling script generation, particularly useful in scenarios where scripts or code need to be dynamically generated from templates.
+ *
+ * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
+ */
 struct script: stream<char, '\t'>{
+    /**
+     * @brief Constructs a new script object with a specified name.
+     * @param name The name of the script, often used as an identifier.
+     */
     explicit script(const std::string& name): stream(), _name(name) {}
+    /**
+     * @brief Returns the name of the script.
+     * @return The name of the script.
+     */
     std::string name() const { return _name; }
     protected:
+        /**
+         * @brief Accepts a section from a template and appends it to the script.
+         * @param section The template section to append.
+         */
         inline void accept(const udho::view::tmpl::section& section){ stream::append(section.begin(), section.end()); }
+        /**
+         * @brief Discards a section from a template. Currently, this function does not perform any operation.
+         * @param section The template section to discard.
+         */
         inline void discard(const udho::view::tmpl::section&){}
     private:
         std::string _name;
