@@ -55,36 +55,73 @@ struct type {};
  *
  * @note This function will compile only if there is a specific overload for the type `ClassT`. If not, it will cause a compile-time error.
  *
- * @example
- * struct info {
- *     std::string name;
- *     double value;
- *     std::uint32_t _x;
+ * @code
+ * struct education {
+ *     std::string course;
+ *     std::string university;
  *
- *     inline double x() const { return _x; }
- *     inline void setx(const std::uint32_t& v) { _x = v; }
+ *     education() = default;
+ *     education(const std::string& c, const std::string& u) : course(c), university(u) {}
  *
- *     inline info() {
- *         name = "Hello";
- *         value = 42;
- *         _x = 43;
- *     }
- *
- *     void print() {
- *         std::cout << "name: " << name << " value: " << value << std::endl;
- *     }
- *
- *     // Prototype specialization for 'info' type
- *     friend auto prototype(udho::view::data::type<info>) {
+ *     friend auto prototype(udho::view::data::type<education>) {
  *         using namespace udho::view::data;
- *         return assoc(
- *             mvar("name", &info::name),
- *             cvar("value", &info::value),
- *             fvar("x", &info::x, &info::setx),
- *             func("print", &info::print)
- *         ).as("info");
+ *         return assoc("education"),
+ *             mvar("course", &education::course),
+ *             mvar("university", &education::university);
  *     }
  * };
+ *
+ * struct person {
+ *     std::string first_name;
+ *     std::string last_name;
+ *     double age;
+ *
+ *     address() = default;
+ *     address(const std::string loc): locality(loc) {}
+ *
+ *     friend auto prototype(udho::view::data::type<person>) {
+ *         using namespace udho::view::data;
+ *         return assoc("person"),
+ *             mvar("first_name", &person::first_name),
+ *             mvar("last_name", &person::last_name),
+ *             cvar("age", &person::age);
+ *     }
+ * };
+ *
+ * struct student : person {
+ *     std::vector<education> courses;
+ *     double _debt;
+ *
+ *     student() = default;
+ *     student(const student&) = delete;
+ *
+ *     inline double debt() const { return _debt; }
+ *     inline void set_debt(const double& v) {
+ *         _debt = v > 100 ? 100 : v;
+ *     }
+ *
+ *     std::string print() const {
+ *         std::stringstream stream;
+ *         stream << "Name: " << first_name << " " << last_name
+ *                << ", Age: " << age << ", Debt: " << _debt << std::endl;
+ *         for (const education& e : courses) {
+ *             stream << e.course << " at " << e.university << std::endl;
+ *         }
+ *         return stream.str();
+ *     }
+ *     double add(std::uint32_t a, double b, float c, int d){ return a+b+c+d; }
+ *
+ *     friend auto prototype(udho::view::data::type<student>) {
+ *         using namespace udho::view::data;
+ *         return assoc("student"),
+ *             prototype(type<person>()),
+ *             fvar("debt",     &student::debt, &student::set_debt),
+ *             mvar("courses",  &student::courses),
+ *             func("print",    &student::print),
+ *             func("add",      &student::add);
+ *     }
+ * };
+ * @endcode
  */
 template <class ClassT>
 auto prototype(udho::view::data::type<ClassT>){
