@@ -34,6 +34,7 @@
 #include <vector>
 #include <iomanip>
 #include <stdexcept>
+#include <exception>
 #include <udho/view/data/associative.h>
 #include <udho/view/tmpl/sections.h>
 
@@ -197,6 +198,33 @@ struct stream{
  * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
  */
 struct script: stream<char, '\t'>{
+    struct description{
+        struct vars_{
+            std::string data;
+            std::string context;
+
+            friend auto prototype(udho::view::data::type<vars_>){
+                using namespace udho::view::data;
+
+                return assoc("vars_"),
+                    mvar("data",    &vars_::data),
+                    mvar("context", &vars_::context);
+            }
+        };
+
+        std::string name;
+        std::string bridge;
+        vars_       vars;
+
+        friend auto prototype(udho::view::data::type<description>){
+            using namespace udho::view::data;
+
+            return assoc("description"),
+                mvar("name",    &description::name),
+                mvar("bridge",  &description::bridge),
+                mvar("vars",    &description::vars);
+        }
+    };
     /**
      * @brief Constructs a new script object with a specified name.
      * @param name The name of the script, often used as an identifier.
@@ -207,6 +235,12 @@ struct script: stream<char, '\t'>{
      * @return The name of the script.
      */
     std::string name() const { return _name; }
+
+    /**
+     * @brief Returns the meta information of the view.
+     * @return View description
+     */
+    const description& desc() const{ return _description; }
     protected:
         /**
          * @brief Accepts a section from a template and appends it to the script.
@@ -218,8 +252,19 @@ struct script: stream<char, '\t'>{
          * @param section The template section to discard.
          */
         inline void discard(const udho::view::tmpl::section&){}
+
+        /**
+         * @brief Adds a meta section to the Lua script.
+         * @details Meta sections typically contain configuration or directives that influence how the template is processed or how the scripting functions. These sections might modify the script's behavior, set up necessary preconditions, or provide metadata that affects the execution context. The implementation should parse and integrate these directives into the Lua script accordingly.
+         * @param section The meta section to integrate.
+         */
+        inline void add_meta_section(const udho::view::tmpl::section& section) {
+            // TODO implement
+            throw std::runtime_error{"Need to parse view meta block"};
+        }
     private:
         std::string _name;
+        description _description;
 };
 
 }
