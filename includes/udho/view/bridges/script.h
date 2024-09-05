@@ -34,6 +34,7 @@
 #include <vector>
 #include <iomanip>
 #include <stdexcept>
+#include <exception>
 #include <udho/view/data/associative.h>
 #include <udho/view/tmpl/sections.h>
 
@@ -200,6 +201,33 @@ template <typename DerivedT>
 struct basic_script: stream<char, '\t'>{
     using derived_type = DerivedT;
 
+    struct description{
+        struct vars_{
+            std::string data;
+            std::string context;
+
+            friend auto prototype(udho::view::data::type<vars_>){
+                using namespace udho::view::data;
+
+                return assoc("vars_"),
+                    mvar("data",    &vars_::data),
+                    mvar("context", &vars_::context);
+            }
+        };
+
+        std::string name;
+        std::string bridge;
+        vars_       vars;
+
+        friend auto prototype(udho::view::data::type<description>){
+            using namespace udho::view::data;
+
+            return assoc("description"),
+                mvar("name",    &description::name),
+                mvar("bridge",  &description::bridge),
+                mvar("vars",    &description::vars);
+        }
+    };
     /**
      * @brief Constructs a new script object with a specified name.
      * @param name The name of the script, often used as an identifier.
@@ -212,7 +240,13 @@ struct basic_script: stream<char, '\t'>{
     std::string name() const { return _name; }
 
     /**
-     * @brief Processes a given template section into Lua script format.
+     * @brief Returns the meta information of the view.
+     * @return View description
+     */
+    const description& desc() const{ return _description; }
+    /**
+     * @brief Processes a given template section into script format.
+     * @details Process the meta section inside basic_script as it is same for all template engine. For all other sections delegates the call to the derived class
      * @param section The template section to process.
      */
     inline void operator()(const udho::view::tmpl::section& section){
@@ -224,7 +258,7 @@ struct basic_script: stream<char, '\t'>{
             // TODO construct the description object
             //      pass it to the begin method of the derived class
 
-            self().begin();
+            self().begin(_description);
 
             _meta_processed = true;
         } else {
@@ -255,8 +289,18 @@ struct basic_script: stream<char, '\t'>{
 
     private:
         derived_type& self() { return static_cast<derived_type&>(*this); }
+        /**
+         * @brief Adds a meta section to the Lua script.
+         * @details Meta sections typically contain configuration or directives that influence how the template is processed or how the scripting functions. These sections might modify the script's behavior, set up necessary preconditions, or provide metadata that affects the execution context. The implementation should parse and integrate these directives into the Lua script accordingly.
+         * @param section The meta section to integrate.
+         */
+        inline void add_meta_section(const udho::view::tmpl::section& section) {
+            // TODO implement
+            throw std::runtime_error{"Need to parse view meta block"};
+        }
     private:
         std::string _name;
+        description _description;
         bool        _meta_processed;
 };
 

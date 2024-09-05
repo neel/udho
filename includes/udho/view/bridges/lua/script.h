@@ -61,11 +61,11 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
 
 
     private:
-        inline void begin(){
+        inline void begin(const base::description& desc){
             // TODO This d should not be constant it should be determined from the variable names inside the meta section.
             // TODO It should contain additional parameter ctx and the signatre should be function(d, ctx, stream) instead.
             // TODO The name ctx should not be fixed as well, it should be retrieved from the neta also.
-            *this << "return function(d, stream)" << std::endl;
+            *this << udho::url::format("return function({}, {})", desc.vars.data, desc.vars.context) << std::endl;
             ++*this;
         }
         /**
