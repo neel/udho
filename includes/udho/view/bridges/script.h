@@ -196,17 +196,51 @@ struct stream{
  *
  * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
  */
-struct script: stream<char, '\t'>{
+template <typename DerivedT>
+struct basic_script: stream<char, '\t'>{
+    using derived_type = DerivedT;
+
     /**
      * @brief Constructs a new script object with a specified name.
      * @param name The name of the script, often used as an identifier.
      */
-    explicit script(const std::string& name): stream(), _name(name) {}
+    explicit basic_script(const std::string& name): stream(), _name(name), _meta_processed(false) {}
     /**
      * @brief Returns the name of the script.
      * @return The name of the script.
      */
     std::string name() const { return _name; }
+
+    /**
+     * @brief Processes a given template section into Lua script format.
+     * @param section The template section to process.
+     */
+    inline void operator()(const udho::view::tmpl::section& section){
+        if(section.type() == udho::view::tmpl::section::meta){
+            if(_meta_processed){
+                throw std::runtime_error{"Encountered multiple meta blocks"};
+            }
+
+            // TODO construct the description object
+            //      pass it to the begin method of the derived class
+
+            self().begin();
+
+            _meta_processed = true;
+        } else {
+            if(!_meta_processed){
+                // warn discarding a block encountered before the meta block
+                discard(section);
+            } else {
+                self().process(section);
+            }
+        }
+    }
+
+    void finish(){
+        self().end();
+    }
+
     protected:
         /**
          * @brief Accepts a section from a template and appends it to the script.
@@ -218,8 +252,12 @@ struct script: stream<char, '\t'>{
          * @param section The template section to discard.
          */
         inline void discard(const udho::view::tmpl::section&){}
+
+    private:
+        derived_type& self() { return static_cast<derived_type&>(*this); }
     private:
         std::string _name;
+        bool        _meta_processed;
 };
 
 }

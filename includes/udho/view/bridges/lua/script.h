@@ -49,44 +49,40 @@ namespace lua{
  *
  * This class generates and manages Lua scripts derived from various sections of a template (view). It processes different types of template sections such as meta, text, echo, and eval etc...
  */
-struct script: udho::view::data::bridges::script{
+struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
+    using base = udho::view::data::bridges::basic_script<detail::lua::script>;
+
+    friend struct udho::view::data::bridges::basic_script<detail::lua::script>;
     /**
      * @brief Constructs a Lua script with a specified name.
      * @param name The identifier name of the script.
      */
-    inline explicit script(const std::string& name): udho::view::data::bridges::script(name) {
-        // TODO This d should not be constant it should be determined from the variable names inside the meta section.
-        // TODO It should contain additional parameter ctx and the signatre should be function(d, ctx, stream) instead.
-        // TODO The name ctx should not be fixed as well, it should be retrieved from the neta also.
-        *this << "return function(d, stream)" << std::endl;
-        ++*this;
-    }
+    inline explicit script(const std::string& name): base(name) {}
 
-    /**
-     * @brief Processes a given template section into Lua script format.
-     * @param section The template section to process.
-     */
-    inline void operator()(const udho::view::tmpl::section& section){
-        add_section(section);
-    }
 
-    /**
-     * @brief Finalizes the script, ensuring proper closure in Lua syntax.
-     */
-    void finish(){
-        --*this;
-        *this << "end";
-    }
     private:
+        inline void begin(){
+            // TODO This d should not be constant it should be determined from the variable names inside the meta section.
+            // TODO It should contain additional parameter ctx and the signatre should be function(d, ctx, stream) instead.
+            // TODO The name ctx should not be fixed as well, it should be retrieved from the neta also.
+            *this << "return function(d, stream)" << std::endl;
+            ++*this;
+        }
+        /**
+         * @brief Finalizes the script, ensuring proper closure in Lua syntax.
+         */
+        inline void end(){
+            --*this;
+            *this << "end";
+        }
         /**
          * @brief Adds a generic section to the Lua script.
          * @param section The section to add.
          */
-        inline void add_section(const udho::view::tmpl::section& section){
+        inline void process(const udho::view::tmpl::section& section){
+            assert(section.type() != udho::view::tmpl::section::meta);
+
             switch(section.type()){
-                case udho::view::tmpl::section::meta:
-                    add_meta_section(section);
-                    break;
                 case udho::view::tmpl::section::text:
                 case udho::view::tmpl::section::verbatim:
                 case udho::view::tmpl::section::echo:
@@ -105,7 +101,7 @@ struct script: udho::view::data::bridges::script{
          * @param section The eval section to add, containing Lua code.
          */
         inline void add_eval_section(const udho::view::tmpl::section& section) {
-            udho::view::data::bridges::script::accept(section);
+            base::accept(section);
         }
 
         /**
