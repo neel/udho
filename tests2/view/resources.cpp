@@ -113,7 +113,7 @@ TEST_CASE("Tokenizer correctly builds the trie", "[trie]") {
     static char buffer[] = R"TEMPLATE(
 <?! register('cards/student', 'js') vars('d', 'ctx') cache(1d) ?>
 
-Hi <?= d.name ?> you are <?= d.age ?> years old.
+Hi <?= d.first_name ?> <?= d.last_name ?> you are <?= d.age ?> years old.
 <? for i, e in ipairs(d.courses) do ?>
     Course <?= i ?>: <?= e.course ?> at <?= e.university ?>
 

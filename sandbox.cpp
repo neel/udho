@@ -27,6 +27,7 @@
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
 #include <udho/net/artifacts.h>
+#include <udho/view/resources/substores/store.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -310,8 +311,28 @@ int main(){
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
     auto artifacts  = udho::net::artifacts{router, resources};
-    server.run(artifacts);
+    // server.run(artifacts);
 
-    service.run();
+    udho::view::resources::storage<udho::view::data::bridges::lua> resources_storage{lua};
+    auto mutable_accessor = resources_storage.writer("primary");
+    {
+        {
+            auto mutable_views_accessor_lua = mutable_accessor.views<udho::view::data::bridges::lua>();
+            mutable_views_accessor_lua << udho::view::resources::resource::view("temp", temp);
+        }
+        resources_storage.lock();
+        try{
+            auto readonly_accessor = resources_storage.reader("primary");
+            auto readonly_views_accessor_lua = readonly_accessor.views<udho::view::data::bridges::lua>();
+            std::cout << "see views below " << resources.views.count() << std::endl;
+            for(const auto& res: readonly_views_accessor_lua){
+                std::cout << res.name() << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cout << e.what() << std::endl;
+        }
+    }
+
+    // service.run();
 
 }

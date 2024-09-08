@@ -33,6 +33,7 @@
 #include <functional>
 #include <sol/sol.hpp>
 #include <udho/url/detail/format.h>
+#include <udho/url/summary.h>
 #include <udho/view/tmpl/sections.h>
 #include <udho/view/tmpl/parser.h>
 #include <udho/view/bridges/lua/script.h>
@@ -44,6 +45,13 @@ namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
+
+/**
+ * @brief a subset of information regarding the global state, environment and context of invocation (e.g. HTTP request, URL routes summary, resource dictionary etc..)
+ */
+struct context{
+    const udho::url::summary::router& _router_summary;
+};
 
 /**
  * @class bridge
@@ -63,6 +71,8 @@ struct bridge{
     using script_type   = ScriptT;
     template <typename X>
     using binder_type   = BinderT<X>;
+
+    static constexpr auto name() { return state_type::name(); }
 
     /**
      * @brief Initializes the scripting engine state.

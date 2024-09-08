@@ -36,6 +36,7 @@
 #include <boost/lexical_cast.hpp>
 #include <udho/url/detail/format.h>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/type_traits/has_right_shift.hpp>
 #include <dlfcn.h>
 #include <cxxabi.h>
 

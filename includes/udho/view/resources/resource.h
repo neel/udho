@@ -173,16 +173,6 @@ struct resource_file{
         boost::iostreams::mapped_file _mmap;
 };
 
-// template <type R, typename IteratorT>
-// resource_buffer<R, IteratorT> resource(const std::string& name, IteratorT begin, IteratorT end){
-//     return resource_buffer<R, IteratorT>{name, begin, end};
-// }
-//
-// template <type R, typename PathT = boost::filesystem::path>
-// resource_file<R> resource(const std::string& name, const PathT& path){
-//     return resource_file<R>{name, path};
-// }
-
 namespace resource{
     /**
     * @brief Creates a resource_buffer instance for a view resource.

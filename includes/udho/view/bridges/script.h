@@ -203,8 +203,8 @@ struct basic_script: stream<char, '\t'>{
 
     struct description{
         struct vars_{
-            std::string data;
-            std::string context;
+            std::string data    = "d";
+            std::string context = "ctx";
 
             friend auto prototype(udho::view::data::type<vars_>){
                 using namespace udho::view::data;

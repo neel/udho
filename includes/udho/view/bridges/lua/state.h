@@ -32,6 +32,7 @@
 #include <string>
 #include <functional>
 #include <sol/sol.hpp>
+#include <udho/hazo/string/basic.h>
 #include <udho/url/detail/format.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/buffer.h>
@@ -52,6 +53,7 @@ namespace lua{
  */
 struct state{
     friend compiler; ///< Allows compiler direct access to internal details for script compilation.
+
     template <typename X>
     friend struct binder;  ///< Allows binder template to access and modify Lua state for type bindings.
 
@@ -64,6 +66,11 @@ struct state{
      */
     inline state() {
         _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
+    }
+
+    static constexpr auto name() {
+        using namespace udho::hazo::string::literals;
+        return "lua"_h;
     }
 
     /**
@@ -98,7 +105,7 @@ struct state{
 
         sol::protected_function view = _views[view_index];
         buffer_type buff;
-        sol::protected_function_result result = view(std::ref(data), buff);
+        sol::protected_function_result result = view(std::ref(data), 0, buff);
 
         if (!result.valid()) {
             sol::error err = result;
