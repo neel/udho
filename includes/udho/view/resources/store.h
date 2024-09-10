@@ -28,69 +28,122 @@
 #ifndef UDHO_VIEW_RESOURCES_STORE_H
 #define UDHO_VIEW_RESOURCES_STORE_H
 
-#include <string>
-#include <map>
-#include <stdexcept>
-#include <udho/view/resources/resource.h>
-#include <udho/view/resources/bundle.h>
+#include <udho/view/resources/substores/tmpl.h>
+#include <udho/view/resources/substores/tmpl_multistore.h>
+#include <udho/view/resources/substores/asset.h>
+#include <udho/view/resources/fwd.h>
 
 namespace udho{
 namespace view{
 namespace resources{
 
-namespace detail{
-template <typename BridgeT>
+template <typename... Bridges>
 struct store{
-    using bridge_type = BridgeT;
-    using bundle_type = resources::bundle<bridge_type>;
+    template <typename... XBridges>
+    friend struct storage_proxy;
 
-    static constexpr const char* primary_bundle_name = "primary";
+    using asset_substore_type = udho::view::resources::asset::substore;
+    using tmpl_substore_type  = udho::view::resources::tmpl::multi_substore<Bridges...>;
+    using writer_type         = mutable_subsets<store<Bridges...>>;
+    using reader_type         = readonly_subsets<store<Bridges...>>;
 
-    inline store(bridge_type& bridge): _bridge(bridge) {
-        bundle(primary_bundle_name);
+    store(Bridges&... bridges): _tmpls(bridges...) {}
+
+    template <typename Bridge>
+    typename tmpl_substore_type::template substore_type<Bridge>& tmpl() { return _tmpls.template substore<Bridge>(); }
+
+    asset_substore_type& assets() { return _assets; }
+
+    writer_type writer(const std::string& prefix) { return writer_type{prefix, *this}; }
+    reader_type reader(const std::string& prefix) { return reader_type{prefix, *this}; }
+
+    void lock() {
+        _tmpls.lock();
+        _assets.lock();
     }
-    store(const store&) = delete;
-    inline bundle_type& bundle(const std::string& name) {
-        auto it = _bundles.find(name);
-        if(it == _bundles.end()){
-            auto result = _bundles.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(_bridge, name));
-            it = result.first;
-        }
-        return it->second;
-    }
-    inline const bundle_type& bundle(const std::string& name) const {
-        auto it = _bundles.find(name);
-        if(it != _bundles.end()){
-            return it->second;
-        }
-        throw std::invalid_argument{udho::url::format("No such bundle named {}", name)};
-    }
-    inline bundle_type& primary() { return bundle(primary_bundle_name); }
-    inline const bundle_type& primary() const { return bundle(primary_bundle_name); }
+
     private:
-        bridge_type& _bridge;
-        std::map<std::string, bundle_type> _bundles;
+        asset_substore_type  _assets;
+        tmpl_substore_type   _tmpls;
 };
-}
 
-template <typename BridgeT>
-struct store: detail::store<BridgeT>{
-    using bridge_type = BridgeT;
-    using bundle_proxy_view = typename detail::store<BridgeT>::bundle_type::bundle_proxy_view;
+template <typename... XBridges>
+struct storage_proxy{
+    using asset_substore_type = udho::view::resources::asset::substore;
+    using proxy_type          = udho::view::resources::tmpl::multi_substore_proxy<XBridges...>;
+    using writer_type         = mutable_subsets<storage_proxy<XBridges...>>;
+    using reader_type         = readonly_subsets<storage_proxy<XBridges...>>;
 
-    store(bridge_type& bridge): detail::store<BridgeT>(bridge), views(detail::store<BridgeT>::primary().views) {}
-    template <typename ResourceT>
-    friend store& operator<<(store& s, ResourceT&& res){
-        s.primary() << std::forward<ResourceT>(res);
-        return s;
+    template <typename... Bridges>
+    storage_proxy(store<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store.assets()) { }
+
+    template <typename Bridge>
+    udho::view::resources::tmpl::substore<Bridge>& tmpl() { return _tmpls_proxy.template substore<Bridge>(); }
+
+    asset_substore_type& assets() { return _assets; }
+
+    writer_type writer(const std::string& prefix) { return writer_type{prefix, *this}; }
+    reader_type reader(const std::string& prefix) { return reader_type{prefix, *this}; }
+
+    void lock() {
+        _tmpls_proxy.lock();
+        _assets.lock();
     }
 
-    bundle_proxy_view& views;
+    private:
+        proxy_type           _tmpls_proxy;
+        asset_substore_type& _assets;
+
+};
+
+template <typename... Bridges>
+struct mutable_subsets<storage_proxy<Bridges...>>{
+    using store_type = storage_proxy<Bridges...>;
+
+    mutable_subsets() = delete;
+    mutable_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
+    mutable_subsets(const mutable_subsets&) = delete;
+
+    template <typename Bridge>
+    typename udho::view::resources::tmpl::substore<Bridge>::mutable_accessor_type views() { return _store.template tmpl<Bridge>().writer(_prefix); }
+
+    template <asset::type Type>
+    typename store_type::asset_substore_type::template mutable_accessor_type<Type> assets() { return _store.assets().template writer<Type>(_prefix); }
+
+    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::js>  js()  { return assets<asset::type::js>(_prefix);  }
+    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::css> css() { return assets<asset::type::css>(_prefix); }
+    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::img> img() { return assets<asset::type::img>(_prefix); }
+
+    private:
+        store_type& _store;
+        std::string _prefix;
+};
+
+template <typename... Bridges>
+struct readonly_subsets<storage_proxy<Bridges...>>{
+    using store_type = storage_proxy<Bridges...>;
+
+    readonly_subsets() = delete;
+    readonly_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
+    readonly_subsets(const readonly_subsets&) = default;
+
+    template <typename Bridge>
+    typename udho::view::resources::tmpl::substore<Bridge>::readonly_accessor_type views() { return _store.template tmpl<Bridge>().reader(_prefix); }
+
+    template <asset::type Type>
+    typename store_type::asset_substore_type::template readonly_accessor_type<Type> assets() { return _store.assets().template reader<Type>(_prefix); }
+
+    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::js>  js()  { return assets<asset::type::js>(_prefix);  }
+    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::css> css() { return assets<asset::type::css>(_prefix); }
+    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::img> img() { return assets<asset::type::img>(_prefix); }
+
+    private:
+        store_type& _store;
+        std::string _prefix;
 };
 
 }
 }
 }
-
 
 #endif // UDHO_VIEW_RESOURCES_STORE_H

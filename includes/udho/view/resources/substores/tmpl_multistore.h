@@ -25,8 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_RESOURCES_SUBSTORE_STORE_H
-#define UDHO_VIEW_RESOURCES_SUBSTORE_STORE_H
+#ifndef UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H
+#define UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H
+
 
 #include <udho/view/resources/substores/tmpl.h>
 #include <udho/view/resources/substores/asset.h>
@@ -155,7 +156,6 @@ struct multi_substore_proxy_<BridgeT, void>{
 };
 
 
-
 template <typename BridgeT, typename... Bridges>
 struct multi_substore_proxy: multi_substore_proxy_<BridgeT, multi_substore_proxy<Bridges...>>{
     using base = multi_substore_proxy_<BridgeT, multi_substore_proxy<Bridges...>>;
@@ -174,119 +174,8 @@ struct multi_substore_proxy<BridgeT>: multi_substore_proxy_<BridgeT>{
 
 }
 
-template <typename StoreT>
-struct mutable_subsets;
-
-template <typename StoreT>
-struct readonly_subsets;
-
-template <typename... Bridges>
-struct storage{
-    template <typename... XBridges>
-    friend struct storage_proxy;
-
-    using asset_substore_type = udho::view::resources::asset::substore;
-    using tmpl_substore_type  = udho::view::resources::tmpl::multi_substore<Bridges...>;
-    using writer_type         = mutable_subsets<storage<Bridges...>>;
-    using reader_type         = readonly_subsets<storage<Bridges...>>;
-
-    storage(Bridges&... bridges): _tmpls(bridges...) {}
-
-    template <typename Bridge>
-    typename tmpl_substore_type::template substore_type<Bridge>& tmpl() { return _tmpls.template substore<Bridge>(); }
-
-    asset_substore_type& assets() { return _assets; }
-
-    writer_type writer(const std::string& prefix) { return writer_type{prefix, *this}; }
-    reader_type reader(const std::string& prefix) { return reader_type{prefix, *this}; }
-
-    void lock() {
-        _tmpls.lock();
-        _assets.lock();
-    }
-
-    private:
-        asset_substore_type  _assets;
-        tmpl_substore_type   _tmpls;
-};
-
-template <typename... XBridges>
-struct storage_proxy{
-    using asset_substore_type = udho::view::resources::asset::substore;
-    using proxy_type          = udho::view::resources::tmpl::multi_substore_proxy<XBridges...>;
-    using writer_type         = mutable_subsets<storage_proxy<XBridges...>>;
-    using reader_type         = readonly_subsets<storage_proxy<XBridges...>>;
-
-    template <typename... Bridges>
-    storage_proxy(storage<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store.assets()) { }
-
-    template <typename Bridge>
-    udho::view::resources::tmpl::substore<Bridge>& tmpl() { return _tmpls_proxy.template substore<Bridge>(); }
-
-    asset_substore_type& assets() { return _assets; }
-
-    writer_type writer(const std::string& prefix) { return writer_type{prefix, *this}; }
-    reader_type reader(const std::string& prefix) { return reader_type{prefix, *this}; }
-
-    void lock() {
-        _tmpls_proxy.lock();
-        _assets.lock();
-    }
-
-    private:
-        proxy_type           _tmpls_proxy;
-        asset_substore_type& _assets;
-
-};
-
-template <typename... Bridges>
-struct mutable_subsets<storage_proxy<Bridges...>>{
-    using store_type = storage_proxy<Bridges...>;
-
-    mutable_subsets() = delete;
-    mutable_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
-    mutable_subsets(const mutable_subsets&) = delete;
-
-    template <typename Bridge>
-    typename udho::view::resources::tmpl::substore<Bridge>::mutable_accessor_type views() { return _store.template tmpl<Bridge>().writer(_prefix); }
-
-    template <asset::type Type>
-    typename store_type::asset_substore_type::template mutable_accessor_type<Type> assets() { return _store.assets().template writer<Type>(_prefix); }
-
-    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::js>  js()  { return assets<asset::type::js>(_prefix);  }
-    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::css> css() { return assets<asset::type::css>(_prefix); }
-    typename store_type::asset_substore_type::template mutable_accessor_type<asset::type::img> img() { return assets<asset::type::img>(_prefix); }
-
-    private:
-        store_type& _store;
-        std::string _prefix;
-};
-
-template <typename... Bridges>
-struct readonly_subsets<storage_proxy<Bridges...>>{
-    using store_type = storage_proxy<Bridges...>;
-
-    readonly_subsets() = delete;
-    readonly_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
-    readonly_subsets(const readonly_subsets&) = default;
-
-    template <typename Bridge>
-    typename udho::view::resources::tmpl::substore<Bridge>::readonly_accessor_type views() { return _store.template tmpl<Bridge>().reader(_prefix); }
-
-    template <asset::type Type>
-    typename store_type::asset_substore_type::template readonly_accessor_type<Type> assets() { return _store.assets().template reader<Type>(_prefix); }
-
-    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::js>  js()  { return assets<asset::type::js>(_prefix);  }
-    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::css> css() { return assets<asset::type::css>(_prefix); }
-    typename store_type::asset_substore_type::template readonly_accessor_type<asset::type::img> img() { return assets<asset::type::img>(_prefix); }
-
-    private:
-        store_type& _store;
-        std::string _prefix;
-};
-
 }
 }
 }
 
-#endif // UDHO_VIEW_RESOURCES_SUBSTORE_STORE_H
+#endif // UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H

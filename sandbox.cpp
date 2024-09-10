@@ -27,7 +27,6 @@
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
 #include <udho/net/artifacts.h>
-#include <udho/view/resources/substores/store.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -279,19 +278,19 @@ int main(){
         temp_stream.close();
     }
     //
-    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
-    auto& primary = resources.primary();
-    resources << udho::view::resources::resource::view("temp", temp);
-
-    std::cout << "see views below " << resources.views.count() << std::endl;
-    for(const auto& res: resources.views){
-        std::cout << res.name() << std::endl;
-    }
-    // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
-    auto temp_view = resources.views["temp"];
-    auto results = temp_view(inf);
-    std::cout << "resources.views[temp](inf).str() " << std::endl;
-    std::cout << resources.views("temp", inf).str() << std::endl;
+    // udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    // auto& primary = resources.primary();
+    // resources << udho::view::resources::resource::view("temp", temp);
+    //
+    // std::cout << "see views below " << resources.views.count() << std::endl;
+    // for(const auto& res: resources.views){
+    //     std::cout << res.name() << std::endl;
+    // }
+    // // std::cout << "view output" << std::endl <<primary.view("temp").eval(inf).str() << std::endl;
+    // auto temp_view = resources.views["temp"];
+    // auto results = temp_view(inf);
+    // std::cout << "resources.views[temp](inf).str() " << std::endl;
+    // std::cout << resources.views("temp", inf).str() << std::endl;
 
     using namespace udho::hazo::string::literals;
 
@@ -310,10 +309,10 @@ int main(){
 
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
-    auto artifacts  = udho::net::artifacts{router, resources};
+    // auto artifacts  = udho::net::artifacts{router, resources};
     // server.run(artifacts);
 
-    udho::view::resources::storage<udho::view::data::bridges::lua> resources_storage{lua};
+    udho::view::resources::store<udho::view::data::bridges::lua> resources_storage{lua};
     udho::view::resources::storage_proxy<udho::view::data::bridges::lua> resources_storage_proxy{resources_storage};
 
     auto mutable_accessor = resources_storage_proxy.writer("primary");
@@ -326,7 +325,7 @@ int main(){
         try{
             auto readonly_accessor = resources_storage_proxy.reader("primary");
             auto readonly_views_accessor_lua = readonly_accessor.views<udho::view::data::bridges::lua>();
-            std::cout << "see views below " << resources.views.count() << std::endl;
+            std::cout << "see views below " << readonly_views_accessor_lua.size() << std::endl;
             for(const auto& res: readonly_views_accessor_lua){
                 std::cout << res.name() << std::endl;
             }
