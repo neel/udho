@@ -45,8 +45,8 @@ struct multi_substore_{
     template <typename XBridgeT>
     using substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, tmpl_substore_type, typename tail_type::template substore_type<XBridgeT>>;
 
-    template <typename... X>
-    multi_substore_(bridge_type& bridge, X&&... x): _substore(bridge), tail_type(x...) {}
+    template <typename... BridgesT>
+    multi_substore_(bridge_type& bridge, BridgesT&&... bridges): _substore(bridge), tail_type(bridges...) {}
 
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
     tmpl_substore_type& substore(){ return _substore; }
@@ -68,6 +68,7 @@ struct multi_substore_<BridgeT, void>{
     using bridge_type = BridgeT;
     using tmpl_substore_type = udho::view::resources::tmpl::substore<BridgeT>;
     using tail_type = void;
+
     template <typename XBridgeT>
     using substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, tmpl_substore_type, void>;
 
@@ -76,9 +77,7 @@ struct multi_substore_<BridgeT, void>{
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
     tmpl_substore_type& substore(){ return _substore; }
 
-    void lock() {
-        _substore.lock();
-    }
+    void lock() { _substore.lock(); }
 
     private:
         tmpl_substore_type _substore;
@@ -90,9 +89,7 @@ struct multi_substore: multi_substore_<Bridge, multi_substore<Bridges...>> {
     using tail = typename base::tail_type;
 
     multi_substore(Bridge& bridge, Bridges&... bridges): base(bridge, tail(bridges...)) {}
-    void lock() {
-        base::lock();
-    }
+    void lock() { base::lock(); }
 };
 
 template <typename Bridge>
@@ -101,9 +98,78 @@ struct multi_substore<Bridge>: multi_substore_<Bridge> {
     using tail = typename base::tail_type;
 
     multi_substore(Bridge& bridge): base(bridge) {}
+    void lock() { base::lock(); }
+};
+
+template <typename BridgeT, typename TailT = void>
+struct multi_substore_proxy_{
+    using tmpl_substore_type = udho::view::resources::tmpl::substore<BridgeT>;
+    using tail_type          = TailT;
+
+    /**
+     * @brief takes a store and takes a reference to the substore inside
+     * - order doesn't matter
+     * - allows same bridge to appear multiple times which is suboptimal
+     * TODO need to check that the multi_substore contains substore of bridge BridgeT using enable_if
+     */
+    template <typename... XBridges>
+    multi_substore_proxy_(multi_substore<XBridges...>& store): _substore(store.template substore<BridgeT>()), _tail(store) { }
+
+    template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
+    tmpl_substore_type& substore(){ return _substore; }
+    template <typename XBridgeT, std::enable_if_t<!std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
+    typename tail_type::template substore_type<XBridgeT>& substore() { return _tail.template substore<XBridgeT>(); }
+
     void lock() {
-        base::lock();
+        _substore.lock();
+        _tail.lock();
     }
+
+    private:
+        tmpl_substore_type& _substore;
+        tail_type           _tail;
+};
+
+template <typename BridgeT>
+struct multi_substore_proxy_<BridgeT, void>{
+    using tmpl_substore_type = udho::view::resources::tmpl::substore<BridgeT>;
+
+    /**
+     * @brief takes a store and takes a reference to the substore inside
+     * - order doesn't matter
+     * - allows same bridge to appear multiple times which is suboptimal
+     * TODO need to check that the multi_substore contains substore of bridge BridgeT using enable_if
+     */
+    template <typename... XBridges>
+    multi_substore_proxy_(multi_substore<XBridges...>& store): _substore(store.template substore<BridgeT>()) { }
+
+    template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
+    tmpl_substore_type& substore(){ return _substore; }
+
+    void lock() {
+        _substore.lock();
+    }
+
+    private:
+        tmpl_substore_type& _substore;
+};
+
+
+
+template <typename BridgeT, typename... Bridges>
+struct multi_substore_proxy: multi_substore_proxy_<BridgeT, multi_substore_proxy<Bridges...>>{
+    using base = multi_substore_proxy_<BridgeT, multi_substore_proxy<Bridges...>>;
+
+    template <typename... XBridges>
+    multi_substore_proxy(multi_substore<XBridges...>& store): base(store) {}
+};
+
+template <typename BridgeT>
+struct multi_substore_proxy<BridgeT>: multi_substore_proxy_<BridgeT>{
+    using base = multi_substore_proxy_<BridgeT>;
+
+    template <typename... XBridges>
+    multi_substore_proxy(multi_substore<XBridges...>& store): base(store) {}
 };
 
 }
@@ -116,6 +182,9 @@ struct readonly_subsets;
 
 template <typename... Bridges>
 struct storage{
+    template <typename... XBridges>
+    friend struct storage_proxy;
+
     using asset_substore_type = udho::view::resources::asset::substore;
     using tmpl_substore_type  = udho::view::resources::tmpl::multi_substore<Bridges...>;
     using writer_type         = mutable_subsets<storage<Bridges...>>;
@@ -141,16 +210,45 @@ struct storage{
         tmpl_substore_type   _tmpls;
 };
 
+template <typename... XBridges>
+struct storage_proxy{
+    using asset_substore_type = udho::view::resources::asset::substore;
+    using proxy_type          = udho::view::resources::tmpl::multi_substore_proxy<XBridges...>;
+    using writer_type         = mutable_subsets<storage_proxy<XBridges...>>;
+    using reader_type         = readonly_subsets<storage_proxy<XBridges...>>;
+
+    template <typename... Bridges>
+    storage_proxy(storage<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store.assets()) { }
+
+    template <typename Bridge>
+    udho::view::resources::tmpl::substore<Bridge>& tmpl() { return _tmpls_proxy.template substore<Bridge>(); }
+
+    asset_substore_type& assets() { return _assets; }
+
+    writer_type writer(const std::string& prefix) { return writer_type{prefix, *this}; }
+    reader_type reader(const std::string& prefix) { return reader_type{prefix, *this}; }
+
+    void lock() {
+        _tmpls_proxy.lock();
+        _assets.lock();
+    }
+
+    private:
+        proxy_type           _tmpls_proxy;
+        asset_substore_type& _assets;
+
+};
+
 template <typename... Bridges>
-struct mutable_subsets<storage<Bridges...>>{
-    using store_type = storage<Bridges...>;
+struct mutable_subsets<storage_proxy<Bridges...>>{
+    using store_type = storage_proxy<Bridges...>;
 
     mutable_subsets() = delete;
     mutable_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
     mutable_subsets(const mutable_subsets&) = delete;
 
     template <typename Bridge>
-    typename store_type::tmpl_substore_type::template substore_type<Bridge>::mutable_accessor_type views() { return _store.template tmpl<Bridge>().writer(_prefix); }
+    typename udho::view::resources::tmpl::substore<Bridge>::mutable_accessor_type views() { return _store.template tmpl<Bridge>().writer(_prefix); }
 
     template <asset::type Type>
     typename store_type::asset_substore_type::template mutable_accessor_type<Type> assets() { return _store.assets().template writer<Type>(_prefix); }
@@ -165,15 +263,15 @@ struct mutable_subsets<storage<Bridges...>>{
 };
 
 template <typename... Bridges>
-struct readonly_subsets<storage<Bridges...>>{
-    using store_type = storage<Bridges...>;
+struct readonly_subsets<storage_proxy<Bridges...>>{
+    using store_type = storage_proxy<Bridges...>;
 
     readonly_subsets() = delete;
     readonly_subsets(const std::string& prefix, store_type& store): _store(store), _prefix(prefix) {}
-    readonly_subsets(const readonly_subsets&) = delete;
+    readonly_subsets(const readonly_subsets&) = default;
 
     template <typename Bridge>
-    typename store_type::tmpl_substore_type::template substore_type<Bridge>::readonly_accessor_type views() { return _store.template tmpl<Bridge>().reader(_prefix); }
+    typename udho::view::resources::tmpl::substore<Bridge>::readonly_accessor_type views() { return _store.template tmpl<Bridge>().reader(_prefix); }
 
     template <asset::type Type>
     typename store_type::asset_substore_type::template readonly_accessor_type<Type> assets() { return _store.assets().template reader<Type>(_prefix); }

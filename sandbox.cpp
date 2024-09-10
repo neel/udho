@@ -314,20 +314,24 @@ int main(){
     // server.run(artifacts);
 
     udho::view::resources::storage<udho::view::data::bridges::lua> resources_storage{lua};
-    auto mutable_accessor = resources_storage.writer("primary");
+    udho::view::resources::storage_proxy<udho::view::data::bridges::lua> resources_storage_proxy{resources_storage};
+
+    auto mutable_accessor = resources_storage_proxy.writer("primary");
     {
         {
             auto mutable_views_accessor_lua = mutable_accessor.views<udho::view::data::bridges::lua>();
             mutable_views_accessor_lua << udho::view::resources::resource::view("temp", temp);
         }
-        resources_storage.lock();
+        resources_storage_proxy.lock();
         try{
-            auto readonly_accessor = resources_storage.reader("primary");
+            auto readonly_accessor = resources_storage_proxy.reader("primary");
             auto readonly_views_accessor_lua = readonly_accessor.views<udho::view::data::bridges::lua>();
             std::cout << "see views below " << resources.views.count() << std::endl;
             for(const auto& res: readonly_views_accessor_lua){
                 std::cout << res.name() << std::endl;
             }
+            auto view = readonly_views_accessor_lua.view("temp");
+            std::cout << view(inf).str() << std::endl;
         } catch (const std::exception& e) {
             std::cout << e.what() << std::endl;
         }
