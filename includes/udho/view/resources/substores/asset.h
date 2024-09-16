@@ -111,19 +111,6 @@ class description{
 struct substore{
     using proxy_type             = proxy;
 
-    template <asset::type Type>
-    using mutable_accessor_type  = mutable_subset<Type>;
-    template <asset::type Type>
-    using readonly_accessor_type = readonly_subset<Type>;
-
-    friend struct mutable_subset<asset::type::js>;
-    friend struct mutable_subset<asset::type::css>;
-    friend struct mutable_subset<asset::type::img>;
-
-    friend struct readonly_subset<asset::type::js>;
-    friend struct readonly_subset<asset::type::css>;
-    friend struct readonly_subset<asset::type::img>;
-
     /**
      * @struct tags
      * @brief Provides tags for indexing the resource set.
@@ -202,6 +189,14 @@ struct substore{
     typename resource_set::template index<Tag>::type& by() { return _resources.template get<Tag>(); }
 
     /**
+     * @brief Retrieves a modifiable index by the specified tag.
+     * @tparam Tag The tag type to retrieve the index by.
+     * @return Reference to the requested index.
+     */
+    template <typename Tag>
+    const typename resource_set::template index<Tag>::type& by() const { return _resources.template get<Tag>(); }
+
+    /**
      * @brief Retrieves a modifiable index by prefix.
      * @return Reference to the requested index.
      */
@@ -221,6 +216,28 @@ struct substore{
      * @return Reference to the requested index.
      */
     typename resource_set::template index<typename tags::composite>::type& by_composite() { return by<typename tags::composite>(); }
+
+
+    /**
+     * @brief Retrieves a modifiable index by prefix.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::prefix>::type& by_prefix() const { return by<typename tags::prefix>(); }
+    /**
+     * @brief Retrieves a modifiable index by name.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::name>::type& by_name() const { return by<typename tags::name>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix and type.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::combined>::type& by_combined() const { return by<typename tags::combined>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix, type and name.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::composite>::type& by_composite() const { return by<typename tags::composite>(); }
 
     /**
      * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
@@ -252,117 +269,71 @@ struct substore{
      * This function should be called after all writing operations are done, typically just before server initialization.
      */
     void lock() { _locked = true; }
-    /**
-     * @brief Retrieves a mutable accessor to add resources to the store.
-     * @param prefix The prefix to identify a set of resources.
-     * @return mutable_accessor_type A mutable subset accessor for adding resources.
-     * @throw std::runtime_error if the store is already locked.
-     */
-    template <asset::type Type>
-    mutable_accessor_type<Type> writer(const std::string& prefix) {
-        if(!_dirty){
-            _dirty = true;
-        }
-        if(_locked){
-            throw std::runtime_error{udho::url::format("Cannot write, because resource store is locked.")};
-        }
-        return mutable_accessor_type<Type>{prefix, *this};
-    }
-    /**
-     * @brief Retrieves a read-only accessor to access resources from the store.
-     * @param prefix The prefix to identify a set of resources.
-     * @return readonly_accessor_type A read-only subset accessor for accessing resources.
-     * @throw std::runtime_error if the store is not yet locked.
-     */
-    template <asset::type Type>
-    readonly_accessor_type<Type> reader(const std::string& prefix) {
-        if(_dirty){
-            throw std::runtime_error{udho::url::format("Cannot create reading interface on view store until the write interface is destroyed")};
-        }
-        return readonly_accessor_type<Type>{prefix, *this};
-    }
 
     private:
         resource_set _resources;
         std::atomic<bool> _dirty, _locked;
 };
 
-template <asset::type Type>
-struct mutable_subset{
+
+struct substore_readonly_proxy{
     using store_type  = substore;
     using proxy_type  = typename store_type::proxy_type;
+
+    using prefix_iterator          = typename store_type::prefix_iterator;
+    using prefix_const_iterator    = typename store_type::prefix_const_iterator;
+    using name_iterator            = typename store_type::name_iterator;
+    using name_const_iterator      = typename store_type::name_const_iterator;
+    using combined_iterator        = typename store_type::combined_iterator;
+    using combined_const_iterator  = typename store_type::combined_const_iterator;
+    using composite_iterator       = typename store_type::composite_iterator;
+    using composite_const_iterator = typename store_type::composite_const_iterator;
+    using size_type                = typename store_type::size_type;
 
     /**
      * @brief A prefix specific interface to the store
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    mutable_subset(const std::string& prefix, store_type& store): _prefix(prefix), _substore(store) {
-        if(!_substore._dirty){
-            _substore._dirty = true;
-        }
-        if(store.locked()){
-            throw std::runtime_error{udho::url::format("Cannot write, because resource store is locked.")};
-        }
-    }
-    mutable_subset(const mutable_subset&) = default;
-    mutable_subset() = delete;
-    ~mutable_subset() {
-        _substore._dirty = false;
-    }
-
-    /**
-     * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
-     * @tparam IteratorT The type of the iterator used to define the resource.
-     * @param res The resource to add and compile.
-     */
-    template <typename IteratorT>
-    void add(resource_buffer<udho::view::resources::type::asset, IteratorT>&& res) {
-        _substore.add(_prefix, Type, std::forward<resource_buffer<udho::view::resources::type::asset, IteratorT>>(res));
-    }
-    /**
-     * @brief Adds a resource file to the bundle and prepares it for use by compiling it through the bridge.
-     * @param res The resource file to add and compile.
-     */
-    void add(resource_file<udho::view::resources::type::asset>&& res) {
-        _substore.add(_prefix, Type, std::forward<resource_file<udho::view::resources::type::asset>>(res));
-    }
-
-    private:
-        std::string _prefix;
-        store_type& _substore;
-};
-
-template <asset::type Type>
-struct readonly_subset{
-    using store_type  = substore;
-    using proxy_type  = typename store_type::proxy_type;
-
-    /**
-     * @brief A prefix specific interface to the store
-     * @param prefix The prefix to identify a set of resources belonging to the same module
-     * @param store Reference to the store.
-     */
-    readonly_subset(const std::string& prefix, store_type& store): _prefix(prefix), _substore(store) {
+    substore_readonly_proxy(const store_type& store): _substore(store) {
         if(!store.locked()){
             throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
         }
-        if(store._dirty){
-            throw std::runtime_error{udho::url::format("Cannot create reading interface on view store until the write interface is destroyed")};
-        }
     }
-    readonly_subset(const readonly_subset&) = default;
-    readonly_subset() = delete;
+    substore_readonly_proxy(const substore_readonly_proxy&) = default;
+    substore_readonly_proxy() = delete;
 
-    typename store_type::combined_const_iterator begin() const { return _substore.by_combined().lower_bound(boost::make_tuple(_prefix, Type)); }
-    typename store_type::combined_const_iterator end()   const { return _substore.by_combined().upper_bound(boost::make_tuple(_prefix, Type)); }
+    typename store_type::combined_const_iterator begin(const std::string& prefix, asset::type type) const { return _substore.by_combined().lower_bound(boost::make_tuple(prefix, type)); }
+    typename store_type::combined_const_iterator end(const std::string& prefix, asset::type type)   const { return _substore.by_combined().upper_bound(boost::make_tuple(prefix, type)); }
+    typename store_type::size_type size(const std::string& prefix, asset::type type) const { return std::distance(begin(prefix, type), end(prefix, type)); }
+
+    private:
+        const store_type& _substore;
+};
+
+template <asset::type Type>
+struct substore_readonly_proxy_prefixed{
+    using store_type  = substore_readonly_proxy;
+    using proxy_type  = typename store_type::proxy_type;
+
+    /**
+     * @brief A prefix specific interface to the store
+     * @param prefix The prefix to identify a set of resources belonging to the same module
+     * @param store Reference to the store.
+     */
+    substore_readonly_proxy_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _substore(store) {}
+    substore_readonly_proxy_prefixed(const substore_readonly_proxy_prefixed&) = default;
+    substore_readonly_proxy_prefixed() = delete;
+
+    typename store_type::combined_const_iterator begin() const { return _substore.begin(_prefix, Type); }
+    typename store_type::combined_const_iterator end()   const { return _substore.end(_prefix, Type); }
     typename store_type::size_type size() const { return std::distance(begin(), end()); }
-
 
     private:
         std::string _prefix;
-        store_type& _substore;
+        const store_type& _substore;
 };
+
 
 }
 

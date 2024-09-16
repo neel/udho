@@ -11,9 +11,9 @@
 namespace udho{
 namespace net{
 
-template <typename ViewBridgeT>
-struct basic_context<udho::view::resources::store<ViewBridgeT>>: public udho::net::stream{
-    using resource_store = udho::view::resources::store<ViewBridgeT>;
+template <typename... ViewBridgeT>
+struct basic_context<udho::view::resources::store_readonly<ViewBridgeT...>>: public udho::net::stream{
+    using resource_store = udho::view::resources::store_readonly<ViewBridgeT...>;
 
     basic_context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
     basic_context(udho::net::stream&& stream, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(std::move(stream)), _summary(summary), _resources(resources) {}
@@ -35,8 +35,8 @@ struct basic_context<udho::view::resources::store<ViewBridgeT>>: public udho::ne
         const resource_store&               _resources;
 };
 
-template <typename ViewBridgeT>
-using context = basic_context<udho::view::resources::store<ViewBridgeT>>;
+template <typename... ViewBridgeT>
+using context = basic_context<udho::view::resources::store_readonly<ViewBridgeT...>>;
 
 }
 }

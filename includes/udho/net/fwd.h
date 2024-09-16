@@ -22,7 +22,7 @@ class stream;
 // template <typename RouterT>
 // struct handle;
 
-template <typename ResourceStoreT>
+template <typename ResourceSubsetT>
 struct basic_context;
 
 }

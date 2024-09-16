@@ -307,34 +307,37 @@ int main(){
         )
     );
 
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp", temp));
+    resource_store.lock();
+
+    udho::view::resources::store_readonly<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+    // auto tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
+    // std::cout << "see views below " << tmpl_lua.size("primary") << std::endl;
+    // for(auto i = tmpl_lua.begin("primary"); i != tmpl_lua.end("primary"); ++i){
+    //     std::cout << i->name() << std::endl;
+    // }
+    // udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view = tmpl_lua("primary", "temp");
+    // std::cout << view(inf).str() << std::endl;
+
+    // udho::view::resources::tmpl::multi_substore_readonly_prefixed<udho::view::data::bridges::lua> multi_store_readonly_prefixed{resource_store_proxy._tmpls_proxy, "primary"};
+    // auto tmpls_lua_prefixed = multi_store_readonly_prefixed.substore<udho::view::data::bridges::lua>();
+    // std::cout << "see views below " << tmpls_lua_prefixed.size() << std::endl;
+
+    udho::view::resources::store_readonly_prefixed<udho::view::data::bridges::lua> resource_store_proxy_prefixed{resource_store_proxy, "primary"};
+    std::cout << resource_store_proxy_prefixed.js().size() << std::endl;
+    auto tmpl_lua_prefixed = resource_store_proxy_prefixed.tmpl<udho::view::data::bridges::lua>();
+    std::cout << "see views below " << tmpl_lua_prefixed.size() << std::endl;
+    for(auto i = tmpl_lua_prefixed.begin(); i != tmpl_lua_prefixed.end(); ++i){
+        std::cout << i->name() << std::endl;
+    }
+    udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua_prefixed["temp"];
+    std::cout << view_prefixed(inf).str() << std::endl;
+
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
-    // auto artifacts  = udho::net::artifacts{router, resources};
+    auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
     // server.run(artifacts);
-
-    udho::view::resources::store<udho::view::data::bridges::lua> resources_storage{lua};
-    udho::view::resources::storage_proxy<udho::view::data::bridges::lua> resources_storage_proxy{resources_storage};
-
-    auto mutable_accessor = resources_storage_proxy.writer("primary");
-    {
-        {
-            auto mutable_views_accessor_lua = mutable_accessor.views<udho::view::data::bridges::lua>();
-            mutable_views_accessor_lua << udho::view::resources::resource::view("temp", temp);
-        }
-        resources_storage_proxy.lock();
-        try{
-            auto readonly_accessor = resources_storage_proxy.reader("primary");
-            auto readonly_views_accessor_lua = readonly_accessor.views<udho::view::data::bridges::lua>();
-            std::cout << "see views below " << readonly_views_accessor_lua.size() << std::endl;
-            for(const auto& res: readonly_views_accessor_lua){
-                std::cout << res.name() << std::endl;
-            }
-            auto view = readonly_views_accessor_lua.view("temp");
-            std::cout << view(inf).str() << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << e.what() << std::endl;
-        }
-    }
 
     // service.run();
 

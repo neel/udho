@@ -37,12 +37,6 @@ namespace tmpl{
 template <typename BridgeT>
 struct proxy;
 
-template <typename StoreT>
-struct mutable_subset;
-
-template <typename StoreT>
-struct readonly_subset;
-
 }
 
 namespace asset{
@@ -51,19 +45,9 @@ namespace asset{
         js, css, img
     };
 
-    template <asset::type Type>
-    struct mutable_subset;
-
-    template <asset::type Type>
-    struct readonly_subset;
+    struct substore_readonly_proxy;
 
 }
-
-template <typename StoreT>
-struct mutable_subsets;
-
-template <typename StoreT>
-struct readonly_subsets;
 
 }
 }

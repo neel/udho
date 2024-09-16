@@ -15,8 +15,8 @@
 #include <curl/curl.h>
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
-#include <udho/net/artifacts.h>
 #include <udho/view/resources/store.h>
+#include <udho/net/artifacts.h>
 #include <udho/view/bridges/lua.h>
 
 using socket_type     = udho::net::types::socket;
@@ -147,7 +147,7 @@ TEST_CASE("udho network", "[net]") {
     udho::view::data::bridges::lua lua;
     lua.init();
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
-    auto artifacts  = udho::net::artifacts{router, resources};
+    auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resources};
 
     server.run(artifacts);
 

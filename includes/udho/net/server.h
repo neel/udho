@@ -36,12 +36,12 @@ struct server{
         template <typename ArtifactsT>
         void serve(boost::asio::ip::address address, udho::net::stream&& stream, const ArtifactsT& artifacts){
             using router_type = typename ArtifactsT::router_type;
-            using resource_store_type = typename ArtifactsT::resource_store_type;
+            using resource_store_proxy_type = typename ArtifactsT::resource_store_proxy_type;
 
             const router_type& router = artifacts.router();
 
             udho::url::summary::router summary = router.summary();
-            udho::net::basic_context<resource_store_type> context{std::move(stream), summary, artifacts.resources()};
+            udho::net::basic_context<resource_store_proxy_type> context{std::move(stream), summary, artifacts.resources()};
 
             prepare(address, context);
             boost::beast::string_view tgt = stream.request().target();
