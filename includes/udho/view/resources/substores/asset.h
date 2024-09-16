@@ -276,17 +276,17 @@ struct substore{
 };
 
 
-struct substore_readonly_proxy{
+/**
+ * @brief copiable readonly accessor for the asset substore
+ * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
+ */
+struct const_substore{
     using store_type  = substore;
     using proxy_type  = typename store_type::proxy_type;
 
-    using prefix_iterator          = typename store_type::prefix_iterator;
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
-    using name_iterator            = typename store_type::name_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
-    using combined_iterator        = typename store_type::combined_iterator;
     using combined_const_iterator  = typename store_type::combined_const_iterator;
-    using composite_iterator       = typename store_type::composite_iterator;
     using composite_const_iterator = typename store_type::composite_const_iterator;
     using size_type                = typename store_type::size_type;
 
@@ -295,13 +295,13 @@ struct substore_readonly_proxy{
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    substore_readonly_proxy(const store_type& store): _substore(store) {
+    explicit const_substore(const store_type& store): _substore(store) {
         if(!store.locked()){
             throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
         }
     }
-    substore_readonly_proxy(const substore_readonly_proxy&) = default;
-    substore_readonly_proxy() = delete;
+    const_substore(const const_substore&) = default;
+    const_substore() = delete;
 
     typename store_type::combined_const_iterator begin(const std::string& prefix, asset::type type) const { return _substore.by_combined().lower_bound(boost::make_tuple(prefix, type)); }
     typename store_type::combined_const_iterator end(const std::string& prefix, asset::type type)   const { return _substore.by_combined().upper_bound(boost::make_tuple(prefix, type)); }
@@ -312,18 +312,23 @@ struct substore_readonly_proxy{
 };
 
 template <asset::type Type>
-struct substore_readonly_proxy_prefixed{
-    using store_type  = substore_readonly_proxy;
-    using proxy_type  = typename store_type::proxy_type;
+struct const_substore_prefixed{
+    using store_type = const_substore;
+    using proxy_type = typename store_type::proxy_type;
+
+    using prefix_const_iterator    = typename store_type::prefix_const_iterator;
+    using name_const_iterator      = typename store_type::name_const_iterator;
+    using composite_const_iterator = typename store_type::composite_const_iterator;
+    using size_type                = typename store_type::size_type;
 
     /**
      * @brief A prefix specific interface to the store
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    substore_readonly_proxy_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _substore(store) {}
-    substore_readonly_proxy_prefixed(const substore_readonly_proxy_prefixed&) = default;
-    substore_readonly_proxy_prefixed() = delete;
+    const_substore_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _substore(store) {}
+    const_substore_prefixed(const const_substore_prefixed&) = default;
+    const_substore_prefixed() = delete;
 
     typename store_type::combined_const_iterator begin() const { return _substore.begin(_prefix, Type); }
     typename store_type::combined_const_iterator end()   const { return _substore.end(_prefix, Type); }

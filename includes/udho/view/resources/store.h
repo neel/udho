@@ -40,7 +40,7 @@ namespace resources{
 template <typename... Bridges>
 struct store{
     template <typename... XBridges>
-    friend struct store_readonly;
+    friend struct const_store;
 
     using asset_substore_type      = udho::view::resources::asset::substore;
     using tmpl_multi_substore_type = udho::view::resources::tmpl::multi_substore<Bridges...>;
@@ -63,37 +63,37 @@ struct store{
 };
 
 template <typename... XBridges>
-struct store_readonly{
+struct const_store{
     template <typename... Bridges>
-    friend struct store_readonly_prefixed;
+    friend struct const_store_prefixed;
 
-    using asset_substore_readonly_type      = udho::view::resources::asset::substore_readonly_proxy;
-    using tmpl_multi_substore_readonly_type = udho::view::resources::tmpl::multi_substore_readonly<XBridges...>;
+    using asset_substore_readonly_type      = udho::view::resources::asset::const_substore;
+    using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_multi_substore<XBridges...>;
 
     template <typename... Bridges>
-    store_readonly(const store<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store._assets) { }
+    const_store(const store<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store._assets) { }
 
     template <typename XBridgeT>
-    udho::view::resources::tmpl::substore_readonly_proxy<XBridgeT> tmpl() { return _tmpls_proxy.template substore<XBridgeT>(); }
+    udho::view::resources::tmpl::const_substore<XBridgeT> tmpl() { return _tmpls_proxy.template substore<XBridgeT>(); }
 
     template <asset::type Type>
     const asset_substore_readonly_type& assets() { return _assets; }
 
     private:
-        tmpl_multi_substore_readonly_type _tmpls_proxy;
+        tmpl_const_multi_substore_type _tmpls_proxy;
         asset_substore_readonly_type      _assets;
 
 };
 
 template <typename... XBridges>
-struct store_readonly_prefixed{
-    using asset_substore_readonly_js   = udho::view::resources::asset::substore_readonly_proxy_prefixed<asset::type::js>;
-    using asset_substore_readonly_css  = udho::view::resources::asset::substore_readonly_proxy_prefixed<asset::type::css>;
-    using asset_substore_readonly_img  = udho::view::resources::asset::substore_readonly_proxy_prefixed<asset::type::img>;
-    using store_readonly_prefixed_type = udho::view::resources::tmpl::multi_substore_readonly_prefixed<XBridges...>;
+struct const_store_prefixed{
+    using asset_substore_readonly_js   = udho::view::resources::asset::const_substore_prefixed<asset::type::js>;
+    using asset_substore_readonly_css  = udho::view::resources::asset::const_substore_prefixed<asset::type::css>;
+    using asset_substore_readonly_img  = udho::view::resources::asset::const_substore_prefixed<asset::type::img>;
+    using store_readonly_prefixed_type = udho::view::resources::tmpl::const_multi_substore_prefixed<XBridges...>;
 
     template <typename... Bridges>
-    store_readonly_prefixed(const store_readonly<Bridges...>& store, const std::string& prefix): _prefix(prefix), _tmpls_prefixed(store._tmpls_proxy, prefix), _assets_prefixed_js(store._assets, prefix), _assets_prefixed_css(store._assets, prefix), _assets_prefixed_img(store._assets, prefix) { }
+    const_store_prefixed(const const_store<Bridges...>& store, const std::string& prefix): _prefix(prefix), _tmpls_prefixed(store._tmpls_proxy, prefix), _assets_prefixed_js(store._assets, prefix), _assets_prefixed_css(store._assets, prefix), _assets_prefixed_img(store._assets, prefix) { }
 
     template <typename XBridgeT>
     auto tmpl() const { return _tmpls_prefixed.template substore<XBridgeT>(); }

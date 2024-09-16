@@ -45,7 +45,7 @@ namespace asset{
         js, css, img
     };
 
-    struct substore_readonly_proxy;
+    struct const_substore;
 
 }
 

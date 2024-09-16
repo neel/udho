@@ -26,7 +26,7 @@ template <typename MountPointsT, typename... Bridges>
 struct artifacts<udho::url::router<MountPointsT>, udho::view::resources::store<Bridges...> >{
     using router_type               = udho::url::router<MountPointsT>;
     using resource_store_type       = udho::view::resources::store<Bridges...>;
-    using resource_store_proxy_type = udho::view::resources::store_readonly<Bridges...>;
+    using resource_store_proxy_type = udho::view::resources::const_store<Bridges...>;
 
     artifacts(const router_type& router, resource_store_type& resources): _router(router), _resources_proxy(resources) {}
 

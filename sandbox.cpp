@@ -311,7 +311,7 @@ int main(){
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp", temp));
     resource_store.lock();
 
-    udho::view::resources::store_readonly<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
     // auto tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
     // std::cout << "see views below " << tmpl_lua.size("primary") << std::endl;
     // for(auto i = tmpl_lua.begin("primary"); i != tmpl_lua.end("primary"); ++i){
@@ -324,7 +324,7 @@ int main(){
     // auto tmpls_lua_prefixed = multi_store_readonly_prefixed.substore<udho::view::data::bridges::lua>();
     // std::cout << "see views below " << tmpls_lua_prefixed.size() << std::endl;
 
-    udho::view::resources::store_readonly_prefixed<udho::view::data::bridges::lua> resource_store_proxy_prefixed{resource_store_proxy, "primary"};
+    udho::view::resources::const_store_prefixed<udho::view::data::bridges::lua> resource_store_proxy_prefixed{resource_store_proxy, "primary"};
     std::cout << resource_store_proxy_prefixed.js().size() << std::endl;
     auto tmpl_lua_prefixed = resource_store_proxy_prefixed.tmpl<udho::view::data::bridges::lua>();
     std::cout << "see views below " << tmpl_lua_prefixed.size() << std::endl;

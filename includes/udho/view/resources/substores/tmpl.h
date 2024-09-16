@@ -298,25 +298,19 @@ struct substore{
         std::atomic<bool> _dirty, _locked;
 };
 
-template <typename BridgeT>
-struct substore_readonly_proxy_prefixed;
-
 /**
  * @brief copiable readonly accessor for a template substore associated with a bridge
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  * @tparam BridgeT the foreign language bridge
  */
 template <typename BridgeT>
-struct substore_readonly_proxy{
+struct const_substore{
     using bridge_type = BridgeT;
     using store_type  = substore<bridge_type>;
     using proxy_type  = typename store_type::proxy_type;
 
-    using prefix_iterator          = typename store_type::prefix_iterator;
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
-    using name_iterator            = typename store_type::name_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
-    using composite_iterator       = typename store_type::composite_iterator;
     using composite_const_iterator = typename store_type::composite_const_iterator;
     using size_type                = typename store_type::size_type;
 
@@ -325,13 +319,13 @@ struct substore_readonly_proxy{
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    explicit substore_readonly_proxy(const store_type& store): _substore(store) {
+    explicit const_substore(const store_type& store): _substore(store) {
         if(!store.locked()){
             throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
         }
     }
-    substore_readonly_proxy(const substore_readonly_proxy&) = default;
-    substore_readonly_proxy() = delete;
+    const_substore(const const_substore&) = default;
+    const_substore() = delete;
 
     typename store_type::prefix_const_iterator begin(const std::string& prefix) const { return _substore.by_prefix().lower_bound(prefix); }
     typename store_type::prefix_const_iterator end(const std::string& prefix)   const { return _substore.by_prefix().upper_bound(prefix); }
@@ -350,19 +344,24 @@ struct substore_readonly_proxy{
 };
 
 template <typename BridgeT>
-struct substore_readonly_proxy_prefixed{
+struct const_substore_prefixed{
     using bridge_type = BridgeT;
-    using store_type  = substore_readonly_proxy<bridge_type>;
+    using store_type  = const_substore<bridge_type>;
     using proxy_type  = typename store_type::proxy_type;
+
+    using prefix_const_iterator    = typename store_type::prefix_const_iterator;
+    using name_const_iterator      = typename store_type::name_const_iterator;
+    using composite_const_iterator = typename store_type::composite_const_iterator;
+    using size_type                = typename store_type::size_type;
 
     /**
      * @brief A prefix specific interface to the store
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    substore_readonly_proxy_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _readonly_substore(store) {}
-    substore_readonly_proxy_prefixed(const substore_readonly_proxy_prefixed&) = default;
-    substore_readonly_proxy_prefixed() = delete;
+    const_substore_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _readonly_substore(store) {}
+    const_substore_prefixed(const const_substore_prefixed&) = default;
+    const_substore_prefixed() = delete;
 
     typename store_type::prefix_const_iterator begin() const { return _readonly_substore.begin(_prefix); }
     typename store_type::prefix_const_iterator end()   const { return _readonly_substore.end(_prefix); }

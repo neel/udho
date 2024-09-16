@@ -44,14 +44,14 @@ namespace tmpl{
 
 template <typename BridgeT, typename TailT = void>
 struct multi_substore_{
-    using bridge_type = BridgeT;
-    using tmpl_substore_type = udho::view::resources::tmpl::substore<BridgeT>;
-    using readonly_substore_proxy_type = udho::view::resources::tmpl::substore_readonly_proxy<BridgeT>;
-    using tail_type = TailT;
+    using bridge_type               = BridgeT;
+    using tmpl_substore_type        = udho::view::resources::tmpl::substore<BridgeT>;
+    using const_tmpl_substore_type  = udho::view::resources::tmpl::const_substore<BridgeT>;
+    using tail_type                 = TailT;
     template <typename XBridgeT>
     using substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, tmpl_substore_type, typename tail_type::template substore_type<XBridgeT>>;
     template <typename XBridgeT>
-    using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, readonly_substore_proxy_type, typename tail_type::template readonly_substore_type<XBridgeT>>;
+    using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, const_tmpl_substore_type, typename tail_type::template readonly_substore_type<XBridgeT>>;
 
     template <typename... BridgesT>
     multi_substore_(bridge_type& bridge, BridgesT&&... bridges): _substore(bridge), tail_type(bridges...) {}
@@ -62,7 +62,7 @@ struct multi_substore_{
     typename tail_type::template substore_type<XBridgeT>& substore() { return _tail.template substore<XBridgeT>(); }
 
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-    readonly_substore_proxy_type readonly_substore() const { return readonly_substore_proxy_type{_substore}; }
+    const_tmpl_substore_type readonly_substore() const { return const_tmpl_substore_type{_substore}; }
     template <typename XBridgeT, std::enable_if_t<!std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
     typename tail_type::template readonly_substore_type<XBridgeT> readonly_substore() const { return _tail.template readonly_substore<XBridgeT>(); }
 
@@ -81,15 +81,15 @@ struct multi_substore_{
 
 template <typename BridgeT>
 struct multi_substore_<BridgeT, void>{
-    using bridge_type = BridgeT;
-    using tmpl_substore_type = udho::view::resources::tmpl::substore<BridgeT>;
-    using readonly_substore_proxy_type = udho::view::resources::tmpl::substore_readonly_proxy<BridgeT>;
-    using tail_type = void;
+    using bridge_type               = BridgeT;
+    using tmpl_substore_type        = udho::view::resources::tmpl::substore<BridgeT>;
+    using const_tmpl_substore_type  = udho::view::resources::tmpl::const_substore<BridgeT>;
+    using tail_type                 = void;
 
     template <typename XBridgeT>
     using substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, tmpl_substore_type, void>;
     template <typename XBridgeT>
-    using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, readonly_substore_proxy_type, void >;
+    using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, const_tmpl_substore_type, void >;
 
     multi_substore_(bridge_type& bridge): _substore(bridge) {}
 
@@ -97,10 +97,10 @@ struct multi_substore_<BridgeT, void>{
     tmpl_substore_type& substore(){ return _substore; }
 
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-    readonly_substore_proxy_type readonly_substore() const { return readonly_substore_proxy_type{_substore}; }
+    const_tmpl_substore_type readonly_substore() const { return const_tmpl_substore_type{_substore}; }
 
     template <typename XBridgeT>
-    readonly_substore_proxy_type substore() const { return readonly_substore<XBridgeT>(); }
+    const_tmpl_substore_type substore() const { return readonly_substore<XBridgeT>(); }
 
     void lock() { _substore.lock(); }
 
@@ -163,34 +163,34 @@ struct multi_substore{
 #endif // __DOXYGEN__
 
 
-#ifndef __DOXYGEN__ // multi_substore_readonly
+#ifndef __DOXYGEN__ // const_multi_substore
 
 template <typename BridgeT = void, typename... Bridges>
-class multi_substore_readonly;
+class const_multi_substore;
 
 template <>
-class multi_substore_readonly<void>{
+class const_multi_substore<void>{
     template <typename BridgeT, typename... Bridges>
-    friend class multi_substore_readonly;
+    friend class const_multi_substore;
 
     template <typename XBridgeT>
-    using substore_readonly_proxy_type = void;
+    using const_substore_type = void;
 
     public:
         template <typename... XBridges>
-        explicit multi_substore_readonly(const multi_substore<XBridges...>&) {}
+        explicit const_multi_substore(const multi_substore<XBridges...>&) {}
 };
 
 template <typename BridgeT, typename... Bridges>
-class multi_substore_readonly{
+class const_multi_substore{
 
     template <typename XBridgeT, typename... XBridges>
-    friend class multi_substore_readonly;
+    friend class const_multi_substore;
 
-    using head_type = substore_readonly_proxy<BridgeT>;
-    using tail_type = multi_substore_readonly<Bridges...>;
+    using head_type = const_substore<BridgeT>;
+    using tail_type = const_multi_substore<Bridges...>;
     template <typename XBridgeT>
-    using substore_readonly_proxy_type = std::conditional_t< std::is_same_v<XBridgeT, BridgeT>, substore_readonly_proxy<XBridgeT>, typename tail_type::template substore_readonly_proxy_type<XBridgeT>>;
+    using const_substore_type = std::conditional_t< std::is_same_v<XBridgeT, BridgeT>, const_substore<XBridgeT>, typename tail_type::template const_substore_type<XBridgeT>>;
 
     head_type _head;
     tail_type _tail;
@@ -198,19 +198,19 @@ class multi_substore_readonly{
     public:
 
         template <typename... XBridges>
-        explicit multi_substore_readonly(const multi_substore<XBridges...>& store): _head(store.template substore<BridgeT>()), _tail(store) {}
+        explicit const_multi_substore(const multi_substore<XBridges...>& store): _head(store.template substore<BridgeT>()), _tail(store) {}
 
         template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-        const substore_readonly_proxy_type<XBridgeT>& substore() const{ return _head; }
+        const const_substore_type<XBridgeT>& substore() const{ return _head; }
 
         template <typename XBridgeT, std::enable_if_t<!std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-        const substore_readonly_proxy_type<XBridgeT>& substore() const { return _tail.template substore<XBridgeT>(); }
+        const const_substore_type<XBridgeT>& substore() const { return _tail.template substore<XBridgeT>(); }
 
         template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-        substore_readonly_proxy_type<XBridgeT>& substore() { return _head; }
+        const_substore_type<XBridgeT>& substore() { return _head; }
 
         template <typename XBridgeT, std::enable_if_t<!std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
-        substore_readonly_proxy_type<XBridgeT>& substore() { return _tail.template substore<XBridgeT>(); }
+        const_substore_type<XBridgeT>& substore() { return _tail.template substore<XBridgeT>(); }
 };
 
 #else
@@ -220,15 +220,15 @@ class multi_substore_readonly{
  * @tparam Bridges... set of bridges of which a readonly interface is requested (defaults to void)
  */
 template <typename... Bridges>
-struct multi_substore_readonly{
+struct const_multi_substore{
     /**
      * @brief construct a readonly interface to an existing multi_substore
-     * The multi_substore must contain the bridges provided as the template parameters of multi_substore_readonly
+     * The multi_substore must contain the bridges provided as the template parameters of const_multi_substore
      * @param const reference to the multi_substore
      * @tparam XBridges... set of bridges of the multi_substore (XBridges... must be a superset of Bridges...)
      */
     template <typename... XBridges>
-    explicit multi_substore_readonly(const multi_substore<XBridges...>& store);
+    explicit const_multi_substore(const multi_substore<XBridges...>& store);
 
     /**
      * @brief Readonly access the substore associated with a specific bridge type
@@ -236,7 +236,7 @@ struct multi_substore_readonly{
      * @return Readonly access to the requested substore type.
      */
     template <typename XBridgeT>
-    const substore_readonly_proxy<XBridgeT>& substore() const;
+    const const_substore<XBridgeT>& substore() const;
 
     /**
      * @brief Readonly access the substore associated with a specific bridge type
@@ -244,22 +244,22 @@ struct multi_substore_readonly{
      * @return Readonly access to the requested substore type.
      */
     template <typename XBridgeT>
-    substore_readonly_proxy<XBridgeT>& substore();
+    const_substore<XBridgeT>& substore();
 };
 
-#endif // multi_substore_readonly
+#endif // const_multi_substore
 
 template <typename... Bridges>
-struct multi_substore_readonly_prefixed{
+struct const_multi_substore_prefixed{
     template <typename... XBridges>
-    multi_substore_readonly_prefixed(const multi_substore_readonly<XBridges...>& multi_substore, const std::string& prefix): _prefix(prefix), _multi_substore(multi_substore) {}
+    const_multi_substore_prefixed(const const_multi_substore<XBridges...>& multi_substore, const std::string& prefix): _prefix(prefix), _multi_substore(multi_substore) {}
 
     template <typename XBridgeT>
-    auto substore() const{ return substore_readonly_proxy_prefixed{_multi_substore.template substore<XBridgeT>(), _prefix}; }
+    auto substore() const{ return const_substore_prefixed{_multi_substore.template substore<XBridgeT>(), _prefix}; }
 
     private:
         std::string _prefix;
-        const multi_substore_readonly<Bridges...>& _multi_substore;
+        const const_multi_substore<Bridges...>& _multi_substore;
 };
 
 }
