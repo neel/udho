@@ -25,12 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H
-#define UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H
+#ifndef UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_STORE_H
+#define UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_STORE_H
 
-
-#include <udho/view/resources/substores/tmpl.h>
-#include <udho/view/resources/substores/asset.h>
+#include <udho/view/resources/tmpl/substore.h>
 
 namespace udho{
 namespace view{
@@ -43,7 +41,7 @@ namespace tmpl{
 #ifndef __DOXYGEN__
 
 template <typename BridgeT, typename TailT = void>
-struct multi_substore_{
+struct store_{
     using bridge_type               = BridgeT;
     using tmpl_substore_type        = udho::view::resources::tmpl::substore<BridgeT>;
     using const_tmpl_substore_type  = udho::view::resources::tmpl::const_substore<BridgeT>;
@@ -54,7 +52,7 @@ struct multi_substore_{
     using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, const_tmpl_substore_type, typename tail_type::template readonly_substore_type<XBridgeT>>;
 
     template <typename... BridgesT>
-    multi_substore_(bridge_type& bridge, BridgesT&&... bridges): _substore(bridge), tail_type(bridges...) {}
+    store_(bridge_type& bridge, BridgesT&&... bridges): _substore(bridge), tail_type(bridges...) {}
 
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
     tmpl_substore_type& substore(){ return _substore; }
@@ -80,7 +78,7 @@ struct multi_substore_{
 };
 
 template <typename BridgeT>
-struct multi_substore_<BridgeT, void>{
+struct store_<BridgeT, void>{
     using bridge_type               = BridgeT;
     using tmpl_substore_type        = udho::view::resources::tmpl::substore<BridgeT>;
     using const_tmpl_substore_type  = udho::view::resources::tmpl::const_substore<BridgeT>;
@@ -91,7 +89,7 @@ struct multi_substore_<BridgeT, void>{
     template <typename XBridgeT>
     using readonly_substore_type = std::conditional_t< std::is_same_v<BridgeT, XBridgeT>, const_tmpl_substore_type, void >;
 
-    multi_substore_(bridge_type& bridge): _substore(bridge) {}
+    store_(bridge_type& bridge): _substore(bridge) {}
 
     template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
     tmpl_substore_type& substore(){ return _substore; }
@@ -109,37 +107,42 @@ struct multi_substore_<BridgeT, void>{
 };
 
 template <typename Bridge, typename... Bridges>
-struct multi_substore: multi_substore_<Bridge, multi_substore<Bridges...>> {
-    using base = multi_substore_<Bridge, multi_substore<Bridges...>>;
+struct store: store_<Bridge, store<Bridges...>> {
+    using base = store_<Bridge, store<Bridges...>>;
     using tail = typename base::tail_type;
 
-    multi_substore(Bridge& bridge, Bridges&... bridges): base(bridge, tail(bridges...)) {}
+    store(Bridge& bridge, Bridges&... bridges): base(bridge, tail(bridges...)) {}
     void lock() { base::lock(); }
 };
 
 template <typename Bridge>
-struct multi_substore<Bridge>: multi_substore_<Bridge> {
-    using base = multi_substore_<Bridge>;
+struct store<Bridge>: store_<Bridge> {
+    using base = store_<Bridge>;
     using tail = typename base::tail_type;
 
-    multi_substore(Bridge& bridge): base(bridge) {}
+    store(Bridge& bridge): base(bridge) {}
     void lock() { base::lock(); }
 };
 
 #else
 
 /**
- * @brief Multiple substores each with a different bridge.
+ * @brief template store containing multiple substores each with a different bridge.
  * Provides a unified interface to manage a collection of substores, each tailored to a specific bridge type.
  * @tparam Bridges Variadic template parameters representing view bridges
  */
 template <typename... Bridges>
-struct multi_substore{
+struct store{
     template <typename XBridgeT>
     using substore_type = auto;
 
     template <typename XBridgeT>
     using readonly_substore_type = auto;
+
+    /**
+     * @brief construct a store
+     */
+    store(Bridge& bridge, Bridges&... bridges);
 
     /**
      * @brief Accesses the substore associated with a specific bridge type
@@ -166,29 +169,29 @@ struct multi_substore{
 #ifndef __DOXYGEN__ // const_multi_substore
 
 template <typename BridgeT = void, typename... Bridges>
-class const_multi_substore;
+class const_store;
 
 template <>
-class const_multi_substore<void>{
+class const_store<void>{
     template <typename BridgeT, typename... Bridges>
-    friend class const_multi_substore;
+    friend class const_store;
 
     template <typename XBridgeT>
     using const_substore_type = void;
 
     public:
         template <typename... XBridges>
-        explicit const_multi_substore(const multi_substore<XBridges...>&) {}
+        explicit const_store(const store<XBridges...>&) {}
 };
 
 template <typename BridgeT, typename... Bridges>
-class const_multi_substore{
+class const_store{
 
     template <typename XBridgeT, typename... XBridges>
-    friend class const_multi_substore;
+    friend class const_store;
 
     using head_type = const_substore<BridgeT>;
-    using tail_type = const_multi_substore<Bridges...>;
+    using tail_type = const_store<Bridges...>;
     template <typename XBridgeT>
     using const_substore_type = std::conditional_t< std::is_same_v<XBridgeT, BridgeT>, const_substore<XBridgeT>, typename tail_type::template const_substore_type<XBridgeT>>;
 
@@ -198,7 +201,7 @@ class const_multi_substore{
     public:
 
         template <typename... XBridges>
-        explicit const_multi_substore(const multi_substore<XBridges...>& store): _head(store.template substore<BridgeT>()), _tail(store) {}
+        explicit const_store(const store<XBridges...>& store): _head(store.template substore<BridgeT>()), _tail(store) {}
 
         template <typename XBridgeT, std::enable_if_t<std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
         const const_substore_type<XBridgeT>& substore() const{ return _head; }
@@ -220,7 +223,7 @@ class const_multi_substore{
  * @tparam Bridges... set of bridges of which a readonly interface is requested (defaults to void)
  */
 template <typename... Bridges>
-struct const_multi_substore{
+struct const_store{
     /**
      * @brief construct a readonly interface to an existing multi_substore
      * The multi_substore must contain the bridges provided as the template parameters of const_multi_substore
@@ -228,7 +231,7 @@ struct const_multi_substore{
      * @tparam XBridges... set of bridges of the multi_substore (XBridges... must be a superset of Bridges...)
      */
     template <typename... XBridges>
-    explicit const_multi_substore(const multi_substore<XBridges...>& store);
+    explicit const_store(const store<XBridges...>& store);
 
     /**
      * @brief Readonly access the substore associated with a specific bridge type
@@ -249,23 +252,24 @@ struct const_multi_substore{
 
 #endif // const_multi_substore
 
-template <typename... Bridges>
-struct const_multi_substore_prefixed{
-    template <typename... XBridges>
-    const_multi_substore_prefixed(const const_multi_substore<XBridges...>& multi_substore, const std::string& prefix): _prefix(prefix), _multi_substore(multi_substore) {}
-
-    template <typename XBridgeT>
-    auto substore() const{ return const_substore_prefixed{_multi_substore.template substore<XBridgeT>(), _prefix}; }
-
-    private:
-        std::string _prefix;
-        const const_multi_substore<Bridges...>& _multi_substore;
-};
-
-}
+// template <typename... Bridges>
+// struct const_multi_substore_prefixed{
+//     template <typename... XBridges>
+//     const_multi_substore_prefixed(const const_multi_substore<XBridges...>& multi_substore, const std::string& prefix): _prefix(prefix), _multi_substore(multi_substore) {}
+//
+//     template <typename XBridgeT>
+//     auto substore() const{ return const_substore_prefixed{_multi_substore.template substore<XBridgeT>(), _prefix}; }
+//
+//     private:
+//         std::string _prefix;
+//         const const_multi_substore<Bridges...>& _multi_substore;
+// };
 
 }
+
+}
 }
 }
 
-#endif // UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_MULTISTORE_H
+
+#endif // UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_STORE_H

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_H
-#define UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_H
+#ifndef UDHO_VIEW_RESOURCES_ASSET_SUBSTORE_H
+#define UDHO_VIEW_RESOURCES_ASSET_SUBSTORE_H
 
 #include <string>
 #include <stdexcept>
@@ -43,27 +43,22 @@ namespace udho{
 namespace view{
 namespace resources{
 
-namespace tmpl{
+namespace asset{
+
 
 /**
  * @struct proxy
- * @brief Manages the execution of a resource using a specified bridge and collects the results.
- *
- * This template struct acts as an interface between resource data and the bridge that handles its execution, capturing the output and storing it in a results structure.
- *
- * @tparam BridgeT The type of the bridge used for resource execution.
+ * @brief proxies an asset.
  */
-template <typename BridgeT>
 struct proxy{
-    using bridge_type = BridgeT;
 
     /**
      * @brief Constructs a proxy for a given resource and bridge.
-     * @param name The name of the resource.
+     * @param name The name of the resource
      * @param prefix The prefix used in resource identification.
      * @param bridge Reference to the bridge used for resource execution.
      */
-    proxy(const std::string& name, const std::string& prefix, bridge_type& bridge): _name(name), _prefix(prefix), _bridge(bridge) {}
+    proxy(const std::string& name, const std::string& prefix): _name(name), _prefix(prefix) {}
 
     /**
      * @brief Returns the name of the resource associated with this proxy.
@@ -71,47 +66,23 @@ struct proxy{
      */
     inline std::string name() const { return _name; }
 
-    /**
-     * @brief Executes the resource using the stored bridge and returns the results.
-     * @tparam T The type of the data passed to the resource during execution.
-     * @param data The data to be used during the resource execution.
-     * @return A results object containing the output from the execution.
-     */
-    template <typename T>
-    udho::view::resources::results eval(T&& data){
-        udho::view::resources::results res(_name);
-        std::size_t size = _bridge.exec(_name, _prefix, std::forward<T>(data), res.output());
-        res.size(size);
-        return res;
-    }
-
-    /**
-     * @brief Function call operator that executes the resource using provided data.
-     * @tparam T The type of the data passed to the resource during execution.
-     * @param data The data to be used during the execution.
-     * @return A results object containing the output from the execution.
-     */
-    template <typename T>
-    udho::view::resources::results operator()(T&& data){
-        return eval(std::forward<T>(data));
-    }
 
     private:
         std::string  _name;
         std::string  _prefix;
-        bridge_type& _bridge;
 };
 
 /**
- * @brief description of a view
+ * @brief description of an asset
  */
 class description{
     std::string _name;
     std::string _prefix;
+    asset::type _type;
 
     public:
         description() = delete;
-        description(const std::string& prefix, const resource_info& info): _name(info.name()), _prefix(prefix) {}
+        description(const std::string& prefix, const resource_info& info, asset::type type): _name(info.name()), _prefix(prefix), _type(type) {}
         description(const description&) = default;
     public:
         /**
@@ -122,32 +93,32 @@ class description{
          * @brief The prefix used in resource identification.
          */
         const std::string& prefix() const { return _prefix; }
+
+        asset::type type() const { return _type; }
 };
 
 /**
  * @class store
- * @brief The global view store that holds all views from all modules using the same bridge.
+ * @brief The global asset store that holds all views from all modules using the same bridge.
  *
  * Usage:
  * - Writing (adding views) must only be done from the main thread and should be completed before the server initialization.
  * - Reading can happen from multiple threads but only after the store has been locked, which is typically done during server initialization or for testing purposes.
  * - Concurrent writing and reading are not allowed to ensure data consistency and to prevent race conditions.
- *
- * @tparam BridgeT Type of the foreign language bridge, facilitating interactions with resources.
  */
-template <typename BridgeT>
-struct substore{
-    using bridge_type = BridgeT;
-    using proxy_type  = proxy<bridge_type>;
+struct store{
+    using proxy_type             = proxy;
 
     /**
      * @struct tags
      * @brief Provides tags for indexing the resource set.
      */
     struct tags{
-        struct prefix{}; ///< Tag for indexing by resource prefix.
-        struct name{}; ///< Tag for indexing by resource name.
-        struct composite{}; ///< Tag for composite indexing by prefix and name.
+        struct prefix{};    ///< Tag for indexing by resource prefix.
+        struct name{};      ///< Tag for indexing by resource name.
+        struct type{};      ///< Tag for indexing by resource type.
+        struct combined{};  ///< Tag for composite indexing by prefix and type
+        struct composite{}; ///< Tag for composite indexing by prefix, type and name.
     };
 
     using resource_set = boost::multi_index_container<
@@ -158,7 +129,16 @@ struct substore{
                 boost::multi_index::composite_key<
                     description,
                     boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
+                    boost::multi_index::const_mem_fun<description, asset::type, &description::type>,
                     boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                >
+            >,
+            boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<typename tags::combined>,
+                boost::multi_index::composite_key<
+                    description,
+                    boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
+                    boost::multi_index::const_mem_fun<description, asset::type, &description::type>
                 >
             >,
             boost::multi_index::ordered_non_unique<
@@ -168,18 +148,27 @@ struct substore{
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::prefix>,
                 boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>
+            >,
+            boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<typename tags::type>,
+                boost::multi_index::const_mem_fun<description, asset::type, &description::type>
             >
         >
     >; ///< Container for storing and indexing resource information.
 
     using prefix_index             = typename resource_set::template index<typename tags::prefix>::type;
     using name_index               = typename resource_set::template index<typename tags::name>::type;
+    using combined_index           = typename resource_set::template index<typename tags::combined>::type;
     using composite_index          = typename resource_set::template index<typename tags::composite>::type;
 
     using prefix_iterator          = typename resource_set::template index<typename tags::prefix>::type::iterator;
     using prefix_const_iterator    = typename resource_set::template index<typename tags::prefix>::type::const_iterator;
     using name_iterator            = typename resource_set::template index<typename tags::name>::type::iterator;
     using name_const_iterator      = typename resource_set::template index<typename tags::name>::type::const_iterator;
+    using type_iterator            = typename resource_set::template index<typename tags::type>::type::iterator;
+    using type_const_iterator      = typename resource_set::template index<typename tags::type>::type::const_iterator;
+    using combined_iterator        = typename resource_set::template index<typename tags::combined>::type::iterator;
+    using combined_const_iterator  = typename resource_set::template index<typename tags::combined>::type::const_iterator;
     using composite_iterator       = typename resource_set::template index<typename tags::composite>::type::iterator;
     using composite_const_iterator = typename resource_set::template index<typename tags::composite>::type::const_iterator;
     using size_type                = typename resource_set::size_type;
@@ -188,8 +177,8 @@ struct substore{
      * @brief Constructs a bundle with a specified bridge.
      * @param bridge Reference to the bridge used for resource compilation and execution.
      */
-    explicit substore(bridge_type& bridge): _bridge(bridge), _dirty(false), _locked(false) {}
-    substore(const substore&) = delete; ///< Prevents copying.
+    explicit store(): _dirty(false), _locked(false) {}
+    store(const store&) = delete; ///< Prevents copying.
 
     /**
      * @brief Retrieves a modifiable index by the specified tag.
@@ -198,6 +187,7 @@ struct substore{
      */
     template <typename Tag>
     typename resource_set::template index<Tag>::type& by() { return _resources.template get<Tag>(); }
+
     /**
      * @brief Retrieves a modifiable index by the specified tag.
      * @tparam Tag The tag type to retrieve the index by.
@@ -217,10 +207,21 @@ struct substore{
      */
     typename resource_set::template index<typename tags::name>::type& by_name() { return by<typename tags::name>(); }
     /**
-     * @brief Retrieves a modifiable index by both prefix and name.
+     * @brief Retrieves a modifiable index by type.
+     * @return Reference to the requested index.
+     */
+    typename resource_set::template index<typename tags::type>::type& by_type() { return by<typename tags::type>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix and type.
+     * @return Reference to the requested index.
+     */
+    typename resource_set::template index<typename tags::combined>::type& by_combined() { return by<typename tags::combined>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix, type and name.
      * @return Reference to the requested index.
      */
     typename resource_set::template index<typename tags::composite>::type& by_composite() { return by<typename tags::composite>(); }
+
 
     /**
      * @brief Retrieves a modifiable index by prefix.
@@ -228,12 +229,22 @@ struct substore{
      */
     const typename resource_set::template index<typename tags::prefix>::type& by_prefix() const { return by<typename tags::prefix>(); }
     /**
-     * @brief Retrieves a modifiable index by name.
+     * @brief Retrieves a const index by name.
      * @return Reference to the requested index.
      */
     const typename resource_set::template index<typename tags::name>::type& by_name() const { return by<typename tags::name>(); }
     /**
-     * @brief Retrieves a modifiable index by both prefix and name.
+     * @brief Retrieves a const index by type.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::type>::type& by_type() const { return by<typename tags::type>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix and type.
+     * @return Reference to the requested index.
+     */
+    const typename resource_set::template index<typename tags::combined>::type& by_combined() const { return by<typename tags::combined>(); }
+    /**
+     * @brief Retrieves a modifiable index by both prefix, type and name.
      * @return Reference to the requested index.
      */
     const typename resource_set::template index<typename tags::composite>::type& by_composite() const { return by<typename tags::composite>(); }
@@ -245,42 +256,19 @@ struct substore{
      * @param res The resource to add and compile.
      */
     template <typename IteratorT>
-    void add(const std::string& prefix, resource_buffer<udho::view::resources::type::view, IteratorT>&& res) {
-        _resources.insert(description{prefix, res.info()});
-        _bridge.compile(std::forward<resource_buffer<udho::view::resources::type::view, IteratorT>>(res), prefix);
+    void add(const std::string& prefix, asset::type type, resource_buffer<udho::view::resources::type::asset, IteratorT>&& res) {
+        _resources.insert(description{prefix, res.info(), type});
     }
     /**
      * @brief Adds a resource file to the bundle and prepares it for use by compiling it through the bridge.
      * @param prefix The prefix used in resource identification.
      * @param res The resource file to add and compile.
      */
-    void add(const std::string& prefix, resource_file<udho::view::resources::type::view>&& res) {
-        _resources.insert(description{prefix, res.info()});
-        _bridge.compile(std::forward<resource_file<udho::view::resources::type::view>>(res), prefix);
+    void add(const std::string& prefix, asset::type type, resource_file<udho::view::resources::type::asset>&& res) {
+        _resources.insert(description{prefix, res.info(), type});
     }
 
-    /**
-     * @brief Retrieves a view proxy for a specified resource by name.
-     * @param prefix The prefix used in resource identification.
-     * @param name The name of the resource to retrieve.
-     * @return A view proxy associated with the named resource.
-     * @throws std::out_of_range if the resource is not found within the bundle.
-     * @details this function probably should not be const, as it passes the bridge to a proxy which mutates it.
-     */
-    proxy_type view(const std::string& prefix, const std::string& name) const {
-        auto it = by_composite().find(boost::make_tuple(prefix, name));
-        if (it != by_composite().end()) {
-            return proxy_type{name, prefix, _bridge};
-        } else {
-            throw std::out_of_range("Resource with name '" + name + "' not found");
-        }
-    }
 
-    /**
-     * @brief Retrieves the bridge associated with this bundle.
-     * @return Reference to the bridge.
-     */
-    bridge_type& bridge() { return _bridge; }
     /**
      * @brief Checks if the store is locked.
      * @return True if the store is locked, false otherwise.
@@ -294,23 +282,22 @@ struct substore{
 
     private:
         resource_set _resources;
-        bridge_type& _bridge;
         std::atomic<bool> _dirty, _locked;
 };
 
+
 /**
- * @brief copiable readonly accessor for a template substore associated with a bridge
+ * @brief copiable readonly accessor for the asset store
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
- * @tparam BridgeT the foreign language bridge
  */
-template <typename BridgeT>
-struct const_substore{
-    using bridge_type = BridgeT;
-    using store_type  = substore<bridge_type>;
+struct const_store{
+    using store_type  = store;
     using proxy_type  = typename store_type::proxy_type;
 
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
+    using type_const_iterator      = typename store_type::type_const_iterator;
+    using combined_const_iterator  = typename store_type::combined_const_iterator;
     using composite_const_iterator = typename store_type::composite_const_iterator;
     using size_type                = typename store_type::size_type;
 
@@ -319,38 +306,34 @@ struct const_substore{
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    explicit const_substore(const store_type& store): _substore(store) {
+    explicit const_store(const store_type& store): _substore(store) {
         if(!store.locked()){
             throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
         }
     }
-    const_substore(const const_substore&) = default;
-    const_substore() = delete;
+    const_store(const const_store&) = default;
+    const_store() = delete;
 
-    typename store_type::prefix_const_iterator begin(const std::string& prefix) const { return _substore.by_prefix().lower_bound(prefix); }
-    typename store_type::prefix_const_iterator end(const std::string& prefix)   const { return _substore.by_prefix().upper_bound(prefix); }
-    typename store_type::size_type size(const std::string& prefix) const { return std::distance(begin(prefix), end(prefix)); }
+    typename store_type::type_const_iterator begin(asset::type type) const { return _substore.by_type().lower_bound(type); }
+    typename store_type::type_const_iterator end(asset::type type)   const { return _substore.by_type().upper_bound(type); }
+    typename store_type::size_type size(asset::type type) const { return std::distance(begin(type), end(type)); }
 
-    /**
-     * @brief Retrieves a view proxy for a specified resource by name.
-     * @param name The name of the resource to retrieve.
-     * @return A view proxy associated with the named resource.
-     * @throws std::out_of_range if the resource is not found within the bundle.
-     */
-    proxy_type operator()(const std::string& prefix, const std::string& name) const { return _substore.view(prefix, name); }
+    typename store_type::combined_const_iterator begin(const std::string& prefix, asset::type type) const { return _substore.by_combined().lower_bound(boost::make_tuple(prefix, type)); }
+    typename store_type::combined_const_iterator end(const std::string& prefix, asset::type type)   const { return _substore.by_combined().upper_bound(boost::make_tuple(prefix, type)); }
+    typename store_type::size_type size(const std::string& prefix, asset::type type) const { return std::distance(begin(prefix, type), end(prefix, type)); }
 
     private:
         const store_type& _substore;
 };
 
-template <typename BridgeT>
-struct const_substore_prefixed{
-    using bridge_type = BridgeT;
-    using store_type  = const_substore<bridge_type>;
-    using proxy_type  = typename store_type::proxy_type;
+template <asset::type Type>
+struct const_substore{
+    using store_type = const_store;
+    using proxy_type = typename store_type::proxy_type;
 
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
+    using type_const_iterator      = typename store_type::type_const_iterator;
     using composite_const_iterator = typename store_type::composite_const_iterator;
     using size_type                = typename store_type::size_type;
 
@@ -359,27 +342,47 @@ struct const_substore_prefixed{
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
-    const_substore_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _readonly_substore(store) {}
-    const_substore_prefixed(const const_substore_prefixed&) = default;
-    const_substore_prefixed() = delete;
+    const_substore(const store_type& store): _substore(store) {}
+    const_substore(const const_substore&) = default;
+    const_substore() = delete;
 
-    typename store_type::prefix_const_iterator begin() const { return _readonly_substore.begin(_prefix); }
-    typename store_type::prefix_const_iterator end()   const { return _readonly_substore.end(_prefix); }
-    typename store_type::size_type size() const { return _readonly_substore.size(_prefix); }
-
-    /**
-     * @brief Retrieves a view proxy for a specified resource by name.
-     * @param name The name of the resource to retrieve.
-     * @return A view proxy associated with the named resource.
-     * @throws std::out_of_range if the resource is not found within the bundle.
-     */
-    proxy_type operator[](const std::string& name) const { return _readonly_substore(_prefix, name); }
+    typename store_type::type_const_iterator begin() const { return _substore.begin(Type); }
+    typename store_type::type_const_iterator end()   const { return _substore.end(Type); }
+    typename store_type::size_type size() const { return std::distance(begin(), end()); }
 
     private:
-        std::string       _prefix;
-        const store_type& _readonly_substore;
+        const store_type& _substore;
 };
 
+// template <asset::type Type>
+// struct const_substore_prefixed{
+//     using store_type = const_store;
+//     using proxy_type = typename store_type::proxy_type;
+//
+//     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
+//     using name_const_iterator      = typename store_type::name_const_iterator;
+//     using composite_const_iterator = typename store_type::composite_const_iterator;
+//     using size_type                = typename store_type::size_type;
+//
+//     /**
+//      * @brief A prefix specific interface to the store
+//      * @param prefix The prefix to identify a set of resources belonging to the same module
+//      * @param store Reference to the store.
+//      */
+//     const_substore_prefixed(const store_type& store, const std::string& prefix): _prefix(prefix), _substore(store) {}
+//     const_substore_prefixed(const const_substore_prefixed&) = default;
+//     const_substore_prefixed() = delete;
+//
+//     typename store_type::combined_const_iterator begin() const { return _substore.begin(_prefix, Type); }
+//     typename store_type::combined_const_iterator end()   const { return _substore.end(_prefix, Type); }
+//     typename store_type::size_type size() const { return std::distance(begin(), end()); }
+//
+//     private:
+//         std::string _prefix;
+//         const store_type& _substore;
+// };
+
+
 }
 
 
@@ -388,4 +391,5 @@ struct const_substore_prefixed{
 }
 
 
-#endif // UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_H
+#endif // UDHO_VIEW_RESOURCES_ASSET_SUBSTORE_H
+

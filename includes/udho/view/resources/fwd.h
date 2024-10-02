@@ -45,7 +45,7 @@ namespace asset{
         js, css, img
     };
 
-    struct const_substore;
+    struct const_store;
 
 }
 

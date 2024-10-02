@@ -324,14 +324,14 @@ int main(){
     // auto tmpls_lua_prefixed = multi_store_readonly_prefixed.substore<udho::view::data::bridges::lua>();
     // std::cout << "see views below " << tmpls_lua_prefixed.size() << std::endl;
 
-    udho::view::resources::const_store_prefixed<udho::view::data::bridges::lua> resource_store_proxy_prefixed{resource_store_proxy, "primary"};
-    std::cout << resource_store_proxy_prefixed.js().size() << std::endl;
-    auto tmpl_lua_prefixed = resource_store_proxy_prefixed.tmpl<udho::view::data::bridges::lua>();
-    std::cout << "see views below " << tmpl_lua_prefixed.size() << std::endl;
-    for(auto i = tmpl_lua_prefixed.begin(); i != tmpl_lua_prefixed.end(); ++i){
+    // udho::view::resources::const_store_prefixed<udho::view::data::bridges::lua> resource_store_proxy_prefixed = resource_store_proxy["primary"];
+    std::cout << resource_store_proxy.js().size() << std::endl;
+    udho::view::resources::tmpl::const_substore<udho::view::data::bridges::lua> tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
+    std::cout << "see views below " << tmpl_lua.size() << std::endl;
+    for(auto i = tmpl_lua.begin(); i != tmpl_lua.end(); ++i){
         std::cout << i->name() << std::endl;
     }
-    udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua_prefixed["temp"];
+    udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua.view("primary", "temp");
     std::cout << view_prefixed(inf).str() << std::endl;
 
     boost::asio::io_service service;
