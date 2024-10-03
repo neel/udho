@@ -39,17 +39,17 @@ struct type {};
 
 
 /**
- * @brief Default prototype function template used when specific type overloads are absent.
+ * @brief Default metatype function template used when specific type overloads are absent.
  *
- * This function serves as a default implementation of the prototype function for any class type that is not explicitly overloaded.
+ * This function serves as a default implementation of the metatype function for any class type that is not explicitly overloaded.
  * It triggers a static assertion error to indicate the absence of an appropriate overload when attempting to expose a class as
  * the data object of the view in an MVC framework setup. This is part of integrating C++ classes with foreign languages by
  * defining how class members are accessed and manipulated from the foreign environment.
  *
  * @note The purpose of this function is to ensure compile-time errors when no suitable overload is provided for a specific class type,
- * thereby enforcing the requirement that all classes exposed to the view must have an explicit prototype definition.
+ * thereby enforcing the requirement that all classes exposed to the view must have an explicit metatype definition.
  *
- * @tparam ClassT The class type for which the prototype function is to be defined.
+ * @tparam ClassT The class type for which the metatype function is to be defined.
  * @param data A type tag representing the ClassT, used for specializing the function for different classes.
  * @return returns an instance of metatype
  *
@@ -63,7 +63,7 @@ struct type {};
  *     education() = default;
  *     education(const std::string& c, const std::string& u) : course(c), university(u) {}
  *
- *     friend auto prototype(udho::view::data::type<education>) {
+ *     friend auto metatype(udho::view::data::type<education>) {
  *         using namespace udho::view::data;
  *         return assoc("education"),
  *             mvar("course", &education::course),
@@ -79,7 +79,7 @@ struct type {};
  *     address() = default;
  *     address(const std::string loc): locality(loc) {}
  *
- *     friend auto prototype(udho::view::data::type<person>) {
+ *     friend auto metatype(udho::view::data::type<person>) {
  *         using namespace udho::view::data;
  *         return assoc("person"),
  *             mvar("first_name", &person::first_name),
@@ -111,10 +111,10 @@ struct type {};
  *     }
  *     double add(std::uint32_t a, double b, float c, int d){ return a+b+c+d; }
  *
- *     friend auto prototype(udho::view::data::type<student>) {
+ *     friend auto metatype(udho::view::data::type<student>) {
  *         using namespace udho::view::data;
  *         return assoc("student"),
- *             prototype(type<person>()),
+ *             metatype(type<person>()),
  *             fvar("debt",     &student::debt, &student::set_debt),
  *             mvar("courses",  &student::courses),
  *             func("print",    &student::print),
@@ -124,15 +124,15 @@ struct type {};
  * @endcode
  */
 template <class ClassT>
-auto prototype(udho::view::data::type<ClassT>){
-    static_assert("prototype method not overloaded");
+auto metatype(udho::view::data::type<ClassT>){
+    static_assert("metatype method not overloaded");
 }
 
 /**
- * @brief checks whether a prototype overload exists for a given class
+ * @brief checks whether a metatype overload exists for a given class
  */
 template <typename ClassT>
-struct has_prototype: std::integral_constant<bool, !std::is_void_v<decltype(prototype(std::declval<type<ClassT>>()))>>{};
+struct has_metatype: std::integral_constant<bool, !std::is_void_v<decltype(metatype(std::declval<type<ClassT>>()))>>{};
 
 }
 }

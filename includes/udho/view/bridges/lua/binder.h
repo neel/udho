@@ -51,7 +51,7 @@ struct binder;
 
 namespace helper{
 
-template <typename ResT, bool Enable = has_prototype<ResT>::value>
+template <typename ResT, bool Enable = has_metatype<ResT>::value>
 struct recurse{
     static void apply(detail::lua::state& state){
         using result_type = ResT;
@@ -67,15 +67,15 @@ struct recurse<ResT, false>{
 template <typename ResT>
 struct recurse<std::vector<ResT>, false>{
     static void apply(detail::lua::state& state){
-        recurse<ResT, has_prototype<ResT>::value>::apply(state);
+        recurse<ResT, has_metatype<ResT>::value>::apply(state);
     }
 };
 
 template <typename KeyT, typename ValueT>
 struct recurse<std::map<KeyT, ValueT>, false>{
     static void apply(detail::lua::state& state){
-        recurse<KeyT, has_prototype<KeyT>::value>::apply(state);
-        recurse<ValueT, has_prototype<ValueT>::value>::apply(state);
+        recurse<KeyT, has_metatype<KeyT>::value>::apply(state);
+        recurse<ValueT, has_metatype<ValueT>::value>::apply(state);
     }
 };
 

@@ -86,18 +86,18 @@ namespace detail{
         DataT& _data;
     };
 
-    template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
+    template <typename ClassT, std::enable_if_t<!has_metatype<ClassT>::value, int> = 0 >
     nlohmann::json to_json_internal(const ClassT& data){
         return nlohmann::json(data);
     }
 
-    template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+    template <class ClassT, std::enable_if_t<has_metatype<ClassT>::value, int> = 0 >
     nlohmann::json to_json_internal(const ClassT& data){
-        auto meta = prototype(udho::view::data::type<ClassT>{});
+        auto meta = metatype(udho::view::data::type<ClassT>{});
         return meta.members().json(data);
     }
 
-    template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+    template <class ClassT, std::enable_if_t<has_metatype<ClassT>::value, int> = 0 >
     nlohmann::json to_json_internal(const std::vector<ClassT>& data) {
         nlohmann::json j = nlohmann::json::array();
         for (const auto& d : data) {
@@ -109,18 +109,18 @@ namespace detail{
         return j;
     }
 
-    template <typename ClassT, std::enable_if_t<!has_prototype<ClassT>::value, int> = 0 >
+    template <typename ClassT, std::enable_if_t<!has_metatype<ClassT>::value, int> = 0 >
     void from_json_internal(ClassT& data, const nlohmann::json& json){
         data = json;
     }
 
-    template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+    template <class ClassT, std::enable_if_t<has_metatype<ClassT>::value, int> = 0 >
     void from_json_internal(ClassT& data, const nlohmann::json& json){
-        auto meta = prototype(udho::view::data::type<ClassT>{});
+        auto meta = metatype(udho::view::data::type<ClassT>{});
         return meta.members().json(data, json);
     }
 
-    template <class ClassT, std::enable_if_t<has_prototype<ClassT>::value, int> = 0 >
+    template <class ClassT, std::enable_if_t<has_metatype<ClassT>::value, int> = 0 >
     void from_json_internal(std::vector<ClassT>& data, const nlohmann::json& json) {
         for(const nlohmann::json& j: json){
             ClassT obj;

@@ -41,7 +41,7 @@ namespace data{
 #ifdef WITH_JSON_NLOHMANN
 
 /**
- * @brief Convert a C++ data object to json assuming the prototype function has been overloaded for it.
+ * @brief Convert a C++ data object to json assuming the metatype function has been overloaded for it.
  */
 template <class ClassT>
 nlohmann::json to_json(const ClassT& data){
@@ -49,7 +49,7 @@ nlohmann::json to_json(const ClassT& data){
 }
 
 /**
- * @brief Loads a C++ data object from json assuming the prototype function has been overloaded for it.
+ * @brief Loads a C++ data object from json assuming the metatype function has been overloaded for it.
  */
 template <class ClassT>
 void from_json(ClassT& data, const nlohmann::json& json){

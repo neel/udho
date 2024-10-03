@@ -20,7 +20,7 @@ struct education{
     education() = default;
     education(const std::string c, const std::string& u): course(c), university(u) {}
 
-    friend auto prototype(udho::view::data::type<education>){
+    friend auto metatype(udho::view::data::type<education>){
         using namespace udho::view::data;
 
         return assoc("education"),
@@ -36,7 +36,7 @@ struct address{
     address() = default;
     address(const std::string loc): locality(loc) {}
 
-    friend auto prototype(udho::view::data::type<address>){
+    friend auto metatype(udho::view::data::type<address>){
         using namespace udho::view::data;
 
         return assoc("address"),
@@ -51,7 +51,7 @@ struct person{
     double      age;
     address     permanent_address;
 
-    friend auto prototype(udho::view::data::type<person>){
+    friend auto metatype(udho::view::data::type<person>){
         using namespace udho::view::data;
 
         return assoc("person"),
@@ -86,11 +86,11 @@ struct student: person{
         return a+b+c+d;
     }
 
-    friend auto prototype(udho::view::data::type<student>){
+    friend auto metatype(udho::view::data::type<student>){
         using namespace udho::view::data;
 
         return assoc("student"),
-            prototype(type<person>()),
+            metatype(type<person>()),
             fvar("debt",        &student::debt, &student::set_debt),
             mvar("courses",     &student::courses),
             func("print",       &student::print),
@@ -143,7 +143,7 @@ Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
 
     // using variant = boost::variant<std::int64_t, double, std::string, bool>;
     //
-    auto meta = prototype(udho::view::data::type<student>{});
+    auto meta = metatype(udho::view::data::type<student>{});
 
     {
         using namespace udho::view;

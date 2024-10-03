@@ -86,7 +86,7 @@ struct X{
 struct subinfo{
     std::string desc = "DESC";
 
-    friend auto prototype(udho::view::data::type<subinfo>){
+    friend auto metatype(udho::view::data::type<subinfo>){
         using namespace udho::view::data;
 
         return assoc("subinfo"),
@@ -114,7 +114,7 @@ struct info{
         std::cout << "name: " << name << " value: " << value  << std::endl;
     }
 
-    friend auto prototype(udho::view::data::type<info>){
+    friend auto metatype(udho::view::data::type<info>){
         using namespace udho::view::data;
 
         return assoc("info"),
@@ -233,7 +233,7 @@ int main(){
     // // // std::cout << "Lua function called successfully." << std::endl;
     // // // return 0;
 
-    // std::cout << "udho::view::data::has_prototype<subinfo>::value " << udho::view::data::has_prototype<subinfo>::value << std::endl;
+    // std::cout << "udho::view::data::has_metatype<subinfo>::value " << udho::view::data::has_metatype<subinfo>::value << std::endl;
     //
     udho::view::data::bridges::lua lua;
     lua.init();
@@ -337,7 +337,7 @@ int main(){
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
     auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
-    // server.run(artifacts);
+    server.run(artifacts);
 
     // service.run();
 

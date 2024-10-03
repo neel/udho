@@ -206,7 +206,7 @@ struct basic_script: stream<char, '\t'>{
             std::string data    = "d";
             std::string context = "ctx";
 
-            friend auto prototype(udho::view::data::type<vars_>){
+            friend auto metatype(udho::view::data::type<vars_>){
                 using namespace udho::view::data;
 
                 return assoc("vars_"),
@@ -219,7 +219,7 @@ struct basic_script: stream<char, '\t'>{
         std::string bridge;
         vars_       vars;
 
-        friend auto prototype(udho::view::data::type<description>){
+        friend auto metatype(udho::view::data::type<description>){
             using namespace udho::view::data;
 
             return assoc("description"),

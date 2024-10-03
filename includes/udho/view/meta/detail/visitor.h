@@ -148,14 +148,14 @@ namespace detail{
             template <typename PolicyT, typename KeyT, typename ValueT, typename V, std::enable_if_t<!data::policies::is_writable_property_v<PolicyT>, int>* = nullptr>
             bool _set(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp, const V& v){ return false; }
 
-            template <typename ValueT, typename std::enable_if<udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            template <typename ValueT, typename std::enable_if<udho::view::data::has_metatype<ValueT>::value, int>::type* = nullptr>
             bool _assign_str(ValueT& target, std::vector<std::string>::const_iterator begin, std::vector<std::string>::const_iterator end){
                 std::size_t assignment_count = udho::view::data::assign(target, begin, end);
                 assert(assignment_count == std::distance(begin, end));
                 return true;
             }
 
-            template <typename ValueT, typename std::enable_if<!udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            template <typename ValueT, typename std::enable_if<!udho::view::data::has_metatype<ValueT>::value, int>::type* = nullptr>
             bool _assign_str(ValueT&, std::vector<std::string>::const_iterator, std::vector<std::string>::const_iterator){ return false; }
         private:
             data_type&                _data;
@@ -208,7 +208,7 @@ namespace detail{
                         return base::_set_str(nvp, provided_args[0]);
                     } else {
                         // multi assign requested
-                        // fetch prototype of the requested object (value)
+                        // fetch metatype of the requested object (value)
                         return base::_assign_str(value, provided_args.begin(), provided_args.end());
                     }
                 } else {
@@ -297,7 +297,7 @@ namespace detail{
                     assert(provided_args.size() == args_count);
 
                     // multi assign requested
-                    // fetch prototype of the requested object (value)
+                    // fetch metatype of the requested object (value)
 
                     return base::_assign_str(value, provided_args.begin(), provided_args.end());
                 }
@@ -331,15 +331,15 @@ namespace detail{
             // template <typename ValueT, typename std::enable_if<!udho::view::data::detail::has_subscript_operator_v<ValueT>, int>::type* = nullptr>
             // bool at(const ast::node_ptr_type& at_node, ValueT& value){ return false; }
 
-            template <typename ValueT, typename VisitorT, typename std::enable_if<udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            template <typename ValueT, typename VisitorT, typename std::enable_if<udho::view::data::has_metatype<ValueT>::value, int>::type* = nullptr>
             bool apply(VisitorT& visitor){
-                auto meta = prototype(udho::view::data::type<ValueT>{});
+                auto meta = metatype(udho::view::data::type<ValueT>{});
                 meta.members().apply_until(visitor);
 
                 return true;
             }
 
-            template <typename ValueT, typename VisitorT, typename std::enable_if<!udho::view::data::has_prototype<ValueT>::value, int>::type* = nullptr>
+            template <typename ValueT, typename VisitorT, typename std::enable_if<!udho::view::data::has_metatype<ValueT>::value, int>::type* = nullptr>
             bool apply(VisitorT&){ return false; }
 
         private:

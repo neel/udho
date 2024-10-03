@@ -62,7 +62,7 @@ struct binder{
     template <typename StateT>
     static void apply(StateT& state, udho::view::data::type<ClassT> type){
         if(!udho::view::data::bindings<StateT, ClassT>::exists()){
-            auto meta = prototype(type);
+            auto meta = metatype(type);
             std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
             BinderT<ClassT> binder(state, meta.name());
             meta.members().apply_all(std::move(binder));

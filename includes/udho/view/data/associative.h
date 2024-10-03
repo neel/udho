@@ -410,9 +410,9 @@ detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; 
  * @param begin iterator to a string container
  * @param end   iterator to a string container
  */
-template <typename DataT, typename IteratorT, typename std::enable_if<udho::view::data::has_prototype<DataT>::value, int>::type* = nullptr>
+template <typename DataT, typename IteratorT, typename std::enable_if<udho::view::data::has_metatype<DataT>::value, int>::type* = nullptr>
 std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
-    auto assoc = prototype(udho::view::data::type<DataT>{});
+    auto assoc = metatype(udho::view::data::type<DataT>{});
 
     using assoc_type    = decltype(assoc);
     using members_type  = typename assoc_type::members_type;
@@ -420,7 +420,7 @@ std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
     return detail::assign(data, assoc.members(), begin, end);
 }
 
-template <typename DataT, typename IteratorT, typename std::enable_if<!udho::view::data::has_prototype<DataT>::value, int>::type* = nullptr>
+template <typename DataT, typename IteratorT, typename std::enable_if<!udho::view::data::has_metatype<DataT>::value, int>::type* = nullptr>
 std::size_t assign(DataT&, IteratorT, IteratorT){ return 0; }
 
 }

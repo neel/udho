@@ -64,10 +64,10 @@ namespace detail{
     struct basic_executor{
         using function_type = Function;
         using finder_type   = visitor<DataT, function_type>;
-        using meta_type     = decltype(prototype(std::declval<udho::view::data::type<DataT>>()));
+        using meta_type     = decltype(metatype(std::declval<udho::view::data::type<DataT>>()));
         using node_ptr_type = ast::node_ptr_type;
 
-        basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(prototype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
+        basic_executor(const std::string& syntax, DataT& data, function_type& function): _syntax(syntax), _ast(_syntax), _data(data), _meta(metatype(udho::view::data::type<DataT>{})), _function(function), _grammar(_ast.root()->children[0]) {
             assert(_grammar->template is_type<ast::grammar>());
             assert(_grammar->children.size() > 0);
         }
