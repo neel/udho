@@ -32,11 +32,13 @@
 #include <array>
 #include <limits>
 #include <vector>
+#include <fstream>
 #include <iomanip>
 #include <stdexcept>
 #include <exception>
 #include <udho/view/data/associative.h>
 #include <udho/view/tmpl/sections.h>
+#include <boost/filesystem.hpp>
 
 namespace udho{
 namespace view{
@@ -140,6 +142,24 @@ struct stream{
      * @return The size of the buffer in characters.
      */
     std::size_t size() const { return _buffer.size(); }
+
+    std::string save() const {
+        boost::filesystem::path temp_dir = boost::filesystem::temp_directory_path();
+        boost::filesystem::path temp_file = temp_dir / boost::filesystem::unique_path("buffer-%%%%-%%%%-%%%%-%%%%.script");
+
+        std::ofstream out(temp_file.string());
+        if (!out) {
+            throw std::runtime_error("Failed to create temporary file");
+        }
+
+        out.write(data(), size());
+        if (!out.good()) {
+            throw std::runtime_error("Failed to write data to temporary file");
+        }
+        out.close();
+
+        return temp_file.string();
+    }
 
     protected:
         /**

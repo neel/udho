@@ -29,6 +29,7 @@
 #define UDHO_VIEW_DATA_BINDINGS_H
 
 #include <udho/view/data/fwd.h>
+#include <udho/view/bridges/fwd.h>
 #include <udho/view/data/nvp.h>
 #include <iostream>
 
@@ -40,14 +41,28 @@ namespace udho{
 namespace view{
 namespace data{
 
-template <template<class> class BinderT, typename Class>
-struct binder;
+// template <template<class> class BinderT, typename Class>
+// struct binder;
+//
+// namespace bridges{
+//     template <typename BridgeT>
+//     struct bind;
+// }
 
+/**
+ * @class bindings
+ * @brief keeps track of binding of a C++ wiith with a foreign language backend.
+ * @tparam StateT the state class representing the state of the foreign language runtime
+ * @tparam T type C++ type
+ */
 template <typename StateT, typename T>
 struct bindings{
 
-    template <template<class> class BinderT, typename Class>
-    friend struct binder;
+    // template <template<class> class BinderT, typename Class>
+    // friend struct binder;
+
+    template <typename BridgeT>
+    friend struct udho::view::data::bridges::bind;
 
     static bool exists() { return _exists; }
     private:
@@ -57,22 +72,27 @@ struct bindings{
 template <typename DerivedT, typename T>
 bool bindings<DerivedT, T>::_exists = false;
 
+namespace detail{
+
 template <template<class> class BinderT, typename ClassT>
 struct binder{
+    using binder_type = BinderT<ClassT>;
+
     template <typename StateT>
     static void apply(StateT& state, udho::view::data::type<ClassT> type){
-        if(!udho::view::data::bindings<StateT, ClassT>::exists()){
-            auto meta = metatype(type);
-            std::cout << "udho::view::data::binder: binding " << meta.name() << std::endl;
-            BinderT<ClassT> binder(state, meta.name());
-            meta.members().apply_all(std::move(binder));
+        // if(!udho::view::data::bindings<StateT, ClassT>::exists()){
 
-            bindings<StateT, ClassT>::_exists = true;
-        }
+        auto meta = metatype(type);
+        std::cout << "udho::view::data::detail::binder: binding " << meta.name() << std::endl;
+        binder_type binder(state, meta.name());
+        meta.members().apply_all(std::move(binder));
+
+        // bindings<StateT, ClassT>::_exists = true;
+        // }
     }
 };
 
-
+}
 
 }
 }

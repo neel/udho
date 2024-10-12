@@ -44,13 +44,87 @@
 namespace udho{
 namespace view{
 namespace data{
+
+/**
+ * @class bind
+ * @brief default binder for a bridge that binds a given class with the bridge by using the metatype.
+ * This template uses the default implementation which expects that the class has a metatype friend function overloaded.
+ * @details the default binder is in @ref udho::view::data::detail::binder
+ * @tparam BridgeT foreign language bridge, usually a parameterization of @ref udho::view::data::bridges::bridge
+ * @tparam ClassT  the C++ struct/class which is supposed to be bound with the bridge
+ *
+ * Following is an example for specialization
+ * @code
+ * #include <udho/view/bridges/bridge.h>
+ * #include <udho/view/bridges/lua.h>
+ *
+ * namespace udho::view::data{
+ *
+ * template <>
+ * struct bind<bridges::lua, udho::url::summary::mount_point::url_proxy>{
+ *
+ *      using state_type  = typename bridges::lua::state_type;
+ *      using class_type  = udho::url::summary::mount_point::url_proxy;
+ *      using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+ *
+ *      static void apply(state_type& state){
+ *          // The default implementation is as follows
+ *          // binder_type::apply(state, udho::view::data::type<class_type>{});
+ *
+ *          // or write your own implementation
+ *          // following is an example
+ *
+ *          user_type type = state.udho().new_usertype<class_type>("url_proxy",
+ *              "new", sol::no_constructor
+ *          );
+ *      }
+ * };
+ *
+ * }
+ * @endcode
+ */
+template <typename BridgeT, typename ClassT>
+struct bind{
+    using state_type  = typename BridgeT::state_type;
+    using class_type  = ClassT;
+    using binder_type = typename BridgeT::template default_binder_type<class_type>;
+
+    static void apply(state_type& state){
+        binder_type::apply(state, udho::view::data::type<class_type>{});
+    }
+};
+
 namespace bridges{
 
 /**
  * @brief a subset of information regarding the global state, environment and context of invocation (e.g. HTTP request, URL routes summary, resource dictionary etc..)
  */
-struct context{
-    const udho::url::summary::router& _router_summary;
+// struct context{
+//     const udho::url::summary::router& _router_summary;
+// };
+
+/**
+ * @brief supposed to be instantiated by the bridge itself for binding any type with that bridge.
+ * @warning Do not specialize. Not intended to be used directly by the user code.
+ * @details checks whether the type is already bound or not. If not then forwards to @ref udho::view::data::bind
+ * @details borrows state. does not own anything.
+ */
+template <typename BridgeT>
+struct bind{
+    using state_type  = typename BridgeT::state_type;
+
+    bind(state_type& state): _state(state) {}
+
+    template <typename ClassT>
+    void operator()(udho::view::data::type<ClassT> handle){
+        if(!udho::view::data::bindings<state_type, ClassT>::exists()){
+            udho::view::data::bind<BridgeT, ClassT>::apply(_state);
+            udho::view::data::bindings<state_type, ClassT>::_exists = true;
+        }
+    }
+
+    private:
+        state_type& _state;
 };
 
 /**
@@ -71,6 +145,8 @@ struct bridge{
     using script_type   = ScriptT;
     template <typename X>
     using binder_type   = BinderT<X>;
+    template <typename X>
+    using default_binder_type = udho::view::data::detail::binder<BinderT, X>;
 
     static constexpr auto name() { return state_type::name(); }
 
@@ -88,7 +164,12 @@ struct bridge{
      */
     template <typename ClassT>
     void bind(udho::view::data::type<ClassT> handle){
-        udho::view::data::binder<BinderT, ClassT>::apply(_state, handle);
+        // udho::view::data::binder<BinderT, ClassT>::apply(_state, handle);
+
+        using self_type = bridge<StateT, CompilerT, ScriptT, BinderT>;
+
+        udho::view::data::bridges::bind<self_type> binder{_state};
+        binder(handle);
     }
 
     /**
@@ -120,12 +201,15 @@ struct bridge{
      * @param prefix A prefix used in the naming of the script.
      * @return True if compilation was successful, false otherwise.
      */
-    template <typename T>
-    std::size_t exec(const std::string& name, const std::string& prefix, const T& data, std::string& output){
+    template <typename T, typename Aux>
+    std::size_t exec(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
         if(!udho::view::data::bindings<StateT, T>::exists()){
             bind(udho::view::data::type<T>{});
         }
-        return _state.exec(view_key(name, prefix), std::ref(data), output);
+        if(!udho::view::data::bindings<StateT, Aux>::exists()){
+            bind(udho::view::data::type<Aux>{});
+        }
+        return _state.exec(view_key(name, prefix), std::ref(data), std::ref(aux), output);
     }
 
     private:
@@ -154,6 +238,9 @@ struct bridge{
             udho::view::tmpl::parser parser;
             parser.parse(begin, end, script);
             script.finish();
+
+            std::string name = script.save();
+            std::cout << "Generated script at " << name << std::endl;
             compiler_type compiler{_state};
             return compiler(std::move(script));
         }

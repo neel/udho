@@ -57,15 +57,14 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
      * @brief Constructs a Lua script with a specified name.
      * @param name The identifier name of the script.
      */
-    inline explicit script(const std::string& name): base(name) {}
+    inline explicit script(const std::string& name): base(name), _min_size(0) {}
 
+    inline std::size_t min_size() { return _min_size; }
 
     private:
         inline void begin(const base::description& desc){
-            // TODO This d should not be constant it should be determined from the variable names inside the meta section.
-            // TODO It should contain additional parameter ctx and the signatre should be function(d, ctx, stream) instead.
-            // TODO The name ctx should not be fixed as well, it should be retrieved from the neta also.
-            *this << udho::url::format("return function({}, {}, stream)", desc.vars.data, desc.vars.context) << std::endl;
+            *this << "return function(d, c, stream)" << std::endl;
+            *this << udho::url::format("  local function view({}, {}, stream)", desc.vars.data, desc.vars.context) << std::endl;
             ++*this;
         }
         /**
@@ -73,7 +72,14 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
          */
         inline void end(){
             --*this;
-            *this << "end";
+            *this << "  end\n";  // Close the view function
+            // Use pcall to handle errors in view function
+            *this << "  local success, resultOrError = pcall(view, d, c, stream)\n";
+            *this << "  if not success then\n";
+            *this << "    print('Error executing view function: ' .. resultOrError)\n";  // Or handle the error as needed
+            *this << "    print(debug.traceback())\n";
+            *this << "  end\n";
+            *this << "end";  // Close the anonymous function
         }
         /**
          * @brief Adds a generic section to the Lua script.
@@ -110,14 +116,20 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
          * @param section The echo section containing text or expressions to be output.
          */
         inline void add_echo_section(const udho::view::tmpl::section& section) {
-            if (section.size() > 0) {
+            std::size_t size = section.size();
+            if (size > 0) {
                 *this << std::endl;
                 *this << "do -- " + udho::url::format("{}", udho::view::tmpl::section::name(section.type())) << std::endl;
                 ++*this;
                 if (section.type() == udho::view::tmpl::section::echo) {
-                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], {})", section.content()) << std::endl;
+                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], tostring({}))", section.content()) << std::endl;
+                    _min_size += size;
                 } else {
                     *this << udho::url::format("local udho_view_str_ = [=====[{}]=====]", section.content()) << std::endl;
+                    _min_size += 1;
+                    // section.content() is a lua code which will return a value
+                    // the returned value will then be converted to string to fill the placeholder{}
+                    // so that string must take at least 1 bye of space
                 }
                 *this << "stream:write(udho_view_str_)" << std::endl;
                 --*this;
@@ -133,6 +145,9 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
         inline void add_meta_section(const udho::view::tmpl::section& section) {
             // TODO implement
         }
+
+    private:
+        std::size_t _min_size;
 
 };
 

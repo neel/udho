@@ -91,9 +91,12 @@ struct const_member_function<Res (Class::*)(X...) const>{
         return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
     }
 
-    result_type call(const Class& d, const args_type& args){
+    result_type call(const Class& d, const args_type& args) const {
         return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
     }
+
+    result_type get(Class& d) const { call(d, std::tuple<>{}); }
+    result_type get(Class& d) { call(d, std::tuple<>{}); }
 
     private:
         member_type _member;
@@ -113,7 +116,7 @@ struct member_function<Res (Class::*)(X...)>{
     member_function(member_type&& member): _member(std::move(member)) {}
     member_type operator*() { return _member; }
 
-    result_type call(Class& d, const args_type& args){
+    result_type call(Class& d, const args_type& args) const {
         return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
     }
 
@@ -179,6 +182,63 @@ struct wrapper2<U (Class::*)() const, Res (Class::*)(V)>: getter_value<U (Class:
     }
     template <typename ValueT, std::enable_if_t< !std::is_assignable_v<std::add_lvalue_reference_t<std::decay_t<V>>, ValueT>, int> = 0>
     bool set(Class&, const ValueT&) { return false; }
+};
+
+template <typename Class, typename U, typename V, typename Res, typename Res2>
+struct wrapper2<Res (Class::*)(U) const, Res2 (Class::*)(U, V)>: const_member_function<Res (Class::*)(U) const>, member_function<Res2 (Class::*)(U, V)> {
+    wrapper2(Res (Class::*u)(U) const, Res2 (Class::*v)(U, V))
+        : const_member_function<Res (Class::*)(U) const>    (std::move(u)),
+          member_function<Res2 (Class::*)(U, V)>            (std::move(v)) {}
+
+    using getter_type = const_member_function<Res (Class::*)(U) const>;
+    using setter_type = member_function<Res2 (Class::*)(U, V)>;
+    using key_type    = std::decay_t<U>;
+    using value_type  = std::decay_t<V>;
+    using result_type = Res;
+
+    getter_type& getter() { return *this; }
+    setter_type& setter() { return *this; }
+
+    typename getter_type::result_type get(const Class& d, const key_type& key) { return getter().call(d, std::tuple<key_type>{key}); }
+    void set(Class& d, const key_type& key, const value_type& value) { setter().call(d, std::tuple<key_type, value_type>{key, value}); }
+};
+
+template <typename Class, typename U, typename Res>
+struct wrapper2<Res& (Class::*)(U), Res& (Class::*)(U)>: member_function<Res& (Class::*)(U)> {
+    wrapper2(Res& (Class::*u)(U), Res& (Class::*)(U))
+        : member_function<Res& (Class::*)(U)>    (std::move(u)) {}
+
+    using getter_type = member_function<Res& (Class::*)(U)>;
+    using setter_type = member_function<Res& (Class::*)(U)>;
+    using key_type    = std::decay_t<U>;
+    using value_type  = std::decay_t<Res>;
+    using result_type = Res;
+
+    getter_type& getter() { return *this; }
+    setter_type& setter() { return *this; }
+
+    typename getter_type::result_type get(Class& d, const key_type& key) { return getter().call(d, std::tuple<key_type>{key}); }
+    void set(Class& d, const key_type& key, const value_type& value) {
+        get(d, key) = value;
+    }
+};
+
+template <typename Class, typename U>
+struct wrapper2<U (Class::*)() const, U (Class::*)() const> {
+    wrapper2(U (Class::*u)() const, U (Class::*v)() const): _begin(std::move(u)), _end(std::move(v)) {}
+
+    using begin_type = getter_value<U (Class::*)() const>;
+    using end_type   = getter_value<U (Class::*)() const>;
+    using class_type = Class;
+    using iterator_type = U;
+    using value_type  = typename std::iterator_traits<iterator_type>::value_type;
+
+    iterator_type begin(const Class& d) const { return _begin.call(d,std::tuple<>{}); }
+    iterator_type end(const Class& d)   const { return _end.call(d, std::tuple<>{});  }
+
+    private:
+        begin_type _begin;
+        end_type   _end;
 };
 
 }
@@ -333,6 +393,13 @@ namespace policies{
      * @brief Represents a property that encapsulates a function.
      */
     struct function{};
+
+    template <bool Mutable>
+    struct index{
+        static constexpr const bool is_mutable = Mutable;
+    };
+
+    struct iterable{};
 }
 
 
@@ -459,6 +526,32 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
     return make_nvp(policies::function{}, std::forward<K>(name), std::forward<X>(v)...);
 }
 
+/**
+ * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
+ *
+ * @param IndexGetterF The name of the function.
+ * @return A name-value pair encapsulating the function.
+ */
+template <typename IndexGetterF>
+nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGetterF&& v){
+    return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v));
+}
+
+/**
+ * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
+ *
+ * @param IndexGetterF The name of the function.
+ * @return A name-value pair encapsulating the function.
+ */
+template <typename IndexGetterF, typename IndexSetterF>
+nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSetterF> > index(IndexGetterF&& u, IndexSetterF v){
+    return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(u), std::forward<IndexSetterF>(v));
+}
+
+template <typename BeginF, typename EndF>
+nvp< policies::iterable, std::string, wrapper<BeginF, EndF> > iter(BeginF&& u, EndF&& v){
+    return make_nvp(policies::iterable{}, std::string{"__iter__"}, std::forward<BeginF>(u), std::forward<EndF>(v));
+}
 
 }
 }

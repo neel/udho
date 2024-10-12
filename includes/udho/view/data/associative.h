@@ -400,7 +400,7 @@ std::size_t assign(DataT& data, associative<HeadT, TailT>& assoc, IteratorT begi
 
 }
 
-detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; }
+inline detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; }
 
 /**
  * @brief assigns values to the nvp's of an associative container

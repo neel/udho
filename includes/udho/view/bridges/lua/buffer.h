@@ -42,40 +42,73 @@ namespace detail{
 namespace lua{
 
 struct buffer{
-    inline explicit buffer(): _len(0) {}
+    inline explicit buffer(std::size_t min_size = 0) {
+        if(min_size > 0){
+            _buffer.reserve(min_size);
+        }
+    }
 
     inline std::size_t write(const sol::string_view& lua_string) {
-        _buffer.emplace_back(lua_string);
+        _buffer.append(lua_string.data(), lua_string.size());
         std::size_t size = lua_string.size();
-        _len += size;
         return size;
     }
 
-    inline std::size_t str(std::string& result) const {
-        result.clear();
-        result.reserve(_len);
 
-        for (const sol::string_view& view : _buffer) {
-            result.append(view.data(), view.size());
+    inline void print(sol::variadic_args va, sol::this_state state) {
+        sol::state_view lua(state);
+
+        std::string result;
+        bool first = true;
+        for (const auto& v : va) {
+            if (!first) {
+                result.append("\t");
+            }
+            first = false;
+
+            switch (v.get_type()) {
+                case sol::type::number:
+                    if (v.is<int>()) {
+                        result.append(std::to_string(v.as<int>()));
+                    } else {
+                        result.append(std::to_string(v.as<double>()));
+                    }
+                    break;
+                case sol::type::boolean:
+                    result.append(v.as<bool>() ? "true" : "false");
+                    break;
+                case sol::type::string:
+                    result.append(v.as<std::string>());
+                    break;
+                default:
+                    sol::function tostring = lua["tostring"];
+                    result.append(tostring(v));
+                    break;
+            }
         }
-
-        return _len;
+        result.append("\n");
+        _buffer.append(result);
     }
 
-    inline std::size_t size() const { return _len; }
+    inline std::size_t str(std::string& result) const {
+        result = _buffer;
+        return _buffer.size();
+    }
+
+    inline std::size_t size() const { return _buffer.size(); }
     inline void clear() { _buffer.clear(); }
 
     inline static sol::usertype<buffer> apply(sol::table& table, const std::string& name = "udho_buffer"){
         return table.new_usertype<buffer>(name,
             "write", &buffer::write,
             "size",  &buffer::size,
-            "clear", &buffer::clear
+            "clear", &buffer::clear,
+            "print", &buffer::print
         );
     }
 
     private:
-        std::vector<sol::string_view> _buffer;
-        std::size_t _len;
+        std::string _buffer;
 };
 
 }

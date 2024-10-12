@@ -89,8 +89,12 @@ bool compiler::operator()(script_type&& script){
         throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
     }
 
+
     sol::protected_function view_fnc = view_result;
-    auto it = _state._views.insert(std::make_pair(script.name(), view_fnc));
+    detail::lua::state::view_info info;
+    info.min_buffer_size = script.min_size();
+    info.function = view_fnc;
+    auto it = _state._views.insert(std::make_pair(script.name(), info));
     return it.second;
 }
 
