@@ -32,6 +32,8 @@
 #include <udho/view/bridges/lua/compiler.h>
 #include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/bridge.h>
+#include <fmt/core.h>
+#include <fmt/args.h>
 
 namespace udho{
 namespace view{
@@ -60,6 +62,53 @@ using lua = udho::view::data::bridges::bridge<
 }
 }
 }
+}
+
+namespace udho::view::data{
+
+    template <>
+    struct bind<bridges::lua, udho::url::summary::mount_point::url_proxy>{
+
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::url::summary::mount_point::url_proxy;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, url_proxy>: binding" << std::endl;
+
+            user_type type = state.udho().new_usertype<class_type>("url_proxy",
+                "new", sol::no_constructor,
+                "pattern", sol::property(&class_type::pattern)
+            );
+
+            type.set_function("replace", [](const class_type& self, sol::variadic_args va) {
+                return replacement(self, va);
+            });
+
+            type.set_function("_call", [](const class_type& self, sol::variadic_args va) {
+                return replacement(self, va);
+            });
+        }
+
+        private:
+            static std::string replacement(const class_type& self, sol::variadic_args va){
+                fmt::dynamic_format_arg_store<fmt::format_context> store;
+                for (auto v : va) {
+                    if (v.is<int>()) {
+                        store.push_back(v.as<int>());
+                    } else if (v.is<double>()) {
+                        store.push_back(v.as<double>());
+                    } else if (v.is<bool>()) {
+                        store.push_back(v.as<bool>());
+                    } else {
+                        store.push_back(v.as<std::string>());
+                    }
+                }
+                return fmt::vformat(self.pattern(), store);
+            }
+    };
 }
 
 
