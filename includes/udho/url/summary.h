@@ -7,6 +7,8 @@
 #include <udho/url/fwd.h>
 #include <udho/url/detail/format.h>
 #include <udho/hazo/string/basic.h>
+#include <udho/view/data/type.h>
+#include <udho/view/data/associative.h>
 #include <string>
 #include <map>
 
@@ -23,6 +25,10 @@ namespace summary{
  * associated with different parts of a URL. It is constructed from a @ref udho::url: mount_point::summary function.
  */
 struct mount_point{
+    using container_type = std::map<std::string, std::string>;
+    using const_iterator = typename container_type::const_iterator;
+    using size_type      = typename container_type::size_type;
+
     /**
      * @class url_proxy
      * @brief Provides a proxy for handling URL replacements in a summarized manner.
@@ -49,6 +55,9 @@ struct mount_point{
         std::string operator()(Args&&... args) const {
             return replace(std::tuple<Args...>{args...});
         }
+
+        std::string pattern() const { return _replace; }
+
         private:
             inline explicit url_proxy(const std::string& replace): _replace(replace) {}
         private:
@@ -75,13 +84,22 @@ struct mount_point{
      * @param key The slot key identifying the specific URL pattern or replacement rule.
      * @return A url_proxy instance capable of performing the replacements associated with the given key.
      */
-    inline url_proxy operator[](const std::string& key) const {
+    inline url_proxy url(const std::string& key) const {
         auto it = _replacements.find(key);
         if (it == _replacements.end()) {
             throw std::out_of_range("Key not found in replacements");
         }
         assert(key == it->first);
         return url_proxy{it->second};
+    }
+
+    /**
+     * @brief Provides access to a url_proxy (for facilitating URL replacements) by a specific key used in slot while constructing the routing table.
+     * @param key The slot key identifying the specific URL pattern or replacement rule.
+     * @return A url_proxy instance capable of performing the replacements associated with the given key.
+     */
+    inline url_proxy operator[](const std::string& key) const {
+        return url(key);
     }
 
     /**
@@ -97,9 +115,25 @@ struct mount_point{
         return operator[](hstr.str());
     }
 
+    const_iterator begin() const { return _replacements.cbegin(); }
+    const_iterator end()   const { return _replacements.cend();   }
+    size_type      size()  const { return _replacements.size();   }
+
+
+    friend auto metatype(udho::view::data::type<mount_point>){
+        using namespace udho::view::data;
+
+        return assoc("mount_point"),
+            index(&mount_point::url),
+            iter (&mount_point::begin, &mount_point::end),
+            func("url",  &mount_point::url),
+            fvar("name", &mount_point::name),
+            fvar("size", &mount_point::size);
+    }
+
     private:
-        std::string _name;
-        std::map<std::string, std::string> _replacements;
+        std::string     _name;
+        container_type  _replacements;
 };
 
 /**
@@ -107,6 +141,13 @@ struct mount_point{
  * @brief Stores a map of mount point summary.
  */
 struct router{
+    using container_type = std::map<std::string, summary::mount_point>;
+    using const_iterator = typename container_type::const_iterator;
+    using size_type      = typename container_type::size_type;
+
+    router() = default;
+    router(const router& other) = default;
+
     /**
      * @brief Adds a new mount point to the router summary.
      * @tparam MountPointT The type of the mount point being added.
@@ -122,7 +163,7 @@ struct router{
      * @param key The name of the mount point to retrieve.
      * @return The mount point associated with the given name.
      */
-    inline const summary::mount_point& operator[](const std::string& key) const {
+    inline const summary::mount_point& route(const std::string& key) const {
         auto it = _mount_points.find(key);
         if (it == _mount_points.end()) {
             throw std::out_of_range("Mount point not found");
@@ -135,17 +176,42 @@ struct router{
      * @param key The name of the mount point to retrieve.
      * @return The mount point associated with the given name.
      */
+    inline const summary::mount_point& operator[](const std::string& key) const {
+        return route(key);
+    }
+
+   /**
+     * @brief Retrieves a mount point by its name.
+     * @param key The name of the mount point to retrieve.
+     * @return The mount point associated with the given name.
+     */
     template <typename Char, Char... C>
     const summary::mount_point& operator[](udho::hazo::string::str<Char, C...>&& hstr) const {
         return operator[](hstr.str());
     }
+
+    const_iterator begin() const { return _mount_points.cbegin(); }
+    const_iterator end()   const { return _mount_points.cend(); }
+    size_type      size()  const { return _mount_points.size(); }
+
+    friend auto metatype(udho::view::data::type<router>){
+        using namespace udho::view::data;
+
+        return assoc("router"),
+            index(&router::route),
+            iter (&router::begin, &router::end),
+            fvar("size", &router::size),
+            func("route",&router::route);
+    }
+
     private:
-        std::map<std::string, summary::mount_point> _mount_points;
+        container_type _mount_points;
 };
 
 }
 
 }
 }
+
 
 #endif // UDHO_URL_SUMMARY_H

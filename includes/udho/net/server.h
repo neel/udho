@@ -40,7 +40,7 @@ struct server{
 
             const router_type& router = artifacts.router();
 
-            udho::url::summary::router summary = router.summary();
+            const udho::url::summary::router& summary = router.summary();
             udho::net::basic_context<resource_store_proxy_type> context{std::move(stream), summary, artifacts.resources()};
 
             prepare(address, context);

@@ -14,6 +14,7 @@ namespace net{
 template <typename... ViewBridgeT>
 struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public udho::net::stream{
     using resource_store = udho::view::resources::const_store<ViewBridgeT...>;
+    using self_type = basic_context;
 
     basic_context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
     basic_context(udho::net::stream&& stream, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(std::move(stream)), _summary(summary), _resources(resources) {}
@@ -28,6 +29,17 @@ struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public
     template <typename XArg>
     const udho::url::summary::mount_point& operator[](XArg&& xarg) const {
         return route(std::forward<XArg>(xarg));
+    }
+
+    const udho::url::summary::router& routes() const {
+        return _summary;
+    }
+
+    friend auto metatype(udho::view::data::type<self_type>){
+        using namespace udho::view::data;
+
+        return assoc("context"),
+            fvar("routes", &self_type::routes);
     }
 
     private:

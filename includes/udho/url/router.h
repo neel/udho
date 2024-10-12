@@ -23,6 +23,8 @@ struct router{
 
     using mountpoints_type = MountPointsT;
 
+    router(router<MountPointsT>&&) = delete;
+
     router(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {
         summarize();
     }

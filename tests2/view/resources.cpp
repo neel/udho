@@ -192,7 +192,7 @@ Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
     std::cout << q_json << std::endl;
 
     std::string output;
-    lua.exec("user:profile", "", p, output);
+    lua.exec("user:profile", "", p, p, output);
 
     std::cout << output << std::endl;
 

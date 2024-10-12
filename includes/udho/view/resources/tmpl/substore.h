@@ -77,10 +77,10 @@ struct proxy{
      * @param data The data to be used during the resource execution.
      * @return A results object containing the output from the execution.
      */
-    template <typename T>
-    udho::view::resources::results eval(T&& data){
+    template <typename T, typename Aux>
+    udho::view::resources::results eval(T&& data, Aux&& aux){
         udho::view::resources::results res(_name);
-        std::size_t size = _bridge.exec(_name, _prefix, std::forward<T>(data), res.output());
+        std::size_t size = _bridge.exec(_name, _prefix, std::forward<T>(data), std::forward<Aux>(aux), res.output());
         res.size(size);
         return res;
     }
@@ -91,9 +91,9 @@ struct proxy{
      * @param data The data to be used during the execution.
      * @return A results object containing the output from the execution.
      */
-    template <typename T>
-    udho::view::resources::results operator()(T&& data){
-        return eval(std::forward<T>(data));
+    template <typename T, typename Aux>
+    udho::view::resources::results operator()(T&& data, Aux&& aux){
+        return eval(std::forward<T>(data), std::forward<Aux>(aux));
     }
 
     private:

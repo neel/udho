@@ -134,7 +134,7 @@ TEST_CASE("udho network", "[net]") {
 
     std::cout << router << std::endl;
 
-    udho::url::summary::router summary = router.summary();
+    const udho::url::summary::router& summary = router.summary();
     std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"]["f1"]("hello", "world", 42) << std::endl;
     std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"_h]["f1"_h]("hello", "world", 42) << std::endl;
 
@@ -147,6 +147,7 @@ TEST_CASE("udho network", "[net]") {
     udho::view::data::bridges::lua lua;
     lua.init();
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    resources.lock();
     auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resources};
 
     server.run(artifacts);

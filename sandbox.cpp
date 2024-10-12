@@ -103,10 +103,19 @@ struct info{
     inline double x() const { return _x; }
     inline void setx(const std::uint32_t& v) { _x = v; }
 
+    subinfo& operator[](const std::size_t& i) {
+        return subs.at(i);
+    }
+
+    std::vector<subinfo>::const_iterator begin() const { return subs.begin(); }
+    std::vector<subinfo>::const_iterator end() const { return subs.end(); }
+
     inline info() {
         name = "Hello";
         value = 42;
         _x = 43;
+        subs.push_back(subinfo{});
+        subs.push_back(subinfo{});
         subs.push_back(subinfo{});
     }
 
@@ -118,6 +127,8 @@ struct info{
         using namespace udho::view::data;
 
         return assoc("info"),
+            index(&info::operator[], &info::operator[]),
+            iter(&info::begin, &info::end),
             mvar("name",  &info::name),
             cvar("value", &info::value),
             fvar("x",     &info::x, &info::setx),
@@ -127,7 +138,25 @@ struct info{
 };
 
 static char buffer[] = R"TEMPLATE(
-<?! register "views.user.badge"; lang "lua" ?>
+<?! vars('d', 'ctx') ?>
+
+<? print(dir(ctx)) ?>
+
+
+Context: <?= ctx.size ?>
+
+<?
+for k, m in ctx:pairs() do
+    stream:print(k, m.size)
+
+    for i, u in m:pairs() do
+        stream:print(i, u)
+    end
+    stream:print()
+end
+?>
+
+<?= ctx['b']['f1']:replace(1, 2, 3) ?>
 
 <? if jit then ?>
 LuaJIT is being used
@@ -136,7 +165,22 @@ LuaJIT version: <?= jit.version ?>
 LuaJIT is not being used
 <? end ?>
 
+Hello <?= d[1].desc ?>
+
+<?
+sub = udho.subinfo.new()
+sub.desc = "Changed Desc"
+d[1] = sub
+?>
+
 Hello <?= d.sub[1].desc ?>
+
+
+<?
+for i, value in d:ipairs() do
+    stream:print(i, value.desc)
+end
+?>
 
 <?:score udho.view() ?>
 
@@ -237,6 +281,7 @@ int main(){
     //
     udho::view::data::bridges::lua lua;
     lua.init();
+    lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
     // // lua.bind(udho::view::data::type<subinfo>{});
     // // lua.bind(udho::view::data::type<info>{});
     // bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
@@ -332,11 +377,20 @@ int main(){
         std::cout << i->name() << std::endl;
     }
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua.view("primary", "temp");
-    std::cout << view_prefixed(inf).str() << std::endl;
+
 
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
     auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
+
+    udho::net::types::headers::request request;
+    udho::net::types::headers::response response;
+    std::ofstream stream;
+
+    const auto& summary = router.summary();
+    std::cout << summary.size() << std::endl;
+    std::cout << view_prefixed(inf, summary).str() << std::endl;
+
     server.run(artifacts);
 
     // service.run();
