@@ -64,6 +64,7 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
     private:
         inline void begin(const base::description& desc){
             *this << "return function(d, c, stream)" << std::endl;
+            *this << "  local function echo(...) stream:print(...) end" << std::endl;
             *this << udho::url::format("  local function view({}, {}, stream)", desc.vars.data, desc.vars.context) << std::endl;
             ++*this;
         }

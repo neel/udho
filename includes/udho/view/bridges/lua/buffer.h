@@ -54,6 +54,11 @@ struct buffer{
         return size;
     }
 
+    inline std::size_t puts(const std::string& str) {
+        _buffer.append(str.data(), str.size());
+        std::size_t size = str.size();
+        return size;
+    }
 
     inline void print(sol::variadic_args va, sol::this_state state) {
         sol::state_view lua(state);

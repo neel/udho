@@ -180,15 +180,37 @@ namespace udho::view::data{
             // then add lua specific functionalities
             user_type& type = binder.type();
 
-            type.set_function("render", [&state](const class_type& self, sol::object d) mutable {
-                try {
-                    std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
-                    return state.exec_lua(view_key, d, self.context());  // script_name should be replaced with actual script identifier
-                } catch (const std::exception& e) {
-                    // If there is an error, throw Lua exception with the error message
-                    throw sol::error(e.what());
+            // type.set_function("render", [&state](const class_type& self, sol::object d) mutable -> std::string {
+            //     try {
+            //         std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+            //         return state.exec_lua(view_key, d, self.context());  // script_name should be replaced with actual script identifier
+            //     } catch (const std::exception& e) {
+            //         // If there is an error, throw Lua exception with the error message
+            //         throw sol::error(e.what());
+            //     }
+            // });
+
+            type.set_function("render", sol::overload(
+                [&state](const class_type& self, sol::object d) mutable -> std::string {
+                    try {
+                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                        return state.exec_lua(view_key, d, self.context());
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
+                },
+                [&state](const class_type& self, sol::object d, udho::view::data::bridges::detail::lua::buffer& stream) mutable -> std::size_t {
+                    try {
+                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                        std::string output = state.exec_lua(view_key, d, self.context());
+                        return stream.puts(output);
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
                 }
-            });
+            ));
         }
     };
 

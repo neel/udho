@@ -154,26 +154,17 @@ static char buffer_router[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 
 <?
-router = ctx.routes
-stream:print("router")
-stream:print(dir(router))
-?>
-
-
-<?= ctx.routes.size ?>
-
-<?
-for k, m in router:pairs() do
-    stream:print(k, m.size)
+for k, m in ctx.routes:pairs() do
+    echo(k, m.size)
 
     for i, u in m:pairs() do
-        stream:print(i, u)
+        echo(i, u)
     end
-    stream:print()
+    echo()
 end
 ?>
 
-<?= router['b']['f1']:replace(1, 2, 3) ?>
+<?= ctx.routes['b']['f1']:replace(1, 2, 3) ?>
 
 <? if jit then ?>
 LuaJIT is being used
@@ -195,7 +186,7 @@ Hello <?= d.sub[1].desc ?>
 
 <?
 for i, value in d:ipairs() do
-    stream:print(i, value.desc)
+    echo(i, value.desc)
 end
 ?>
 
@@ -210,16 +201,8 @@ end
 static char buffer_store[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 
-<?
-store = ctx.resources
-print(dir(store))
-?>
-
 Embedding view
-<?
-local v = ctx:view("primary", "mini")
-stream:print(v:render(d))
-?>
+<?= ctx:view("primary", "mini"):render(d) ?>
 
 )TEMPLATE";
 
@@ -323,7 +306,7 @@ int main(){
     lua.init();
     // lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
     // lua.bind(udho::view::data::type<udho::net::proxy_wrapper<udho::view::data::bridges::lua, udho::view::data::bridges::lua>>{});
-    lua.bind(udho::view::data::type<udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua>>{});
+    // lua.bind(udho::view::data::type<udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua>>{});
     // // lua.bind(udho::view::data::type<subinfo>{});
     // // lua.bind(udho::view::data::type<info>{});
     // bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
@@ -429,16 +412,19 @@ int main(){
     auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
 
     udho::net::types::headers::request  request;
-    udho::net::types::headers::response response;
-    std::ofstream stream;
-    udho::net::types::transfer_encoding encoding;
+    // udho::net::types::headers::response response;
+    // std::ofstream stream;
+    // udho::net::types::transfer_encoding encoding;
+    //
+    // // udho::net::bridge::handler_type     null_handler    = [] (boost::system::error_code, std::size_t) -> void {};
+    // udho::net::bridge::flush_callback   flush_callback  = [] (udho::net::bridge::handler_type, bool)  -> void {};
+    // udho::net::bridge::finish_callback  finish_callback = [] () -> void {};
+    //
+    // udho::net::bridge bridge{request, response, stream, encoding, std::move(flush_callback), std::move(finish_callback)};
+    // udho::net::context<udho::view::data::bridges::lua> context{service, bridge, router.summary(), resource_store_proxy};
 
-    // udho::net::bridge::handler_type     null_handler    = [] (boost::system::error_code, std::size_t) -> void {};
-    udho::net::bridge::flush_callback   flush_callback  = [] (udho::net::bridge::handler_type, bool)  -> void {};
-    udho::net::bridge::finish_callback  finish_callback = [] () -> void {};
-
-    udho::net::bridge bridge{request, response, stream, encoding, std::move(flush_callback), std::move(finish_callback)};
-    udho::net::context<udho::view::data::bridges::lua> context{service, bridge, router.summary(), resource_store_proxy};
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(service, router, resource_store_proxy);
 
 
     std::cout << view_prefixed(inf, context).str() << std::endl;
