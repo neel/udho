@@ -38,6 +38,8 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/results.h>
+#include <udho/view/data/associative.h>
+#include <udho/view/data/operators.h>
 
 namespace udho{
 namespace view{
@@ -56,6 +58,7 @@ namespace tmpl{
 template <typename BridgeT>
 struct proxy{
     using bridge_type = BridgeT;
+    using self_type   = proxy<BridgeT>;
 
     /**
      * @brief Constructs a proxy for a given resource and bridge.
@@ -70,6 +73,12 @@ struct proxy{
      * @return The name of the resource.
      */
     inline std::string name() const { return _name; }
+
+    /**
+     * @brief Returns the prefix of the resource associated with this proxy.
+     * @return The prefix of the resource.
+     */
+    inline std::string prefix() const { return _prefix; }
 
     /**
      * @brief Executes the resource using the stored bridge and returns the results.
@@ -94,6 +103,14 @@ struct proxy{
     template <typename T, typename Aux>
     udho::view::resources::results operator()(T&& data, Aux&& aux){
         return eval(std::forward<T>(data), std::forward<Aux>(aux));
+    }
+
+    friend auto metatype(udho::view::data::type<self_type>){
+        using namespace udho::view::data;
+
+        return assoc("proxy"),
+            fvar("name",   &self_type::name),
+            fvar("prefix", &self_type::prefix);
     }
 
     private:

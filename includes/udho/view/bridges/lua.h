@@ -32,6 +32,8 @@
 #include <udho/view/bridges/lua/compiler.h>
 #include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/bridge.h>
+#include <udho/view/resources/store.h>
+#include <udho/net/context.h>
 #include <fmt/core.h>
 #include <fmt/args.h>
 
@@ -68,7 +70,6 @@ namespace udho::view::data{
 
     template <>
     struct bind<bridges::lua, udho::url::summary::mount_point::url_proxy>{
-
         using state_type  = typename bridges::lua::state_type;
         using class_type  = udho::url::summary::mount_point::url_proxy;
         using binder_type = typename bridges::lua::template default_binder_type<class_type>;
@@ -109,6 +110,118 @@ namespace udho::view::data{
                 return fmt::vformat(self.pattern(), store);
             }
     };
+
+    template <typename... Bridges>
+    struct bind<bridges::lua, udho::view::resources::const_store<Bridges...>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::view::resources::const_store<Bridges...>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, udho::view::resources::const_store<...>>: binding" << std::endl;
+
+            // first bind according to the metatype
+            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+
+            // then add lua specific functionalities
+            user_type& type = binder.type();
+
+            type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name){
+                return self.template view<bridges::lua>(prefix, name);
+            });
+        }
+    };
+
+    template <typename... Bridges>
+    struct bind<bridges::lua, udho::net::basic_context<udho::view::resources::const_store<Bridges...>>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::net::basic_context<udho::view::resources::const_store<Bridges...>>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, udho::net::basic_context<...>>: binding" << std::endl;
+
+            // first bind according to the metatype
+            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+
+            {
+                udho::view::data::bridges::bind<bridges::lua> binder{state};
+                binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
+                binder(udho::view::data::type<udho::net::proxy_wrapper<bridges::lua, Bridges...>>{});
+            }
+
+            // then add lua specific functionalities
+            user_type& type = binder.type();
+
+            type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name) -> udho::net::proxy_wrapper<bridges::lua, Bridges...> {
+                return self.template view<bridges::lua>(prefix, name);
+            });
+        }
+    };
+
+    template <typename... Bridges>
+    struct bind<bridges::lua, udho::net::proxy_wrapper<bridges::lua, Bridges...>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::net::proxy_wrapper<bridges::lua, Bridges...>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, udho::net::proxy_wrapper<bridges::lua, ...>>: binding" << std::endl;
+
+            // first bind according to the metatype
+            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+
+            // then add lua specific functionalities
+            user_type& type = binder.type();
+
+            type.set_function("render", [&state](const class_type& self, sol::object d) mutable {
+                try {
+                    std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                    return state.exec_lua(view_key, d, self.context());  // script_name should be replaced with actual script identifier
+                } catch (const std::exception& e) {
+                    // If there is an error, throw Lua exception with the error message
+                    throw sol::error(e.what());
+                }
+            });
+        }
+    };
+
+    template <>
+    struct bind<bridges::lua, udho::view::resources::tmpl::proxy<bridges::lua>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::view::resources::tmpl::proxy<bridges::lua>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, udho::view::resources::tmpl::proxy<bridges::lua>>: binding" << std::endl;
+
+            // first bind according to the metatype
+            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+
+            // then add lua specific functionalities
+            user_type& type = binder.type();
+
+            type.set_function("render", [&state](const class_type& self, sol::object d, sol::object aux) mutable {
+                try {
+                    std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                    return state.exec_lua(view_key, d, aux);  // script_name should be replaced with actual script identifier
+                } catch (const std::exception& e) {
+                    // If there is an error, throw Lua exception with the error message
+                    throw sol::error(e.what());
+                }
+            });
+        }
+
+    };
+
 }
 
 

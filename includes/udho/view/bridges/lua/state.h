@@ -178,6 +178,29 @@ struct state{
         return size;
     }
 
+    template <typename AuxT>
+    std::string exec_lua(const std::string& name, sol::object d, AuxT aux){
+        std::string view_index = name;
+        if(!_views.count(view_index)){
+            std::cout << "View not found " << view_index << std::endl;
+            throw std::runtime_error("View not found: " + view_index);
+        }
+
+        view_info view = _views[view_index];
+        buffer_type buff{view.min_buffer_size};
+        sol::protected_function_result result = view.function(d, aux, buff); // unlike the previous version of the function here d and aux comes from lua itself. Not from C++
+
+        if (!result.valid()) {
+            sol::error err = result;
+            std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            throw std::runtime_error("Error executing function from " + view_index + ": " + err.what());
+        }
+
+        std::string output;
+        buff.str(output);
+        return output;
+    }
+
     sol::table& udho() { return _udho; }
 
     private:

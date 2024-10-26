@@ -76,16 +76,18 @@ namespace detail{
 
 template <template<class> class BinderT, typename ClassT>
 struct binder{
-    using binder_type = BinderT<ClassT>;
+    using foreign_binder_type = BinderT<ClassT>;
 
     template <typename StateT>
-    static void apply(StateT& state, udho::view::data::type<ClassT> type){
+    static foreign_binder_type apply(StateT& state, udho::view::data::type<ClassT> type){
         // if(!udho::view::data::bindings<StateT, ClassT>::exists()){
 
         auto meta = metatype(type);
-        std::cout << "udho::view::data::detail::binder: binding " << meta.name() << std::endl;
-        binder_type binder(state, meta.name());
-        meta.members().apply_all(std::move(binder));
+        std::cout << "udho::view::data::detail::binder: binding metatype " << meta.name() << std::endl;
+        foreign_binder_type binder(state, meta.name());
+        meta.members().apply_all(binder);
+
+        return binder;
 
         // bindings<StateT, ClassT>::_exists = true;
         // }

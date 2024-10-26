@@ -50,7 +50,7 @@ namespace lua{
 
 namespace helper{
 
-template <typename ResT, bool Enable = has_metatype<ResT>::value>
+template <typename ResT>
 struct recurse{
     static void apply(detail::lua::state& state){
         using result_type = ResT;
@@ -64,36 +64,30 @@ struct recurse{
         >;
 
         udho::view::data::bridges::bind<bridge_type> binder{state};
-        binder(udho::view::data::type<result_type>{});
-
+        binder(udho::view::data::type<std::decay_t<result_type>>{});
     }
 };
 
 template <typename ResT>
-struct recurse<ResT, false>{
-    static void apply(detail::lua::state&){}
-};
-
-template <typename ResT>
-struct recurse<std::vector<ResT>, false>{
+struct recurse<std::vector<ResT>>{
     static void apply(detail::lua::state& state){
-        recurse<ResT, has_metatype<ResT>::value>::apply(state);
+        recurse<ResT>::apply(state);
     }
 };
 
 template <typename KeyT, typename ValueT>
-struct recurse<std::map<KeyT, ValueT>, false>{
+struct recurse<std::map<KeyT, ValueT>>{
     static void apply(detail::lua::state& state){
-        recurse<KeyT, has_metatype<KeyT>::value>::apply(state);
-        recurse<ValueT, has_metatype<ValueT>::value>::apply(state);
+        recurse<KeyT>::apply(state);
+        recurse<ValueT>::apply(state);
     }
 };
 
 template <typename KeyT, typename ValueT>
-struct recurse<std::pair<KeyT, ValueT>, false>{
+struct recurse<std::pair<KeyT, ValueT>>{
     static void apply(detail::lua::state& state){
-        recurse<KeyT, has_metatype<KeyT>::value>::apply(state);
-        recurse<ValueT, has_metatype<ValueT>::value>::apply(state);
+        recurse<KeyT>::apply(state);
+        recurse<ValueT>::apply(state);
     }
 };
 
@@ -161,6 +155,9 @@ struct internal_index_binder {
         using args_type    = typename wrapper_type::args_type;
         using key_type     = typename std::tuple_element<0, args_type>::type;
 
+        helper::recurse<std::decay_t<key_type>>::apply(state);
+        helper::recurse<std::decay_t<result_type>>::apply(state);
+
         static_assert(std::tuple_size<args_type>::value == 1);
 
         apply_impl<Usertype, key_type, class_type>(type, *wrapper, typename std::is_integral<key_type>::type());
@@ -173,6 +170,10 @@ struct internal_index_binder {
         using class_type   = typename wrapper_type::class_type;
         using key_type     = typename wrapper_type::key_type;
         using value_type   = typename wrapper_type::value_type;
+
+        helper::recurse<std::decay_t<key_type>>::apply(state);
+        helper::recurse<std::decay_t<value_type>>::apply(state);
+        helper::recurse<std::decay_t<result_type>>::apply(state);
 
         apply_impl2<Usertype>(type, wrapper, typename std::is_integral<key_type>::type());
     }
@@ -234,7 +235,8 @@ struct internal_iter_binder {
         using class_type    = typename wrapper_type::class_type;
         using iterator_type = typename wrapper_type::iterator_type;
 
-        helper::recurse<value_type>::apply(state);
+        helper::recurse<std::decay_t<value_type>>::apply(state);
+
         apply_impl(type, wrapper, typename boost::numeric::odeint::is_pair<value_type>::type{});
     }
 
@@ -303,11 +305,23 @@ struct binder{
     using user_type = sol::usertype<X>;
 
     binder(detail::lua::state& state, const std::string& name): _state(state), _type(state._udho.new_usertype<X>(name)) {}
+    binder(const binder& other) = delete;
+    binder(binder&& other): _state(other._state), _type(std::move(other._type)) {}
+
+    binder& operator=(const binder& other) = delete;
+
+    binder& operator=(binder&& other) noexcept {
+        if (this != &other) {
+            _type = std::move(other._type);
+        }
+        return *this;
+    }
+
 
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::writable>, KeyT, udho::view::data::wrapper<T>>& nvp){
         using result_type = typename udho::view::data::wrapper<T>::result_type;
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding mutable property: " << nvp.name() << std::endl;
 
@@ -318,7 +332,7 @@ struct binder{
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::readonly>, KeyT, udho::view::data::wrapper<T>>& nvp){
         using result_type = typename udho::view::data::wrapper<T>::result_type;
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding immutable property: " << nvp.name() << std::endl;
 
@@ -329,7 +343,7 @@ struct binder{
     template <typename KeyT, typename U, typename V>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding functional property: " << nvp.name() << std::endl;
 
@@ -344,21 +358,23 @@ struct binder{
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::property<udho::view::data::policies::functional>, KeyT, udho::view::data::wrapper<U>>& nvp){
         using result_type = typename udho::view::data::wrapper<U>::result_type;
         using class_type  = typename udho::view::data::wrapper<U>::class_type;
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding functional property: " << nvp.name() << std::endl;
 
+
         auto& w = nvp.value();
-        _type.set(nvp.name(), sol::property([callback = *w](const class_type& d){
-            result_type res = std::bind(callback, std::ref(d))();
-            return res;
-        }));
+        // _type.set(nvp.name(), sol::property([callback = *w](const class_type& d) -> result_type {
+        //     result_type res = std::bind(callback, std::ref(d))();
+        //     return res;
+        // }));
+        _type.set(nvp.name(), sol::property(*w));
         return *this;
     }
     template <typename KeyT, typename T>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::function, KeyT, udho::view::data::wrapper<T>>& nvp){
         using result_type = typename udho::view::data::wrapper<T>::result_type;
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
@@ -372,7 +388,7 @@ struct binder{
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<false>, KeyT, udho::view::data::wrapper<T>>& nvp){
         using result_type = typename udho::view::data::wrapper<T>::result_type;
 
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
@@ -387,7 +403,7 @@ struct binder{
         using args_type   = typename udho::view::data::wrapper<U, V>::args_type;
         using key_type    = typename std::tuple_element<0, args_type>::type;
 
-        helper::recurse<result_type>::apply(_state);
+        helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
@@ -403,7 +419,7 @@ struct binder{
         using iterator_type = typename udho::view::data::wrapper<U, V>::iterator_type;
         using value_type    = typename udho::view::data::wrapper<U, V>::value_type;
 
-        helper::recurse<value_type>::apply(_state);
+        helper::recurse<std::decay_t<value_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
@@ -411,6 +427,8 @@ struct binder{
         helper::internal_iter_binder::apply(_state, _type, wrapper);
         return *this;
     }
+
+    user_type& type() { return _type; }
 
     private:
         detail::lua::state& _state;

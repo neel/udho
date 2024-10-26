@@ -45,6 +45,29 @@ namespace udho{
 namespace view{
 namespace data{
 
+namespace detail{
+
+template <typename BridgeT, typename ClassT, bool Enable = udho::view::data::has_metatype<ClassT>::value>
+struct bind{
+    using state_type  = typename BridgeT::state_type;
+    using class_type  = ClassT;
+    using binder_type = typename BridgeT::template default_binder_type<class_type>;
+
+    static void apply(state_type& state){
+        binder_type::apply(state, udho::view::data::type<class_type>{});
+    }
+};
+
+template <typename BridgeT, typename ClassT>
+struct bind<BridgeT, ClassT, false>{
+    using state_type  = typename BridgeT::state_type;
+    using class_type  = ClassT;
+
+    static void apply(state_type& state){}
+};
+
+}
+
 /**
  * @class bind
  * @brief default binder for a bridge that binds a given class with the bridge by using the metatype.
@@ -84,15 +107,8 @@ namespace data{
  * @endcode
  */
 template <typename BridgeT, typename ClassT>
-struct bind{
-    using state_type  = typename BridgeT::state_type;
-    using class_type  = ClassT;
-    using binder_type = typename BridgeT::template default_binder_type<class_type>;
+struct bind: detail::bind<BridgeT, ClassT>{};
 
-    static void apply(state_type& state){
-        binder_type::apply(state, udho::view::data::type<class_type>{});
-    }
-};
 
 namespace bridges{
 
@@ -120,6 +136,8 @@ struct bind{
         if(!udho::view::data::bindings<state_type, ClassT>::exists()){
             udho::view::data::bind<BridgeT, ClassT>::apply(_state);
             udho::view::data::bindings<state_type, ClassT>::_exists = true;
+        } else {
+            // bindings already exists no need to do it again.
         }
     }
 

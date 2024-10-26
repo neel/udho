@@ -35,6 +35,11 @@ namespace udho{
 namespace view{
 namespace resources{
 
+namespace detail {
+    template <int I, typename Tuple>
+    struct renderer_many;
+}
+
 /**
  * @struct results
  * @brief Encapsulates the output of a resource execution, including metadata like name, size, and type.
@@ -45,7 +50,12 @@ struct results{
     template <typename BridgeT>
     friend struct udho::view::resources::tmpl::proxy;  ///< Allows proxy to construct and modify results.
 
+    template <int I, typename Tuple>
+    friend struct udho::view::resources::detail::renderer_many;
+
     results() = delete;  ///< Prevents direct construction of results instances.
+
+    inline bool empty() const { return size() == 0; }
 
     /**
      * @brief Returns the name of the resource associated with these results.

@@ -38,6 +38,7 @@
 #include <exception>
 #include <udho/view/data/associative.h>
 #include <udho/view/tmpl/sections.h>
+#include <udho/view/meta.h>
 #include <boost/filesystem.hpp>
 
 namespace udho{
@@ -275,9 +276,11 @@ struct basic_script: stream<char, '\t'>{
                 throw std::runtime_error{"Encountered multiple meta blocks"};
             }
 
-            // TODO construct the description object
-            //      pass it to the begin method of the derived class
+            // pass the _description object through the contents of the meta block
+            // this may update the default values of the variables such as vars etc..
 
+            std::string instructions = section.content();
+            udho::view::data::meta::exec(_description, instructions);
             self().begin(_description);
 
             _meta_processed = true;

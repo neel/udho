@@ -28,61 +28,6 @@
 #include <boost/algorithm/string.hpp>
 #include <udho/net/artifacts.h>
 
-using socket_type     = udho::net::types::socket;
-using http_protocol   = udho::net::protocols::http<socket_type>;
-using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
-using http_connection = udho::net::connection<http_protocol>;
-using scgi_connection = udho::net::connection<scgi_protocol>;
-using http_listener   = udho::net::listener<http_connection>;
-using scgi_listener   = udho::net::listener<scgi_connection>;
-using http_server     = udho::net::server<http_listener>;
-using scgi_server     = udho::net::server<scgi_listener>;
-
-void chunk3(udho::net::stream context){
-    context << "Chunk 3 (Final)";
-    context.finish();
-}
-
-void chunk2(udho::net::stream context){
-    context << "chunk 2";
-    context.flush(std::bind(&chunk3, context));
-}
-
-void chunk(udho::net::stream context){
-    context.encoding(udho::net::types::transfer::encoding::chunked);
-    context << "Chunk 1";
-    context.flush(std::bind(&chunk2, context));
-}
-
-void f0(udho::net::stream context){
-    context << "Hello f0";
-    context.finish();
-}
-
-int f1(udho::net::stream context, int a, const std::string& b, const double& c){
-        context << "Hello f1 ";
-        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
-        context.finish();
-        return a+b.size()+c;
-}
-
-struct X{
-    void f0(udho::net::context<udho::view::data::bridges::lua> context){
-        context << "Hello X::f0";
-        context << context.route("f0").name();
-        context.finish();
-        std::cout << context.route("f0").name() << std::endl;
-    }
-
-    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
-        context << "Hello X::f1 ";
-        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
-        context.finish();
-        return a+b.size()+c;
-    }
-};
-
-
 struct subinfo{
     std::string desc = "DESC";
 
@@ -137,16 +82,88 @@ struct info{
     }
 };
 
-static char buffer[] = R"TEMPLATE(
+using socket_type     = udho::net::types::socket;
+using http_protocol   = udho::net::protocols::http<socket_type>;
+using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
+using http_connection = udho::net::connection<http_protocol>;
+using scgi_connection = udho::net::connection<scgi_protocol>;
+using http_listener   = udho::net::listener<http_connection>;
+using scgi_listener   = udho::net::listener<scgi_connection>;
+using http_server     = udho::net::server<http_listener>;
+using scgi_server     = udho::net::server<scgi_listener>;
+
+void chunk3(udho::net::stream context){
+    context << "Chunk 3 (Final)";
+    context.finish();
+}
+
+void chunk2(udho::net::stream context){
+    context << "chunk 2";
+    context.flush(std::bind(&chunk3, context));
+}
+
+void chunk(udho::net::stream context){
+    context.encoding(udho::net::types::transfer::encoding::chunked);
+    context << "Chunk 1";
+    context.flush(std::bind(&chunk2, context));
+}
+
+void f0(udho::net::stream context){
+    context << "Hello f0";
+    context.finish();
+}
+
+int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+}
+
+struct X{
+    void f0(udho::net::context<udho::view::data::bridges::lua> context){
+        using context_type = udho::net::context<udho::view::data::bridges::lua>;
+        using store_type   = typename context_type::resource_store;
+
+        const store_type& store = context.resources();
+
+        udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.view<udho::view::data::bridges::lua>("primary", "temp");
+
+        info inf;
+        inf.name = "NAME";
+        inf.value = 42.42;
+        inf._x    = 42;
+
+        proxy(inf, context);
+
+        context << "Hello X::f0";
+        context << context.route("f0").name();
+        context.finish();
+        std::cout << context.route("f0").name() << std::endl;
+    }
+
+    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello X::f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+    }
+};
+
+static char buffer_router[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 
-<? print(dir(ctx)) ?>
+<?
+router = ctx.routes
+stream:print("router")
+stream:print(dir(router))
+?>
 
 
-Context: <?= ctx.size ?>
+<?= ctx.routes.size ?>
 
 <?
-for k, m in ctx:pairs() do
+for k, m in router:pairs() do
     stream:print(k, m.size)
 
     for i, u in m:pairs() do
@@ -156,7 +173,7 @@ for k, m in ctx:pairs() do
 end
 ?>
 
-<?= ctx['b']['f1']:replace(1, 2, 3) ?>
+<?= router['b']['f1']:replace(1, 2, 3) ?>
 
 <? if jit then ?>
 LuaJIT is being used
@@ -187,6 +204,29 @@ end
 <# Some comments that will be ignored #>
 
 <@ verbatim block @>
+
+)TEMPLATE";
+
+static char buffer_store[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+
+<?
+store = ctx.resources
+print(dir(store))
+?>
+
+Embedding view
+<?
+local v = ctx:view("primary", "mini")
+stream:print(v:render(d))
+?>
+
+)TEMPLATE";
+
+static char buffer_mini[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+
+Hello Mini
 
 )TEMPLATE";
 
@@ -281,7 +321,9 @@ int main(){
     //
     udho::view::data::bridges::lua lua;
     lua.init();
-    lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
+    // lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
+    // lua.bind(udho::view::data::type<udho::net::proxy_wrapper<udho::view::data::bridges::lua, udho::view::data::bridges::lua>>{});
+    lua.bind(udho::view::data::type<udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua>>{});
     // // lua.bind(udho::view::data::type<subinfo>{});
     // // lua.bind(udho::view::data::type<info>{});
     // bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
@@ -319,7 +361,7 @@ int main(){
     boost::filesystem::path temp = boost::filesystem::unique_path();
     {
         std::ofstream temp_stream(temp.c_str());
-        temp_stream << buffer;
+        temp_stream << buffer_router;
         temp_stream.close();
     }
     //
@@ -354,6 +396,8 @@ int main(){
 
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp", temp));
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp2", buffer_store, buffer_store+sizeof(buffer_store)));
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("mini",  buffer_mini, buffer_mini+sizeof(buffer_mini)));
     resource_store.lock();
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
@@ -377,19 +421,35 @@ int main(){
         std::cout << i->name() << std::endl;
     }
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua.view("primary", "temp");
+    udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_store    = tmpl_lua.view("primary", "temp2");
 
 
     boost::asio::io_service service;
     auto server     = http_server{service, 9000};
     auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
 
-    udho::net::types::headers::request request;
+    udho::net::types::headers::request  request;
     udho::net::types::headers::response response;
     std::ofstream stream;
+    udho::net::types::transfer_encoding encoding;
 
-    const auto& summary = router.summary();
-    std::cout << summary.size() << std::endl;
-    std::cout << view_prefixed(inf, summary).str() << std::endl;
+    // udho::net::bridge::handler_type     null_handler    = [] (boost::system::error_code, std::size_t) -> void {};
+    udho::net::bridge::flush_callback   flush_callback  = [] (udho::net::bridge::handler_type, bool)  -> void {};
+    udho::net::bridge::finish_callback  finish_callback = [] () -> void {};
+
+    udho::net::bridge bridge{request, response, stream, encoding, std::move(flush_callback), std::move(finish_callback)};
+    udho::net::context<udho::view::data::bridges::lua> context{service, bridge, router.summary(), resource_store_proxy};
+
+
+    std::cout << view_prefixed(inf, context).str() << std::endl;
+    std::cout << view_store(inf, context).str() << std::endl;
+
+
+    // const auto& summary = router.summary();
+    // std::cout << summary.size() << std::endl;
+    // std::cout << view_prefixed(inf, summary).str() << std::endl;
+    //
+    // std::cout << view_store(inf, resource_store_proxy).str() << std::endl;
 
     server.run(artifacts);
 

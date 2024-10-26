@@ -66,7 +66,49 @@ template <typename... Bridges>
 struct const_store_prefixed;
 
 template <typename... XBridges>
+struct const_store;
+
+namespace detail {
+    template <int I, typename Tuple>
+    struct renderer_many;
+
+    template <int I, typename... Ts>
+    struct renderer_many<I, std::tuple<Ts...>> {
+        using store_type = const_store<Ts...>;
+        store_type& _store;
+
+        renderer_many(store_type& store) : _store(store) {}
+
+        template <typename DataT, typename... Args>
+        udho::view::resources::results apply(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) {
+            using bridge_type = typename std::tuple_element<I, std::tuple<Ts...>>::type;
+            using proxy_type  = udho::view::resources::tmpl::proxy<bridge_type>;
+
+            if (bridge_type::name() == lang) {
+                proxy_type proxy = _store.template view<bridge_type>(prefix, name);
+                return proxy(data, args...);
+            }
+            return renderer_many<I + 1, std::tuple<Ts...>>(_store).apply(lang, prefix, name);
+        }
+    };
+
+    template <typename... Ts>
+    struct renderer_many<sizeof...(Ts), std::tuple<Ts...>> {
+        using store_type = const_store<Ts...>;
+        store_type& _store;
+
+        renderer_many(store_type& store) : _store(store) {}
+
+        udho::view::resources::results apply(const std::string&, const std::string&, const std::string& name) {
+            udho::view::resources::results results{name};
+            return results;
+        }
+    };
+}
+
+template <typename... XBridges>
 struct const_store{
+    using self_type = const_store<XBridges...>;
     using asset_substore_readonly_js   = udho::view::resources::asset::const_substore<asset::type::js>;
     using asset_substore_readonly_css  = udho::view::resources::asset::const_substore<asset::type::css>;
     using asset_substore_readonly_img  = udho::view::resources::asset::const_substore<asset::type::img>;
@@ -81,10 +123,19 @@ struct const_store{
     const_store(const store<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store._assets), _assets_js(_assets), _assets_css(_assets), _assets_img(_assets) { }
 
     template <typename XBridgeT>
-    udho::view::resources::tmpl::const_substore<XBridgeT> tmpl() { return _tmpls_proxy.template substore<XBridgeT>(); }
+    udho::view::resources::tmpl::const_substore<XBridgeT> tmpl() const { return _tmpls_proxy.template substore<XBridgeT>(); }
 
     template <typename XBridgeT>
-    udho::view::resources::tmpl::proxy<XBridgeT> view(const std::string& prefix, const std::string& name){ return tmpl<XBridgeT>()(prefix, name); }
+    udho::view::resources::tmpl::proxy<XBridgeT> view(const std::string& prefix, const std::string& name) const {
+        udho::view::resources::tmpl::const_substore<XBridgeT> tmpl_substore = tmpl<XBridgeT>();
+        return tmpl_substore.view(prefix, name);
+    }
+
+    template <typename DataT, typename... Args>
+    udho::view::resources::results render(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) const{
+        detail::renderer_many renderer{*this};
+        return renderer(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+    }
 
     template <asset::type Type>
     const asset_substore_readonly_type& assets() { return _assets; }
@@ -92,6 +143,15 @@ struct const_store{
     const asset_substore_readonly_js&  js()  const { return _assets_js;  }
     const asset_substore_readonly_css& css() const { return _assets_css; }
     const asset_substore_readonly_img& img() const { return _assets_img; }
+
+    friend auto metatype(udho::view::data::type<self_type>){
+        using namespace udho::view::data;
+
+        return assoc("resources_const_store"),
+            fvar("js",   &self_type::js),
+            fvar("css",  &self_type::css),
+            fvar("img",  &self_type::img);
+    }
 
     // const_store_prefixed<XBridges...> operator[] (const std::string& prefix) const { return const_store_prefixed<XBridges...>{*this, prefix}; }
 

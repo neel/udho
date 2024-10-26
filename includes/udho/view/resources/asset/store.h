@@ -66,6 +66,20 @@ struct proxy{
      */
     inline std::string name() const { return _name; }
 
+   /**
+     * @brief Returns the prefix of the resource associated with this proxy.
+     * @return The prefix of the resource.
+     */
+    inline std::string prefix() const { return _prefix; }
+
+
+    friend auto metatype(udho::view::data::type<proxy>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_proxy"),
+            fvar("name",   &proxy::name),
+            fvar("prefix", &proxy::prefix);
+    }
 
     private:
         std::string  _name;
@@ -330,6 +344,7 @@ template <asset::type Type>
 struct const_substore{
     using store_type = const_store;
     using proxy_type = typename store_type::proxy_type;
+    using self_type = const_substore<Type>;
 
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
@@ -349,6 +364,14 @@ struct const_substore{
     typename store_type::type_const_iterator begin() const { return _substore.begin(Type); }
     typename store_type::type_const_iterator end()   const { return _substore.end(Type); }
     typename store_type::size_type size() const { return std::distance(begin(), end()); }
+
+    friend auto metatype(udho::view::data::type<self_type>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_const_substore"),
+            iter (&self_type::begin, &self_type::end),
+            fvar("size", &self_type::size);
+    }
 
     private:
         const store_type& _substore;

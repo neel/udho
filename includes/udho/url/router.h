@@ -70,7 +70,7 @@ struct router{
         return invoke(url, std::forward<Args>(args)...);
     }
 
-    const summary::router& summary() const { return _summary; }
+    const udho::url::summary::router& summary() const { return _summary; }
 
     private:
         void summarize(){
@@ -80,7 +80,7 @@ struct router{
         }
     private:
         mountpoints_type _mountpoints;
-        summary::router  _summary;
+        udho::url::summary::router _summary;
 };
 
 }

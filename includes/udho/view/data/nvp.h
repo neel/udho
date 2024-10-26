@@ -142,6 +142,7 @@ struct wrapper1;
 template <typename Class, typename T>
 struct wrapper1<T Class::*>: member_variable<T Class::*> {
     using member_variable<T Class::*>::member_variable;
+    static constexpr bool is_variable = true;
 };
 
 template <typename Res, typename Class, typename... Args>
@@ -152,7 +153,13 @@ struct wrapper1<Res (Class::*)(Args...)>: member_function<Res (Class::*)(Args...
 template <typename Res, typename Class, typename... Args>
 struct wrapper1<Res (Class::*)(Args...) const>: const_member_function<Res (Class::*)(Args...) const> {
     using const_member_function<Res (Class::*)(Args...) const>::const_member_function;
+    static constexpr bool is_variable = false;
 };
+
+// template <typename Res, typename Class, typename... Args>
+// struct wrapper1<Res (Class::*)() const>: const_member_function<Res (Class::*)() const> {
+//     using const_member_function<Res (Class::*)() const>::const_member_function;
+// };
 
 template <typename U, typename V>
 struct wrapper2;
