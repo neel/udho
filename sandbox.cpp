@@ -407,9 +407,9 @@ int main(){
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_store    = tmpl_lua.view("primary", "temp2");
 
 
-    boost::asio::io_service service;
-    auto server     = http_server{service, 9000};
-    auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resource_store};
+    boost::asio::io_service io;
+    auto server     = http_server{io, 9000};
+    auto artifacts  = udho::net::artifacts(router, resource_store);
 
     udho::net::types::headers::request  request;
     // udho::net::types::headers::response response;
@@ -424,7 +424,7 @@ int main(){
     // udho::net::context<udho::view::data::bridges::lua> context{service, bridge, router.summary(), resource_store_proxy};
 
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(service, router, resource_store_proxy);
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
 
 
     std::cout << view_prefixed(inf, context).str() << std::endl;

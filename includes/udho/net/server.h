@@ -22,7 +22,7 @@ struct server{
 
     template <typename ArtifactsT>
     void run(const ArtifactsT& artifacts){
-        _listener->listen(std::bind(&server_type::serve<ArtifactsT>, this, std::placeholders::_1, std::placeholders::_2, artifacts));
+        _listener->listen(std::bind(&server_type::serve<ArtifactsT>, this, std::placeholders::_1, std::placeholders::_2, std::cref(artifacts)));
     }
 
     void stop(){

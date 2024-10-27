@@ -13,6 +13,21 @@
 namespace udho{
 namespace net{
 
+namespace detail{
+
+template <typename T>
+struct is_router: std::false_type{};
+template <typename MountPointsT>
+struct is_router<udho::url::router<MountPointsT>>: std::true_type{};
+
+template <typename T>
+struct is_resource_store: std::false_type{};
+template <typename... Bridges>
+struct is_resource_store<udho::view::resources::store<Bridges...>>: std::true_type{};
+
+
+}
+
 /**
  * @brief collection of common information that are relevant to and accessible by the url callbacks over the course of executaions of the server process.
  * It contains the following items:
@@ -20,15 +35,17 @@ namespace net{
  * - resource store
  */
 template <typename RouterT, typename ResourcesStoreT>
-struct artifacts;
+struct artifacts{
+    static_assert(detail::is_router<RouterT>::value);
+    static_assert(detail::is_resource_store<ResourcesStoreT>::value);
 
-template <typename MountPointsT, typename... Bridges>
-struct artifacts<udho::url::router<MountPointsT>, udho::view::resources::store<Bridges...> >{
-    using router_type               = udho::url::router<MountPointsT>;
-    using resource_store_type       = udho::view::resources::store<Bridges...>;
-    using resource_store_proxy_type = udho::view::resources::const_store<Bridges...>;
+    using router_type               = RouterT;
+    using resource_store_type       = ResourcesStoreT;
+    using resource_store_proxy_type = typename ResourcesStoreT::const_store_type;
 
-    artifacts(const router_type& router, resource_store_type& resources): _router(router), _resources_proxy(resources) {}
+    artifacts(router_type& router, const resource_store_type& resources): _router(router), _resources_proxy(resources) {}
+    artifacts(const artifacts&) = delete;
+    artifacts(artifacts&&) = delete;
 
     const router_type& router() const { return _router; }
     const resource_store_proxy_type& resources() const { return _resources_proxy; }

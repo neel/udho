@@ -37,12 +37,20 @@ namespace udho{
 namespace view{
 namespace resources{
 
+
+template <typename... Bridges>
+struct const_store_prefixed;
+
+template <typename... XBridges>
+struct const_store;
+
 template <typename... Bridges>
 struct store{
     template <typename... XBridges>
     friend struct const_store;
 
-    using asset_store_type      = udho::view::resources::asset::store;
+    using const_store_type     = const_store<Bridges...>;
+    using asset_store_type     = udho::view::resources::asset::store;
     using tmpl_multi_substore_type = udho::view::resources::tmpl::store<Bridges...>;
 
     store(Bridges&... bridges): _tmpls(bridges...) {}
@@ -61,12 +69,6 @@ struct store{
         asset_store_type      _assets;
         tmpl_multi_substore_type _tmpls;
 };
-
-template <typename... Bridges>
-struct const_store_prefixed;
-
-template <typename... XBridges>
-struct const_store;
 
 namespace detail {
     template <int I, typename Tuple>
@@ -109,13 +111,9 @@ namespace detail {
 template <typename... XBridges>
 struct const_store{
     using self_type = const_store<XBridges...>;
-    using asset_substore_readonly_js   = udho::view::resources::asset::const_substore<asset::type::js>;
-    using asset_substore_readonly_css  = udho::view::resources::asset::const_substore<asset::type::css>;
-    using asset_substore_readonly_img  = udho::view::resources::asset::const_substore<asset::type::img>;
-
-    // template <typename... Bridges>
-    // friend struct const_store_prefixed;
-
+    using asset_substore_readonly_js     = udho::view::resources::asset::const_substore<asset::type::js>;
+    using asset_substore_readonly_css    = udho::view::resources::asset::const_substore<asset::type::css>;
+    using asset_substore_readonly_img    = udho::view::resources::asset::const_substore<asset::type::img>;
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
     using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_store<XBridges...>;
 
