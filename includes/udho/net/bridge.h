@@ -66,6 +66,15 @@ struct bridge{
     }
 
     /**
+     * @brief Writes data to the output stream.
+     * @param str Data to write.
+     * @param len length of the data to write
+     */
+    void write_latter(const char* str, std::size_t len){
+        std::copy_n(str, len, std::ostream_iterator<char>(_stream));
+    }
+
+    /**
      * @brief Adds or modifies a header in the response.
      * @param header Pair consisting of the HTTP field to modify and its value.
      * @return Reference to this bridge object.

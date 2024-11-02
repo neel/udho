@@ -166,6 +166,7 @@ namespace detail{
 
 /**
  * \brief A connection object wraps a socket.
+ * \ingroup server
  * Follows a protocol (e.g. HTTP, FastCGI, SCGI, wscgi etc..) to parse the headers.
  * Uses ProtocolT to follow the protocol and prepare a request object.
  * Once the request object is created it passes that to an asynchronous resolver to resolve a slot that will process that request.

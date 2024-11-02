@@ -17,8 +17,8 @@ namespace detail{
 
 template <typename T>
 struct is_router: std::false_type{};
-template <typename MountPointsT>
-struct is_router<udho::url::router<MountPointsT>>: std::true_type{};
+template <typename MountPointsT, typename StoreT>
+struct is_router<udho::url::basic_router<MountPointsT, StoreT>>: std::true_type{};
 
 template <typename T>
 struct is_resource_store: std::false_type{};
@@ -41,18 +41,18 @@ struct artifacts{
 
     using router_type               = RouterT;
     using resource_store_type       = ResourcesStoreT;
-    using resource_store_proxy_type = typename ResourcesStoreT::const_store_type;
+    using const_resource_store_type = typename ResourcesStoreT::const_store_type;
 
-    artifacts(router_type& router, const resource_store_type& resources): _router(router), _resources_proxy(resources) {}
+    artifacts(router_type& router, const resource_store_type& resources): _router(router), _resources(resources) {}
     artifacts(const artifacts&) = delete;
     artifacts(artifacts&&) = delete;
 
     const router_type& router() const { return _router; }
-    const resource_store_proxy_type& resources() const { return _resources_proxy; }
+    const const_resource_store_type& resources() const { return _resources; }
 
     private:
         const router_type&         _router;
-        resource_store_proxy_type  _resources_proxy;
+        const_resource_store_type  _resources;
 };
 
 }

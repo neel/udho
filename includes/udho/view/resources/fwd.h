@@ -41,9 +41,9 @@ struct proxy;
 
 namespace asset{
 
-    enum class type{
-        js, css, img
-    };
+    enum class source{ memory, disk, remote };
+
+    enum class type{ js, css, img };
 
     struct const_store;
 

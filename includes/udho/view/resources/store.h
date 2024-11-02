@@ -135,7 +135,6 @@ struct const_store{
         return renderer(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
     }
 
-    template <asset::type Type>
     const asset_substore_readonly_type& assets() { return _assets; }
 
     const asset_substore_readonly_js&  js()  const { return _assets_js;  }

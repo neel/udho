@@ -253,10 +253,10 @@ struct internal_iter_binder {
 
             return sol::as_function([i, it, end](sol::this_state ts) mutable -> std::tuple<sol::object, sol::object> {
                 if (it != end) {
-                    auto v = *it;
+                    const auto& v = *it;
 
                     auto key    = sol::make_object(ts, i + 1);
-                    auto value  = sol::make_object(ts, v);
+                    auto value  = sol::make_object(ts, std::cref(v));
 
                     ++it;
                     ++i;
@@ -281,8 +281,8 @@ struct internal_iter_binder {
 
             return sol::as_function([it, end](sol::this_state ts) mutable -> std::tuple<sol::object, sol::object> {
                 if (it != end) {
-                    auto k = it->first;
-                    auto v = it->second;
+                    const auto& k = it->first;
+                    const auto& v = it->second;
 
                     auto key    = sol::make_object(ts, k);
                     auto value  = sol::make_object(ts, v);

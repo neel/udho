@@ -90,11 +90,11 @@ std::ostream& operator<<(std::ostream& stream, const udho::hazo::basic_seq_d<mou
     return stream;
 }
 
-template <typename Mountpoints>
-std::ostream& operator<<(std::ostream& stream, const udho::url::router<Mountpoints>& router){
-    stream << router._mountpoints;
-    return stream;
-}
+// template <typename Mountpoints>
+// std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
+//     stream << router._mountpoints;
+//     return stream;
+// }
 
 }
 }

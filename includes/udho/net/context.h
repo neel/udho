@@ -112,8 +112,8 @@ struct context{
           _bridge{request, _response, _stream, _encoding, std::move([](udho::net::bridge::handler_type, bool)  -> void {}), std::move([] () -> void {})}
     {}
 
-    template <typename MountPointsT>
-    context_type create(boost::asio::io_service& io, const udho::url::router<MountPointsT>& router, const resources_type& store){
+    template <typename MountPointsT, typename StoreT>
+    context_type create(boost::asio::io_service& io, const udho::url::basic_router<MountPointsT, StoreT>& router, const resources_type& store){
         return context_type{io, _bridge, router.summary(), store};
     }
 

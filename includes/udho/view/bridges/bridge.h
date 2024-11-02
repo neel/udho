@@ -196,19 +196,7 @@ struct bridge{
      * @param prefix A prefix used in the naming of the script.
      * @return True if compilation was successful, false otherwise.
      */
-    template <typename IteratorT>
-    bool compile(resources::resource_buffer<udho::view::resources::type::view, IteratorT>&& view, const std::string& prefix){
-        std::string key = view_key(view.name(), prefix);
-        return compile(view.begin(), view.end(), key);
-    }
-
-    /**
-     * @brief Compiles a template (view) from a resource file into a script.
-     * @param view The resource file containing the template data.
-     * @param prefix A prefix used in the naming of the script.
-     * @return True if compilation was successful, false otherwise.
-     */
-    bool compile(resources::resource_file<udho::view::resources::type::view>&& view, const std::string& prefix){
+    bool compile(udho::view::resources::tmpl::resource&& view, const std::string& prefix){
         std::string key = view_key(view.name(), prefix);
         return compile(view.begin(), view.end(), key);
     }

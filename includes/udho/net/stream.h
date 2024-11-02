@@ -18,6 +18,7 @@ namespace net{
  * @brief context is a copiable handle that bridges with the connection object associated with the http request
  * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
  * transfer encoding of the response. The equest and the response objects can be accessed through the connection.
+ * \ingroup server
  * @note the context object may be copied across multiple callbacks while using chunked transfer encoding.
  *       from callback1 one may call `context.flush(std::bind(&callback2, context))` which will call the callback2
  *       function once the already written contents are flushed out.
@@ -55,6 +56,10 @@ class stream{
         template <typename StrT>
         stream& operator<<(const StrT& str){
              _bridge << str;
+            return *this;
+        }
+        stream& write(const char* str, std::size_t len){
+             _bridge.write_latter(str, len);
             return *this;
         }
         template <typename ValueT>

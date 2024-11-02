@@ -127,7 +127,7 @@ Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
 
     udho::view::data::bridges::lua lua;
     lua.init();
-    bool res = lua.compile(udho::view::resources::resource::view("user:profile", buffer, buffer+sizeof(buffer)), "");
+    bool res = lua.compile(udho::view::resources::tmpl::resource("user:profile", buffer, buffer+sizeof(buffer)), "");
     REQUIRE(res == true);
 
     student p;

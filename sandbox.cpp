@@ -362,6 +362,15 @@ int main(){
     // std::cout << "resources.views[temp](inf).str() " << std::endl;
     // std::cout << resources.views("temp", inf).str() << std::endl;
 
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp", temp));
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp2", buffer_store, buffer_store+sizeof(buffer_store)));
+    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("mini",  buffer_mini, buffer_mini+sizeof(buffer_mini)));
+    resource_store.lock();
+
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+
     using namespace udho::hazo::string::literals;
 
     X x;
@@ -374,16 +383,14 @@ int main(){
         udho::url::mount("b"_h, "/b",
             udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
             udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
-        )
+        ),
+        resource_store_proxy.assets()
     );
 
-    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp", temp));
-    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("temp2", buffer_store, buffer_store+sizeof(buffer_store)));
-    resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::resource::view("mini",  buffer_mini, buffer_mini+sizeof(buffer_mini)));
-    resource_store.lock();
+    std::cout << "Router: " << std::endl << router << std::endl;
 
-    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+
     // auto tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
     // std::cout << "see views below " << tmpl_lua.size("primary") << std::endl;
     // for(auto i = tmpl_lua.begin("primary"); i != tmpl_lua.end("primary"); ++i){
@@ -412,17 +419,6 @@ int main(){
     auto artifacts  = udho::net::artifacts(router, resource_store);
 
     udho::net::types::headers::request  request;
-    // udho::net::types::headers::response response;
-    // std::ofstream stream;
-    // udho::net::types::transfer_encoding encoding;
-    //
-    // // udho::net::bridge::handler_type     null_handler    = [] (boost::system::error_code, std::size_t) -> void {};
-    // udho::net::bridge::flush_callback   flush_callback  = [] (udho::net::bridge::handler_type, bool)  -> void {};
-    // udho::net::bridge::finish_callback  finish_callback = [] () -> void {};
-    //
-    // udho::net::bridge bridge{request, response, stream, encoding, std::move(flush_callback), std::move(finish_callback)};
-    // udho::net::context<udho::view::data::bridges::lua> context{service, bridge, router.summary(), resource_store_proxy};
-
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
     udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
 
@@ -440,5 +436,6 @@ int main(){
     server.run(artifacts);
 
     // service.run();
+    io.run();
 
 }

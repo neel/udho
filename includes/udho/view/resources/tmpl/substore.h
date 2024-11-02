@@ -128,7 +128,7 @@ class description{
 
     public:
         description() = delete;
-        description(const std::string& prefix, const resource_info& info): _name(info.name()), _prefix(prefix) {}
+        description(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {}
         description(const description&) = default;
     public:
         /**
@@ -261,19 +261,9 @@ struct substore{
      * @param prefix The prefix used in resource identification.
      * @param res The resource to add and compile.
      */
-    template <typename IteratorT>
-    void add(const std::string& prefix, resource_buffer<udho::view::resources::type::view, IteratorT>&& res) {
-        _resources.insert(description{prefix, res.info()});
-        _bridge.compile(std::forward<resource_buffer<udho::view::resources::type::view, IteratorT>>(res), prefix);
-    }
-    /**
-     * @brief Adds a resource file to the bundle and prepares it for use by compiling it through the bridge.
-     * @param prefix The prefix used in resource identification.
-     * @param res The resource file to add and compile.
-     */
-    void add(const std::string& prefix, resource_file<udho::view::resources::type::view>&& res) {
-        _resources.insert(description{prefix, res.info()});
-        _bridge.compile(std::forward<resource_file<udho::view::resources::type::view>>(res), prefix);
+    void add(const std::string& prefix, udho::view::resources::tmpl::resource&& res) {
+        _resources.insert(description{prefix, res.name()});
+        _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
     }
 
     /**
