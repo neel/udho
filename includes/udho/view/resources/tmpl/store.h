@@ -127,6 +127,7 @@ struct store<Bridge>: store_<Bridge> {
 #else
 
 /**
+ * @ingroup view
  * @brief template store containing multiple substores each with a different bridge.
  * Provides a unified interface to manage a collection of substores, each tailored to a specific bridge type.
  * @tparam Bridges Variadic template parameters representing view bridges
@@ -160,6 +161,9 @@ struct store{
     template <typename XBridgeT>
     auto substore() const;
 
+    /**
+     * @brief lock the store
+     */
     void lock();
 };
 
@@ -219,6 +223,7 @@ class const_store{
 #else
 
 /**
+ * @ingroup view
  * @brief readonly interface to multi substore
  * @tparam Bridges... set of bridges of which a readonly interface is requested (defaults to void)
  */

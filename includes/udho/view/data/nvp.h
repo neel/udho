@@ -307,6 +307,7 @@ inline constexpr bool is_wrappable_v = is_wrappable<T>::value;
 
 /**
  * @namespace policies
+ * @ingroup view
  * @brief Contains policy classes and templates for defining and checking property characteristics in a type-safe manner.
  *
  * This namespace provides a set of structures and type traits that help in defining and querying the characteristics
@@ -412,6 +413,7 @@ namespace policies{
 
 /**
  * @struct nvp
+ * @ingroup view
  * @brief Represents a name-value pair where the value is a wrapped entity, governed by a specific policy.
  *
  * This template struct is used to associate a name (key) with a wrapper that encapsulates some properties, possibly of a class,
@@ -461,6 +463,7 @@ struct nvp<PolicyT, KeyT, wrapper<X...>>{
 
 
 /**
+ * @ingroup view
  * @brief Creates a name-value pair for a member variable or member function.
  *
  * This function template assists in creating a name-value pair for properties, which can then be used for named properties.
@@ -478,6 +481,7 @@ nvp<P, K, wrapper<X...>> make_nvp(P, K&& name, X&&... v){
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function to encapsulate a member variable as mutable property.
  *
  * @param name The name of the property.
@@ -492,6 +496,7 @@ nvp< policies::property<policies::writable>, K, wrapper<X...> > mvar(K&& name, X
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function to encapsulate a member variable as constant property.
  *
  * @param name The name of the property.
@@ -506,6 +511,7 @@ nvp< policies::property<policies::readonly>, K, wrapper<X...> > cvar(K&& name, X
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function for encapsulate a pair of getter and setter as mutable property.
  *
  * @param name The name of the property.
@@ -520,6 +526,7 @@ nvp< policies::property<policies::functional>, K, wrapper<X...> > fvar(K&& name,
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function to encapsulate a member function.
  *
  * @param name The name of the function.
@@ -534,6 +541,7 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -545,6 +553,7 @@ nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGet
 }
 
 /**
+ * @ingroup view
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -555,6 +564,14 @@ nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSetterF> > i
     return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(u), std::forward<IndexSetterF>(v));
 }
 
+/**
+ * @ingroup view
+ * @brief Convenience function to encapsulate a an iterable object.
+ *
+ * @param BeginF function that returns the begin iterator.
+ * @param EndF function that returns the end iterator.
+ * @return A name-value pair encapsulating the function.
+ */
 template <typename BeginF, typename EndF>
 nvp< policies::iterable, std::string, wrapper<BeginF, EndF> > iter(BeginF&& u, EndF&& v){
     return make_nvp(policies::iterable{}, std::string{"__iter__"}, std::forward<BeginF>(u), std::forward<EndF>(v));

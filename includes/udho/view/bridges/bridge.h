@@ -105,6 +105,7 @@ struct bind<BridgeT, ClassT, false>{
  *
  * }
  * @endcode
+ * @ingroup view
  */
 template <typename BridgeT, typename ClassT>
 struct bind: detail::bind<BridgeT, ClassT>{};
@@ -113,17 +114,11 @@ struct bind: detail::bind<BridgeT, ClassT>{};
 namespace bridges{
 
 /**
- * @brief a subset of information regarding the global state, environment and context of invocation (e.g. HTTP request, URL routes summary, resource dictionary etc..)
- */
-// struct context{
-//     const udho::url::summary::router& _router_summary;
-// };
-
-/**
  * @brief supposed to be instantiated by the bridge itself for binding any type with that bridge.
  * @warning Do not specialize. Not intended to be used directly by the user code.
  * @details checks whether the type is already bound or not. If not then forwards to @ref udho::view::data::bind
  * @details borrows state. does not own anything.
+ * @ingroup view
  */
 template <typename BridgeT>
 struct bind{
@@ -147,6 +142,7 @@ struct bind{
 
 /**
  * @class bridge
+ * @ingroup view
  * @brief Manages the compilation and execution of scripts within a template engine framework.
  *
  * This template class binds scripting functionality with a state management system, allowing for dynamic compilation and execution of templates.

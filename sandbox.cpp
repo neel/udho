@@ -27,6 +27,7 @@
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
 #include <udho/net/artifacts.h>
+#include <tabulate/table.hpp>
 
 struct subinfo{
     std::string desc = "DESC";
@@ -159,8 +160,10 @@ for k, m in ctx.routes:pairs() do
 
     for i, u in m:pairs() do
         echo(i, u)
+        echo('\n')
     end
-    echo()
+    echo('\n')
+    echo('\n')
 end
 ?>
 
@@ -202,14 +205,70 @@ static char buffer_store[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 
 Embedding view
-<?= ctx:view("primary", "mini"):render(d) ?>
+<?= ctx:view("primary", "mini"):render() ?>
 
 )TEMPLATE";
 
 static char buffer_mini[] = R"TEMPLATE(
-<?! vars('d', 'ctx') ?>
+<?! vars('d', 'ctx'); whitespace(false) ?>
 
-Hello Mini
+Mount points (<?= ctx.routes.size ?>)
+==================
+<? for label, mountpoint in ctx.routes:pairs() do ?>
+    <? echo('\n') ?>
+    <?= string.format("%s -> %s (%d)", label, mountpoint.path, mountpoint.size) ?>
+    <?
+        echo('\n')
+        local table = udho.Tabulate.new()
+        for name, pattern in mountpoint:pairs() do
+            table:add(name, pattern)
+        end
+    ?>
+
+<?= table ?>
+<? end ?>
+
+
+Javascript Assets (<?= ctx.resources.js.size ?>)
+=======================
+<? if ctx.resources.js.size == 0 then ?>
+    <?= 'No Javascript Assets added' ?>
+<? else ?>
+    <? local table = udho.Tabulate.new() ?>
+    <? for i, js in ctx.resources.js:ipairs() do ?>
+        <? table:add(js.prefix, js.name, js.url) ?>
+    <? end ?>
+
+    <?= table ?>
+<? end ?>
+
+
+CSS Assets (<?= ctx.resources.css.size ?>)
+================
+<? if ctx.resources.css.size == 0 then ?>
+    <?= 'No CSS Assets added' ?>
+<? else ?>
+    <? local table = udho.Tabulate.new() ?>
+    <? for i, css in ctx.resources.css:ipairs() do ?>
+        <? table:add(css.prefix, css.name, string.format("/%s/%s", css.prefix, css.name)) ?>
+    <? end ?>
+
+    <?= table ?>
+<? end ?>
+
+
+Image Assets (<?= ctx.resources.img.size ?>)
+=================
+<? if ctx.resources.img.size == 0 then ?>
+    <?= 'No Image Assets added' ?>
+<? else ?>
+    <? local table = udho.Tabulate.new() ?>
+    <? for i, img in ctx.resources.img:ipairs() do ?>
+        <? table:add(img.prefix, img.name, string.format("/%s/%s", img.prefix, img.name)) ?>
+    <? end ?>
+
+    <?= table ?>
+<? end ?>
 
 )TEMPLATE";
 
@@ -304,6 +363,7 @@ int main(){
     //
     udho::view::data::bridges::lua lua;
     lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
     // lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
     // lua.bind(udho::view::data::type<udho::net::proxy_wrapper<udho::view::data::bridges::lua, udho::view::data::bridges::lua>>{});
     // lua.bind(udho::view::data::type<udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua>>{});
@@ -366,6 +426,10 @@ int main(){
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp", temp));
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp2", buffer_store, buffer_store+sizeof(buffer_store)));
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("mini",  buffer_mini, buffer_mini+sizeof(buffer_mini)));
+
+    std::string js_str = "console.log('Hello World')";
+
+    resource_store.assets().add("primary", udho::view::resources::asset::js("hello.js", js_str.begin(), js_str.end()));
     resource_store.lock();
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
@@ -375,14 +439,14 @@ int main(){
 
     X x;
     auto router = udho::url::router(
-        udho::url::root(
-            udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
-            udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
-            udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
-        ) |
-        udho::url::mount("b"_h, "/b",
-            udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
-            udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+          udho::url::root(
+                udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)
+              | udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
+              | udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+          )
+        | udho::url::mount("b"_h, "/b",
+              udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
+            | udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
         ),
         resource_store_proxy.assets()
     );

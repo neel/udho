@@ -91,7 +91,7 @@ struct buffer{
                     break;
             }
         }
-        result.append("\n");
+        // result.append("\n");
         _buffer.append(result);
     }
 

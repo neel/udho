@@ -36,6 +36,7 @@
 #include <udho/net/context.h>
 #include <fmt/core.h>
 #include <fmt/args.h>
+#include <tabulate/table.hpp>
 
 namespace udho{
 namespace view{
@@ -44,6 +45,7 @@ namespace bridges{
 
 /**
  * @typedef lua
+ * @ingroup view
  * @brief A specialized bridge configured for Lua scripting.
  *
  * This type alias represents a specific instantiation of the `bridge` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
@@ -191,6 +193,15 @@ namespace udho::view::data{
             // });
 
             type.set_function("render", sol::overload(
+                [&state](const class_type& self) mutable -> std::string {
+                    try {
+                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                        return state.exec_lua(view_key, sol::nil, self.context()); // TODO how to pass nill as d ?
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
+                },
                 [&state](const class_type& self, sol::object d) mutable -> std::string {
                     try {
                         std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
@@ -241,7 +252,39 @@ namespace udho::view::data{
                 }
             });
         }
+    };
 
+    template <>
+    struct bind<bridges::lua, tabulate::Table>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = tabulate::Table;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::view::data::bind<lua, tabulate::Table>>: binding" << std::endl;
+
+            user_type type = state.udho().new_usertype<class_type>("Tabulate",
+                "new", sol::constructors<class_type()>(),
+                "str", &class_type::str,
+                "__tostring", &class_type::str
+            );
+            type.set_function("add", [](class_type& self, sol::variadic_args va) {
+                using row_type = tabulate::Table::Row_t;
+                row_type row;
+
+                for (auto v : va) {
+                    if(v.is<tabulate::Table>()){
+                        row.push_back("Unsupported");
+                    } else {
+                        std::string value = v.as<std::string>();
+                        row.push_back(value);
+                    }
+                }
+                self.add_row(row);
+            });
+        }
     };
 
 }

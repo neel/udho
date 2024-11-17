@@ -81,6 +81,25 @@ namespace detail{
         }
     };
 
+    template<>
+    struct convert_str_to_type<bool> {
+        static bool apply(const std::string& str, bool* ok = nullptr){
+            std::string lower_str = str;
+            std::transform(lower_str.begin(), lower_str.end(), lower_str.begin(), [](unsigned char c) { return std::tolower(c); });
+
+            if (lower_str == "true" || lower_str == "on" || lower_str == "1") {
+                if (ok) *ok = true;
+                return true;
+            } else if (lower_str == "false" || lower_str == "off" || lower_str == "0") {
+                if (ok) *ok = true;
+                return false;
+            } else {
+                if (ok) *ok = false;
+                return false;
+            }
+        }
+    };
+
 
     template<typename T>
     struct convert_str_to_type<std::chrono::duration<T>> {

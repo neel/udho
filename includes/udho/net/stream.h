@@ -62,6 +62,11 @@ class stream{
              _bridge.write_latter(str, len);
             return *this;
         }
+        template <typename Iterator>
+        stream& write(Iterator begin, Iterator end){
+             _bridge.write_latter(begin, end);
+            return *this;
+        }
         template <typename ValueT>
         void set(const boost::beast::http::field& field, const ValueT& value){
             _bridge.set(field, value);

@@ -49,6 +49,7 @@ namespace tmpl{
 
 /**
  * @struct proxy
+ * @ingroup view
  * @brief Manages the execution of a resource using a specified bridge and collects the results.
  *
  * This template struct acts as an interface between resource data and the bridge that handles its execution, capturing the output and storing it in a results structure.
@@ -120,6 +121,7 @@ struct proxy{
 };
 
 /**
+ * @ingroup view
  * @brief description of a view
  */
 class description{
@@ -143,6 +145,7 @@ class description{
 
 /**
  * @class store
+ * @ingroup view
  * @brief The global view store that holds all views from all modules using the same bridge.
  *
  * Usage:
@@ -306,6 +309,7 @@ struct substore{
 };
 
 /**
+ * @ingroup view
  * @brief copiable readonly accessor for a template substore associated with a bridge
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  * @tparam BridgeT the foreign language bridge

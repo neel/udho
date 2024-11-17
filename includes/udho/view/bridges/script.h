@@ -48,6 +48,7 @@ namespace bridges{
 
 /**
  * @struct stream
+ * @ingroup view
  * @brief A generic text stream class for handling formatted text output with controlled indentation.
  *
  * This template class facilitates structured text generation, which is particularly useful for scripting and code generation in various languages. It manages indentation and newlines to produce readable and well-formatted output.
@@ -213,7 +214,8 @@ struct stream{
 };
 
 /**
- * @struct script
+ * @struct basic_script
+ * @ingroup view
  * @brief A specialized stream for handling script generation, particularly useful in scenarios where scripts or code need to be dynamically generated from templates.
  *
  * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
@@ -222,6 +224,11 @@ template <typename DerivedT>
 struct basic_script: stream<char, '\t'>{
     using derived_type = DerivedT;
 
+    /**
+     * @brief meta block configuration object
+     * @details A destription object is passed to the meta block, which is modified by the instruction present in that block.
+     *          After that the description object is accessed to interpret the consfigurations expressed by the view template.
+     */
     struct description{
         struct vars_{
             std::string data    = "d";
@@ -239,14 +246,16 @@ struct basic_script: stream<char, '\t'>{
         std::string name;
         std::string bridge;
         vars_       vars;
+        bool        whitespace = false;
 
         friend auto metatype(udho::view::data::type<description>){
             using namespace udho::view::data;
 
             return assoc("description"),
-                mvar("name",    &description::name),
-                mvar("bridge",  &description::bridge),
-                mvar("vars",    &description::vars);
+                mvar("name",       &description::name),
+                mvar("bridge",     &description::bridge),
+                mvar("vars",       &description::vars),
+                mvar("whitespace", &description::whitespace);
         }
     };
     /**
@@ -286,10 +295,23 @@ struct basic_script: stream<char, '\t'>{
             _meta_processed = true;
         } else {
             if(!_meta_processed){
-                // warn discarding a block encountered before the meta block
+                // TODO warn discarding a block encountered before the meta block
                 discard(section);
             } else {
-                self().process(section);
+                if (section.size() == 0) {
+                    // empty section always discard
+                    discard(section);
+                } else if (section.type() == udho::view::tmpl::section::text && !_description.whitespace && section.is_whitespace() && section.size() > 1) {
+                    // whitespace if false and the section has only whitespaces and there are more than one white space
+                    // hence discard
+                    // Note: if the section has exactly one white space then keep it
+                    const std::string& content = section.content();
+                    discard(section);
+                    udho::view::tmpl::section space{udho::view::tmpl::section::text, std::string{content[0]}};
+                    self().process(space);
+                } else {
+                    self().process(section);
+                }
             }
         }
     }

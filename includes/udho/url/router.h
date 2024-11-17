@@ -134,6 +134,9 @@ struct routing_table{
             if(normalized_path.empty()){
                 return false;
             }
+            if(!std::filesystem::exists(normalized_path)){
+                return false;
+            }
 
             try {
                 std::string mime = mime_type(normalized_path);

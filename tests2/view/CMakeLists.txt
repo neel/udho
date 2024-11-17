@@ -15,8 +15,12 @@ endif()
 add_executable(view-parser parser.cpp)
 target_link_libraries(view-parser PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
-add_executable(resources resources)
-target_link_libraries(resources PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+add_executable(data-meta meta.cpp)
+target_link_libraries(data-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+
+add_executable(lua lua.cpp)
+target_link_libraries(lua PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
 catch_discover_tests(view-parser)
-catch_discover_tests(resources)
+catch_discover_tests(data-meta)
+catch_discover_tests(lua)

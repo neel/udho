@@ -45,6 +45,59 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+namespace scripts{
+
+inline const std::string& dir() {
+    // https://snipplr.com/view/13085
+    static const std::string code = R"(
+        function dir(obj, level)
+            local s, t = '', type(obj)
+            level = level or ''
+
+            if t == 'nil' or t == 'boolean' or t == 'number' or t == 'string' then
+                s = tostring(obj)
+                if t == 'string' then
+                    s = '"' .. s .. '"'
+                end
+            elseif t == 'function' then
+                s = 'function'
+            elseif t == 'userdata' or t == 'thread' then
+                local mt = getmetatable(obj)
+                if mt then
+                    s = s .. '{\n'
+                    for k, v in pairs(mt) do
+                        local funcType = type(v) == 'function' and 'function' or 'value'
+                        -- Heuristic to differentiate potential properties (common in userdata)
+                        if type(v) == 'function' and (k:sub(1, 3) == 'get' or k:sub(1, 3) == 'set') then
+                            funcType = 'property'
+                        end
+                        s = s .. level .. '  ' .. tostring(k) .. ': ' .. funcType .. ',\n'
+                    end
+                    s = s .. level .. '}'
+                else
+                    s = tostring(obj) -- Default to a simple tostring if no metatable or special handling defined
+                end
+            elseif t == 'table' then
+                s = '{\n'
+                for k, v in pairs(obj) do
+                    local k_str = tostring(k)
+                    if type(k) == 'string' then
+                        k_str = '["' .. k_str .. '"]'
+                    end
+                    s = s .. level .. '  ' .. k_str .. ' = ' .. dir(v, level .. '  ') .. ',\n'
+                end
+                s = s .. level .. '}'
+            end
+
+            return s
+        end
+    )";
+
+    return code;
+}
+
+
+}
 /**
  * @struct state
  * @brief Manages the Lua scripting environment, including libraries, global variables, and script execution.
@@ -95,51 +148,8 @@ struct state{
         //     }
         //     return 1;  // Return the number of values pushed onto the stack
         // });
-        // https://snipplr.com/view/13085
-        std::string dir_code = R"(
-            function dir(obj, level)
-                local s, t = '', type(obj)
-                level = level or ''
 
-                if t == 'nil' or t == 'boolean' or t == 'number' or t == 'string' then
-                    s = tostring(obj)
-                    if t == 'string' then
-                        s = '"' .. s .. '"'
-                    end
-                elseif t == 'function' then
-                    s = 'function'
-                elseif t == 'userdata' or t == 'thread' then
-                    local mt = getmetatable(obj)
-                    if mt then
-                        s = s .. '{\n'
-                        for k, v in pairs(mt) do
-                            local funcType = type(v) == 'function' and 'function' or 'value'
-                            -- Heuristic to differentiate potential properties (common in userdata)
-                            if type(v) == 'function' and (k:sub(1, 3) == 'get' or k:sub(1, 3) == 'set') then
-                                funcType = 'property'
-                            end
-                            s = s .. level .. '  ' .. tostring(k) .. ': ' .. funcType .. ',\n'
-                        end
-                        s = s .. level .. '}'
-                    else
-                        s = tostring(obj) -- Default to a simple tostring if no metatable or special handling defined
-                    end
-                elseif t == 'table' then
-                    s = '{\n'
-                    for k, v in pairs(obj) do
-                        local k_str = tostring(k)
-                        if type(k) == 'string' then
-                            k_str = '["' .. k_str .. '"]'
-                        end
-                        s = s .. level .. '  ' .. k_str .. ' = ' .. dir(v, level .. '  ') .. ',\n'
-                    end
-                    s = s .. level .. '}'
-                end
-
-                return s
-            end
-        )";
-        _state.script(dir_code);
+        _state.script(scripts::dir());
         _udho = _state["udho"].get_or_create<sol::table>();
         buffer::apply(_udho);
     }

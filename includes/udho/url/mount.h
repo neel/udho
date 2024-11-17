@@ -44,7 +44,7 @@ struct mount_point{
      * @param path Base URL path to which this mount point is mapped.
      * @param actions Actions associated with this mount point.
      */
-    mount_point(name_type&& name, const std::string& path, actions_type&& actions): _name(std::move(name)), _path(path), _actions(std::move(actions)), _summary(name.c_str()) {
+    mount_point(name_type&& name, const std::string& path, actions_type&& actions): _name(std::move(name)), _path(path), _actions(std::move(actions)), _summary(_name.c_str(), _path) {
         check();
         summarize();
     }

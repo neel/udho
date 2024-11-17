@@ -253,10 +253,13 @@ struct internal_iter_binder {
 
             return sol::as_function([i, it, end](sol::this_state ts) mutable -> std::tuple<sol::object, sol::object> {
                 if (it != end) {
-                    const auto& v = *it;
-
-                    auto key    = sol::make_object(ts, i + 1);
-                    auto value  = sol::make_object(ts, std::cref(v));
+                    sol::object key = sol::make_object(ts, i + 1);
+                    sol::object value;
+                    if constexpr (std::is_reference<decltype(*it)>::value) {
+                        value = sol::make_object(ts, std::cref(*it));
+                    } else {
+                        value = sol::make_object(ts, *it);
+                    }
 
                     ++it;
                     ++i;

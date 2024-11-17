@@ -42,6 +42,7 @@ namespace detail {
 
 /**
  * @struct results
+ * @ingroup view
  * @brief Encapsulates the output of a resource execution, including metadata like name, size, and type.
  *
  * This structure is used to store and access the results of executing a resource, such as a rendered view. It is not constructible directly but through friend classes that manage resource execution.
@@ -55,6 +56,9 @@ struct results{
 
     results() = delete;  ///< Prevents direct construction of results instances.
 
+    /**
+     * @brief checks if the output is empty
+     */
     inline bool empty() const { return size() == 0; }
 
     /**

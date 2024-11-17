@@ -87,8 +87,14 @@ namespace detail{
                     } else if (c->template is_type<ast::boolean>()) {
                         std::string q_str = c->string();
                         boost::algorithm::to_lower(q_str);
-                        if(q_str == "on"  || q_str == "true")  return std::string{"1"};
-                        if(q_str == "off" || q_str == "false") return std::string{"0"};
+                        if(q_str == "on"  || q_str == "true") {
+                            ++counter;
+                            return std::string{"1"};
+                        }
+                        if(q_str == "off" || q_str == "false") {
+                            ++counter;
+                            return std::string{"0"};
+                        }
                         return std::string{};
                     } else {
                         return std::string{};

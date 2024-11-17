@@ -71,13 +71,19 @@ struct mount_point{
      * @brief Constructs a summary mount point with the specified name.
      * @param name The name of the mount point, typically derived from a compile-time string in the detailed mount_point.
      */
-    inline explicit mount_point(const char* name): _name(name) {}
+    inline explicit mount_point(const char* name, const std::string& path): _name(name), _path(path) {}
 
     /**
      * @brief Retrieves the name of the mount point.
      * @return The name as a standard string.
      */
     inline const std::string& name() const { return _name; }
+
+    /**
+     * @brief Retrieves the path of the mount point.
+     * @return The path as a standard string.
+     */
+    inline const std::string& path() const { return _path; }
 
     /**
      * @brief Provides access to a url_proxy (for facilitating URL replacements) by a specific key used in slot while constructing the routing table.
@@ -128,11 +134,13 @@ struct mount_point{
             iter (&mount_point::begin, &mount_point::end),
             func("url",  &mount_point::url),
             fvar("name", &mount_point::name),
+            fvar("path", &mount_point::path),
             fvar("size", &mount_point::size);
     }
 
     private:
         std::string     _name;
+        std::string     _path;
         container_type  _replacements;
 };
 

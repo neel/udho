@@ -12,6 +12,7 @@ namespace view{
 namespace tmpl{
 
 /**
+ * @ingroup view
  * @struct section
  * @brief Represents a segment or section of a template, categorized by type and containing specific content.
  *
@@ -96,6 +97,15 @@ struct section {
      * @return The size of the content as a std::size_t.
      */
     inline const std::size_t size() const { return _content.size(); }
+    /**
+     * @brief Checks if the contents of the section is whitespace only.
+     * @return boolean value denoting whether the contents of the section is whitespace only.
+     */
+    inline bool is_whitespace() const {
+        return std::all_of(_content.begin(), _content.end(), [](unsigned char c) {
+            return std::isspace(c);
+        });
+    }
     /**
      * @brief Converts a section type to its corresponding name string.
      * @param type The section type.

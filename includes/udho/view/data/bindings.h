@@ -51,6 +51,7 @@ namespace data{
 
 /**
  * @class bindings
+ * @ingroup view
  * @brief keeps track of binding of a C++ wiith with a foreign language backend.
  * @tparam StateT the state class representing the state of the foreign language runtime
  * @tparam T type C++ type
@@ -64,6 +65,9 @@ struct bindings{
     template <typename BridgeT>
     friend struct udho::view::data::bridges::bind;
 
+    /**
+     * @brief checks whether binding already exists or not
+     */
     static bool exists() { return _exists; }
     private:
         static bool _exists;

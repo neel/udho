@@ -44,22 +44,69 @@ struct const_store_prefixed;
 template <typename... XBridges>
 struct const_store;
 
+/**
+ * @ingroup view
+ * @brief The resource store combines storage for view templates written in foreign languages (such as lua) as well as assets (e.g. js, css, images etc..)
+ * @tparam Bridges... the foreign language bridges for view executaion of the views
+ *
+ * @code
+ * udho::view::data::bridges::lua lua;
+ * lua.init();
+ *
+ * udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+ *
+ * boost::filesystem::path view_path = "/path/to/lua/view_x.lua";
+ * std::string             js_str    = "console.log('Hello World')";
+ *
+ * store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("view_x", view_path));
+ * store.assets().add("primary", udho::view::resources::asset::js("hello.js", js_str.begin(), js_str.end()));
+ *
+ * store.lock();
+ *
+ * udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+ *
+ * // Now access the views and assets as follows
+ *
+ * udho::view::resources::tmpl::const_substore<udho::view::data::bridges::lua> lviews = cstore.tmpl<udho::view::data::bridges::lua>();
+ * udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_x = lviews.view("primary", "view_x");
+ *
+ * std::cout << view_x(data, context) << std::endl; // Call the view_x as a function with the data and the context
+ * @endcode
+ */
 template <typename... Bridges>
 struct store{
     template <typename... XBridges>
     friend struct const_store;
 
-    using const_store_type     = const_store<Bridges...>;
-    using asset_store_type     = udho::view::resources::asset::store;
-    using tmpl_multi_substore_type = udho::view::resources::tmpl::store<Bridges...>;
+    using const_store_type          = const_store<Bridges...>;
+    using asset_store_type          = udho::view::resources::asset::store;
+    using tmpl_multi_substore_type  = udho::view::resources::tmpl::store<Bridges...>;
 
+    /**
+     * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
+     * @param bridges... references to the bridges
+     */
     store(Bridges&... bridges): _tmpls(bridges...) {}
 
+    /**
+     * @brief access a substore dedicated for one particular bridge
+     * @tparam Bridge the requested Bridge
+     * @return udho::view::resources::tmpl::substore<Bridge> substore for the specific Bridge
+     */
     template <typename Bridge>
     typename tmpl_multi_substore_type::template substore_type<Bridge>& tmpl() { return _tmpls.template substore<Bridge>(); }
 
+    /**
+     * @brief gets reference to the asset store
+     * @return reference to the asset store
+     */
     asset_store_type& assets() { return _assets; }
 
+    /**
+     * @brief lock the storage
+     * @warning The store should be locked before it is used for reading operations such as accessing/rendering views and assets.
+     *          Once locked no other views or assets can be added to the store.
+     */
     void lock() {
         _tmpls.lock();
         _assets.lock();
@@ -108,6 +155,18 @@ namespace detail {
     };
 }
 
+/**
+ * @ingroup view
+ * @brief Once a resource store is constructed, it is accessed through a const_store.
+ * This ensures that the resources are added to the store only once during the initialization and never again.
+ * The const_store only supports readonly operations on the resource store (including rendering of the views).
+ * The resource store has to be locked before it can be passed to the const_store. This ensures that there won't
+ * be any write operation on the resource store once the server starts serving the resources. This also makes it
+ * easy in terms of handling multithreaded environment, because even though there could no concurrent reads, there
+ * won't be any concurrent write operations.
+ *
+ * @tparam XBridges The bridges accessible by the const_store.
+ */
 template <typename... XBridges>
 struct const_store{
     using self_type = const_store<XBridges...>;
@@ -117,31 +176,78 @@ struct const_store{
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
     using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_store<XBridges...>;
 
+    /**
+     * @brief construct a const_store from a resource store
+     * @tparam Bridges A suuperset of Bridges
+     * @param store a resource store supporting superset of bridges
+     */
     template <typename... Bridges>
     const_store(const store<Bridges...>& store): _tmpls_proxy(store._tmpls), _assets(store._assets), _assets_js(_assets), _assets_css(_assets), _assets_img(_assets) { }
 
+    /**
+     * @brief a const interface to a substore for view templates
+     * @tparam XBridgeT The intended bridge
+     * @return returns a const_substore specialized for accessing view templates for a specified bridge
+     */
     template <typename XBridgeT>
     udho::view::resources::tmpl::const_substore<XBridgeT> tmpl() const { return _tmpls_proxy.template substore<XBridgeT>(); }
 
+    /**
+     * @brief access a view through a bridge by the prefix and the name
+     * @tparam XBridgeT the bridge on which the intended view template is registered.
+     * @param prefix prefix of the view template
+     * @param name name of the biew template
+     */
     template <typename XBridgeT>
     udho::view::resources::tmpl::proxy<XBridgeT> view(const std::string& prefix, const std::string& name) const {
         udho::view::resources::tmpl::const_substore<XBridgeT> tmpl_substore = tmpl<XBridgeT>();
         return tmpl_substore.view(prefix, name);
     }
 
+    /**
+     * @brief renders a view and returns result while matching the bridge at runtime.
+     * @tparam DataT type of the data passed to the view template
+     * @tparam Args... types of the additional arguments passed to teh view template
+     * @param lang name of the bridge e.g. lua
+     * @param prefix view prefix
+     * @param name view name
+     * @param data data passed to the view
+     * @param args... additional arguments
+     */
     template <typename DataT, typename... Args>
     udho::view::resources::results render(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) const{
         detail::renderer_many renderer{*this};
         return renderer(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief const reference to the assets store
+     */
     const asset_substore_readonly_type& assets() { return _assets; }
 
+    /**
+     * @brief const reference to the asset substore specific for javascript
+     */
     const asset_substore_readonly_js&  js()  const { return _assets_js;  }
+    /**
+     * @brief const reference to the asset substore specific for stylesheets
+     */
     const asset_substore_readonly_css& css() const { return _assets_css; }
+    /**
+     * @brief const reference to the asset substore specific for images
+     */
     const asset_substore_readonly_img& img() const { return _assets_img; }
 
-    friend auto metatype(udho::view::data::type<self_type>){
+    /**
+     * @brief resources::const_store<XBridges...> is exposed to lua with the following properties
+     * +------+------------------------+
+     * | js   | property               |
+     * | css  | property               |
+     * | img  | property               |
+     * | view | function(prefix, name) |
+     * +------+------------------------+
+     */
+    friend auto metatype(udho::view::data::type<const_store<XBridges...>>){
         using namespace udho::view::data;
 
         return assoc("resources_const_store"),

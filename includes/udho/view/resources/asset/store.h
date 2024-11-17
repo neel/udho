@@ -38,6 +38,7 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/results.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace udho{
 namespace view{
@@ -45,49 +46,9 @@ namespace resources{
 
 namespace asset{
 
-
-/**
- * @struct proxy
- * @brief proxies an asset.
- */
-struct proxy{
-
-    /**
-     * @brief Constructs a proxy for a given resource and bridge.
-     * @param name The name of the resource
-     * @param prefix The prefix used in resource identification.
-     * @param bridge Reference to the bridge used for resource execution.
-     */
-    proxy(const std::string& name, const std::string& prefix): _name(name), _prefix(prefix) {}
-
-    /**
-     * @brief Returns the name of the resource associated with this proxy.
-     * @return The name of the resource.
-     */
-    inline std::string name() const { return _name; }
-
-   /**
-     * @brief Returns the prefix of the resource associated with this proxy.
-     * @return The prefix of the resource.
-     */
-    inline std::string prefix() const { return _prefix; }
-
-
-    friend auto metatype(udho::view::data::type<proxy>){
-        using namespace udho::view::data;
-
-        return assoc("resources_asset_proxy"),
-            fvar("name",   &proxy::name),
-            fvar("prefix", &proxy::prefix);
-    }
-
-    private:
-        std::string  _name;
-        std::string  _prefix;
-};
-
 /**
  * @brief description of an asset
+ * @ingroup view
  */
 class description{
     using resource_ptr = udho::view::resources::asset::resource_ptr;
@@ -123,10 +84,94 @@ class description{
          * @brief type of the asset
          */
         asset::type type() const { return _res->type(); }
+
+        friend auto metatype(udho::view::data::type<description>){
+            using namespace udho::view::data;
+
+            return assoc("asset_description"),
+                fvar("name",   &description::name),
+                fvar("prefix", &description::prefix);
+        }
 };
 
 /**
+ * @struct proxy
+ * @ingroup view
+ * @brief proxies an asset.
+ */
+struct proxy{
+
+    /**
+     * @brief Constructs a proxy for a given resource and bridge.
+     * @param name The name of the resource
+     * @param prefix The prefix used in resource identification.
+     * @param bridge Reference to the bridge used for resource execution.
+     */
+    proxy(const description& desc,  const std::string& base): _desc(desc), _base(base) {}
+
+    /**
+     * @brief Returns the name of the resource associated with this proxy.
+     * @return The name of the resource.
+     */
+    inline std::string name() const { return _desc.name(); }
+
+   /**
+     * @brief Returns the prefix of the resource associated with this proxy.
+     * @return The prefix of the resource.
+     */
+    inline std::string prefix() const { return _desc.prefix(); }
+
+    /**
+     * @brief type of the asset
+     */
+    asset::type type() const { return _desc.type(); }
+
+    /**
+     * @brief gets base url of the asset store
+     * @details an asset with prefix "blog", name "theme.css" will be served as /base/blog/theme.css
+     */
+    const std::string& base() const { return _base; }
+
+    /**
+     * @brief expected url of the asset
+     */
+    const std::string url() const {
+        return udho::url::format("/{}/{}/{}", _base, prefix(), name());
+    }
+
+    /**
+     * @brief write the asset contents to stream
+     */
+    std::size_t write(udho::net::stream& stream) const{
+        return _desc.write(stream);
+    }
+
+    /**
+     * @brief exposed to lua via the following properties
+     * +----------+------------+
+     * | name     | property   |
+     * | prefix   | property   |
+     * | url      | property   |
+     * +----------+------------+
+     */
+    friend auto metatype(udho::view::data::type<proxy>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_proxy"),
+            fvar("name",   &proxy::name),
+            fvar("prefix", &proxy::prefix),
+            fvar("url",    &proxy::url);
+    }
+
+    private:
+        const description& _desc;
+        const std::string& _base;
+};
+
+
+/**
  * @class store
+ * @ingroup view
  * @brief The global asset store that holds all assets from all modules.
  *
  * Usage:
@@ -135,8 +180,6 @@ class description{
  * - Concurrent writing and reading are not allowed to ensure data consistency and to prevent race conditions.
  */
 struct store{
-    using proxy_type             = proxy;
-
     /**
      * @struct tags
      * @brief Provides tags for indexing the resource set.
@@ -223,7 +266,7 @@ struct store{
      * @brief Constructs a bundle with a specified bridge.
      * @param bridge Reference to the bridge used for resource compilation and execution.
      */
-    explicit store(): _locked(false) {}
+    explicit store(): _locked(false), _base("/") {}
     store(const store&) = delete; ///< Prevents copying.
 
     /**
@@ -307,13 +350,16 @@ struct store{
 
     /**
      * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
-     * @tparam IteratorT The type of the iterator used to define the resource.
      * @param prefix The prefix used in resource identification.
-     * @param res The resource to add and compile.
+     * @param res The resource to add.
      */
-    template <typename IteratorT>
-    void add(const std::string& prefix, udho::view::resources::asset::resource_ptr&& res) {
-        _resources.insert(description{prefix, std::move(res)});
+   const description& add(const std::string& prefix, udho::view::resources::asset::resource_ptr&& res) {
+       std::string name = res->name();
+        auto it = _resources.insert(description{prefix, std::move(res)});
+        if(!it.second){
+            throw std::runtime_error{udho::url::format("Filed to add asset {}/{}", prefix, name)};
+        }
+        return *(it.first);
     }
 
 
@@ -328,26 +374,53 @@ struct store{
      */
     void lock() { _locked = true; }
 
+    /**
+     * @brief gets base url of the asset store
+     * @details an asset with prefix "blog", name "theme.css" will be served as /base/blog/theme.css
+     */
+    const std::string& base() const { return _base; }
+    /**
+     * @brief sets base url of the asset store
+     * @details an asset with prefix "blog", name "theme.css" will be served as /base/blog/theme.css
+     */
+    void base(const std::string& url) { _base = url; }
+
     private:
         resource_set _resources;
         std::atomic<bool> _locked;
+        std::string _base;
 };
 
 
 /**
+ * @ingroup view
  * @brief copiable readonly accessor for the asset store
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  */
 struct const_store{
     using store_type  = store;
-    using proxy_type  = typename store_type::proxy_type;
+    using proxy_type  = proxy;
 
-    using prefix_const_iterator    = typename store_type::prefix_const_iterator;
-    using name_const_iterator      = typename store_type::name_const_iterator;
-    using type_const_iterator      = typename store_type::type_const_iterator;
-    using combined_const_iterator  = typename store_type::combined_const_iterator;
-    using composite_const_iterator = typename store_type::composite_const_iterator;
-    using uri_const_iterator       = typename store_type::uri_const_iterator;
+    template <typename Iterator>
+    struct proxy_iterator : public boost::iterator_adaptor<proxy_iterator<Iterator>, Iterator, proxy_type, boost::use_default, proxy_type> {
+        proxy_iterator() : proxy_iterator::iterator_adaptor_() {}
+        explicit proxy_iterator(Iterator it, const std::string& base): proxy_iterator::iterator_adaptor_(it), _base(base) {}
+        private:
+            std::string _base;
+
+            friend class boost::iterator_core_access;
+
+            proxy_type dereference() const {
+                return proxy_type(*this->base_reference(), _base);
+            }
+    };
+
+    using prefix_const_iterator    = proxy_iterator<typename store_type::prefix_const_iterator>;
+    using name_const_iterator      = proxy_iterator<typename store_type::name_const_iterator>;
+    using type_const_iterator      = proxy_iterator<typename store_type::type_const_iterator>;
+    using combined_const_iterator  = proxy_iterator<typename store_type::combined_const_iterator>;
+    using composite_const_iterator = proxy_iterator<typename store_type::composite_const_iterator>;
+    using uri_const_iterator       = proxy_iterator<typename store_type::uri_const_iterator>;
     using size_type                = typename store_type::size_type;
 
     /**
@@ -356,7 +429,7 @@ struct const_store{
      * @param store Reference to the store that this accessor will provide a read-only interface for.
      * @exception std::runtime_error Thrown if the store is not locked, indicating it may still be under modification.
      */
-    inline explicit const_store(const store_type& store): _substore(store) {
+    inline explicit const_store(const store_type& store): _store(store) {
         if(!store.locked()){
             throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
         }
@@ -369,19 +442,19 @@ struct const_store{
      * @param type The asset type to filter the assets by (e.g., js, css, img).
      * @return An iterator pointing to the first asset of the specified type, or end iterator if no such asset exists.
      */
-    inline typename store_type::type_const_iterator begin(asset::type type) const { return _substore.by_type().lower_bound(type); }
+    inline type_const_iterator begin(asset::type type) const { return type_const_iterator{_store.by_type().lower_bound(type), base()}; }
     /**
      * @brief Returns an iterator to the end of the assets of the specified type.
      * @param type The asset type to filter the assets by (e.g., js, css, img).
      * @return An iterator pointing just past the last asset of the specified type.
      */
-    inline typename store_type::type_const_iterator end(asset::type type)   const { return _substore.by_type().upper_bound(type); }
+    inline type_const_iterator end(asset::type type)   const { return type_const_iterator{_store.by_type().upper_bound(type), base()}; }
     /**
      * @brief Returns the number of assets of a given type.
      * @param type The asset type to count in the store (e.g., js, css, img).
      * @return The number of assets of the specified type.
      */
-    inline typename store_type::size_type size(asset::type type) const { return std::distance(begin(type), end(type)); }
+    inline size_type size(asset::type type) const { return std::distance(begin(type), end(type)); }
 
     /**
      * @brief Returns an iterator to the beginning of the assets of a given type and prefix.
@@ -389,49 +462,99 @@ struct const_store{
      * @param type The asset type to filter the assets by.
      * @return An iterator pointing to the first asset that matches the specified type and prefix, or end iterator if no such asset exists.
      */
-    inline typename store_type::combined_const_iterator begin(const std::string& prefix, asset::type type) const { return _substore.by_combined().lower_bound(boost::make_tuple(prefix, type)); }
+    inline combined_const_iterator begin(const std::string& prefix, asset::type type) const { return combined_const_iterator{_store.by_combined().lower_bound(boost::make_tuple(prefix, type)), base()}; }
     /**
      * @brief Returns an iterator to the end of the assets of a given type and prefix.
      * @param prefix The prefix that groups assets.
      * @param type The asset type to filter the assets by.
      * @return An iterator pointing just past the last asset that matches the specified type and prefix.
      */
-    inline typename store_type::combined_const_iterator end(const std::string& prefix, asset::type type)   const { return _substore.by_combined().upper_bound(boost::make_tuple(prefix, type)); }
+    inline combined_const_iterator end(const std::string& prefix, asset::type type)   const { return combined_const_iterator{_store.by_combined().upper_bound(boost::make_tuple(prefix, type)), base()}; }
     /**
      * @brief Returns the number of assets of a given type and prefix.
      * @param prefix The prefix that groups assets.
      * @param type The asset type to count in the store.
      * @return The number of assets that match the specified type and prefix.
      */
-    inline typename store_type::size_type size(const std::string& prefix, asset::type type) const { return std::distance(begin(prefix, type), end(prefix, type)); }
+    inline size_type size(const std::string& prefix, asset::type type) const { return std::distance(begin(prefix, type), end(prefix, type)); }
 
-    inline typename store_type::composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name){ return _substore.by_composite().find(boost::make_tuple(prefix, type, name)); }
+    /**
+     * @brief find a resource by type, prefix and name
+     * @param type asset type
+     * @param prefix string prefix of the asset
+     * @param name string name of the asset
+     */
+    inline composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name){ return composite_const_iterator{_store.by_composite().find(boost::make_tuple(prefix, type, name)), base()}; }
 
-    inline typename store_type::uri_const_iterator begin() const { return _substore.by_uri().begin(); }
-    inline typename store_type::uri_const_iterator end() const { return _substore.by_uri().end(); }
-    inline typename store_type::uri_const_iterator find(const std::string& prefix, const std::string& name) const { return _substore.by_uri().find(boost::make_tuple(prefix, name)); }
-    inline typename store_type::uri_const_iterator find(std::string subject) const {
-        std::size_t slash_pos = subject.find('/');
-        if (slash_pos == std::string::npos || slash_pos == 0 || slash_pos == subject.size() - 1) {
-            return end();
+    /**
+     * @brief Returns an iterator to the beginning of all assets
+     */
+    inline uri_const_iterator begin() const { return uri_const_iterator{_store.by_uri().begin(), base()}; }
+    /**
+     * @brief Returns an iterator to the end of the all assets
+     */
+    inline uri_const_iterator end() const { return uri_const_iterator{_store.by_uri().end(), base()}; }
+    /**
+     * @brief find a resource by prefix and name
+     * @param type asset type
+     * @param prefix string prefix of the asset
+     * @param name string name of the asset
+     */
+    inline uri_const_iterator find(const std::string& prefix, const std::string& name) const { return uri_const_iterator{_store.by_uri().find(boost::make_tuple(prefix, name)), base()}; }
+    /**
+     * @brief find a resource by uri.
+     * @param subject /base/prefix/name
+     */
+    inline uri_const_iterator find(std::string subject) const {
+        // check if subject starts with base
+        // if not return end()
+        // else take the part after the base ends
+        // split that by the first slash only
+        // take the first part as prefix and the last part as name
+        // Remember: The name may contain / (just ignore them)
+
+        const std::string& base_url = base();
+        if (!boost::starts_with(subject, base_url)) {
+            return uri_const_iterator{end()};
         }
+        std::size_t begin = base_url.size();
+        std::size_t slash = subject.find('/', begin);
+        if (slash == std::string::npos) {
+            return uri_const_iterator{end()};
+        }
+        std::string prefix = subject.substr(begin, slash - begin);
+        std::string name   = subject.substr(slash + 1);
 
-        std::string prefix = subject.substr(0, slash_pos);
-        std::string name = subject.substr(slash_pos + 1);
-
-        return find(prefix, name);
+        return uri_const_iterator{find(prefix, name)};
     }
 
+    /**
+     * @brief server an asset resource through the stream
+     * @param stream the response stream
+     * @param prefix string prefix of the asset
+     * @param name string name of the asset
+     */
     inline bool serve(udho::net::stream& stream, std::string prefix, std::string name) const {
         return serve(stream, find(prefix, name));
     }
 
+    /**
+     * @brief server an asset resource through the stream
+     * @param stream the response stream
+     * @param subject uri of the asset
+     */
     inline bool serve(udho::net::stream& stream, std::string subject) const {
         return serve(stream, find(subject));
     }
 
+    /**
+     * @brief gets base url of the asset store
+     * @details an asset with prefix "blog", name "theme.css" will be served as /base/blog/theme.css
+     */
+    const std::string& base() const { return _store.base(); }
+
     private:
-        inline bool serve(udho::net::stream& stream, typename store_type::uri_const_iterator it) const {
+        inline bool serve(udho::net::stream& stream, uri_const_iterator it) const {
             if(it == end()){
                 return false;
             }
@@ -441,14 +564,19 @@ struct const_store{
         }
 
     private:
-        const store_type& _substore;
+        const store_type& _store;
 };
 
+/**
+ * @ingroup view
+ * @brief copiable readonly accessor (obtained from a const_store) for the asset store for a specific asset type e.g. javascript, css etc..
+ * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
+ */
 template <asset::type Type>
 struct const_substore{
     using store_type = const_store;
     using proxy_type = typename store_type::proxy_type;
-    using self_type = const_substore<Type>;
+    using self_type  = const_substore<Type>;
 
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
@@ -459,18 +587,35 @@ struct const_substore{
     /**
      * @brief A prefix specific interface to the store
      * @param prefix The prefix to identify a set of resources belonging to the same module
-     * @param store Reference to the store.
+     * @param store Reference to the const_store.
      */
-    const_substore(const store_type& store): _substore(store) {}
+    const_substore(const store_type& store): _store(store) {}
     const_substore(const const_substore&) = default;
     const_substore() = delete;
 
-    typename store_type::type_const_iterator begin() const { return _substore.begin(Type); }
-    typename store_type::type_const_iterator end()   const { return _substore.end(Type); }
+    /**
+     * @brief begin iterator for the asset substore
+     */
+    typename store_type::type_const_iterator begin() const { return _store.begin(Type); }
+    /**
+     * @brief end iterator for the asset substore
+     */
+    typename store_type::type_const_iterator end()   const { return _store.end(Type); }
+    /**
+     * @brief number of assets in the asset substore
+     */
     typename store_type::size_type size() const { return std::distance(begin(), end()); }
 
-
-    friend auto metatype(udho::view::data::type<self_type>){
+    /**
+     * @brief exposed to lua via the following properties
+     * +----------+------------+
+     * | ipairs   | function() |
+     * | size     | property   |
+     * +----------+------------+
+     *
+     * The iterator returns @ref resources::asset::proxy as value type which is also exposed to lua
+     */
+    friend auto metatype(udho::view::data::type<const_substore<Type>>){
         using namespace udho::view::data;
 
         return assoc("resources_asset_const_substore"),
@@ -479,7 +624,7 @@ struct const_substore{
     }
 
     private:
-        const store_type& _substore;
+        const store_type& _store;
 };
 
 // template <asset::type Type>

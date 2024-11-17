@@ -18,6 +18,7 @@ namespace view{
 namespace tmpl{
 
 /**
+ * @ingroup view
  * @struct parser
  * @brief Handles the parsing of template files into sections based on predefined tags and constructs.
  *

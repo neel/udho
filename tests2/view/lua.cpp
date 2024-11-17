@@ -15,7 +15,7 @@
 
 #include "data.h"
 
-TEST_CASE("Tokenizer correctly builds the trie", "[trie]") {
+TEST_CASE("Lua bridge", "[lua]") {
 
     static char buffer[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
@@ -54,9 +54,4 @@ Address: <?= d.address.locality ?> (<?= d.address.zip ?>)
     lua.exec("user:profile", "", p, p, output);
 
     std::cout << output << std::endl;
-
-    // std::string input = R"(x.y.z_a('v1', 'v_2',:keyword); hello[24]("world", "pluto"); hello.hi[23]('pla_net'); feature.value[1].bit(on); cache.expire(-42.24)[0];)";
-    // udho::view::sections::meta_parser::parse(input);
-    // udho::view::data::meta::detail::ast ast{input};
-    // udho::view::data::meta::detail::ast::print(std::cout, ast.root());
 }

@@ -28,8 +28,10 @@
 #ifndef UDHO_VIEW_RESOURCES_RESOURCE_H
 #define UDHO_VIEW_RESOURCES_RESOURCE_H
 
+#include <magic.h>
 #include <string>
 #include <fstream>
+#include <iostream>
 #include <boost/filesystem/path.hpp>
 #include <udho/url/detail/format.h>
 #include <boost/iostreams/device/mapped_file.hpp>
@@ -43,7 +45,7 @@ namespace resources{
 namespace tmpl{
     /**
      * @brief a view template written in a foreign language
-     *
+     * @ingroup view
      */
     struct resource{
         using buffer_type   = std::vector<char>;
@@ -124,24 +126,24 @@ namespace tmpl{
 }
 
 namespace asset{
-    template <asset::source Source, bool Owned>
+    template <typename Source, bool Owned>
     struct storage;
 
-    template <asset::source Source, bool Owned>
+    template <typename Source, bool Owned>
     struct basic_resource;
 
-    template <>
-    struct storage<asset::source::memory, true>{
-        static constexpr asset::source source = asset::source::memory;
+    template <typename Iterator>
+    struct storage<asset::source::memory<Iterator>, true>{
+        using source = asset::source::memory<Iterator>;
         static constexpr bool owned           = true;
 
-        template <asset::source Source, bool Owned>
+        template <typename Source, bool Owned>
         friend struct basic_resource;
 
-        using buffer_type   = std::vector<char>;
-        using iterator_type = buffer_type::const_iterator;
-        using value_type    = char;
-        using size_type     = buffer_type::size_type;
+        using iterator_type = Iterator;
+        using value_type    = typename std::iterator_traits<Iterator>::value_type;
+        using size_type     = std::size_t;
+        using buffer_type   = std::vector<value_type>;
 
         iterator_type begin() const { return _buffer.begin(); }
         iterator_type end()   const { return _buffer.end();   }
@@ -157,33 +159,39 @@ namespace asset{
             }
 
         private:
-            template <typename Iterator>
             storage(Iterator begin, Iterator end) {
-                using value_type = typename std::iterator_traits<Iterator>::value_type;
-
                 auto size = std::distance(begin, end);
-                _buffer.reserve(size * sizeof(value_type));
-
-                for (auto it = begin; it != end; ++it) {
-                    const char* data = reinterpret_cast<const char*>(&*it);
-                    _buffer.insert(_buffer.end(), data, data + sizeof(value_type));
+                _buffer.reserve(size);
+                std::copy(begin, end, _buffer.begin());
+            }
+            std::string mime() const {
+                magic_t magic = magic_open(MAGIC_MIME_TYPE);
+                if (magic_load(magic, nullptr) != 0) {
+                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    magic_close(magic);
+                    return "application/octet-stream"; // Default MIME type if error
                 }
+
+                const char* mime_type = magic_buffer(magic, _buffer.data(), _buffer.size());
+                std::string result = mime_type ? mime_type : "application/octet-stream";
+                magic_close(magic);
+                return result;
             }
 
         private:
-            std::vector<char> _buffer;
+            buffer_type _buffer;
     };
 
-    template <>
-    struct storage<asset::source::memory, false>{
-        static constexpr asset::source source = asset::source::memory;
+    template <typename Iterator>
+    struct storage<asset::source::memory<Iterator>, false>{
+        using source = asset::source::memory<Iterator>;
         static constexpr bool owned           = false;
 
-        template <asset::source Source, bool Owned>
+        template <typename Source, bool Owned>
         friend struct basic_resource;
 
-        using iterator_type = const char*;
-        using value_type    = char;
+        using iterator_type = Iterator;
+        using value_type    = typename std::iterator_traits<Iterator>::value_type;
         using size_type     = std::size_t;
 
         iterator_type begin() const { return _begin; }
@@ -192,29 +200,46 @@ namespace asset{
 
         private:
             std::size_t write(udho::net::stream& stream) const {
-                if (_begin && _end && _size > 0) {
-                    stream.write(_begin, _size);
+                if (_size > 0) {
+                    stream.write(_begin, _end);
                 }
                 return _size;
             }
 
         private:
             storage(iterator_type begin, iterator_type end): _begin(begin), _end(end), _size(std::distance(begin, end)) { }
+            std::string mime() const {
+                magic_t magic = magic_open(MAGIC_MIME_TYPE);
+                if (magic_load(magic, nullptr) != 0) {
+                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    magic_close(magic);
+                    return "application/octet-stream"; // Default MIME type if error
+                }
 
+                std::vector<char> buffer;
+                buffer.reserve(_size);
+                std::copy(_begin, _end, buffer.begin());
+
+                const char* mime_type = magic_buffer(magic, buffer.data(), buffer.size());
+                std::string result = mime_type ? mime_type : "application/octet-stream";
+                magic_close(magic);
+                return result;
+            }
         private:
             iterator_type _begin;
             iterator_type _end;
             size_type     _size;
     };
 
-    template <>
-    struct storage<asset::source::disk, true>{
-        static constexpr asset::source source = asset::source::disk;
+    template <typename Path>
+    struct storage<asset::source::disk<Path>, true>{
+        using source = asset::source::disk<Path>;
         static constexpr bool owned           = true;
 
-        template <asset::source Source, bool Owned>
+        template <typename Source, bool Owned>
         friend struct basic_resource;
 
+        using path_type     = Path;
         using buffer_type   = std::vector<char>;
         using iterator_type = buffer_type::const_iterator;
         using value_type    = char;
@@ -235,8 +260,8 @@ namespace asset{
             }
 
         private:
-            storage(const boost::filesystem::path& path): _path(path) {
-                std::ifstream file(path.string(), std::ios::binary | std::ios::ate);
+            storage(const path_type& path): _path(path) {
+                std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
                 if (!file) {
                     throw std::runtime_error("Failed to open file: " + path.string());
                 }
@@ -254,22 +279,36 @@ namespace asset{
                 }
             }
 
+            std::string mime() const {
+                magic_t magic = magic_open(MAGIC_MIME_TYPE);
+                if (magic_load(magic, nullptr) != 0) {
+                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    magic_close(magic);
+                    return "application/octet-stream"; // Default MIME type if error
+                }
+
+                const char* mime_type = magic_buffer(magic, _buffer.data(), _buffer.size());
+                std::string result = mime_type ? mime_type : "application/octet-stream";
+                magic_close(magic);
+                return result;
+            }
+
         private:
-            boost::filesystem::path _path;
+            path_type _path;
             std::vector<char> _buffer;
     };
 
-    template <>
-    struct storage<asset::source::disk, false>{
+    template <typename Path>
+    struct storage<asset::source::disk<Path>, false>{
         static_assert("Non owned disk resource is not supported");
     };
 
     template <>
     struct storage<asset::source::remote, false>{
-        static constexpr asset::source source = asset::source::remote;
+        using source = asset::source::remote;
         static constexpr bool owned           = false;
 
-        template <asset::source Source, bool Owned>
+        template <typename Source, bool Owned>
         friend struct basic_resource;
 
         const std::string& location() const  { return _location; }
@@ -307,29 +346,23 @@ namespace asset{
          * @brief Construct a new abstract resource object.
          * @param name The name of the resource.
          * @param type The type of the resource.
-         * @param source The source type of the resource (memory, disk, remote).
          * @param owned Indicates whether the resource is owned by this object.
          */
-        inline abstract_resource(const std::string& name, asset::type type, asset::source source, bool owned): _name(name), _type(type), _source(source), _owned(owned) {}
+        inline abstract_resource(const std::string& name, asset::type type, bool owned): _name(name), _type(type), _owned(owned) {}
 
         /**
          * @brief Get the name of the resource.
          * @return const std::string& The name of the resource.
          */
         inline const std::string& name() const { return _name; }
-        /**
-         * @brief Get the source type of the resource.
-         * @return asset::source The source type of the resource.
-         */
-        inline asset::source source() const { return _source; }
+
         /**
          * @brief Check if the resource is owned.
          * @return bool True if the resource is owned, false otherwise.
          */
         inline bool owned() const { return _owned; }
 
-        inline asset::type type() const { return _type; }
-
+        asset::type type() const { return _type; }
 
         /**
          * @brief Write the resource to a given output stream.
@@ -346,7 +379,6 @@ namespace asset{
         private:
             std::string   _name;
             asset::type   _type;
-            asset::source _source;
             bool          _owned;
     };
 
@@ -359,7 +391,7 @@ namespace asset{
      * @tparam Source The source type of the resource.
      * @tparam Owned Flag indicating whether the resource is owned or not.
      */
-    template <asset::source Source, bool Owned>
+    template <typename Source, bool Owned>
     struct basic_resource: abstract_resource{
         using storage_type = asset::storage<Source, Owned>;
 
@@ -369,10 +401,45 @@ namespace asset{
          * @tparam Args Variadic template for constructor arguments.
          * @param name The name of the resource.
          * @param type The type of the resource.
+         * @param mime Mime type
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
-        basic_resource(const std::string& name, asset::type type, Args&&... args): abstract_resource(name, type, Source, Owned), _storage(std::forward<Args>(args)...) {}
+        basic_resource(const std::string& name, asset::type type, const std::string mime, Args&&... args): abstract_resource(name, type, Owned), _mime(mime), _storage(std::forward<Args>(args)...) {
+            if(mime.empty()){
+                if (type == asset::type::js) {
+                    _mime = "application/javascript";
+                } else if (type == asset::type::css) {
+                    _mime = "text/css";
+                } else if (type == asset::type::img) {
+                    _mime = _storage.mime();
+                } else {
+                    _mime = "application/octet-stream";
+                }
+            }
+        }
+
+        /**
+         * @brief Construct a new basic resource object.
+         *
+         * @tparam Args Variadic template for constructor arguments.
+         * @param name The name of the resource.
+         * @param type The type of the resource.
+         * @param args Arguments forwarded to the storage constructor.
+         */
+        // template <typename... Args>
+        // basic_resource(const std::string& name, asset::type type, Args&&... args): abstract_resource(name, type, Owned), _storage(std::forward<Args>(args)...) {
+        //     if (type == asset::type::js) {
+        //         _mime = "application/javascript";
+        //     } else if (type == asset::type::css) {
+        //         _mime = "text/css";
+        //     } else if (type == asset::type::img) {
+        //         _mime = _storage.mime();
+        //     } else {
+        //         _mime = "application/octet-stream";
+        //     }
+        // }
+
 
         /**
          * @brief Get the MIME type of the resource.
@@ -425,7 +492,7 @@ namespace asset{
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
-        basic_resource(const std::string& name, asset::type type, Args&&... args): abstract_resource(name, type, asset::source::remote, false), _storage(std::forward<Args>(args)...) {}
+        basic_resource(const std::string& name, asset::type type, Args&&... args): abstract_resource(name, type, false), _storage(std::forward<Args>(args)...) {}
 
         const storage_type& storage() const { return _storage; }
 
@@ -452,16 +519,38 @@ namespace asset{
      * @param type The type of the resource.
      * @param begin Iterator to the beginning of the resource data.
      * @param end Iterator to the end of the resource data.
+     * @param mime String mime type.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Iterator>
+    inline std::unique_ptr<abstract_resource> resource(const std::string& name, asset::type type, Iterator begin, Iterator end, const std::string& mime, bool owned) {
+        if (owned) {
+            return std::make_unique<basic_resource<asset::source::memory<Iterator>, true>>(name, type, mime, begin, end);
+        } else {
+            return std::make_unique<basic_resource<asset::source::memory<Iterator>, false>>(name, type, mime, begin, end);
+        }
+    }
+
+    /**
+     * @brief Function to create a resource object.
+     *
+     * This function creates a unique_ptr to an abstract_resource, managing memory resources, disk resources, or remote resources.
+     *
+     * @tparam Iterator Type of iterator (only valid for memory resources).
+     * @param name Name of the resource.
+     * @param type The type of the resource.
+     * @param begin Iterator to the beginning of the resource data.
+     * @param end Iterator to the end of the resource data.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
      */
     template <typename Iterator>
     inline std::unique_ptr<abstract_resource> resource(const std::string& name, asset::type type, Iterator begin, Iterator end, bool owned) {
         if (owned) {
-            return std::make_unique<basic_resource<asset::source::memory, true>>(name, type, begin, end);
+            return std::make_unique<basic_resource<asset::source::memory<Iterator>, true>>(name, type, "", begin, end);
         } else {
-            static_assert(std::is_same<typename std::iterator_traits<Iterator>::value_type, char>::value, "Non-owned memory resources should be created with char pointers.");
-            return std::make_unique<basic_resource<asset::source::memory, false>>(name, type, begin, end);
+            return std::make_unique<basic_resource<asset::source::memory<Iterator>, false>>(name, type, "", begin, end);
         }
     }
 
@@ -470,11 +559,24 @@ namespace asset{
      *
      * @param name Name of the resource.
      * @param type The type of the resource.
-     * @param url URL of the remote resource.
+     * @param path Path to the file
+     * @param mime String mime type
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    inline std::unique_ptr<abstract_resource> resource(const std::string& name, asset::type type, const boost::filesystem::path& path, const std::string& mime) {
+        return std::make_unique<basic_resource<asset::source::disk<boost::filesystem::path>, true>>(name, type, mime, path);
+    }
+
+    /**
+     * @brief Overload of resource function for creating disk resources.
+     *
+     * @param name Name of the resource.
+     * @param type The type of the resource.
+     * @param path Path to the file
      * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
      */
     inline std::unique_ptr<abstract_resource> resource(const std::string& name, asset::type type, const boost::filesystem::path& path) {
-        return std::make_unique<basic_resource<asset::source::disk, true>>(name, type, path);
+        return std::make_unique<basic_resource<asset::source::disk<boost::filesystem::path>, true>>(name, type, "", path);
     }
 
     /**
@@ -502,7 +604,50 @@ namespace asset{
      * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
      */
     template <typename Iterator>
-    inline std::unique_ptr<abstract_resource> css(const std::string& name, Iterator begin, Iterator end, bool owned){ return resource(name, asset::type::css, begin, end, owned); }
+    inline std::unique_ptr<abstract_resource> css(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource(name, asset::type::css, begin, end, owned); }
+
+
+    /**
+     * @brief Function to create a CSS resource.
+     *
+     * This function creates a unique_ptr to an abstract_resource for CSS assets,
+     *
+     * @tparam Char Type of character.
+     * @param name Name of the CSS resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Char>
+    inline std::unique_ptr<abstract_resource> css(const std::string& name, const std::basic_string<Char>& str, bool owned = false){ return css(name, str.begin(), str.end(), owned); }
+
+    /**
+     * @brief Function to create a CSS resource.
+     *
+     * This function creates a unique_ptr to an abstract_resource for CSS assets,
+     *
+     * @tparam Char Type of character.
+     * @param name Name of the CSS resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Char>
+    inline std::unique_ptr<abstract_resource> css(const std::string& name, const Char* str, bool owned = false){ return css(name, str, str + strlen(str), owned); }
+
+    /**
+     * @brief Function to create a CSS resource.
+     *
+     * This function creates a unique_ptr to an abstract_resource for CSS assets,
+     *
+     * @tparam Char Type of character.
+     * @tparam N Number of characters.
+     * @param name Name of the CSS resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Char, std::size_t N>
+    inline std::unique_ptr<abstract_resource> css(const std::string& name, const Char (&str)[N], bool owned = false) { return css(name, str, str + N - 1, owned); }
+
+
     /**
      * @brief Overload of css function for creating disk-based CSS resources.
      *
@@ -533,7 +678,35 @@ namespace asset{
      * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
      */
     template <typename Iterator>
-    inline std::unique_ptr<abstract_resource> js(const std::string& name, Iterator begin, Iterator end, bool owned){ return resource(name, asset::type::js, begin, end, owned); }
+    inline std::unique_ptr<abstract_resource> js(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource(name, asset::type::js, begin, end, owned); }
+
+    /**
+     * @brief Function to create a javascript resource.
+     *
+     * This function creates a unique_ptr to an abstract_resource for javascript assets,
+     *
+     * @tparam Char Type of character.
+     * @param name Name of the javascript resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Char>
+    inline std::unique_ptr<abstract_resource> js(const std::string& name, const Char* str, bool owned = false){ return js(name, str, str + strlen(str), owned); }
+
+    /**
+     * @brief Function to create a javascript resource.
+     *
+     * This function creates a unique_ptr to an abstract_resource for javascript assets,
+     *
+     * @tparam Char Type of character.
+     * @tparam N Number of characters.
+     * @param name Name of the javascript resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
+     */
+    template <typename Char, std::size_t N>
+    inline std::unique_ptr<abstract_resource> js(const std::string& name, const Char (&str)[N], bool owned = false) { return js(name, str, str + N - 1, owned); }
+
     /**
      * @brief Overload of js function for creating disk-based JS resources.
      *
@@ -564,7 +737,7 @@ namespace asset{
      * @return std::unique_ptr<abstract_resource> A unique pointer to the created resource.
      */
     template <typename Iterator>
-    inline std::unique_ptr<abstract_resource> img(const std::string& name, Iterator begin, Iterator end, bool owned){ return resource(name, asset::type::img, begin, end, owned); }
+    inline std::unique_ptr<abstract_resource> img(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource(name, asset::type::img, begin, end, owned); }
     /**
      * @brief Overload of img function for creating disk-based image resources.
      *

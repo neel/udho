@@ -400,11 +400,15 @@ std::size_t assign(DataT& data, associative<HeadT, TailT>& assoc, IteratorT begi
 
 }
 
+/**
+ * @brief expose associative metatype
+ * @ingroup view
+ */
 inline detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; }
 
 /**
  * @brief assigns values to the nvp's of an associative container
- *
+ * @ingroup view
  * @param data  the targeted data object
  * @param assoc the associative container
  * @param begin iterator to a string container

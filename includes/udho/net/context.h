@@ -11,6 +11,11 @@
 namespace udho{
 namespace net{
 
+/**
+ * @brief A proxy around the context used internally to make a view accessible conveniently
+ * @tparam XBridgeT the bridge on which the intended view is registered
+ * @tparam Bridges...  The bridges supported by the context
+ */
 template <typename XBridgeT, typename... Bridges>
 struct proxy_wrapper{
     using context_type = basic_context<udho::view::resources::const_store<Bridges...>>;
@@ -35,6 +40,10 @@ struct proxy_wrapper{
      */
     inline std::string prefix() const { return _proxy.prefix(); }
 
+    /**
+     * @brief Returns const reference to the context
+     * @return context
+     */
     const context_type& context() const { return _ctx; }
 
 

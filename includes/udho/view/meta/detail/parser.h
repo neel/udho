@@ -42,7 +42,7 @@ struct ast{
                                 call
                             > {};
     struct statement:       pegtl::seq<key, pegtl::star<index>> {};
-    struct grammar:         pegtl::must<   pegtl::list<  statement, pegtl::seq<spaced<pegtl::opt<pegtl::one<';'>>>>  >   > {};
+    struct grammar:         pegtl::must<   pegtl::seq<whitespace, pegtl::list<  statement, pegtl::seq<spaced<pegtl::opt<pegtl::one<';'>>>>  >>   > {};
 
     template<typename Rule>
     struct selector:        pegtl::parse_tree::selector<Rule,

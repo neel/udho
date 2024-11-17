@@ -75,6 +75,16 @@ struct bridge{
     }
 
     /**
+     * @brief Writes data to the output stream.
+     * @param begin Begin
+     * @param end end
+     */
+    template <typename Iterator>
+    void write_latter(Iterator begin, Iterator end){
+        std::copy(begin, end, std::ostream_iterator<char>(_stream));
+    }
+
+    /**
      * @brief Adds or modifies a header in the response.
      * @param header Pair consisting of the HTTP field to modify and its value.
      * @return Reference to this bridge object.

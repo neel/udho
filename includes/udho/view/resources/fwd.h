@@ -41,9 +41,21 @@ struct proxy;
 
 namespace asset{
 
-    enum class source{ memory, disk, remote };
+    namespace source{
+        template <typename Iterator = const char*>
+        struct memory{
+            using iterator = Iterator;
+        };
 
-    enum class type{ js, css, img };
+        template <typename Path = std::filesystem::path>
+        struct disk{
+            using path = Path;
+        };
+
+        struct remote{};
+    };
+
+    enum class type{ js, css, txt, img };
 
     struct const_store;
 
