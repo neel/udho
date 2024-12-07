@@ -17,6 +17,54 @@ namespace detail{
 
 namespace pegtl = tao::pegtl;
 
+/**
+ * @brief abstract syntax tree representation for the meta syntax
+ *
+ * Grammar
+ * ------------
+ * whitespace      ::= *space
+ * boolean         ::= 'true' | 'false' | 'on' | 'off'
+ * integer         ::= [minus], +digit
+ * real            ::= [minus], +digit, '.', +digit
+ * duration        ::= (real | integer), ('s' | 'm' | 'h' | 'd')
+ * quoted_string   ::= dquoted_string | squoted_string
+ * dquoted_string  ::= '"', {any character except '"'}, '"'
+ * squoted_string  ::= ''', {any character except ''''}, '''
+ * value           ::= quoted_string | reference | duration | real | integer | boolean
+ * grammar         ::= whitespace, {statement, {whitespace, [semicolon], whitespace}}
+ * statement       ::= key, *index
+ * key             ::= alpha, *(alnum | '_')
+ * index           ::= ('.' key) | index_seq | call
+ * index_seq       ::= '[', at, ']'
+ * at              ::= +digit
+ * call            ::= whitespace, '(', values, ')'
+ * values          ::= value, {whitespace, ',', whitespace, value}
+ *
+ * Examples
+ * ---------
+ * Following are all valid syntax according to the above mentioned grammar
+ *
+ * ```
+ * x.y.z_a('v1', 'v_2',:keyword);
+ * hello[24]("world", "pluto");
+ * hello.hi[23]('pla_net')
+ * feature.value[1].bit(false);
+ * cache.expire(-42.24)[0];
+ * ```
+ *
+ * Usage
+ * ------
+ *
+ * This class is not supposed to be used directly. Rather though the functions in `udho::view::data::meta` namespace.
+ * However, following example parses the syntax and prints the AST
+ *
+ * @code
+ * std::string input = "..."; // syntax as mentioned above
+ * udho::view::data::meta::detail::ast ast{input};
+ * udho::view::data::meta::detail::ast::print(std::cout, ast.root());
+ * const udho::view::data::meta::detail::ast::node_ptr_type& root = ast.root();
+ * @endcode
+ */
 struct ast{
     struct at:              pegtl::plus<pegtl::digit> {};
     struct index_seq:       pegtl::seq<pegtl::one<'['>, at, pegtl::one<']'>> {};

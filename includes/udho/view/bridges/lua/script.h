@@ -118,17 +118,25 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
          */
         inline void add_echo_section(const udho::view::tmpl::section& section) {
             std::size_t size = section.size();
+            const std::string& content = section.content();
             if (size > 0) {
                 *this << std::endl;
-                *this << "do -- " + udho::url::format("{}", udho::view::tmpl::section::name(section.type())) << std::endl;
+                *this << "do -- " + udho::url::format("{} {}", udho::view::tmpl::section::name(section.type()), size) << std::endl;
                 ++*this;
                 if (section.type() == udho::view::tmpl::section::echo) {
-                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], tostring({}))", section.content()) << std::endl;
-                    _min_size += size;
-                } else {
-                    *this << udho::url::format("local udho_view_str_ = [=====[{}]=====]", section.content()) << std::endl;
+                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], tostring({}))", content) << std::endl;
                     _min_size += 1;
-                    // section.content() is a lua code which will return a value
+                } else {
+                    bool starts_with_nl = (content[0] == '\n' || content[0] == '\r');
+                    std::string initial = "";
+                    if(starts_with_nl) initial = "\n";
+                    // Lua Reference Manual:
+                    // Long strings: A long string starts with an opening long bracket of any level [=*[ and ends at the first closing long
+                    // bracket of the same level ]=*]. It can contain any text except a closing bracket of the same level. It can contain newlines.
+                    // If the opening long bracket is immediately followed by a newline, the newline is not included in the string.
+                    *this << udho::url::format("local udho_view_str_ = [=====[{}{}]=====]", initial, content) << std::endl;
+                    _min_size += size;
+                    // content is a lua code which will return a value
                     // the returned value will then be converted to string to fill the placeholder{}
                     // so that string must take at least 1 bye of space
                 }
