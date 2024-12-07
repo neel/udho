@@ -130,7 +130,7 @@ struct mount_point{
         using namespace udho::view::data;
 
         return assoc("mount_point"),
-            index(&mount_point::url),
+            index(&mount_point::url, &mount_point::size),
             iter (&mount_point::begin, &mount_point::end),
             func("url",  &mount_point::url),
             fvar("name", &mount_point::name),
@@ -206,7 +206,7 @@ struct router{
         using namespace udho::view::data;
 
         return assoc("router"),
-            index(&router::route),
+            index(&router::route, &router::size),
             iter (&router::begin, &router::end),
             fvar("size", &router::size),
             func("route",&router::route);

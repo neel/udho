@@ -32,6 +32,11 @@
 #include <vector>
 #include <functional>
 #include <sol/sol.hpp>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
+#include <memory>
 #include <udho/url/detail/format.h>
 #include <udho/url/summary.h>
 #include <udho/view/tmpl/sections.h>
@@ -39,7 +44,14 @@
 #include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/lua/buffer.h>
 #include <udho/view/bridges/lua/binder.h>
+#include <udho/view/bridges/results.h>
 #include <udho/view/resources/resource.h>
+
+// #define UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE 1
+
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+#include <boost/lockfree/queue.hpp>
+#endif
 
 namespace udho{
 namespace view{
@@ -114,6 +126,53 @@ struct bind: detail::bind<BridgeT, ClassT>{};
 namespace bridges{
 
 /**
+ * @enum policy
+ * @brief Defines the synchronization policies for handling execution in different concurrency environments.
+ *
+ * This enum class provides identifiers for selecting the appropriate synchronization mechanisms
+ * based on the operational needs and threading environment of the application.
+ */
+enum class policy{
+    /**
+     * @brief Suitable for high-concurrency environments.
+     *
+     * Uses a fixed number of states on which the foreign functions will be executed.
+     * Multiple threads calling exec function will either wait or get a free state allocated from the state pool.
+     */
+    state_pool,
+
+    /**
+     * @brief Provides thread safety using a single mutex.
+     *
+     * Doesn't maintain a pool of states, rather uses a single lock to synchronize execution of foreign function on the same state.
+     */
+    thread_safe,
+
+    /**
+     * @brief Intended for use in single-threaded or non-concurrent environments.
+     *
+     * Doesn't implement any synchronization mechanism, applicable for scenarios when then server is running on single threaded environment.
+     */
+    non_concurrent
+};
+
+/**
+ * @brief common functionalities required by bridges of all languages
+ * @ingroup view
+ */
+struct common{
+    /**
+     * @brief given a prefix and a view name construct a key against which the actual compipled view functions will be stored
+     * @param name std::string view name
+     * @param prefix std::string view prefix
+     * @return returns the view key given the name and the prefix of the view
+     */
+    static std::string view_key(const std::string& name, const std::string& prefix) {
+        return udho::url::format(":{}/{}", prefix, name);
+    }
+};
+
+/**
  * @brief supposed to be instantiated by the bridge itself for binding any type with that bridge.
  * @warning Do not specialize. Not intended to be used directly by the user code.
  * @details checks whether the type is already bound or not. If not then forwards to @ref udho::view::data::bind
@@ -127,10 +186,10 @@ struct bind{
     bind(state_type& state): _state(state) {}
 
     template <typename ClassT>
-    void operator()(udho::view::data::type<ClassT> handle){
+    void operator()(udho::view::data::type<ClassT>){
         if(!udho::view::data::bindings<state_type, ClassT>::exists()){
             udho::view::data::bind<BridgeT, ClassT>::apply(_state);
-            udho::view::data::bindings<state_type, ClassT>::_exists = true;
+            udho::view::data::bindings<state_type, ClassT>::bound_one();
         } else {
             // bindings already exists no need to do it again.
         }
@@ -161,8 +220,10 @@ struct bridge{
     using binder_type   = BinderT<X>;
     template <typename X>
     using default_binder_type = udho::view::data::detail::binder<BinderT, X>;
+    using self_type = bridge<StateT, CompilerT, ScriptT, BinderT>;
 
     static constexpr auto name() { return state_type::name(); }
+
 
     /**
      * @brief Initializes the scripting engine state.
@@ -178,10 +239,6 @@ struct bridge{
      */
     template <typename ClassT>
     void bind(udho::view::data::type<ClassT> handle){
-        // udho::view::data::binder<BinderT, ClassT>::apply(_state, handle);
-
-        using self_type = bridge<StateT, CompilerT, ScriptT, BinderT>;
-
         udho::view::data::bridges::bind<self_type> binder{_state};
         binder(handle);
     }
@@ -204,14 +261,18 @@ struct bridge{
      * @return True if compilation was successful, false otherwise.
      */
     template <typename T, typename Aux>
-    std::size_t exec(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+    udho::view::data::bridges::results exec(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
         if(!udho::view::data::bindings<StateT, T>::exists()){
             bind(udho::view::data::type<T>{});
         }
         if(!udho::view::data::bindings<StateT, Aux>::exists()){
             bind(udho::view::data::type<Aux>{});
         }
-        return _state.exec(view_key(name, prefix), std::ref(data), std::ref(aux), output);
+        udho::view::data::bridges::results results;
+        results.start(0);
+        std::size_t size = _state.exec(view_key(name, prefix), std::ref(data), std::ref(aux), output);
+        results.finish(size);
+        return results;
     }
 
     private:
@@ -222,7 +283,7 @@ struct bridge{
          * @return The generated view key.
          */
         std::string view_key(const std::string& name, const std::string& prefix) const {
-            return udho::url::format(":{}/{}", prefix, name);
+            return bridges::common::view_key(name, prefix);
         }
         /**
          * @brief Compiles a script from a range of iterators that encapsulate template data.
@@ -241,13 +302,368 @@ struct bridge{
             parser.parse(begin, end, script);
             script.finish();
 
-            std::string name = script.save();
+            std::string name = script.save(key);
             std::cout << "Generated script at " << name << std::endl;
             compiler_type compiler{_state};
             return compiler(std::move(script));
         }
     private:
         StateT _state;
+
+};
+
+/**
+ * @class bridge
+ * @ingroup view
+ * @brief Manages the compilation and execution of scripts within a template engine framework.
+ *
+ * This template class binds scripting functionality with a state management system, allowing for dynamic compilation and execution of templates.
+ *
+ * @tparam StateT The type representing the scripting engine's state.
+ * @tparam CompilerT The compiler used to compile scripts.
+ * @tparam ScriptT The type of script being compiled and executed.
+ * @tparam BinderT A template template parameter representing the binder used for data bindings.
+ *
+ * @section synchronization Synchronization Overview
+ * The `bridge` class employs a combination of mutexes and semaphores to manage synchronization between multiple threads, particularly focusing on the `bind` and `exec` functions.
+ *
+ * @subsection bind_function Bind Function
+ * Binds a data type to all Lua states. This operation must have exclusive access to all Lua states because it modifies the state bindings that the exec function relies upon.
+ *
+ * @pre
+ * No Lua state is currently executing a script.
+ * All Lua states are available for modification.
+ *
+ * @post
+ * All Lua states have the new data type bound.
+ * All Lua states are again available for script execution.
+ *
+ * @par Strategy:
+ * Uses a recursive mutex to ensure exclusive access across threads.
+ * Uses a semaphore to ensure all Lua states are free and not in use.
+ *
+ * @par Entry Condition:
+ * Acquires a recursive mutex to ensure exclusive access, preventing other threads from modifying Lua states during the binding process.
+ *
+ * @par Exit Condition:
+ * Releases the mutex and all Lua states back to the pool for further use.
+ *
+ * @par Critical Section:
+ * The function iterates over all Lua states, applying the binding operation. This section is protected using a recursive mutex and a semaphore is used to check state availability.
+ *
+ * @code
+ * function bind(ClassT handle):
+ *     // Entry: Ensure exclusive access to bind operation.
+ *     lock mutex_bind recursively
+ *
+ *     // Ensure all Lua states are available.
+ *     for i from 1 to pool_size:
+ *         wait on semaphore_exec
+ *
+ *     // Critical Section: Binding operation.
+ *     assert(free_queue.size() == pool_size)  // All states must be free.
+ *     for each state in states:
+ *         perform binding operation on state with handle
+ *
+ *     // Release all Lua states for use.
+ *     for i from 1 to pool_size:
+ *         post to semaphore_exec
+ *
+ *     // Exit: Release exclusive access lock.
+ *     unlock mutex_bind
+ * end function
+ * @endcode
+ *
+ * @par Performance Assumptions:
+ * This function is called infrequently relative to exec since bindings do not need to be updated often.
+ * Can block exec operations temporarily (not forever) but guarantees system integrity by updating all states consistently.
+ *
+ * @subsection exec_function Exec Function
+ * Executes a Lua script using an available Lua state, potentially performing bindings if they are not already in place.
+ *
+ * @pre
+ * At least one Lua state is available for executing a script.
+ *
+ * @post
+ * The script is executed on a Lua state, or an error is handled.
+ * The Lua state used is released back into the pool for further use.
+ *
+ * @par Entry Condition:
+ * Optionally acquires a recursive mutex if the required bindings are not already established.
+ *
+ * @par Exit Condition:
+ * Ensures the Lua state is released back to the pool, even in cases of exceptions.
+ *
+ * @par Critical Section:
+ * Script execution takes place within a try-catch block to handle any Lua or C++ exceptions, ensuring clean error handling and Lua state release.
+ *
+ * @par Synchronization Strategy:
+ * Uses a recursive mutex to protect binding operations within the execution context.
+ * Uses a semaphore to manage access to individual Lua states ensuring only available states are accessed.
+ *
+ * @code
+ * function exec(T data, Aux aux, name, prefix):
+ *     // Entry: Try to lock for binding if necessary, defer otherwise.
+ *     if not binding_exists for T:
+ *         lock mutex_bind recursively
+ *         if not binding_exists for T:  // Double-checked locking
+ *             bind data type T
+ *         unlock mutex_bind
+ *
+ *     // Wait for an available Lua state.
+ *     wait on semaphore_exec
+ *     get an available state index from free_queue
+ *
+ *     // Critical Section: Execute the Lua script.
+ *     try:
+ *         execute Lua script on the state
+ *     catch any exception:
+ *         handle the exception and prepare error message
+ *
+ *     // Release the Lua state back to the pool.
+ *     push state index back to free_queue
+ *     post to semaphore_exec
+ *
+ *     // Exit: Lua state is released, and function ends.
+ * end function
+ * @endcode
+ *
+ * @par Expectations:
+ * This function is expected to be called frequently.
+ * It handles its own errors internally and ensures that even in case of failure, the Lua state is properly released.
+ *
+ * @par Caution:
+ * Major parts of this above documentation was generated by ChatGPT 4.0 based on the code in the two functions, bind and exec.
+ * Additionally, ChatGPT o1 was used to verify whether these two functions can lead to any race conditions in any circumstances.
+ */
+template <typename StateT, typename CompilerT, typename ScriptT, template <class> typename BinderT>
+struct pool{
+    using state_type    = StateT;
+    using compiler_type = CompilerT;
+    using script_type   = ScriptT;
+    template <typename X>
+    using binder_type   = BinderT<X>;
+    template <typename X>
+    using default_binder_type = udho::view::data::detail::binder<BinderT, X>;
+    using self_type = pool<StateT, CompilerT, ScriptT, BinderT>;
+
+
+    static constexpr auto name() { return state_type::name(); }
+
+    pool(std::size_t states): _pool_size(states), _semaphore_exec(_pool_size)
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+    , _free_lf_q(_pool_size)
+#endif
+    {
+        for (int i = 0; i < _pool_size; ++i) {
+            auto state = std::make_unique<state_type>();
+            _states.emplace_back(std::move(state));
+        }
+    }
+
+    /**
+     * @brief Initializes the scripting engine state.
+     */
+    void init(){
+        std::size_t counter = 0;
+        for (std::unique_ptr<state_type>& state: _states){
+            state->init();
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+            _free_lf_q.push(counter);
+#else
+            _freeq.push(counter);
+#endif
+
+            ++counter;
+        }
+    }
+
+    /**
+     * @brief Compiles a template (view) from a resource buffer into a script.
+     * @param view The resource buffer containing the template data.
+     * @param prefix A prefix used in the naming of the script.
+     * @return True if compilation was successful, false otherwise.
+     */
+    bool compile(udho::view::resources::tmpl::resource&& view, const std::string& prefix){
+        std::string key = view_key(view.name(), prefix);
+        return compile(view.begin(), view.end(), key);
+    }
+
+    /**
+     * @brief Binds a data type to the scripting engine, enabling data access within the scripts generated from the templates (view files).
+     * @tparam ClassT The data type to bind.
+     * @param handle A handle representing the data type.
+     */
+    template <typename ClassT>
+    void bind(udho::view::data::type<ClassT> handle){
+        // { Enter CS
+        std::lock_guard<std::recursive_mutex> lock(_mutex_bind);
+        for (int i = 0; i < _pool_size; ++i) {
+            _semaphore_exec.wait();
+        }
+        // }
+
+        // _semaphore_exec decremented to 0
+        // _mutex_bind is either locked once or twice.
+        // if once then bind was called directly from usercode.
+        // if twice then both locks are from the same thread.
+        // in either way all other threads calling exec or bind will wait.
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+        // boost lock free queue doesn;t have a size method
+#else
+        assert(_freeq.size() == _pool_size);
+#endif
+
+        // { CS
+        for (std::unique_ptr<state_type>& state: _states){
+            udho::view::data::bridges::bind<self_type> binder{*state};
+            binder(handle);
+        }
+        // }
+
+        // { Exit CS
+        for (int i = 0; i < _pool_size; ++i) {
+            _semaphore_exec.post();
+        }
+        // _semaphore_exec incremented to _semaphore_exec
+        // _mutex_bind still locks implying all exec are waiting
+        // RAII lock _mutex_bind unlocked
+        // }
+    }
+
+    /**
+     * @brief Compiles a template from a resource file into a script.
+     * @param view The resource file containing the template data.
+     * @param prefix A prefix used in the naming of the script.
+     * @return True if compilation was successful, false otherwise.
+     */
+    template <typename T, typename Aux>
+    udho::view::data::bridges::results exec(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+        udho::view::data::bridges::results results;
+        {
+            std::unique_lock<std::recursive_mutex> lock(_mutex_bind, std::defer_lock);
+            if(!udho::view::data::bindings<StateT, T>::exists()){
+                // { Enter CS
+                lock.lock();
+                // }
+
+                // { CS
+                bind(udho::view::data::type<T>{});
+                // }
+
+                // { Exit CS
+                lock.unlock();
+                // }
+            }
+        }
+
+        // { Enter CS
+        _semaphore_exec.wait();
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+        std::size_t index = 0;
+        _free_lf_q.pop(index);
+#else
+        _mutex_queue.lock();
+        assert(_freeq.size() > 0);
+        std::size_t index = _freeq.front();
+        _freeq.pop();
+        _mutex_queue.unlock();
+#endif
+        std::unique_ptr<state_type>& state = _states[index];
+        // }
+
+        // { CS
+        results.start(index);
+        std::size_t size = 0;
+        try {
+            size = state->exec(view_key(name, prefix), std::ref(data), std::ref(aux), output);
+        } catch(const sol::error& e){
+            std::string execption_str = udho::url::format("Lua Exeption while executing view {}/{}: ", prefix, name);
+            std::string ex_str;
+            ex_str += execption_str;
+            ex_str += e.what();
+            size = ex_str.size();
+            output = ex_str;
+            std::cerr << execption_str << e.what() << std::endl;
+        } catch(const std::exception& e){
+            std::string execption_str = udho::url::format("C++ Exeption while executing view {}/{}: ", prefix, name);
+            std::string ex_str;
+            ex_str += execption_str;
+            ex_str += e.what();
+            size = ex_str.size();
+            output = ex_str;
+            std::cerr << execption_str << e.what() << std::endl;
+        } catch(...){
+            std::string execption_str = udho::url::format("Unknown Exeption while executing view {}/{}: ", prefix, name);
+            std::string ex_str;
+            ex_str += execption_str;
+            size = ex_str.size();
+            output = ex_str;
+            std::cerr << execption_str << std::endl;
+        }
+        results.finish(size);
+        // }
+
+        // { Exit CS
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+        _free_lf_q.push(index);
+#else
+        _mutex_queue.lock();
+        _freeq.push(index);
+        _mutex_queue.unlock();
+#endif
+        // }
+        _semaphore_exec.post();
+        return results;
+    }
+
+    private:
+        /**
+         * @brief Generates a key for identifying a view script.
+         * @param name The name of the view.
+         * @param prefix The prefix used in the naming.
+         * @return The generated view key.
+         */
+        std::string view_key(const std::string& name, const std::string& prefix) const {
+            return bridges::common::view_key(name, prefix);
+        }
+        /**
+         * @brief Compiles a script from a range of iterators that encapsulate template data.
+         * @details This function takes iterators pointing to the beginning and end of a template, generates a script using the specified script handler, and attempts to compile this script using the scripting engine associated with this bridge.
+         *          It processes the template data, transforms it into the scripting language using the provided script handler, and manages the compilation through the scripting engine's compiler.
+         * @param begin Iterator to the beginning of the template data.
+         * @param end Iterator to the end of the template data.
+         * @param key A unique key or identifier for the compiled script, used to store and reference the script within the scripting engine.
+         * @return True if the compilation was successful, false otherwise.
+         * @tparam IteratorT The type of the iterator (e.g., string iterator, file buffer iterator).
+         */
+        template <typename IteratorT>
+        bool compile(IteratorT begin, IteratorT end, std::string key){
+            script_type script{key};
+            udho::view::tmpl::parser parser;
+            parser.parse(begin, end, script);
+            script.finish();
+
+            std::string name = script.save(key);
+            std::cout << "Generated script at " << name << std::endl;
+            bool success = true;
+            for (std::unique_ptr<state_type>& state: _states){
+                compiler_type compiler{*state};
+                success = success && compiler(std::move(script));
+            }
+            return success;
+        }
+    private:
+        std::size_t                                 _pool_size;
+        std::vector<std::unique_ptr<state_type>>    _states;
+        boost::interprocess::interprocess_semaphore _semaphore_exec;
+#if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
+        boost::lockfree::queue<std::size_t>         _free_lf_q;
+#else
+        std::queue<std::size_t>                     _freeq;
+        std::mutex                                  _mutex_queue;
+#endif
+        std::recursive_mutex                        _mutex_bind;
 
 };
 

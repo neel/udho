@@ -48,7 +48,7 @@ namespace bridges{
  * @ingroup view
  * @brief A specialized bridge configured for Lua scripting.
  *
- * This type alias represents a specific instantiation of the `bridge` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
+ * This type alias represents lua specific instantiation of the `bridge` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
  *
  * @details The lua type is defined using several Lua-specific components:
  * - `detail::lua::state`: Manages the state specific to Lua scripts, such as global variables and function registrations.
@@ -62,6 +62,29 @@ using lua = udho::view::data::bridges::bridge<
                 detail::lua::script,
                 detail::lua::binder
             >;
+
+namespace pools{
+/**
+ * @typedef lua
+ * @ingroup view
+ * @brief A specialized bridge configured for Lua scripting.
+ *
+ * This type alias represents lua specific instantiation of the `pool` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
+ *
+ * @details The lua type is defined using several Lua-specific components:
+ * - `detail::lua::state`: Manages the state specific to Lua scripts, such as global variables and function registrations.
+ * - `detail::lua::compiler`: Responsible for compiling Lua scripts into a form that can be executed by the Lua interpreter.
+ * - `detail::lua::script`: Handles the generation of Lua scripts from parsed template sections.
+ * - `detail::lua::binder`: Provides mechanisms to bind C++ data structures to Lua scripts, enabling data exchange between C++ and Lua.
+ */
+using lua = udho::view::data::bridges::pool<
+                detail::lua::state,
+                detail::lua::compiler,
+                detail::lua::script,
+                detail::lua::binder
+            >;
+
+}
 
 }
 }
@@ -182,21 +205,11 @@ namespace udho::view::data{
             // then add lua specific functionalities
             user_type& type = binder.type();
 
-            // type.set_function("render", [&state](const class_type& self, sol::object d) mutable -> std::string {
-            //     try {
-            //         std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
-            //         return state.exec_lua(view_key, d, self.context());  // script_name should be replaced with actual script identifier
-            //     } catch (const std::exception& e) {
-            //         // If there is an error, throw Lua exception with the error message
-            //         throw sol::error(e.what());
-            //     }
-            // });
-
             type.set_function("render", sol::overload(
                 [&state](const class_type& self) mutable -> std::string {
                     try {
-                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
-                        return state.exec_lua(view_key, sol::nil, self.context()); // TODO how to pass nill as d ?
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                        return state.exec_lua(view_key, sol::nil, self.context());
                     } catch (const std::exception& e) {
                         // If there is an error, throw Lua exception with the error message
                         throw sol::error(e.what());
@@ -204,7 +217,7 @@ namespace udho::view::data{
                 },
                 [&state](const class_type& self, sol::object d) mutable -> std::string {
                     try {
-                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
                         return state.exec_lua(view_key, d, self.context());
                     } catch (const std::exception& e) {
                         // If there is an error, throw Lua exception with the error message
@@ -213,7 +226,7 @@ namespace udho::view::data{
                 },
                 [&state](const class_type& self, sol::object d, udho::view::data::bridges::detail::lua::buffer& stream) mutable -> std::size_t {
                     try {
-                        std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
                         std::string output = state.exec_lua(view_key, d, self.context());
                         return stream.puts(output);
                     } catch (const std::exception& e) {
@@ -244,7 +257,7 @@ namespace udho::view::data{
 
             type.set_function("render", [&state](const class_type& self, sol::object d, sol::object aux) mutable {
                 try {
-                    std::string view_key = udho::url::format(":{}/{}", self.prefix(), self.name());
+                    std::string view_key = bridges::common::view_key(self.name(), self.prefix());
                     return state.exec_lua(view_key, d, aux);  // script_name should be replaced with actual script identifier
                 } catch (const std::exception& e) {
                     // If there is an error, throw Lua exception with the error message

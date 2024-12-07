@@ -40,6 +40,7 @@
 #include <udho/view/tmpl/sections.h>
 #include <udho/view/meta.h>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 
 namespace udho{
 namespace view{
@@ -145,9 +146,13 @@ struct stream{
      */
     std::size_t size() const { return _buffer.size(); }
 
-    std::string save() const {
+    std::string save(const std::string& name) const {
+        std::string sanitized_name = name;
+        std::replace_if(sanitized_name.begin(), sanitized_name.end(), [](char ch) {
+            return !std::isalnum(ch) && ch != '.' && ch != '-' && ch != '_';
+        }, '_');
         boost::filesystem::path temp_dir = boost::filesystem::temp_directory_path();
-        boost::filesystem::path temp_file = temp_dir / boost::filesystem::unique_path("buffer-%%%%-%%%%-%%%%-%%%%.script");
+        boost::filesystem::path temp_file = temp_dir / boost::filesystem::unique_path(udho::url::format("{}-%%%%-%%%%-%%%%-%%%%.lua", sanitized_name));
 
         std::ofstream out(temp_file.string());
         if (!out) {

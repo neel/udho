@@ -29,6 +29,8 @@
 #define UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
 
 #include <map>
+#include <thread>
+#include <chrono>
 #include <string>
 #include <functional>
 #include <sol/sol.hpp>
@@ -124,6 +126,7 @@ struct state{
      */
     inline state() {
         _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8, sol::lib::debug);
+        _lua_version = {0, 0};
     }
 
     static constexpr auto name() {
@@ -148,10 +151,42 @@ struct state{
         //     }
         //     return 1;  // Return the number of values pushed onto the stack
         // });
+        try {
+            // Execute the script and directly obtain the version string
+            auto result = _state.safe_script("return _VERSION", sol::script_pass_on_error);
+            if (!result.valid()) {
+                sol::error err = result;
+                std::cerr << "Failed to detect lua version: " << err.what() << std::endl;
+                return;
+            }
+
+            std::string lua_version_str = result.get<std::string>();
+            _lua_version = parse_lua_version(lua_version_str);
+            std::cout << "Detected Lua version: " << _lua_version.first << "." << _lua_version.second << std::endl;
+        } catch (const sol::error& e) {
+            std::cerr << "Error while detecting lua version: " << e.what() << std::endl;
+            return;
+        }
 
         _state.script(scripts::dir());
         _udho = _state["udho"].get_or_create<sol::table>();
         buffer::apply(_udho);
+
+        _utils  = _udho["utils"].get_or_create<sol::table>();
+        _utils.set_function("sleep", [](std::size_t millisecs){
+            std::this_thread::sleep_for(std::chrono::milliseconds(millisecs));
+        });
+        _utils.set_function("thread_id", []() -> std::thread::id {
+            try{
+                return std::this_thread::get_id();
+            } catch(const std::exception& ex){
+                std::cout << "Exception from lua calling thread.id: " << ex.what() << std::endl;
+                return std::thread::id{};
+            }catch (...) {
+                std::cout << "An unknown exception occurred." << std::endl;
+                return std::thread::id{};
+            }
+        });
     }
 
 
@@ -176,7 +211,12 @@ struct state{
 
         view_info view = _views[view_index];
         buffer_type buff{view.min_buffer_size};
+
+        sol::environment env = sol::get_environment(view.function);
+        sol::environment isolated_env(_state, sol::create, _state.globals());
+        sol::set_environment(isolated_env, view.function);
         sol::protected_function_result result = view.function(std::ref(data), std::ref(aux), buff);
+        sol::set_environment(env, view.function);
 
         if (!result.valid()) {
             sol::error err = result;
@@ -188,6 +228,18 @@ struct state{
         return size;
     }
 
+    /**
+     * @brief Executes a Lua script identified by its name, using provided data and capturing the output.
+     *
+     * @warning supposed to be called from lua
+     * @param name The identifier of the script to execute.
+     * @param d The data to be passed to the script, typically involving context or configuration.
+     * @param output Reference to a string where the script's output will be stored.
+     * @return The size of the generated output.
+     * @tparam T The type of the data passed to the script.
+     *
+     * Searches for the script in the internal map and executes it if found. If the script execution is successful, captures the output using the provided buffer. Handles and reports errors if the script execution fails.
+     */
     template <typename AuxT>
     std::string exec_lua(const std::string& name, sol::object d, AuxT aux){
         std::string view_index = name;
@@ -198,7 +250,12 @@ struct state{
 
         view_info view = _views[view_index];
         buffer_type buff{view.min_buffer_size};
+
+        sol::environment env = sol::get_environment(view.function);
+        sol::environment isolated_env(_state, sol::create, _state.globals());
+        sol::set_environment(isolated_env, view.function);
         sol::protected_function_result result = view.function(d, aux, buff); // unlike the previous version of the function here d and aux comes from lua itself. Not from C++
+        sol::set_environment(env, view.function);
 
         if (!result.valid()) {
             sol::error err = result;
@@ -212,11 +269,28 @@ struct state{
     }
 
     sol::table& udho() { return _udho; }
+    const std::pair<int, int>& lua_version() const { return _lua_version; }
+
+    private:
+        std::pair<int, int> parse_lua_version(const std::string& version_string) {
+            std::istringstream iss(version_string);
+            std::string token;
+            std::getline(iss, token, ' ');  // Skip "Lua" prefix
+
+            std::getline(iss, token, '.'); // Get major version part
+            int major = std::stoi(token);
+            std::getline(iss, token);      // Get minor version part, assuming no patch version handling
+            int minor = std::stoi(token);
+
+            return {major, minor};
+        }
 
     private:
         sol::state _state; ///< The underlying Sol2 state object managing the Lua environment.
         sol::table _udho; ///< A table in the Lua global environment for namespaced operations related to this framework.
         std::map<std::string, view_info> _views;
+        sol::table _utils;
+        std::pair<int, int> _lua_version;
 };
 
 }

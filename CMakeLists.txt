@@ -30,7 +30,7 @@ option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
 option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
 option(UDHO_USE_FCGI "Build with FCGI" ON)
 option(UDHO_HEADER_ONLY "Use Udho as Header Only Library" ON)
-option(UDHO_USE_LUAJIT "Use LuaJIT is available" ON)
+option(UDHO_USE_LUAJIT "Use LuaJIT is available" OFF)
 
 IF(UNIX AND APPLE)
     SET(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl@3/3.0.1")
@@ -84,6 +84,8 @@ SET(UDHO_SOURCES
 
 ADD_EXECUTABLE(sandbox sandbox.cpp)
 TARGET_LINK_LIBRARIES(sandbox udho)
+ADD_EXECUTABLE(sandbox2 sandbox2.cpp)
+TARGET_LINK_LIBRARIES(sandbox2 udho)
 
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
@@ -142,7 +144,7 @@ else()
     TARGET_INCLUDE_DIRECTORIES(udho PUBLIC ${LUA_INCLUDE_DIR})
 endif()
 
-target_compile_definitions(udho PUBLIC SOL_EXCEPTIONS_SAFE_PROPAGATION)
+target_compile_definitions(udho PUBLIC SOL_EXCEPTIONS_SAFE_PROPAGATION SOL_ALL_SAFETIES_ON)
 TARGET_LINK_LIBRARIES(udho PUBLIC sol2)
 
 if(UDHO_BUILD_TESTS)

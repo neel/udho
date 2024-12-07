@@ -37,6 +37,9 @@ namespace bridges{
 template <typename StateT, typename CompilerT, typename ScriptT, template <class> typename BinderT>
 struct bridge;
 
+template <typename StateT, typename CompilerT, typename ScriptT, template <class> typename BinderT>
+struct pool;
+
 template <typename BridgeT>
 struct bind;
 

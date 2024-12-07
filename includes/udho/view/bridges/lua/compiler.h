@@ -70,7 +70,9 @@ struct compiler{
      * @details This function performs the actual compilation work by loading the script into the Lua state, checking for syntax errors, and registering the resulting function. Detailed error handling ensures that any issues during loading or function extraction are clearly reported.
      */
     inline bool operator()(script_type&& script);
-
+    inline void analyze_fn(const sol::protected_function& fn) {
+        // TODO future work nice to have bytecode analyser to detect vulnerabilities e.g. accedental SET GLOBAL.
+    }
     private:
         state& _state;
 };
@@ -83,14 +85,16 @@ bool compiler::operator()(script_type&& script){
     }
 
     sol::protected_function view =  load_result.get<sol::protected_function>();
-    sol::protected_function_result view_result = view();
+    sol::protected_function_result view_result = view(); // a view is a function returned from a anonymous wrapper function that takes no argument
     if (!view_result.valid()) {
         sol::error err = view_result;
         throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
     }
 
 
-    sol::protected_function view_fnc = view_result;
+    sol::protected_function view_fnc = view_result;     // view_fnc is the actual view function that will be called with a data and a context object
+    analyze_fn(view_fnc);
+
     detail::lua::state::view_info info;
     info.min_buffer_size = script.min_size();
     info.function = view_fnc;

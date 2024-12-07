@@ -40,6 +40,7 @@
 #include <udho/view/resources/results.h>
 #include <udho/view/data/associative.h>
 #include <udho/view/data/operators.h>
+#include <udho/view/bridges/results.h>
 
 namespace udho{
 namespace view{
@@ -90,8 +91,8 @@ struct proxy{
     template <typename T, typename Aux>
     udho::view::resources::results eval(T&& data, Aux&& aux){
         udho::view::resources::results res(_name);
-        std::size_t size = _bridge.exec(_name, _prefix, std::forward<T>(data), std::forward<Aux>(aux), res.output());
-        res.size(size);
+        udho::view::data::bridges::results results = _bridge.exec(_name, _prefix, std::forward<T>(data), std::forward<Aux>(aux), res.output());
+        res.size(results.size());
         return res;
     }
 
