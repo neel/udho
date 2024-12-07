@@ -122,16 +122,16 @@ struct writable_internal_binder<Class, std::map<K, T>>{
 template <typename Class, typename ResT>
 struct readonly_internal_binder{
     template <typename Usertype, typename... X>
-    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& w){
+    static void apply(sol::state& state, Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& w){
         type.set(name, sol::readonly(*w));
     }
 };
 template <typename Class, typename T>
 struct readonly_internal_binder<Class, std::vector<T>>{
     template <typename Usertype, typename... X>
-    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+    static void apply(sol::state& state, Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
-            [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, std::ref(d))())); }
+            [w = *wrapper](const Class& d) { return sol::as_table(std::bind(w, std::cref(d))()); }
         ));
     }
 };
@@ -139,94 +139,111 @@ struct readonly_internal_binder<Class, std::vector<T>>{
 template <typename Class, typename K, typename T>
 struct readonly_internal_binder<Class, std::map<K, T>>{
     template <typename Usertype, typename... X>
-    static void apply(Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
+    static void apply(sol::state& state, Usertype& type, const std::string& name, udho::view::data::wrapper<X...>& wrapper){
         type.set(name, sol::property(
             [w = *wrapper](Class& d) { return sol::readonly(sol::as_table(std::bind(w, std::ref(d))())); }
         ));
     }
 };
 
-struct internal_index_binder {
-    template<typename Usertype, typename T>
-    static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<T>& wrapper) {
-        using wrapper_type = udho::view::data::wrapper<T>;
-        using result_type  = typename wrapper_type::result_type;
-        using class_type   = typename wrapper_type::class_type;
-        using args_type    = typename wrapper_type::args_type;
-        using key_type     = typename std::tuple_element<0, args_type>::type;
+// struct internal_index_binder {
+//     template<typename Usertype, typename T>
+//     static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<T>& wrapper) {
+//         using wrapper_type = udho::view::data::wrapper<T>;
+//         using result_type  = typename wrapper_type::result_type;
+//         using class_type   = typename wrapper_type::class_type;
+//         using args_type    = typename wrapper_type::args_type;
+//         using key_type     = typename std::tuple_element<0, args_type>::type;
+//
+//         helper::recurse<std::decay_t<key_type>>::apply(state);
+//         helper::recurse<std::decay_t<result_type>>::apply(state);
+//
+//         static_assert(std::tuple_size<args_type>::value == 1);
+//
+//         apply_impl<Usertype, key_type, class_type>(type, *wrapper, typename std::is_integral<key_type>::type());
+//     }
+//
+//     template<typename Usertype, typename U, typename V>
+//     static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<U, V>& wrapper) {
+//         using wrapper_type = udho::view::data::wrapper<U, V>;
+//         using result_type  = typename wrapper_type::result_type;
+//         using class_type   = typename wrapper_type::class_type;
+//         using key_type     = typename wrapper_type::key_type;
+//         using value_type   = typename wrapper_type::value_type;
+//
+//         helper::recurse<std::decay_t<key_type>>::apply(state);
+//         helper::recurse<std::decay_t<value_type>>::apply(state);
+//         helper::recurse<std::decay_t<result_type>>::apply(state);
+//
+//         apply_impl2<Usertype>(type, wrapper, typename std::is_integral<key_type>::type());
+//     }
+//
+//     private:
+//
+//         template<typename Usertype, typename KeyT, typename Class, typename MemberT>
+//         static void apply_impl(Usertype& type, MemberT func, std::true_type) {
+//             type[sol::meta_function::index] = [func](Class& self, KeyT key) {
+//                 return std::apply(func, std::make_tuple(self, key - 1));
+//             };
+//         }
+//
+//         template<typename Usertype, typename KeyT, typename Class, typename MemberT>
+//         static void apply_impl(Usertype& type, MemberT func, std::false_type) {
+//             type[sol::meta_function::index] = [func](Class& self, KeyT key) {
+//                 return std::apply(func, std::make_tuple(self, key));
+//             };
+//         }
+//
+//         template<typename Usertype, typename U, typename V>
+//         static void apply_impl2(Usertype& type, udho::view::data::wrapper<U, V>& wrapper, std::true_type) {
+//             using wrapper_type = udho::view::data::wrapper<U, V>;
+//             using result_type  = typename wrapper_type::result_type;
+//             using class_type   = typename wrapper_type::class_type;
+//             using key_type     = typename wrapper_type::key_type;
+//             using value_type   = typename wrapper_type::value_type;
+//
+//             type[sol::meta_function::index] = [w = wrapper](class_type& self, key_type key) mutable {
+//                 return w.get(self, key -1);
+//             };
+//             // type[sol::meta_function::new_index] = [w = wrapper](class_type& self, key_type key, value_type value) mutable {
+//             //     return w.set(self, key -1, value);
+//             // };
+//         }
+//
+//         template<typename Usertype, typename KeyT, typename Class, typename U, typename V>
+//         static void apply_impl2(Usertype& type, udho::view::data::wrapper<U, V>& wrapper, std::true_type) {
+//             using wrapper_type = udho::view::data::wrapper<U, V>;
+//             using result_type  = typename wrapper_type::result_type;
+//             using class_type   = typename wrapper_type::class_type;
+//             using key_type     = typename wrapper_type::key_type;
+//             using value_type   = typename wrapper_type::value_type;
+//
+//             type[sol::meta_function::index] = [w = wrapper](class_type& self, key_type key) mutable {
+//                 return w.get(self, key);
+//             };
+//             // type[sol::meta_function::new_index] = [w = wrapper](class_type& self, key_type key, value_type value) mutable {
+//             //     return w.set(self, key, value);
+//             // };
+//         }
+// };
 
-        helper::recurse<std::decay_t<key_type>>::apply(state);
-        helper::recurse<std::decay_t<result_type>>::apply(state);
-
-        static_assert(std::tuple_size<args_type>::value == 1);
-
-        apply_impl<Usertype, key_type, class_type>(type, *wrapper, typename std::is_integral<key_type>::type());
-    }
-
-    template<typename Usertype, typename U, typename V>
-    static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<U, V>& wrapper) {
-        using wrapper_type = udho::view::data::wrapper<U, V>;
-        using result_type  = typename wrapper_type::result_type;
-        using class_type   = typename wrapper_type::class_type;
-        using key_type     = typename wrapper_type::key_type;
-        using value_type   = typename wrapper_type::value_type;
-
-        helper::recurse<std::decay_t<key_type>>::apply(state);
-        helper::recurse<std::decay_t<value_type>>::apply(state);
-        helper::recurse<std::decay_t<result_type>>::apply(state);
-
-        apply_impl2<Usertype>(type, wrapper, typename std::is_integral<key_type>::type());
-    }
-
-    private:
-
-        template<typename Usertype, typename KeyT, typename Class, typename MemberT>
-        static void apply_impl(Usertype& type, MemberT func, std::true_type) {
-            type[sol::meta_function::index] = [func](Class& self, KeyT key) {
-                return std::apply(func, std::make_tuple(self, key - 1));
-            };
-        }
-
-        template<typename Usertype, typename KeyT, typename Class, typename MemberT>
-        static void apply_impl(Usertype& type, MemberT func, std::false_type) {
-            type[sol::meta_function::index] = [func](Class& self, KeyT key) {
-                return std::apply(func, std::make_tuple(self, key));
-            };
-        }
-
-        template<typename Usertype, typename U, typename V>
-        static void apply_impl2(Usertype& type, udho::view::data::wrapper<U, V>& wrapper, std::true_type) {
-            using wrapper_type = udho::view::data::wrapper<U, V>;
-            using result_type  = typename wrapper_type::result_type;
-            using class_type   = typename wrapper_type::class_type;
-            using key_type     = typename wrapper_type::key_type;
-            using value_type   = typename wrapper_type::value_type;
-
-            type[sol::meta_function::index] = [w = wrapper](class_type& self, key_type key) mutable {
-                return w.get(self, key -1);
-            };
-            type[sol::meta_function::new_index] = [w = wrapper](class_type& self, key_type key, value_type value) mutable {
-                return w.set(self, key -1, value);
-            };
-        }
-
-        template<typename Usertype, typename KeyT, typename Class, typename U, typename V>
-        static void apply_impl2(Usertype& type, udho::view::data::wrapper<U, V>& wrapper, std::true_type) {
-            using wrapper_type = udho::view::data::wrapper<U, V>;
-            using result_type  = typename wrapper_type::result_type;
-            using class_type   = typename wrapper_type::class_type;
-            using key_type     = typename wrapper_type::key_type;
-            using value_type   = typename wrapper_type::value_type;
-
-            type[sol::meta_function::index] = [w = wrapper](class_type& self, key_type key) mutable {
-                return w.get(self, key);
-            };
-            type[sol::meta_function::new_index] = [w = wrapper](class_type& self, key_type key, value_type value) mutable {
-                return w.set(self, key, value);
-            };
-        }
-};
-
+/**
+ * @note For Lua 5.3, 5.4 the ipairs method calls index metafunction until it returns nil.
+ *       For Lua 5.3 it calls __pairs method if it exists.
+ *       This binder binds __ipairs, ipairs to the same function object when value type is not a pair.
+ *       Otherwise it binds __pairs and pairs function to a function object that performs assiciative retrival
+ *       For associative container it uses __pairs method if provided in all lua versions
+ *       References Below:
+ *       https://www.lua.org/manual/5.1/manual.html#pdf-ipairs
+ *       https://www.lua.org/manual/5.2/manual.html#pdf-ipairs
+ *       https://www.lua.org/manual/5.3/manual.html#pdf-ipairs
+ *       https://www.lua.org/manual/5.4/manual.html#pdf-ipairs
+ *       https://www.lua.org/manual/5.1/manual.html#pdf-pairs
+ *       https://www.lua.org/manual/5.2/manual.html#pdf-pairs
+ *       https://www.lua.org/manual/5.3/manual.html#pdf-pairs
+ *       https://www.lua.org/manual/5.4/manual.html#pdf-pairs
+ *
+ */
 struct internal_iter_binder {
     template<typename Usertype, typename U>
     static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<U, U>& wrapper) {
@@ -247,7 +264,7 @@ struct internal_iter_binder {
         using class_type    = typename wrapper_type::class_type;
         using iterator_type = typename wrapper_type::iterator_type;
 
-        type["ipairs"] = [w = wrapper](class_type& d) mutable {
+        auto lambda = [w = wrapper](class_type& d) mutable {
             std::size_t i = 0;
             iterator_type it = w.begin(d), end = w.end(d);
 
@@ -270,6 +287,9 @@ struct internal_iter_binder {
                 }
             });
         };
+
+        type["ipairs"]   = lambda;
+        type["__ipairs"] = lambda;
     }
 
     template <typename Usertype, typename U>
@@ -279,7 +299,7 @@ struct internal_iter_binder {
         using class_type    = typename wrapper_type::class_type;
         using iterator_type = typename wrapper_type::iterator_type;
 
-        type["pairs"] = [w = wrapper](class_type& d) mutable {
+        auto lambda = [w = wrapper](class_type& d) mutable {
             iterator_type it = w.begin(d), end = w.end(d);
 
             return sol::as_function([it, end](sol::this_state ts) mutable -> std::tuple<sol::object, sol::object> {
@@ -298,6 +318,9 @@ struct internal_iter_binder {
                 }
             });
         };
+
+        type["pairs"] = lambda;
+        type["__pairs"] = lambda;
     }
 };
 
@@ -340,7 +363,7 @@ struct binder{
         std::cout << "lua binding immutable property: " << nvp.name() << std::endl;
 
         auto& w = nvp.value();
-        helper::readonly_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
+        helper::readonly_internal_binder<X, result_type>::apply(_state._state, _type, nvp.name(), w);
         return *this;
     }
     template <typename KeyT, typename U, typename V>
@@ -387,31 +410,58 @@ struct binder{
     }
 
 
-    template <typename KeyT, typename T>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<false>, KeyT, udho::view::data::wrapper<T>>& nvp){
-        using result_type = typename udho::view::data::wrapper<T>::result_type;
+    template <typename KeyT, typename U, typename V>
+    binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<false>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
+        using result_type = typename udho::view::data::wrapper<U, V>::result_type;
+        using class_type  = typename udho::view::data::wrapper<U, V>::class_type;
+        using key_type    = typename udho::view::data::wrapper<U, V>::key_type;
 
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
         auto& wrapper = nvp.value();
-        helper::internal_index_binder::apply(_state, _type, wrapper);
+        // helper::internal_index_binder::apply(_state, _type, wrapper);
+        _type[sol::meta_function::index] = [w = wrapper](const class_type& self, key_type key, sol::this_state ts) mutable {
+            if constexpr (std::is_integral<key_type>::value){
+                if(key == w.size(self)+1){
+                    return sol::make_object(ts, sol::nil);
+                } else if (key == 0) {
+                    throw std::runtime_error{"index 0 used while Lua is 1 indexed"};
+                }else {
+                    return sol::make_object(ts, w.get(self, key -1));
+                }
+            } else {
+                return sol::make_object(ts, w.get(self, key));
+            }
+        };
         return *this;
     }
     template <typename KeyT, typename U, typename V>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<true>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;
         using class_type  = typename udho::view::data::wrapper<U, V>::class_type;
-        using args_type   = typename udho::view::data::wrapper<U, V>::args_type;
-        using key_type    = typename std::tuple_element<0, args_type>::type;
+        using key_type    = typename udho::view::data::wrapper<U, V>::key_type;
 
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
         std::cout << "lua binding function: " << nvp.name() << std::endl;
 
         auto& wrapper = nvp.value();
-        helper::internal_index_binder::apply(_state, _type, wrapper);
+        // helper::internal_index_binder::apply(_state, _type, wrapper);
+        _type[sol::meta_function::index] = [w = wrapper](class_type& self, key_type key, sol::this_state ts) mutable {
+            if constexpr (std::is_integral<key_type>::value){
+                if(key == w.size(self)+1){
+                    return sol::make_object(ts, sol::nil);
+                } else if (key == 0) {
+                    throw std::runtime_error{"index 0 used while Lua is 1 indexed"};
+                }else {
+                    return sol::make_object(ts, w.get(self, key -1));
+                }
+            } else {
+                return sol::make_object(ts, w.get(self, key));
+            }
+        };
         return *this;
     }
 
