@@ -49,9 +49,10 @@ struct info{
     inline double x() const { return _x; }
     inline void setx(const std::uint32_t& v) { _x = v; }
 
-    subinfo& operator[](const std::size_t& i) {
+    const subinfo& operator[](const std::size_t& i) const {
         return subs.at(i);
     }
+    std::size_t size() const { return subs.size(); }
 
     std::vector<subinfo>::const_iterator begin() const { return subs.begin(); }
     std::vector<subinfo>::const_iterator end() const { return subs.end(); }
@@ -73,7 +74,7 @@ struct info{
         using namespace udho::view::data;
 
         return assoc("info"),
-            index(&info::operator[], &info::operator[]),
+            index(&info::operator[], &info::size),
             iter(&info::begin, &info::end),
             mvar("name",  &info::name),
             cvar("value", &info::value),
@@ -303,7 +304,6 @@ void run(sol::protected_function& view_fnc, const Data& data){
 }
 
 int main(){
-
     // // // sol::state lua;
     // // // lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8);
     // // //

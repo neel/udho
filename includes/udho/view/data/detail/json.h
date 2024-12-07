@@ -58,6 +58,12 @@ namespace detail{
         template <typename KeyT, typename ValueT>
         bool operator()(nvp<policies::function, KeyT, ValueT>&){ return false; }
 
+        template <typename KeyT, typename ValueT>
+        bool operator()(nvp<policies::iterable, KeyT, ValueT>&){ return false; }
+
+        template <bool Mutable, typename KeyT, typename ValueT>
+        bool operator()(nvp<policies::index<Mutable>, KeyT, ValueT>&){ return false; }
+
         nlohmann::json& _root;
         const DataT& _data;
     };
@@ -81,6 +87,12 @@ namespace detail{
 
         template <typename KeyT, typename ValueT>
         bool operator()(nvp<policies::function, KeyT, ValueT>&){ return false; }
+
+        template <typename KeyT, typename ValueT>
+        bool operator()(nvp<policies::iterable, KeyT, ValueT>&){ return false; }
+
+        template <bool Mutable, typename KeyT, typename ValueT>
+        bool operator()(nvp<policies::index<Mutable>, KeyT, ValueT>&){ return false; }
 
         const nlohmann::json& _root;
         DataT& _data;

@@ -95,8 +95,9 @@ struct const_member_function<Res (Class::*)(X...) const>{
         return std::apply(_member, std::tuple_cat(std::make_tuple(std::ref(d)), args));
     }
 
-    result_type get(Class& d) const { call(d, std::tuple<>{}); }
-    result_type get(Class& d) { call(d, std::tuple<>{}); }
+    result_type get(Class& d) const { return call(d, std::tuple<>{}); }
+    result_type get(Class& d) { return call(d, std::tuple<>{}); }
+    result_type get(const Class& d) const { return call(d, std::tuple<>{}); }
 
     private:
         member_type _member;
@@ -208,6 +209,27 @@ struct wrapper2<Res (Class::*)(U) const, Res2 (Class::*)(U, V)>: const_member_fu
 
     typename getter_type::result_type get(const Class& d, const key_type& key) { return getter().call(d, std::tuple<key_type>{key}); }
     void set(Class& d, const key_type& key, const value_type& value) { setter().call(d, std::tuple<key_type, value_type>{key, value}); }
+};
+
+template <typename Class, typename U, typename Res, typename SizeT>
+struct wrapper2<Res (Class::*)(U) const, SizeT (Class::*)() const>: const_member_function<Res (Class::*)(U) const>, const_member_function<SizeT (Class::*)() const> {
+    wrapper2(Res (Class::*u)(U) const, SizeT (Class::*v)() const)
+        : const_member_function<Res (Class::*)(U) const>    (std::move(u)),
+          const_member_function<SizeT (Class::*)() const>   (std::move(v)) {}
+
+    using class_type  = Class;
+    using getter_type = const_member_function<Res (Class::*)(U) const>;
+    using sizef_type  = const_member_function<SizeT (Class::*)() const>;
+    using key_type    = std::decay_t<U>;
+    using value_type  = std::decay_t<Res>;
+    using size_type   = SizeT;
+    using result_type = Res;
+
+    getter_type& getter() { return *this; }
+    sizef_type& sizef() { return *this; }
+
+    typename getter_type::result_type get(const Class& d, const key_type& key) { return getter().call(d, std::tuple<key_type>{key}); }
+    size_type size(const Class& d) { return sizef().call(d, std::tuple<>{}); }
 };
 
 template <typename Class, typename U, typename Res>
@@ -483,7 +505,9 @@ nvp<P, K, wrapper<X...>> make_nvp(P, K&& name, X&&... v){
 /**
  * @ingroup view
  * @brief Convenience function to encapsulate a member variable as mutable property.
- *
+ * @warn If a C++ class provides two methods begin and end then sol2 expects it to provide value_type and an emplace method too.
+ *       So, either satisfy all stl container requirements and use mvar on that object. Otherwise use cvar instead. The third
+ *       alternative is to change the names of the begin and end method so that sol2 does not build its expectations.
  * @param name The name of the property.
  * @param v a member variable.
  * @tparam K The type of the key or name of the property.
@@ -547,9 +571,22 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
  * @param IndexGetterF The name of the function.
  * @return A name-value pair encapsulating the function.
  */
-template <typename IndexGetterF>
-nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGetterF&& v){
-    return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v));
+// template <typename IndexGetterF>
+// nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGetterF&& v){
+//     return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v));
+// }
+
+/**
+ * @ingroup view
+ * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
+ *
+ * @param IndexGetterF The name of the function.
+ * @param IndexSizeF The name of the function
+ * @return A name-value pair encapsulating the function.
+ */
+template <typename IndexGetterF, typename IndexSizeF>
+nvp< policies::index<false>, std::string, wrapper<IndexGetterF, IndexSizeF> > index(IndexGetterF&& v, IndexSizeF&& s){
+    return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v), std::forward<IndexSizeF>(s));
 }
 
 /**
@@ -559,10 +596,10 @@ nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGet
  * @param IndexGetterF The name of the function.
  * @return A name-value pair encapsulating the function.
  */
-template <typename IndexGetterF, typename IndexSetterF>
-nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSetterF> > index(IndexGetterF&& u, IndexSetterF v){
-    return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(u), std::forward<IndexSetterF>(v));
-}
+// template <typename IndexGetterF, typename IndexSetterF>
+// nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSetterF> > index(IndexGetterF&& u, IndexSetterF v){
+//     return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(u), std::forward<IndexSetterF>(v));
+// }
 
 /**
  * @ingroup view

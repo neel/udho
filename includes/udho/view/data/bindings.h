@@ -32,6 +32,7 @@
 #include <udho/view/bridges/fwd.h>
 #include <udho/view/data/nvp.h>
 #include <iostream>
+#include <atomic>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
@@ -66,15 +67,27 @@ struct bindings{
     friend struct udho::view::data::bridges::bind;
 
     /**
-     * @brief checks whether binding already exists or not
+     * @brief atomic load count and return
      */
-    static bool exists() { return _exists; }
+    inline static std::uint32_t count() { return _count; }
+    /**
+     * @brief atomic checks whether binding already exists or not (count > 0)
+     */
+    inline static bool exists() { return _count > 0; }
+    /**
+     * @brief atomic checks whether binding already performed at least expected_count number of times.
+     */
+    inline static bool exists(std::uint32_t expected_count) { return _count >= expected_count; }
     private:
-        static bool _exists;
+        /**
+         * @brief atomic increment count
+         */
+        inline static void bound_one(){ ++_count; }
+        static std::atomic_uint _count;
 };
 
 template <typename DerivedT, typename T>
-bool bindings<DerivedT, T>::_exists = false;
+std::atomic_uint bindings<DerivedT, T>::_count = 0;
 
 namespace detail{
 

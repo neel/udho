@@ -174,6 +174,9 @@ namespace detail{
     template <typename DataT, typename Function>
     struct visitor_index;
 
+    /**
+     * @brief visitor that visits a key node
+     */
     template <typename DataT, typename Function>
     struct visitor_key: private visitor_common<DataT, Function>{
         using function_type = Function;
@@ -261,6 +264,12 @@ namespace detail{
                 return false;
             }
         }
+
+        template <typename K, typename V>
+        bool operator()(nvp<policies::iterable, K, V>&){ return false; }
+
+        template <bool Mutable, typename K, typename V>
+        bool operator()(nvp<policies::index<Mutable>, K, V>&){ return false; }
 
         private:
             template <typename ValueT, typename std::enable_if<udho::view::data::detail::has_subscript_operator_v<ValueT>, int>::type* = nullptr>
@@ -353,17 +362,35 @@ namespace detail{
             std::string               _name;
     };
 
+    /**
+     * @brief visitor visits every nvp in the metatype of the input data and if matched executes the meta code in the context of that nvp.
+     * Example usage shown below
+     * @code
+     * auto meta = metatype(udho::view::data::type<DataT>{});   // DataT has metatype defined
+     * visitor<DataT, Function> v{statement, d, f};             // d:DataT, f:Function
+     * meta.members().apply_until(v);                           // apply the visitor over the meta
+     * @endcode
+     */
     template <typename DataT, typename Function>
     struct visitor{
-        visitor(const ast::node_ptr_type& id, DataT& data, Function& function): _id(id), _data(data), _function(function), _found(false), _key_visitor(0x0) {
-            assert(_id->template is_type<ast::statement>());
-            assert(_id->has_content());
-            assert(_id->children.size() > 0);
-            const ast::node_ptr_type& key_node = _id->children[0];
+        /**
+         * @brief constructs a visitor
+         * @param stmt a statement node
+         * @param data a data object provides the context of execution of the statement expressed by the statement node
+         * @param function a callback to be called with the returned value of the statement
+         *
+         * @pre stmt must be a non-empty (1 or more children) statement node in the ast
+         * @pre data must have metatype defined
+         */
+        visitor(const ast::node_ptr_type& stmt, DataT& data, Function& function): _statement(stmt), _data(data), _function(function), _found(false), _key_visitor(0x0) {
+            assert(_statement->template is_type<ast::statement>());
+            assert(_statement->has_content());
+            assert(_statement->children.size() > 0);
+            const ast::node_ptr_type& key_node = _statement->children[0];
             assert(key_node->template is_type<ast::key>());
             assert(key_node->has_content());
 
-            _key_visitor = new visitor_key<DataT, Function>{_data, _function, _id, 0, key_node};
+            _key_visitor = new visitor_key<DataT, Function>{_data, _function, _statement, 0, key_node};
         }
 
         ~visitor(){
@@ -371,6 +398,9 @@ namespace detail{
                 delete _key_visitor;
         }
 
+        /**
+         * @brief fowards calls to the key visitor with the input nvp
+         */
         template <typename PolicyT, typename KeyT, typename ValueT>
         bool operator()(udho::view::data::nvp<PolicyT, KeyT, ValueT>& nvp){
             bool success = (*_key_visitor)(nvp);
@@ -383,11 +413,11 @@ namespace detail{
 
         bool found() const { return _found; }
 
-        const ast::node_ptr_type& _id;
-        DataT&                                          _data;
-        Function&                                       _function;
-        bool                                            _found;
-        visitor_key<DataT, Function>*                   _key_visitor;
+        const ast::node_ptr_type&       _statement;
+        DataT&                          _data;
+        Function&                       _function;
+        bool                            _found;
+        visitor_key<DataT, Function>*   _key_visitor;
     };
 
 

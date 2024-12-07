@@ -12,15 +12,19 @@ if(Catch2_VERSION_MAJOR LESS 3)
     add_definitions(-DWITH_CATCH_VERSION_2)
 endif()
 
-add_executable(view-parser parser.cpp)
-target_link_libraries(view-parser PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+add_executable(udho-test-view-parser parser.cpp)
+target_link_libraries(udho-test-view-parser PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
-add_executable(data-meta meta.cpp)
-target_link_libraries(data-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+add_executable(udho-test-data-meta meta.cpp)
+target_link_libraries(udho-test-data-meta PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
-add_executable(lua lua.cpp)
-target_link_libraries(lua PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+add_executable(udho-test-lua-mt lua-mt.cpp)
+target_link_libraries(udho-test-lua-mt PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
-catch_discover_tests(view-parser)
-catch_discover_tests(data-meta)
-catch_discover_tests(lua)
+add_executable(udho-test-lua lua.cpp)
+target_link_libraries(udho-test-lua PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+
+catch_discover_tests(udho-test-view-parser)
+catch_discover_tests(udho-test-data-meta)
+catch_discover_tests(udho-test-lua-mt)
+catch_discover_tests(udho-test-lua)
