@@ -120,7 +120,7 @@ struct student: person{
     std::vector<education> courses;
 
     student() = default;
-    student(const student&) = delete;
+    student(const student&) = default;
 
     inline double debt() const { return _debt; }
     inline void set_debt(const std::uint32_t& v) {

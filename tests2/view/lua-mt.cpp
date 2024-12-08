@@ -22,7 +22,7 @@ struct exec_result{
     std::size_t waiting = 0;
 };
 
-TEST_CASE("Lua Concurrent bridge", "[lua][mt]") {
+TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
     static char buffer[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 <?= udho.utils.thread_id() ?>
@@ -33,7 +33,7 @@ TEST_CASE("Lua Concurrent bridge", "[lua][mt]") {
 
     constexpr const std::size_t nstates = 4;
 
-    udho::view::data::bridges::pools::lua lua{nstates};
+    udho::view::data::bridges::lua lua{nstates};
     lua.init();
 
     lua.compile(udho::view::resources::tmpl::resource("view", buffer, buffer+sizeof(buffer)), "");

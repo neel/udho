@@ -16,7 +16,7 @@
 #include "data.h"
 
 
-TEST_CASE("data accessible through metatype", "[view.meta]") {
+TEST_CASE("data accessible through metatype", "[view][meta]") {
 
     student p;
     p.first_name = "X";

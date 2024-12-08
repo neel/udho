@@ -33,6 +33,7 @@
 #include <udho/view/data/nvp.h>
 #include <iostream>
 #include <atomic>
+#include <set>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
@@ -69,25 +70,49 @@ struct bindings{
     /**
      * @brief atomic load count and return
      */
-    inline static std::uint32_t count() { return _count; }
+    inline static std::uint32_t count() { return _states.size(); }
     /**
      * @brief atomic checks whether binding already exists or not (count > 0)
      */
-    inline static bool exists() { return _count > 0; }
+    inline static bool exists_any() { return count() > 0; }
     /**
      * @brief atomic checks whether binding already performed at least expected_count number of times.
      */
-    inline static bool exists(std::uint32_t expected_count) { return _count >= expected_count; }
+    inline static bool exists(std::uint32_t expected_count) { return count() >= expected_count; }
+    /**
+     * @brief atomic checks whether binding already exists or not (count > 0)
+     */
+    inline static bool exists(const StateT& state) {
+        return _states.count(state.id()) == 1;
+    }
+    inline static void unbind(const StateT& state) {
+        auto it = _states.find(state.id());
+        if(it != _states.end()){
+            _states.erase(it);
+        }
+    }
+
     private:
+        inline static void bound_one(const StateT& state){
+            _states.insert(state.id());
+            state.add_unbinder([](const StateT& state){
+                bindings<StateT, T>::unbind(state);
+            });
+            // ++_count;
+        }
         /**
          * @brief atomic increment count
          */
-        inline static void bound_one(){ ++_count; }
-        static std::atomic_uint _count;
+        // inline static void bound_one(){ ++_count; }
+        // static std::atomic_uint _count;
+        static std::set<typename StateT::id_type> _states;
 };
 
-template <typename DerivedT, typename T>
-std::atomic_uint bindings<DerivedT, T>::_count = 0;
+// template <typename StateT, typename T>
+// std::atomic_uint bindings<StateT, T>::_count = 0;
+
+template <typename StateT, typename T>
+std::set<typename StateT::id_type> bindings<StateT, T>::_states;
 
 namespace detail{
 

@@ -77,7 +77,7 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
             // Use pcall to handle errors in view function
             *this << "  local success, resultOrError = pcall(view, d, c, stream)\n";
             *this << "  if not success then\n";
-            *this << "    print('Error executing view function: ' .. resultOrError)\n";  // Or handle the error as needed
+            *this << "    print('Error executing view " << base::name() << ": '  .. resultOrError)\n";  // Or handle the error as needed
             *this << "    print(debug.traceback())\n";
             *this << "  end\n";
             *this << "end";  // Close the anonymous function

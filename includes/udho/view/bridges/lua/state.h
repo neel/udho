@@ -107,10 +107,17 @@ inline const std::string& dir() {
  * This structure encapsulates the Lua state management using the Sol2 library, providing functionalities for opening libraries, initializing global tables, and executing Lua scripts. It is designed to interact closely with Lua scripts generated from templates, facilitating data binding and script execution within a robust error handling framework.
  */
 struct state{
+    inline static std::uint32_t generate_id(){
+        static std::uint32_t id = 0;
+        return id++;
+    }
+
     struct view_info{
         std::size_t min_buffer_size;
         sol::protected_function function;
     };
+
+    using id_type = std::uint32_t;
 
     friend compiler; ///< Allows compiler direct access to internal details for script compilation.
 
@@ -124,10 +131,12 @@ struct state{
      *
      * Opens essential libraries such as base, string, math, and utf8 to provide a rich standard environment for executing scripts.
      */
-    inline state() {
+    inline state(): _id(state::generate_id()) {
         _state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::utf8, sol::lib::debug);
         _lua_version = {0, 0};
     }
+
+    id_type id() const { return _id; }
 
     static constexpr auto name() {
         using namespace udho::hazo::string::literals;
@@ -271,6 +280,15 @@ struct state{
     sol::table& udho() { return _udho; }
     const std::pair<int, int>& lua_version() const { return _lua_version; }
 
+    template <typename UnbinderF>
+    void add_unbinder(UnbinderF&& unbinder) const {
+        _unbinders.emplace_back(std::move(unbinder));
+    }
+    ~state(){
+        for(auto& unbinder: _unbinders){
+            unbinder(*this);
+        }
+    }
     private:
         std::pair<int, int> parse_lua_version(const std::string& version_string) {
             std::istringstream iss(version_string);
@@ -291,6 +309,8 @@ struct state{
         std::map<std::string, view_info> _views;
         sol::table _utils;
         std::pair<int, int> _lua_version;
+        id_type _id;
+        mutable std::vector<std::function<void (const state&)>> _unbinders;
 };
 
 }

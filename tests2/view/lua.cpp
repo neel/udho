@@ -15,7 +15,7 @@
 
 #include "data.h"
 
-TEST_CASE("Lua Interop", "[lua][interop]") {
+TEST_CASE("Lua Interop", "[view][lua][interop]") {
     CHECK(1 == 1);
 
     student p;
@@ -83,9 +83,8 @@ static char buffer_iter[] = R"TEMPLATE(
 )TEMPLATE";
 
 static char buffer_assoc[] = R"TEMPLATE(
-<?! vars('d', 'ctx') ?>
-<? for subject, marks in pairs(d.courses[1].marks) do ?>
-<?= subject ?>: <?= marks ?>
+<?! vars('d', 'ctx') whitespace(off) ?>
+<? for subject, marks in pairs(d.courses[1].marks) do ?><?= subject ?>: <?= marks ?>
 <? end ?>
 )TEMPLATE";
 
@@ -134,25 +133,135 @@ Number of courses: <?= #d.courses ?>
         "\nName: X Bose, Age: 25, Debt: 50 Address: Good locality\nPhD at JU\nMCA at SMU\nBCA at SMU\n\nResult of add: 51.0\n",
         "\nCourse 1: PhD at JU\nCourse 2: MCA at SMU\nCourse 3: BCA at SMU\n\n",
         "\nSpecialization 1: Data Science\nSpecialization 2: Machine Learning\n\nSpecialization 1: Data Science\nSpecialization 2: Machine Learning\n\n",
-        "\nCourse at index 2: MCA at SMU\nMark for Object Oriented Programming: 88.0\n",
+        "\nAlgorithms: 90.0\nData Structures: 85.0\n\n",
         "\nCourse at index 2: MCA at SMU\nMark for Object Oriented Programming: 88.0\n",
         "\nName: X Bose\nAge: 25.0\nDebt: 50.0\nAddress: Good locality (7086)\n\nName: X Bose, Age: 25, Debt: 50 Address: Good locality\nPhD at JU\nMCA at SMU\nBCA at SMU\n\nCourse 1: PhD at JU\nCourse 2: MCA at SMU\nCourse 3: BCA at SMU\n\nSpecialization 1: Data Science\nSpecialization 2: Machine Learning\n\nCourse at index 2: MCA at SMU\nMark for Object Oriented Programming: 88.0\n",
         "\nNumber of courses: 3\n"
     };
 
-    udho::view::data::bridges::lua lua;
-    lua.init();
+    SECTION("Default bridge") {
+        udho::view::data::bridges::lua lua;
+        lua.init();
 
-    for (std::size_t i = 0; i < views.size(); ++i) {
-        bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
-        REQUIRE(res == true);
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            INFO("Compiling view " << views[i].first);
+            REQUIRE(res == true);
+        }
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            INFO("Testing expected output for view " << views[i].first);
+            std::string output;
+            lua.exec(views[i].first, "prefix", p, nullptr, output);
+            REQUIRE(output == expected_outputs[i]);
+        }
     }
 
-    for (std::size_t i = 0; i < views.size(); ++i) {
-        std::cout << "Testing view: " << i << " " << views[i].first << std::endl;
-        std::string output;
-        lua.exec(views[i].first, "prefix", p, nullptr, output);
-        // std::cout << output << std::endl;
-        REQUIRE(output == expected_outputs[i]);
+    SECTION("Threadsafe bridge") {
+        udho::view::data::bridges::lua lua{1, udho::view::data::bridges::policy::thread_safe};
+        lua.init();
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            INFO("Compiling view " << views[i].first);
+            REQUIRE(res == true);
+        }
+
+        std::vector<std::thread> threads;
+        std::vector<std::string> outputs{views.size()};
+        std::mutex               mutex;
+        std::vector<student>     data{views.size()};
+
+        std::fill(data.begin(), data.end(), p);
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex] {
+                std::string output;
+                lua.exec(views[i].first, "prefix", data[i], nullptr, output);
+                std::lock_guard<std::mutex> lock(mutex);
+                // std::cout << output << std::endl;
+                outputs[i] = output;
+            });
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            INFO("Testing expected output for view " << views[i].first);
+            CHECK(outputs[i] == expected_outputs[i]);
+        }
+    }
+
+    SECTION("State Pool Bridge") {
+        udho::view::data::bridges::lua lua{4, udho::view::data::bridges::policy::state_pool};
+        lua.init();
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            INFO("Compiling view " << views[i].first);
+            REQUIRE(res == true);
+        }
+
+        std::vector<std::thread> threads;
+        std::vector<std::string> outputs{views.size()};
+        std::mutex               mutex;
+        std::vector<student>     data{views.size()};
+
+        std::fill(data.begin(), data.end(), p);
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex] {
+                std::string output;
+                lua.exec(views[i].first, "prefix", data[i], nullptr, output);
+                std::lock_guard<std::mutex> lock(mutex);
+                // std::cout << output << std::endl;
+                outputs[i] = output;
+            });
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            INFO("Testing expected output for view " << views[i].first);
+            CHECK(outputs[i] == expected_outputs[i]);
+        }
+    }
+
+    SECTION("State Pool Bridge Reading the same data") {
+        udho::view::data::bridges::lua lua{4, udho::view::data::bridges::policy::state_pool};
+        lua.init();
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            INFO("Compiling view " << views[i].first);
+            REQUIRE(res == true);
+        }
+
+        std::vector<std::thread> threads;
+        std::vector<std::string> outputs{views.size()};
+        std::mutex               mutex;
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            threads.emplace_back([&lua, &views, i,  &p, &outputs, &mutex] {
+                std::string output;
+                lua.exec(views[i].first, "prefix", p, nullptr, output);
+                std::lock_guard<std::mutex> lock(mutex);
+                // std::cout << output << std::endl;
+                outputs[i] = output;
+            });
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        for (std::size_t i = 0; i < views.size(); ++i) {
+            INFO("Testing expected output for view " << views[i].first);
+            CHECK(outputs[i] == expected_outputs[i]);
+        }
     }
 }

@@ -69,7 +69,7 @@ TEST_CASE("Tokenizer correctly builds the trie", "[trie]") {
     REQUIRE(tokens[4] == 104);
 }
 
-TEST_CASE("Parser correctly identifies Meta Blocks", "[template]") {
+TEST_CASE("Parser correctly identifies Meta Blocks", "[view][template][parser]") {
     std::string input = R"TEMPLATE(<?! register "views.user.badge"; lang "lua" ?>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -80,7 +80,7 @@ TEST_CASE("Parser correctly identifies Meta Blocks", "[template]") {
     REQUIRE(script[0].content() == R"(register "views.user.badge"; lang "lua")");
 }
 
-TEST_CASE("Parser correctly identifies Echo Blocks", "[template]") {
+TEST_CASE("Parser correctly identifies Echo Blocks", "[view][template][parser]") {
     const char* input = R"TEMPLATE(Hello <?= d.world ?>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -93,7 +93,7 @@ TEST_CASE("Parser correctly identifies Echo Blocks", "[template]") {
     REQUIRE(script[1].content() == "d.world");
 }
 
-TEST_CASE("Parser correctly identifies Eval Blocks", "[template]") {
+TEST_CASE("Parser correctly identifies Eval Blocks", "[view][template][parser]") {
     const char* input = R"TEMPLATE(<? d = udho.view() ?>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -104,7 +104,7 @@ TEST_CASE("Parser correctly identifies Eval Blocks", "[template]") {
     REQUIRE(script[0].content() == "d = udho.view()");
 }
 
-TEST_CASE("Parser correctly ignores Comment Blocks", "[template]") {
+TEST_CASE("Parser correctly ignores Comment Blocks", "[view][template][parser]") {
     const char* input = R"TEMPLATE(<# Some comments that will be ignored #>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -115,7 +115,7 @@ TEST_CASE("Parser correctly ignores Comment Blocks", "[template]") {
     REQUIRE(script[0].content() == "Some comments that will be ignored");
 }
 
-TEST_CASE("Parser correctly handles Embed Blocks", "[template]") {
+TEST_CASE("Parser correctly handles Embed Blocks", "[view][template][parser]") {
     const char* input = R"TEMPLATE(<?:score udho.view() ?>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -126,7 +126,7 @@ TEST_CASE("Parser correctly handles Embed Blocks", "[template]") {
     REQUIRE(script[0].content() == "score udho.view()");
 }
 
-TEST_CASE("Parser correctly handles Verbatim Blocks", "[template]") {
+TEST_CASE("Parser correctly handles Verbatim Blocks", "[view][template][parser]") {
     const char* input = R"TEMPLATE(<@ verbatim block @>)TEMPLATE";
     udho::view::tmpl::parser parser;
     parsed_document script;
@@ -137,7 +137,7 @@ TEST_CASE("Parser correctly handles Verbatim Blocks", "[template]") {
     REQUIRE(script[0].content() == " verbatim block ");
 }
 
-TEST_CASE("Parser correctly handles templates with multiple sections", "[template]") {
+TEST_CASE("Parser correctly handles templates with multiple sections", "[view][template][parser]") {
     static char input[] = R"TEMPLATE(
         <?! bridge lua; lang lua ?>
 
