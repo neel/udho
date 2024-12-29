@@ -126,10 +126,10 @@ struct context{
         return context_type{io, _bridge, router.summary(), store};
     }
 
-    private:
+    public:
         udho::net::types::headers::request  _request;
         udho::net::types::headers::response _response;
-        std::ofstream                       _stream;
+        std::stringstream                   _stream;
         udho::net::types::transfer_encoding _encoding;
         udho::net::bridge                   _bridge;
 };

@@ -14,6 +14,10 @@
 namespace udho{
 namespace net{
 
+namespace fake{
+    struct stream;
+}
+
 /**
  * @brief context is a copiable handle that bridges with the connection object associated with the http request
  * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
@@ -28,6 +32,8 @@ class stream{
 
     template <typename ProtocolT>
     friend struct connection;
+
+    friend struct fake::stream;
 
     boost::asio::io_service&            _service;
     udho::net::bridge&                  _bridge;
@@ -91,6 +97,16 @@ class stream{
         inline void compression(types::transfer::compression compress) { _bridge.compression(compress); }
         inline types::transfer::compression compression() const { return _bridge.compression(); }
 };
+
+namespace fake{
+
+struct stream{
+    static udho::net::stream create(boost::asio::io_service& io, udho::net::bridge& bridge){
+        return udho::net::stream{io, bridge};
+    }
+};
+
+}
 
 }
 }
