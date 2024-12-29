@@ -28,6 +28,7 @@
 #include <boost/algorithm/string.hpp>
 #include <udho/net/artifacts.h>
 #include <tabulate/table.hpp>
+#include <udho/view/tmpl/layout/layout.h>
 
 struct subinfo{
     std::string desc = "DESC";
@@ -429,10 +430,12 @@ int main(){
 
     std::string js_str = "console.log('Hello World')";
 
-    resource_store.assets().add("primary", udho::view::resources::asset::js("hello.js", js_str.begin(), js_str.end()));
+    resource_store.assets().add("primary", udho::view::resources::asset::js("hello.js", js_str.begin(), js_str.end())->self().is_async(true) );
     resource_store.lock();
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+    udho::view::tmpl::layout::asset_loader<udho::view::resources::asset::type::js> loader{resource_store_proxy.js()};
 
 
     using namespace udho::hazo::string::literals;
