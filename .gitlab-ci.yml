@@ -57,11 +57,13 @@ test:ubuntu:noble:
   variables:
     DEBIAN_FRONTEND: "noninteractive"
     LANG: en_US.utf8
+    LC_ALL: "en_US.UTF-8"
   before_script:
     - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
     - apt-get update
-    - apt-get install -y locales && rm -rf /var/lib/apt/lists/* localedef -i en_US -f UTF-8 /usr/share/locale/locale.alias en_US.UTF-8
-    - apt-get update
+    - apt-get install -y locales
+    - locale-gen en_US.UTF-8  # Ensure the locale is generated
+    - update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
     - apt-get upgrade -y
     - ln -fs /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
     - apt-get install -y tzdata
