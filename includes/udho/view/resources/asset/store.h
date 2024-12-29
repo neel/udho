@@ -51,7 +51,7 @@ namespace asset{
  * @ingroup view
  */
 class description{
-    using resource_ptr = udho::view::resources::asset::resource_ptr;
+    using resource_ptr = std::unique_ptr<asset::abstract_resource>;
 
     std::string  _prefix;
     resource_ptr _res;
@@ -77,13 +77,32 @@ class description{
          */
         const std::string& prefix() const { return _prefix; }
 
+        basic_resource<asset::type::css>& css() { return cast<asset::type::css>(); }
+        basic_resource<asset::type::js>&  js()  { return cast<asset::type::js> (); }
+        basic_resource<asset::type::txt>& txt() { return cast<asset::type::txt>(); }
+        basic_resource<asset::type::img>& img() { return cast<asset::type::img>(); }
+
+        std::string mime() const { return _res->mime(); }
+
         std::size_t write(udho::net::stream& stream) const{
             return _res->write(stream);
+        }
+        std::size_t write_contents(udho::net::stream& stream) const{
+            return _res->write_contents(stream);
         }
         /**
          * @brief type of the asset
          */
         asset::type type() const { return _res->type(); }
+
+        template <asset::type AssetType>
+        const udho::view::resources::asset::basic_resource<AssetType>& cast() const {
+            return dynamic_cast<const udho::view::resources::asset::basic_resource<AssetType>&>(*_res);
+        }
+        template <asset::type AssetType>
+        udho::view::resources::asset::basic_resource<AssetType>& cast() {
+            return dynamic_cast<udho::view::resources::asset::basic_resource<AssetType>&>(*_res);
+        }
 
         friend auto metatype(udho::view::data::type<description>){
             using namespace udho::view::data;
@@ -107,24 +126,30 @@ struct proxy{
      * @param prefix The prefix used in resource identification.
      * @param bridge Reference to the bridge used for resource execution.
      */
-    proxy(const description& desc,  const std::string& base): _desc(desc), _base(base) {}
+    inline proxy(const description& desc,  const std::string& base): _desc(desc), _base(base) {}
 
-    /**
+     /**
      * @brief Returns the name of the resource associated with this proxy.
      * @return The name of the resource.
      */
     inline std::string name() const { return _desc.name(); }
 
-   /**
+    /**
      * @brief Returns the prefix of the resource associated with this proxy.
      * @return The prefix of the resource.
      */
     inline std::string prefix() const { return _desc.prefix(); }
 
     /**
+     * @brief Returns the prefix of the resource associated with this proxy.
+     * @return The prefix of the resource.
+     */
+    inline std::string mime() const { return _desc.mime(); }
+
+    /**
      * @brief type of the asset
      */
-    asset::type type() const { return _desc.type(); }
+    inline asset::type type() const { return _desc.type(); }
 
     /**
      * @brief gets base url of the asset store
@@ -144,6 +169,14 @@ struct proxy{
      */
     std::size_t write(udho::net::stream& stream) const{
         return _desc.write(stream);
+    }
+    std::size_t write_contents(udho::net::stream& stream) const{
+        return _desc.write_contents(stream);
+    }
+
+    template <asset::type AssetType>
+    const udho::view::resources::asset::basic_resource<AssetType>& cast() const {
+        return _desc.cast<AssetType>();
     }
 
     /**
@@ -350,18 +383,32 @@ struct store{
 
     /**
      * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
+     * @pre expects that the store is locked before adding.
+     * @note throws exception if resource is being added after the store is locked.
+     * @note ownership of the resource is transfered to the store.
      * @param prefix The prefix used in resource identification.
      * @param res The resource to add.
      */
-   const description& add(const std::string& prefix, udho::view::resources::asset::resource_ptr&& res) {
-       std::string name = res->name();
-        auto it = _resources.insert(description{prefix, std::move(res)});
-        if(!it.second){
-            throw std::runtime_error{udho::url::format("Filed to add asset {}/{}", prefix, name)};
+   template <udho::view::resources::asset::type AssetType>
+   const description& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>* res) {
+        if(!locked()){
+            std::string name = res->name();
+            auto it = _resources.insert(description{prefix, std::unique_ptr<udho::view::resources::asset::basic_resource<AssetType>>(res)});
+            if(!it.second){
+                throw std::runtime_error{udho::url::format("Filed to add asset {}/{}. As another resouorce with the same name already exists.", prefix, name)};
+            }
+            return *(it.first);
+        } else {
+            throw std::runtime_error{"Trying to add resources after the store is locked is not permitted."};
         }
-        return *(it.first);
     }
 
+    template <udho::view::resources::asset::type AssetType>
+    const description& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>& res) {
+        return add(prefix, &res);
+    }
+
+    size_type size() const { return _resources.size(); }
 
     /**
      * @brief Checks if the store is locked.
@@ -431,7 +478,7 @@ struct const_store{
      */
     inline explicit const_store(const store_type& store): _store(store) {
         if(!store.locked()){
-            throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
+            throw std::runtime_error{udho::url::format("Cannot create const_store from unlocked store.")};
         }
     }
     inline const_store(const const_store&) = default;
@@ -484,7 +531,7 @@ struct const_store{
      * @param prefix string prefix of the asset
      * @param name string name of the asset
      */
-    inline composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name){ return composite_const_iterator{_store.by_composite().find(boost::make_tuple(prefix, type, name)), base()}; }
+    inline composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name) const { return composite_const_iterator{_store.by_composite().find(boost::make_tuple(prefix, type, name)), base()}; }
 
     /**
      * @brief Returns an iterator to the beginning of all assets
@@ -496,7 +543,6 @@ struct const_store{
     inline uri_const_iterator end() const { return uri_const_iterator{_store.by_uri().end(), base()}; }
     /**
      * @brief find a resource by prefix and name
-     * @param type asset type
      * @param prefix string prefix of the asset
      * @param name string name of the asset
      */
@@ -573,15 +619,16 @@ struct const_store{
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  */
 template <asset::type Type>
-struct const_substore{
+struct basic_const_substore{
     using store_type = const_store;
     using proxy_type = typename store_type::proxy_type;
-    using self_type  = const_substore<Type>;
+    using self_type  = basic_const_substore<Type>;
 
     using prefix_const_iterator    = typename store_type::prefix_const_iterator;
     using name_const_iterator      = typename store_type::name_const_iterator;
     using type_const_iterator      = typename store_type::type_const_iterator;
     using composite_const_iterator = typename store_type::composite_const_iterator;
+    using combined_const_iterator  = typename store_type::combined_const_iterator;
     using size_type                = typename store_type::size_type;
 
     /**
@@ -589,9 +636,9 @@ struct const_substore{
      * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the const_store.
      */
-    const_substore(const store_type& store): _store(store) {}
-    const_substore(const const_substore&) = default;
-    const_substore() = delete;
+    basic_const_substore(const store_type& store): _store(store) {}
+    basic_const_substore(const basic_const_substore&) = default;
+    basic_const_substore() = delete;
 
     /**
      * @brief begin iterator for the asset substore
@@ -606,6 +653,17 @@ struct const_substore{
      */
     typename store_type::size_type size() const { return std::distance(begin(), end()); }
 
+    typename store_type::combined_const_iterator begin(const std::string& prefix) const { return _store.begin(prefix, Type); }
+    typename store_type::combined_const_iterator end(const std::string& prefix)   const { return _store.end(prefix, Type); }
+    typename store_type::size_type count(const std::string& prefix) const { return std::distance(begin(prefix), end(prefix)); }
+
+    /**
+     * @brief find a resource by type, prefix and name
+     * @param prefix string prefix of the asset
+     * @param name string name of the asset
+     */
+    inline composite_const_iterator find(const std::string& prefix, const std::string& name){ return _store.find(Type, prefix, name); }
+
     /**
      * @brief exposed to lua via the following properties
      * +----------+------------+
@@ -615,7 +673,7 @@ struct const_substore{
      *
      * The iterator returns @ref resources::asset::proxy as value type which is also exposed to lua
      */
-    friend auto metatype(udho::view::data::type<const_substore<Type>>){
+    friend auto metatype(udho::view::data::type<basic_const_substore<Type>>){
         using namespace udho::view::data;
 
         return assoc("resources_asset_const_substore"),
@@ -625,6 +683,89 @@ struct const_substore{
 
     private:
         const store_type& _store;
+};
+
+template <asset::type Type>
+struct const_substore: basic_const_substore<Type>{
+    using basic_const_store_type = basic_const_substore<Type>;
+
+    using basic_const_store_type::basic_const_store_type;
+};
+
+template <>
+struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
+    using basic_const_store_type = basic_const_substore<asset::type::js>;
+
+    using basic_const_store_type::basic_const_store_type;
+
+    template <typename It, typename Function>
+    udho::net::stream& importmap(udho::net::stream& stream, It begin, It end, Function&& f) const {
+        std::stringstream sstream;
+        sstream << "<script type=\"importmap\">" << "\n";
+        sstream << "{" << "\n";
+        sstream << "\t\"imports\": {" <<"\n";
+        for(It it = begin; it != end; ++it){
+            if(f(it)){
+                sstream << udho::url::format("\t\"{}/{}\": \"{}\",", it->prefix(), it->name(), it->url()) << "\n";
+            }
+        }
+        sstream << "\t}" <<"\n";
+        sstream << "}" << "\n";
+        sstream << "</script>" << "\n";
+        stream << sstream.str();
+        return stream;
+    }
+
+    template <typename Function>
+    udho::net::stream& importmap(udho::net::stream& stream, Function&& f) const {
+        return importmap(stream, basic_const_store_type::begin(), basic_const_store_type::end(), std::forward<Function>(f));
+    }
+
+    template <typename Function>
+    udho::net::stream& importmap(udho::net::stream& stream, const std::string& prefix, Function&& f) const {
+        return importmap(stream, basic_const_store_type::begin(prefix), basic_const_store_type::end(prefix), std::forward<Function>(f));
+    }
+
+    udho::net::stream& importmap(udho::net::stream& stream) const {
+        return importmap(stream, [](basic_const_store_type::type_const_iterator){ return true; });
+    }
+
+    udho::net::stream& importmap(udho::net::stream& stream, const std::string& prefix) const {
+        return importmap(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
+    }
+
+    template <typename It, typename Function>
+    udho::net::stream& bundle(udho::net::stream& stream, It begin, It end, Function&& f) const {
+        stream << "<script>" << "\n";
+        for(It it = begin; it != end; ++it){
+            if(f(it)){
+                stream << udho::url::format("// {}/{}", it->prefix(), it->name()) << "\n";
+                stream << "(function() {" << "\n";
+                it->write_contents(stream);
+                stream << "})();" << "\n";
+            }
+        }
+        stream << "</script>" << "\n";
+        return stream;
+    }
+
+    template <typename Function>
+    udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix, Function&& f) const {
+        return bundle(stream, basic_const_store_type::begin(prefix), basic_const_store_type::end(prefix), std::forward<Function>(f));
+    }
+
+    template <typename Function>
+    udho::net::stream& bundle(udho::net::stream& stream, Function&& f) const {
+        return bundle(stream, basic_const_store_type::begin(), basic_const_store_type::end(), std::forward<Function>(f));
+    }
+
+    udho::net::stream& bundle(udho::net::stream& stream) const {
+        return bundle(stream, [](basic_const_store_type::type_const_iterator){ return true; });
+    }
+
+    udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix) const {
+        return bundle(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
+    }
 };
 
 // template <asset::type Type>

@@ -37,6 +37,8 @@ namespace udho{
 namespace view{
 namespace resources{
 
+template <typename... Bridges>
+struct prefixed_store;
 
 template <typename... Bridges>
 struct const_store_prefixed;
@@ -97,6 +99,20 @@ struct store{
     typename tmpl_multi_substore_type::template substore_type<Bridge>& tmpl() { return _tmpls.template substore<Bridge>(); }
 
     /**
+     * @brief Adds a view template resource to the bundle and prepares it for use by compiling it through the bridge.
+     * @param prefix The prefix used in resource identification.
+     * @param res The resource to add and compile.
+     */
+    template <typename Bridge>
+    void add(const std::string& prefix, udho::view::resources::tmpl::resource&& res){
+        tmpl<Bridge>().add(prefix, std::forward<udho::view::resources::tmpl::resource>(res));
+    }
+
+    prefixed_store<Bridges...> operator[](const std::string& prefix){
+        return prefixed_store<Bridges...>{*this, prefix};
+    }
+
+    /**
      * @brief gets reference to the asset store
      * @return reference to the asset store
      */
@@ -113,8 +129,69 @@ struct store{
     }
 
     private:
-        asset_store_type      _assets;
+        asset_store_type         _assets;
         tmpl_multi_substore_type _tmpls;
+};
+
+template <typename... Bridges>
+struct prefixed_store{
+    using store_type = store<Bridges...>;
+
+    explicit prefixed_store(store_type& store, const std::string& prefix): _store(store), _prefix(prefix) {}
+    prefixed_store(const prefixed_store&) = delete;
+    prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
+
+    template <typename Bridge>
+    void add(udho::view::resources::tmpl::bridged<Bridge>&& res){
+        _store.template add<Bridge>(_prefix, std::move(res.resource()));
+    }
+    template <asset::type AssetType>
+    void add(asset::basic_resource<AssetType>* res){
+        _store.assets().add(_prefix, res);
+    }
+    template <asset::type AssetType>
+    void add(asset::basic_resource<AssetType>& res){
+        _store.assets().add(_prefix, &res);
+    }
+
+    template <typename Bridge>
+    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
+        pstore.template add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
+        return pstore;
+    }
+    template <typename Bridge>
+    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
+        pstore.template add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
+        return std::forward<prefixed_store<Bridges...>>(pstore);
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>* res){
+        pstore.add(res);
+        return pstore;
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>& res){
+        pstore.add(res);
+        return pstore;
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>* res){
+        pstore.add(res);
+        return std::forward<prefixed_store<Bridges...>>(pstore);
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>& res){
+        pstore.add(res);
+        return std::forward<prefixed_store<Bridges...>>(pstore);
+    }
+
+    private:
+        store_type& _store;
+        std::string _prefix;
 };
 
 namespace detail {
