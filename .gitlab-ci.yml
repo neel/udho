@@ -29,7 +29,7 @@ stages:
 #   dependencies:
 #     - build:arch
     
-build:ubuntu:lunar:
+build:ubuntu:noble:
   image: ubuntu:24.04
   stage: build
   variables:
@@ -51,7 +51,7 @@ build:ubuntu:lunar:
     paths:
       - build
     
-test:ubuntu:lunar:
+test:ubuntu:noble:
   image: ubuntu:24.04
   stage: test
   variables:
@@ -68,14 +68,16 @@ test:ubuntu:lunar:
     - dpkg-reconfigure --frontend noninteractive tzdata
     - apt-get install -y build-essential checkinstall zlib1g-dev libboost-all-dev cmake gcc clang git curl wget libssl-dev libpugixml-dev nlohmann-json3-dev catch2 doxygen liblua5.3-dev
     - apt-get install -y postgresql postgresql-client libpq-dev postgresql-contrib postgresql-server-dev-all
-    - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" /etc/postgresql/15/main/pg_hba.conf > /tmp/pg_hba.conf
-    - cp /tmp/pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
+    - PSQL_VER=$(psql --version | awk '{print $3}' | cut -d '.' -f1)
+    - PSQL_CONF_DIR="/etc/postgresql/$PSQL_VER/main"
+    - sed -E "s/local\s+all(.+)peer/local all\1 trust/g" $PSQL_CONF_DIR/pg_hba.conf > /tmp/pg_hba.conf
+    - cp /tmp/pg_hba.conf $PSQL_CONF_DIR/pg_hba.conf
     - service postgresql start
     - service postgresql status
   script:
     - cd build
     - ctest --output-on-failure
   dependencies:
-    - build:ubuntu:lunar
+    - build:ubuntu:noble
 
     
