@@ -38,7 +38,6 @@
 #include <udho/view/bridges/fwd.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/state.h>
-#include <boost/numeric/odeint/util/is_pair.hpp>
 
 namespace udho{
 namespace view{
@@ -49,6 +48,13 @@ namespace detail{
 namespace lua{
 
 namespace helper{
+
+template <typename T>
+struct is_pair : std::false_type {};
+template <typename T, typename U>
+struct is_pair<std::pair<T, U>> : std::true_type {};
+template <typename T>
+inline constexpr bool is_pair_v = is_pair<T>::value;
 
 template <typename ResT>
 struct recurse{
@@ -254,7 +260,7 @@ struct internal_iter_binder {
 
         helper::recurse<std::decay_t<value_type>>::apply(state);
 
-        apply_impl(type, wrapper, typename boost::numeric::odeint::is_pair<value_type>::type{});
+        apply_impl(type, wrapper, typename is_pair<value_type>::type{});
     }
 
     template <typename Usertype, typename U>
