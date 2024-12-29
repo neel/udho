@@ -105,7 +105,7 @@ namespace detail{
 
             template <typename KeyT, typename ValueT>
             typename ValueT::result_type _call(udho::view::data::nvp<udho::view::data::policies::function, KeyT, ValueT>& nvp, std::vector<std::string> provided_args){
-                using required_arguments_type = typename ValueT::function::arguments_type;
+                using required_arguments_type = typename ValueT::function::decayed_arguments_type;
                 using result_type             = typename ValueT::result_type;
 
                 constexpr std::size_t required_args_count = std::tuple_size<required_arguments_type>::value;
@@ -129,9 +129,13 @@ namespace detail{
                 std::size_t args_extracted = _list_args(values_node, provided_args);
                 assert(args_extracted == provided_args.size());
 
-                typename ValueT::result_type res = _call(nvp, provided_args);
-
-                return res;
+                if constexpr (std::is_void_v<typename ValueT::result_type>){
+                    _call(nvp, provided_args);
+                    return;
+                } else {
+                    typename ValueT::result_type res = _call(nvp, provided_args);
+                    return res;
+                }
             }
             template <typename P, typename KeyT, typename ValueT, std::enable_if_t<data::policies::is_writable_property_v<P>, int>* = nullptr>
             bool _set_str(udho::view::data::nvp<P, KeyT, ValueT>& nvp, const std::string& v){
@@ -250,14 +254,20 @@ namespace detail{
                 assert(call_node->children.size() > 0);
 
                 const ast::node_ptr_type& values_node = call_node->children[0];
-                typename V::result_type res = base::_call(nvp, values_node);
 
-                if(base::has_next()){
-                    const ast::node_ptr_type& next_index_node = base::next();
-                    return visit(next_index_node, res);
-                } else {
-                    base::pass(res);
+                if constexpr (std::is_void_v<typename V::result_type>){
+                    base::_call(nvp, values_node);
                     return true;
+                } else {
+                    typename V::result_type res = base::_call(nvp, values_node);
+
+                    if(base::has_next()){
+                        const ast::node_ptr_type& next_index_node = base::next();
+                        return visit(next_index_node, res);
+                    } else {
+                        base::pass(res);
+                        return true;
+                    }
                 }
             } else {
                 // TODO throw exception
