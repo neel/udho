@@ -2,6 +2,8 @@
 #include <sol/sol.hpp>
 #include <thread>
 #include <iostream>
+#include <udho/view/tmpl/layout/property_tree.h>
+#include <udho/view/tmpl/layout/placeholder.h>
 
 int my_exception_handler(lua_State* L, sol::optional<const std::exception&> maybe_exception, sol::string_view description) {
 	// L is the lua state, which you can wrap in a state_view if necessary
@@ -27,6 +29,24 @@ int my_exception_handler(lua_State* L, sol::optional<const std::exception&> mayb
 }
 
 int main(){
+
+    namespace layout = udho::view::tmpl::layout;
+
+    layout::menu menu{"root"};
+    auto& child1 = menu.add("child1");
+    child1.add("child1.1");
+    child1.add("child1.2");
+    auto& child2 = menu.add("child2");
+    child2.add("child2.1");
+    child2.add("child2.1");
+    menu.write(std::cout, 0);
+
+    layout::placeholders::standard p;
+    std::cout << p[layout::placeholders::central].exists() << std::endl;
+    std::cout << p[nullptr].exists() << std::endl;
+
+    // auto value = menu.property("key");
+
     sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::debug, sol::lib::string, sol::lib::math, sol::lib::utf8);
     lua.set_exception_handler(&my_exception_handler);

@@ -41,6 +41,7 @@
 #include <udho/view/meta.h>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
+#include <udho/view/resources/fwd.h>
 
 namespace udho{
 namespace view{
@@ -248,9 +249,61 @@ struct basic_script: stream<char, '\t'>{
             }
         };
 
+        struct includes_{
+            using asset_type            = udho::view::resources::asset::type;
+
+            struct resource_info_{
+                std::string prefix;
+                std::string name;
+
+                bool operator<(const resource_info_& other) const {
+                    return std::tie(prefix, name) < std::tie(other.prefix, other.name);
+                }
+            };
+
+            /**
+             * Checks if the resource is already added. if added does not add again.
+             */
+            bool add(asset_type type, const std::string& prefix, const std::string& name){
+                auto mit = _includes.find(type);
+                if(mit == _includes.end()){
+                    mit = _includes.insert(std::make_pair(type, std::set<resource_info_>{})).first;
+                }
+
+                auto sit = mit->second.insert(resource_info_{prefix, name});
+                return sit.second;
+            }
+
+            typename std::set<resource_info_>::const_iterator begin(asset_type type) const {
+                auto it = _includes.find(type);
+                return it != _includes.end() ? it->second.begin() : end(type);
+            }
+            typename std::set<resource_info_>::const_iterator end(asset_type type) const  {
+                auto it = _includes.find(type);
+                return it != _includes.end() ? it->second.end() : std::set<resource_info_>().end();  // Safe end iterator
+            }
+
+            void add_js(const std::string& prefix, const std::string& name)  { add(asset_type::js, prefix, name); }
+            void add_css(const std::string& prefix, const std::string& name) { add(asset_type::css, prefix, name); }
+
+            auto js() const { return boost::make_iterator_range(begin(asset_type::js), end(asset_type::js)); }
+            auto css() const { return boost::make_iterator_range(begin(asset_type::css), end(asset_type::css)); }
+
+            friend auto metatype(udho::view::data::type<includes_>){
+                using namespace udho::view::data;
+
+                return assoc("includes_"),
+                    func("js",  &includes_::add_js),
+                    func("css", &includes_::add_css);
+            }
+
+            std::map<asset_type, std::set<resource_info_>> _includes;
+        };
+
         std::string name;
         std::string bridge;
         vars_       vars;
+        includes_   includes;
         bool        whitespace = false;
 
         friend auto metatype(udho::view::data::type<description>){
@@ -260,6 +313,7 @@ struct basic_script: stream<char, '\t'>{
                 mvar("name",       &description::name),
                 mvar("bridge",     &description::bridge),
                 mvar("vars",       &description::vars),
+                mvar("include",    &description::includes),
                 mvar("whitespace", &description::whitespace);
         }
     };
