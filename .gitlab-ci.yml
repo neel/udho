@@ -30,7 +30,7 @@ stages:
 #     - build:arch
     
 build:ubuntu:lunar:
-  image: ubuntu:23.04
+  image: ubuntu:24.04
   stage: build
   variables:
     DEBIAN_FRONTEND: "noninteractive"
@@ -52,7 +52,7 @@ build:ubuntu:lunar:
       - build
     
 test:ubuntu:lunar:
-  image: ubuntu:23.04
+  image: ubuntu:24.04
   stage: test
   variables:
     DEBIAN_FRONTEND: "noninteractive"
@@ -74,7 +74,7 @@ test:ubuntu:lunar:
     - service postgresql status
   script:
     - cd build
-    - ctest
+    - ctest --output-on-failure
   dependencies:
     - build:ubuntu:lunar
 

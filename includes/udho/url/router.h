@@ -11,6 +11,7 @@
 #include <udho/view/resources/asset/store.h>
 #include <iostream>
 #include <magic.h>
+#include <udho/view/resources/asset/io.h>
 
 namespace udho{
 namespace url{
@@ -206,7 +207,6 @@ struct basic_router<MountPointsT, void>: private detail::routing_table<MountPoin
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, void>& router){
         const detail::routing_table<Mountpoints>& table = router;
         stream << table;
-        // TODO print the assets
         return stream;
     }
 
@@ -235,8 +235,8 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
     template <typename Mountpoints>
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, udho::view::resources::asset::const_store>& router){
         const detail::routing_table<Mountpoints>& table = router;
-        stream << table;
-        // TODO print the assets
+        stream << table << "\n";
+        stream << router.assets();
         return stream;
     }
 
@@ -247,6 +247,8 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
     basic_router(basic_router<MountPointsT>&&) = delete;
 
     basic_router(mountpoints_type&& mountpoints, const udho::view::resources::asset::const_store& assets): routing_table(std::move(mountpoints)), _assets(assets) {}
+
+    const udho::view::resources::asset::const_store& assets() const { return _assets; }
 
     template <typename Ch>
     bool find(const std::basic_string<Ch>& subject) const {
@@ -285,7 +287,7 @@ template <>
 struct basic_router<void, udho::view::resources::asset::const_store>{
 
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<void, udho::view::resources::asset::const_store>& router){
-        // TODO print the assets
+        stream << router.assets();
         return stream;
     }
 
@@ -295,6 +297,8 @@ struct basic_router<void, udho::view::resources::asset::const_store>{
     basic_router(basic_router<void, udho::view::resources::asset::const_store>&&) = delete;
 
     basic_router(const udho::view::resources::asset::const_store& assets): _assets(assets) {}
+
+    const udho::view::resources::asset::const_store& assets() const { return _assets; }
 
     template <typename Ch>
     bool find(const std::basic_string<Ch>& subject) const {

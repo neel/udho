@@ -194,6 +194,7 @@ struct bind{
             udho::view::data::bindings<state_type, ClassT>::bound_one(_state);
         } else {
             // bindings already exists no need to do it again.
+            std::cout << "udho::view::data::bridges::bind: " << "skipped binding" << std::endl;
         }
     }
 
@@ -490,6 +491,8 @@ struct bridge{
             _states.emplace_back(std::move(state));
         }
     }
+
+    bridges::policy policy() const { return _policy; }
 
     /**
      * @brief Initializes the scripting engine state.

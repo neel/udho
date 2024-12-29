@@ -28,6 +28,12 @@ struct results{
     inline bool valid() const { return _end > _start && _start > _queued; }
     /**
      * @brief sets the execution start time along with the index of the state
+     * @note The bridge first creates an empty results.
+     *       Bridge calls the start method just before the view enters the execution critical section.
+     * @pre waiting for type binding critical section
+     * @pre waiting for a state to be free
+     * @pre a free state has been found for executing the view
+     * @post the execution critical section begins
      * @param index index of the state on which the view was/will be invoked.
      */
     inline void start(std::int32_t index){
@@ -45,6 +51,9 @@ struct results{
         _size = size;
         _end  = std::chrono::system_clock::now();
     }
+    /**
+     * @brief time duration of waiting before a state was allocated.
+     */
     inline std::chrono::nanoseconds wait_time() const { return _start - _queued; }
     inline std::chrono::nanoseconds exec_time() const { return _end   - _start;  }
     inline std::size_t size()  const { return _size;  }

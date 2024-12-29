@@ -365,11 +365,12 @@ int main(){
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
     // lua.bind(udho::view::data::type<udho::url::summary::mount_point::url_proxy>{});
     // lua.bind(udho::view::data::type<udho::net::proxy_wrapper<udho::view::data::bridges::lua, udho::view::data::bridges::lua>>{});
     // lua.bind(udho::view::data::type<udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua>>{});
-    // // lua.bind(udho::view::data::type<subinfo>{});
-    // // lua.bind(udho::view::data::type<info>{});
+    // lua.bind(udho::view::data::type<subinfo>{});
+    // lua.bind(udho::view::data::type<info>{});
     // bool res = lua.compile(udho::view::resources::resource::view("script.lua", buffer, buffer+sizeof(buffer)), "");
     // // std::cout << "compilation result " << res << std::endl;
     //

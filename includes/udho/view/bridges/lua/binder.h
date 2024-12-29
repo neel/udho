@@ -442,6 +442,7 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;
         using class_type  = typename udho::view::data::wrapper<U, V>::class_type;
         using key_type    = typename udho::view::data::wrapper<U, V>::key_type;
+        using value_type  = typename udho::view::data::wrapper<U, V>::value_type;
 
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
@@ -461,6 +462,10 @@ struct binder{
             } else {
                 return sol::make_object(ts, w.get(self, key));
             }
+        };
+
+        _type[sol::meta_function::new_index] = [w = wrapper](class_type& self, key_type key, const value_type& val, sol::this_state ts) mutable {
+            throw std::runtime_error{"Not implemented yet"};
         };
         return *this;
     }

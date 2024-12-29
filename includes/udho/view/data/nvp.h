@@ -252,6 +252,7 @@ struct wrapper2<Res& (Class::*)(U), Res& (Class::*)(U)>: member_function<Res& (C
     }
 };
 
+// iterator rettuning begin end function pairs
 template <typename Class, typename U>
 struct wrapper2<U (Class::*)() const, U (Class::*)() const> {
     wrapper2(U (Class::*u)() const, U (Class::*v)() const): _begin(std::move(u)), _end(std::move(v)) {}

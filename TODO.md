@@ -55,3 +55,5 @@ We can use that for unit testing.
 > TODO: How do I add mime type ?
 
 > TODO: Sometimes I need the view to clean white spaces. So that <?= 'a' ?> woull not be precedded by while spaces because of the indentation in view
+
+> TODO: lua bridge index mutable index is still pending See udho/view/data/nvp.h

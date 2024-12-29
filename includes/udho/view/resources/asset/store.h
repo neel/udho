@@ -665,6 +665,15 @@ struct basic_const_substore{
     inline composite_const_iterator find(const std::string& prefix, const std::string& name){ return _store.find(Type, prefix, name); }
 
     /**
+     * @brief begin iterator for the asset substore
+     */
+    typename store_type::type_const_iterator cbegin() const { return _store.begin(Type); }
+    /**
+     * @brief end iterator for the asset substore
+     */
+    typename store_type::type_const_iterator cend()   const { return _store.end(Type); }
+
+    /**
      * @brief exposed to lua via the following properties
      * +----------+------------+
      * | ipairs   | function() |
@@ -676,8 +685,8 @@ struct basic_const_substore{
     friend auto metatype(udho::view::data::type<basic_const_substore<Type>>){
         using namespace udho::view::data;
 
-        return assoc("resources_asset_const_substore"),
-            iter (&self_type::begin, &self_type::end),
+        return assoc("resources_asset_basic_const_substore"),
+            iter (&self_type::cbegin, &self_type::cend),
             fvar("size", &self_type::size);
     }
 
@@ -690,6 +699,13 @@ struct const_substore: basic_const_substore<Type>{
     using basic_const_store_type = basic_const_substore<Type>;
 
     using basic_const_store_type::basic_const_store_type;
+
+    friend auto metatype(udho::view::data::type<const_substore<Type>>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_const_substore_generic"),
+            metatype(udho::view::data::type<basic_const_substore<Type>>());
+    }
 };
 
 template <>
@@ -734,38 +750,45 @@ struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
         return importmap(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
     }
 
-    template <typename It, typename Function>
-    udho::net::stream& bundle(udho::net::stream& stream, It begin, It end, Function&& f) const {
-        stream << "<script>" << "\n";
-        for(It it = begin; it != end; ++it){
-            if(f(it)){
-                stream << udho::url::format("// {}/{}", it->prefix(), it->name()) << "\n";
-                stream << "(function() {" << "\n";
-                it->write_contents(stream);
-                stream << "})();" << "\n";
-            }
-        }
-        stream << "</script>" << "\n";
-        return stream;
+    friend auto metatype(udho::view::data::type<const_substore<asset::type::js>>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_const_substore_js"),
+            metatype(udho::view::data::type<basic_const_substore<asset::type::js>>());
     }
 
-    template <typename Function>
-    udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix, Function&& f) const {
-        return bundle(stream, basic_const_store_type::begin(prefix), basic_const_store_type::end(prefix), std::forward<Function>(f));
-    }
-
-    template <typename Function>
-    udho::net::stream& bundle(udho::net::stream& stream, Function&& f) const {
-        return bundle(stream, basic_const_store_type::begin(), basic_const_store_type::end(), std::forward<Function>(f));
-    }
-
-    udho::net::stream& bundle(udho::net::stream& stream) const {
-        return bundle(stream, [](basic_const_store_type::type_const_iterator){ return true; });
-    }
-
-    udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix) const {
-        return bundle(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
-    }
+    // template <typename It, typename Function>
+    // udho::net::stream& bundle(udho::net::stream& stream, It begin, It end, Function&& f) const {
+    //     stream << "<script>" << "\n";
+    //     for(It it = begin; it != end; ++it){
+    //         if(f(it)){
+    //             stream << udho::url::format("// {}/{}", it->prefix(), it->name()) << "\n";
+    //             stream << "(function() {" << "\n";
+    //             it->write_contents(stream);
+    //             stream << "})();" << "\n";
+    //         }
+    //     }
+    //     stream << "</script>" << "\n";
+    //     return stream;
+    // }
+    //
+    // template <typename Function>
+    // udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix, Function&& f) const {
+    //     return bundle(stream, basic_const_store_type::begin(prefix), basic_const_store_type::end(prefix), std::forward<Function>(f));
+    // }
+    //
+    // template <typename Function>
+    // udho::net::stream& bundle(udho::net::stream& stream, Function&& f) const {
+    //     return bundle(stream, basic_const_store_type::begin(), basic_const_store_type::end(), std::forward<Function>(f));
+    // }
+    //
+    // udho::net::stream& bundle(udho::net::stream& stream) const {
+    //     return bundle(stream, [](basic_const_store_type::type_const_iterator){ return true; });
+    // }
+    //
+    // udho::net::stream& bundle(udho::net::stream& stream, const std::string& prefix) const {
+    //     return bundle(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
+    // }
 };
 
 // template <asset::type Type>

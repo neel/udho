@@ -34,6 +34,7 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
     constexpr const std::size_t nstates = 4;
 
     udho::view::data::bridges::lua lua{nstates};
+    REQUIRE(lua.policy() == udho::view::data::bridges::policy::state_pool);
     lua.init();
 
     lua.compile(udho::view::resources::tmpl::resource("view", buffer, buffer+sizeof(buffer)), "");
@@ -42,7 +43,7 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
         std::vector<exec_result> view_results;
         std::mutex mutex;
         constexpr const std::size_t nthreads = 20;
-        std::size_t waiting = nthreads;
+        std::size_t waiting = nthreads;         //  number of threads waiting at CS
 
         auto exec = [&lua, &view_results, &mutex, &waiting](std::uint32_t id){ // This id does not imply order
             std::string output;
@@ -52,7 +53,10 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
             er.results = results;
             er.output = output;
             std::scoped_lock lock(mutex);
-            er.waiting = --waiting;
+            er.waiting = --waiting;             // one job finished
+                                                // hence number of threads waiting for CS should be reduced by one
+                                                // er.waiting implies number of threads that were waiting
+                                                //            before it exited from the CS
             view_results.push_back(er);
         };
 
@@ -81,23 +85,55 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
         std::sort(view_results_sorted_by_queue.begin(), view_results_sorted_by_queue.end(), [](const exec_result& a, const exec_result& b) {
             return a.waiting > b.waiting; // All other tasks were waiting when the first job was executed hence the 'waiting' value is the most for the first job
         });
-        std::vector<std::chrono::nanoseconds> wait_times;
-        std::transform(view_results_sorted_by_queue.begin(), view_results_sorted_by_queue.end(), std::back_inserter(wait_times), [](const exec_result& er){
-            return er.results.wait_time();
+
+        // Given: nthreads > nstates
+        // Given: each view acquires the state for at least 1 second.
+        // Therefore: some views will be waiting to get an available state
+        // Expectation: waiting time should be proportional to the queue length         ----------------------------- #Ex1
+        // Input: view_results -> a list of execution results
+        //        Assuming r is the result of job j
+        //        ∀ r ∈ view_results, r.waiting implies number of jobs waiting before this job was finished
+        //                  if M = pending(j) jobs were observed to be waiting while r finished, then r must not have waited for those M jobs.
+        //                  Because r has finished at the time of observation.
+        //                  So, if M1 = pending(j1), M2 = pending(j2) and M1 > M2 assuming r1, r2 are results of jobs j1, j2
+        //                  then more jobs were observed to be waiting for a free state when j1 finished
+        //                  implying r.waiting is inversely proportional to number of jobs acquiring on the same state making j wait
+        //        ∀ r ∈ view_results, r.waiting_time() implies duration of waiting before this job was started
+        // Expectation:
+        //      Given two jobs, j1 and j2 were allocated on the same state (index)
+        //      according to @Ex1 we expect
+        //          r1.waiting_time() <= r2.waiting_time() if r1.waiting >= r2.waiting
+
+        std::vector<exec_result> view_results_sorted_by_index_asc_waiting_desc = view_results;
+        std::sort(view_results_sorted_by_index_asc_waiting_desc.begin(), view_results_sorted_by_index_asc_waiting_desc.end(), [](const exec_result& a, const exec_result& b) {
+            if (a.results.index() == b.results.index()) {
+                return a.waiting > b.waiting;
+            }
+            return a.results.index() < b.results.index();
         });
-
-
-        std::chrono::nanoseconds max_waiting_time = *(std::max_element(wait_times.begin(), wait_times.end()));
-        for(auto i = 0; i != nthreads; ++i){
-            using namespace std::chrono_literals;
-
-            int batch = i / nstates;
-            CHECK(wait_times[i] < (((batch+1) * std::chrono::nanoseconds{1s}) + std::chrono::milliseconds{4}) );
-            int max_batch = (nthreads-1) / nstates;
-            if(batch < max_batch){
-                CHECK(wait_times[i] < max_waiting_time);
+        for (size_t i = 1; i < view_results_sorted_by_index_asc_waiting_desc.size(); ++i) {
+            if (view_results_sorted_by_index_asc_waiting_desc[i].results.index() == view_results_sorted_by_index_asc_waiting_desc[i - 1].results.index()) {
+                CAPTURE(view_results_sorted_by_index_asc_waiting_desc[i - 1].waiting, view_results_sorted_by_index_asc_waiting_desc[i].waiting, view_results_sorted_by_index_asc_waiting_desc[i - 1].results.wait_time(), view_results_sorted_by_index_asc_waiting_desc[i].results.wait_time());
+                REQUIRE(view_results_sorted_by_index_asc_waiting_desc[i - 1].waiting >= view_results_sorted_by_index_asc_waiting_desc[i].waiting);
+                REQUIRE(view_results_sorted_by_index_asc_waiting_desc[i - 1].results.wait_time() <= view_results_sorted_by_index_asc_waiting_desc[i].results.wait_time());
             }
         }
+
+        // for(const auto& r: view_results){
+        //     std::cout << r.waiting << "," << r.results.index() << "," << r.results.wait_time().count() << std::endl;
+        // }
+
+        // std::chrono::nanoseconds max_waiting_time = *(std::max_element(wait_times.begin(), wait_times.end()));
+        // for(auto i = 0; i != nthreads; ++i){
+        //     using namespace std::chrono_literals;
+        //
+        //     int batch = i / nstates;
+        //     CHECK(wait_times[i] < (((batch+1) * std::chrono::nanoseconds{1s}) + std::chrono::milliseconds{4}) );
+        //     int max_batch = (nthreads-1) / nstates;
+        //     if(batch < max_batch){
+        //         CHECK(wait_times[i] < max_waiting_time);
+        //     }
+        // }
 
         // for(const auto& vres: view_results){
         //     std::cout << "job_id: " << vres.job_id << std::endl

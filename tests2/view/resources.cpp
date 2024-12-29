@@ -37,10 +37,10 @@ Hello World
     };
 
     const std::map<std::string, std::tuple<std::string, udho::view::resources::asset::type, std::string>> assets = {
-        {"profile1.js", {"primary", udho::view::resources::asset::type::js, buffer_js}},
-        {"profile2.js", {"primary", udho::view::resources::asset::type::js, buffer_js1}},
-        {"profile.css", {"primary", udho::view::resources::asset::type::css, buffer_css}},
-        {"profile.png", {"primary", udho::view::resources::asset::type::img, buffer_img}}
+        {"0profile1.js", {"primary", udho::view::resources::asset::type::js, buffer_js}},
+        {"1profile2.js", {"primary", udho::view::resources::asset::type::js, buffer_js1}},
+        {"2profile.css", {"primary", udho::view::resources::asset::type::css, buffer_css}},
+        {"3profile.png", {"primary", udho::view::resources::asset::type::img, buffer_img}}
     };
 
     udho::view::data::bridges::lua lua;
@@ -67,15 +67,16 @@ Hello World
     // Asset resources can be on memory strings, on disk files, or remote (urls of remote sources)
     // TEST check with all asset sources
     store["primary"] << udho::view::resources::asset::js("profile0.js", buffer_js, buffer_js+std::strlen(buffer_js));
-    auto it = assets.cbegin();
-    store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
-    it++;
-    store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
-    it++;
-    store[std::get<0>(it->second)] << udho::view::resources::asset::css(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
-    it++;
-    store[std::get<0>(it->second)] << udho::view::resources::asset::img(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
-
+    {
+        auto it = assets.cbegin();
+        store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        store[std::get<0>(it->second)] << udho::view::resources::asset::css(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        store[std::get<0>(it->second)] << udho::view::resources::asset::img(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+    }
 
     CHECK(assets.size()+1 == store.assets().size());
 
@@ -119,12 +120,13 @@ Hello World
                 continue;
             }
             CHECK(asset.name()   == (*i).first);
-            CHECK(asset.prefix() == std::get<0>((*i).second));
-            CHECK(asset.type()   == std::get<1>((*i).second));
-            if(std::get<1>((*i).second) == udho::view::resources::asset::type::js){
+            const auto& asset_desc_input = (*i).second;
+            CHECK(asset.prefix() == std::get<0>(asset_desc_input));
+            CHECK(asset.type()   == std::get<1>(asset_desc_input));
+            if(std::get<1>(asset_desc_input) == udho::view::resources::asset::type::js){
                 CHECK(asset.mime()   == "application/javascript");
             }
-            CHECK(asset.url()    == udho::url::format("/assets/{}/{}",std::get<0>((*i).second), (*i).first));
+            CHECK(asset.url()    == udho::url::format("/assets/{}/{}",std::get<0>(asset_desc_input), (*i).first));
 
             // TEST asset types are enum class type{ js, css, txt, img };
 
@@ -266,6 +268,7 @@ Hello World
     boost::asio::io_service io;
 
     const udho::view::resources::asset::const_store& asset_substore = cstore.assets();
+    std::cout << asset_substore << std::endl;
     {
         auto i = assets.begin();
         for(auto j = asset_substore.begin(); j != asset_substore.end(); ++j){
