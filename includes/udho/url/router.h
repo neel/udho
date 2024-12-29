@@ -206,6 +206,7 @@ struct basic_router<MountPointsT, void>: private detail::routing_table<MountPoin
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, void>& router){
         const detail::routing_table<Mountpoints>& table = router;
         stream << table;
+        // TODO print the assets
         return stream;
     }
 
@@ -235,6 +236,7 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, udho::view::resources::asset::const_store>& router){
         const detail::routing_table<Mountpoints>& table = router;
         stream << table;
+        // TODO print the assets
         return stream;
     }
 
@@ -279,6 +281,111 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
 
 };
 
+template <>
+struct basic_router<void, udho::view::resources::asset::const_store>{
+
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void, udho::view::resources::asset::const_store>& router){
+        // TODO print the assets
+        return stream;
+    }
+
+
+    basic_router() = delete;
+    basic_router(const basic_router<void, udho::view::resources::asset::const_store>&) = delete;
+    basic_router(basic_router<void, udho::view::resources::asset::const_store>&&) = delete;
+
+    basic_router(const udho::view::resources::asset::const_store& assets): _assets(assets) {}
+
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& subject) const {
+        return _assets.find(subject);
+    }
+
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        return serve_asset(subject, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const {
+        return this->invoke(url, std::forward<Args>(args)...);
+    }
+
+    const udho::url::summary::router& summary() const { return _summary; }
+
+    private:
+        template <typename Ch>
+        bool serve_asset(const std::basic_string<Ch>& subject, udho::net::stream& stream) const {
+            return _assets.serve(stream, subject);
+        }
+    private:
+        const udho::view::resources::asset::const_store& _assets;
+        udho::url::summary::router _summary;
+
+};
+
+/**
+ * @brief create router from a set of mountpoints
+ *
+ * @code
+ * void f0(udho::net::stream context){
+ *   context << "Hello f0";
+ *   context.finish();
+ * }
+ *
+ * int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+ *   context << "Hello f1 ";
+ *   context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+ *   context.finish();
+ *   return a+b.size()+c;
+ * }
+ *
+ * void chunk3(udho::net::stream context){
+ *   context << "Chunk 3 (Final)";
+ *   context.finish();
+ * }
+ *
+ * void chunk2(udho::net::stream context){
+ *   context << "chunk 2";
+ *   context.flush(std::bind(&chunk3, context));
+ * }
+ *
+ * void chunk(udho::net::stream context){
+ *   context.encoding(udho::net::types::transfer::encoding::chunked);
+ *   context << "Chunk 1";
+ *   context.flush(std::bind(&chunk2, context));
+ * }
+ *
+ * struct X{
+ *     void f0(udho::net::context<udho::view::data::bridges::lua> context){
+ *         ..
+ *         context << "Hello X::f0";
+ *         context << context.route("f0").name();
+ *         context.finish();
+ *         std::cout << context.route("f0").name() << std::endl;
+ *     }
+ *
+ *     int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+ *         context << "Hello X::f1 ";
+ *         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+ *         context.finish();
+ *         return a+b.size()+c;
+ *     }
+ * };
+ *
+ * auto router = udho::url::router(
+ *      udho::url::root(
+ *           udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)
+ *         | udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
+ *         | udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+ *     )
+ *   | udho::url::mount("b"_h, "/b",
+ *         udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
+ *       | udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+ *   )
+ * );
+ * @endcode
+ */
 template <typename MountPointsT>
 basic_router<MountPointsT, void> router(MountPointsT&& mountpoints){
     return basic_router<MountPointsT, void>{std::move(mountpoints)};
@@ -292,6 +399,10 @@ basic_router<MountPointsT, udho::view::resources::asset::const_store> router(Mou
 template <typename MountPointsT>
 basic_router<MountPointsT, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets, MountPointsT&& mountpoints){
     return basic_router<MountPointsT, udho::view::resources::asset::const_store>{std::move(mountpoints), assets};
+}
+
+inline basic_router<void, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets){
+    return basic_router<void, udho::view::resources::asset::const_store>{assets};
 }
 
 }
