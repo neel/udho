@@ -261,13 +261,21 @@ struct substore{
 
     /**
      * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
-     * @tparam IteratorT The type of the iterator used to define the resource.
+     * @note throws exception if resource is being added after the store is locked.
      * @param prefix The prefix used in resource identification.
      * @param res The resource to add and compile.
      */
     void add(const std::string& prefix, udho::view::resources::tmpl::resource&& res) {
-        _resources.insert(description{prefix, res.name()});
-        _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
+        if(!locked()){
+            _resources.insert(description{prefix, res.name()});
+            _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
+        } else {
+            throw std::runtime_error{"Trying to add view template after the store is locked is not permitted."};
+        }
+    }
+
+    size_type size() const {
+        return _resources.size();
     }
 
     /**
@@ -333,7 +341,7 @@ struct const_substore{
      */
     explicit const_substore(const store_type& store): _substore(store) {
         if(!store.locked()){
-            throw std::runtime_error{udho::url::format("Cannot read, because resource store is not locked.")};
+            throw std::runtime_error{udho::url::format("Cannot create const_substore from unlocked store.")};
         }
     }
     const_substore(const const_substore&) = default;

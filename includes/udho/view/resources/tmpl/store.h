@@ -81,6 +81,7 @@ template <typename BridgeT>
 struct store_<BridgeT, void>{
     using bridge_type               = BridgeT;
     using tmpl_substore_type        = udho::view::resources::tmpl::substore<BridgeT>;
+    using size_type                 = typename tmpl_substore_type::size_type;
     using const_tmpl_substore_type  = udho::view::resources::tmpl::const_substore<BridgeT>;
     using tail_type                 = void;
 
@@ -99,6 +100,8 @@ struct store_<BridgeT, void>{
 
     template <typename XBridgeT>
     const_tmpl_substore_type substore() const { return readonly_substore<XBridgeT>(); }
+
+    size_type size() const { return _substore.size(); }
 
     void lock() { _substore.lock(); }
 
