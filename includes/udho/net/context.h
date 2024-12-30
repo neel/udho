@@ -6,6 +6,7 @@
 #include <udho/net/bridge.h>
 #include <udho/net/stream.h>
 #include <udho/url/summary.h>
+#include <udho/view/data/type.h>
 #include <udho/view/resources/store.h>
 
 namespace udho{

@@ -36,7 +36,7 @@ We can use that for unit testing.
 
 > TODO: Need to document the tmpls, asset etc.. Clearly state what are movable, what are copiable etc..
 
-> TODO: Thee two types of resources have to be dealth in a different way. The view can only be a file or memory, whereas an asset can be file, memory, url. Also, the asset store doesn't actually store the assets.
+> DONE TODO: Thee two types of resources have to be dealth in a different way. The view can only be a file or memory, whereas an asset can be file, memory, url. Also, the asset store doesn't actually store the assets.
 
 > TODO: layout
 
@@ -50,10 +50,12 @@ We can use that for unit testing.
 
 > TODO: Formalize an way of throwing http exception from the actions or other ways of commucating http errors.
 
-> TODO: Router serving assets if it coukd not files with matching url pattern in the document root
+> TODO: Router serving assets if it could not files with matching url pattern in the document root
 
-> TODO: How do I add mime type ?
+> DONE TODO: How do I add mime type ?
+> mime method added to the basic_resource class
 
 > TODO: Sometimes I need the view to clean white spaces. So that <?= 'a' ?> woull not be precedded by while spaces because of the indentation in view
 
 > TODO: lua bridge index mutable index is still pending See udho/view/data/nvp.h
+> Defered because views don't alter data
