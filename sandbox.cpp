@@ -24,9 +24,7 @@
 #include <udho/net/context.h>
 #include <type_traits>
 #include <curl/curl.h>
-#include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
-#include <udho/net/artifacts.h>
 #include <tabulate/table.hpp>
 #include <udho/view/tmpl/layout/layout.h>
 

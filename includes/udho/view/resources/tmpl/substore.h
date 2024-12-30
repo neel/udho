@@ -38,8 +38,7 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/results.h>
-#include <udho/view/data/associative.h>
-#include <udho/view/data/operators.h>
+#include <udho/view/data/data.h>
 #include <udho/view/bridges/results.h>
 
 namespace udho{

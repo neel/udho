@@ -7,8 +7,7 @@
 #include <udho/url/fwd.h>
 #include <udho/url/detail/format.h>
 #include <udho/hazo/string/basic.h>
-#include <udho/view/data/type.h>
-#include <udho/view/data/associative.h>
+#include <udho/view/data/data.h>
 #include <string>
 #include <map>
 

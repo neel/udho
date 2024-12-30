@@ -27,8 +27,12 @@ target_link_libraries(udho-test-view-lua PRIVATE ${Boost_LIBRARIES} Catch2::Catc
 add_executable(udho-test-view-resources resources.cpp)
 target_link_libraries(udho-test-view-resources PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
+add_executable(udho-test-view-lua-context context.cpp)
+target_link_libraries(udho-test-view-lua-context PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+
 catch_discover_tests(udho-test-view-parser)
 catch_discover_tests(udho-test-view-data-meta)
 catch_discover_tests(udho-test-view-lua-mt)
 catch_discover_tests(udho-test-view-lua)
 catch_discover_tests(udho-test-view-resources)
+catch_discover_tests(udho-test-view-lua-context)

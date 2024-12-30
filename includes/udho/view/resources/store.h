@@ -32,6 +32,7 @@
 #include <udho/view/resources/tmpl/store.h>
 #include <udho/view/resources/asset/store.h>
 #include <udho/view/resources/fwd.h>
+#include <udho/view/data/data.h>
 
 namespace udho{
 namespace view{
