@@ -39,6 +39,7 @@ We can use that for unit testing.
 > DONE TODO: Thee two types of resources have to be dealth in a different way. The view can only be a file or memory, whereas an asset can be file, memory, url. Also, the asset store doesn't actually store the assets.
 
 > TODO: layout
+> Layout In progress
 
 > TODO: asset store need to use iterator adopters around the unique_ptr<abatract_resource>
 

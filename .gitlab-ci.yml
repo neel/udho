@@ -79,10 +79,10 @@ test:ubuntu:noble:
   script:
     - cd build
     - ctest --output-on-failure
-    - zip -r results.zip results
+    - tar -czvf results.tar.gz results
   artifacts:
     paths:
-      - build/test_results.zip
+      - build/results.tar.gz
   dependencies:
     - build:ubuntu:noble
 
