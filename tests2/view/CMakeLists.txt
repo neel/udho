@@ -27,12 +27,18 @@ target_link_libraries(udho-test-view-lua PRIVATE ${Boost_LIBRARIES} Catch2::Catc
 add_executable(udho-test-view-resources resources.cpp)
 target_link_libraries(udho-test-view-resources PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
-add_executable(udho-test-view-lua-context context.cpp)
-target_link_libraries(udho-test-view-lua-context PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
+IF(UDHO_USE_NLOHMANN_JSON)
+    FIND_PACKAGE(nlohmann_json)
+    add_executable(udho-test-view-lua-context context.cpp)
+    target_link_libraries(udho-test-view-lua-context PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho nlohmann_json::nlohmann_json)
+ENDIF()
 
 catch_discover_tests(udho-test-view-parser)
 catch_discover_tests(udho-test-view-data-meta)
 catch_discover_tests(udho-test-view-lua-mt)
 catch_discover_tests(udho-test-view-lua)
 catch_discover_tests(udho-test-view-resources)
+
+IF(UDHO_USE_NLOHMANN_JSON)
 catch_discover_tests(udho-test-view-lua-context)
+ENDIF()

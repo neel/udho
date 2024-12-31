@@ -11,6 +11,7 @@
 #include <udho/url/url.h>
 #include <udho/net/context.h>
 #include <tabulate/table.hpp>
+#include <nlohmann/json.hpp>
 
 #include "data.h"
 
@@ -128,69 +129,90 @@ struct X{
     }
 };
 
-TEST_CASE("Lua Concurrent bridge", "[view][lua][context]") {
+TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     static char buffer[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
-
-Mount points (<?= ctx.routes.size ?>)
-==================
-<? for label, mountpoint in ctx.routes:pairs() do ?>
-    <? echo('\n') ?>
-    <?= string.format("%s -> %s (%d)", label, mountpoint.path, mountpoint.size) ?>
-    <?
-        echo('\n')
-        local table = udho.Tabulate.new()
-        for name, pattern in mountpoint:pairs() do
-            table:add(name, pattern)
-        end
-    ?>
-
-<?= table ?>
-<? end ?>
-
-
-Javascript Assets (<?= ctx.resources.js.size ?>)
-=======================
-<? if ctx.resources.js.size == 0 then ?>
-    <?= 'No Javascript Assets added' ?>
-<? else ?>
-    <? local table = udho.Tabulate.new() ?>
-    <? for i, js in ctx.resources.js:ipairs() do ?>
-        <? table:add(js.prefix, js.name, js.url) ?>
-    <? end ?>
-
-    <?= table ?>
-<? end ?>
-
-
-CSS Assets (<?= ctx.resources.css.size ?>)
-================
-<? if ctx.resources.css.size == 0 then ?>
-    <?= 'No CSS Assets added' ?>
-<? else ?>
-    <? local table = udho.Tabulate.new() ?>
-    <? for i, css in ctx.resources.css:ipairs() do ?>
-        <? table:add(css.prefix, css.name, string.format("/%s/%s", css.prefix, css.name)) ?>
-    <? end ?>
-
-    <?= table ?>
-<? end ?>
-
-
-Image Assets (<?= ctx.resources.img.size ?>)
-=================
-<? if ctx.resources.img.size == 0 then ?>
-    <?= 'No Image Assets added' ?>
-<? else ?>
-    <? local table = udho.Tabulate.new() ?>
-    <? for i, img in ctx.resources.img:ipairs() do ?>
-        <? table:add(img.prefix, img.name, string.format("/%s/%s", img.prefix, img.name)) ?>
-    <? end ?>
-
-    <?= table ?>
-<? end ?>
-
+{
+    "router": {
+        "size": <?= ctx.routes.size ?>,
+        "mountpoints": [
+            <? local is_first = true ?>
+            <? for label, mountpoint in ctx.routes:pairs() do ?>
+            <? if not is_first then ?>,<? end ?>
+            {
+                "label": "<?= label ?>",
+                "path" : "<?= mountpoint.path ?>",
+                "size" :  <?= mountpoint.size ?>,
+                "routes": [
+                    <? local is_first_route = true ?>
+                    <? for name, pattern in mountpoint:pairs() do ?>
+                    <? if not is_first_route then ?>,<? end ?>
+                    {
+                        "name": "<?= name ?>",
+                        "pattern": "<?= pattern ?>"
+                    }
+                    <? is_first_route = false ?>
+                    <? end ?>
+                ]
+            }
+            <? is_first = false ?>
+            <? end ?>
+        ]
+    },
+    "resources": {
+        "js": {
+            "size": <?= ctx.resources.js.size ?>,
+            "resources": [
+                <? local is_first = true ?>
+                <? for i, js in ctx.resources.js:ipairs() do ?>
+                <? if not is_first then ?>,<? end ?>
+                {
+                    "prefix": "<?= js.prefix ?>",
+                    "name"  : "<?= js.name ?>",
+                    "url"   : "<?= js.url ?>"
+                }
+                <? is_first = false ?>
+                <? end ?>
+            ]
+        },
+        "css": {
+            "size": <?= ctx.resources.css.size ?>,
+            "resources": [
+                <? local is_first = true ?>
+                <? for i, css in ctx.resources.css:ipairs() do ?>
+                <? if not is_first then ?>,<? end ?>
+                {
+                    "prefix": "<?= css.prefix ?>",
+                    "name"  : "<?= css.name ?>",
+                    "url"   : "<?= css.url ?>"
+                }
+                <? is_first = false ?>
+                <? end ?>
+            ]
+        },
+        "img": {
+            "size": <?= ctx.resources.img.size ?>,
+            "resources": [
+                <? local is_first = true ?>
+                <? for i, img in ctx.resources.img:ipairs() do ?>
+                <? if not is_first then ?>,<? end ?>
+                {
+                    "prefix": "<?= img.prefix ?>",
+                    "name"  : "<?= img.name ?>",
+                    "url"   : "<?= img.url ?>"
+                }
+                <? is_first = false ?>
+                <? end ?>
+            ]
+        }
+    }
+}
 )TEMPLATE";
+
+    static char buffer_js[]  = "console.log('Hello, world!');";
+    static char buffer_js1[] = "console.log('Hello, Mars!');";
+    static char buffer_css[] = ".classname{color: blue}";
+    static char buffer_img[] = "console.log('Hello, world!');";
 
     student p;
 
@@ -202,6 +224,24 @@ Image Assets (<?= ctx.resources.img.size ?>)
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("ctx_explorer",  buffer, buffer+sizeof(buffer)));
 
+    const std::map<std::string, std::tuple<std::string, udho::view::resources::asset::type, std::string>> assets = {
+        {"0profile1.js", {"primary", udho::view::resources::asset::type::js, buffer_js}},
+        {"1profile2.js", {"primary", udho::view::resources::asset::type::js, buffer_js1}},
+        {"2profile.css", {"primary", udho::view::resources::asset::type::css, buffer_css}},
+        {"3profile.png", {"primary", udho::view::resources::asset::type::img, buffer_img}}
+    };
+
+    {
+        auto it = assets.cbegin();
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::css(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::img(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+    }
+    resource_store.assets().base("assets");
     resource_store.lock();
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
@@ -231,4 +271,135 @@ Image Assets (<?= ctx.resources.img.size ?>)
     udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
 
     std::string output = ctx_explorer(p, context).str();
+    nlohmann::json output_json = nlohmann::json::parse(output);
+
+    std::string expected_output = R"(
+    {
+        "router": {
+            "size": 2,
+            "mountpoints": [{
+                "label": "b",
+                "path": "/b",
+                "size": 2,
+                "routes": [{
+                    "name": "f1",
+                    "pattern": "/f1/{}/{}/{}"
+                },{
+                    "name": "xf1",
+                    "pattern": "/x/f1/{}/{}/{}"
+                }]
+            },{
+                "label": "root",
+                "path": "/",
+                "size": 3,
+                "routes": [{
+                    "name": "chunked",
+                    "pattern": "/chunk"
+                },{
+                    "name": "f0",
+                    "pattern": "/"
+                },{
+                    "name": "xf0",
+                    "pattern": "/x/f0"
+                }]
+            }
+        ]},"resources": {
+            "js": {
+                "size": 2,
+                "resources": [{
+                    "prefix": "primary",
+                    "name": "0profile1.js",
+                    "url": "/assets/primary/0profile1.js"
+                },{
+                    "prefix": "primary",
+                    "name": "1profile2.js",
+                    "url": "/assets/primary/1profile2.js"
+                }]
+            }, "css": {
+                "size": 1,
+                "resources": [{
+                    "prefix": "primary",
+                    "name": "2profile.css",
+                    "url": "/assets/primary/2profile.css"
+                }]
+            }, "img": {
+                "size": 1,
+                "resources": [{
+                    "prefix": "primary",
+                    "name": "3profile.png",
+                    "url": "/assets/primary/3profile.png"
+                }]
+            }
+        }
+    }
+    )";
+
+    nlohmann::json expected_json = nlohmann::json::parse(expected_output);
+    CHECK(output_json.dump() == expected_json.dump());
+
+    SECTION("Check Router") {
+        auto& router = output_json["router"];
+        REQUIRE(router["size"] == 2);
+
+        SECTION("Mountpoint b") {
+            auto& b = router["mountpoints"][0];
+            CHECK(b["label"] == "b");
+            CHECK(b["path"] == "/b");
+            CHECK(b["size"] == 2);
+
+            SECTION("Routes in b") {
+                CHECK(b["routes"][0]["name"] == "f1");
+                CHECK(b["routes"][0]["pattern"] == "/f1/{}/{}/{}");
+                CHECK(b["routes"][1]["name"] == "xf1");
+                CHECK(b["routes"][1]["pattern"] == "/x/f1/{}/{}/{}");
+            }
+        }
+
+        SECTION("Mountpoint root") {
+            auto& root = router["mountpoints"][1];
+            CHECK(root["label"] == "root");
+            CHECK(root["path"] == "/");
+            CHECK(root["size"] == 3);
+
+            SECTION("Routes in root") {
+                CHECK(root["routes"][0]["name"] == "chunked");
+                CHECK(root["routes"][0]["pattern"] == "/chunk");
+                CHECK(root["routes"][1]["name"] == "f0");
+                CHECK(root["routes"][1]["pattern"] == "/");
+                CHECK(root["routes"][2]["name"] == "xf0");
+                CHECK(root["routes"][2]["pattern"] == "/x/f0");
+            }
+        }
+    }
+
+    SECTION("Check Resources") {
+        auto& resources = output_json["resources"];
+
+        SECTION("JS Resources") {
+            auto& js = resources["js"];
+            REQUIRE(js["size"] == 2);
+            CHECK(js["resources"][0]["prefix"] == "primary");
+            CHECK(js["resources"][0]["name"] == "0profile1.js");
+            CHECK(js["resources"][0]["url"] == "/assets/primary/0profile1.js");
+            CHECK(js["resources"][1]["prefix"] == "primary");
+            CHECK(js["resources"][1]["name"] == "1profile2.js");
+            CHECK(js["resources"][1]["url"] == "/assets/primary/1profile2.js");
+        }
+
+        SECTION("CSS Resources") {
+            auto& css = resources["css"];
+            REQUIRE(css["size"] == 1);
+            CHECK(css["resources"][0]["prefix"] == "primary");
+            CHECK(css["resources"][0]["name"] == "2profile.css");
+            CHECK(css["resources"][0]["url"] == "/assets/primary/2profile.css");
+        }
+
+        SECTION("IMG Resources") {
+            auto& img = resources["img"];
+            REQUIRE(img["size"] == 1);
+            CHECK(img["resources"][0]["prefix"] == "primary");
+            CHECK(img["resources"][0]["name"] == "3profile.png");
+            CHECK(img["resources"][0]["url"] == "/assets/primary/3profile.png");
+        }
+    }
 }
