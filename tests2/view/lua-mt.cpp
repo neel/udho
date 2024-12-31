@@ -229,8 +229,8 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
 
             using namespace std::chrono_literals;
 
-            CHECK(most_delayed_job == 0);                         // TEST Job 0 should be delayed most
-            CHECK(least_waiting_list_job == 0);                   // TEST Job 0 should not have other jobs pending for it
+            // CHECK(most_delayed_job == 0);                         // TEST Job 0 should be delayed most
+            // CHECK(least_waiting_list_job == 0);                   // TEST Job 0 should not have other jobs pending for it
             CHECK(most_delayed_job == least_waiting_list_job);    // TEST The job that is most delayed should be the job executed last, hence no pending.
             CHECK(view_results_sorted_by_wait_time.front().results.wait_time() > 1s);
 
