@@ -7,6 +7,7 @@
 #include <udho/net/common.h>
 #include <udho/net/stream.h>
 #include <chrono>
+#include <iostream>
 
 namespace udho{
 namespace net{
@@ -41,7 +42,9 @@ struct bridge{
     inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, std::ostream& stream, types::transfer_encoding& encoding, flush_callback&& flush, finish_callback&& finish)
         : _request(request), _response(response), _stream(stream), _transfer_encoding(encoding), _flush(std::move(flush)), _finish(finish)
         {}
-
+    ~bridge() {
+        std::cout << "~bridge" << std::endl;
+    }
     bridge(const bridge&) = delete;
     bridge(bridge&& other): _request(other._request), _response(other._response), _stream(other._stream), _transfer_encoding(other._transfer_encoding), _flush(std::move(other._flush)) {}
 
@@ -165,6 +168,35 @@ struct bridge{
     inline types::transfer::compression compression() const { return _transfer_encoding.compression(); }
 };
 
+namespace fake{
+
+struct bridge{
+
+    inline explicit bridge(const udho::net::types::headers::request& request)
+        : _request(request),
+          _bridge{request, _response, _stream, _encoding, [](udho::net::bridge::handler_type, bool)  -> void {}, [] () -> void {}}
+    {}
+
+    inline udho::net::bridge& get(){ return _bridge; }
+
+    inline udho::net::types::headers::response& response() { return _response; }
+    inline const udho::net::types::headers::response& response() const { return _response; }
+
+    inline std::stringstream& stream() { return _stream; }
+    inline const std::stringstream& stream() const { return _stream; }
+
+    inline udho::net::types::transfer_encoding& encoding() { return _encoding; }
+    inline const udho::net::types::transfer_encoding& encoding() const { return _encoding; }
+
+    private:
+        udho::net::types::headers::request  _request;
+        udho::net::types::headers::response _response;
+        std::stringstream                   _stream;
+        udho::net::types::transfer_encoding _encoding;
+        udho::net::bridge                   _bridge;
+};
+
+}
 
 }
 }
