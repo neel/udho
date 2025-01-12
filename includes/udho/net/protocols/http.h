@@ -26,7 +26,9 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
     using stream_type               = StreamT;
 
     inline explicit http_reader(types::headers::request& request, stream_type& stream): _request(request), _stream(stream) {}
-
+    ~http_reader() {
+        std::cout << "~http_reader" << std::endl;
+    }
     template <typename Handler>
     void start(Handler&& handler){
         _handler = std::move(handler);
@@ -88,7 +90,7 @@ struct http_writer: public std::enable_shared_from_this<http_writer<StreamT>>{
 
     explicit http_writer(const types::headers::response& headers, stream_type& stream): _headers(headers), _stream(stream) {}
     http_writer(const http_writer&) = delete;
-    ~http_writer() { std::cout << "http_writer dtor" << std::endl; }
+    ~http_writer() { std::cout << "~http_writer" << std::endl; }
 
     template <typename Handler>
     void start(boost::asio::io_service& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){

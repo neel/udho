@@ -135,7 +135,7 @@ Hello World
             udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
             asset.write(stream);
 
-            const udho::net::types::headers::response& response = fake_context_generator._bridge.response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
+            const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
             // TEST check mime type in response
             // TEST check content size
             CHECK(response[boost::beast::http::field::content_length] == std::to_string(std::get<2>((*i).second).size()));
@@ -292,7 +292,7 @@ Hello World
             udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
             asset.write(stream);
 
-            const udho::net::types::headers::response& response = fake_context_generator._bridge.response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
+            const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
             // TEST check mime type in response
             // TEST check content size
             CHECK(response[boost::beast::http::field::content_length] == std::to_string(std::get<2>((*i).second).size()));

@@ -130,7 +130,7 @@ namespace detail{
             if(_transfer_encoding.compression() == types::transfer::compression::none){
                 _compressed = _buffer;
             }else{
-                // do compress _buffer
+                // TODO compress _buffer
             }
             encode();
             finish();
@@ -165,7 +165,7 @@ namespace detail{
 
 
 /**
- * \brief A connection object wraps a socket.
+ * \brief A non-copiable connection object that wraps a socket.
  * \ingroup server
  * Follows a protocol (e.g. HTTP, FastCGI, SCGI, wscgi etc..) to parse the headers.
  * Uses ProtocolT to follow the protocol and prepare a request object.
@@ -207,22 +207,38 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
 
     connection(boost::asio::io_service& service, udho::net::types::socket socket)
       : _io(service), _socket(std::move(socket)), _compression_strand(_socket.get_executor()), _write_strand(_socket.get_executor()), _stat_strand(_socket.get_executor()),
-        _reader(std::make_shared<reader_type>(_request, _socket)), _writer(std::make_shared<writer_type>(_response, _socket)),
+        _writer(std::make_shared<writer_type>(_response, _socket)),
         _stream(&_streambuf)
     {}
+    ~connection(){
+        std::cout << "~connection" << std::endl;
+    }
     void start(processer_type&& processor){
+        std::cout << "start() connection ref_count " << weak_from_this().use_count() << std::endl;
         _processor = std::move(processor);
         _start = std::chrono::system_clock::now();
-        _reader->start(
+        std::shared_ptr<reader_type> reader(new reader_type{_request, _socket}, [this](reader_type* reader){
+            assert(_reader.use_count() == 0);
+            assert(_stage == types::stages::rejected || _stage == types::stages::headers_read);
+            delete reader;
+        });
+        // connection outlives the reader, because we pass a callback to on_read_header bound on shared_from_this()
+        reader->start(
             std::bind(&self_type::on_read_header, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
         );
+        _reader = reader;
     }
     private:
         auto shared_from_this() {
             return std::enable_shared_from_this<self_type>::shared_from_this();
         }
 
+        auto weak_from_this() {
+            return std::enable_shared_from_this<self_type>::weak_from_this();
+        }
+
         void on_read_header(boost::system::error_code ec, std::size_t bytes_transferred){
+            std::cout << "on_read_header() connection ref_count " << weak_from_this().use_count() << std::endl;
             if(ec){
                 _stage = types::stages::rejected;
                 return;
@@ -230,19 +246,26 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             _stage = types::stages::headers_read;
             _io.post(std::bind(&self_type::process, shared_from_this()));
             _bytes_read += bytes_transferred;
+            assert(_reader.use_count() == 1);
         }
 
+        /**
+         * @brief process the connection by creating a bridge and a stream object with that bridge
+         */
         void process(){
-            _bridge_ptr = std::make_shared<udho::net::bridge>(
+            std::cout << "process() connection ref_count " << weak_from_this().use_count() << std::endl;
+            auto self = shared_from_this();
+            auto bridge_ptr = std::make_shared<udho::net::bridge>(
                 _request, _response, _stream, static_cast<types::transfer_encoding&>(*this),
-                std::bind(&self_type::flush<handler_type>, shared_from_this(), std::placeholders::_1, std::placeholders::_2),
-                std::bind(&self_type::finish, shared_from_this())
+                std::bind(&self_type::flush<handler_type>, self, std::placeholders::_1, std::placeholders::_2),
+                std::bind(&self_type::finish, self)
             );
-            udho::net::stream context(_io, *_bridge_ptr);
-            _processor(std::move(context));
+            udho::net::stream stream(_io, bridge_ptr);
+            _processor(std::move(stream));
         }
 
         void flush_header() {
+            std::cout << "flush_header() connection ref_count " << weak_from_this().use_count() << std::endl;
             _writer->start(_io, _write_strand, _stat_strand, on_flush_header(*this));
         }
 
@@ -266,6 +289,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         }
         template <typename Handler>
         void flush_body_(buffer_type&& buffer, Handler&& handler){
+            std::cout << "flush_body_() connection ref_count " << weak_from_this().use_count() << std::endl;
             flush_body<Handler> body_flusher(_io, _stat_strand, _socket, _buffers, encoding(), stat(), std::move(handler));
             _io.dispatch(
                 boost::asio::bind_executor(
@@ -289,6 +313,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
          */
         template <typename Handler>
         void flush(Handler&& handler, bool only_headers = false){
+            std::cout << "flush() connection ref_count " << weak_from_this().use_count() << std::endl;
             buffer_type buffer;
             std::size_t payload_size = 0;
             if(!only_headers){
@@ -312,6 +337,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
          * @note Expects that the write buffer is empty.
          */
         void finish(){
+            std::cout << "finish() connection ref_count " << weak_from_this().use_count() << std::endl;
             if(_streambuf.size() != 0){
                 // TODO need to flush if there is something pending in the buffer
                 flush(std::bind(&self_type::finish, shared_from_this()));
@@ -337,10 +363,13 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             }
         }
         void on_finish(boost::system::error_code ec, std::size_t bytes_transferred){
+            std::cout << "on_finish() connection ref_count " << weak_from_this().use_count() << std::endl;
             boost::ignore_unused(bytes_transferred);
-            // std::cout << "socket close" << std::endl;
+            std::cout << "socket close" << std::endl;
             boost::system::error_code error;
             _socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, error);
+
+            std::cout << "connection ref_count " << weak_from_this().use_count() << std::endl;
         }
         detail::connection_stat& stat(){
             return *this;
@@ -353,11 +382,11 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         udho::net::types::strand            _compression_strand, _write_strand, _stat_strand;
         udho::net::types::headers::request  _request;
         udho::net::types::headers::response _response;
-        std::shared_ptr<reader_type>        _reader;
+        std::weak_ptr<reader_type>          _reader;
         std::shared_ptr<writer_type>        _writer;
         boost::asio::streambuf              _streambuf;
         std::ostream                        _stream;
-        bridge_ptr                          _bridge_ptr;
+        // bridge_ptr                          _bridge_ptr;
         buffer_type                         _compressed;
         buffers_type                        _buffers;
 };

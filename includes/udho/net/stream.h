@@ -18,14 +18,10 @@ namespace fake{
     struct stream;
 }
 
+
 /**
- * @brief context is a copiable handle that bridges with the connection object associated with the http request
- * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
- * transfer encoding of the response. The equest and the response objects can be accessed through the connection.
- * \ingroup server
- * @note the context object may be copied across multiple callbacks while using chunked transfer encoding.
- *       from callback1 one may call `context.flush(std::bind(&callback2, context))` which will call the callback2
- *       function once the already written contents are flushed out.
+ * @brief stream is a copiable interface to the @ref bridge used for communicating the HTTP responses.
+ * Copying the stream creates multiple streams reporting to the same bridge
  */
 class stream{
     using handler_type   = std::function<void (boost::system::error_code, std::size_t)>;
@@ -36,12 +32,12 @@ class stream{
     friend struct fake::stream;
 
     boost::asio::io_service&            _service;
-    udho::net::bridge&                  _bridge;
+    udho::net::bridge::ptr              _bridge;
 
     stream() = delete;
 
     protected:
-        inline stream(boost::asio::io_service& io, udho::net::bridge& bridge) : _service(io), _bridge(bridge) { }
+        inline stream(boost::asio::io_service& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
 
         struct noop{
             void operator()(boost::system::error_code, std::size_t){}
@@ -49,59 +45,59 @@ class stream{
 
     public:
         stream(const stream&) = default;
-        stream(stream&&) = default;
+        stream(stream&& other): _service(other._service), _bridge(std::move(other._bridge)) {}
 
-        inline const udho::net::types::headers::request& request() const { return _bridge.request(); }
-        inline udho::net::types::headers::response& response() { return _bridge.response(); }
+        inline const udho::net::types::headers::request& request() const { return _bridge->request(); }
+        inline udho::net::types::headers::response& response() { return _bridge->response(); }
 
         template <typename ValueT>
         stream& operator<<(const std::pair<boost::beast::http::field, ValueT>& header){
-            _bridge << header;
+            *_bridge << header;
             return *this;
         }
         template <typename StrT>
         stream& operator<<(const StrT& str){
-             _bridge << str;
+             *_bridge << str;
             return *this;
         }
         stream& write(const char* str, std::size_t len){
-             _bridge.write_latter(str, len);
+             _bridge->write_latter(str, len);
             return *this;
         }
         template <typename Iterator>
         stream& write(Iterator begin, Iterator end){
-             _bridge.write_latter(begin, end);
+             _bridge->write_latter(begin, end);
             return *this;
         }
         template <typename ValueT>
         void set(const boost::beast::http::field& field, const ValueT& value){
-            _bridge.set(field, value);
+            _bridge->set(field, value);
         }
         inline void flush(handler_type&& handler, bool only_headers = false){
-            _bridge.flush(std::move(handler), only_headers);
+            _bridge->flush(std::move(handler), only_headers);
         }
         inline void flush(bool only_headers = false){
             flush(noop{}, only_headers);
         }
         inline void finish(){
-            _bridge.finish();
+            _bridge->finish();
         }
         inline void end(){
-            _bridge.flush(std::bind(&stream::finish_, this, std::placeholders::_1, std::placeholders::_2));
+            _bridge->flush(std::bind(&stream::finish_, this, std::placeholders::_1, std::placeholders::_2));
         }
         inline void finish_(boost::system::error_code, std::size_t){
             finish();
         }
-        inline void encoding(types::transfer::encoding enc) { _bridge.encoding(enc); }
-        inline types::transfer::encoding encoding() const { return _bridge.encoding(); }
-        inline void compression(types::transfer::compression compress) { _bridge.compression(compress); }
-        inline types::transfer::compression compression() const { return _bridge.compression(); }
+        inline void encoding(types::transfer::encoding enc) { _bridge->encoding(enc); }
+        inline types::transfer::encoding encoding() const { return _bridge->encoding(); }
+        inline void compression(types::transfer::compression compress) { _bridge->compression(compress); }
+        inline types::transfer::compression compression() const { return _bridge->compression(); }
 };
 
 namespace fake{
 
 struct stream{
-    static udho::net::stream create(boost::asio::io_service& io, udho::net::bridge& bridge){
+    static udho::net::stream create(boost::asio::io_service& io, udho::net::bridge::ptr bridge){
         return udho::net::stream{io, bridge};
     }
 };

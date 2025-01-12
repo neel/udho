@@ -26,7 +26,8 @@
 #include <curl/curl.h>
 #include <boost/algorithm/string.hpp>
 #include <tabulate/table.hpp>
-#include <udho/view/tmpl/layout/layout.h>
+
+#include <udho/view/tmpl/layout/loader.h>
 
 struct subinfo{
     std::string desc = "DESC";
@@ -487,7 +488,6 @@ int main(){
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
     udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
-
 
     std::cout << view_prefixed(inf, context).str() << std::endl;
     std::cout << view_store(inf, context).str() << std::endl;

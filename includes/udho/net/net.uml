@@ -1,0 +1,279 @@
+@startuml
+skinparam sequenceArrowColor #blue
+skinparam sequenceParticipant underline
+
+actor Client
+
+participant "server" as Server
+participant "listener" as Listener
+participant "connection" as Conn
+participant "reader (ProtocolT::reader)" as Reader
+participant "writer (ProtocolT::writer)" as Writer
+participant "io_service" as IO
+participant "processor (server::serve(...))" as Processor
+participant "preprocess" as Preprocess
+participant "flush_body" as FlushBody
+participant "on_flush_header" as OnFlushHeader
+participant "on_flush_body" as OnFlushBody
+participant "on_finish" as OnFinish
+
+' ---------------------------------------------------------
+' STEP 1: The server is created and run.
+' ---------------------------------------------------------
+Client -> Server: run(artifacts)
+
+note right of Server
+  server::run() calls:
+
+  _listener->listen(
+    bind(&server_type::serve<ArtifactsT>, ...,
+         placeholders::_1, placeholders::_2,
+         artifacts)
+  )
+end note
+
+Server -> Listener: listen(processorLambda)
+
+' ---------------------------------------------------------
+' STEP 2: The listener starts accepting connections.
+' ---------------------------------------------------------
+loop Accept Loop
+    Listener -> Listener: async_accept()
+    note right
+      Once a new connection is accepted:
+      on_accept callback is invoked.
+    end note
+
+    Listener --> Conn: on_accept(new socket)
+    note right
+      The listener constructs a connection
+      and calls connection::start(...) with
+      the processor bound from server::serve.
+    end note
+    Listener -> Conn: start(processor = server::serve(...))
+end loop
+
+' ---------------------------------------------------------
+' STEP 3: Inside connection::start()
+' ---------------------------------------------------------
+Conn -> IO: post(\n  reader->start(...\n    on_read_header))
+
+Conn -> Reader: start(\n  on_read_header callback)
+
+' Reader eventually calls on_read_header:
+Reader -> Conn: on_read_header(ec, bytes_transferred)
+alt error in on_read_header
+    Conn -> Conn: _stage = error/rejected\nreturn
+else success
+    Conn -> Conn: _stage = headers_read\n_bytes_read += bytes_transferred
+    note right
+      on_read_header schedules process()
+      via io_service.post()
+    end note
+    Conn -> IO: post(\n  process())
+end
+
+' ---------------------------------------------------------
+' STEP 4: process() sets up a 'bridge' and calls the server::serve(...)
+'         that was captured as a lambda (processor).
+' ---------------------------------------------------------
+IO -> Conn: process()
+Conn -> Conn: _bridge_ptr = std::make_shared<bridge>(...)
+Conn -> Processor: operator()(stream)
+note right
+  The Processor is effectively
+  server::serve(...).
+end note
+
+' ---------------------------------------------------------
+' STEP 5: server::serve(...) dispatches user-level logic
+'         (router, resource matching, etc.).
+' ---------------------------------------------------------
+Processor -> Server: serve(address, stream, artifacts)
+note right of Server
+  1) prepare(...)
+  2) Attempt to route request
+  3) Possibly handle exceptions
+     with server::fail(...)
+end note
+
+' ---------------------------------------------------------
+' STEP 6: At some point, user logic or route code calls
+'         stream.flush(...) or stream.finish().
+'         This triggers the connection flush pipeline.
+' ---------------------------------------------------------
+
+'===============================================================
+' FLUSHING DATA (detailed)
+'===============================================================
+== Flushing data ==
+
+Client -> Conn: flush(handler, only_headers?)
+activate Conn
+    ' (A) Copy from _streambuf into local buffer if needed
+    Conn -> Conn: copy(buffer)
+    deactivate Conn
+
+    ' (B) If we haven't written headers yet
+    alt (_stage < headers_written)
+        Conn -> Conn: flush_header()
+        activate Conn
+            note right
+                Synchronous call: sets up a writer->start(...)
+            end note
+            Conn -> Writer: start(IO, _write_strand, _stat_strand,\n                 on_flush_header(*this))
+            note right
+                Asynchronous: returns immediately<br/>
+                Will eventually call <b>on_flush_header::operator()</b>
+            end note
+        deactivate Conn
+
+        ' Callback for Writer’s async operation
+        Writer -> OnFlushHeader: operator()(ec, bytes_transferred)
+        activate OnFlushHeader
+            alt ec != 0
+                OnFlushHeader -> Conn: _stat._stage = error
+            else
+                OnFlushHeader -> Conn: _stat._stage = headers_written
+                OnFlushHeader -> Conn: _stat._bytes_written += bytes_transferred
+            end
+        deactivate OnFlushHeader
+    end
+
+    ' (C) If user wants to write body data (only_headers==false && buffer not empty)
+    alt (!only_headers && payload_size > 0)
+        Conn -> Conn: flush_body_(buffer, handler)
+        activate Conn
+            note right
+                Synchronous call that sets up a <b>preprocess<Handler></b> functor, <br/>
+                and a <b>flush_body<Handler></b> functor, then calls io.dispatch(...)
+            end note
+
+            Conn -> IO: dispatch( preprocess<Handler>(...) )
+            note right
+                Asynchronous: returns immediately
+            end note
+        deactivate Conn
+
+        '===============================================================
+        ' PREPROCESS FLOW
+        '===============================================================
+        IO -> Preprocess: operator()  ( detail::preprocess<Handler> )
+        activate Preprocess
+            note right
+                Synchronous steps inside operator():<br/>
+                1) compress()<br/>
+                2) encode()<br/>
+                3) finish() => _io.post(...flush_body...)
+            end note
+
+            Preprocess -> Preprocess: compress()
+            activate Preprocess
+                alt (compression == none)
+                    Preprocess -> Preprocess: _compressed = _buffer
+                else
+                    Preprocess -> Preprocess: // actual compression logic
+                end
+                Preprocess -> Preprocess: encode()
+                Preprocess -> Preprocess: finish()
+                note right
+                    finish() does<br/>
+                    _io.post( std::bind(std::move(_handler)) )
+                end note
+            deactivate Preprocess
+
+            ' Once done, preprocess posts to flush_body
+            Preprocess -> IO: post( flush_body<Handler> )
+        deactivate Preprocess
+
+        '===============================================================
+        ' FLUSH BODY FLOW
+        '===============================================================
+        IO -> FlushBody: operator()(ec, bytes_transferred) ( detail::flush_body<Handler> )
+        activate FlushBody
+            alt ec != 0
+                FlushBody -> Conn: _stat._stage = error
+                FlushBody -> Conn: return
+            else
+                FlushBody -> FlushBody: write()
+                activate FlushBody
+                    note right
+                        Synchronous function sets up async_write(...,<br/>
+                        on_flush_body<Handler>)
+                    end note
+                    FlushBody -> Conn: async_write(socket, buffers, on_flush_body<Handler>)
+                    note right
+                        Asynchronous, calls on_flush_body<Handler>::operator()<br/>
+                        eventually
+                    end note
+                deactivate FlushBody
+            end
+        deactivate FlushBody
+
+        ' Callback for the async_write
+        OnFlushBody -> Conn: operator()(ec, bytes_transferred) ( detail::on_flush_body<Handler> )
+        activate OnFlushBody
+            alt ec != 0
+                OnFlushBody -> Conn: _stat._stage = error
+            else
+                OnFlushBody -> Conn: _stat._stage = body_written
+                OnFlushBody -> Conn: _stat._bytes_written += bytes_transferred
+
+                ' The user-supplied handler we passed to flush_body_ is called.
+                OnFlushBody -> IO: post(handler(ec, bytes_transferred))
+            end
+        deactivate OnFlushBody
+    end
+
+== Finishing up ==
+
+Client -> Conn: finish()
+activate Conn
+    alt _streambuf.size() != 0
+        note right
+            If there's still data in _streambuf,<br/>
+            finish() synchronously calls flush(...) again.<br/>
+            Once flush completes, it calls finish() again.
+        end note
+        Conn -> Conn: flush(std::bind(&finish, shared_from_this()))
+        activate Conn
+            note right
+                Re-enters the same flush logic above.<br/>
+                After flush() callback is done, finish() is called again.
+            end note
+        deactivate Conn
+
+    else if chunked()
+        note right
+            For chunked encoding, we must send<br/>
+            the final empty chunk before shutting down.
+        end note
+        Conn -> Conn: flush_body(empty_chunk, on_finish)
+        activate Conn
+            note right
+                flush_body(...) again sets up a preprocess(...)<br/>
+                that eventually calls on_finish(...) callback
+            end note
+            Conn -> IO: dispatch( preprocess<on_finish>(...) )
+            note right
+                Asynchronous
+            end note
+        deactivate Conn
+    else
+        note right
+            For non-chunked, we simply post <b>on_finish</b><br/>
+            directly to the write_strand
+        end note
+        Conn -> IO: post(on_finish)
+    end
+deactivate Conn
+
+OnFinish -> Conn: operator()(ec, bytes_transferred)
+activate OnFinish
+    note right
+        Synchronous method that<br/>
+        shuts down the socket and frees resources
+    end note
+    OnFinish -> Conn: _socket.shutdown()\n_bridge_ptr.reset()
+deactivate OnFinish
+@enduml

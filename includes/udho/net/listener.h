@@ -13,8 +13,12 @@ namespace udho{
 namespace net{
 
 /**
- * listener runs accept loop for HTTP sockets
- * \ingroup server
+ * @brief listener runs accept loop for HTTP sockets.
+ * Creates a new shared_ptr to the ConnectionT on each successful accept.
+ * Then calls the start method of the connection object with a callback to the processor.
+ * A processor is callable with two inputs, boost::asio::ip::address, udho::net::stream&&.
+ *
+ * @ingroup server
  */
 template <typename ConnectionT>
 class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
@@ -22,6 +26,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
     using self_type        = listener<ConnectionT>;
     using connection_type  = ConnectionT;
     using processer_type   = std::function<void (boost::asio::ip::address, udho::net::stream&&)>;
+    using connection_map   = std::map<typename std::add_pointer<connection_type>::type, std::weak_ptr<connection_type>>;
 
     boost::asio::io_service&          _service;
     boost::asio::ip::tcp::acceptor    _acceptor;
@@ -29,6 +34,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
     boost::asio::signal_set           _signals;
     processer_type                    _processor;
     std::atomic<bool>                 _running;
+    connection_map                    _connections;
   public:
     /**
      * @brief Construct a socket listener that accepts an incoming connection into a socket and moves it into a newly constructed ConnectionT object and then call's it's start method to start parsing the received message.
@@ -61,7 +67,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
         stop();
     }
     /**
-     * starts the async accept loop
+     * @brief starts the async accept loop
      */
     void listen(processer_type&& processor){
         _processor = std::move(processor);
@@ -81,11 +87,39 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
             _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
         }
         void on_accept(boost::system::error_code ec){
-            if(!_running) return;
+            if(!_running) {
+                for(auto pair : _connections){
+                    connection_type* conn = pair.first;
+                    // TODO force stop conn
+                }
+                return;
+            }
             if(!ec){
                 boost::asio::ip::address remote_address = _socket.remote_endpoint().address();
                 // std::cout << "accepted " << remote_address << std::endl;
-                std::shared_ptr<connection_type> conn = std::make_shared<connection_type>(_service, std::move(_socket));
+                // Assumption:
+                //  The listener outlives all connections created by it from the on_accept function
+                //  Support:
+                //      The lifetime of the listener is managed by itself through accept -> on_accept -> accept loop
+                //      which never termintes until explicitely requested by setting _running to false.
+                // Argument:
+                //  As the listener always outlives the connection, capturing this in the deleter callback is okay.
+                std::shared_ptr<connection_type> conn = std::shared_ptr<connection_type>{
+                    new connection_type{_service, std::move(_socket)},
+                    [this](connection_type* ptr){
+                        std::cout << "deleting connection " << ptr << std::endl;
+                        assert(ptr != 0x0);
+                        auto it = _connections.find(ptr);
+                        assert(it != _connections.end());
+                        auto refs = it->second.use_count();
+                        assert(refs == 0);
+                        _connections.erase(it);
+                        delete ptr;
+                        ptr = 0x0;
+                    }
+                };
+                _connections.insert(std::make_pair(conn.get(), std::weak_ptr<connection_type>{conn}));
+                std::cout << "conn.use_count() " << conn.use_count() << std::endl;
                 conn->start(std::bind(&self_type::on_ready, shared_from_this(), remote_address, std::placeholders::_1));
             }else{
                 // TODO failed to accept
