@@ -19,6 +19,7 @@ namespace net{
  * @note non-copyable.
  */
 struct bridge{
+    using ptr = std::shared_ptr<bridge>;
     using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
     using flush_callback  = std::function<void (handler_type, bool)>;
     using finish_callback = std::function<void ()>;
@@ -44,6 +45,8 @@ struct bridge{
         {}
     ~bridge() {
         std::cout << "~bridge" << std::endl;
+        _finish = nullptr;
+        _flush  = nullptr;
     }
     bridge(const bridge&) = delete;
     bridge(bridge&& other): _request(other._request), _response(other._response), _stream(other._stream), _transfer_encoding(other._transfer_encoding), _flush(std::move(other._flush)) {}
@@ -174,10 +177,10 @@ struct bridge{
 
     inline explicit bridge(const udho::net::types::headers::request& request)
         : _request(request),
-          _bridge{request, _response, _stream, _encoding, [](udho::net::bridge::handler_type, bool)  -> void {}, [] () -> void {}}
+          _bridge{std::make_shared<udho::net::bridge>(request, _response, _stream, _encoding, [](udho::net::bridge::handler_type, bool)  -> void {}, [] () -> void {})}
     {}
 
-    inline udho::net::bridge& get(){ return _bridge; }
+    inline udho::net::bridge::ptr get(){ return _bridge; }
 
     inline udho::net::types::headers::response& response() { return _response; }
     inline const udho::net::types::headers::response& response() const { return _response; }
@@ -193,7 +196,7 @@ struct bridge{
         udho::net::types::headers::response _response;
         std::stringstream                   _stream;
         udho::net::types::transfer_encoding _encoding;
-        udho::net::bridge                   _bridge;
+        udho::net::bridge::ptr              _bridge;
 };
 
 }

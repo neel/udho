@@ -229,4 +229,6 @@ struct info{
 // }
 
 
-
+TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
+    CHECK(0 == 0);
+}

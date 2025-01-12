@@ -61,12 +61,21 @@ struct proxy_wrapper{
         proxy_type    _proxy;
 };
 
+/**
+ * @brief context is a copiable handle that bridges with the connection object associated with the http request
+ * It facilitates sending, flushing and finishing the response. It also provides functionality for providing the
+ * transfer encoding of the response. The equest and the response objects can be accessed through the connection.
+ * \ingroup server
+ * @note the context object may be copied across multiple callbacks while using chunked transfer encoding.
+ *       from callback1 one may call `context.flush(std::bind(&callback2, context))` which will call the callback2
+ *       function once the already written contents are flushed out.
+ */
 template <typename... ViewBridgeT>
 struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public udho::net::stream{
     using resource_store = udho::view::resources::const_store<ViewBridgeT...>;
     using self_type = basic_context;
 
-    basic_context(boost::asio::io_service& io, udho::net::bridge& bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
+    basic_context(boost::asio::io_service& io, udho::net::bridge::ptr bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
     basic_context(udho::net::stream&& stream, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(std::move(stream)), _summary(summary), _resources(resources) {}
 
     const udho::url::summary::mount_point& route(const std::string& name) const {
@@ -119,7 +128,7 @@ struct context{
 
     context(const udho::net::types::headers::request& request)
         : _request(request),
-          _bridge{request, _response, _stream, _encoding, std::move([](udho::net::bridge::handler_type, bool)  -> void {}), std::move([] () -> void {})}
+          _bridge{std::make_shared<udho::net::bridge>(request, _response, _stream, _encoding, std::move([](udho::net::bridge::handler_type, bool)  -> void {}), std::move([] () -> void {}))}
     {}
 
     template <typename MountPointsT, typename StoreT>
@@ -132,7 +141,7 @@ struct context{
         udho::net::types::headers::response _response;
         std::stringstream                   _stream;
         udho::net::types::transfer_encoding _encoding;
-        udho::net::bridge                   _bridge;
+        udho::net::bridge::ptr              _bridge;
 };
 
 }

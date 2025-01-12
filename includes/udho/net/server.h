@@ -76,20 +76,21 @@ struct server{
             udho::net::basic_context<const_resource_store_type> context{std::move(stream), summary, artifacts.resources()};
 
             prepare(address, context);
-            boost::beast::string_view tgt = stream.request().target();
+            boost::beast::string_view tgt = context.request().target();
             std::string target(tgt.begin(), tgt.end());
             bool found = false;
             try{
                 found = router(target, context);
+                // TODO the targetted function may perform async operations which may make this try...catch block unnecessary because you can't catch them like that anyway'
                 if(!found){
-                    throw udho::http::error(address, stream, boost::beast::http::status::not_found);
+                    throw udho::http::error(address, context, boost::beast::http::status::not_found);
                 }
             } catch(std::exception& ex) {
-                fail(address, stream, ex);
+                fail(address, context, ex);
             } catch(udho::http::exception& ex) {
-                fail(stream, ex);
+                fail(context, ex);
             } catch(udho::http::error& error) {
-                fail(stream, error);
+                fail(context, error);
             }
         }
 

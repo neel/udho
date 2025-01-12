@@ -27,6 +27,10 @@ using scgi_connection = udho::net::connection<scgi_protocol>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
+// TODO TEST async functions writing to the context (may be use deadline timer)
+// TODO TEST connection object should be destroyed once finished
+// TODO TEST bridge object should be destroyed once finished
+
 void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
     context.finish();
@@ -41,6 +45,23 @@ void chunk(udho::net::stream context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
     context.flush(std::bind(&chunk2, context));
+}
+
+void chunk3_ex(udho::net::stream context){
+    context << "Chunk 3 (Final)";
+    context.finish();
+}
+
+void chunk2_ex(udho::net::stream context){
+    context << "chunk 2";
+    // throw std::runtime_error{"Testing exceptions"};
+    context.flush(std::bind(&chunk3_ex, context));
+}
+
+void chunk_ex(udho::net::stream context){
+    context.encoding(udho::net::types::transfer::encoding::chunked);
+    context << "Chunk 1";
+    context.flush(std::bind(&chunk2_ex, context));
 }
 
 void f0(udho::net::stream context){
@@ -122,9 +143,10 @@ TEST_CASE("udho network", "[net]") {
     X x;
     auto router = udho::url::router(
         udho::url::root(
-            udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
-            udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
-            udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+            udho::url::slot("f0"_h,  &f0)           << udho::url::home  (udho::url::verb::get)                                                  |
+            udho::url::slot("xf0"_h, &X::f0, &x)    << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
+            udho::url::slot("chunked"_h,  &chunk)   << udho::url::fixed (udho::url::verb::get, "/chunk")                                        |
+            udho::url::slot("chunkx"_h,  &chunk_ex) << udho::url::fixed (udho::url::verb::get, "/chunkx")
         ) |
         udho::url::mount("b"_h, "/b",
             udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
@@ -192,6 +214,13 @@ TEST_CASE("udho network", "[net]") {
         CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
         CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
     }
+
+    // SECTION("HTTP Chunked Response with exceptions") {
+    //     http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunkx");
+    //     CHECK(results.code == 200);
+    //     CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
+    //     CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
+    // }
 
     curl_easy_cleanup(curl);
 
