@@ -67,7 +67,7 @@ struct http_writer_internal: public std::enable_shared_from_this<http_writer_int
     http_writer_internal(const http_writer_internal&) = delete;
     ~http_writer_internal() { std::cout << "~http_writer_internal" << std::endl; }
 
-    void operator()(){
+    void start() {
         boost::beast::http::async_write_header(
             _stream, _serializer,
             std::bind(&self_type::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
@@ -112,13 +112,13 @@ struct http_writer{
     ~http_writer() { std::cout << "~http_writer" << std::endl; }
 
     template <typename Handler>
-    void start(boost::asio::io_service& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
+    void operator()(boost::asio::io_service& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
         using internal_writer_type = http_writer_internal<Handler, stream_type>;
         auto internal_writer = std::make_shared<internal_writer_type>(io, strand_finished, _headers, _stream, std::move(handler));
         io.dispatch(
             boost::asio::bind_executor(
                 strand_write,
-                std::bind(&internal_writer_type::operator(), internal_writer)
+                std::bind(&internal_writer_type::start, internal_writer)
             )
         );
     }

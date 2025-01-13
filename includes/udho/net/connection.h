@@ -206,8 +206,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
     using preprocess      = detail::preprocess<Handler>;
 
     connection(boost::asio::io_service& service, udho::net::types::socket socket)
-      : _io(service), _socket(std::move(socket)), _compression_strand(_socket.get_executor()), _write_strand(_socket.get_executor()), _stat_strand(_socket.get_executor()),
-        // _writer(std::make_shared<writer_type>(_response, _socket)),
+      : _io(service), _socket(std::move(socket)),
+        _compression_strand(_socket.get_executor()), _write_strand(_socket.get_executor()), _stat_strand(_socket.get_executor()),
         _stream(&_streambuf)
     {}
     ~connection(){
@@ -266,8 +266,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
 
         void flush_header() {
             std::cout << "flush_header() connection ref_count " << weak_from_this().use_count() << std::endl;
-            auto writer = std::make_shared<writer_type>(_response, _socket);
-            writer->start(_io, _write_strand, _stat_strand, on_flush_header(*this));
+            writer_type writer{_response, _socket};
+            writer(_io, _write_strand, _stat_strand, on_flush_header{*this});
         }
 
         std::size_t copy(buffer_type& buffer){
