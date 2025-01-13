@@ -130,7 +130,7 @@ namespace detail{
             if(_transfer_encoding.compression() == types::transfer::compression::none){
                 _compressed = _buffer;
             }else{
-                // TODO compress _buffer
+                // do compress _buffer
             }
             encode();
             finish();
@@ -165,7 +165,7 @@ namespace detail{
 
 
 /**
- * \brief A non-copiable connection object that wraps a socket.
+ * \brief A connection object wraps a socket.
  * \ingroup server
  * Follows a protocol (e.g. HTTP, FastCGI, SCGI, wscgi etc..) to parse the headers.
  * Uses ProtocolT to follow the protocol and prepare a request object.
