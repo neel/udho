@@ -33,6 +33,7 @@
 #include <udho/view/resources/asset/store.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/data/data.h>
+#include <scn/scn.h>
 
 namespace udho{
 namespace view{
@@ -210,9 +211,13 @@ namespace detail {
         udho::view::resources::results apply(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) {
             using bridge_type = typename std::tuple_element<I, std::tuple<Ts...>>::type;
             using proxy_type  = udho::view::resources::tmpl::proxy<bridge_type>;
+            using description_type = typename proxy_type::description_type;
 
             if (bridge_type::name() == lang) {
                 proxy_type proxy = _store.template view<bridge_type>(prefix, name);
+
+                // const description_type& desc = proxy.description();
+
                 return proxy(data, args...);
             }
             return renderer_many<I + 1, std::tuple<Ts...>>(_store).apply(lang, prefix, name);
@@ -296,6 +301,32 @@ struct const_store{
     udho::view::resources::results render(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) const{
         detail::renderer_many renderer{*this};
         return renderer(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+    }
+    /**
+     * @brief Renders a view and returns the result while matching the bridge at runtime.
+     *
+     * This function parses the `view_address` string to extract the language, prefix, and name, and then delegates the
+     * rendering to another overload of `render` function which takes lang, prefix and path as seperate arguments.
+     * Throws exception if parsing fails.
+     *
+     * @tparam DataT Type of the data passed to the view template.
+     * @tparam Args... Types of the additional arguments passed to the view template.
+     * @param view_address The view address in the format `lang://prefix/name`.
+     * @param data Data passed to the view.
+     * @param args... Additional arguments passed to the view.
+     * @return udho::view::resources::results The result of rendering the view.
+     * @throws std::runtime_error If the `view_address` cannot be parsed.
+     */
+    template <typename DataT, typename... Args>
+    udho::view::resources::results render(const std::string& view_address, DataT&& data, Args&&... args) const{
+        std::string lang, prefix, name;
+        auto result = scn::scan(view_address, "{}://{}/{}", lang, prefix, name);
+
+        if (result) {
+            render<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+        } else {
+            throw std::runtime_error{"Failed to parse view address " + view_address};
+        }
     }
 
     /**
