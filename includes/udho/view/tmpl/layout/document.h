@@ -122,6 +122,8 @@ struct basic_document: protected document_preamble, PlaceholderT{
     using PlaceholderT::operator[];
     using PlaceholderT::properties;
 
+    using placeholders_type = PlaceholderT;
+
     using loader_js  = asset_loader<udho::view::resources::asset::type::js>;
     using loader_css = asset_loader<udho::view::resources::asset::type::css>;
 
