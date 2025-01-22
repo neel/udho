@@ -384,10 +384,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         udho::net::types::headers::request  _request;
         udho::net::types::headers::response _response;
         std::weak_ptr<reader_type>          _reader;
-        // std::shared_ptr<writer_type>        _writer;
         boost::asio::streambuf              _streambuf;
         std::ostream                        _stream;
-        // bridge_ptr                          _bridge_ptr;
         buffer_type                         _compressed;
         buffers_type                        _buffers;
 };

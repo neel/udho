@@ -49,6 +49,7 @@ class stream{
 
         inline const udho::net::types::headers::request& request() const { return _bridge->request(); }
         inline udho::net::types::headers::response& response() { return _bridge->response(); }
+        boost::asio::io_service& io() { return _service; }
 
         template <typename ValueT>
         stream& operator<<(const std::pair<boost::beast::http::field, ValueT>& header){

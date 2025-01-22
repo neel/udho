@@ -31,6 +31,8 @@ using scgi_listener   = udho::net::listener<scgi_connection>;
 // TODO TEST connection object should be destroyed once finished
 // TODO TEST bridge object should be destroyed once finished
 
+
+
 void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
     context.finish();
@@ -70,9 +72,17 @@ void f0(udho::net::stream context){
 }
 
 int f1(udho::net::stream context, int a, const std::string& b, const double& c){
-        context << "Hello f1 ";
-        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
-        context.finish();
+        context << udho::url::format("a: {}, b: {}, c: {} ", a, b, c);
+        auto timer = std::make_shared<boost::asio::deadline_timer>(context.io(), boost::posix_time::seconds(5));
+        timer->async_wait([context, timer](const boost::system::error_code& error) mutable {
+            if (!error) {
+                context << "Hello";
+            } else {
+                context << "error: " << error.message();
+            }
+            context.finish();
+        });
+        context << "f1 ";
         return a+b.size()+c;
 }
 
@@ -196,12 +206,14 @@ TEST_CASE("udho network", "[net]") {
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
     }
 
-    SECTION("HTTP Response from mountpoint") {
+    SECTION("Copying the context extends the connection lifetime") {
         http_results results_f1 = curl_fetch(curl, "GET", "http://localhost:9000/b/f1/10/hello/42");
         CHECK(results_f1.code == 200);
-        CHECK(results_f1.body == "Hello f1 a: 10, b: hello, c: 42");
+        CHECK(results_f1.body == "a: 10, b: hello, c: 42 f1 Hello");
         CHECK(results_f1.headers["Transfer-Encoding"] == "plain,plain");
+    }
 
+    SECTION("HTTP Response from mountpoint") {
         http_results results_xf1 = curl_fetch(curl, "GET", "http://localhost:9000/b/x/f1/567/ping/42.8");
         CHECK(results_xf1.code == 200);
         CHECK(results_xf1.body == "Hello X::f1 a: 567, b: ping, c: 42.8");
@@ -215,12 +227,12 @@ TEST_CASE("udho network", "[net]") {
         CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
     }
 
-    // SECTION("HTTP Chunked Response with exceptions") {
-    //     http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunkx");
-    //     CHECK(results.code == 200);
-    //     CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
-    //     CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
-    // }
+    SECTION("HTTP Chunked Response with exceptions") {
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunkx");
+        CHECK(results.code == 200);
+        CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
+        CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
+    }
 
     curl_easy_cleanup(curl);
 
