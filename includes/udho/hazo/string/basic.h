@@ -75,6 +75,7 @@ struct basic{
     };
 
     constexpr static bool empty() { return length == 0; }
+
     template <typename OtherTag, typename OtherCharT, OtherCharT... X>
     constexpr bool operator==(const basic<OtherTag, CharT, X...>&) const {
         return std::is_same_v<Tag, OtherTag> && std::is_same_v<CharT, OtherCharT> && compare<X...>::value;
@@ -82,6 +83,13 @@ struct basic{
     template <typename OtherTag, typename OtherCharT, OtherCharT... X>
     constexpr bool operator!=(const basic<OtherTag, CharT, X...>& other) const {
         return !operator==(other);
+    }
+
+    constexpr bool operator==(const std::basic_string<CharT>& other) const {
+        if(other.size() != length)
+            return false;
+
+        return std::equal(begin(), end(), other.begin(), other.end());
     }
 
     static CharT at(int i) { return _str[i]; }
