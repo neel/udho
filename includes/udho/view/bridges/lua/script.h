@@ -62,10 +62,10 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
     inline std::size_t min_size() { return _min_size; }
 
     private:
-        inline void begin(const base::description& desc){
+        inline void begin(const base::header_type& header){
             *this << "return function(d, c, stream)" << std::endl;
             *this << "  local function echo(...) stream:print(...) end" << std::endl;
-            *this << udho::url::format("  local function view({}, {}, stream)", desc.vars.data, desc.vars.context) << std::endl;
+            *this << udho::url::format("  local function view({}, {}, stream)", header.vars.data, header.vars.context) << std::endl;
             ++*this;
         }
         /**

@@ -28,6 +28,8 @@
 #ifndef UDHO_VIEW_RESOURCES_FWD_H
 #define UDHO_VIEW_RESOURCES_FWD_H
 
+#include <filesystem>
+
 namespace udho{
 namespace view{
 namespace resources{

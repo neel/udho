@@ -29,14 +29,8 @@
 #define UDHO_VIEW_BRIDGES_SCRIPT_H
 
 #include <string>
-#include <array>
-#include <limits>
-#include <vector>
-#include <fstream>
-#include <iomanip>
-#include <stdexcept>
-#include <exception>
-#include <udho/view/data/associative.h>
+#include <udho/view/bridges/stream.h>
+#include <udho/view/bridges/header.h>
 #include <udho/view/tmpl/sections.h>
 #include <udho/view/meta.h>
 #include <boost/filesystem.hpp>
@@ -49,177 +43,6 @@ namespace data{
 namespace bridges{
 
 /**
- * @struct stream
- * @ingroup view
- * @brief A generic text stream class for handling formatted text output with controlled indentation.
- *
- * This template class facilitates structured text generation, which is particularly useful for scripting and code generation in various languages. It manages indentation and newlines to produce readable and well-formatted output.
- *
- * @tparam CharT Character type for the stream (default: char).
- * @tparam C Default indentation character (default: tab '\t').
- */
-template <typename CharT = char, CharT C = '\t'>
-struct stream{
-    using char_type = CharT; ///< The character type used in the stream.
-    static constexpr const char_type indent_char = C; ///< The character used for indentation.
-
-    /**
-     * @brief Constructs a new stream object with default settings.
-     */
-    explicit stream(): _indent(0), _empty_newline(true) {
-        std::fill(_indent_str.begin(), _indent_str.end(), indent_char);
-    }
-
-    stream(const stream&) = delete; ///< Copy constructor is deleted.
-    stream& operator=(const stream&) = delete; ///< Copy assignment is deleted.
-
-    /**
-     * @brief Appends a string to the stream.
-     * @param s Reference to the stream.
-     * @param str The string to append.
-     * @return A reference to the modified stream.
-     */
-    friend stream& operator<<(stream& s, const std::string& str){
-        s.append(str);
-        return s;
-    }
-
-    /**
-     * @brief Handles manipulators, specifically std::endl to append a newline.
-     * @param s Reference to the stream.
-     * @param manip Manipulator function.
-     * @return A reference to the modified stream.
-     */
-    friend stream& operator<<(stream& s, std::ostream& (*manip)(std::ostream&)) {
-        if (manip == static_cast<std::ostream& (*)(std::ostream&)>(std::endl)) {
-            s.append_newline();
-        }
-        return s;
-    }
-
-    /**
-     * @brief Prefix increment to increase indentation.
-     */
-    stream& operator++() {
-        indent(true);
-        return *this;
-    }
-
-    /**
-     * @brief Postfix increment to increase indentation.
-     */
-    stream operator++(int) {
-        stream temp = *this;
-        indent(true);
-        return temp;
-    }
-
-    /**
-     * @brief Prefix decrement to decrease indentation.
-     */
-    stream& operator--() {
-        indent(false);
-        return *this;
-    }
-
-    /**
-     * @brief Postfix decrement to decrease indentation.
-     */
-    stream operator--(int) {
-        stream temp = *this;
-        indent(false);
-        return temp;
-    }
-
-    /**
-     * @brief Returns the entire content of the buffer as a standard string.
-     * @return A string containing all characters currently in the buffer.
-     */
-    std::string body() const { return std::string(_buffer.begin(), _buffer.end()); }
-    /**
-     * @brief Provides access to the raw data of the buffer.
-     * @return A pointer to the beginning of the data buffer.
-     */
-    const char* data() const { return _buffer.data(); }
-    /**
-     * @brief Gets the current size of the buffer.
-     * @return The size of the buffer in characters.
-     */
-    std::size_t size() const { return _buffer.size(); }
-
-    std::string save(const std::string& name) const {
-        std::string sanitized_name = name;
-        std::replace_if(sanitized_name.begin(), sanitized_name.end(), [](char ch) {
-            return !std::isalnum(ch) && ch != '.' && ch != '-' && ch != '_';
-        }, '_');
-        boost::filesystem::path temp_dir = boost::filesystem::temp_directory_path();
-        boost::filesystem::path temp_file = temp_dir / boost::filesystem::unique_path(udho::url::format("{}-%%%%-%%%%-%%%%-%%%%.lua", sanitized_name));
-
-        std::ofstream out(temp_file.string());
-        if (!out) {
-            throw std::runtime_error("Failed to create temporary file");
-        }
-
-        out.write(data(), size());
-        if (!out.good()) {
-            throw std::runtime_error("Failed to write data to temporary file");
-        }
-        out.close();
-
-        return temp_file.string();
-    }
-
-    protected:
-        /**
-         * @brief Adjusts the indentation level of the output.
-         * @param positive If true, increases the indentation level; if false, decreases it.
-         * @throw std::underflow_error If decreasing the indentation would result in a negative indentation level.
-         */
-        void indent(bool positive){
-            std::int8_t indent = _indent;
-            indent += positive ? +1 : -1;
-            if(indent < 0){
-                throw std::underflow_error{"indentation < 0 is illegal"};
-            }
-            _indent = indent;
-        }
-    protected:
-        /**
-         * @brief Appends a string directly to the buffer.
-         * @param str The string to append to the buffer.
-         */
-        void append(const std::string& str) { append(str.begin(), str.end()); }
-        /**
-         * @brief Appends a range of characters to the buffer, applying indentation as necessary.
-         * @tparam Iterator Type of the iterator.
-         * @param begin Iterator pointing to the beginning of the character range.
-         * @param end Iterator pointing to the end of the character range.
-         * @note Inserts indentation characters at the beginning of a new line if the line is currently empty.
-         */
-        template <typename Iterator>
-        void append(Iterator begin, Iterator end) {
-            if(_empty_newline){
-                _buffer.insert(_buffer.end(), _indent_str.begin(), _indent_str.begin() + _indent);
-                _empty_newline = false;
-            }
-            _buffer.insert(_buffer.end(), begin, end);
-        }
-        /**
-         * @brief Appends a newline character to the buffer and resets the line state to empty.
-         * @details This causes the next line of output to begin with the appropriate indentation.
-         */
-        void append_newline() {
-            _buffer.push_back('\n');
-            _empty_newline = true;
-        }
-    private:
-        std::vector<char_type> _buffer;  ///< The buffer storing the stream's content.
-        std::int8_t _indent;  ///< Current indentation level.
-        bool _empty_newline;  ///< Flag indicating whether the current line is empty.
-        std::array<char_type, std::numeric_limits<std::int8_t>::max()> _indent_str;  ///< Array used for indentation.
-};
-
-/**
  * @struct basic_script
  * @ingroup view
  * @brief A specialized stream for handling script generation, particularly useful in scenarios where scripts or code need to be dynamically generated from templates.
@@ -229,94 +52,7 @@ struct stream{
 template <typename DerivedT>
 struct basic_script: stream<char, '\t'>{
     using derived_type = DerivedT;
-
-    /**
-     * @brief meta block configuration object
-     * @details A destription object is passed to the meta block, which is modified by the instruction present in that block.
-     *          After that the description object is accessed to interpret the consfigurations expressed by the view template.
-     */
-    struct description{
-        struct vars_{
-            std::string data    = "d";
-            std::string context = "ctx";
-
-            friend auto metatype(udho::view::data::type<vars_>){
-                using namespace udho::view::data;
-
-                return assoc("vars_"),
-                    mvar("data",    &vars_::data),
-                    mvar("context", &vars_::context);
-            }
-        };
-
-        struct includes_{
-            using asset_type            = udho::view::resources::asset::type;
-
-            struct resource_info_{
-                std::string prefix;
-                std::string name;
-
-                bool operator<(const resource_info_& other) const {
-                    return std::tie(prefix, name) < std::tie(other.prefix, other.name);
-                }
-            };
-
-            /**
-             * Checks if the resource is already added. if added does not add again.
-             */
-            bool add(asset_type type, const std::string& prefix, const std::string& name){
-                auto mit = _includes.find(type);
-                if(mit == _includes.end()){
-                    mit = _includes.insert(std::make_pair(type, std::set<resource_info_>{})).first;
-                }
-
-                auto sit = mit->second.insert(resource_info_{prefix, name});
-                return sit.second;
-            }
-
-            typename std::set<resource_info_>::const_iterator begin(asset_type type) const {
-                auto it = _includes.find(type);
-                return it != _includes.end() ? it->second.begin() : end(type);
-            }
-            typename std::set<resource_info_>::const_iterator end(asset_type type) const  {
-                auto it = _includes.find(type);
-                return it != _includes.end() ? it->second.end() : std::set<resource_info_>().end();  // Safe end iterator
-            }
-
-            void add_js(const std::string& prefix, const std::string& name)  { add(asset_type::js, prefix, name); }
-            void add_css(const std::string& prefix, const std::string& name) { add(asset_type::css, prefix, name); }
-
-            auto js() const { return boost::make_iterator_range(begin(asset_type::js), end(asset_type::js)); }
-            auto css() const { return boost::make_iterator_range(begin(asset_type::css), end(asset_type::css)); }
-
-            friend auto metatype(udho::view::data::type<includes_>){
-                using namespace udho::view::data;
-
-                return assoc("includes_"),
-                    func("js",  &includes_::add_js),
-                    func("css", &includes_::add_css);
-            }
-
-            std::map<asset_type, std::set<resource_info_>> _includes;
-        };
-
-        std::string name;
-        std::string bridge;
-        vars_       vars;
-        includes_   includes;
-        bool        whitespace = false;
-
-        friend auto metatype(udho::view::data::type<description>){
-            using namespace udho::view::data;
-
-            return assoc("description"),
-                mvar("name",       &description::name),
-                mvar("bridge",     &description::bridge),
-                mvar("vars",       &description::vars),
-                mvar("include",    &description::includes),
-                mvar("whitespace", &description::whitespace);
-        }
-    };
+    using header_type  = udho::view::data::bridges::view_header;
     /**
      * @brief Constructs a new script object with a specified name.
      * @param name The name of the script, often used as an identifier.
@@ -330,9 +66,9 @@ struct basic_script: stream<char, '\t'>{
 
     /**
      * @brief Returns the meta information of the view.
-     * @return View description
+     * @return View header
      */
-    const description& desc() const{ return _description; }
+    const view_header& header() const{ return _header; }
     /**
      * @brief Processes a given template section into script format.
      * @details Process the meta section inside basic_script as it is same for all template engine. For all other sections delegates the call to the derived class
@@ -348,8 +84,8 @@ struct basic_script: stream<char, '\t'>{
             // this may update the default values of the variables such as vars etc..
 
             std::string instructions = section.content();
-            udho::view::data::meta::exec(_description, instructions);
-            self().begin(_description);
+            udho::view::data::meta::exec(_header, instructions);
+            self().begin(_header);
 
             _meta_processed = true;
         } else {
@@ -360,7 +96,7 @@ struct basic_script: stream<char, '\t'>{
                 if (section.size() == 0) {
                     // empty section always discard
                     discard(section);
-                } else if (section.type() == udho::view::tmpl::section::text && !_description.whitespace && section.is_whitespace() && section.size() > 1) {
+                } else if (section.type() == udho::view::tmpl::section::text && !_header.whitespace && section.is_whitespace() && section.size() > 1) {
                     // whitespace if false and the section has only whitespaces and there are more than one white space
                     // hence discard
                     // Note: if the section has exactly one white space then keep it
@@ -404,7 +140,7 @@ struct basic_script: stream<char, '\t'>{
         }
     private:
         std::string _name;
-        description _description;
+        view_header _header;
         bool        _meta_processed;
 };
 

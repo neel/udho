@@ -522,6 +522,14 @@ struct bridge{
         return compile(view.begin(), view.end(), key);
     }
 
+    const udho::view::data::bridges::view_header& header(const std::string& key) const {
+        return _headers.at(key);
+    }
+
+    const udho::view::data::bridges::view_header& header(const std::string& name, const std::string& prefix) const {
+        return header(view_key(name, prefix));
+    }
+
     /**
      * @brief Binds a data type to the scripting engine, enabling data access within the scripts generated from the templates (view files).
      * @tparam ClassT The data type to bind.
@@ -536,7 +544,7 @@ struct bridge{
         } else if(_policy == bridges::policy::state_pool) {
             bind_pool(handle);
         } else {
-            assert(("no policy is det for the bridge", false));
+            assert(("no policy is set for the bridge", false));
         }
     }
 
@@ -556,7 +564,7 @@ struct bridge{
         } else if(_policy == bridges::policy::state_pool) {
             return exec_pool(name, prefix, data, aux, output);
         } else {
-            assert(("no policy is det for the bridge", false));
+            assert(("no policy is set for the bridge", false));
         }
     }
 
@@ -806,6 +814,8 @@ struct bridge{
             udho::view::tmpl::parser parser;
             parser.parse(begin, end, script);
             script.finish();
+            const udho::view::data::bridges::view_header& header = script.header();
+            _headers.insert(std::make_pair(key, std::move(header)));
 
             std::string name = script.save(key);
             std::cout << "Generated script at " << name << std::endl;
@@ -816,6 +826,7 @@ struct bridge{
             }
             return success;
         }
+
     private:
         std::size_t                                 _pool_size;
         std::vector<std::unique_ptr<state_type>>    _states;
@@ -828,6 +839,7 @@ struct bridge{
 #endif
         std::recursive_mutex                        _mutex_bind;
         bridges::policy                             _policy;
+        std::map<std::string, udho::view::data::bridges::view_header> _headers;
 
 };
 

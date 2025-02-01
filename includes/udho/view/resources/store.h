@@ -35,6 +35,8 @@
 #include <udho/view/data/data.h>
 #include <scn/scn.h>
 
+#include <udho/view/bridges/script.h>
+
 namespace udho{
 namespace view{
 namespace resources{
@@ -198,42 +200,50 @@ struct prefixed_store{
 
 namespace detail {
     template <int I, typename Tuple>
-    struct renderer_many;
+    struct view_bridge_auto_resolver;
 
     template <int I, typename... Ts>
-    struct renderer_many<I, std::tuple<Ts...>> {
+    struct view_bridge_auto_resolver<I, std::tuple<Ts...>> {
         using store_type = const_store<Ts...>;
-        store_type& _store;
+        const store_type& _store;
 
-        renderer_many(store_type& store) : _store(store) {}
+        view_bridge_auto_resolver(const store_type& store) : _store(store) {}
 
         template <typename DataT, typename... Args>
         udho::view::resources::results apply(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) {
             using bridge_type = typename std::tuple_element<I, std::tuple<Ts...>>::type;
             using proxy_type  = udho::view::resources::tmpl::proxy<bridge_type>;
-            using description_type = typename proxy_type::description_type;
 
             if (bridge_type::name() == lang) {
                 proxy_type proxy = _store.template view<bridge_type>(prefix, name);
-
-                // const description_type& desc = proxy.description();
-
                 return proxy(data, args...);
             }
-            return renderer_many<I + 1, std::tuple<Ts...>>(_store).apply(lang, prefix, name);
+            return view_bridge_auto_resolver<I + 1, std::tuple<Ts...>>(_store).template apply<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+        }
+
+        const udho::view::data::bridges::view_header& header(const std::string& lang, const std::string& prefix, const std::string& name) const {
+            using bridge_type = typename std::tuple_element<I, std::tuple<Ts...>>::type;
+
+            if (bridge_type::name() == lang) {
+                return _store.template header<bridge_type>(prefix, name);
+            }
+            return view_bridge_auto_resolver<I + 1, std::tuple<Ts...>>(_store).header(lang, prefix, name);
         }
     };
 
     template <typename... Ts>
-    struct renderer_many<sizeof...(Ts), std::tuple<Ts...>> {
+    struct view_bridge_auto_resolver<sizeof...(Ts), std::tuple<Ts...>>{
         using store_type = const_store<Ts...>;
-        store_type& _store;
+        const store_type& _store;
 
-        renderer_many(store_type& store) : _store(store) {}
+        view_bridge_auto_resolver(const store_type& store) : _store(store) {}
 
-        udho::view::resources::results apply(const std::string&, const std::string&, const std::string& name) {
-            udho::view::resources::results results{name};
-            return results;
+        template <typename DataT, typename... Args>
+        udho::view::resources::results apply(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) {
+            throw std::runtime_error{"Requested language "+lang+" not present in the store"};
+        }
+        const udho::view::data::bridges::view_header& header(const std::string& lang, const std::string& prefix, const std::string& name) const {
+            throw std::runtime_error{"Requested language "+lang+" not present in the store"};
         }
     };
 }
@@ -258,6 +268,7 @@ struct const_store{
     using asset_substore_readonly_img    = udho::view::resources::asset::const_substore<asset::type::img>;
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
     using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_store<XBridges...>;
+    using view_autoresolver_type         = detail::view_bridge_auto_resolver<0, std::tuple<XBridges...>>;
 
     /**
      * @brief construct a const_store from a resource store
@@ -299,8 +310,8 @@ struct const_store{
      */
     template <typename DataT, typename... Args>
     udho::view::resources::results render(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) const{
-        detail::renderer_many renderer{*this};
-        return renderer(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+        view_autoresolver_type renderer{*this};
+        return renderer.apply(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
     }
     /**
      * @brief Renders a view and returns the result while matching the bridge at runtime.
@@ -323,11 +334,34 @@ struct const_store{
         auto result = scn::scan(view_address, "{}://{}/{}", lang, prefix, name);
 
         if (result) {
-            render<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
+            return render<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
         } else {
             throw std::runtime_error{"Failed to parse view address " + view_address};
         }
     }
+
+    template <typename XBridgeT>
+    const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const {
+        udho::view::resources::tmpl::const_substore<XBridgeT> tmpl_substore = tmpl<XBridgeT>();
+        return tmpl_substore.header(prefix, name);
+    }
+
+    const udho::view::data::bridges::view_header& header(const std::string& lang, const std::string& prefix, const std::string& name) const {
+        view_autoresolver_type renderer{*this};
+        return renderer.header(lang, prefix, name);
+    }
+
+    const udho::view::data::bridges::view_header& header(const std::string& view_address) const{
+        std::string lang, prefix, name;
+        auto result = scn::scan(view_address, "{}://{}/{}", lang, prefix, name);
+
+        if (result) {
+            return header(lang, prefix, name);
+        } else {
+            throw std::runtime_error{"Failed to parse view address " + view_address};
+        }
+    }
+
 
     /**
      * @brief const reference to the assets store
