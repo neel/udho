@@ -581,7 +581,9 @@ struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<!has_less_than_
     void apply(F&& f, Stream& stream) const {
         static key_type empty_key;
         if constexpr (!Multi){
-            f(empty_key, *_container, stream);
+            if(_container){
+                f(empty_key, *_container, stream);
+            }
         } else {
             std::size_t index = 0;
             std::size_t count = _container.size();

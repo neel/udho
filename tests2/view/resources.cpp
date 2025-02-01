@@ -96,7 +96,7 @@ Hello World
     // TEST check view count again
     {
         std::size_t i = 0;
-        for(const udho::view::resources::tmpl::description& view_proxy: lua_substore){
+        for(const udho::view::resources::tmpl::tmpl_view_registration_info& view_proxy: lua_substore){
             // std::cout << view_proxy.name() << " " << view_proxy.prefix() << std::endl;
             // TEST Check view name and prefix only, view functionality will be checked in other tests
             CHECK(view_proxy.name()   == views[i].first);
@@ -253,7 +253,7 @@ Hello World
     // TEST check view count again
     {
         std::size_t i = 0;
-        for(const udho::view::resources::tmpl::description& view_proxy: lua_substore){
+        for(const udho::view::resources::tmpl::tmpl_view_registration_info& view_proxy: lua_substore){
             // std::cout << view_proxy.name() << " " << view_proxy.prefix() << std::endl;
             // TEST Check view name and prefix only, view functionality will be checked in other tests
             CHECK(view_proxy.name()   == views[i].first);

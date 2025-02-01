@@ -38,7 +38,8 @@ struct meta_tags: property_map<std::string, std::string>{
         return http_equiv_.property(key);
     }
 
-    std::ostream& write(std::ostream& stream){
+    template <typename Stream>
+    Stream& write(Stream& stream) const {
         static std::map<http_equiv, std::string> http_equiv_keys = {
             {content_security_policy,   "content-security-policy"},
             {content_type,              "content-type"},

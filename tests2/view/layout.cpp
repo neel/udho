@@ -17,7 +17,8 @@
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/tmpl/layout/document.h>
 #include <udho/view/tmpl/layout/presenter.h>
-
+#include <udho/view/tmpl/layout/layout.h>
+#include <udho/url/url.h>
 #include "data.h"
 
 static char buffer_router[] = R"TEMPLATE(
@@ -197,38 +198,138 @@ struct info{
     }
 };
 
-// TEST_CASE("View layout normal functionalities", "[view][lua][layout]") {
-//     udho::view::data::bridges::lua lua;
-//     lua.init();
-//     lua.bind(udho::view::data::type<tabulate::Table>{});
-//     lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-//     info inf;
-//     inf.name = "NAME";
-//     inf.value = 42.42;
-//     inf._x    = 42;
-//
-//     boost::filesystem::path temp = boost::filesystem::unique_path();
-//     {
-//         std::ofstream temp_stream(temp.c_str());
-//         temp_stream << buffer_router;
-//         temp_stream.close();
-//     }
-//
-//     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-//     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp", temp));
-//     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("temp2", buffer_store, buffer_store+sizeof(buffer_store)));
-//     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("mini",  buffer_mini, buffer_mini+sizeof(buffer_mini)));
-//
-//     std::string js_str = "console.log(\"Hello World\")";
-//
-//     resource_store.assets().add("primary", udho::view::resources::asset::js("hello.js", js_str.begin(), js_str.end())->self().is_async(true) );
-//     resource_store.lock();
-//
-//     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
-//     udho::view::tmpl::layout::asset_loader<udho::view::resources::asset::type::js> loader{resource_store_proxy.js()};
-// }
+void chunk3(udho::net::stream context){
+    context << "Chunk 3 (Final)";
+    context.finish();
+}
+
+void chunk2(udho::net::stream context){
+    context << "chunk 2";
+    context.flush(std::bind(&chunk3, context));
+}
+
+void chunk(udho::net::stream context){
+    context.encoding(udho::net::types::transfer::encoding::chunked);
+    context << "Chunk 1";
+    context.flush(std::bind(&chunk2, context));
+}
+
+void f0(udho::net::stream context){
+    context << "Hello f0";
+    context.finish();
+}
+
+int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+}
+
+struct X{
+    void f0(udho::net::context<udho::view::data::bridges::lua> context){
+        using context_type = udho::net::context<udho::view::data::bridges::lua>;
+        using store_type   = typename context_type::resource_store;
+
+        const store_type& store = context.resources();
+
+        udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.view<udho::view::data::bridges::lua>("primary", "temp");
+
+        info inf;
+        inf.name = "NAME";
+        inf.value = 42.42;
+        inf._x    = 42;
+
+        proxy(inf, context);
+
+        context << "Hello X::f0";
+        context << context.route("f0").name();
+        context.finish();
+        std::cout << context.route("f0").name() << std::endl;
+    }
+
+    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << "Hello X::f1 ";
+        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+        context.finish();
+        return a+b.size()+c;
+    }
+};
 
 
 TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     CHECK(0 == 0);
+
+    static char buffer_js[]  = "console.log('Hello, world!');";
+    static char buffer_js1[] = "console.log('Hello, Mars!');";
+    static char buffer_css[] = ".classname{color: blue}";
+    static char buffer_img[] = "console.log('Hello, world!');";
+
+    student p;
+
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+
+    const std::map<std::string, std::tuple<std::string, udho::view::resources::asset::type, std::string>> assets = {
+        {"0profile1.js", {"primary", udho::view::resources::asset::type::js, buffer_js}},
+        {"1profile2.js", {"primary", udho::view::resources::asset::type::js, buffer_js1}},
+        {"2profile.css", {"primary", udho::view::resources::asset::type::css, buffer_css}},
+        {"3profile.png", {"primary", udho::view::resources::asset::type::img, buffer_img}}
+    };
+
+    {
+        auto it = assets.cbegin();
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::js(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::css(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+        it++;
+        resource_store[std::get<0>(it->second)] << udho::view::resources::asset::img(it->first, std::get<2>(it->second).begin(), std::get<2>(it->second).end());
+    }
+    resource_store.assets().base("assets");
+    resource_store.lock();
+
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+    udho::view::resources::tmpl::const_substore<udho::view::data::bridges::lua> tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
+    // udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> ctx_explorer = tmpl_lua.view("primary", "ctx_explorer");
+
+    boost::asio::io_service io;
+
+    using namespace udho::hazo::string::literals;
+
+    X x;
+    auto router = udho::url::router(
+          udho::url::root(
+                udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)
+              | udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
+              | udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+          )
+        | udho::url::mount("b"_h, "/b",
+              udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
+            | udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+        ),
+        resource_store_proxy.assets()
+    );
+
+    udho::net::types::headers::request  request;
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
+
+    using context_type = udho::net::context<udho::view::data::bridges::lua>;
+
+    // udho::view::tmpl::layout::standard_layout<context_type> layout{context};
+    auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+    layout.preamble().title("Page title");
+    namespace placeholders = udho::view::tmpl::layout::placeholders;
+    layout[placeholders::central] = "Hello";
+
+    layout();
+
+    std::cout << fake_context_generator._stream.str() << std::endl;
 }

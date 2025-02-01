@@ -68,13 +68,13 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
     /**
      * @brief write global importmap (includes all javascripts from all prefixes irrespective of whether they are requested or not)
      */
-    udho::net::stream& importmap(udho::net::stream& stream){
+    udho::net::stream& importmap(udho::net::stream& stream) const {
         return _store.importmap(stream);
     }
     /**
      * @brief generate script tags only for the requested javascripts
      */
-    udho::net::stream& write(udho::net::stream& stream){
+    udho::net::stream& write(udho::net::stream& stream) const {
         for(auto it: common_asset_loader_type::_selection){
             if(!embed()){
                 stream << udho::url::format("<script src=\"{}\"></script>", it->url()) << "\n";
@@ -102,7 +102,7 @@ struct asset_loader<udho::view::resources::asset::type::css>: common_asset_loade
     /**
      * @brief generate link or style tags only for the requested stylesheets
      */
-    udho::net::stream& write(udho::net::stream& stream){
+    udho::net::stream& write(udho::net::stream& stream) const {
         for(auto it: common_asset_loader_type::_selection){
             const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& a = it->template cast<udho::view::resources::asset::type::css>();
             const auto& policy = a.policy();
