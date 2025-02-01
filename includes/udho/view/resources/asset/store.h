@@ -50,19 +50,19 @@ namespace asset{
  * @brief description of an asset
  * @ingroup view
  */
-class description{
+class asset_registration_info{
     using resource_ptr = std::unique_ptr<asset::abstract_resource>;
 
     std::string  _prefix;
     resource_ptr _res;
 
     public:
-        description() = delete;
-        description(const std::string& prefix, resource_ptr&& res): _prefix(prefix), _res(std::move(res)) {}
-        description(const description&) = delete;
-        description(description&& other): _prefix(std::move(other._prefix)), _res(std::move(other._res)) {}
-        description& operator=(const description&) = delete;
-        description& operator=(description&& other) noexcept {
+        asset_registration_info() = delete;
+        asset_registration_info(const std::string& prefix, resource_ptr&& res): _prefix(prefix), _res(std::move(res)) {}
+        asset_registration_info(const asset_registration_info&) = delete;
+        asset_registration_info(asset_registration_info&& other): _prefix(std::move(other._prefix)), _res(std::move(other._res)) {}
+        asset_registration_info& operator=(const asset_registration_info&) = delete;
+        asset_registration_info& operator=(asset_registration_info&& other) noexcept {
             _prefix = std::move(other._prefix);
             _res = std::move(other._res);
             return *this;
@@ -104,12 +104,12 @@ class description{
             return dynamic_cast<udho::view::resources::asset::basic_resource<AssetType>&>(*_res);
         }
 
-        friend auto metatype(udho::view::data::type<description>){
+        friend auto metatype(udho::view::data::type<asset_registration_info>){
             using namespace udho::view::data;
 
             return assoc("asset_description"),
-                fvar("name",   &description::name),
-                fvar("prefix", &description::prefix);
+                fvar("name",   &asset_registration_info::name),
+                fvar("prefix", &asset_registration_info::prefix);
         }
 };
 
@@ -126,7 +126,7 @@ struct proxy{
      * @param prefix The prefix used in resource identification.
      * @param bridge Reference to the bridge used for resource execution.
      */
-    inline proxy(const description& desc,  const std::string& base): _desc(desc), _base(base) {}
+    inline proxy(const asset_registration_info& desc,  const std::string& base): _desc(desc), _base(base) {}
 
      /**
      * @brief Returns the name of the resource associated with this proxy.
@@ -207,7 +207,7 @@ struct proxy{
     }
 
     private:
-        const description& _desc;
+        const asset_registration_info& _desc;
         const std::string& _base;
 };
 
@@ -238,44 +238,44 @@ struct store{
     };
 
     using resource_set = boost::multi_index_container<
-        description,
+        asset_registration_info,
         boost::multi_index::indexed_by<
             boost::multi_index::ordered_unique<
                 boost::multi_index::tag<typename tags::composite>,
                 boost::multi_index::composite_key<
-                    description,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
-                    boost::multi_index::const_mem_fun<description, asset::type, &description::type>,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                    asset_registration_info,
+                    boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::prefix>,
+                    boost::multi_index::const_mem_fun<asset_registration_info, asset::type, &asset_registration_info::type>,
+                    boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::name>
                 >
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::combined>,
                 boost::multi_index::composite_key<
-                    description,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
-                    boost::multi_index::const_mem_fun<description, asset::type, &description::type>
+                    asset_registration_info,
+                    boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::prefix>,
+                    boost::multi_index::const_mem_fun<asset_registration_info, asset::type, &asset_registration_info::type>
                 >
             >,
             boost::multi_index::ordered_unique<
                 boost::multi_index::tag<typename tags::uri>,
                 boost::multi_index::composite_key<
-                    description,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                    asset_registration_info,
+                    boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::prefix>,
+                    boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::name>
                 >
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::name>,
-                boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::name>
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::prefix>,
-                boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>
+                boost::multi_index::const_mem_fun<asset_registration_info, const std::string&, &asset_registration_info::prefix>
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::type>,
-                boost::multi_index::const_mem_fun<description, asset::type, &description::type>
+                boost::multi_index::const_mem_fun<asset_registration_info, asset::type, &asset_registration_info::type>
             >
         >
     >; ///< Container for storing and indexing resource information.
@@ -401,10 +401,10 @@ struct store{
      * @param res The resource to add.
      */
    template <udho::view::resources::asset::type AssetType>
-   const description& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>* res) {
+   const asset_registration_info& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>* res) {
         if(!locked()){
             std::string name = res->name();
-            auto it = _resources.insert(description{prefix, std::unique_ptr<udho::view::resources::asset::basic_resource<AssetType>>(res)});
+            auto it = _resources.insert(asset_registration_info{prefix, std::unique_ptr<udho::view::resources::asset::basic_resource<AssetType>>(res)});
             if(!it.second){
                 throw std::runtime_error{udho::url::format("Filed to add asset {}/{}. As another resouorce with the same name already exists.", prefix, name)};
             }
@@ -415,7 +415,7 @@ struct store{
     }
 
     template <udho::view::resources::asset::type AssetType>
-    const description& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>& res) {
+    const asset_registration_info& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>& res) {
         return add(prefix, &res);
     }
 

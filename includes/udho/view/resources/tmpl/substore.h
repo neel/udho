@@ -41,6 +41,8 @@
 #include <udho/view/data/data.h>
 #include <udho/view/bridges/results.h>
 
+#include <udho/view/bridges/script.h>
+
 namespace udho{
 namespace view{
 namespace resources{
@@ -124,14 +126,14 @@ struct proxy{
  * @ingroup view
  * @brief description of a view
  */
-class description{
+class tmpl_view_registration_info{
     std::string _name;
     std::string _prefix;
 
     public:
-        description() = delete;
-        description(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {}
-        description(const description&) = default;
+        tmpl_view_registration_info() = delete;
+        tmpl_view_registration_info(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {}
+        tmpl_view_registration_info(const tmpl_view_registration_info&) = default;
     public:
         /**
          * @brief Name of the view
@@ -171,23 +173,23 @@ struct substore{
     };
 
     using resource_set = boost::multi_index_container<
-        description,
+        tmpl_view_registration_info,
         boost::multi_index::indexed_by<
             boost::multi_index::ordered_unique<
                 boost::multi_index::tag<typename tags::composite>,
                 boost::multi_index::composite_key<
-                    description,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>,
-                    boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                    tmpl_view_registration_info,
+                    boost::multi_index::const_mem_fun<tmpl_view_registration_info, const std::string&, &tmpl_view_registration_info::prefix>,
+                    boost::multi_index::const_mem_fun<tmpl_view_registration_info, const std::string&, &tmpl_view_registration_info::name>
                 >
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::name>,
-                boost::multi_index::const_mem_fun<description, const std::string&, &description::name>
+                boost::multi_index::const_mem_fun<tmpl_view_registration_info, const std::string&, &tmpl_view_registration_info::name>
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<typename tags::prefix>,
-                boost::multi_index::const_mem_fun<description, const std::string&, &description::prefix>
+                boost::multi_index::const_mem_fun<tmpl_view_registration_info, const std::string&, &tmpl_view_registration_info::prefix>
             >
         >
     >; ///< Container for storing and indexing resource information.
@@ -266,7 +268,7 @@ struct substore{
      */
     void add(const std::string& prefix, udho::view::resources::tmpl::resource&& res) {
         if(!locked()){
-            _resources.insert(description{prefix, res.name()});
+            _resources.insert(tmpl_view_registration_info{prefix, res.name()});
             _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
         } else {
             throw std::runtime_error{"Trying to add view template after the store is locked is not permitted."};
@@ -293,6 +295,13 @@ struct substore{
             throw std::out_of_range("Resource with name '" + name + "' not found");
         }
     }
+
+    /**
+     * @brief returns the view header as mentioned in the meta block of the view.
+     * @param prefix The prefix used in resource identification.
+     * @param name The name of the resource to retrieve.
+     */
+    const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const { return _bridge.header(prefix, name); }
 
     /**
      * @brief Retrieves the bridge associated with this bundle.
@@ -388,6 +397,13 @@ struct const_substore{
      * @throws std::out_of_range if the resource is not found within the bundle.
      */
     proxy_type view(const std::string& prefix, const std::string& name) const { return _substore.view(prefix, name); }
+
+    /**
+     * @brief returns the view header as mentioned in the meta block of the view.
+     * @param prefix The prefix used in resource identification.
+     * @param name The name of the resource to retrieve.
+     */
+    const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const { return _substore.header(prefix, name); }
 
     private:
         const store_type& _substore;
