@@ -146,11 +146,12 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
     using loader_js         = typename document_type::loader_js;
     using loader_css        = typename document_type::loader_css;
     using mapped_view       = std::tuple<std::string, std::string>;
+    using on_delete_f       = std::function<void ()>;
 
     static_assert(std::is_base_of<basic_presenter<document_type>, PresenterT>::value);
 
     template <typename... Bridges>
-    basic_layout_impl(const udho::view::resources::const_store<Bridges...>& store): _document(store), _presenter(_document) {}
+    basic_layout_impl(const udho::view::resources::const_store<Bridges...>& store, on_delete_f on_delete): _document(store), _presenter(_document), _on_delete(on_delete) {}
 
     document_type& document() { return _document; }
     const document_type& document() const { return _document; }
@@ -158,9 +159,14 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
     presenter_type& presenter() { return _presenter; }
     const presenter_type& presenter() const { return _presenter; }
 
+    ~basic_layout_impl() {
+        _on_delete();
+    }
+
     private:
         document_type   _document;
         presenter_type  _presenter;
+        on_delete_f     _on_delete;
 
 };
 
@@ -216,8 +222,8 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     template <typename KeyT, typename LayoutT, bool>
     friend struct renderer;
 
-    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.resources())) { }
-    basic_layout(const basic_layout_& other): _context(other._context), _pimpl(other._pimpl) {}
+    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.resources(), std::bind(&basic_layout_::on_delete, this))), _finished(false) { }
+    basic_layout(const basic_layout_& other): _context(other._context), _pimpl(other._pimpl), _finished(other._finished) {}
 
     template <typename Key>
     auto operator[](const Key& key){
@@ -244,7 +250,22 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     template <typename Key>
     const proxy::placeholder_properties& properties(const Key& key) const { return _pimpl->document().properties(key); }
 
-    void operator()() { _pimpl->presenter()(_context); }
+    void finish() {
+        if(!_finished){
+            _pimpl->presenter()(_context);
+            _finished = true;
+        }
+    }
+
+    void operator()() {
+        finish();
+    }
+
+    private:
+        void on_delete() {
+            // layout_imple being deleted
+            finish();
+        }
 
     private:
         document_type& document() { return _pimpl->document(); }
@@ -256,6 +277,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     private:
         context_type    _context;
         basic_layout_pimpl_type _pimpl;
+        bool _finished;
 
 };
 

@@ -322,14 +322,16 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
 
     using context_type = udho::net::context<udho::view::data::bridges::lua>;
 
-    // udho::view::tmpl::layout::standard_layout<context_type> layout{context};
-    auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+    {
+        // udho::view::tmpl::layout::standard_layout<context_type> layout{context};
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
 
-    layout.preamble().title("Page title");
-    namespace placeholders = udho::view::tmpl::layout::placeholders;
-    layout[placeholders::central] = "Hello";
+        layout.preamble().title("Page title");
+        namespace placeholders = udho::view::tmpl::layout::placeholders;
+        layout[placeholders::central] = "Hello";
 
-    layout();
+        // layout();
+    }
 
     std::cout << fake_context_generator._stream.str() << std::endl;
 }
