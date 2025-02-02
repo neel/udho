@@ -52,7 +52,7 @@ struct X{
     }
 };
 
-TEST_CASE("Regex matching operations", "[regex_match]") {
+TEST_CASE("Regex matching operations", "[url][regex]") {
     udho::url::pattern::match<udho::url::pattern::formats::regex, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
 
     SECTION("Successful match") {
@@ -86,7 +86,7 @@ TEST_CASE("Regex matching operations", "[regex_match]") {
     }
 }
 
-TEST_CASE("String matching operations using p1729 format", "[string_match]") {
+TEST_CASE("String matching operations using p1729 format", "[url][p1729]") {
     udho::url::pattern::match<udho::url::pattern::formats::p1729, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
 
     SECTION("Successful string match and extraction") {
@@ -116,7 +116,7 @@ TEST_CASE("String matching operations using p1729 format", "[string_match]") {
     }
 }
 
-TEST_CASE("Fixed string matching operations", "[fixed_string_match]") {
+TEST_CASE("Fixed string matching operations", "[url][fixed]") {
     udho::url::pattern::match<udho::url::pattern::formats::fixed, char> matcher(udho::url::verb::get, "/example/path", "/example/path");
 
     SECTION("Successful string match") {
@@ -140,7 +140,7 @@ TEST_CASE("Fixed string matching operations", "[fixed_string_match]") {
     }
 }
 
-TEST_CASE("Home pattern matching operations", "[home_pattern_match]") {
+TEST_CASE("Home pattern matching operations", "[url][home]") {
     udho::url::pattern::match<udho::url::pattern::formats::home, char> matcher(udho::url::verb::get);
 
     SECTION("Match explicit home pattern") {
@@ -170,7 +170,7 @@ TEST_CASE("Home pattern matching operations", "[home_pattern_match]") {
 }
 
 
-TEST_CASE("url common functionalities using regex", "[url]") {
+TEST_CASE("url common functionalities using regex", "[url][router]") {
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);

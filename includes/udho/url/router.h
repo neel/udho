@@ -390,7 +390,7 @@ struct basic_router<void, udho::view::resources::asset::const_store>{
  * );
  * @endcode
  */
-template <typename MountPointsT>
+template <typename MountPointsT, typename std::enable_if<!std::is_same<std::decay_t<MountPointsT>, udho::view::resources::asset::const_store>::value, int>::type = 0>
 basic_router<MountPointsT, void> router(MountPointsT&& mountpoints){
     return basic_router<MountPointsT, void>{std::move(mountpoints)};
 }
