@@ -78,17 +78,17 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     static char buffer_js1[] = "console.log('Hello, Mars!');";
     static char buffer_css[] = ".classname{color: blue}";
     static unsigned char buffer_img[] = {
-        0x47,0x49,0x46,0x38,0x39,0x61,0x04,0x00,0x04,0x00,0xA1,0x01,0x00,0x00,0x00,0x00,
-        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x21,0xF9,0x04,0x01,0x0A,0x00,0x02,
-        0x00,0x2C,0x00,0x00,0x00,0x00,0x04,0x00,0x04,0x00,0x00,0x02,0x05,0x44,0x7C,0x67,
-        0xB8,0x05,0x00,0x3B
+        0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x04, 0x00, 0x04, 0x00, 0x80, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x2c, 0x00, 0x00, 0x00, 0x00,
+        0x04, 0x00, 0x04, 0x00, 0x00, 0x02, 0x05, 0x44, 0x7c, 0x67, 0xb8, 0x05,
+        0x00, 0x3b
     };
 
     udho::view::resources::store<> resources;
     resources["primary"] << udho::view::resources::asset::js ("0profile1.js", std::begin(buffer_js),  std::end(buffer_js) );
     resources["primary"] << udho::view::resources::asset::js ("1profile2.js", std::begin(buffer_js1), std::end(buffer_js1));
     resources["primary"] << udho::view::resources::asset::css("2profile.css", std::begin(buffer_css), std::end(buffer_css));
-    resources["primary"] << udho::view::resources::asset::img("3profile.gif", std::begin(buffer_img), std::end(buffer_img))->mime("image/gif");
+    resources["primary"] << udho::view::resources::asset::img("3profile.gif", std::begin(buffer_img), std::end(buffer_img));// ->mime("image/gif");
 
     CHECK(4 == resources.assets().size());
 
@@ -128,7 +128,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     SECTION("HTTP Response js0") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/0profile1.js");
         CHECK(results.code == 200);
-        CHECK(results.body == buffer_js);
+        CHECK(results.body.size() == sizeof(buffer_js));
+        CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js)));
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
         CHECK(results.headers["Content-Type"] == "application/javascript");
     }
@@ -136,7 +137,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     SECTION("HTTP Response js1") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/1profile2.js");
         CHECK(results.code == 200);
-        CHECK(results.body == buffer_js1);
+        CHECK(results.body.size() == sizeof(buffer_js1));
+        CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js1)));
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
         CHECK(results.headers["Content-Type"] == "application/javascript");
     }
@@ -144,7 +146,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     SECTION("HTTP Response css") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
         CHECK(results.code == 200);
-        CHECK(results.body == buffer_css);
+        CHECK(results.body.size() == sizeof(buffer_css));
+        CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
         CHECK(results.headers["Content-Type"] == "text/css");
     }
@@ -152,14 +155,15 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     SECTION("HTTP Response img") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/3profile.gif");
         CHECK(results.code == 200);
-        // CHECK(results.body == gif);
-        // CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
-        // CHECK(results.headers["Content-Type"] == "text/css");
+        CHECK(results.body.size() == sizeof(buffer_img));
+        CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_img), [](const char& l, const unsigned char& r){ return static_cast<unsigned char>(l) == r; }));
+        CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+        CHECK(results.headers["Content-Type"] == "image/gif");
     }
 
     curl_easy_cleanup(curl);
 
-    // server.stop();
+    server.stop();
 
 
     thread.join();
