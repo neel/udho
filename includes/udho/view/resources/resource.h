@@ -239,16 +239,19 @@ namespace asset{
             storage(iterator_type begin, iterator_type end): _begin(begin), _end(end), _size(std::distance(begin, end)) { }
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
+                if (!magic) {
+                    std::cerr << "Failed to initialize magic" << std::endl;
+                    return "application/octet-stream";
+                }
                 if (magic_load(magic, nullptr) != 0) {
                     std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
                     magic_close(magic);
-                    return "application/octet-stream"; // Default MIME type if error
+                    return "application/octet-stream";
                 }
 
-                std::vector<char> buffer;
-                buffer.reserve(_size);
+                std::vector<unsigned char> buffer;
+                buffer.resize(_size);
                 std::copy(_begin, _end, buffer.begin());
-
                 const char* mime_type = magic_buffer(magic, buffer.data(), buffer.size());
                 std::string result = mime_type ? mime_type : "application/octet-stream";
                 magic_close(magic);
