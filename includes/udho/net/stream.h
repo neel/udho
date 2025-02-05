@@ -61,7 +61,8 @@ class stream{
              *_bridge << str;
             return *this;
         }
-        stream& write(const char* str, std::size_t len){
+        template <typename CharT>
+        stream& write(const CharT* str, std::size_t len){
              _bridge->write_latter(str, len);
             return *this;
         }

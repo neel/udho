@@ -76,7 +76,8 @@ struct bridge{
      * @param str Data to write.
      * @param len length of the data to write
      */
-    void write_latter(const char* str, std::size_t len){
+    template <typename CharT>
+    void write_latter(const CharT* str, std::size_t len){
         std::copy_n(str, len, std::ostream_iterator<char>(_stream));
     }
 

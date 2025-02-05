@@ -632,16 +632,19 @@ struct const_store{
         // take the first part as prefix and the last part as name
         // Remember: The name may contain / (just ignore them)
 
-        const std::string& base_url = base();
+        std::string base_url = base();
+        if(!boost::starts_with(base_url, "/")){
+            base_url = "/"+base_url;
+        }
         if (!boost::starts_with(subject, base_url)) {
             return uri_const_iterator{end()};
         }
         std::size_t begin = base_url.size();
-        std::size_t slash = subject.find('/', begin);
+        std::size_t slash = subject.find('/', begin+1);
         if (slash == std::string::npos) {
             return uri_const_iterator{end()};
         }
-        std::string prefix = subject.substr(begin, slash - begin);
+        std::string prefix = subject.substr(begin+1, slash - (begin+1));
         std::string name   = subject.substr(slash + 1);
 
         return uri_const_iterator{find(prefix, name)};

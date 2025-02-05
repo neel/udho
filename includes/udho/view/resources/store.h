@@ -42,6 +42,9 @@ namespace view{
 namespace resources{
 
 template <typename... Bridges>
+struct store;
+
+template <typename... Bridges>
 struct prefixed_store;
 
 template <typename... Bridges>
@@ -49,6 +52,102 @@ struct const_store_prefixed;
 
 template <typename... XBridges>
 struct const_store;
+
+template <>
+struct store<>;
+
+template <>
+struct prefixed_store<>;
+
+
+template <>
+struct prefixed_store<>{
+    using store_type = store<>;
+
+    explicit prefixed_store(store_type& store, const std::string& prefix): _store(store), _prefix(prefix) {}
+    prefixed_store(const prefixed_store&) = delete;
+    prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
+
+    template <asset::type AssetType>
+    void add(asset::basic_resource<AssetType>* res);
+
+    template <asset::type AssetType>
+    void add(asset::basic_resource<AssetType>& res);
+
+    template <asset::type AssetType>
+    friend prefixed_store<>& operator<<(prefixed_store<>& pstore, asset::basic_resource<AssetType>* res){
+        pstore.add(res);
+        return pstore;
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<>& operator<<(prefixed_store<>& pstore, asset::basic_resource<AssetType>& res){
+        pstore.add(res);
+        return pstore;
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, asset::basic_resource<AssetType>* res){
+        pstore.add(res);
+        return std::forward<prefixed_store<>>(pstore);
+    }
+
+    template <asset::type AssetType>
+    friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, asset::basic_resource<AssetType>& res){
+        pstore.add(res);
+        return std::forward<prefixed_store<>>(pstore);
+    }
+
+    private:
+        store_type& _store;
+        std::string _prefix;
+};
+
+template <>
+struct store<>{
+    template <typename... XBridges>
+    friend struct const_store;
+
+    using const_store_type          = const_store<>;
+    using asset_store_type          = udho::view::resources::asset::store;
+
+    /**
+     * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
+     * @param bridges... references to the bridges
+     */
+    store() {}
+
+    prefixed_store<> operator[](const std::string& prefix){
+        return prefixed_store<>{*this, prefix};
+    }
+
+    /**
+     * @brief gets reference to the asset store
+     * @return reference to the asset store
+     */
+    asset_store_type& assets() { return _assets; }
+
+    /**
+     * @brief lock the storage
+     * @warning The store should be locked before it is used for reading operations such as accessing/rendering views and assets.
+     *          Once locked no other views or assets can be added to the store.
+     */
+    void lock() {
+        _assets.lock();
+    }
+
+    private:
+        asset_store_type         _assets;
+};
+
+template <asset::type AssetType>
+void prefixed_store<>::add(asset::basic_resource<AssetType>* res){
+    _store.assets().add(_prefix, res);
+}
+template <asset::type AssetType>
+void prefixed_store<>::add(asset::basic_resource<AssetType>& res){
+    _store.assets().add(_prefix, &res);
+}
 
 /**
  * @ingroup view
@@ -197,6 +296,9 @@ struct prefixed_store{
         store_type& _store;
         std::string _prefix;
 };
+
+
+
 
 namespace detail {
     template <int I, typename Tuple>
@@ -403,6 +505,67 @@ struct const_store{
 
     private:
         tmpl_const_multi_substore_type _tmpls_proxy;
+        asset_substore_readonly_type   _assets;
+        asset_substore_readonly_js     _assets_js;
+        asset_substore_readonly_css    _assets_css;
+        asset_substore_readonly_img    _assets_img;
+
+};
+
+template <>
+struct const_store<>{
+    using self_type = const_store<>;
+    using asset_substore_readonly_js     = udho::view::resources::asset::const_substore<asset::type::js>;
+    using asset_substore_readonly_css    = udho::view::resources::asset::const_substore<asset::type::css>;
+    using asset_substore_readonly_img    = udho::view::resources::asset::const_substore<asset::type::img>;
+    using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
+
+    /**
+     * @brief construct a const_store from a resource store
+     * @tparam Bridges A suuperset of Bridges
+     * @param store a resource store supporting superset of bridges
+     */
+    const_store(const store<>& store): _assets(store._assets), _assets_js(_assets), _assets_css(_assets), _assets_img(_assets) { }
+
+    /**
+     * @brief const reference to the assets store
+     */
+    const asset_substore_readonly_type& assets() { return _assets; }
+
+    /**
+     * @brief const reference to the asset substore specific for javascript
+     */
+    const asset_substore_readonly_js&  js()  const { return _assets_js;  }
+    /**
+     * @brief const reference to the asset substore specific for stylesheets
+     */
+    const asset_substore_readonly_css& css() const { return _assets_css; }
+    /**
+     * @brief const reference to the asset substore specific for images
+     */
+    const asset_substore_readonly_img& img() const { return _assets_img; }
+
+    /**
+     * @brief resources::const_store<XBridges...> is exposed to lua with the following properties
+     * +------+------------------------+
+     * | js   | property               |
+     * | css  | property               |
+     * | img  | property               |
+     * | view | function(prefix, name) |
+     * +------+------------------------+
+     */
+    friend auto metatype(udho::view::data::type<const_store<>>){
+        using namespace udho::view::data;
+
+        return assoc("resources_const_store"),
+            fvar("js",   &self_type::js),
+            fvar("css",  &self_type::css),
+            fvar("img",  &self_type::img);
+    }
+
+    // const_store_prefixed<XBridges...> operator[] (const std::string& prefix) const { return const_store_prefixed<XBridges...>{*this, prefix}; }
+
+    private:
         asset_substore_readonly_type   _assets;
         asset_substore_readonly_js     _assets_js;
         asset_substore_readonly_css    _assets_css;
