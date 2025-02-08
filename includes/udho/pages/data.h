@@ -23,11 +23,12 @@ class file_entry{
     bool                            _is_directory;
     std::uintmax_t                  _size;
     std::filesystem::file_time_type _modification_time;
+    std::filesystem::path           _root;
 
     public:
-        inline file_entry(const std::filesystem::directory_entry& entry)
+        inline file_entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root)
             : _path (entry.path()), _status(entry.status()), _type(_status.type()), _permissions(_status.permissions())
-            , _is_directory(entry.is_directory()) , _size(_is_directory ? 0 : entry.file_size()), _modification_time(entry.last_write_time())
+            , _is_directory(entry.is_directory()) , _size(_is_directory ? 0 : entry.file_size()), _modification_time(entry.last_write_time()), _root(root)
             {}
         inline bool is_directory() const { return _is_directory; }
         inline std::string filename() const { return _path.filename(); }
@@ -93,10 +94,24 @@ class file_entry{
             return buffer.str();
         }
 
+        inline std::string url() const {
+            std::filesystem::path relative = std::filesystem::relative(_path, _root);
+
+            std::string url_path = relative.string();
+            std::replace(url_path.begin(), url_path.end(), '\\', '/');
+
+            if (url_path.empty()) {
+                return "/";
+            }
+
+            return (url_path.front() == '/') ? url_path : "/" + url_path;
+        }
+
         friend auto metatype(udho::view::data::type<file_entry>){
             using namespace udho::view::data;
 
             return assoc("file_entry"),
+                fvar("url",         &file_entry::url),
                 fvar("name",        &file_entry::filename),
                 fvar("extension",   &file_entry::extension),
                 fvar("is_dir",      &file_entry::is_directory),
@@ -111,6 +126,7 @@ class file_entry{
 class directory_listing{
     std::filesystem::path   _path;
     std::vector<file_entry> _entries;
+    std::filesystem::path   _root;
 
     public:
         using container_type = std::vector<file_entry>;
@@ -118,10 +134,10 @@ class directory_listing{
         using value_type     = typename container_type::value_type;
         using size_type      = typename container_type::size_type;
     public:
-        inline directory_listing(const std::filesystem::path& path): _path(path) {
+        inline directory_listing(const std::filesystem::path& path, const std::filesystem::path& root): _path(path), _root(root) {
             std::filesystem::directory_iterator dit{_path};
             for(const std::filesystem::directory_entry& entry: dit){
-                _entries.emplace_back(file_entry{entry});
+                _entries.emplace_back(file_entry{entry, _root});
             }
         }
 
