@@ -25,7 +25,7 @@ constexpr static char template_listing_files[] = R"TEMPLATE(
             </tr>
         </thead>
         <tbody>
-        <? for i, e in ipairs(d.entries) do ?>
+        <? for i, e in ipairs(d) do ?>
             <tr>
                 <?
                     local entry_class = e.is_dir and 'udho-icon-directory' or 'udho-icon-file'

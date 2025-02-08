@@ -142,22 +142,6 @@ class directory_listing{
         }
 };
 
-class directory_page{
-    directory_listing _listing;
-    public:
-        directory_page(const std::filesystem::path& path): _listing{path} {}
-        const directory_listing& listing() const{
-            return _listing;
-        }
-
-        friend auto metatype(udho::view::data::type<directory_page>){
-            using namespace udho::view::data;
-
-            return assoc("directory_page"),
-                   fvar("entries", &directory_page::listing);
-        }
-};
-
 }
 }
 }
