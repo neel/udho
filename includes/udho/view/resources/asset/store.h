@@ -198,7 +198,7 @@ struct proxy{
 
     bool less(const proxy& other) const {
         if(type() == other.type()){
-            if(prefix() < other.prefix()){
+            if(prefix() == other.prefix()){
                 return name() < other.name();
             }
             return prefix() < other.prefix();
@@ -604,7 +604,13 @@ struct const_store{
      * @param prefix string prefix of the asset
      * @param name string name of the asset
      */
-    inline composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name) const { return composite_const_iterator{_store.by_composite().find(boost::make_tuple(prefix, type, name)), _store.by_composite().end(), base()}; }
+    inline composite_const_iterator find(asset::type type, const std::string& prefix, const std::string& name) const {
+        return composite_const_iterator{
+            _store.by_composite().find(boost::make_tuple(prefix, type, name)),
+            _store.by_composite().end(),
+            base()
+        };
+    }
 
     /**
      * @brief Returns an iterator to the beginning of all assets
@@ -657,7 +663,8 @@ struct const_store{
      * @param name string name of the asset
      */
     inline bool serve(udho::net::stream& stream, std::string prefix, std::string name) const {
-        return serve(stream, find(prefix, name));
+        auto it = find(prefix, name);
+        return serve(stream, it);
     }
 
     /**
@@ -666,7 +673,8 @@ struct const_store{
      * @param subject uri of the asset
      */
     inline bool serve(udho::net::stream& stream, std::string subject) const {
-        return serve(stream, find(subject));
+        auto it = find(subject);
+        return serve(stream, it);
     }
 
     /**
@@ -773,6 +781,8 @@ struct basic_const_substore{
 template <asset::type Type>
 struct const_substore: basic_const_substore<Type>{
     using basic_const_store_type = basic_const_substore<Type>;
+
+    using composite_const_iterator = typename basic_const_store_type::composite_const_iterator;
 
     using basic_const_store_type::basic_const_store_type;
 
