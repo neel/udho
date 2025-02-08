@@ -169,8 +169,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     curl_easy_cleanup(curl);
 
-    // server.stop();
-
+    server.stop();
 
     thread.join();
 }
