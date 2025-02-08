@@ -86,10 +86,10 @@ struct basic{
     }
 
     constexpr bool operator==(const std::basic_string<CharT>& other) const {
-        if(other.size() != length)
-            return false;
-
-        return std::equal(begin(), end(), other.begin(), other.end());
+        if(other.size() == length || other.size() == length-1){ // The other string might not be terminated with \0
+            return std::equal(other.begin(), other.end(), begin());
+        }
+        return false;
     }
 
     static CharT at(int i) { return _str[i]; }
