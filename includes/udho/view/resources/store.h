@@ -318,7 +318,7 @@ namespace detail {
 
             if (bridge_type::name() == lang) {
                 proxy_type proxy = _store.template view<bridge_type>(prefix, name);
-                return proxy(data, args...);
+                return proxy(std::forward<DataT>(data), std::forward<Args>(args)...);
             }
             return view_bridge_auto_resolver<I + 1, std::tuple<Ts...>>(_store).template apply<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
         }
@@ -348,6 +348,27 @@ namespace detail {
             throw std::runtime_error{"Requested language "+lang+" not present in the store"};
         }
     };
+
+    inline bool parse_view_address(const std::string& subject, std::string& o_bridge, std::string& o_prefix, std::string& o_view){
+        static std::string bridge_sep = "://";
+        std::string::const_iterator it = std::find_first_of(subject.cbegin(), subject.cend(), bridge_sep.begin(), bridge_sep.end());
+        if(it != subject.cend()){
+            std::string bridge{subject.cbegin(), it};
+            std::advance(it, bridge_sep.size());
+            std::string::const_iterator pos = std::find(it, subject.cend(), '/');
+            if(pos != subject.cend()){
+                std::string prefix{it, pos};
+                std::string view{pos+1, subject.cend()};
+
+                o_bridge = bridge;
+                o_prefix = prefix;
+                o_view   = view;
+
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 /**
@@ -431,11 +452,11 @@ struct const_store{
      * @throws std::runtime_error If the `view_address` cannot be parsed.
      */
     template <typename DataT, typename... Args>
-    udho::view::resources::results render(const std::string& view_address, DataT&& data, Args&&... args) const{
+    udho::view::resources::results render(std::string view_address, DataT&& data, Args&&... args) const{
         std::string lang, prefix, name;
-        auto result = scn::scan(view_address, "{}://{}/{}", lang, prefix, name);
+        bool parsed = detail::parse_view_address(view_address, lang, prefix, name);
 
-        if (result) {
+        if (parsed) {
             return render<DataT, Args...>(lang, prefix, name, std::forward<DataT>(data), std::forward<Args>(args)...);
         } else {
             throw std::runtime_error{"Failed to parse view address " + view_address};
@@ -453,11 +474,11 @@ struct const_store{
         return renderer.header(lang, prefix, name);
     }
 
-    const udho::view::data::bridges::view_header& header(const std::string& view_address) const{
+    const udho::view::data::bridges::view_header& header(std::string view_address) const{
         std::string lang, prefix, name;
-        auto result = scn::scan(view_address, "{}://{}/{}", lang, prefix, name);
+        bool parsed = detail::parse_view_address(view_address, lang, prefix, name);
 
-        if (result) {
+        if (parsed) {
             return header(lang, prefix, name);
         } else {
             throw std::runtime_error{"Failed to parse view address " + view_address};
