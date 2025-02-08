@@ -33,8 +33,6 @@ struct view_header{
     };
 
     struct includes_{
-        using asset_type            = udho::view::resources::asset::type;
-
         struct resource_info_{
             std::string prefix;
             std::string name;
@@ -42,11 +40,20 @@ struct view_header{
             bool operator<(const resource_info_& other) const {
                 return std::tie(prefix, name) < std::tie(other.prefix, other.name);
             }
+
+            bool operator==(const resource_info_& other) const noexcept {
+                return std::tie(prefix, name) == std::tie(other.prefix, other.prefix);
+            }
         };
 
+        using asset_type     = udho::view::resources::asset::type;
+        using resources_set  = std::set<resource_info_>;
+        using const_iterator = typename resources_set::const_iterator;
+        using includes_map   = std::map<asset_type, resources_set>;
+
         /**
-            * Checks if the resource is already added. if added does not add again.
-            */
+         * Checks if the resource is already added. if added does not add again.
+         */
         bool add(asset_type type, const std::string& prefix, const std::string& name){
             auto mit = _includes.find(type);
             if(mit == _includes.end()){
@@ -57,20 +64,31 @@ struct view_header{
             return sit.second;
         }
 
-        typename std::set<resource_info_>::const_iterator begin(asset_type type) const {
-            auto it = _includes.find(type);
-            return it != _includes.end() ? it->second.begin() : end(type);
+        boost::iterator_range<const_iterator> resources(asset_type type) const noexcept {
+            if(auto it = _includes.find(type); it != _includes.end()) {
+                return boost::make_iterator_range(it->second);
+            }
+            return {};
         }
-        typename std::set<resource_info_>::const_iterator end(asset_type type) const  {
-            auto it = _includes.find(type);
-            return it != _includes.end() ? it->second.end() : std::set<resource_info_>().end();  // Safe end iterator
-        }
+
+
+        // typename std::set<resource_info_>::const_iterator begin(asset_type type) const {
+        //     auto it = _includes.find(type);
+        //     return it != _includes.end() ? it->second.begin() : end(type);
+        // }
+        // typename std::set<resource_info_>::const_iterator end(asset_type type) const  {
+        //     auto it = _includes.find(type);
+        //     return it != _includes.end() ? it->second.end() : std::set<resource_info_>().end();  // Safe end iterator
+        // }
 
         void add_js(const std::string& prefix, const std::string& name)  { add(asset_type::js, prefix, name); }
         void add_css(const std::string& prefix, const std::string& name) { add(asset_type::css, prefix, name); }
 
-        auto js() const { return boost::make_iterator_range(begin(asset_type::js), end(asset_type::js)); }
-        auto css() const { return boost::make_iterator_range(begin(asset_type::css), end(asset_type::css)); }
+        // auto js() const { return boost::make_iterator_range(begin(asset_type::js), end(asset_type::js)); }
+        // auto css() const { return boost::make_iterator_range(begin(asset_type::css), end(asset_type::css)); }
+
+        auto js() const { return resources(asset_type::js); }
+        auto css() const { return resources(asset_type::css); }
 
         friend auto metatype(udho::view::data::type<includes_>){
             using namespace udho::view::data;
@@ -80,7 +98,7 @@ struct view_header{
                 func("css", &includes_::add_css);
         }
 
-        std::map<asset_type, std::set<resource_info_>> _includes;
+        includes_map _includes;
     };
 
     std::string name;

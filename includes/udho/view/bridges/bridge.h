@@ -526,7 +526,7 @@ struct bridge{
         return _headers.at(key);
     }
 
-    const udho::view::data::bridges::view_header& header(const std::string& name, const std::string& prefix) const {
+    const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const {
         return header(view_key(name, prefix));
     }
 
