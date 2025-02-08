@@ -84,24 +84,30 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         0x00, 0x3b
     };
 
-    udho::view::resources::store<> resources;
+    udho::view::data::bridges::lua lua;
+    lua.init();
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    udho::pages::system::setup(resources);
+
+    auto previous_size = resources.assets().size();
     resources["primary"] << udho::view::resources::asset::js ("0profile1.js", std::begin(buffer_js),  std::end(buffer_js) );
     resources["primary"] << udho::view::resources::asset::js ("1profile2.js", std::begin(buffer_js1), std::end(buffer_js1));
     resources["primary"] << udho::view::resources::asset::css("2profile.css", std::begin(buffer_css), std::end(buffer_css));
     resources["primary"] << udho::view::resources::asset::img("3profile.gif", std::begin(buffer_img), std::end(buffer_img));// ->mime("image/gif");
 
-    CHECK(4 == resources.assets().size());
+    CHECK(previous_size + 4 == resources.assets().size());
 
     resources.assets().base("assets");
 
     // TEST Creating a const_store from store should throw exception unless the store is locked.
-    REQUIRE_THROWS_AS(udho::view::resources::const_store{resources}, std::exception);
+    REQUIRE_THROWS_AS(udho::view::resources::const_store<udho::view::data::bridges::lua>{resources}, std::exception);
 
     resources.lock();
     // TEST Adding resources to a locked store should also throw exception
     REQUIRE_THROWS_AS(resources["primary"] << udho::view::resources::asset::js("profile1.js", buffer_js, buffer_js+std::strlen(buffer_js)), std::exception);
 
-    udho::view::resources::const_store cstore{resources};
+    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{resources};
 
     auto router = udho::url::router(cstore.assets());
 
@@ -163,7 +169,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     curl_easy_cleanup(curl);
 
-    server.stop();
+    // server.stop();
 
 
     thread.join();

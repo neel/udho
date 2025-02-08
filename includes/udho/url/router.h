@@ -13,99 +13,37 @@
 #include <magic.h>
 #include <udho/view/resources/asset/io.h>
 
+#include <udho/pages/system.h>
+
 namespace udho{
 namespace url{
 
 namespace detail{
 
-/**
- * mounts points
- * @tparam MountPointsT udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
- */
-template <typename MountPointsT>
-struct routing_table{
-    template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-        stream << router._mountpoints;
-        return stream;
-    }
-
-    using mountpoints_type = MountPointsT;
-
-    routing_table() = delete;
-    routing_table(const routing_table<MountPointsT>&) = delete;
-    routing_table(routing_table<MountPointsT>&&) = delete;
-
-    routing_table(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {
-        summarize();
-    }
-
-    template <typename XStrT>
-    auto& operator[](XStrT&& xstr) { return _mountpoints[std::move(xstr)]; }
-
-    template <typename XStrT>
-    const auto& operator[](XStrT&& xstr) const { return _mountpoints[std::move(xstr)]; }
-
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = false;
-        _mountpoints.visit([&subject, &found](const auto& mointpoint){
-            if(found)
-                return;
-            auto path = mointpoint.path();
-            if(!boost::starts_with(subject, path))
-                return;
-            auto rest = path == "/" ? subject : subject.substr(path.size());
-            found = mointpoint.find(rest);
-        });
-        if(!found){
-            return find_file(subject);
-        }
-        return found;
-    }
-
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool found = false;
-        _mountpoints.visit([&subject, &found, &args...](const auto& mointpoint){
-            if(found)
-                return;
-            auto path = mointpoint.path();
-            if(!boost::starts_with(subject, path))
-                return;
-            auto rest = path == "/" ? subject : subject.substr(path.size());
-            found = mointpoint.invoke(rest, std::forward<Args>(args)...);
-        });
-        if(!found){
-            return serve_file(subject, std::forward<Args>(args)...);
-        }
-        return found;
-    }
-
-    template <typename... Args>
-    bool operator()(const std::string& url, Args&&... args) const {
-        return this->invoke(url, std::forward<Args>(args)...);
-    }
-
-    const udho::url::summary::router& summary() const { return _summary; }
-
+struct docroot_fs{
+    /**
+     * @brief Sets the document root for file serving
+     * @param path Filesystem path to use as document root
+     */
     void docroot(const std::filesystem::path& path) {
         _docroot = path;
     }
+
+    /**
+     * @brief Gets the current document root
+     * @return Const reference to the document root path
+     */
     const std::filesystem::path& docroot() const {
         return _docroot;
     }
-
-    private:
-        template <typename Ch>
-        bool find_file(const std::basic_string<Ch>& subject) const {
-            std::filesystem::path normalized_path = normalize(subject);
-            if(normalized_path.empty()){
-                return false;
-            }
-            return std::filesystem::exists(normalized_path) && std::filesystem::is_regular_file(normalized_path);
-        }
-
+    protected:
+        /**
+         * @brief Normalizes and secures a filesystem path
+         * @tparam Ch Character type for the path string
+         * @param subject Path to normalize
+         * @return Normalized path or empty path if security check fails
+         * @note Prevents directory traversal attacks by ensuring path stays within docroot
+         */
         template <typename Ch>
         std::filesystem::path normalize(const std::basic_string<Ch>& subject) const {
             std::filesystem::path root = !_docroot.empty() ? _docroot : std::filesystem::current_path();
@@ -129,6 +67,29 @@ struct routing_table{
             return normalized_path;
         }
 
+        /**
+         * @brief Checks if a normalized file path exists
+         * @tparam Ch Character type for the path string
+         * @param subject Path to check
+         * @return true if file exists and is regular, false otherwise
+         */
+        template <typename Ch>
+        bool find_file(const std::basic_string<Ch>& subject) const {
+            std::filesystem::path normalized_path = normalize(subject);
+            if(normalized_path.empty()){
+                return false;
+            }
+            return std::filesystem::exists(normalized_path);
+        }
+
+        /**
+         * @brief Serves a file through the provided stream
+         * @tparam Ch Character type for the path string
+         * @param subject Path to serve
+         * @param stream Network stream to write to
+         * @return true if file was served successfully, false otherwise
+         * @throws Propagates filesystem errors and libmagic exceptions
+         */
         template <typename Ch>
         bool serve_file(const std::basic_string<Ch>& subject, udho::net::stream& stream) const {
             std::filesystem::path normalized_path = normalize(subject);
@@ -139,6 +100,62 @@ struct routing_table{
                 return false;
             }
 
+            return serve_file(normalized_path, stream);
+        }
+
+        /**
+         * @brief Determines MIME type of a file using libmagic
+         * @param path Filesystem path to analyze
+         * @return MIME type as string
+         * @note Requires libmagic development files during compilation
+         */
+        inline std::string mime_type(const std::filesystem::path& path) const {
+            magic_t magic = magic_open(MAGIC_MIME_TYPE);
+            magic_load(magic, nullptr);
+            const char* mime_type = magic_file(magic, path.c_str());
+            std::string result = mime_type ? mime_type : "application/octet-stream";
+            magic_close(magic);
+            return result;
+        }
+
+        /**
+         * @brief serves a directory or file from docroot
+         * @param ctx
+         * @param target
+         * @return boolean value indicating success
+         */
+        template <typename ContextT>
+        bool serve_local(const std::string& target, ContextT ctx) const {
+            std::filesystem::path normalized_path = normalize(target);
+            if(normalized_path.empty()){
+                return false;
+            }
+            if(!std::filesystem::exists(normalized_path)){
+                return false;
+            }
+
+            if(std::filesystem::is_directory(normalized_path)){
+                return serve_listing(normalized_path, ctx);
+            } else {
+                return serve_file(normalized_path, ctx);
+            }
+        }
+    private:
+        template <typename ContextT>
+        bool serve_listing(const std::filesystem::path& target, ContextT ctx) const {
+            if(!std::filesystem::is_directory(target)){
+                return false;
+            }
+
+            namespace placeholders = udho::pages::system::layouts::placeholders;
+
+            auto layout     = udho::pages::system::layouts::listing(ctx);
+            auto directory  = udho::pages::system::data::directory_page{target};
+
+            layout[placeholders::central] = directory;
+            return true;
+        }
+        inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) const {
             try {
                 std::string mime = mime_type(normalized_path);
                 boost::iostreams::mapped_file_source file;
@@ -161,16 +178,139 @@ struct routing_table{
 
             return false;
         }
-
-        inline std::string mime_type(const std::filesystem::path& path) const {
-            magic_t magic = magic_open(MAGIC_MIME_TYPE);
-            magic_load(magic, nullptr);
-            const char* mime_type = magic_file(magic, path.c_str());
-            std::string result = mime_type ? mime_type : "application/octet-stream";
-            magic_close(magic);
-            return result;
-        }
     private:
+        std::filesystem::path      _docroot;
+};
+
+/**
+ * @class routing_table
+ * @brief Template class for managing URL routing with mount points and file serving capabilities
+ *
+ * @tparam MountPointsT Sequence of mount points (udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>)
+ */
+template <typename MountPointsT>
+struct routing_table: protected docroot_fs{
+    /**
+     * @brief operator overload for streaming the routing table's mount points
+     * @param stream Output stream
+     * @param router Routing table
+     * @return Reference to the output stream
+     */
+    template <typename Mountpoints>
+    friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
+        stream << router._mountpoints;
+        return stream;
+    }
+
+    /// Type alias for the mount points collection
+    using mountpoints_type = MountPointsT;
+
+    routing_table() = delete;
+    routing_table(const routing_table<MountPointsT>&) = delete;
+    routing_table(routing_table<MountPointsT>&&) = delete;
+
+    using docroot_fs::normalize;
+    using docroot_fs::docroot;
+
+    /**
+     * @brief Constructs a routing table with mount points
+     * @param mountpoints Rvalue reference to mount points collection
+     * @post Initializes internal summary that can be accessed through the @ref summary function
+     */
+    routing_table(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {
+        summarize();
+    }
+
+    /**
+     * @brief Subscript operator for accessing mount points
+     * @tparam XStrT Type of the mount point key
+     * @param xstr Key to access in mount points
+     * @return Reference to the associated mount point
+     */
+    template <typename XStrT>
+    auto& operator[](XStrT&& xstr) { return _mountpoints[std::move(xstr)]; }
+
+    /**
+     * @brief Const subscript operator for accessing mount points
+     * @tparam XStrT Type of the mount point key (deduced)
+     * @param xstr Key to access in mount points
+     * @return Const reference to the associated mount point
+     */
+    template <typename XStrT>
+    const auto& operator[](XStrT&& xstr) const { return _mountpoints[std::move(xstr)]; }
+
+    /**
+     * @brief Checks if a URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return true if path is found in mount points or filesystem, false otherwise
+     */
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& subject) const {
+        bool found = false;
+        _mountpoints.visit([&subject, &found](const auto& mointpoint){
+            if(found)
+                return;
+            auto path = mointpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            found = mointpoint.find(rest);
+        });
+        if(!found){
+            return find_file(subject);
+        }
+        return found;
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        bool found = false;
+        _mountpoints.visit([&subject, &found, &args...](const auto& mointpoint){
+            if(found)
+                return;
+            auto path = mointpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            found = mointpoint.invoke(rest, std::forward<Args>(args)...);
+        });
+        if(!found){
+            found = serve_local(subject, std::forward<Args>(args)...);
+        }
+        return found;
+    }
+
+    /**
+     * @brief Function call operator that delegates to invoke()
+     * @param url URL path to process
+     * @param args Arguments to forward to the action
+     * @return bool indicating if request was handled
+     */
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const {
+        return this->invoke(url, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Gets the routing summary
+     * @return Const reference to the summary object
+     */
+    const udho::url::summary::router& summary() const { return _summary; }
+
+    private:
+        /**
+         * @brief Builds summary information by visiting all mount points
+         * @post Populates the _summary member with mount point information
+         */
         void summarize(){
             _mountpoints.visit([this](const auto& m){
                 _summary.add(m);
@@ -179,17 +319,37 @@ struct routing_table{
     private:
         mountpoints_type           _mountpoints;
         udho::url::summary::router _summary;
-        std::filesystem::path      _docroot;
 };
 
 }
 
+/**
+ * @defgroup Router Routing System
+ * @brief Core components for URL routing with template specialization support
+ */
+
+/**
+ * @brief Primary template for URL router with mount points and optional asset store
+ * @tparam MountPointsT Type sequence defining routing endpoints
+ * @tparam StoreT Storage type for resources (default: void = no storage)
+ * @ingroup Router
+ *
+ * @par Specialization Behavior:
+ * - void store: Basic routing without asset management
+ * - const_store: Routing with compiled-in asset resources
+ */
 template <typename MountPointsT, typename StoreT = void>
 struct basic_router;
 
+/// @addtogroup Router
+/// @{
+
 /**
- * mounts points
- * @tparam MountPointsT udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
+ * @brief Specialization for basic routing without asset storage
+ * @tparam MountPointsT Mount points sequence udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
+ *
+ * Inherits core routing functionality from detail::routing_table.
+ * Use this version when you don't need embedded resources.
  */
 template <typename MountPointsT>
 struct basic_router<MountPointsT, void>: private detail::routing_table<MountPointsT>{
@@ -220,8 +380,13 @@ struct basic_router<MountPointsT, void>: private detail::routing_table<MountPoin
 };
 
 /**
- * mounts points
- * @tparam MountPointsT udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
+ * @brief Specialization with compiled asset store integration
+ * @tparam MountPointsT Mount points sequence udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
+ *
+ * Provides routing using mountpoints with access to assets from const_store.
+ * Automatically serves assets when routes don't match.
+ *
+ * @note If there exists a file with matching path (including directory and file name) as an asset in the docroot then that file is served as the asset.
  */
 template <typename MountPointsT>
 struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: private detail::routing_table<MountPointsT>{
@@ -254,7 +419,7 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
     bool find(const std::basic_string<Ch>& subject) const {
         bool found = routing_table::find(subject);
         if(!found){
-            return _assets.find(subject);
+            return _assets.find(subject).valid();
         }
         return found;
     }
@@ -283,8 +448,13 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
 
 };
 
+/**
+ * @brief Asset-only specialization without mount points
+ *
+ * Pure asset server configuration. Use when only serving assets without custom routes.
+ */
 template <>
-struct basic_router<void, udho::view::resources::asset::const_store>{
+struct basic_router<void, udho::view::resources::asset::const_store>: private detail::docroot_fs{
 
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<void, udho::view::resources::asset::const_store>& router){
         stream << router.assets();
@@ -302,12 +472,19 @@ struct basic_router<void, udho::view::resources::asset::const_store>{
 
     template <typename Ch>
     bool find(const std::basic_string<Ch>& subject) const {
-        return _assets.find(subject);
+        bool found = find_file(subject);
+        if(!found){
+            return _assets.find(subject).valid();
+        }
     }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        return serve_asset(subject, std::forward<Args>(args)...);
+        bool invoked = serve_local(subject, std::forward<Args>(args)...);
+        if(!invoked){
+            return serve_asset(subject, std::forward<Args>(args)...);
+        }
+        return invoked;
     }
 
     template <typename... Args>
@@ -328,9 +505,26 @@ struct basic_router<void, udho::view::resources::asset::const_store>{
 
 };
 
+/// @}
+
 /**
- * @brief create router from a set of mountpoints
+ * @name Router Factory Functions
+ * @brief Convenience functions for creating router configurations
+ * @relates basic_router
+ * @ingroup Router
  *
+ * These functions automatically select the appropriate router specialization
+ * based on input parameters.
+ */
+/// @{
+
+/**
+ * @brief Create basic router from a set of mountpoints without asset store
+ * @tparam MountPointsT Deduced mount points type
+ * @param mountpoints Routing configuration
+ * @return Router without asset support
+ *
+ * @par Example:
  * @code
  * void f0(udho::net::stream context){
  *   context << "Hello f0";
@@ -395,19 +589,38 @@ basic_router<MountPointsT, void> router(MountPointsT&& mountpoints){
     return basic_router<MountPointsT, void>{std::move(mountpoints)};
 }
 
+/**
+ * @brief Create router with asset store (parameter order 1)
+ * @param mountpoints Routing configuration
+ * @param assets asset store
+ * @return Router with asset support
+ */
 template <typename MountPointsT>
 basic_router<MountPointsT, udho::view::resources::asset::const_store> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets){
     return basic_router<MountPointsT, udho::view::resources::asset::const_store>{std::move(mountpoints), assets};
 }
 
+/**
+ * @brief Create router with asset store (parameter order 2)
+ * @param assets asset store
+ * @param mountpoints Routing configuration
+ * @return Router with asset support
+ */
 template <typename MountPointsT>
 basic_router<MountPointsT, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets, MountPointsT&& mountpoints){
     return basic_router<MountPointsT, udho::view::resources::asset::const_store>{std::move(mountpoints), assets};
 }
 
+/**
+ * @brief Create asset-only router without mount points
+ * @param assets asset store
+ * @return Pure asset server router
+ */
 inline basic_router<void, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets){
     return basic_router<void, udho::view::resources::asset::const_store>{assets};
 }
+
+/// @}
 
 }
 }

@@ -11,10 +11,22 @@
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
 
+#include <boost/type_traits/has_left_shift.hpp>
+
 namespace udho{
 namespace view{
 namespace tmpl{
 namespace layout{
+
+namespace helper{
+template <typename T>
+struct is_streamable {
+    static constexpr bool value = boost::has_left_shift<std::ostream, T>::value;
+};
+
+template <typename T>
+constexpr bool is_streamable_v = is_streamable<T>::value;
+}
 
 template <typename ContextT, typename DocumentT, typename PresenterT>
 struct basic_layout;
@@ -63,7 +75,7 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.resources()) {}
 
     template <typename Data>
-    renderer& render(const Data& d){
+    renderer& render(Data&& d){
         using proxy_type = decltype(_layout.document()[_key]);
         assert(proxy_type::multiple);
 
@@ -71,14 +83,16 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
 
         std::string view_addr = _layout.properties(_key).view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, d, _ctx);
+            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
             proxy += results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr, d, _ctx);
+            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
             header_renderer_type::apply(header);
         } else {
             std::stringstream str_stream;
-            str_stream << d;
+            if constexpr (helper::is_streamable_v<Data>) {
+                str_stream << d;
+            }
 
             proxy += str_stream.str();
         }
@@ -86,8 +100,8 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     }
 
     template <typename Data>
-    renderer& operator+=(const Data& d) {
-        return render(d);
+    renderer& operator+=(Data&& d) {
+        return render(std::forward<Data>(d));
     }
 };
 
@@ -117,14 +131,16 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
         const proxy::placeholder_properties& p = _layout.properties(_key);
         std::string view_addr = p.view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, d, _ctx);
+            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
             proxy = results.str();
 
             const udho::view::data::bridges::view_header& header = _store.header(view_addr);
             header_renderer_type::apply(header);
         } else {
             std::stringstream str_stream;
-            str_stream << d;
+            if constexpr (helper::is_streamable_v<Data>) {
+                str_stream << d;
+            }
 
             proxy = str_stream.str();
         }
@@ -254,6 +270,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
         if(!_finished){
             _pimpl->presenter()(_context);
             _finished = true;
+            _context.finish();
         }
     }
 
@@ -264,6 +281,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     private:
         void on_delete() {
             // layout_imple being deleted
+            std::cout << "layout is being deleted" << std::endl;
             finish();
         }
 

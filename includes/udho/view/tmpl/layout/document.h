@@ -12,6 +12,7 @@
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/asset/store.h>
+#include <udho/view/resources/store.h>
 
 namespace udho{
 namespace view{

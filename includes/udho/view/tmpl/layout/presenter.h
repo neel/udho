@@ -97,6 +97,43 @@ struct basic_presenter{
             stream << "</head>";
             return stream;
         }
+
+    protected:
+
+        template <typename KeyT, typename Stream>
+        void present(const KeyT& key, const std::string& str, Stream& stream, std::size_t i, std::size_t len) const {
+            const auto& properties = document().properties(key);
+            if(i == 0 && properties.styled()){
+                stream << properties.opening();
+            }
+            const std::string& wrapper_tag = properties.wrapper_tag();
+            if(wrapper_tag.empty()){
+                stream << str;
+            } else {
+                const std::string& wrapper_classes = properties.wrapper_classes();
+                stream << "<" << wrapper_tag;
+                if(!wrapper_classes.empty()) stream << "class=\"" << wrapper_classes << "\"";
+                stream << ">";
+            }
+
+            if(i == len-1 && properties.styled()){
+                stream << properties.closing();
+            }
+        }
+
+        template <typename KeyT, typename Stream>
+        void present(const KeyT& key, const std::string& str, Stream& stream) const {
+            const auto& properties = document().properties(key);
+            bool tag_opened = false;
+            if(properties.styled()){
+                stream << properties.opening();
+                tag_opened = true;
+            }
+            stream << str;
+            if(tag_opened){
+                stream << properties.closing();
+            }
+        }
 };
 
 /**
@@ -125,7 +162,7 @@ struct default_presenter: basic_presenter<DocumentT>{
     Stream& operator()(Stream& stream) const {
         basic_presenter_::html_open(stream);
             basic_presenter_::head(stream);
-            static_cast<Derived&>(*this)->render(stream);
+            static_cast<const Derived*>(this)->render(stream);
         basic_presenter_::html_close(stream);
         return stream;
     }
@@ -151,37 +188,12 @@ struct default_presenter<DocumentT, void>: basic_presenter<DocumentT>{
 
     template <typename KeyT, typename Stream>
     void operator()(const KeyT& key, const std::string& str, Stream& stream, std::size_t i, std::size_t len) const {
-        const auto& properties = basic_presenter_::document().properties(key);
-        if(i == 0 && properties.styled()){
-            stream << properties.opening();
-        }
-        const std::string& wrapper_tag = properties.wrapper_tag();
-        if(wrapper_tag.empty()){
-            stream << str;
-        } else {
-            const std::string& wrapper_classes = properties.wrapper_classes();
-            stream << "<" << wrapper_tag;
-            if(!wrapper_classes.empty()) stream << "class=\"" << wrapper_classes << "\"";
-            stream << ">";
-        }
-
-        if(i == len-1 && properties.styled()){
-            stream << properties.closing();
-        }
+        basic_presenter_::present(key, str, stream, i, len);
     }
 
     template <typename KeyT, typename Stream>
     void operator()(const KeyT& key, const std::string& str, Stream& stream) const {
-        const auto& properties = basic_presenter_::document().properties(key);
-        bool tag_opened = false;
-        if(properties.styled()){
-            stream << properties.opening();
-            tag_opened = true;
-        }
-        stream << str;
-        if(tag_opened){
-            stream << properties.closing();
-        }
+        basic_presenter_::present(key, str, stream);
     }
 
     private:

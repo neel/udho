@@ -20,15 +20,22 @@ namespace layout{
 template <udho::view::resources::asset::type AssetType>
 struct common_asset_loader{
     using substore_type     = udho::view::resources::asset::const_substore<AssetType>;
-    using selection_type    = std::set<typename substore_type::composite_const_iterator>;
+    using composite_const_iterator = typename substore_type::composite_const_iterator;
+    using selection_type    = std::set<composite_const_iterator>;
 
     common_asset_loader(const common_asset_loader&) = delete;
     common_asset_loader(common_asset_loader&& other): _selection(std::move(other._selection)) {}
 
     void add(const std::string& prefix, const std::string& name) {
-        typename substore_type::composite_const_iterator it = _store.find(prefix, name);
+        composite_const_iterator it = _store.find(prefix, name);
         if(it.valid()){
-            _selection.emplace(it);
+            if(_selection.count(it)){
+                // already added
+                std::cout << "asset added already " << it->url() << std::endl;
+            } else{
+                _selection.insert(it);
+                std::cout << "asset adding " << it->url() << std::endl;
+            }
         } else {
             throw std::out_of_range{udho::url::format("Refering to asset :{}/{} which was nevered registered to the store", prefix, name)};
         }
