@@ -6,9 +6,17 @@
 #include <ctime>
 #include <chrono>
 #include <string>
+#include <sstream>
 #include <filesystem>
 #include <udho/view/data.h>
 #include <udho/view/meta.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/sysinfo.h>
+#include <unistd.h>
+#endif
 
 namespace udho{
 namespace pages{
@@ -181,6 +189,108 @@ class listing_header{
             return assoc("listing_header"),
                    fvar("base", &listing_header::url);
         }
+};
+
+struct status_info{
+    std::string compiler;
+    std::string os;
+    std::string cpp;
+    std::string boost;
+    std::string memory;
+    std::string time;
+
+    status_info() {
+        compiler = compiler_info();
+        os       = os_info();
+        cpp      = cpp_version();
+        boost    = boost_version();
+        memory   = memory_available();
+        time     = time_str();
+    }
+
+    std::string compiler_info() const {
+        std::ostringstream oss;
+        oss << "Compiler: ";
+#ifdef __GNUC__
+        oss << "GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
+#elif defined(__clang__)
+        oss << "Clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+#elif defined(_MSC_VER)
+        oss << "MSVC " << _MSC_FULL_VER;
+#else
+        oss << "Unknown";
+#endif
+        return oss.str();
+    }
+
+    std::string os_info() const {
+        std::ostringstream oss;
+#ifdef _WIN32
+        OSVERSIONINFOEX osvi;
+        ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
+        osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+        GetVersionEx((OSVERSIONINFO*)&osvi);
+        oss << "Windows " << osvi.dwMajorVersion << "." << osvi.dwMinorVersion;
+#elif __linux__
+        oss << "Linux";
+#elif __APPLE__
+        oss << "macOS";
+#else
+        oss << "Unknown OS";
+#endif
+        return oss.str();
+    }
+
+    std::string cpp_version() const {
+        std::ostringstream oss;
+        oss << "C++" << (__cplusplus / 100 % 100);
+        return oss.str();
+    }
+
+    std::string boost_version() const {
+        std::ostringstream oss;
+        oss << "Boost " << BOOST_VERSION / 100000 << "."
+            << BOOST_VERSION / 100 % 1000 << "."
+            << BOOST_VERSION % 100;
+        return oss.str();
+    }
+
+    std::string memory_available() const {
+        std::ostringstream oss;
+#ifdef _WIN32
+        MEMORYSTATUSEX memInfo;
+        memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+        GlobalMemoryStatusEx(&memInfo);
+        oss << "RAM: " << (memInfo.ullTotalPhys >> 30) << "GB|";
+#else
+        struct sysinfo memInfo;
+        sysinfo(&memInfo);
+        oss << "RAM: " << (memInfo.totalram * memInfo.mem_unit >> 30) << "GB";
+#endif
+        return oss.str();
+    }
+
+    std::string time_str() const{
+        std::ostringstream oss;
+        auto now = std::chrono::system_clock::now();
+        auto t = std::chrono::system_clock::to_time_t(now);
+        oss << "Timezone: UTC" << std::put_time(std::localtime(&t), "%z") << "|";
+        oss << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S");
+        return oss.str();
+    }
+
+    friend auto metatype(udho::view::data::type<status_info>){
+        using namespace udho::view::data;
+
+        return assoc("status_info"),
+                cvar("compiler", &status_info::compiler),
+                cvar("os",       &status_info::os),
+                cvar("cpp",      &status_info::cpp),
+                cvar("boost",    &status_info::boost),
+                cvar("memory",   &status_info::memory),
+                cvar("time",     &status_info::time);
+    }
+
 };
 
 }

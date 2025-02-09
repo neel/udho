@@ -61,7 +61,14 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
 
 constexpr static char template_listing_status[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
-
+<ul class="udho-deploy-info">
+    <li> <?= d.compiler ?> </li>
+    <li> <?= d.os ?> </li>
+    <li> <?= d.cpp ?> </li>
+    <li> <?= d.boost ?> </li>
+    <li> <?= d.memory ?> </li>
+    <li> <?= d.time ?> </li>
+</ul>
 )TEMPLATE";
 
 template <typename... Bridges>

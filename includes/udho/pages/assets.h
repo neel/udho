@@ -42,6 +42,21 @@ constexpr static char css_system[] = R"ASSET(
     font-size: 1.2em;
     font-weight: 500;
 }
+
+ul.udho-deploy-info{
+    list-style-type: none;
+    float: left;
+    margin: 0px;
+    margin-top: 15px;
+}
+
+ul.udho-deploy-info > li {
+    float: left;
+    border-right: 1px solid #dedede;
+    margin-right: 6px;
+    padding-right: 6px;
+}
+
 )ASSET";
 
 constexpr static char css_listing[] = R"ASSET(

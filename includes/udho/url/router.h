@@ -154,9 +154,11 @@ struct docroot_fs{
             auto layout     = udho::pages::system::layouts::listing(ctx);
             auto header     = udho::pages::system::data::listing_header{target, docroot()};
             auto directory  = udho::pages::system::data::directory_listing{target, docroot()};
+            auto footer     = udho::pages::system::data::status_info{};
 
             layout[placeholders::header]  = header;
             layout[placeholders::central] = directory;
+            layout[placeholders::footer]  = footer;
             return true;
         }
         inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) const {
