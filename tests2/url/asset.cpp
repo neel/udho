@@ -86,6 +86,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     udho::view::data::bridges::lua lua;
     lua.init();
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
 
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
     udho::pages::system::setup(resources);

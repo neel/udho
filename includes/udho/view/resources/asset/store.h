@@ -525,7 +525,7 @@ struct const_store{
         }
 
         private:
-            std::string _base;
+            const std::string& _base;
             Iterator    _end;
 
             friend class boost::iterator_core_access;
@@ -748,6 +748,13 @@ struct basic_const_substore{
      */
     inline composite_const_iterator find(const std::string& prefix, const std::string& name) const { return _store.find(Type, prefix, name); }
 
+    asset::proxy get(const std::string& prefix, const std::string& name) const {
+        composite_const_iterator it = find(prefix, name);
+        if(it.valid()){
+            return *it;
+        }
+        throw std::out_of_range{udho::url::format("resource {}/{} not found in the asset store", prefix, name)};
+    }
     /**
      * @brief begin iterator for the asset substore
      */
@@ -770,7 +777,8 @@ struct basic_const_substore{
         using namespace udho::view::data;
 
         return assoc("resources_asset_basic_const_substore"),
-            iter (&self_type::cbegin, &self_type::cend),
+            iter(&self_type::cbegin, &self_type::cend),
+            func("get",  &self_type::get),
             fvar("size", &self_type::size);
     }
 

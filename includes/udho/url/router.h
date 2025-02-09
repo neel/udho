@@ -152,8 +152,10 @@ struct docroot_fs{
             namespace placeholders = udho::pages::system::layouts::placeholders;
 
             auto layout     = udho::pages::system::layouts::listing(ctx);
+            auto header     = udho::pages::system::data::listing_header{target, docroot()};
             auto directory  = udho::pages::system::data::directory_listing{target, docroot()};
 
+            layout[placeholders::header]  = header;
             layout[placeholders::central] = directory;
             return true;
         }

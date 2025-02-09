@@ -158,6 +158,31 @@ class directory_listing{
         }
 };
 
+class listing_header{
+    std::filesystem::path _path;
+    std::filesystem::path _root;
+    public:
+        inline listing_header(const std::filesystem::path& path, const std::filesystem::path& root): _path(path), _root(root) {}
+        inline std::string url() const {
+            std::filesystem::path relative = std::filesystem::relative(_path, _root);
+
+            std::string url_path = relative.string();
+            std::replace(url_path.begin(), url_path.end(), '\\', '/');
+
+            if (url_path.empty()) {
+                return "/";
+            }
+
+            return (url_path.front() == '/') ? url_path : "/" + url_path;
+        }
+        friend auto metatype(udho::view::data::type<listing_header>){
+            using namespace udho::view::data;
+
+            return assoc("listing_header"),
+                   fvar("base", &listing_header::url);
+        }
+};
+
 }
 }
 }
