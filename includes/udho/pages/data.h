@@ -210,7 +210,6 @@ struct status_info{
 
     std::string compiler_info() const {
         std::ostringstream oss;
-        oss << "Compiler: ";
 #ifdef __GNUC__
         oss << "GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
 #elif defined(__clang__)

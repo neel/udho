@@ -15,15 +15,20 @@ constexpr static char css_system[] = R"ASSET(
     margin-right: 20%;
     width: auto;
     position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
 }
 .central {
     position: relative;
 }
-.central > .header{
+.header{
     border-bottom: 1px solid #b4b4b4;
 }
-.central > .footer{
-    border-top: 1px solid #b4b4b4;
+.foooter {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif; */
 }
 .logo {
     text-align: center;
@@ -43,20 +48,57 @@ constexpr static char css_system[] = R"ASSET(
     font-weight: 500;
 }
 
-ul.udho-deploy-info{
-    list-style-type: none;
-    float: left;
-    margin: 0px;
+.udho-deploy-info {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    /* gap: 1.5rem; */
+    justify-content: center;
+    font-size: 0.85rem;
+    color: #495057;
     margin-top: 15px;
+    border-top: 1px solid #b4b4b4;
+    padding-top: 5px;
 }
 
-ul.udho-deploy-info > li {
-    float: left;
-    border-right: 1px solid #dedede;
-    margin-right: 6px;
-    padding-right: 6px;
+.udho-deploy-info li {
+    display: flex;
+    align-items: center;
+    /* padding: 0.5rem 1rem; */
+    background-color: #fff;
 }
 
+.udho-deploy-info li:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+/* Optional: Add subtle separators */
+.udho-deploy-info li:not(:last-child)::after {
+    content: "|";
+    margin-left: 1.5rem;
+    color: #dee2e6;
+    font-weight: 300;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .foooter {
+        background-color: #212529;
+        border-color: #343a40;
+    }
+
+    .udho-deploy-info li {
+        background-color: #2b3035;
+        color: #adb5bd;
+    }
+
+    .udho-deploy-info li:not(:last-child)::after {
+        color: #495057;
+    }
+}
 )ASSET";
 
 constexpr static char css_listing[] = R"ASSET(
