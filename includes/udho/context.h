@@ -401,7 +401,7 @@ struct context_common{
         return _aux.client(*this, options);
     }
     
-    boost::asio::io_service& io() {
+    boost::asio::io_context& io() {
         return _aux._io;
     }
 };

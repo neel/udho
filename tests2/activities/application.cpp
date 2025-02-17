@@ -274,7 +274,7 @@ void unprepared_a1_fail(udho::contexts::stateless ctx){
 TEST_CASE( "activity application", "[activities]" ) {
 
     SECTION("unprepared_subtasks"){
-        boost::asio::io_service io;
+        boost::asio::io_context io;
         udho::servers::quiet::stateless server(io);
         auto urls = udho::router()
             | (udho::get(&unprepared).deferred() = "^/unprepared");
@@ -295,7 +295,7 @@ TEST_CASE( "activity application", "[activities]" ) {
     }
 
     SECTION("prepared_subtasks"){
-        boost::asio::io_service io;
+        boost::asio::io_context io;
         udho::servers::quiet::stateless server(io);
         auto urls = udho::router()
             | (udho::get(&prepared).deferred() = "^/prepared");
@@ -316,7 +316,7 @@ TEST_CASE( "activity application", "[activities]" ) {
     }
 
     SECTION("unprepared_subtasks_a1_fail"){
-        boost::asio::io_service io;
+        boost::asio::io_context io;
         udho::servers::quiet::stateless server(io);
         auto urls = udho::router()
             | (udho::get(&unprepared_a1_fail).deferred() = "^/unprepared_a1_fail");

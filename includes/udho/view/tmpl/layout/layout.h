@@ -26,6 +26,16 @@ struct is_streamable {
 
 template <typename T>
 constexpr bool is_streamable_v = is_streamable<T>::value;
+
+template <typename LayoutT, typename KeyT>
+struct proxy_type{
+    using type = typename LayoutT::placeholders_type::template proxy_type<KeyT>;
+
+    static_assert(!std::is_void<type>::value, "Placeholder Key out of range in Layout");
+
+    static bool constexpr multiple = type::multiple;
+};
+
 }
 
 template <typename ContextT, typename DocumentT, typename PresenterT>
@@ -34,7 +44,7 @@ struct basic_layout;
 template <typename DocumentT, typename PresenterT>
 struct basic_layout_impl;
 
-template <typename KeyT, typename LayoutT, bool IsMultiple = LayoutT::placeholders_type::template proxy_type<KeyT>::multiple>
+template <typename KeyT, typename LayoutT, bool IsMultiple = helper::proxy_type<LayoutT, KeyT>::multiple>
 struct renderer;
 
 template <typename LayoutT>

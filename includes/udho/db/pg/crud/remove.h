@@ -66,7 +66,7 @@ struct basic_remove{
         typedef pg::activity<DerivedT, db::none> activity_type;
         
         template <typename CollectorT, typename... Args>
-        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): 
+        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): 
             activity_type(collector, pool, io), 
             with_type(std::forward<Args>(args)...)
             {}

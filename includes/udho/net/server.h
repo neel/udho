@@ -27,7 +27,7 @@ struct server{
      * @param port Port number to bind the server.
      * @param ip IP address to bind the server. Defaults to "0.0.0.0" (all interfaces).
      */
-    server(boost::asio::io_service& io, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
+    server(boost::asio::io_context& io, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
         _listener = std::make_shared<listener_type>(_io, _endpoint);
     }
 
@@ -127,13 +127,13 @@ struct server{
             context.finish();
         }
     private:
-        boost::asio::io_service&          _io;
+        boost::asio::io_context&          _io;
         boost::asio::ip::tcp::endpoint    _endpoint;
         std::shared_ptr<listener_type>    _listener;
 };
 
 // template <typename ListenerT>
-// basic_server<ListenerT> server(boost::asio::io_service& io,  std::uint32_t port, const std::string& ip = "0.0.0.0"){
+// basic_server<ListenerT> server(boost::asio::io_context& io,  std::uint32_t port, const std::string& ip = "0.0.0.0"){
 //     return basic_server<ListenerT>(io, port, ip);
 // }
 

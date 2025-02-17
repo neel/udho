@@ -114,7 +114,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     std::cout << router << std::endl;
 
-    boost::asio::io_service service;
+    boost::asio::io_context service;
 
     auto server = udho::net::server<http_listener>(service, 9000);
     auto artifacts  = udho::net::artifacts{router, resources};

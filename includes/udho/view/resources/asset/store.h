@@ -35,6 +35,7 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/composite_key.hpp>
+#include <udho/view/data/data.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/results.h>
@@ -192,7 +193,9 @@ struct proxy{
 
         return assoc("resources_asset_proxy"),
             fvar("name",   &proxy::name),
+            fvar("type",   &proxy::type),
             fvar("prefix", &proxy::prefix),
+            fvar("mime",   &proxy::mime),
             fvar("url",    &proxy::url);
     }
 
@@ -210,6 +213,13 @@ struct proxy{
         const asset_registration_info& _desc;
         const std::string& _base;
 };
+
+inline bool operator<(const proxy& l, const proxy& r) {
+    return l.less(r);
+}
+inline bool operator==(const proxy& l, const proxy& r) {
+    return l.url() == r.url();
+}
 
 struct prefixed_store;
 
@@ -525,8 +535,8 @@ struct const_store{
         }
 
         private:
-            const std::string& _base;
             Iterator    _end;
+            const std::string& _base;
 
             friend class boost::iterator_core_access;
 
@@ -556,6 +566,25 @@ struct const_store{
     }
     inline const_store(const const_store&) = default;
     inline const_store() = delete;
+
+    /**
+     * @brief Returns an iterator to the beginning of the assets of the specified type.
+     * @param type The asset type to filter the assets by (e.g., js, css, img).
+     * @return An iterator pointing to the first asset of the specified type, or end iterator if no such asset exists.
+     */
+    inline prefix_const_iterator begin(const std::string& prefix) const { return prefix_const_iterator{_store.by_prefix().lower_bound(prefix), _store.by_prefix().end(), base()}; }
+    /**
+     * @brief Returns an iterator to the end of the assets of the specified type.
+     * @param type The asset type to filter the assets by (e.g., js, css, img).
+     * @return An iterator pointing just past the last asset of the specified type.
+     */
+    inline prefix_const_iterator end(const std::string& prefix)   const { return prefix_const_iterator{_store.by_prefix().upper_bound(prefix), _store.by_prefix().end(), base()}; }
+    /**
+     * @brief Returns the number of assets of a given type.
+     * @param type The asset type to count in the store (e.g., js, css, img).
+     * @return The number of assets of the specified type.
+     */
+    inline size_type size(const std::string& prefix) const { return std::distance(begin(prefix), end(prefix)); }
 
     /**
      * @brief Returns an iterator to the beginning of the assets of the specified type.
@@ -616,10 +645,24 @@ struct const_store{
      * @brief Returns an iterator to the beginning of all assets
      */
     inline uri_const_iterator begin() const { return uri_const_iterator{_store.by_uri().begin(), _store.by_uri().end(), base()}; }
+    inline uri_const_iterator cbegin() const { return begin(); }
     /**
      * @brief Returns an iterator to the end of the all assets
      */
     inline uri_const_iterator end() const { return uri_const_iterator{_store.by_uri().end(), _store.by_uri().end(), base()}; }
+    inline uri_const_iterator cend() const { return end(); }
+
+    inline proxy_type at(std::size_t i) const {
+        uri_const_iterator it = begin();
+        std::size_t size = csize();
+        if(i >= csize()){
+            throw std::out_of_range{udho::url::format("Index {} out of range, total {}", i, size)};
+        }
+        std::advance(it, i);
+        return *it;
+    }
+
+    inline size_type csize() const { return std::distance(begin(), end()); }
     /**
      * @brief find a resource by prefix and name
      * @param prefix string prefix of the asset
@@ -631,29 +674,48 @@ struct const_store{
      * @param subject /base/prefix/name
      */
     inline uri_const_iterator find(std::string subject) const {
+        // Input: /BASE_URL/PREFIX/NAME
+        // Assumptions:
+        //  BASE_URL may have multiple / characters
+        //  PREFIX may have multiple / characters
+        //  NAME must not have any / character
+        //
         // check if subject starts with base
         // if not return end()
-        // else take the part after the base ends
-        // split that by the first slash only
+        // split the rest of the string by the last slash
         // take the first part as prefix and the last part as name
-        // Remember: The name may contain / (just ignore them)
 
         std::string base_url = base();
-        if(!boost::starts_with(base_url, "/")){
-            base_url = "/"+base_url;
+        if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
+            base_url.insert(0, "/");
         }
         if (!boost::starts_with(subject, base_url)) {
             return uri_const_iterator{end()};
         }
-        std::size_t begin = base_url.size();
-        std::size_t slash = subject.find('/', begin+1);
-        if (slash == std::string::npos) {
+        // Given: subject starts with base_url
+        //      -> subject_len >= base_uri_len
+        //      -> asset_uri_len >= 0
+
+        const std::size_t subject_len   = subject.size();
+        const std::size_t base_uri_len  = base_url.size();
+        const std::size_t asset_uri_len = (subject_len-base_uri_len);
+        if(0 == asset_uri_len){
+            // no asset specified
             return uri_const_iterator{end()};
         }
-        std::string prefix = subject.substr(begin+1, slash - (begin+1));
-        std::string name   = subject.substr(slash + 1);
+        const auto slash_pos = subject.rfind('/');
+        if(slash_pos <= base_uri_len){
+            // No '/' found after base_uri
+            return uri_const_iterator{end()};
+        }
 
-        return uri_const_iterator{find(prefix, name)};
+        const std::size_t base_uri_slash = base_uri_len +1;
+        const std::size_t prefix_len     = slash_pos - base_uri_slash;
+
+        std::string prefix = subject.substr(base_uri_slash, prefix_len);
+        std::string name   = subject.substr(slash_pos +1);
+
+        return find(prefix, name);
     }
 
     /**
@@ -682,6 +744,115 @@ struct const_store{
      * @details an asset with prefix "blog", name "theme.css" will be served as /base/blog/theme.css
      */
     const std::string& base() const { return _store.base(); }
+
+    public:
+        template <typename Index>
+        class prefixed_proxy_ {
+          public:
+            using const_iterator = typename Index::const_iterator;
+            using size_type      = typename Index::size_type;
+
+            prefixed_proxy_(const Index& index, const std::string& prefix): _index(index), _prefix(prefix) {}
+
+            const std::string& prefix() const { return _prefix; }
+
+            const_iterator begin() const { return _index.lower_bound(_prefix); }
+            const_iterator end() const { return _index.upper_bound(_prefix); }
+            size_type size() const { return std::distance(begin(), end()); }
+
+            friend auto metatype(udho::view::data::type<prefixed_proxy_<Index>>){
+                using namespace udho::view::data;
+
+                return assoc("resources_asset_const_store_prefix_proxy_"),
+                       iter(&prefixed_proxy_<Index>::begin, &prefixed_proxy_<Index>::end),
+                       fvar("prefix", &prefixed_proxy_<Index>::prefix),
+                       fvar("size",   &prefixed_proxy_<Index>::size);
+            }
+
+          private:
+            const Index& _index;
+            std::string  _prefix;
+        };
+        template <typename Index>
+        class prefix_group_iterator: public boost::iterator_adaptor<prefix_group_iterator<Index>, typename Index::const_iterator, prefixed_proxy_<Index>, boost::forward_traversal_tag, prefixed_proxy_<Index>>{
+          public:
+            prefix_group_iterator(const Index& index, typename Index::const_iterator it): prefix_group_iterator::iterator_adaptor_(it), _index(index) {}
+
+          private:
+            friend class boost::iterator_core_access;
+
+            const Index& _index;
+
+            void increment() {
+                if (this->base() != _index.end()) {
+                    this->base_reference() = _index.upper_bound(this->base()->prefix());
+                }
+            }
+
+            prefixed_proxy_<Index> dereference() const {
+                return prefixed_proxy_<Index>{ _index, this->base()->prefix() };
+            }
+
+            bool equal(const prefix_group_iterator& other) const {
+                return this->base() == other.base();
+            }
+        };
+
+        auto prefixes() const {
+            using iterator = prefix_group_iterator<store_type::prefix_index>;
+
+            const auto& index = _store.by_prefix();
+            return boost::make_iterator_range(
+                iterator(index, index.begin()),
+                iterator(index, index.end())
+            );
+        }
+
+        struct prefix_proxy{
+            using iterator = prefix_group_iterator<store_type::prefix_index>;
+            using iterator_range = boost::iterator_range<iterator>;
+            using size_type = store_type::prefix_index::size_type;
+
+            explicit inline prefix_proxy(iterator_range range): _range(range) {}
+            prefix_proxy(const prefix_proxy&) = default;
+
+            iterator  begin() const { return _range.begin(); }
+            iterator  end() const   { return _range.end(); }
+            size_type size() const  { return std::distance(begin(), end()); }
+
+            friend auto metatype(udho::view::data::type<prefix_proxy>){
+                using namespace udho::view::data;
+
+                return assoc("resources_asset_const_store_prefix_proxy"),
+                       iter(&prefix_proxy::begin, &prefix_proxy::end),
+                       fvar("size", &prefix_proxy::size);
+            }
+
+            private:
+                iterator_range _range;
+        };
+
+        prefix_proxy make_prefix_proxy() const {
+            return prefix_proxy{prefixes()};
+        }
+    public:
+    /**
+     * @brief exposed to lua via the following properties
+     * +----------+------------+
+     * | ipairs   | function() |
+     * +----------+------------+
+     *
+     * The iterator returns @ref resources::asset::proxy as value type which is also exposed to lua
+     */
+    friend auto metatype(udho::view::data::type<const_store>){
+        using namespace udho::view::data;
+
+        return assoc("resources_asset_const_store"),
+            iter(&const_store::cbegin, &const_store::cend),
+            index(&const_store::at, &const_store::csize),
+            fvar("size", &const_store::csize),
+            fvar("prefixes", &const_store::make_prefix_proxy);
+    }
 
     private:
         inline bool serve(udho::net::stream& stream, uri_const_iterator it) const {

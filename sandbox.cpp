@@ -10,6 +10,7 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 #include <string.h>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -28,6 +29,8 @@
 #include <tabulate/table.hpp>
 
 #include <udho/view/tmpl/layout/loader.h>
+
+#include <udho/url/pattern.h>
 
 struct subinfo{
     std::string desc = "DESC";
@@ -481,7 +484,7 @@ int main(){
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_store    = tmpl_lua.view("primary", "temp2");
 
 
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     auto server     = http_server{io, 9000};
     auto artifacts  = udho::net::artifacts(router, resource_store);
 
@@ -491,6 +494,22 @@ int main(){
 
     std::cout << view_prefixed(inf, context).str() << std::endl;
     std::cout << view_store(inf, context).str() << std::endl;
+
+
+    std::string subject = "lua://udho/listing";
+    static std::string bridge_sep = "://";
+    std::string::const_iterator it = std::find_first_of(subject.cbegin(), subject.cend(), bridge_sep.begin(), bridge_sep.end());
+    if(it != subject.cend()){
+        std::string bridge{subject.cbegin(), it};
+        std::advance(it, bridge_sep.size());
+        std::string::const_iterator pos = std::find(it, subject.cend(), '/');
+        if(pos != subject.cend()){
+            std::string prefix{it, pos};
+            std::string view{pos+1, subject.cend()};
+
+            std::cout << bridge << " " << prefix << " " << view << std::endl;
+        }
+    }
 
 
     // const auto& summary = router.summary();

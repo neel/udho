@@ -31,13 +31,13 @@ class stream{
 
     friend struct fake::stream;
 
-    boost::asio::io_service&            _service;
+    boost::asio::io_context&            _service;
     udho::net::bridge::ptr              _bridge;
 
     stream() = delete;
 
     protected:
-        inline stream(boost::asio::io_service& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
+        inline stream(boost::asio::io_context& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
 
         struct noop{
             void operator()(boost::system::error_code, std::size_t){}
@@ -49,7 +49,7 @@ class stream{
 
         inline const udho::net::types::headers::request& request() const { return _bridge->request(); }
         inline udho::net::types::headers::response& response() { return _bridge->response(); }
-        boost::asio::io_service& io() { return _service; }
+        boost::asio::io_context& io() { return _service; }
 
         template <typename ValueT>
         stream& operator<<(const std::pair<boost::beast::http::field, ValueT>& header){
@@ -99,7 +99,7 @@ class stream{
 namespace fake{
 
 struct stream{
-    static udho::net::stream create(boost::asio::io_service& io, udho::net::bridge::ptr bridge){
+    static udho::net::stream create(boost::asio::io_context& io, udho::net::bridge::ptr bridge){
         return udho::net::stream{io, bridge};
     }
 };

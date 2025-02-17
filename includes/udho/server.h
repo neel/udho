@@ -60,10 +60,10 @@ struct server{
     typedef udho::defs::request_type http_request_type;
     typedef http_request_type request_type;
     
-    boost::asio::io_service& _io;
+    boost::asio::io_context& _io;
     attachment_type _attachment;
     
-    server(boost::asio::io_service& io, logger_type& logger): _io(io), _attachment(io, logger){}
+    server(boost::asio::io_context& io, logger_type& logger): _io(io), _attachment(io, logger){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
@@ -112,10 +112,10 @@ struct server<AuxT, void, CacheT>{
     typedef context_type<http_request_type> context;
     typedef http_request_type request_type;
     
-    boost::asio::io_service& _io;
+    boost::asio::io_context& _io;
     attachment_type _attachment;
     
-    server(boost::asio::io_service& io): _io(io), _attachment(io){}
+    server(boost::asio::io_context& io): _io(io), _attachment(io){}
     server(const self_type&) = delete;
     server(self_type&& other) = default;
     template <typename RouterT>
@@ -237,7 +237,7 @@ namespace ostreamed{
         udho::loggers::ostream _logger;
         server_type _server;
         
-        ostreamed_helper(boost::asio::io_service& io, udho::loggers::ostream::stream_type& stream): _logger(stream), _server(io, _logger){}
+        ostreamed_helper(boost::asio::io_context& io, udho::loggers::ostream::stream_type& stream): _logger(stream), _server(io, _logger){}
         template <typename RouterT>
         void serve(RouterT&& router, int port=9198){
             _server.template serve(router, port);

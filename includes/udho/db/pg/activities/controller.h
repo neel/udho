@@ -98,9 +98,9 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
     /**
      * @brief Get a reference to the underlying boost asio IO Service
      * 
-     * @return boost::asio::io_service& 
+     * @return boost::asio::io_context& 
      */
-    boost::asio::io_service& io() { return _io; }
+    boost::asio::io_context& io() { return _io; }
     
     /**
      * @brief Gets success value associated with an activity of type ActivityT
@@ -125,7 +125,7 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
     
     private:
         pg::connection::pool& _pool;
-        boost::asio::io_service& _io;
+        boost::asio::io_context& _io;
         ContextT _ctx;
 };
 

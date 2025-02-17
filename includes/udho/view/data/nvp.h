@@ -572,10 +572,10 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
  * @param IndexGetterF The name of the function.
  * @return A name-value pair encapsulating the function.
  */
-// template <typename IndexGetterF>
-// nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGetterF&& v){
-//     return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v));
-// }
+template <typename IndexGetterF>
+nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGetterF&& v){
+    return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v));
+}
 
 /**
  * @ingroup view
@@ -586,8 +586,8 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
  * @return A name-value pair encapsulating the function.
  */
 template <typename IndexGetterF, typename IndexSizeF>
-nvp< policies::index<false>, std::string, wrapper<IndexGetterF, IndexSizeF> > index(IndexGetterF&& v, IndexSizeF&& s){
-    return make_nvp(policies::index<false>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v), std::forward<IndexSizeF>(s));
+nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSizeF> > index(IndexGetterF&& v, IndexSizeF&& s){
+    return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v), std::forward<IndexSizeF>(s));
 }
 
 /**

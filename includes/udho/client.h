@@ -33,7 +33,7 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/asio/strand.hpp>
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <udho/configuration.h>
 #include <udho/forms.h>
 #include <udho/url.h>
@@ -318,7 +318,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
         }
     }
     
-    static std::shared_ptr<self_type> create(boost::asio::io_service& io, ContextT ctx, udho::url url, options_type options){
+    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url url, options_type options){
         boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
         ssl_ctx.set_default_verify_paths();
         boost::certify::enable_native_https_server_verification(ssl_ctx);
@@ -425,7 +425,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
         }
     }
     
-    static std::shared_ptr<self_type> create(boost::asio::io_service& io, ContextT ctx, udho::url url, options_type options){
+    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url url, options_type options){
         std::shared_ptr<self_type> connection = std::make_shared<self_type>(ctx, url, boost::asio::make_strand(io), options);
         return connection;
     }
@@ -440,11 +440,11 @@ struct client_connection_wrapper{
     typedef udho::detail::async_result<ContextT> result_type;
     typedef udho::config<udho::client_options> options_type;
     
-    boost::asio::io_service& _io;
+    boost::asio::io_context& _io;
     ContextT _context;
     options_type _options;
     
-    explicit inline client_connection_wrapper(boost::asio::io_service& io, ContextT ctx, options_type options): _io(io), _context(ctx), _options(options){}
+    explicit inline client_connection_wrapper(boost::asio::io_context& io, ContextT ctx, options_type options): _io(io), _context(ctx), _options(options){}
     result_type& request(boost::beast::http::verb method, udho::url url){
         self_type self(*this);
         

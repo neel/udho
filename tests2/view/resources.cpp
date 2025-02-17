@@ -108,7 +108,7 @@ Hello World
 
     // TEST The number of assets, name, type, prefix, url, mime type of each view should be same as it was added in the store.
 
-    boost::asio::io_service io;
+    boost::asio::io_context io;
 
     const udho::view::resources::asset::const_store& asset_substore = cstore.assets();
     {
@@ -265,7 +265,7 @@ Hello World
 
     // TEST The number of assets, name, type, prefix, url, mime type of each view should be same as it was added in the store.
 
-    boost::asio::io_service io;
+    boost::asio::io_context io;
 
     const udho::view::resources::asset::const_store& asset_substore = cstore.assets();
     std::cout << asset_substore << std::endl;

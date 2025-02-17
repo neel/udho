@@ -75,7 +75,7 @@ struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public
     using resource_store = udho::view::resources::const_store<ViewBridgeT...>;
     using self_type = basic_context;
 
-    basic_context(boost::asio::io_service& io, udho::net::bridge::ptr bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
+    basic_context(boost::asio::io_context& io, udho::net::bridge::ptr bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
     basic_context(udho::net::stream&& stream, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(std::move(stream)), _summary(summary), _resources(resources) {}
 
     const udho::url::summary::mount_point& route(const std::string& name) const {
@@ -132,7 +132,7 @@ struct context{
     {}
 
     template <typename MountPointsT, typename StoreT>
-    context_type create(boost::asio::io_service& io, const udho::url::basic_router<MountPointsT, StoreT>& router, const resources_type& store){
+    context_type create(boost::asio::io_context& io, const udho::url::basic_router<MountPointsT, StoreT>& router, const resources_type& store){
         return context_type{io, _bridge, router.summary(), store};
     }
 

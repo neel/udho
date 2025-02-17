@@ -158,7 +158,7 @@ int main(){
     pg::connection::info conn_info("host=localhost dbname=postgres user=postgres");
     auto pool = pg::connection::pool(conn_info, dbconfig);
 
-    boost::asio::io_service io;
+    boost::asio::io_context io;
 
     context_type::request_type req;
     server_type::attachment_type attachment(io);

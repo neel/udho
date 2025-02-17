@@ -47,7 +47,7 @@ int my_app::mul(udho::contexts::stateful<my_app::state> ctx, int a, int b){
 }
 
 int main(){
-    boost::asio::io_service io;
+    boost::asio::io_context io;
 
     udho::servers::ostreamed::stateful<udho::cache::storage::memory, my_app::state> server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
@@ -66,7 +66,7 @@ int main(){
     std::cout << "using " << boost::thread::hardware_concurrency() << " threads" << std::endl;
     boost::thread_group pool;
     for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i){
-        pool.create_thread(boost::bind(&boost::asio::io_service::run, &io));
+        pool.create_thread(boost::bind(&boost::asio::io_context::run, &io));
     }
     pool.join_all();
     // io.run();

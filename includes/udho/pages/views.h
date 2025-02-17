@@ -49,6 +49,48 @@ constexpr static char template_listing_files[] = R"TEMPLATE(
 
 )TEMPLATE";
 
+constexpr static char template_listing_assets[] = R"TEMPLATE(
+<?! vars('d', 'ctx') include.css("udho", "system.css") include.css("udho", "assets.css") ?>
+
+<div class="udho-assets-container">
+    <table class="udho-assets-listing">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Prefix</th>
+                <th scope="col">Type</th>
+                <th scope="col">MIME</th>
+                <th scope="col">URL</th>
+            </tr>
+        </thead>
+        <tbody>
+        <? for i, a in ipairs(ctx.resources.assets) do ?>
+            <tr>
+                <?
+                    local type_class = a.type and 'udho-icon-asset-type-' .. a.type or ''
+                ?>
+                <td>
+                    <a href="<?= a.url ?>">
+                        <span class="udho-icon-asset <?= type_class ?>"></span>
+                        <?= a.name ?>
+                    </a>
+                </td>
+                <td class="udho-assets-prefix"><?= a.prefix ?></td>
+                <td class="<?= type_class ?>"><?= a.type ?></td>
+                <td><code><?= a.mime ?></code></td>
+                <td>
+                    <a href="<?= a.url ?>" class="udho-asset-url">
+                        <?= a.url ?>
+                    </a>
+                </td>
+            </tr>
+        <? end ?>
+        </tbody>
+    </table>
+</div>
+
+)TEMPLATE";
+
 constexpr static char template_listing_header[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 <div class="logo">
@@ -62,9 +104,10 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
 constexpr static char template_listing_status[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 <ul class="udho-deploy-info">
-    <li> <?= d.compiler ?> </li>
+    <li> udho </li>
     <li> <?= d.os ?> </li>
     <li> <?= d.cpp ?> </li>
+    <li> <?= d.compiler ?> </li>
     <li> <?= d.boost ?> </li>
     <li> <?= d.memory ?> </li>
     <li> <?= d.time ?> </li>
@@ -74,6 +117,7 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"] << udho::view::resources::lua{"listing", std::begin(template_listing_files),  std::end(template_listing_files)}
+                  << udho::view::resources::lua{"assets",  std::begin(template_listing_assets), std::end(template_listing_assets)}
                   << udho::view::resources::lua{"header",  std::begin(template_listing_header), std::end(template_listing_header)}
                   << udho::view::resources::lua{"status",  std::begin(template_listing_status), std::end(template_listing_status)};
 }

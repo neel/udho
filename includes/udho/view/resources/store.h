@@ -517,9 +517,10 @@ struct const_store{
         using namespace udho::view::data;
 
         return assoc("resources_const_store"),
-            fvar("js",   &self_type::js),
-            fvar("css",  &self_type::css),
-            fvar("img",  &self_type::img);
+            fvar("assets", &self_type::assets),
+            fvar("js",     &self_type::js),
+            fvar("css",    &self_type::css),
+            fvar("img",    &self_type::img);
     }
 
     // const_store_prefixed<XBridges...> operator[] (const std::string& prefix) const { return const_store_prefixed<XBridges...>{*this, prefix}; }
@@ -579,6 +580,7 @@ struct const_store<>{
         using namespace udho::view::data;
 
         return assoc("resources_const_store"),
+            fvar("assets", &self_type::assets),
             fvar("js",   &self_type::js),
             fvar("css",  &self_type::css),
             fvar("img",  &self_type::img);

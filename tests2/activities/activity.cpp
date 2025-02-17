@@ -49,7 +49,7 @@ struct MinimalA3: activities::activity<MinimalA3, success_t, failure_t>{
 };
 
 TEST_CASE( "activity basic", "[activities]" ) {
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     udho::servers::quiet::stateless::request_type req;
     udho::servers::quiet::stateless::attachment_type attachment(io);
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);

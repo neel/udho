@@ -72,7 +72,7 @@ struct basic_update{
         typedef basic_activity<DerivedT> activity_type;
         
         template <typename CollectorT, typename... Args>
-        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... rest): 
+        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... rest): 
             activity_type(collector, pool, io), 
             schema_type(std::forward<Args>(rest)...)
             {}
@@ -116,7 +116,7 @@ struct basic_update{
             typedef basic_activity<DerivedT> activity_type;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... rest): 
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... rest): 
                 activity_type(collector, pool, io), 
                 schema_type(std::forward<Args>(rest)...)
                 {}
@@ -206,7 +206,7 @@ struct basic_update{
                 typedef pg::activity<DerivedT, db::result<pg::schema<F...>>> activity_type;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... rest): 
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... rest): 
                     activity_type(collector, pool, io), 
                     schema_type(std::forward<Args>(rest)...)
                     {}
@@ -288,7 +288,7 @@ struct basic_update{
                 typedef pg::activity<DerivedT, db::result<pg::schema<F...>>> activity_type;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... rest): 
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... rest): 
                     activity_type(collector, pool, io), 
                     schema_type(std::forward<Args>(rest)...)
                     {}

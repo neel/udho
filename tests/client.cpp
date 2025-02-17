@@ -13,7 +13,7 @@ typedef udho::contexts::stateless context_type;
 BOOST_AUTO_TEST_SUITE(client)
 
 BOOST_AUTO_TEST_CASE(https){
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     context_type::request_type req;
     server_type::attachment_type attachment(io);
     context_type ctx(attachment.aux(), req, attachment);

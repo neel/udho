@@ -2,11 +2,10 @@
 #define UDHO_VIEW_LAYOUT_PLACEHOLDER_H
 
 #include <map>
-#include <tuple>
+#include <vector>
 #include <string>
 #include <mutex>
 #include <optional>
-#include <exception>
 #include <udho/url/detail/format.h>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/algorithm/string/join.hpp>

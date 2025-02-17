@@ -105,7 +105,7 @@ struct basic_select{
         // generators generate;
         
         template <typename CollectorT>
-        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io) /*, generate(activity_type::result)*/ {}
+        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io) /*, generate(activity_type::result)*/ {}
         template <typename ContextT, typename... T>
         activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
         
@@ -180,7 +180,7 @@ struct basic_select{
             // generators generate;
             
             template <typename CollectorT>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result)*/ {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result)*/ {}
             template <typename ContextT, typename... T>
             activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
             
@@ -227,7 +227,7 @@ struct basic_select{
             // generators generate;
             
             template <typename CollectorT>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result)*/ {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result)*/ {}
             template <typename ContextT, typename... T>
             activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
             
@@ -269,7 +269,7 @@ struct basic_select{
                 // generators generate;
                 
                 template <typename CollectorT>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result, activity_type::limited())*/ {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result, activity_type::limited())*/ {}
                 template <typename ContextT, typename... T>
                 activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io())/*, generate(activity_type::result, activity_type::limited())*/{}
                     
@@ -327,7 +327,7 @@ struct basic_select{
             // generators generate;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
             template <typename ContextT, typename... T, typename... Args>
             activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with())*/{}
             
@@ -376,7 +376,7 @@ struct basic_select{
                 // generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/{}
                 
@@ -427,7 +427,7 @@ struct basic_select{
                 // generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with())*/ {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with())*/ {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...) /*, generate(activity_type::result, activity_type::with())*/{}
                     
@@ -478,7 +478,7 @@ struct basic_select{
                     // generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/{}
                         
@@ -535,7 +535,7 @@ struct basic_select{
                 // generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with())*/{}
                 
@@ -585,7 +585,7 @@ struct basic_select{
                     // generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...)/*, generate(activity_type::result, activity_type::with())*/ {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with())*/{}
                         
@@ -638,7 +638,7 @@ struct basic_select{
                         // generators generate;
                         
                         template <typename CollectorT, typename... Args>
-                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
+                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): activity_type(collector, pool, io), with_type(args...) /*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/ {}
                         template <typename ContextT, typename... T, typename... Args>
                         activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), args...)/*, generate(activity_type::result, activity_type::with(), activity_type::limited())*/{}
                             
@@ -690,7 +690,7 @@ struct basic_select{
             // generators generate;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result) */{}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result) */{}
             template <typename ContextT, typename... T, typename... Args>
             activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io())/*, generate(activity_type::result) */{}
             
@@ -737,7 +737,7 @@ struct basic_select{
                 // generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result) */ {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result) */ {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io())/*, generate(activity_type::result) */{}
                     
@@ -786,7 +786,7 @@ struct basic_select{
                     // generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): activity_type(collector, pool, io)/*, generate(activity_type::result, activity_type::limited()) */ {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): activity_type(collector, pool, io)/*, generate(activity_type::result, activity_type::limited()) */ {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io())/*, generate(activity_type::result, activity_type::limited()) */{}
                         

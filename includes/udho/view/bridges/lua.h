@@ -71,6 +71,26 @@ using lua = udho::view::data::bridges::bridge<
 namespace udho::view::data{
 
     template <>
+    struct bind<bridges::lua, udho::view::resources::asset::type>{
+        using state_type  = typename bridges::lua::state_type;
+        using enum_type  = udho::view::resources::asset::type;
+        using binder_type = typename bridges::lua::template default_binder_type<enum_type>;
+
+        static void apply(state_type& state){
+            // using user_type = sol::usertype<enum_type>;
+
+            std::cout << "udho::view::data::bind<lua, udho::view::resources::asset::type>>: binding" << std::endl;
+
+            state.udho().new_enum<enum_type>("asset_type", {
+                    {"js",  enum_type::js},
+                    {"css", enum_type::css},
+                    {"txt", enum_type::txt},
+                    {"img", enum_type::img}
+                });
+        }
+    };
+
+    template <>
     struct bind<bridges::lua, udho::url::summary::mount_point::url_proxy>{
         using state_type  = typename bridges::lua::state_type;
         using class_type  = udho::url::summary::mount_point::url_proxy;

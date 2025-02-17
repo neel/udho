@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(mapping){
         | (udho::get(&data).json()   = "^/data$")
         | (udho::get(&add).plain()   = "^/add/(\\d+)/(\\d+)$");
         
-    boost::asio::io_service io;
+    boost::asio::io_context io;
         
     context_type::request_type req;
     server_type::attachment_type attachment(io);

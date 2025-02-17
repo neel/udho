@@ -62,7 +62,7 @@ struct http_writer_internal: public std::enable_shared_from_this<http_writer_int
     using serializer_type       = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
     using stream_type           = StreamT;
 
-    explicit http_writer_internal(boost::asio::io_service& io, udho::net::types::strand& strand, const types::headers::response& headers, stream_type& stream, Handler&& handler)
+    explicit http_writer_internal(boost::asio::io_context& io, udho::net::types::strand& strand, const types::headers::response& headers, stream_type& stream, Handler&& handler)
         : _io(io), _strand(strand), _headers(headers), _response(_headers), _serializer(_response), _stream(stream), _handler(std::move(handler)) {}
     http_writer_internal(const http_writer_internal&) = delete;
     ~http_writer_internal() { std::cout << "~http_writer_internal" << std::endl; }
@@ -74,7 +74,7 @@ struct http_writer_internal: public std::enable_shared_from_this<http_writer_int
         );
     }
     void finished(boost::system::error_code ec, std::size_t bytes_transferred){
-        _io.dispatch(
+        boost::asio::dispatch(_io,
             boost::asio::bind_executor(
                 _strand,
                 std::bind(std::move(_handler), ec, bytes_transferred)
@@ -91,7 +91,7 @@ struct http_writer_internal: public std::enable_shared_from_this<http_writer_int
         }
 
     private:
-        boost::asio::io_service&        _io;
+        boost::asio::io_context&        _io;
         udho::net::types::strand&       _strand;
         const response_headers_type&    _headers;
         response_type                   _response;
@@ -112,10 +112,10 @@ struct http_writer{
     ~http_writer() { std::cout << "~http_writer" << std::endl; }
 
     template <typename Handler>
-    void operator()(boost::asio::io_service& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
+    void operator()(boost::asio::io_context& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
         using internal_writer_type = http_writer_internal<Handler, stream_type>;
         auto internal_writer = std::make_shared<internal_writer_type>(io, strand_finished, _headers, _stream, std::move(handler));
-        io.dispatch(
+        boost::asio::dispatch(io,
             boost::asio::bind_executor(
                 strand_write,
                 std::bind(&internal_writer_type::start, internal_writer)

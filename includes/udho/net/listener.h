@@ -28,7 +28,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
     using processer_type   = std::function<void (boost::asio::ip::address, udho::net::stream&&)>;
     using connection_map   = std::map<typename std::add_pointer<connection_type>::type, std::weak_ptr<connection_type>>;
 
-    boost::asio::io_service&          _service;
+    boost::asio::io_context&          _service;
     boost::asio::ip::tcp::acceptor    _acceptor;
     socket_type                       _socket;
     boost::asio::signal_set           _signals;
@@ -42,7 +42,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
      * @param service I/O service
      * @param endpoint HTTP server endpoint to listen on
      */
-    listener(boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _running(false) {
+    listener(boost::asio::io_context& service, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _running(false) {
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
@@ -128,7 +128,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
             accept();
         }
         void on_ready(boost::asio::ip::address address, udho::net::stream&& context){
-            _service.post([address, context = std::move(context), this] () mutable {
+            boost::asio::post(_service, [address, context = std::move(context), this] () mutable {
                 _processor(address, std::move(context));
                 // std::cout << __FILE__ << " :" << __LINE__ << std::endl;
             });

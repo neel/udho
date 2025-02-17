@@ -101,6 +101,141 @@ constexpr static char css_system[] = R"ASSET(
 }
 )ASSET";
 
+constexpr static char css_assets[] = R"ASSET(
+/* Asset-specific styles */
+/* Deepseek R1 generated CSS */
+
+/* Container for responsive overflow */
+.udho-assets-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12); */
+}
+
+/* Modern table styling */
+table.udho-assets-listing {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+    font-size: 0.9rem;
+    background: white;
+    min-width: 600px;
+}
+
+/* Header styling */
+table.udho-assets-listing thead th {
+    font-weight: 500;
+    color: #2d3748;
+    text-align: left;
+    padding: 16px 24px;
+    /* background-color: #f7fafc; */
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* Table cells */
+table.udho-assets-listing td {
+    padding: 12px 24px;
+    color: #4a5568;
+    border-bottom: 1px solid #edf2f7;
+}
+
+/* Row hover effect */
+table.udho-assets-listing tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+table.udho-assets-listing tbody tr:hover {
+    background-color: #f8fafc;
+    cursor: pointer;
+}
+/* File name link styling */
+table.udho-assets-listing a {
+    color: #2d3748;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+table.udho-assets-listing a:hover {
+    color: #4299e1;
+}
+
+/* Extension badge styling */
+table.udho-assets-listing td:nth-child(2) {
+    font-size: 0.8em;
+    color: #718096;
+    font-weight: 500;
+}
+
+/* Size formatting */
+table.udho-assets-listing td:nth-child(5) {
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .udho-assets-container {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.24);
+    }
+
+    table.udho-assets-listing {
+        background: #1a202c;
+    }
+
+    table.udho-assets-listing thead th {
+        background-color: #2d3748;
+        color: #cbd5e0;
+        border-bottom-color: #4a5568;
+    }
+
+    table.udho-assets-listing td {
+        color: #cbd5e0;
+        border-bottom-color: #2d3748;
+    }
+
+    table.udho-assets-listing tbody tr:hover {
+        background-color: #2d3748;
+    }
+
+    table.udho-assets-listing a {
+        color: #cbd5e0;
+    }
+
+    table.udho-assets-listing a:hover {
+        color: #63b3ed;
+    }
+}
+
+/* Icon styling */
+.udho-icon-asset {
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    margin-right: 12px;
+    transition: transform 0.2s ease;
+}
+
+/* Add these rules */
+.udho-icon-asset::before {
+    content: "";
+    display: inline-block;
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: middle;
+}
+
+.udho-icon-asset-type-0::before {
+    content: "\1f4dc";
+}
+.udho-icon-asset-type-1::before {
+    content: "\1f4c3";
+}
+.udho-icon-asset-type-3::before {
+    content: "\1f338";
+}
+)ASSET";
+
 constexpr static char css_listing[] = R"ASSET(
 /* Deepseek R1 generated CSS */
 
@@ -668,7 +803,8 @@ template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
-                    << udho::view::resources::asset::img("beral.gif",    std::begin(beral_transp_gif), std::end(beral_transp_gif));
+                    << udho::view::resources::asset::css("assets.css",  std::begin(css_assets),  std::end(css_assets))
+                    << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
 }
 
 }

@@ -173,7 +173,7 @@ TEST_CASE("udho network", "[net]") {
 
     CHECK(router["b"_h]("f1"_h, 24, "Hello", 42) == "/b/f1/24/Hello/42");
 
-    boost::asio::io_service service;
+    boost::asio::io_context service;
 
     auto server = udho::net::server<http_listener>(service, 9000);
     udho::view::data::bridges::lua lua;

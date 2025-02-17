@@ -150,6 +150,7 @@ struct docroot_fs{
             }
 
             namespace placeholders = udho::pages::system::layouts::placeholders;
+            namespace places = udho::pages::system::layouts::places;
 
             auto layout     = udho::pages::system::layouts::listing(ctx);
             auto header     = udho::pages::system::data::listing_header{target, docroot()};
@@ -157,7 +158,8 @@ struct docroot_fs{
             auto footer     = udho::pages::system::data::status_info{};
 
             layout[placeholders::header]  = header;
-            layout[placeholders::central] = directory;
+            layout[places::files] = directory;
+            layout[places::assets] = nullptr;
             layout[placeholders::footer]  = footer;
             return true;
         }

@@ -45,14 +45,27 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
     }
 };
 
+namespace places {
+namespace segments {
+    struct files{};
+    struct assets{};
+}
+}
+
+
 namespace placeholders = l::placeholders;
 
 using minimal = l::basic_placeholder<
-    l::spot<l::placeholders::segments::header>,
-    l::spot<l::placeholders::segments::central>,
-    l::spot<l::placeholders::segments::footer>
+    l::spot<placeholders::segments::header>,
+    l::spot<places::segments::files>,
+    l::spot<places::segments::assets>,
+    l::spot<placeholders::segments::footer>
 >;
 
+namespace places{
+    static segments::files files;
+    static segments::assets assets;
+}
 
 
 template <typename ContextT>
@@ -65,9 +78,10 @@ auto listing(ContextT context) {
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");
-    layout.properties(p::central).classes("central").view("lua://udho/listing");
-    layout.properties(p::header) .classes("header") .view("lua://udho/header");
-    layout.properties(p::footer) .classes("footer") .view("lua://udho/status");
+    layout.properties(places::files).classes("files").view("lua://udho/listing");
+    layout.properties(places::assets).classes("assets").view("lua://udho/assets");
+    layout.properties(p::header).classes("header") .view("lua://udho/header");
+    layout.properties(p::footer).classes("footer") .view("lua://udho/status");
 
     return layout;
 }

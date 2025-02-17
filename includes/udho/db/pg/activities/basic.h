@@ -121,7 +121,7 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
      * @param io 
      */
     template <typename CollectorT>
-    basic_activity(CollectorT c, pg::connection::pool& pool, boost::asio::io_service& io): base(c), _pool(pool), _io(io), _transformer(static_cast<derived_type&>(*this)){}
+    basic_activity(CollectorT c, pg::connection::pool& pool, boost::asio::io_context& io): base(c), _pool(pool), _io(io), _transformer(static_cast<derived_type&>(*this)){}
     
     /**
      * @brief Construct a new basic activity object with a controller
@@ -211,7 +211,7 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
     
     private:
         pg::connection::pool&    _pool;
-        boost::asio::io_service& _io;
+        boost::asio::io_context& _io;
         transformer_type         _transformer;
         container_type           _rows;
         ozo::result              _results;
@@ -244,7 +244,7 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
      * @param io 
      */
     template <typename CollectorT>
-    basic_activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): base(collector), _pool(pool), _io(io){}
+    basic_activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): base(collector), _pool(pool), _io(io){}
     /**
      * @brief Construct a new basic activity object with a controller
      * 
@@ -313,7 +313,7 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
     
     private:
         pg::connection::pool&    _pool;
-        boost::asio::io_service& _io;
+        boost::asio::io_context& _io;
         ozo::result              _result;
 };
     

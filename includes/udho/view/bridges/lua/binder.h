@@ -416,33 +416,33 @@ struct binder{
     }
 
 
-    template <typename KeyT, typename U, typename V>
-    binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<false>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
-        using result_type = typename udho::view::data::wrapper<U, V>::result_type;
-        using class_type  = typename udho::view::data::wrapper<U, V>::class_type;
-        using key_type    = typename udho::view::data::wrapper<U, V>::key_type;
+    // template <typename KeyT, typename U, typename V>
+    // binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<false>, KeyT, udho::view::data::wrapper<U>>& nvp){
+    //     using result_type = typename udho::view::data::wrapper<U>::result_type;
+    //     using class_type  = typename udho::view::data::wrapper<U>::class_type;
+    //     using key_type    = typename udho::view::data::wrapper<U>::key_type;
 
-        helper::recurse<std::decay_t<result_type>>::apply(_state);
+    //     helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+    //     std::cout << "\tlua binding function: " << nvp.name() << std::endl;
 
-        auto& wrapper = nvp.value();
-        // helper::internal_index_binder::apply(_state, _type, wrapper);
-        _type[sol::meta_function::index] = [w = wrapper](const class_type& self, key_type key, sol::this_state ts) mutable {
-            if constexpr (std::is_integral<key_type>::value){
-                if(key == w.size(self)+1){
-                    return sol::make_object(ts, sol::nil);
-                } else if (key == 0) {
-                    throw std::runtime_error{"index 0 used while Lua is 1 indexed"};
-                }else {
-                    return sol::make_object(ts, w.get(self, key -1));
-                }
-            } else {
-                return sol::make_object(ts, w.get(self, key));
-            }
-        };
-        return *this;
-    }
+    //     auto& wrapper = nvp.value();
+    //     // helper::internal_index_binder::apply(_state, _type, wrapper);
+    //     _type[sol::meta_function::index] = [w = wrapper](const class_type& self, key_type key, sol::this_state ts) mutable {
+    //         if constexpr (std::is_integral<key_type>::value){
+    //             if(key == w.size(self)+1){
+    //                 return sol::make_object(ts, sol::nil);
+    //             } else if (key == 0) {
+    //                 throw std::runtime_error{"index 0 used while Lua is 1 indexed"};
+    //             }else {
+    //                 return sol::make_object(ts, w.get(self, key -1));
+    //             }
+    //         } else {
+    //             return sol::make_object(ts, w.get(self, key));
+    //         }
+    //     };
+    //     return *this;
+    // }
     template <typename KeyT, typename U, typename V>
     binder& operator()(udho::view::data::nvp<udho::view::data::policies::index<true>, KeyT, udho::view::data::wrapper<U, V>>& nvp){
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;

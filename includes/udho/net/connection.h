@@ -41,11 +41,11 @@ namespace detail{
 
     template <typename Handler>
     struct on_flush_body{
-        boost::asio::io_service& _io;
+        boost::asio::io_context& _io;
         detail::connection_stat& _stat;
         Handler                  _handler;
 
-        on_flush_body(boost::asio::io_service& io, connection_stat& stat, Handler&& handler)
+        on_flush_body(boost::asio::io_context& io, connection_stat& stat, Handler&& handler)
             : _io(io), _stat(stat), _handler(std::move(handler))
         {}
         void operator()(boost::system::error_code ec, std::size_t bytes_transferred){
@@ -58,7 +58,7 @@ namespace detail{
             _stat._stage = types::stages::body_written;
             _stat._bytes_written += bytes_transferred;
 
-            _io.post(std::bind(std::move(_handler), ec, bytes_transferred));
+            boost::asio::post(_io, std::bind(std::move(_handler), ec, bytes_transferred));
         }
     };
     /**
@@ -69,7 +69,7 @@ namespace detail{
         using buffer_type  = std::basic_string<std::uint8_t>;
         using buffers_type = std::vector<boost::asio::const_buffer>;
 
-        boost::asio::io_service&     _io;     // io service
+        boost::asio::io_context&     _io;     // io service
         udho::net::types::strand&    _strand; // write strand
         udho::net::types::socket&    _socket; // socket
         buffers_type&                _buffers;
@@ -77,7 +77,7 @@ namespace detail{
         detail::connection_stat&     _stat;
         Handler                      _handler;
 
-        flush_body(boost::asio::io_service& io, udho::net::types::strand& strand, udho::net::types::socket& socket, buffers_type& buffers, types::transfer::encoding encoding, connection_stat& stat, Handler&& handler)
+        flush_body(boost::asio::io_context& io, udho::net::types::strand& strand, udho::net::types::socket& socket, buffers_type& buffers, types::transfer::encoding encoding, connection_stat& stat, Handler&& handler)
             :_io(io), _strand(strand), _socket(socket), _buffers(buffers), _encoding(encoding), _stat(stat), _handler(std::move(handler))
         {}
 
@@ -93,7 +93,7 @@ namespace detail{
             // std::cout << "flush_body::operator()" << std::endl;
             _stat._bytes_written += bytes_transferred;
             if(ec){
-                _io.post(std::bind(std::move(_handler), ec, bytes_transferred));
+                boost::asio::post(_io, std::bind(std::move(_handler), ec, bytes_transferred));
             }else{
                 write();
             }
@@ -111,7 +111,7 @@ namespace detail{
         using buffer_type  = std::basic_string<std::uint8_t>;
         using buffers_type = std::vector<boost::asio::const_buffer>;
 
-        boost::asio::io_service&        _io;     // io service
+        boost::asio::io_context&        _io;     // io service
         udho::net::types::strand&       _strand; // write strand
         buffer_type                     _buffer; // uncompressed data
         buffer_type&                    _compressed; // compressed data
@@ -119,7 +119,7 @@ namespace detail{
         buffers_type&                   _buffers;
         Handler                         _handler;
 
-        preprocess(boost::asio::io_service& io, udho::net::types::strand& strand, buffer_type&& buffer, buffer_type& compressed, const types::transfer_encoding& transfer_encoding, buffers_type& buffers, Handler&& handler):
+        preprocess(boost::asio::io_context& io, udho::net::types::strand& strand, buffer_type&& buffer, buffer_type& compressed, const types::transfer_encoding& transfer_encoding, buffers_type& buffers, Handler&& handler):
             _io(io), _strand(strand), _buffer(std::move(buffer)), _compressed(compressed), _transfer_encoding(transfer_encoding), _buffers(buffers), _handler(std::move(handler))
         {}
         void operator()(){
@@ -158,7 +158,7 @@ namespace detail{
             std::copy(_compressed.begin(), _compressed.end(), std::back_inserter(compressed_print));
 
             // std::cout << "preprocess::finish() " << compressed_print << std::endl;
-            _io.post(boost::asio::bind_executor(_strand, std::bind(std::move(_handler))));
+            boost::asio::post(_io, boost::asio::bind_executor(_strand, std::bind(std::move(_handler))));
         }
     };
 }
@@ -205,7 +205,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
     template <typename Handler>
     using preprocess      = detail::preprocess<Handler>;
 
-    connection(boost::asio::io_service& service, udho::net::types::socket socket)
+    connection(boost::asio::io_context& service, udho::net::types::socket socket)
       : _io(service), _socket(std::move(socket)),
         _compression_strand(_socket.get_executor()), _write_strand(_socket.get_executor()), _stat_strand(_socket.get_executor()),
         _stream(&_streambuf)
@@ -244,7 +244,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
                 return;
             }
             _stage = types::stages::headers_read;
-            _io.post(std::bind(&self_type::process, shared_from_this()));
+            boost::asio::post(_io, std::bind(&self_type::process, shared_from_this()));
             _bytes_read += bytes_transferred;
             assert(_reader.use_count() == 1);
         }
@@ -270,13 +270,27 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             writer(_io, _write_strand, _stat_strand, on_flush_header{*this});
         }
 
-        std::size_t copy(buffer_type& buffer){
-            auto size = _streambuf.size();
-            if(size > 0){
-                std::copy_n(boost::asio::buffer_cast<const std::uint8_t*>(_streambuf.data()), size, std::back_inserter(buffer));
-                _streambuf.consume(size);
+        std::size_t copy(buffer_type& buffer) {
+            const auto buffers = _streambuf.data();
+            const std::size_t size = boost::asio::buffer_size(buffers);
+
+            if (size > 0) {
+                const auto orig_size = buffer.size();
+                buffer.resize(orig_size + size);
+
+                auto target = boost::asio::buffer(buffer.data() + orig_size, size);
+                const std::size_t bytes_copied = boost::asio::buffer_copy(target, buffers);
+
+                _streambuf.consume(bytes_copied);
+
+                // Handle potential partial copy (shouldn't happen with proper sizing)
+                if (bytes_copied != size) {
+                    buffer.resize(orig_size + bytes_copied);
+                }
+
+                return bytes_copied;
             }
-            return size;
+            return 0;
         }
 
         bool chunked() const {
@@ -292,7 +306,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         void flush_body_(buffer_type&& buffer, Handler&& handler){
             std::cout << "flush_body_() connection ref_count " << weak_from_this().use_count() << std::endl;
             flush_body<Handler> body_flusher(_io, _stat_strand, _socket, _buffers, encoding(), stat(), std::move(handler));
-            _io.dispatch(
+            boost::asio::dispatch(_io,
                 boost::asio::bind_executor(
                     _compression_strand,
                     preprocess<flush_body<Handler>>(_io, _write_strand, std::move(buffer), _compressed, *this, _buffers, std::move(body_flusher))
@@ -347,7 +361,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             if(chunked()){
                 auto handler = std::bind(&self_type::on_finish, shared_from_this(), std::placeholders::_1, std::placeholders::_2);
                 flush_body<decltype(handler)> body_flusher(_io, _stat_strand, _socket, _buffers, encoding(), stat(), std::move(handler));
-                _io.dispatch(
+                boost::asio::dispatch(_io,
                     boost::asio::bind_executor(
                         _compression_strand,
                         preprocess<flush_body<decltype(handler)>>(_io, _compression_strand, {}, _compressed, *this, _buffers, std::move(body_flusher))
@@ -355,7 +369,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
                 );
             }else{
                 // prepare_headers();
-                _io.post(
+                boost::asio::post(_io,
                     boost::asio::bind_executor(
                         _write_strand,              // why ?
                         std::bind(&self_type::on_finish, shared_from_this(), boost::system::error_code(), 0)
@@ -377,7 +391,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         }
     private:
         clock_type                          _start, _end;
-        boost::asio::io_service&            _io;
+        boost::asio::io_context&            _io;
         processer_type                      _processor;
         udho::net::types::socket            _socket;
         udho::net::types::strand            _compression_strand, _write_strand, _stat_strand;

@@ -298,7 +298,7 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     udho::view::resources::tmpl::const_substore<udho::view::data::bridges::lua> tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
     // udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> ctx_explorer = tmpl_lua.view("primary", "ctx_explorer");
 
-    boost::asio::io_service io;
+    boost::asio::io_context io;
 
     using namespace udho::hazo::string::literals;
 

@@ -11,11 +11,15 @@
 #include <udho/view/data.h>
 #include <udho/view/meta.h>
 
+
+#include <fstream>
 #ifdef _WIN32
 #include <windows.h>
+#include <winternl.h>
 #else
 #include <sys/sysinfo.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 #endif
 
 namespace udho{
@@ -224,19 +228,88 @@ struct status_info{
 
     std::string os_info() const {
         std::ostringstream oss;
+
 #ifdef _WIN32
-        OSVERSIONINFOEX osvi;
-        ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-        osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-        GetVersionEx((OSVERSIONINFO*)&osvi);
-        oss << "Windows " << osvi.dwMajorVersion << "." << osvi.dwMinorVersion;
+        // Get Windows version information
+        NTSTATUS(WINAPI *RtlGetVersion)(LPOSVERSIONINFOEXW);
+        OSVERSIONINFOEXW osInfo;
+
+        *(FARPROC*)&RtlGetVersion = GetProcAddress(
+            GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
+
+        if (RtlGetVersion) {
+            osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+            if (SUCCEEDED(RtlGetVersion(&osInfo))) {
+                oss << "Windows "
+                    << osInfo.dwMajorVersion << "."
+                    << osInfo.dwMinorVersion << "."
+                    << osInfo.dwBuildNumber;
+            }
+        }
+
+        // Get Windows 10+ display version
+        HKEY hKey;
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                          L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                          0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+            WCHAR displayVersion[128];
+            DWORD size = sizeof(displayVersion);
+            if (RegQueryValueExW(hKey, L"DisplayVersion", nullptr, nullptr,
+                                 (LPBYTE)displayVersion, &size) == ERROR_SUCCESS) {
+                oss << " (" << std::wstring(displayVersion) << ")";
+            }
+            RegCloseKey(hKey);
+        }
+
 #elif __linux__
-        oss << "Linux";
+        // Get Linux kernel version
+        struct utsname buf;
+        if (uname(&buf) == 0) {
+            oss << "Linux " << buf.release << " (" << buf.version << ")";
+        } else {
+            oss << "Linux";
+        }
+
+        // Try to get distribution info
+        std::ifstream osRelease("/etc/os-release");
+        if (osRelease) {
+            std::string line;
+            while (std::getline(osRelease, line)) {
+                if (line.find("PRETTY_NAME=") != std::string::npos) {
+                    auto value = line.substr(line.find('=')+1);
+                    value.erase(std::remove(value.begin(), value.end(), '"'), value.end());
+                    oss << " - " << value;
+                    break;
+                }
+            }
+        }
+
 #elif __APPLE__
-        oss << "macOS";
+        // Get macOS version and kernel info
+        struct utsname buf;
+        if (uname(&buf) == 0) {
+            oss << "macOS Darwin " << buf.release << " (" << buf.version << ")";
+        }
+
+        // Get macOS marketing version
+        FILE* sw_vers = popen("sw_vers -productVersion", "r");
+        if (sw_vers) {
+            char version[128];
+            if (fgets(version, sizeof(version), sw_vers) != nullptr) {
+                oss << " macOS ";
+                for (char* c = version; *c; c++) {
+                    if (*c == '.') *c = '_';
+                    if (*c == '\n') *c = '\0';
+                }
+                oss << version;
+            }
+            pclose(sw_vers);
+        }
+
 #else
         oss << "Unknown OS";
 #endif
+
         return oss.str();
     }
 
@@ -273,7 +346,7 @@ struct status_info{
         std::ostringstream oss;
         auto now = std::chrono::system_clock::now();
         auto t = std::chrono::system_clock::to_time_t(now);
-        oss << "Timezone: UTC" << std::put_time(std::localtime(&t), "%z") << "|";
+        oss << "UTC" << std::put_time(std::localtime(&t), "%z") << " ";
         oss << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S");
         return oss.str();
     }
