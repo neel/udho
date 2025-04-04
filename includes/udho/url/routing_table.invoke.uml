@@ -1,0 +1,60 @@
+@startuml
+participant Client
+participant Router
+participant Mountpoints
+participant Mountpoint
+participant FileSystem
+participant Stream
+
+Client -> Router: operator()(url, args)
+activate Router
+
+Router -> Router: invoke(url, args)
+activate Router #FFBBBB
+
+Router -> Mountpoints: visit()
+activate Mountpoints
+
+loop for each Mountpoint
+    Mountpoints -> Mountpoint: check path
+    activate Mountpoint
+
+    alt path matches
+        Mountpoint -> Mountpoint: invoke(rest, args)
+        Mountpoint --> Mountpoints: found = true
+        deactivate Mountpoint
+        break
+    else
+        Mountpoint --> Mountpoints: not found
+        deactivate Mountpoint
+    end
+end
+
+Mountpoints --> Router: result (found)
+deactivate Mountpoints
+
+alt not found
+    Router -> Router: serve_file(url, stream)
+    activate Router #FFBBBB
+
+    Router -> FileSystem: normalize_path(url)
+    activate FileSystem
+    FileSystem --> Router: normalized_path
+    deactivate FileSystem
+
+    Router -> FileSystem: exists(normalized_path)?
+    activate FileSystem
+    FileSystem --> Router: yes
+    deactivate FileSystem
+
+    Router -> Stream: set headers
+    activate Stream
+    Router -> Stream: write(file_data)
+    Stream --> Client: HTTP response
+    deactivate Stream
+
+    deactivate Router
+end
+
+deactivate Router
+@enduml

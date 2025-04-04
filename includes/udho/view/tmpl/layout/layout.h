@@ -113,6 +113,13 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     renderer& operator+=(Data&& d) {
         return render(std::forward<Data>(d));
     }
+
+    bool exists() const {
+        return _layout.document()[_key].exists();
+    }
+    std::size_t count() const {
+        return _layout.document()[_key].count();
+    }
 };
 
 
@@ -160,6 +167,13 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     template <typename Data>
     renderer& operator=(Data&& d) {
         return render(std::forward<Data>(d));
+    }
+
+    bool exists() const {
+        return _layout.document()[_key].exists();
+    }
+    std::size_t count() const {
+        return _layout.document()[_key].count();
     }
 };
 
