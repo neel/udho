@@ -15,7 +15,7 @@ MACRO(update_submodule submodule_dir)
   ENDIF()
 ENDMACRO()
 
-update_submodule(${PROJECT_SOURCE_DIR}/vendor/)
+# update_submodule(${PROJECT_SOURCE_DIR}/vendor/)
 
 SET(CMAKE_CXX_STANDARD 14)
 #SET(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=1 ${CMAKE_CXX_FLAGS}")
