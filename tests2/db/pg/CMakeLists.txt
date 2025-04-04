@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.9)
 
 project(udho-tests2-db-pg LANGUAGES CXX VERSION 0.0.1)
 
