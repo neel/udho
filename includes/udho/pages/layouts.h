@@ -67,14 +67,20 @@ namespace places{
     static segments::assets assets;
 }
 
+template <typename ContextT>
+using sys = udho::view::tmpl::layout::basic_layout<
+                ContextT,
+                udho::view::tmpl::layout::basic_document<minimal>,
+                presenter<l::basic_document<minimal>>
+            >;
 
 template <typename ContextT>
-auto listing(ContextT context) {
+sys<ContextT> listing(ContextT context) {
     namespace p = l::placeholders;
 
     using minimal_presenter = presenter<l::basic_document<minimal>>;
 
-    auto layout = l::create<minimal, ContextT, minimal_presenter>(context);
+    sys<ContextT> layout = l::create<minimal, ContextT, minimal_presenter>(context);
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");

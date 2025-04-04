@@ -20,8 +20,8 @@ namespace url{
 
 namespace detail{
 
-struct docroot_fs{
-    docroot_fs(): _docroot(std::filesystem::current_path()){}
+struct docroot_explorer{
+    docroot_explorer(): _docroot(std::filesystem::current_path()){}
 
     /**
      * @brief Sets the document root for file serving
@@ -48,7 +48,12 @@ struct docroot_fs{
          */
         template <typename Ch>
         std::filesystem::path normalize(const std::basic_string<Ch>& subject) const {
-            std::filesystem::path root = !_docroot.empty() ? _docroot : std::filesystem::current_path();
+            return normalize_path(subject, _docroot);
+        }
+
+        template <typename Ch>
+        static std::filesystem::path normalize_path(const std::basic_string<Ch>& subject, const std::filesystem::path& docroot = std::filesystem::path()) {
+            std::filesystem::path root = !docroot.empty() ? docroot : std::filesystem::current_path();
             std::string relative_subject = subject;
             if (!relative_subject.empty() && relative_subject[0] == '/') {
                 relative_subject.erase(0, 1); // Remove the leading slash if present
@@ -111,7 +116,7 @@ struct docroot_fs{
          * @return MIME type as string
          * @note Requires libmagic development files during compilation
          */
-        inline std::string mime_type(const std::filesystem::path& path) const {
+        static inline std::string mime_type(const std::filesystem::path& path) {
             magic_t magic = magic_open(MAGIC_MIME_TYPE);
             magic_load(magic, nullptr);
             const char* mime_type = magic_file(magic, path.c_str());
@@ -149,21 +154,28 @@ struct docroot_fs{
                 return false;
             }
 
+            auto l = layout(target, ctx, _docroot);
+            return true;
+        }
+
+        template <typename ContextT>
+        static auto layout(const std::filesystem::path& target, ContextT ctx, const std::filesystem::path& docroot){
             namespace placeholders = udho::pages::system::layouts::placeholders;
             namespace places = udho::pages::system::layouts::places;
 
             auto layout     = udho::pages::system::layouts::listing(ctx);
-            auto header     = udho::pages::system::data::listing_header{target, docroot()};
-            auto directory  = udho::pages::system::data::directory_listing{target, docroot()};
+            auto header     = udho::pages::system::data::listing_header{target, docroot};
+            auto directory  = udho::pages::system::data::directory_listing{target, docroot};
             auto footer     = udho::pages::system::data::status_info{};
 
             layout[placeholders::header]  = header;
-            layout[places::files] = directory;
-            layout[places::assets] = nullptr;
+            layout[places::files]         = directory;
+            layout[places::assets]        = nullptr;
             layout[placeholders::footer]  = footer;
-            return true;
+
+            return layout;
         }
-        inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) const {
+        static inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) {
             try {
                 std::string mime = mime_type(normalized_path);
                 boost::iostreams::mapped_file_source file;
@@ -190,6 +202,31 @@ struct docroot_fs{
         std::filesystem::path      _docroot;
 };
 
+struct asset_explorer{
+    asset_explorer(const udho::view::resources::asset::const_store& assets): _assets(assets) {}
+
+    protected:
+        inline bool find_file(const std::string& subject) const {
+            // TODO implement
+        }
+        template <typename ContextT>
+        bool serve_listing(const std::filesystem::path& target, ContextT ctx) const {
+            // TODO implement
+        }
+        static inline bool serve_asset(const std::filesystem::path& normalized_path, udho::net::stream& stream) {
+            // TODO implement
+        }
+    private:
+        const udho::view::resources::asset::const_store& _assets;
+};
+
+template <typename Explorers>
+struct explorer_wrapper{
+    bool exists(const std::string& subject) const {}
+    template <typename ContextT>
+    bool serve(const std::string& subject, ContextT ctx) const {}
+};
+
 /**
  * @class routing_table
  * @brief Template class for managing URL routing with mount points and file serving capabilities
@@ -197,7 +234,7 @@ struct docroot_fs{
  * @tparam MountPointsT Sequence of mount points (udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>)
  */
 template <typename MountPointsT>
-struct routing_table: protected docroot_fs{
+struct routing_table: protected docroot_explorer{
     /**
      * @brief operator overload for streaming the routing table's mount points
      * @param stream Output stream
@@ -217,8 +254,8 @@ struct routing_table: protected docroot_fs{
     routing_table(const routing_table<MountPointsT>&) = delete;
     routing_table(routing_table<MountPointsT>&&) = delete;
 
-    using docroot_fs::normalize;
-    using docroot_fs::docroot;
+    using docroot_explorer::normalize;
+    using docroot_explorer::docroot;
 
     /**
      * @brief Constructs a routing table with mount points
@@ -447,9 +484,41 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
     }
 
     private:
-        template <typename Ch>
-        bool serve_asset(const std::basic_string<Ch>& subject, udho::net::stream& stream) const {
-            return _assets.serve(stream, subject);
+        template <typename Ch, typename ContextT>
+        bool serve_asset(const std::basic_string<Ch>& subject, ContextT& ctx) const {
+            bool success = _assets.serve(ctx, subject);
+            if(!success) {
+                std::string base_url = _assets.base();
+                if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
+                    base_url.insert(0, "/");
+                }
+                if (boost::starts_with(subject, base_url)) {
+                    // TODO server asset listing
+                    std::filesystem::path normalized_path = this->normalize(subject);
+
+                    namespace placeholders = udho::pages::system::layouts::placeholders;
+                    namespace places = udho::pages::system::layouts::places;
+
+                    auto layout     = udho::pages::system::layouts::listing(ctx);
+                    auto header     = udho::pages::system::data::listing_header{subject, docroot()};
+                    layout[placeholders::header]  = header;
+
+                    if(!normalized_path.empty() && std::filesystem::exists(normalized_path) && std::filesystem::is_directory(normalized_path)){
+                        auto directory  = udho::pages::system::data::directory_listing{normalized_path, docroot()};
+                        layout[places::files] = directory;
+                    }
+
+                    auto footer     = udho::pages::system::data::status_info{};
+
+                    layout[places::assets] = nullptr;
+                    layout[placeholders::footer]  = footer;
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                return success;
+            }
         }
     private:
         const udho::view::resources::asset::const_store& _assets;
@@ -462,7 +531,7 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
  * Pure asset server configuration. Use when only serving assets without custom routes.
  */
 template <>
-struct basic_router<void, udho::view::resources::asset::const_store>: private detail::docroot_fs{
+struct basic_router<void, udho::view::resources::asset::const_store>: private detail::docroot_explorer{
 
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<void, udho::view::resources::asset::const_store>& router){
         stream << router.assets();
@@ -488,11 +557,19 @@ struct basic_router<void, udho::view::resources::asset::const_store>: private de
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool invoked = serve_local(subject, std::forward<Args>(args)...);
-        if(!invoked){
-            return serve_asset(subject, std::forward<Args>(args)...);
+        std::string base_url = _assets.base();
+        if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
+            base_url.insert(0, "/");
         }
-        return invoked;
+        if (boost::starts_with(subject, base_url)) {
+            return serve_asset(subject, std::forward<Args>(args)...);
+        } else {
+            bool invoked = serve_local(subject, std::forward<Args>(args)...);
+            if(!invoked){
+                return serve_asset(subject, std::forward<Args>(args)...);
+            }
+            return invoked;
+        }
     }
 
     template <typename... Args>
@@ -503,10 +580,42 @@ struct basic_router<void, udho::view::resources::asset::const_store>: private de
     const udho::url::summary::router& summary() const { return _summary; }
 
     private:
-        template <typename Ch>
-        bool serve_asset(const std::basic_string<Ch>& subject, udho::net::stream& stream) const {
-            return _assets.serve(stream, subject);
+    template <typename Ch, typename ContextT>
+    bool serve_asset(const std::basic_string<Ch>& subject, ContextT& ctx) const {
+        bool success = _assets.serve(ctx, subject);
+        if(!success) {
+            std::string base_url = _assets.base();
+            if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
+                base_url.insert(0, "/");
+            }
+            if (boost::starts_with(subject, base_url)) {
+                // TODO server asset listing
+                std::filesystem::path normalized_path = this->normalize(subject);
+
+                namespace placeholders = udho::pages::system::layouts::placeholders;
+                namespace places = udho::pages::system::layouts::places;
+
+                auto layout     = udho::pages::system::layouts::listing(ctx);
+                auto header     = udho::pages::system::data::listing_header{subject, docroot()};
+                layout[placeholders::header]  = header;
+
+                if(!normalized_path.empty() && std::filesystem::exists(normalized_path) && std::filesystem::is_directory(normalized_path)){
+                    auto directory  = udho::pages::system::data::directory_listing{normalized_path, docroot()};
+                    layout[places::files] = directory;
+                }
+
+                auto footer     = udho::pages::system::data::status_info{};
+
+                layout[places::assets] = nullptr;
+                layout[placeholders::footer]  = footer;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return success;
         }
+    }
     private:
         const udho::view::resources::asset::const_store& _assets;
         udho::url::summary::router _summary;
