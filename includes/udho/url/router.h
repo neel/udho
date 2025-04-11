@@ -12,221 +12,13 @@
 #include <iostream>
 #include <magic.h>
 #include <udho/view/resources/asset/io.h>
-
+#include <udho/url/explorers.h>
 #include <udho/pages/system.h>
 
 namespace udho{
 namespace url{
 
 namespace detail{
-
-struct docroot_explorer{
-    docroot_explorer(): _docroot(std::filesystem::current_path()){}
-
-    /**
-     * @brief Sets the document root for file serving
-     * @param path Filesystem path to use as document root
-     */
-    void docroot(const std::filesystem::path& path) {
-        _docroot = path;
-    }
-
-    /**
-     * @brief Gets the current document root
-     * @return Const reference to the document root path
-     */
-    const std::filesystem::path& docroot() const {
-        return _docroot;
-    }
-    protected:
-        /**
-         * @brief Normalizes and secures a filesystem path
-         * @tparam Ch Character type for the path string
-         * @param subject Path to normalize
-         * @return Normalized path or empty path if security check fails
-         * @note Prevents directory traversal attacks by ensuring path stays within docroot
-         */
-        template <typename Ch>
-        std::filesystem::path normalize(const std::basic_string<Ch>& subject) const {
-            return normalize_path(subject, _docroot);
-        }
-
-        template <typename Ch>
-        static std::filesystem::path normalize_path(const std::basic_string<Ch>& subject, const std::filesystem::path& docroot = std::filesystem::path()) {
-            std::filesystem::path root = !docroot.empty() ? docroot : std::filesystem::current_path();
-            std::string relative_subject = subject;
-            if (!relative_subject.empty() && relative_subject[0] == '/') {
-                relative_subject.erase(0, 1); // Remove the leading slash if present
-            }
-
-            std::filesystem::path requested_path = root / relative_subject;
-            std::filesystem::path normalized_path;
-            try {
-                normalized_path = std::filesystem::weakly_canonical(requested_path);
-                if (!boost::algorithm::starts_with(normalized_path.string(), root.string())) {
-                    std::cout << "Security alert: Attempted access outside of the document root. " << normalized_path << " " << root << std::endl;
-                    return std::filesystem::path{};
-                }
-            } catch(const std::filesystem::filesystem_error& e) {
-                std::cout << "Filesystem error: " << e.what() << std::endl;
-                return std::filesystem::path{};
-            }
-            return normalized_path;
-        }
-
-        /**
-         * @brief Checks if a normalized file path exists
-         * @tparam Ch Character type for the path string
-         * @param subject Path to check
-         * @return true if file exists and is regular, false otherwise
-         */
-        template <typename Ch>
-        bool find_file(const std::basic_string<Ch>& subject) const {
-            std::filesystem::path normalized_path = normalize(subject);
-            if(normalized_path.empty()){
-                return false;
-            }
-            return std::filesystem::exists(normalized_path);
-        }
-
-        /**
-         * @brief Serves a file through the provided stream
-         * @tparam Ch Character type for the path string
-         * @param subject Path to serve
-         * @param stream Network stream to write to
-         * @return true if file was served successfully, false otherwise
-         * @throws Propagates filesystem errors and libmagic exceptions
-         */
-        template <typename Ch>
-        bool serve_file(const std::basic_string<Ch>& subject, udho::net::stream& stream) const {
-            std::filesystem::path normalized_path = normalize(subject);
-            if(normalized_path.empty()){
-                return false;
-            }
-            if(!std::filesystem::exists(normalized_path)){
-                return false;
-            }
-
-            return serve_file(normalized_path, stream);
-        }
-
-        /**
-         * @brief Determines MIME type of a file using libmagic
-         * @param path Filesystem path to analyze
-         * @return MIME type as string
-         * @note Requires libmagic development files during compilation
-         */
-        static inline std::string mime_type(const std::filesystem::path& path) {
-            magic_t magic = magic_open(MAGIC_MIME_TYPE);
-            magic_load(magic, nullptr);
-            const char* mime_type = magic_file(magic, path.c_str());
-            std::string result = mime_type ? mime_type : "application/octet-stream";
-            magic_close(magic);
-            return result;
-        }
-
-        /**
-         * @brief serves a directory or file from docroot
-         * @param ctx
-         * @param target
-         * @return boolean value indicating success
-         */
-        template <typename ContextT>
-        bool serve_local(const std::string& target, ContextT ctx) const {
-            std::filesystem::path normalized_path = normalize(target);
-            if(normalized_path.empty()){
-                return false;
-            }
-            if(!std::filesystem::exists(normalized_path)){
-                return false;
-            }
-
-            if(std::filesystem::is_directory(normalized_path)){
-                return serve_listing(normalized_path, ctx);
-            } else {
-                return serve_file(normalized_path, ctx);
-            }
-        }
-    private:
-        template <typename ContextT>
-        bool serve_listing(const std::filesystem::path& target, ContextT ctx) const {
-            if(!std::filesystem::is_directory(target)){
-                return false;
-            }
-
-            auto l = layout(target, ctx, _docroot);
-            return true;
-        }
-
-        template <typename ContextT>
-        static auto layout(const std::filesystem::path& target, ContextT ctx, const std::filesystem::path& docroot){
-            namespace placeholders = udho::pages::system::layouts::placeholders;
-            namespace places = udho::pages::system::layouts::places;
-
-            auto layout     = udho::pages::system::layouts::listing(ctx);
-            auto header     = udho::pages::system::data::listing_header{target, docroot};
-            auto directory  = udho::pages::system::data::directory_listing{target, docroot};
-            auto footer     = udho::pages::system::data::status_info{};
-
-            layout[placeholders::header]  = header;
-            layout[places::files]         = directory;
-            layout[places::assets]        = nullptr;
-            layout[placeholders::footer]  = footer;
-
-            return layout;
-        }
-        static inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) {
-            try {
-                std::string mime = mime_type(normalized_path);
-                boost::iostreams::mapped_file_source file;
-                file.open(normalized_path);
-
-                if (file.is_open()) {
-                    stream.set(boost::beast::http::field::content_type, mime);
-                    stream.set(boost::beast::http::field::content_length, std::to_string(file.size()));
-
-                    stream.write(file.data(), file.size());
-                    file.close();
-                    stream.finish();
-                    return true;
-                } else {
-                    std::cout << "Failed to open file: " << normalized_path << std::endl;
-                }
-            } catch (const std::exception& e) {
-                std::cout << "Error serving file: " << e.what() << std::endl;
-            }
-
-            return false;
-        }
-    private:
-        std::filesystem::path      _docroot;
-};
-
-struct asset_explorer{
-    asset_explorer(const udho::view::resources::asset::const_store& assets): _assets(assets) {}
-
-    protected:
-        inline bool find_file(const std::string& subject) const {
-            // TODO implement
-        }
-        template <typename ContextT>
-        bool serve_listing(const std::filesystem::path& target, ContextT ctx) const {
-            // TODO implement
-        }
-        static inline bool serve_asset(const std::filesystem::path& normalized_path, udho::net::stream& stream) {
-            // TODO implement
-        }
-    private:
-        const udho::view::resources::asset::const_store& _assets;
-};
-
-template <typename Explorers>
-struct explorer_wrapper{
-    bool exists(const std::string& subject) const {}
-    template <typename ContextT>
-    bool serve(const std::string& subject, ContextT ctx) const {}
-};
-
 /**
  * @class routing_table
  * @brief Template class for managing URL routing with mount points and file serving capabilities
@@ -234,7 +26,8 @@ struct explorer_wrapper{
  * @tparam MountPointsT Sequence of mount points (udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>)
  */
 template <typename MountPointsT>
-struct routing_table: protected docroot_explorer{
+struct routing_table{
+
     /**
      * @brief operator overload for streaming the routing table's mount points
      * @param stream Output stream
@@ -254,17 +47,12 @@ struct routing_table: protected docroot_explorer{
     routing_table(const routing_table<MountPointsT>&) = delete;
     routing_table(routing_table<MountPointsT>&&) = delete;
 
-    using docroot_explorer::normalize;
-    using docroot_explorer::docroot;
-
     /**
      * @brief Constructs a routing table with mount points
      * @param mountpoints Rvalue reference to mount points collection
      * @post Initializes internal summary that can be accessed through the @ref summary function
      */
-    routing_table(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) {
-        summarize();
-    }
+    routing_table(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) { summarize(); }
 
     /**
      * @brief Subscript operator for accessing mount points
@@ -302,9 +90,6 @@ struct routing_table: protected docroot_explorer{
             auto rest = path == "/" ? subject : subject.substr(path.size());
             found = mointpoint.find(rest);
         });
-        if(!found){
-            return find_file(subject);
-        }
         return found;
     }
 
@@ -328,9 +113,6 @@ struct routing_table: protected docroot_explorer{
             auto rest = path == "/" ? subject : subject.substr(path.size());
             found = mointpoint.invoke(rest, std::forward<Args>(args)...);
         });
-        if(!found){
-            found = serve_local(subject, std::forward<Args>(args)...);
-        }
         return found;
     }
 
@@ -341,9 +123,7 @@ struct routing_table: protected docroot_explorer{
      * @return bool indicating if request was handled
      */
     template <typename... Args>
-    bool operator()(const std::string& url, Args&&... args) const {
-        return this->invoke(url, std::forward<Args>(args)...);
-    }
+    bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
 
     /**
      * @brief Gets the routing summary
@@ -352,6 +132,7 @@ struct routing_table: protected docroot_explorer{
     const udho::url::summary::router& summary() const { return _summary; }
 
     private:
+
         /**
          * @brief Builds summary information by visiting all mount points
          * @post Populates the _summary member with mount point information
@@ -361,9 +142,87 @@ struct routing_table: protected docroot_explorer{
                 _summary.add(m);
             });
         }
+
     private:
         mountpoints_type           _mountpoints;
         udho::url::summary::router _summary;
+};
+
+template <typename RoutingTableT = void>
+struct basic_router;
+
+template <typename MountPointsT>
+struct basic_router<detail::routing_table<MountPointsT>>: private detail::routing_table<MountPointsT>{
+    using routing_table    = detail::routing_table<MountPointsT>;
+    using mountpoints_type = MountPointsT;
+
+    using routing_table::operator[];
+    using routing_table::summary;
+
+    basic_router() = delete;
+    basic_router(const basic_router<routing_table>&) = delete;
+    basic_router(basic_router<routing_table>&&) = delete;
+    basic_router(mountpoints_type&& mountpoints): routing_table(std::move(mountpoints)) {}
+    basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): routing_table(std::move(mountpoints)), _registry(std::move(registry)) {}
+
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& subject) const {
+        bool found = routing_table::find(subject);
+        if(!found){
+            return _registry.exists(subject);
+        }
+        return found;
+    }
+
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
+        if(!invoked){
+            if constexpr (sizeof...(args) == 1){
+                invoked = _registry.serve(subject, std::forward<Args>(args)...);
+            }
+        }
+        return invoked;
+    }
+
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
+
+    const detail::routing_table<MountPointsT>& table() const { return *this; }
+
+private:
+    udho::url::explorers::registry _registry;
+};
+
+template <>
+struct basic_router<void>{
+    using routing_table    = void;
+    using mountpoints_type = void;
+
+    basic_router() = delete;
+    basic_router(const basic_router<routing_table>&) = delete;
+    basic_router(basic_router<routing_table>&&) = delete;
+
+    basic_router(udho::url::explorers::registry&& registry): _registry(std::move(registry)) {}
+
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& subject) const { return _registry.exists(subject); }
+
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        if constexpr (sizeof...(args) == 1){
+            return _registry.serve(subject, std::forward<Args>(args)...);
+        }
+    }
+
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
+
+    const udho::url::summary::router& summary() const { return _summary; }
+
+private:
+    udho::url::explorers::registry _registry;
+    udho::url::summary::router     _summary;
 };
 
 }
@@ -383,7 +242,7 @@ struct routing_table: protected docroot_explorer{
  * - void store: Basic routing without asset management
  * - const_store: Routing with compiled-in asset resources
  */
-template <typename MountPointsT, typename StoreT = void>
+template <typename MountPointsT = void>
 struct basic_router;
 
 /// @addtogroup Router
@@ -397,131 +256,29 @@ struct basic_router;
  * Use this version when you don't need embedded resources.
  */
 template <typename MountPointsT>
-struct basic_router<MountPointsT, void>: private detail::routing_table<MountPointsT>{
+struct basic_router: private detail::basic_router<detail::routing_table<MountPointsT>>{
+    using detail_basic_router   = detail::basic_router<detail::routing_table<MountPointsT>>;
+    using routing_table         = typename detail_basic_router::routing_table;
+    using mountpoints_type      = typename detail_basic_router::mountpoints_type;
 
-    using routing_table = detail::routing_table<MountPointsT>;
+    using detail_basic_router::operator[];
+    using detail_basic_router::summary;
+    using detail_basic_router::find;
+    using detail_basic_router::invoke;
+    using detail_basic_router::operator();
 
-    using routing_table::operator[];
-    using routing_table::find;
-    using routing_table::invoke;
-    using routing_table::operator();
-    using routing_table::summary;
-    using routing_table::docroot;
+    basic_router() = delete;
+    basic_router(const basic_router<MountPointsT>&) = delete;
+    basic_router(basic_router<MountPointsT>&&) = delete;
+    basic_router(mountpoints_type&& mountpoints): detail_basic_router(std::forward<mountpoints_type>(mountpoints)) {}
+    basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): detail_basic_router(std::forward<mountpoints_type>(mountpoints), std::forward<udho::url::explorers::registry>(registry)) {}
 
     template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, void>& router){
-        const detail::routing_table<Mountpoints>& table = router;
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router){
+        const detail::routing_table<Mountpoints>& table = router.table();
         stream << table;
         return stream;
     }
-
-    using mountpoints_type = MountPointsT;
-
-    basic_router() = delete;
-    basic_router(const basic_router<MountPointsT>&) = delete;
-    basic_router(basic_router<MountPointsT>&&) = delete;
-
-    basic_router(mountpoints_type&& mountpoints): routing_table(std::move(mountpoints)) {}
-};
-
-/**
- * @brief Specialization with compiled asset store integration
- * @tparam MountPointsT Mount points sequence udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>
- *
- * Provides routing using mountpoints with access to assets from const_store.
- * Automatically serves assets when routes don't match.
- *
- * @note If there exists a file with matching path (including directory and file name) as an asset in the docroot then that file is served as the asset.
- */
-template <typename MountPointsT>
-struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: private detail::routing_table<MountPointsT>{
-
-    using routing_table = detail::routing_table<MountPointsT>;
-
-    using routing_table::operator[];
-    using routing_table::summary;
-    using routing_table::docroot;
-
-    template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints, udho::view::resources::asset::const_store>& router){
-        const detail::routing_table<Mountpoints>& table = router;
-        stream << table << "\n";
-        stream << router.assets();
-        return stream;
-    }
-
-    using mountpoints_type = MountPointsT;
-
-    basic_router() = delete;
-    basic_router(const basic_router<MountPointsT>&) = delete;
-    basic_router(basic_router<MountPointsT>&&) = delete;
-
-    basic_router(mountpoints_type&& mountpoints, const udho::view::resources::asset::const_store& assets): routing_table(std::move(mountpoints)), _assets(assets) {}
-
-    const udho::view::resources::asset::const_store& assets() const { return _assets; }
-
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = routing_table::find(subject);
-        if(!found){
-            return _assets.find(subject).valid();
-        }
-        return found;
-    }
-
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
-        if(!invoked){
-            return serve_asset(subject, std::forward<Args>(args)...);
-        }
-        return invoked;
-    }
-
-    template <typename... Args>
-    bool operator()(const std::string& url, Args&&... args) const {
-        return this->invoke(url, std::forward<Args>(args)...);
-    }
-
-    private:
-        template <typename Ch, typename ContextT>
-        bool serve_asset(const std::basic_string<Ch>& subject, ContextT& ctx) const {
-            bool success = _assets.serve(ctx, subject);
-            if(!success) {
-                std::string base_url = _assets.base();
-                if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
-                    base_url.insert(0, "/");
-                }
-                if (boost::starts_with(subject, base_url)) {
-                    // TODO server asset listing
-                    std::filesystem::path normalized_path = this->normalize(subject);
-
-                    namespace placeholders = udho::pages::system::layouts::placeholders;
-                    namespace places = udho::pages::system::layouts::places;
-
-                    auto layout     = udho::pages::system::layouts::listing(ctx);
-                    auto header     = udho::pages::system::data::listing_header{subject, docroot()};
-                    layout[placeholders::header]  = header;
-
-                    if(!normalized_path.empty() && std::filesystem::exists(normalized_path) && std::filesystem::is_directory(normalized_path)){
-                        auto directory  = udho::pages::system::data::directory_listing{normalized_path, docroot()};
-                        layout[places::files] = directory;
-                    }
-
-                    auto footer     = udho::pages::system::data::status_info{};
-
-                    layout[places::assets] = nullptr;
-                    layout[placeholders::footer]  = footer;
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return success;
-            }
-        }
-    private:
-        const udho::view::resources::asset::const_store& _assets;
 
 };
 
@@ -531,94 +288,24 @@ struct basic_router<MountPointsT, udho::view::resources::asset::const_store>: pr
  * Pure asset server configuration. Use when only serving assets without custom routes.
  */
 template <>
-struct basic_router<void, udho::view::resources::asset::const_store>: private detail::docroot_explorer{
+struct basic_router<void>: private detail::basic_router<void>{
+    using detail_basic_router   = detail::basic_router<void>;
+    using routing_table         = typename detail_basic_router::routing_table;
+    using mountpoints_type      = typename detail_basic_router::mountpoints_type;
 
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void, udho::view::resources::asset::const_store>& router){
-        stream << router.assets();
-        return stream;
-    }
-
+    using detail_basic_router::summary;
+    using detail_basic_router::find;
+    using detail_basic_router::invoke;
+    using detail_basic_router::operator();
 
     basic_router() = delete;
-    basic_router(const basic_router<void, udho::view::resources::asset::const_store>&) = delete;
-    basic_router(basic_router<void, udho::view::resources::asset::const_store>&&) = delete;
+    basic_router(const basic_router<void>&) = delete;
+    basic_router(basic_router<void>&&) = delete;
+    basic_router(udho::url::explorers::registry&& registry): detail_basic_router(std::forward<udho::url::explorers::registry>(registry)) {}
 
-    basic_router(const udho::view::resources::asset::const_store& assets): _assets(assets) {}
-
-    const udho::view::resources::asset::const_store& assets() const { return _assets; }
-
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = find_file(subject);
-        if(!found){
-            return _assets.find(subject).valid();
-        }
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
+        return stream;
     }
-
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        std::string base_url = _assets.base();
-        if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
-            base_url.insert(0, "/");
-        }
-        if (boost::starts_with(subject, base_url)) {
-            return serve_asset(subject, std::forward<Args>(args)...);
-        } else {
-            bool invoked = serve_local(subject, std::forward<Args>(args)...);
-            if(!invoked){
-                return serve_asset(subject, std::forward<Args>(args)...);
-            }
-            return invoked;
-        }
-    }
-
-    template <typename... Args>
-    bool operator()(const std::string& url, Args&&... args) const {
-        return this->invoke(url, std::forward<Args>(args)...);
-    }
-
-    const udho::url::summary::router& summary() const { return _summary; }
-
-    private:
-    template <typename Ch, typename ContextT>
-    bool serve_asset(const std::basic_string<Ch>& subject, ContextT& ctx) const {
-        bool success = _assets.serve(ctx, subject);
-        if(!success) {
-            std::string base_url = _assets.base();
-            if (base_url.empty() || base_url[0] != '/') { // Handle empty base()
-                base_url.insert(0, "/");
-            }
-            if (boost::starts_with(subject, base_url)) {
-                // TODO server asset listing
-                std::filesystem::path normalized_path = this->normalize(subject);
-
-                namespace placeholders = udho::pages::system::layouts::placeholders;
-                namespace places = udho::pages::system::layouts::places;
-
-                auto layout     = udho::pages::system::layouts::listing(ctx);
-                auto header     = udho::pages::system::data::listing_header{subject, docroot()};
-                layout[placeholders::header]  = header;
-
-                if(!normalized_path.empty() && std::filesystem::exists(normalized_path) && std::filesystem::is_directory(normalized_path)){
-                    auto directory  = udho::pages::system::data::directory_listing{normalized_path, docroot()};
-                    layout[places::files] = directory;
-                }
-
-                auto footer     = udho::pages::system::data::status_info{};
-
-                layout[places::assets] = nullptr;
-                layout[placeholders::footer]  = footer;
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return success;
-        }
-    }
-    private:
-        const udho::view::resources::asset::const_store& _assets;
-        udho::url::summary::router _summary;
 
 };
 
@@ -701,40 +388,61 @@ struct basic_router<void, udho::view::resources::asset::const_store>: private de
  * );
  * @endcode
  */
-template <typename MountPointsT, typename std::enable_if<!std::is_same<std::decay_t<MountPointsT>, udho::view::resources::asset::const_store>::value, int>::type = 0>
-basic_router<MountPointsT, void> router(MountPointsT&& mountpoints){
-    return basic_router<MountPointsT, void>{std::move(mountpoints)};
-}
-
-/**
- * @brief Create router with asset store (parameter order 1)
- * @param mountpoints Routing configuration
- * @param assets asset store
- * @return Router with asset support
- */
 template <typename MountPointsT>
-basic_router<MountPointsT, udho::view::resources::asset::const_store> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets){
-    return basic_router<MountPointsT, udho::view::resources::asset::const_store>{std::move(mountpoints), assets};
+basic_router<MountPointsT> router(MountPointsT&& mountpoints, udho::url::explorers::registry&& registry){
+    return basic_router<MountPointsT>{std::forward<MountPointsT>(mountpoints), std::forward<udho::url::explorers::registry>(registry)};
 }
 
-/**
- * @brief Create router with asset store (parameter order 2)
- * @param assets asset store
- * @param mountpoints Routing configuration
- * @return Router with asset support
- */
 template <typename MountPointsT>
-basic_router<MountPointsT, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets, MountPointsT&& mountpoints){
-    return basic_router<MountPointsT, udho::view::resources::asset::const_store>{std::move(mountpoints), assets};
+basic_router<MountPointsT> router(MountPointsT&& mountpoints){
+    return basic_router<MountPointsT>{std::forward<MountPointsT>(mountpoints)};
 }
 
 /**
- * @brief Create asset-only router without mount points
- * @param assets asset store
- * @return Pure asset server router
+ * @brief Create explorer router without mount points
+ * @param explorer
+ * @return Pure explorer based server router
  */
-inline basic_router<void, udho::view::resources::asset::const_store> router(const udho::view::resources::asset::const_store& assets){
-    return basic_router<void, udho::view::resources::asset::const_store>{assets};
+inline basic_router<void> router(udho::url::explorers::registry&& registry){
+    return basic_router<void>{std::forward<udho::url::explorers::registry>(registry)};
+}
+
+template <typename... ExplorerT>
+inline basic_router<void> router(ExplorerT&&... explorers){
+    return basic_router<void>{udho::url::explorers::registry{std::move(explorers)...}};
+}
+
+template <typename MountPointsT>
+basic_router<MountPointsT> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets){
+    using router_type = basic_router<MountPointsT>;
+
+    return  router_type{
+                std::forward<MountPointsT>(mountpoints),
+                udho::url::explorers::registry{
+                    udho::url::explorers::assets{"assets", assets}
+                }
+            };
+}
+
+inline basic_router<void> router(const udho::view::resources::asset::const_store& assets){
+    using router_type = basic_router<void>;
+
+    return  router_type{
+                udho::url::explorers::registry{
+                    udho::url::explorers::assets{"assets", assets}
+                }
+            };
+}
+
+inline basic_router<void> router(const udho::view::resources::asset::const_store& assets, const std::filesystem::path& docroot){
+    using router_type = basic_router<void>;
+
+    return  router_type{
+        udho::url::explorers::registry{
+            udho::url::explorers::files{"docroot", docroot},
+            udho::url::explorers::assets{"assets", assets}
+        }
+    };
 }
 
 /// @}

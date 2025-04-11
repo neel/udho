@@ -31,6 +31,8 @@
 #include <udho/view/resources/tmpl/substore.h>
 #include <udho/view/resources/tmpl/store.h>
 #include <udho/view/resources/asset/store.h>
+#include <udho/view/resources/asset/const_store.h>
+#include <udho/view/resources/asset/const_substore.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/data/data.h>
 #include <scn/scn.h>

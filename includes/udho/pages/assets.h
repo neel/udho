@@ -372,6 +372,50 @@ table.udho-directory-listing td:nth-child(5) {
 }
 )ASSET";
 
+constexpr static char css_tabs[] = R"TABS(
+.tab-container {
+    margin: 20px auto;
+    font-family: Arial, sans-serif;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 5px;
+    margin-bottom: -1px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 5px 5px 0 0;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.tab-btn:hover {
+    background: #ddd;
+}
+
+.tab-btn.active-tab {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 0 5px 5px 5px;
+}
+
+.tab-content.active-content {
+    display: block;
+}
+)TABS";
+
+
+
 static constexpr unsigned char beral_transp_gif[] = {
     0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x73, 0x01, 0x00, 0x01, 0xe7, 0xd3, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x05, 0x05, 0x05, 0x06,
     0x06, 0x06, 0x07, 0x07, 0x07, 0x08, 0x08, 0x08, 0x09, 0x09, 0x09, 0x0a, 0x0a, 0x0a, 0x0b, 0x0b, 0x0b, 0x0c, 0x0c, 0x0c, 0x0d, 0x0d, 0x0d, 0x0e, 0x0e, 0x0e, 0x0f, 0x0f, 0x0f, 0x10, 0x10, 0x10,
@@ -804,6 +848,7 @@ void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
                     << udho::view::resources::asset::css("assets.css",  std::begin(css_assets),  std::end(css_assets))
+                    << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
 }
 

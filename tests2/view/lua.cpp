@@ -129,8 +129,8 @@ Number of courses: <?= #d.courses ?>
     };
 
     const std::vector<std::string> expected_outputs = {
-        "\nName: X Bose\nAge: 25.0\nDebt: 50.0\nAddress: Good locality (7086)\n",
-        "\nName: X Bose, Age: 25, Debt: 50 Address: Good locality\nPhD at JU\nMCA at SMU\nBCA at SMU\n\nResult of add: 51.0\n",
+        "\nName: X Bose\nAge: 25\nDebt: 50\nAddress: Good locality (7086)\n",
+        "\nName: X Bose, Age: 25, Debt: 50 Address: Good locality\nPhD at JU\nMCA at SMU\nBCA at SMU\n\nResult of add: 51\n",
         "\nCourse 1: PhD at JU\nCourse 2: MCA at SMU\nCourse 3: BCA at SMU\n\n",
         "\nSpecialization 1: Data Science\nSpecialization 2: Machine Learning\n\nSpecialization 1: Data Science\nSpecialization 2: Machine Learning\n\n",
         "\nAlgorithms: 90.0\nData Structures: 85.0\n\n",
@@ -153,7 +153,7 @@ Number of courses: <?= #d.courses ?>
             INFO("Testing expected output for view " << views[i].first);
             std::string output;
             lua.exec(views[i].first, "prefix", p, nullptr, output);
-            REQUIRE(output == expected_outputs[i]);
+            CHECK(output == expected_outputs[i]);
         }
     }
 

@@ -594,7 +594,7 @@ struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<!has_less_than_
   private:
     container_type  _container;
     properties_type _properties;
-    locker_type     _locker;
+    mutable locker_type _locker;
 };
 
 template <typename KeyT, bool Multi = false>

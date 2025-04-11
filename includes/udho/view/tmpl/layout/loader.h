@@ -2,15 +2,12 @@
 #define UDHO_VIEW_LAYOUT_LOADER_H
 
 #include <set>
-#include <map>
 #include <string>
-#include <optional>
-#include <exception>
 #include <udho/url/detail/format.h>
 #include <udho/view/tmpl/layout/property_map.h>
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/resources/fwd.h>
-#include <udho/view/resources/asset/store.h>
+#include <udho/view/resources/asset/const_substore.h>
 
 namespace udho{
 namespace view{

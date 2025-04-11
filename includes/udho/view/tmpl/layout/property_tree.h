@@ -1,11 +1,9 @@
 #ifndef UDHO_VIEW_LAYOUT_PROPERTY_TREE_H
 #define UDHO_VIEW_LAYOUT_PROPERTY_TREE_H
 
-#include <map>
+#include <vector>
 #include <string>
-#include <optional>
-#include <exception>
-#include <exception>
+#include <cstdint>
 #include <udho/view/tmpl/layout/property_map.h>
 
 namespace udho{

@@ -82,8 +82,7 @@ SET(UDHO_SOURCES
     sources/udho/page.cpp
 )
 
-ADD_EXECUTABLE(sandbox sandbox.cpp
-    includes/udho/url/explorers.h)
+ADD_EXECUTABLE(sandbox sandbox.cpp)
 TARGET_LINK_LIBRARIES(sandbox udho)
 ADD_EXECUTABLE(sandbox2 sandbox2.cpp)
 TARGET_LINK_LIBRARIES(sandbox2 udho)

@@ -1,11 +1,8 @@
 #ifndef UDHO_VIEW_LAYOUT_DOCUMENT_H
 #define UDHO_VIEW_LAYOUT_DOCUMENT_H
 
-#include <set>
 #include <map>
 #include <string>
-#include <optional>
-#include <exception>
 #include <udho/url/detail/format.h>
 #include <udho/view/tmpl/layout/loader.h>
 #include <udho/view/tmpl/layout/property_map.h>

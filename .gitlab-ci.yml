@@ -43,6 +43,10 @@ build:ubuntu:noble:
     - apt-get install -y build-essential checkinstall zlib1g-dev
     - apt-get install -y libboost-all-dev cmake gcc clang git curl libcurl4-gnutls-dev wget libssl-dev libpugixml-dev nlohmann-json3-dev libpq-dev postgresql-server-dev-all catch2 doxygen liblua5.3-dev tao-pegtl-dev libmagic-dev
   script:
+    - cd vendor
+    - git submodule init
+    - git submodule update --init --recursive --force
+    - cd ..
     - mkdir build
     - cd build
     - cmake -DPostgreSQL_TYPE_INCLUDE_DIR=/usr/include/postgresql/ ..

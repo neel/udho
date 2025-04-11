@@ -337,6 +337,8 @@ namespace detail{
             std::string symbol;
             if(_info.dli_saddr){
                 symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            } else {
+                symbol = "dli_saddr::dli_saddr null";
             }
             static std::string cxx_string_expanded_type = "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >";
             boost::replace_all(symbol, cxx_string_expanded_type, "std::string");

@@ -17,34 +17,6 @@ namespace layouts{
 
 namespace l = udho::view::tmpl::layout;
 
-template <class DocumentT>
-struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
-    using default_presenter_ = l::default_presenter<DocumentT, presenter<DocumentT>>;
-    using basic_presenter_   = typename default_presenter_::basic_presenter_;
-
-    presenter(const DocumentT& doc): default_presenter_(doc) {}
-
-    using default_presenter_::operator();
-    template <typename KeyT, typename Stream>
-    void operator()(const KeyT& key, const std::string& str, Stream& stream, std::size_t i, std::size_t len) const {
-        basic_presenter_::present(key, str, stream, i, len);
-    }
-
-    template <typename KeyT, typename Stream>
-    void operator()(const KeyT& key, const std::string& str, Stream& stream) const {
-        basic_presenter_::present(key, str, stream);
-    }
-
-    template <typename Stream>
-    void render(Stream& stream) const {
-        stream << "<body>";
-        stream <<   "<div class='system'>";
-        basic_presenter_::document().apply(*this, stream);
-        stream <<   "</div>";
-        stream << "</body>";
-    }
-};
-
 namespace places {
 namespace segments {
     struct files{};
@@ -57,7 +29,7 @@ namespace placeholders = l::placeholders;
 
 using minimal = l::basic_placeholder<
     l::spot<placeholders::segments::header>,
-    l::spot<places::segments::files>,
+    l::multispot<places::segments::files>,
     l::spot<places::segments::assets>,
     l::spot<placeholders::segments::footer>
 >;
@@ -66,6 +38,99 @@ namespace places{
     static segments::files files;
     static segments::assets assets;
 }
+
+template <class DocumentT>
+struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
+    using default_presenter_ = l::default_presenter<DocumentT, presenter<DocumentT>>;
+    using basic_presenter_   = typename default_presenter_::basic_presenter_;
+
+    presenter(const DocumentT& doc): default_presenter_(doc), _doc(doc) {}
+
+    using default_presenter_::operator();
+
+    template <typename Stream>
+    void render(Stream& stream) const {
+        namespace p = l::placeholders;
+
+        bool tab_active = false;
+
+        stream << "<body>";
+        stream <<   "<div class='system'>";
+        if(_doc[p::header].exists())
+            basic_presenter_::present(p::header, *_doc[p::header], stream);
+
+        stream <<       "<div class='tab-container'>";
+        stream <<           "<div class='tab-buttons'>";
+        stream <<           "</div>";
+
+        bool content_active = false;
+        for(auto i = 0; i < _doc[places::files].count(); ++i){
+            std::string tab_content = !content_active ? "tab-content" : "tab-content active-content";
+            content_active = true;
+
+            stream << "<div class='"+ tab_content +"'>";
+            stream << _doc[places::files][i];
+            stream << "</div>";
+        }
+
+        if(_doc[places::assets].exists()){
+            std::string tab_content = !content_active ? "tab-content" : "tab-content active-content";
+            content_active = true;
+
+            stream << "<div class='"+ tab_content +"'>";
+            stream << *_doc[places::assets];
+            stream << "</div>";
+        }
+
+        stream <<       "</div>";
+        stream <<   "</div>";
+        stream <<     R"SCRIPT(<script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const tabButtonsContainer = document.querySelector('.tab-buttons');
+                            const tabContents = document.querySelectorAll('.tab-content');
+
+                            // Generate buttons based on existing content
+                            tabContents.forEach(contentDiv => {
+                                const listingContainer = contentDiv.querySelector('.listing-container:first-child');
+                                if (!listingContainer || !listingContainer.id) return;
+
+                                const button = document.createElement('button');
+                                button.className = 'tab-btn';
+                                button.textContent = listingContainer.id.charAt(0).toUpperCase() + listingContainer.id.slice(1); // Capitalize first letter
+                                button.setAttribute('data-target', listingContainer.id);
+
+                                // Set initial active tab
+                                if (contentDiv.classList.contains('active-content')) {
+                                    button.classList.add('active-tab');
+                                }
+
+                                tabButtonsContainer.appendChild(button);
+                            });
+
+                            // Add click handlers
+                            tabButtonsContainer.addEventListener('click', (e) => {
+                                if (!e.target.classList.contains('tab-btn')) return;
+
+                                // Remove active classes
+                                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+                                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active-content'));
+
+                                // Set new active
+                                const targetId = e.target.dataset.target;
+                                e.target.classList.add('active-tab');
+                                const targetContent = document.getElementById(targetId).closest('.tab-content');
+                                if (targetContent) {
+                                    targetContent.classList.add('active-content');
+                                }
+                            });
+                        });
+        </script>)SCRIPT";
+        stream << "</body>";
+    }
+
+    private:
+    const DocumentT& _doc;
+};
 
 template <typename ContextT>
 using sys = udho::view::tmpl::layout::basic_layout<

@@ -52,6 +52,24 @@ struct X{
     }
 };
 
+TEST_CASE("DL_info", "[url][dlinfo]"){
+    void (X::* pFunc)() = &X::f0;
+    void* ptr = (void*&)pFunc;
+
+    Dl_info f0_info, f1_info, xf0_info;
+    dladdr(reinterpret_cast<void *>(&f0), &f0_info);
+    dladdr(reinterpret_cast<void *>(&f1), &f1_info);
+    dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
+
+    std::string f0_name{abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL)};
+    std::string f1_name{abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL)};
+    std::string xf0_name{abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL)};
+
+    CHECK(f0_name == "f0");
+    CHECK(f1_name == "f1");
+    CHECK(xf0_name == "X::f0");
+}
+
 TEST_CASE("Regex matching operations", "[url][regex]") {
     udho::url::pattern::match<udho::url::pattern::formats::regex, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
 
@@ -285,7 +303,7 @@ TEST_CASE("url common functionalities using regex", "[url][router]") {
     // std::cout << mount_point << std::endl;
     auto chain4 = std::move(mount_point) | udho::url::mount_point("root"_h, "/", std::move(chain3));
 
-    std::cout << chain4 << std::endl;
+    std::cout << "chain4" << std::endl << chain4 << std::endl;
 
     auto router = udho::url::router(std::move(chain4));
 
@@ -295,20 +313,4 @@ TEST_CASE("url common functionalities using regex", "[url][router]") {
     CHECK(router.find(std::string("/pchain/f1/23/hello/24/1")) == true);
     CHECK(router.find(std::string("/f1/23/hello/24/1"))        == true);
     CHECK(router.find(std::string("f1/23/hello/24/1"))         == false);
-
-
-
-    // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
-
-    // void (X::* pFunc)() = &X::f0;
-    // void* ptr = (void*&)pFunc;
-    //
-    // Dl_info f0_info, f1_info, xf0_info;
-    // dladdr(reinterpret_cast<void *>(&f0), &f0_info);
-    // dladdr(reinterpret_cast<void *>(&f1), &f1_info);
-    // dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
-    //
-    // std::cout << abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    // std::cout << abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    // std::cout << abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL) << std::endl;
 }

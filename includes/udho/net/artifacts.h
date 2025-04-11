@@ -17,8 +17,8 @@ namespace detail{
 
 template <typename T>
 struct is_router: std::false_type{};
-template <typename MountPointsT, typename StoreT>
-struct is_router<udho::url::basic_router<MountPointsT, StoreT>>: std::true_type{};
+template <typename MountPointsT>
+struct is_router<udho::url::basic_router<MountPointsT>>: std::true_type{};
 
 template <typename T>
 struct is_resource_store: std::false_type{};

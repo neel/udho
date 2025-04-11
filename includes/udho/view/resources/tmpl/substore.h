@@ -132,7 +132,9 @@ class tmpl_view_registration_info{
 
     public:
         tmpl_view_registration_info() = delete;
-        tmpl_view_registration_info(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {}
+        tmpl_view_registration_info(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {
+            assert(prefix.front() != '/' && prefix.back() != '/');
+        }
         tmpl_view_registration_info(const tmpl_view_registration_info&) = default;
     public:
         /**
@@ -262,12 +264,17 @@ struct substore{
 
     /**
      * @brief Adds a resource to the bundle and prepares it for use by compiling it through the bridge.
+     * @pre expects that the store is locked before adding.
+     *      prefix must not contain a leading or trailing slash
      * @note throws exception if resource is being added after the store is locked.
      * @param prefix The prefix used in resource identification.
      * @param res The resource to add and compile.
      */
     void add(const std::string& prefix, udho::view::resources::tmpl::resource&& res) {
         if(!locked()){
+            if(prefix.front() == '/' || prefix.back() == '/') {
+                throw std::runtime_error{udho::url::format("Restriction: Prefix must not contain a leading or trailing slash, violated by prefix `{}`", prefix)};
+            }
             _resources.insert(tmpl_view_registration_info{prefix, res.name()});
             _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
         } else {

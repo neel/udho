@@ -29,10 +29,9 @@
 #ifndef UDHO_VIEW_RESOURCES_ASSET_IO_H
 #define UDHO_VIEW_RESOURCES_ASSET_IO_H
 
-#include <udho/view/resources/asset/store.h>
+#include <udho/view/resources/asset/const_store.h>
 #include <udho/url/tabulate.h>
-
-
+#include <udho/view/resources/asset/utils.h>
 
 namespace udho{
 namespace view{
@@ -43,22 +42,7 @@ namespace asset{
 inline tabulate::Table& operator<<(tabulate::Table& table, const udho::view::resources::asset::const_store& store){
     table.add_row({"prefix", "name", "type", "mime", "url"});
     for(const auto& asset: store){
-        std::string asset_type_str = "unkown";
-        switch(asset.type()){
-            case type::css:
-                asset_type_str = "css";
-                break;
-            case type::js:
-                asset_type_str = "js";
-                break;
-            case type::txt:
-                asset_type_str = "txt";
-                break;
-            case type::img:
-                asset_type_str = "img";
-                break;
-        }
-
+        std::string asset_type_str = udho::view::resources::asset::utils::to_string(asset.type());
         table.add_row({
             asset.prefix(),
             asset.name(),

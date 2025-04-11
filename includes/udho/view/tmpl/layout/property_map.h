@@ -4,8 +4,6 @@
 #include <map>
 #include <string>
 #include <optional>
-#include <exception>
-#include <exception>
 
 namespace udho{
 namespace view{

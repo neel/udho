@@ -110,7 +110,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{resources};
 
-    auto router = udho::url::router(cstore.assets());
+    auto router = udho::url::router(udho::url::explorers::files{"docroot"}, udho::url::explorers::assets{"assets", cstore.assets()}, udho::url::explorers::files{"logroot", "/var/log"});
 
     std::cout << router << std::endl;
 

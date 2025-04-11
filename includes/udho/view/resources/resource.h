@@ -380,7 +380,7 @@ namespace asset{
          * @param type The type of the resource.
          * @param owned Indicates whether the resource is owned by this object.
          */
-        inline abstract_resource(const std::string& name, asset::type type, bool owned): _name(name), _type(type), _owned(owned) {}
+        inline abstract_resource(const std::string& name, asset::type type, asset::source::type source, bool owned): _name(name), _type(type), _source(source), _owned(owned) {}
 
         /**
          * @brief Get the name of the resource.
@@ -393,7 +393,7 @@ namespace asset{
          * @return bool True if the resource is owned, false otherwise.
          */
         inline bool owned() const { return _owned; }
-
+        asset::source::type source() const { return _source; }
         asset::type type() const { return _type; }
 
         /**
@@ -413,6 +413,7 @@ namespace asset{
         private:
             std::string   _name;
             asset::type   _type;
+            asset::source::type _source;
             bool          _owned;
     };
 
@@ -486,7 +487,7 @@ namespace asset{
         using policy_type  = asset_policy<AssetType>;
         using basic_type   = basic_resource<AssetType>;
 
-        basic_resource(const std::string& name, bool owned): abstract_resource(name, AssetType, owned), asset_policy<AssetType>(*this) {}
+        basic_resource(const std::string& name, asset::source::type source, bool owned): abstract_resource(name, AssetType, source, owned), asset_policy<AssetType>(*this) {}
 
 
         /**
@@ -533,7 +534,7 @@ namespace asset{
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
-        common_resource(const std::string& name, const std::string mime, Args&&... args): basic_resource<AssetType>(name, Owned), _storage(std::forward<Args>(args)...) {
+        common_resource(const std::string& name, const std::string mime, Args&&... args): basic_resource<AssetType>(name, Source::source, Owned), _storage(std::forward<Args>(args)...) {
             if(mime.empty()){
                 if (AssetType == asset::type::js) {
                     basic_type::mime("application/javascript");
@@ -589,7 +590,7 @@ namespace asset{
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
-        common_resource(const std::string& name, Args&&... args): basic_resource<AssetType>(name, false), _storage(std::forward<Args>(args)...) {}
+        common_resource(const std::string& name, Args&&... args): basic_resource<AssetType>(name, asset::source::remote::source, false), _storage(std::forward<Args>(args)...) {}
 
         const storage_type& storage() const { return _storage; }
 

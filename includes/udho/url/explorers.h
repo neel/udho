@@ -8,87 +8,171 @@
 #include <udho/pages/layouts.h>
 #include <udho/pages/data.h>
 #include <udho/view/bridges/lua.h>
+#include <udho/url/utils.h>
 
 namespace udho{
 namespace url{
+namespace explorers {
 
-namespace utils{
+namespace detail{
 
-template <typename Ch>
-inline std::filesystem::path normalize_path(const std::basic_string<Ch>& subject, const std::filesystem::path& root = std::filesystem::current_path()) {
-    std::string relative_subject = subject;
-    if (!relative_subject.empty() && relative_subject[0] == '/') {
-        relative_subject.erase(0, 1); // Remove the leading slash if present
-    }
+template <typename T>
+struct is_unique_ptr_: public std::false_type{};
+template <typename T, typename D>
+struct is_unique_ptr_<std::unique_ptr<T, D>>: public std::true_type{};
+template <typename T>
+using is_unique_ptr = is_unique_ptr_<std::remove_cv_t<std::remove_reference_t<T>>>;
+template<typename T>
+constexpr bool is_unique_ptr_v = is_unique_ptr<T>::value;
 
-    std::filesystem::path requested_path = root / relative_subject;
-    std::filesystem::path normalized_path;
-    try {
-        normalized_path = std::filesystem::weakly_canonical(requested_path);
-        if (!boost::algorithm::starts_with(normalized_path.string(), root.string())) {
-            std::cout << "Security alert: Attempted access outside of the document root. " << normalized_path << " " << root << std::endl;
-            return std::filesystem::path{};
-        }
-    } catch(const std::filesystem::filesystem_error& e) {
-        std::cout << "Filesystem error: " << e.what() << std::endl;
-        return std::filesystem::path{};
-    }
-    return normalized_path;
+template <typename T>
+struct is_shared_ptr_: public std::false_type{};
+template <typename T>
+struct is_shared_ptr_<std::shared_ptr<T>>: public std::true_type{};
+template <typename T>
+using is_shared_ptr = is_shared_ptr_<std::remove_cv_t<std::remove_reference_t<T>>>;
+template< typename T >
+constexpr bool is_shared_ptr_v = is_shared_ptr<T>::value;
+
+template <typename T>
+struct is_smart_ptr: std::bool_constant<is_shared_ptr_v<T> || is_unique_ptr_v<T>> {};
+
 }
 
 /**
- * @brief Determines MIME type of a file using libmagic
- * @param path Filesystem path to analyze
- * @return MIME type as string
- * @note Requires libmagic development files during compilation
+ * @brief Abstract base class for resource explorers providing unified interface for file/asset access
+ *
+ * This class defines the common interface for exploring different types of resources,
+ * whether they exist in the filesystem or as embedded assets. Derived classes must
+ * implement the core functionality for checking existence, serving content, and listing resources.
  */
-inline std::string mime_type(const std::filesystem::path& path) {
-    magic_t magic = magic_open(MAGIC_MIME_TYPE);
-    magic_load(magic, nullptr);
-    const char* mime_type = magic_file(magic, path.c_str());
-    std::string result = mime_type ? mime_type : "application/octet-stream";
-    magic_close(magic);
-    return result;
-}
-
-}
-
-struct files_explorer{
+struct abstract_explorer {
     using context_type = udho::net::context<udho::view::data::bridges::lua>;
 
-    explicit inline files_explorer(const std::filesystem::path& root = std::filesystem::current_path()): _root(root){}
+    inline explicit abstract_explorer(const std::string& label): _label(label) {}
+    virtual ~abstract_explorer() = default;
+
+    const std::string& label() const { return _label; }
+
+    /**
+     * @brief Check if a resource exists at the given path
+     * @param subject Path to the resource to check
+     * @return true if the resource exists and is accessible, false otherwise
+     */
+    virtual bool exists(const std::string& subject) const = 0;
+
+    /**
+     * @brief Check if the path represents a valid resource container (directory/prefix)
+     * @param subject Path to check
+     * @return true if the path is a valid container that can be listed
+     */
+    virtual bool is_subset(const std::string& subject) const = 0;
+
+    /**
+     * @brief Serve the content of a resource through a network stream
+     * @param subject Path to the resource to serve
+     * @param stream Network stream to write the content to
+     * @return true if the resource was successfully served, false otherwise
+     */
+    virtual bool cat(const std::string& subject, udho::net::stream& stream) const = 0;
+
+    inline static udho::pages::system::layouts::sys<context_type> layout(context_type ctx) {
+        return udho::pages::system::layouts::listing(ctx);
+    }
+
+    /**
+     * @brief List contents of a resource container
+     * @param subject Path to the container to list
+     * @param ctx Rendering context for generating the listing
+     * @return true if the listing was successfully generated, false otherwise
+     */
+    virtual bool ls(const std::string& subject, context_type ctx) const {
+        if(is_subset(subject)) {
+            auto l = layout(ctx);
+            ls(subject, ctx, l);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    virtual udho::pages::system::layouts::sys<context_type>& ls(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const {
+        namespace placeholders  = udho::pages::system::layouts::placeholders;
+
+        if(is_subset(subject)) {
+            populate(subject, ctx, layout);
+            if(!layout[placeholders::footer].exists()){
+                layout[placeholders::footer] = udho::pages::system::data::status_info{};
+            }
+        }
+
+        return layout;
+    }
+
+    bool serve(const std::string& subject, context_type ctx) const {
+        bool found = false;
+        if(exists(subject)){
+            found = cat(subject, ctx);
+        } else if(is_subset(subject)){
+            found = ls(subject, ctx);
+        }
+        return found;
+    }
+
+    protected:
+    virtual udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const = 0;
+
+    // virtual abstract_explorer* clone() const = 0;
+
+    private:
+    std::string _label;
+};
+
+/**
+ * @class files
+ * @brief Filesystem-based resource explorer
+ *
+ * Serves static files from the filesystem.
+ * Manages document root directory and ensures secure path resolution.
+ */
+struct files: public abstract_explorer {
+    using context_type = abstract_explorer::context_type;
+
+    // files* clone() const override { return new files(*this); }
 
     /**
      * @brief Gets the current document root
      * @return Const reference to the document root path
      */
-    inline const std::filesystem::path& root() const {
-        return _root;
-    }
+    inline const std::filesystem::path& root() const { return _root; }
+    explicit inline files(const std::string& label, const std::filesystem::path& root = std::filesystem::current_path()): abstract_explorer(label), _root(root){}
+
     /**
      * @brief Checks if a normalized file path exists
      * @param subject Path to check
      * @return true if file exists and is regular, false otherwise
      */
-    inline bool exists(const std::string& subject) const {
+    inline bool exists(const std::string& subject) const override {
         std::filesystem::path normalized_path = normalize(subject);
         return
             !normalized_path.empty()
             && std::filesystem::exists(normalized_path)
             && std::filesystem::is_regular_file(normalized_path);
     }
+
     /**
      * @brief Checks if a normalized file path exists as a directory inside root
      * @param subject Path to check
      * @return true if directory exists false otherwise
      */
-    inline bool is_subset(const std::string& subject) const {
-        std::filesystem::path normalized_path = utils::normalize_path(subject);
+    inline bool is_subset(const std::string& subject) const override {
+        std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
         return
-                  !normalized_path.empty()
-               && std::filesystem::exists(normalized_path)
-               && std::filesystem::is_directory(normalized_path);
+            !normalized_path.empty()
+            && std::filesystem::exists(normalized_path)
+            && std::filesystem::is_directory(normalized_path);
     }
+
     /**
      * @brief Serves a file through the provided stream
      * @param subject Path to serve
@@ -96,60 +180,31 @@ struct files_explorer{
      * @return true if file was served successfully, false otherwise
      * @throws Propagates filesystem errors and libmagic exceptions
      */
-    inline bool cat(const std::string& subject, udho::net::stream& stream) const {
+    inline bool cat(const std::string& subject, udho::net::stream& stream) const override {
         if(exists(subject)) {
-            std::filesystem::path normalized_path = utils::normalize_path(subject);
+            std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
             return serve_file(normalized_path, stream);
         } else {
             return false;
         }
     }
-    /**
-     * @brief serves a directory or file from docroot
-     * @param subject Path to serve
-     * @param ctx context
-     * @return boolean value indicating success
-     */
-    bool ls(const std::string& subject, context_type ctx) const {
-        if(is_subset(subject)) {
-            std::filesystem::path normalized_path = utils::normalize_path(subject);
-            auto layout     = udho::pages::system::layouts::listing(ctx);
-            ls(subject, ctx, layout);
-            return true;
-        } else {
-            return false;
-        }
+
+    static std::unique_ptr<files> create(const std::string& label, const std::filesystem::path& root = std::filesystem::current_path()){
+        return std::unique_ptr<files>(new files{label, root});
     }
-    /**
-     * @brief serves a directory or file from docroot by populating an existing layout
-     * @param subject Path to serve
-     * @param ctx context
-     * @param layout layout to populate
-     * @return the same layout (populated only is the subject is_subset of the root)
-     */
-    template <typename ContextT>
-    udho::pages::system::layouts::sys<ContextT>& ls(const std::string& subject, ContextT ctx, udho::pages::system::layouts::sys<ContextT>& layout) const {
+
+  protected:
+    virtual udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const override {
+        namespace places        = udho::pages::system::layouts::places;
         namespace placeholders  = udho::pages::system::layouts::placeholders;
-        namespace places        = udho::pages::system::layouts::places;
 
-        if(is_subset(subject)) {
-            std::filesystem::path normalized_path = utils::normalize_path(subject);
-            if(!layout[placeholders::header].exists()){
-                layout[placeholders::header] = udho::pages::system::data::listing_header{subject, _root};
-            }
-            populate(normalized_path, ctx, layout);
-            if(!layout[placeholders::header].exists()){
-                layout[placeholders::footer] = udho::pages::system::data::status_info{};
-            }
+        std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
+
+        if(!layout[placeholders::header].exists()){
+            layout[placeholders::header] = udho::pages::system::data::listing_header{normalized_path, _root};
         }
 
-        return layout;
-    }
-  private:
-    template <typename ContextT>
-    udho::pages::system::layouts::sys<ContextT>& populate(const std::string& subject, ContextT ctx, udho::pages::system::layouts::sys<ContextT>& layout) const {
-        namespace places        = udho::pages::system::layouts::places;
-        layout[places::files]   = udho::pages::system::data::directory_listing{subject, _root};
+        layout[places::files] += udho::pages::system::data::directory_listing{label(), normalized_path, _root};
         return layout;
     }
 
@@ -190,69 +245,250 @@ struct files_explorer{
     std::filesystem::path      _root;
 };
 
-struct asset_explorer{
-    asset_explorer(const udho::view::resources::asset::const_store& assets, const std::string base): _assets(assets), _base(base) {}
+/**
+ * @class assets
+ * @brief Embedded asset resource explorer
+ *
+ * Serves static files from the asset store.
+ */
+struct assets: public abstract_explorer {
+    using context_type = abstract_explorer::context_type;
 
-    inline bool exists(const std::string& subject) const {
-        return _assets.find(_base+subject) != _assets.end();
+    assets(const std::string& label, const udho::view::resources::asset::const_store& assets): abstract_explorer(label), _assets(assets) {}
+
+    // assets* clone() const override { return new assets(*this); }
+
+    /**
+     * @brief Checks if the path exists
+     * @param subject Path to check
+     * @return true if path exists
+     */
+    inline bool exists(const std::string& subject) const override {
+        return _assets.find(subject) != _assets.end();
     }
-    inline bool is_subset(const std::string& subject) const {
-        std::string sub = _base+subject;
+
+    /**
+     * @brief Checks if a path exists as a prefix
+     * @param subject Path to check
+     * @return true if a prefix exists false otherwise
+     */
+    inline bool is_subset(const std::string& subject) const override {
+        std::string sub = utils::slash_quote(subject);          // _base starts and ends with / -> sub starts with /
         for(auto p: _assets.prefixes()){
-            const std::string& prefix = p.prefix();
-            auto it = std::find_first_of(p.begin(), p.end(), sub.begin(), sub.end());
-            if(it != p.end()){
-                auto sub_it = sub.begin();
-                std::advance(sub_it, prefix.size());
-                if(sub_it == sub.end()){
-                    return true;
-                } else {
-                    return *sub_it == '/' || *(sub_it+1) == '/';
+            const std::string& prefix = p.prefix();                     // prefix does not contain any leading or trailing /
+            std::string prefix_q = utils::slash_quote(utils::slash_concat(_assets.base(), prefix));          // prefix_q starts and ends with /
+            bool prefix_matched = boost::starts_with(sub, _assets.base()) && boost::starts_with(prefix_q, sub);    // prefix_q starts with the sub
+            if(prefix_matched){
+                if(sub.size() == prefix_q.size()){                      // complete match implies |sub| = |prefix_q|
+                    return true;                                        // fully matches with a prefix
+                } else {                                                // partial match implies |sub| < |prefix_q|
+                                                                        // but both sub and prefix_q ends with /
+                                                                        // therefore the last / of sub must have matched
+                                                                        // with some intermediate slash of prefix_q
+                    return true;                                        // fully matches with a subprefix
                 }
             }
         }
         return false;
     }
-    inline bool cat(const std::string& subject, udho::net::stream& stream) const {
+
+    /**
+     * @brief Serves aan asset through the provided stream
+     * @param subject path to asset
+     * @param stream network stream to write to
+     * @return true if an asset was served successfully, false otherwise
+     * @throws Propagates filesystem errors and libmagic exceptions
+     */
+    inline bool cat(const std::string& subject, udho::net::stream& stream) const override {
         if(exists(subject)){
-            std::string sub = _base+subject;
             return _assets.serve(stream, subject);
         }
         return false;
     }
-    template <typename ContextT>
-    bool ls(const std::string& subject, ContextT ctx) const {
-        std::string sub = _base+subject;
-        for(auto p: _assets.prefixes()){
-            const std::string& prefix = p.prefix();
-            auto it = std::find_first_of(p.begin(), p.end(), sub.begin(), sub.end());
-            if(it != p.end()){
-                auto sub_it = sub.begin();
-                std::advance(sub_it, prefix.size());
-                if(sub_it == sub.end()){
-                    // TODO inside a prefix
-                    // List all assets inside it
-                } else {
-                    if(*sub_it == '/' || *(sub_it+1) == '/'){
-                        // partially inside a prefix
-                        // List the rest of the sub as a subprefix
-                    }
-                }
-            }
-        }
-        return false;
+
+    static std::unique_ptr<assets> create(const std::string& label, const udho::view::resources::asset::const_store& cstore){
+        return std::unique_ptr<assets>(new assets{label, cstore});
     }
+protected:
+    udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const override {
+        namespace places        = udho::pages::system::layouts::places;
+        namespace placeholders  = udho::pages::system::layouts::placeholders;
 
-  private:
-    template <typename ContextT>
-    udho::pages::system::layouts::sys<ContextT>& populate(const std::string& subject, ContextT ctx, udho::pages::system::layouts::sys<ContextT>& layout) const {
+        if(!layout[placeholders::header].exists()){
+            layout[placeholders::header] = udho::pages::system::data::listing_header{subject, _assets.base()};
+        }
 
+        layout[places::assets]  = udho::pages::system::data::asset_listing{label(), _assets.make_prefix_proxy(), _assets.base(), subject};
+        return layout;
     }
   private:
     const udho::view::resources::asset::const_store& _assets;
-      std::string _base;
 };
 
+/**
+ * @class explorers_hub
+ * @brief Central registry for managing resource explorers
+ *
+ * This class acts as an immutable container for abstract_explorer instances, providing:
+ * - Ownership management of explorers
+ * - Unique label enforcement
+ * - Type-safe insertion of various explorer types
+ * - Immutability guarantee after construction
+ *
+ * The hub becomes immutable after construction and cannot be modified once created.
+ * All explorers must be added during initialization.
+ */
+struct registry{
+
+    /// @brief Pointer type for owned explorer instances
+    using explorer_ptr    = std::unique_ptr<abstract_explorer>;
+    using explorer_entry  = std::pair<std::string, explorer_ptr>;
+    /// @brief Container type mapping labels to explorer instances
+    using collection_type = std::vector<explorer_entry>;
+
+    using context_type = abstract_explorer::context_type;
+
+    static const explorer_ptr nothing;
+
+
+    /**
+     * @brief Construct an empty hub
+     */
+    explicit registry() = default;
+
+    /**
+     * @brief Construct hub with multiple explorers
+     * @tparam Args Variadic template parameter pack of explorer arguments
+     * @param args Explorer instances to insert (supports multiple types)
+     * @throw std::invalid_argument If any argument is null
+     * @throw std::runtime_error If duplicate labels are detected
+     *
+     * Accepts arguments in various forms:
+     * - unique_ptr<abstract_explorer> (transfers ownership)
+     * - Concrete explorer objects (copies into owned instances)
+     * - Raw pointers to explorers (clones and takes ownership)
+     */
+    template <typename... Args>
+    explicit registry(Args&&... args) {
+        (insert(std::forward<Args>(args)), ...);
+    }
+
+    /**
+     * @brief Construct hub with a single explorer
+     * @param explorer Explorer instance to insert
+     * @throw std::invalid_argument If explorer is null
+     * @throw std::runtime_error If label already exists
+     */
+    explicit registry(explorer_ptr explorer) {
+        insert(std::move(explorer));
+    }
+
+    registry(const registry&) = delete;
+    registry& operator=(const registry&) = delete;
+
+    registry(registry&&) noexcept = default;
+    registry& operator=(registry&&) noexcept = default;
+
+    inline const explorer_ptr& exists_in(const std::string& subject) const {
+        for(const auto& pair: _explorers){
+            if(pair.second->exists(subject)){
+                return pair.second;
+            }
+        }
+        return nothing;
+    }
+
+    inline bool exists(const std::string& subject) const {
+        return exists_in(subject) != nothing;
+    }
+
+    inline const explorer_ptr& subset_of(const std::string& subject) const {
+        for(const auto& pair: _explorers){
+            if(pair.second->is_subset(subject)){
+                return pair.second;
+            }
+        }
+        return nothing;
+    }
+
+    inline bool is_subset(const std::string& subject) const {
+        return subset_of(subject) != nothing;
+    }
+
+    inline bool cat(const std::string& subject, udho::net::stream& stream) const {
+        const explorer_ptr& explorer = exists_in(subject);
+        if(explorer == nothing) {
+            return false;
+        }
+        return explorer->cat(subject, stream);
+    }
+
+    inline bool ls(const std::string& subject, context_type ctx) const {
+        auto layout = abstract_explorer::layout(ctx);
+        layout.css().add("udho", "tabs.css");
+        bool result = false;
+        for(const auto& pair: _explorers){
+            if(pair.second->is_subset(subject)){
+                pair.second->ls(subject, ctx, layout);
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    bool serve(const std::string& subject, context_type ctx) const {
+        bool found = false;
+        if(exists(subject)){
+            found = cat(subject, ctx);
+        } else if(is_subset(subject)){
+            found = ls(subject, ctx);
+        }
+        return found;
+    }
+
+  private:
+
+    /**
+     * @brief Insert a pre-constructed explorer instance
+     * @param explorer Unique pointer to explorer instance
+     * @throw std::invalid_argument If explorer is null
+     * @throw std::runtime_error If label already exists
+     */
+    void insert(explorer_ptr&& explorer) {
+        if (!explorer) {
+            throw std::invalid_argument("Cannot insert null explorer");
+        }
+
+        const std::string label = explorer->label();
+        if (_labels.count(label)) {
+            throw std::runtime_error("Explorer with label '" + label + "' already exists");
+        }
+
+        _explorers.emplace_back(explorer_entry{label, std::move(explorer)});
+        _labels.insert(label);
+    }
+
+    /**
+     * @brief Insert a copyable explorer instance
+     * @tparam ExplorerT Concrete explorer type (must be copy constructible)
+     * @param explorer Explorer instance to copy
+     */
+    template <typename ExplorerT, std::enable_if_t<!detail::is_unique_ptr_v<ExplorerT>>* = nullptr>
+    void insert(ExplorerT&& explorer) {
+        static_assert(std::is_base_of_v<abstract_explorer, ExplorerT>, "Must insert objects derived from abstract_explorer");
+        auto ptr = std::make_unique<ExplorerT>(std::forward<ExplorerT>(explorer));
+        assert(dynamic_cast<abstract_explorer*>(ptr.get()) != nullptr);
+        insert(std::move(ptr));
+    }
+
+    private:
+    collection_type _explorers;
+    std::set<std::string> _labels;
+};
+
+inline const registry::explorer_ptr registry::nothing = nullptr;
+
+}
 }
 }
 

@@ -41,7 +41,7 @@ struct basic_action;
 template <typename StrT, typename ActionsT>
 struct mount_point;
 
-template <typename MountPointsT, typename Store>
+template <typename MountPointsT>
 struct basic_router;
 
 }
