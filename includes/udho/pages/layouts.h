@@ -9,6 +9,7 @@
 #include <udho/view/tmpl/layout/presenter.h>
 #include <udho/view/tmpl/layout/layout.h>
 #include <udho/net/context.h>
+#include <udho/pages/data.h>
 
 namespace udho{
 namespace pages{
@@ -19,8 +20,7 @@ namespace l = udho::view::tmpl::layout;
 
 namespace places {
 namespace segments {
-    struct files{};
-    struct assets{};
+    struct listing{};
 }
 }
 
@@ -29,14 +29,12 @@ namespace placeholders = l::placeholders;
 
 using minimal = l::basic_placeholder<
     l::spot<placeholders::segments::header>,
-    l::multispot<places::segments::files>,
-    l::spot<places::segments::assets>,
+    l::spot<places::segments::listing>,
     l::spot<placeholders::segments::footer>
 >;
 
 namespace places{
-    static segments::files files;
-    static segments::assets assets;
+    static segments::listing listing;
 }
 
 template <class DocumentT>
@@ -57,73 +55,58 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
         stream << "<body>";
         stream <<   "<div class='system'>";
         if(_doc[p::header].exists())
-            basic_presenter_::present(p::header, *_doc[p::header], stream);
+            stream << *_doc[p::header];
 
-        stream <<       "<div class='tab-container'>";
-        stream <<           "<div class='tab-buttons'>";
-        stream <<           "</div>";
+        if(_doc[places::listing].exists())
+        stream << *_doc[places::listing];
 
-        bool content_active = false;
-        for(auto i = 0; i < _doc[places::files].count(); ++i){
-            std::string tab_content = !content_active ? "tab-content" : "tab-content active-content";
-            content_active = true;
-
-            stream << "<div class='"+ tab_content +"'>";
-            stream << _doc[places::files][i];
-            stream << "</div>";
-        }
-
-        if(_doc[places::assets].exists()){
-            std::string tab_content = !content_active ? "tab-content" : "tab-content active-content";
-            content_active = true;
-
-            stream << "<div class='"+ tab_content +"'>";
-            stream << *_doc[places::assets];
-            stream << "</div>";
-        }
-
-        stream <<       "</div>";
+        if(_doc[placeholders::footer].exists())
+            default_presenter_::present(placeholders::footer, *_doc[placeholders::footer], stream);
         stream <<   "</div>";
+
         stream <<     R"SCRIPT(<script>
-                        document.addEventListener('DOMContentLoaded', () => {
-                            const tabButtonsContainer = document.querySelector('.tab-buttons');
-                            const tabContents = document.querySelectorAll('.tab-content');
+            document.addEventListener('DOMContentLoaded', () => {
+                // Add JS-enabled class to body
+                document.body.classList.add('js-enabled');
 
-                            // Generate buttons based on existing content
-                            tabContents.forEach(contentDiv => {
-                                const listingContainer = contentDiv.querySelector('.listing-container:first-child');
-                                if (!listingContainer || !listingContainer.id) return;
+                // Initialize tab system for each .system container
+                document.querySelectorAll('.system').forEach(system => {
+                    const tabContainer = system.querySelector('.tab-container');
+                    const buttons = tabContainer.querySelectorAll('.tab-btn');
+                    const contents = tabContainer.querySelectorAll('.tab-content');
+                    const headings = tabContainer.querySelectorAll('.listing-heading');
 
-                                const button = document.createElement('button');
-                                button.className = 'tab-btn';
-                                button.textContent = listingContainer.id.charAt(0).toUpperCase() + listingContainer.id.slice(1); // Capitalize first letter
-                                button.setAttribute('data-target', listingContainer.id);
+                    // Hide headings and show buttons
+                    headings.forEach(heading => heading.style.display = 'none');
+                    tabContainer.querySelector('.tab-buttons').style.display = 'flex';
 
-                                // Set initial active tab
-                                if (contentDiv.classList.contains('active-content')) {
-                                    button.classList.add('active-tab');
-                                }
+                    // Set initial active state
+                    const firstContent = contents[0];
+                    const firstButton = buttons[0];
 
-                                tabButtonsContainer.appendChild(button);
-                            });
+                    contents.forEach(content => content.classList.remove('active-content'));
+                    buttons.forEach(button => button.classList.remove('active-tab'));
 
-                            // Add click handlers
-                            tabButtonsContainer.addEventListener('click', (e) => {
-                                if (!e.target.classList.contains('tab-btn')) return;
+                    if (firstContent) firstContent.classList.add('active-content');
+                    if (firstButton) firstButton.classList.add('active-tab');
 
-                                // Remove active classes
-                                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
-                                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active-content'));
+                    // Add click handlers
+                    tabContainer.querySelector('.tab-buttons').addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('tab-btn')) return;
 
-                                // Set new active
-                                const targetId = e.target.dataset.target;
-                                e.target.classList.add('active-tab');
-                                const targetContent = document.getElementById(targetId).closest('.tab-content');
-                                if (targetContent) {
-                                    targetContent.classList.add('active-content');
-                                }
-                            });
-                        });
+                        const targetId = e.target.dataset.target;
+                        const targetContent = tabContainer.querySelector(`#${targetId}`);
+
+                        // Update buttons
+                        buttons.forEach(button => button.classList.remove('active-tab'));
+                        e.target.classList.add('active-tab');
+
+                        // Update contents
+                        contents.forEach(content => content.classList.remove('active-content'));
+                        if (targetContent) targetContent.classList.add('active-content');
+                    });
+                });
+            });
         </script>)SCRIPT";
         stream << "</body>";
     }
@@ -149,8 +132,7 @@ sys<ContextT> listing(ContextT context) {
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");
-    layout.properties(places::files).classes("files").view("lua://udho/listing");
-    layout.properties(places::assets).classes("assets").view("lua://udho/assets");
+    layout.properties(places::listing).classes("files").view("lua://udho/listing_page");
     layout.properties(p::header).classes("header") .view("lua://udho/header");
     layout.properties(p::footer).classes("footer") .view("lua://udho/status");
 

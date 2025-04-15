@@ -31,211 +31,194 @@ namespace pages{
 namespace system{
 namespace data{
 
-class file_entry{
-    std::filesystem::path           _path;
-    std::filesystem::file_status    _status;
-    std::filesystem::file_type      _type;
-    std::filesystem::perms          _permissions;
-    bool                            _is_directory;
-    std::uintmax_t                  _size;
-    std::filesystem::file_time_type _modification_time;
-    std::filesystem::path           _root;
+class entry{
+    std::string _name;
+    bool        _is_directory;
+    std::string _mime;
+    std::size_t _size;
+    std::string _url;
+    std::string _type;
 
     public:
-        inline file_entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root)
-            : _path (entry.path()), _status(entry.status()), _type(_status.type()), _permissions(_status.permissions())
-            , _is_directory(entry.is_directory()) , _size(_is_directory ? 0 : entry.file_size()), _modification_time(entry.last_write_time()), _root(root)
-            {}
-        inline bool is_directory() const { return _is_directory; }
-        inline std::string filename() const { return _path.filename(); }
-        inline std::string extension() const { return _path.extension(); }
+    inline explicit entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root):
+        _name(entry.path().filename()), _is_directory(entry.is_directory()), _size(_is_directory ? 0 : entry.file_size())
+    {
+        // { type
+        switch (entry.status().type()) {
+            case std::filesystem::file_type::regular:    _type = "File";             break;
+            case std::filesystem::file_type::directory:  _type = "Directory";        break;
+            case std::filesystem::file_type::symlink:    _type = "Symlink";          break;
+            case std::filesystem::file_type::block:      _type = "Block Device";     break;
+            case std::filesystem::file_type::character:  _type = "Character Device"; break;
+            case std::filesystem::file_type::fifo:       _type = "FIFO";             break;
+            case std::filesystem::file_type::socket:     _type = "Socket";           break;
+            default:                                     _type = "Unknown";          break;
+        }
+        // }
 
-        inline std::string size() const {
-            if (_is_directory) return "N/A";
+        // { url
+        std::filesystem::path relative = std::filesystem::relative(entry.path(), root);
+        std::string url_path = relative.string();
+        std::replace(url_path.begin(), url_path.end(), '\\', '/');
+        if (url_path.empty()) {
+            _url = "/";
+        } else{
+            _url = (url_path.front() == '/') ? url_path : "/" + url_path;
+        }
+        // }
+    }
 
-            const char* units[] = {"B", "KB", "MB", "GB", "TB"};
-            double size = static_cast<double>(_size);
-            int unit = 0;
+    inline explicit entry(const udho::view::resources::asset::asset_registration_info& info, const std::string& base):
+        _name(info.name()), _is_directory(false), _mime(info.mime()), _size(0), _url(udho::url::utils::slash_concat(udho::url::utils::slash_concat(base, info.prefix()), info.name()))
+    {
+        _type = udho::view::resources::asset::utils::to_string(info.source()) + " " + udho::view::resources::asset::utils::to_string(info.type());
+        if(info.owned()){
+            _type = "owned " + _type;
+        }
+    }
 
-            while (size >= 1024 && unit < 4) {
-                size /= 1024;
-                unit++;
-            }
+    inline explicit entry(const std::string& subprefix, const std::string& base):
+        _name(subprefix), _is_directory(true), _mime("N/A"), _size(0), _url(udho::url::utils::slash_quote(udho::url::utils::slash_concat(base, subprefix))), _type("prefix")
+    {}
 
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(2) << size << ' ' << units[unit];
-            return oss.str();
+    inline const std::string& name() const { return _name; }
+    inline const std::string& mime() const { return _mime; }
+    inline const std::string& url() const { return _url; }
+    inline const std::string& type() const { return _type; }
+    inline bool is_directory() const { return _is_directory; }
+    inline std::string extension() const {
+        if(_is_directory) return "";
+
+        std::size_t dot_pos = _name.rfind('.');
+        if (dot_pos != std::string::npos && dot_pos > 0 && dot_pos < _name.length() - 1) {
+            return _name.substr(dot_pos+1);
+        }
+        return "";
+    }
+    inline std::string size() const {
+        if (_is_directory) return "N/A";
+
+        const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+        double size = static_cast<double>(_size);
+        int unit = 0;
+
+        while (size >= 1024 && unit < 4) {
+            size /= 1024;
+            unit++;
         }
 
-        inline std::string type() const {
-            switch (_type) {
-                case std::filesystem::file_type::regular:    return "File";
-                case std::filesystem::file_type::directory:  return "Directory";
-                case std::filesystem::file_type::symlink:    return "Symlink";
-                case std::filesystem::file_type::block:      return "Block Device";
-                case std::filesystem::file_type::character:  return "Character Device";
-                case std::filesystem::file_type::fifo:       return "FIFO";
-                case std::filesystem::file_type::socket:     return "Socket";
-                default:                                     return "Unknown";
-            }
-        }
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << size << ' ' << units[unit];
+        return oss.str();
+    }
 
-        inline std::string permissions() const {
-            auto perm_to_char = [](std::filesystem::perms p, char rwx) {
-                return (p & std::filesystem::perms::mask) == std::filesystem::perms::none
-                    ? '-' : rwx;
-            };
+    friend auto metatype(udho::view::data::type<entry>){
+        using namespace udho::view::data;
 
-            std::string result(9, '-');
-            result[0] = perm_to_char(_permissions & std::filesystem::perms::owner_read,  'r');
-            result[1] = perm_to_char(_permissions & std::filesystem::perms::owner_write, 'w');
-            result[2] = perm_to_char(_permissions & std::filesystem::perms::owner_exec,  'x');
-            result[3] = perm_to_char(_permissions & std::filesystem::perms::group_read,  'r');
-            result[4] = perm_to_char(_permissions & std::filesystem::perms::group_write, 'w');
-            result[5] = perm_to_char(_permissions & std::filesystem::perms::group_exec,  'x');
-            result[6] = perm_to_char(_permissions & std::filesystem::perms::others_read, 'r');
-            result[7] = perm_to_char(_permissions & std::filesystem::perms::others_write,'w');
-            result[8] = perm_to_char(_permissions & std::filesystem::perms::others_exec, 'x');
-            return result;
-        }
-
-        inline std::string modification_time() const {
-            auto sctp    = std::chrono::time_point_cast<std::chrono::system_clock::duration>(_modification_time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
-            auto ttime   = std::chrono::system_clock::to_time_t(sctp);
-            std::tm* gmt = std::gmtime(&ttime);
-
-            std::stringstream buffer;
-            buffer << std::put_time(gmt, "%A, %d %B %Y %H:%M");
-
-            return buffer.str();
-        }
-
-        inline std::string url() const {
-            std::filesystem::path relative = std::filesystem::relative(_path, _root);
-
-            std::string url_path = relative.string();
-            std::replace(url_path.begin(), url_path.end(), '\\', '/');
-
-            if (url_path.empty()) {
-                return "/";
-            }
-
-            return (url_path.front() == '/') ? url_path : "/" + url_path;
-        }
-
-        friend auto metatype(udho::view::data::type<file_entry>){
-            using namespace udho::view::data;
-
-            return assoc("file_entry"),
-                fvar("url",         &file_entry::url),
-                fvar("name",        &file_entry::filename),
-                fvar("extension",   &file_entry::extension),
-                fvar("is_dir",      &file_entry::is_directory),
-                fvar("type",        &file_entry::type),
-                fvar("permissions", &file_entry::permissions),
-                fvar("file_size",   &file_entry::size),
-                fvar("modified_at", &file_entry::modification_time);
-        }
-
+        return assoc("entry"),
+               fvar("name",        &entry::name),
+               fvar("is_dir",      &entry::is_directory),
+               fvar("mime",        &entry::mime),
+               fvar("size",        &entry::size),
+               fvar("url",         &entry::url),
+               fvar("extension",   &entry::extension),
+               fvar("type",        &entry::type);
+    }
 };
 
-class directory_listing{
-    std::filesystem::path   _path;
-    std::vector<file_entry> _entries;
-    std::filesystem::path   _root;
-    std::string             _label;
+class listing{
+    std::string         _base;
+    std::vector<entry>  _entries;
+    std::string         _subject;
+    std::string         _label;
 
     public:
-        using container_type = std::vector<file_entry>;
+        using container_type = std::vector<entry>;
         using const_iterator = typename container_type::const_iterator;
         using value_type     = typename container_type::value_type;
         using size_type      = typename container_type::size_type;
-    public:
+
         /**
          * @brief directory_listing
          * @param path requested to be shown
          * @param root base filesystem path
          * @note path is supposed to be subset of root
          */
-        inline directory_listing(const std::string& label, const std::filesystem::path& path, const std::filesystem::path& root): _path(path), _root(root), _label(label) {
-            std::filesystem::directory_iterator dit{_path};
-            for(const std::filesystem::directory_entry& entry: dit){
-                _entries.emplace_back(file_entry{entry, _root});
+        inline listing(const std::string& label, const std::filesystem::path& path, const std::filesystem::path& root): _subject(path), _base(root), _label(label) {
+            std::filesystem::directory_iterator dit{path};
+            for(const std::filesystem::directory_entry& e: dit){
+                _entries.emplace_back( entry{e, root} );
+            }
+        }
+        inline listing(const std::string& label, const udho::view::resources::asset::const_store::prefix_proxy& proxy, const std::string& base, const std::string& subject): _base(base), _subject(subject), _label(label) {
+            std::string subject_q = udho::url::utils::slash_quote(_subject);
+            for(const auto& group: proxy){
+                std::string prefix = udho::url::utils::slash_quote(udho::url::utils::slash_concat(_base, group.prefix()));
+                std::string::size_type pos = prefix.find(subject_q);
+                if(pos == std::string::npos){                             // subject does not match with prefix;
+                    continue;                                             //  skip this prefix and check the next
+                } else if(pos > 0 ) {                                     // subject matches with prefix but the prefix does not start with the subject
+                    continue;                                             //  skip this prefix and check the next
+                } else {                                                  // subject starts with the prefix
+                    if(subject_q.size() == prefix.size()){                // subject fully matches with the prefix
+                        for(const auto& asset: group){                    // List all assets inside this prefix
+                            entry entry{asset, base};
+                            _entries.push_back(entry);
+                        }
+                    } else {                                                // subject partially matches with the prefix
+                        std::string rest = prefix.substr(subject_q.size()); // List all sub-prefixes inside the prefix part
+                        entry entry{rest, base};
+                        _entries.push_back(entry);
+                    }
+                }
             }
         }
 
-        inline std::string path() const { return _path; }
+        inline std::string subject() const { return _subject; }
         inline std::size_t size() const { return _entries.size(); }
-        inline const file_entry& at(size_t i) const { return _entries.at(i); }
+        inline const entry& at(size_t i) const { return _entries.at(i); }
         inline const_iterator begin() const { return _entries.begin(); }
         inline const_iterator end() const { return _entries.end(); }
 
-        friend auto metatype(udho::view::data::type<directory_listing>){
+        friend auto metatype(udho::view::data::type<listing>){
             using namespace udho::view::data;
 
-            return assoc("directory_listing"),
-                cvar("label", &directory_listing::_label),
-                fvar("path", &directory_listing::path),
-                fvar("size", &directory_listing::size),
-                iter(&directory_listing::begin, &directory_listing::end),
-                index(&directory_listing::at, &directory_listing::size);
+            return assoc("listing"),
+                   cvar("label", &listing::_label),
+                   fvar("subject", &listing::subject),
+                   fvar("size", &listing::size),
+                   iter(&listing::begin, &listing::end),
+                   index(&listing::at, &listing::size);
         }
 };
 
-class asset_entry{
-    bool        _is_directory;
-    udho::view::resources::asset::type _type;
-    std::string _name;
-    std::string _path;
-    std::string _mime;
-    std::string _prefix;
-    bool _owned = false;
-    udho::view::resources::asset::source::type _source = udho::view::resources::asset::source::type::none;
-
+class listings{
+    std::vector<listing> _collection;
     public:
-        asset_entry() = delete;
-        asset_entry(const asset_entry&) = default;
-        inline asset_entry(const udho::view::resources::asset::asset_registration_info& info, const std::string& base)
-            : _is_directory(false), _type(info.type()), _name(info.name()),
-              _path(udho::url::utils::slash_concat(udho::url::utils::slash_concat(base, info.prefix()), info.name())),
-              _mime(info.mime()), _prefix(info.prefix()), _owned(info.owned()), _source(info.source())
-        {}
-        inline asset_entry(const std::string& subprefix, const std::string& base)
-            : _is_directory(true), _type(udho::view::resources::asset::type::none), _name(subprefix),
-              _path(udho::url::utils::slash_quote(udho::url::utils::slash_concat(base, subprefix))), _mime("prefix")
-        {}
+        using container_type = std::vector<listing>;
+        using const_iterator = typename container_type::const_iterator;
+        using value_type     = typename container_type::value_type;
+        using size_type      = typename container_type::size_type;
+    public:
+        listings() = default;
+        listings(const listings&) = default;
 
-        inline bool is_directory() const { return _is_directory; }
-        inline std::string name() const { return _name; }
-        inline std::string path() const { return _path; }
-        inline std::string prefix() const { return _prefix; }
-        inline std::string url() const { return path(); }
-        inline std::string mime() const { return _mime; }
-        inline bool owned() const { return _owned; }
-        inline std::string type() const { return udho::view::resources::asset::utils::to_string(_type); }
-        inline std::string source() const { return udho::view::resources::asset::utils::to_string(_source); }
-        inline std::string extension() const {
-            std::size_t dot_pos = _name.rfind('.');
-            if (dot_pos != std::string::npos && dot_pos > 0 && dot_pos < _name.length() - 1) {
-                return _name.substr(dot_pos+1);
-            }
-            return "";
+        inline void add(listing&& l){
+            _collection.emplace_back(std::move(l));
         }
 
-        friend auto metatype(udho::view::data::type<asset_entry>){
+        inline std::size_t size() const { return _collection.size(); }
+        inline const listing& at(size_t i) const { return _collection.at(i); }
+        inline const_iterator begin() const { return _collection.begin(); }
+        inline const_iterator end() const { return _collection.end(); }
+
+        friend auto metatype(udho::view::data::type<listings>){
             using namespace udho::view::data;
 
-            return assoc("asset_entry"),
-                   fvar("url",         &asset_entry::url),
-                   fvar("name",        &asset_entry::name),
-                   fvar("extension",   &asset_entry::extension),
-                   fvar("is_dir",      &asset_entry::is_directory),
-                   fvar("type",        &asset_entry::type),
-                   fvar("path",        &asset_entry::path),
-                   fvar("owned",       &asset_entry::owned),
-                   fvar("prefix",      &asset_entry::prefix),
-                   fvar("source",      &asset_entry::source),
-                   fvar("mime",        &asset_entry::mime);
+            return assoc("listing"),
+                   fvar("size", &listings::size),
+                   iter(&listings::begin, &listings::end),
+                   index(&listings::at, &listings::size);
         }
 };
 
@@ -435,58 +418,6 @@ struct status_info{
 
 };
 
-class asset_listing{
-    std::string              _base;
-    std::vector<asset_entry> _entries;
-    std::string              _subject;
-    std::string              _label;
-public:
-    using container_type = std::vector<asset_entry>;
-    using const_iterator = typename container_type::const_iterator;
-    using value_type     = typename container_type::value_type;
-    using size_type      = typename container_type::size_type;
-public:
-    inline asset_listing(const std::string& label, const udho::view::resources::asset::const_store::prefix_proxy& proxy, const std::string& base, const std::string& subject): _base(base), _subject(subject), _label(label) {
-        std::string subject_q = udho::url::utils::slash_quote(_subject);
-        for(const auto& group: proxy){
-            std::string prefix = udho::url::utils::slash_quote(udho::url::utils::slash_concat(_base, group.prefix()));
-            std::string::size_type pos = prefix.find(subject_q);
-            if(pos == std::string::npos){                             // subject does not match with prefix;
-                continue;                                             //  skip this prefix and check the next
-            } else if(pos > 0 ) {                                     // subject matches with prefix but the prefix does not start with the subject
-                continue;                                             //  skip this prefix and check the next
-            } else {                                                  // subject starts with the prefix
-                if(subject_q.size() == prefix.size()){                 // subject fully matches with the prefix
-                    for(const auto& asset: group){                    // List all assets inside this prefix
-                        asset_entry entry{asset, base};
-                        _entries.push_back(entry);
-                    }
-                } else {                                              // subject partially matches with the prefix
-                    std::string rest = prefix.substr(subject_q.size()); // List all sub-prefixes inside the prefix part
-                    asset_entry entry{rest, base};
-                    _entries.push_back(entry);
-                }
-            }
-        }
-    }
-
-    inline std::string subject() const { return _subject; }
-    inline std::size_t size() const { return _entries.size(); }
-    inline const asset_entry& at(size_t i) const { return _entries.at(i); }
-    inline const_iterator begin() const { return _entries.begin(); }
-    inline const_iterator end() const { return _entries.end(); }
-
-    friend auto metatype(udho::view::data::type<asset_listing>){
-        using namespace udho::view::data;
-
-        return assoc("asset_listing"),
-               cvar("label", &asset_listing::_label),
-               fvar("subject", &asset_listing::subject),
-               fvar("size", &asset_listing::size),
-               iter(&asset_listing::begin, &asset_listing::end),
-               index(&asset_listing::at, &asset_listing::size);
-    }
-};
 
 }
 }

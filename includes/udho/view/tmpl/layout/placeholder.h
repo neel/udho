@@ -624,6 +624,12 @@ struct basic_placeholder<spot<KeyT, Multi>, Spots...>: protected basic_placehold
         typename basic_placeholder<Spots...>::template proxy_type<Key>
     >::type;
 
+    template <typename Key>
+    using const_proxy_type = typename std::conditional<std::is_same<Key, KeyT>::value,
+         typename basic_placeholder_container<Multi, KeyT>::const_proxy_type,
+         typename basic_placeholder<Spots...>::template const_proxy_type<Key>
+     >::type;
+
     template <typename F, typename Stream>
     void apply(F&& f, Stream& stream) const {
         auto&& lf = std::forward<F>(f);
@@ -644,6 +650,8 @@ struct basic_placeholder<nullspot>: protected basic_placeholder_container<true, 
 
     template <typename Key>
     using proxy_type = void;
+    template <typename Key>
+    using const_proxy_type = void;
 
     template <typename F, typename Stream>
     void apply(F&& f, Stream& stream) const {

@@ -101,153 +101,43 @@ constexpr static char css_system[] = R"ASSET(
 }
 )ASSET";
 
-constexpr static char css_assets[] = R"ASSET(
-/* Asset-specific styles */
-/* Deepseek R1 generated CSS */
-
-/* Container for responsive overflow */
-.udho-assets-container {
-    overflow-x: auto;
-    border-radius: 8px;
-    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12); */
-}
-
-/* Modern table styling */
-table.udho-assets-listing {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
-    font-size: 0.9rem;
-    background: white;
-    min-width: 600px;
-}
-
-/* Header styling */
-table.udho-assets-listing thead th {
-    font-weight: 500;
-    color: #2d3748;
-    text-align: left;
-    padding: 16px 24px;
-    /* background-color: #f7fafc; */
-    border-bottom: 2px solid #e2e8f0;
-}
-
-/* Table cells */
-table.udho-assets-listing td {
-    padding: 12px 24px;
-    color: #4a5568;
-    border-bottom: 1px solid #edf2f7;
-}
-
-/* Row hover effect */
-table.udho-assets-listing tbody tr {
-    transition: background-color 0.2s ease;
-}
-
-table.udho-assets-listing tbody tr:hover {
-    background-color: #f8fafc;
-    cursor: pointer;
-}
-/* File name link styling */
-table.udho-assets-listing a {
-    color: #2d3748;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    display: flex;
-    align-items: center;
-}
-
-table.udho-assets-listing a:hover {
-    color: #4299e1;
-}
-
-/* Extension badge styling */
-table.udho-assets-listing td:nth-child(2) {
-    font-size: 0.8em;
-    color: #718096;
-    font-weight: 500;
-}
-
-/* Size formatting */
-table.udho-assets-listing td:nth-child(5) {
-    font-family: monospace;
-    font-size: 0.9em;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .udho-assets-container {
-        box-shadow: 0 1px 3px rgba(0,0,0,0.24);
-    }
-
-    table.udho-assets-listing {
-        background: #1a202c;
-    }
-
-    table.udho-assets-listing thead th {
-        background-color: #2d3748;
-        color: #cbd5e0;
-        border-bottom-color: #4a5568;
-    }
-
-    table.udho-assets-listing td {
-        color: #cbd5e0;
-        border-bottom-color: #2d3748;
-    }
-
-    table.udho-assets-listing tbody tr:hover {
-        background-color: #2d3748;
-    }
-
-    table.udho-assets-listing a {
-        color: #cbd5e0;
-    }
-
-    table.udho-assets-listing a:hover {
-        color: #63b3ed;
-    }
-}
-
-/* Icon styling */
-.udho-icon-asset {
-    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
-    margin-right: 12px;
-    transition: transform 0.2s ease;
-}
-
-/* Add these rules */
-.udho-icon-asset::before {
-    content: "";
-    display: inline-block;
-    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
-    width: 1.2em;
-    height: 1.2em;
-    vertical-align: middle;
-}
-
-.udho-icon-asset-type-0::before {
-    content: "\1f4dc";
-}
-.udho-icon-asset-type-1::before {
-    content: "\1f4c3";
-}
-.udho-icon-asset-type-3::before {
-    content: "\1f338";
-}
-)ASSET";
-
 constexpr static char css_listing[] = R"ASSET(
 /* Deepseek R1 generated CSS */
 
-/* Container for responsive overflow */
-.udho-directory-container {
+.udho-container {
     overflow-x: auto;
     border-radius: 8px;
-    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12); */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-/* Modern table styling */
-table.udho-directory-listing {
+.listing-heading {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #2d3748;
+    padding-bottom: 0.75rem;
+    margin: 0 0 1.5rem 0;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    letter-spacing: 0.025em;
+}
+
+.listing-heading::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: #4299e1;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM1.5 10.146V6a3 3 0 013-3h5.379a2.25 2.25 0 011.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 013 3v1.146A4.483 4.483 0 0019.5 9h-15a4.483 4.483 0 00-3 1.146z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    background-size: 18px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+table.udho-listing {
     width: 100%;
     border-collapse: collapse;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
@@ -256,34 +146,30 @@ table.udho-directory-listing {
     min-width: 600px;
 }
 
-/* Header styling */
-table.udho-directory-listing thead th {
+table.udho-listing thead th {
     font-weight: 500;
     color: #2d3748;
     text-align: left;
     padding: 16px 24px;
-    /* background-color: #f7fafc; */
+    background-color: #f7fafc;
     border-bottom: 2px solid #e2e8f0;
 }
 
-/* Table cells */
-table.udho-directory-listing td {
+table.udho-listing td {
     padding: 12px 24px;
     color: #4a5568;
     border-bottom: 1px solid #edf2f7;
 }
 
-/* Row hover effect */
-table.udho-directory-listing tbody tr {
+table.udho-listing tbody tr {
     transition: background-color 0.2s ease;
 }
 
-table.udho-directory-listing tbody tr:hover {
+table.udho-listing tbody tr:hover {
     background-color: #f8fafc;
     cursor: pointer;
 }
 
-/* Icon styling */
 .udho-icon-file,
 .udho-icon-directory {
     font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
@@ -291,7 +177,6 @@ table.udho-directory-listing tbody tr:hover {
     transition: transform 0.2s ease;
 }
 
-/* Add these rules */
 .udho-icon-file::before,
 .udho-icon-directory::before {
     content: "";
@@ -310,9 +195,7 @@ table.udho-directory-listing tbody tr:hover {
     content: "\1F4C1"; /* File Folder */
 }
 
-
-/* File name link styling */
-table.udho-directory-listing a {
+table.udho-listing a {
     color: #2d3748;
     text-decoration: none;
     transition: color 0.2s ease;
@@ -320,97 +203,71 @@ table.udho-directory-listing a {
     align-items: center;
 }
 
-table.udho-directory-listing a:hover {
+table.udho-listing a:hover {
     color: #4299e1;
 }
 
-/* Extension badge styling */
-table.udho-directory-listing td:nth-child(2) {
-    font-size: 0.8em;
-    color: #718096;
-    font-weight: 500;
-}
 
-/* Size formatting */
-table.udho-directory-listing td:nth-child(5) {
-    font-family: monospace;
-    font-size: 0.9em;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .udho-directory-container {
-        box-shadow: 0 1px 3px rgba(0,0,0,0.24);
-    }
-
-    table.udho-directory-listing {
-        background: #1a202c;
-    }
-
-    table.udho-directory-listing thead th {
-        background-color: #2d3748;
-        color: #cbd5e0;
-        border-bottom-color: #4a5568;
-    }
-
-    table.udho-directory-listing td {
-        color: #cbd5e0;
-        border-bottom-color: #2d3748;
-    }
-
-    table.udho-directory-listing tbody tr:hover {
-        background-color: #2d3748;
-    }
-
-    table.udho-directory-listing a {
-        color: #cbd5e0;
-    }
-
-    table.udho-directory-listing a:hover {
-        color: #63b3ed;
-    }
-}
 )ASSET";
 
 constexpr static char css_tabs[] = R"TABS(
-.tab-container {
-    margin: 20px auto;
-    font-family: Arial, sans-serif;
+.tab-buttons {
+    display: none;
+    margin-bottom: 1.5rem;
+}
+.tab-content {
+    width: 100%;
+    margin-bottom: 2rem;
 }
 
-.tab-buttons {
-    display: flex;
-    gap: 5px;
-    margin-bottom: -1px;
+.js-enabled .tab-buttons {
+    border-bottom-color: #e2e8f0;
+}
+.js-enabled .listing-heading {
+    display: none;
+}
+
+.js-enabled .tab-content {
+    display: none;
+}
+
+.js-enabled .tab-content.active-content {
+    display: block;
 }
 
 .tab-btn {
-    padding: 10px 20px;
-    background: #f1f1f1;
-    border: 1px solid #ddd;
-    border-radius: 5px 5px 0 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #718096;
+    background: none;
+    border: none;
+    padding: 0.5rem 0;
+    position: relative;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.2s ease;
+    letter-spacing: 0.025em;
+    margin-right: 15px;
 }
 
 .tab-btn:hover {
-    background: #ddd;
+    color: #4299e1;
 }
 
 .tab-btn.active-tab {
-    background: #fff;
-    border-bottom: 1px solid #fff;
+    color: #2d3748;
+    font-weight: 600;
 }
 
-.tab-content {
-    display: none;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 0 5px 5px 5px;
-}
-
-.tab-content.active-content {
-    display: block;
+.tab-btn.active-tab::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -0.35rem;
+    width: 100%;
+    height: 3px;
+    background-color: #4299e1;
+    border-radius: 2px;
 }
 )TABS";
 
@@ -847,7 +704,6 @@ template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
-                    << udho::view::resources::asset::css("assets.css",  std::begin(css_assets),  std::end(css_assets))
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
 }

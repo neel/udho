@@ -130,6 +130,9 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     using context_type = typename LayoutT::context_type;
     using store_type   = typename context_type::resource_store;
     using header_renderer_type = header_renderer<LayoutT>;
+    using placeholders_type = typename layout_type::placeholders_type;
+    using proxy_type = typename placeholders_type::template proxy_type<key_type>;
+    using const_proxy_type = typename placeholders_type::template const_proxy_type<key_type>;
 
     context_type&       _ctx;
     layout_type&        _layout;
@@ -175,6 +178,22 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     std::size_t count() const {
         return _layout.document()[_key].count();
     }
+
+    // typename proxy_type::value_type& operator*(){
+    //     return _layout.document()[_key].value();
+    // }
+
+    // typename proxy_type::value_type& operator->(){
+    //     return _layout.document()[_key].value();
+    // }
+
+    // const typename proxy_type::value_type& operator*() const{
+    //     return _layout.document()[_key].value();
+    // }
+
+    // const typename proxy_type::value_type& operator->() const{
+    //     return _layout.document()[_key].value();
+    // }
 };
 
 template <typename PlaceholderT, typename PresenterT>

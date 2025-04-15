@@ -80,49 +80,18 @@ struct abstract_explorer {
         return udho::pages::system::layouts::listing(ctx);
     }
 
-    /**
-     * @brief List contents of a resource container
-     * @param subject Path to the container to list
-     * @param ctx Rendering context for generating the listing
-     * @return true if the listing was successfully generated, false otherwise
-     */
-    virtual bool ls(const std::string& subject, context_type ctx) const {
-        if(is_subset(subject)) {
-            auto l = layout(ctx);
-            ls(subject, ctx, l);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    virtual udho::pages::system::layouts::sys<context_type>& ls(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const {
+    virtual bool ls(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const {
         namespace placeholders  = udho::pages::system::layouts::placeholders;
 
         if(is_subset(subject)) {
-            populate(subject, ctx, layout);
-            if(!layout[placeholders::footer].exists()){
-                layout[placeholders::footer] = udho::pages::system::data::status_info{};
-            }
+            return populate(subject, ctx, d);
         }
 
-        return layout;
-    }
-
-    bool serve(const std::string& subject, context_type ctx) const {
-        bool found = false;
-        if(exists(subject)){
-            found = cat(subject, ctx);
-        } else if(is_subset(subject)){
-            found = ls(subject, ctx);
-        }
-        return found;
+        return false;
     }
 
     protected:
-    virtual udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const = 0;
-
-    // virtual abstract_explorer* clone() const = 0;
+    virtual bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const = 0;
 
     private:
     std::string _label;
@@ -189,23 +158,11 @@ struct files: public abstract_explorer {
         }
     }
 
-    static std::unique_ptr<files> create(const std::string& label, const std::filesystem::path& root = std::filesystem::current_path()){
-        return std::unique_ptr<files>(new files{label, root});
-    }
-
   protected:
-    virtual udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const override {
-        namespace places        = udho::pages::system::layouts::places;
-        namespace placeholders  = udho::pages::system::layouts::placeholders;
-
+    virtual bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const override {
         std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
-
-        if(!layout[placeholders::header].exists()){
-            layout[placeholders::header] = udho::pages::system::data::listing_header{normalized_path, _root};
-        }
-
-        layout[places::files] += udho::pages::system::data::directory_listing{label(), normalized_path, _root};
-        return layout;
+        d.add(udho::pages::system::data::listing{label(), normalized_path, _root});
+        return true;
     }
 
     /**
@@ -256,8 +213,6 @@ struct assets: public abstract_explorer {
 
     assets(const std::string& label, const udho::view::resources::asset::const_store& assets): abstract_explorer(label), _assets(assets) {}
 
-    // assets* clone() const override { return new assets(*this); }
-
     /**
      * @brief Checks if the path exists
      * @param subject Path to check
@@ -306,20 +261,10 @@ struct assets: public abstract_explorer {
         return false;
     }
 
-    static std::unique_ptr<assets> create(const std::string& label, const udho::view::resources::asset::const_store& cstore){
-        return std::unique_ptr<assets>(new assets{label, cstore});
-    }
 protected:
-    udho::pages::system::layouts::sys<context_type>& populate(const std::string& subject, context_type ctx, udho::pages::system::layouts::sys<context_type>& layout) const override {
-        namespace places        = udho::pages::system::layouts::places;
-        namespace placeholders  = udho::pages::system::layouts::placeholders;
-
-        if(!layout[placeholders::header].exists()){
-            layout[placeholders::header] = udho::pages::system::data::listing_header{subject, _assets.base()};
-        }
-
-        layout[places::assets]  = udho::pages::system::data::asset_listing{label(), _assets.make_prefix_proxy(), _assets.base(), subject};
-        return layout;
+    bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const override {
+        d.add(udho::pages::system::data::listing{label(), _assets.make_prefix_proxy(), _assets.base(), subject});
+        return true;
     }
   private:
     const udho::view::resources::asset::const_store& _assets;
@@ -426,13 +371,22 @@ struct registry{
     inline bool ls(const std::string& subject, context_type ctx) const {
         auto layout = abstract_explorer::layout(ctx);
         layout.css().add("udho", "tabs.css");
+
+        udho::pages::system::data::listings listings;
+
         bool result = false;
         for(const auto& pair: _explorers){
             if(pair.second->is_subset(subject)){
-                pair.second->ls(subject, ctx, layout);
+                pair.second->ls(subject, ctx, listings);
                 result = true;
             }
         }
+
+        namespace places = udho::pages::system::layouts::places;
+        namespace placeholders = udho::pages::system::layouts::placeholders;
+
+        layout[places::listing] = listings;
+
         return result;
     }
 

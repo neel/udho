@@ -126,6 +126,11 @@ struct basic_document: protected document_preamble, PlaceholderT{
     using loader_js  = asset_loader<udho::view::resources::asset::type::js>;
     using loader_css = asset_loader<udho::view::resources::asset::type::css>;
 
+    template <typename Key>
+    using proxy_type = typename placeholders_type::template proxy_type<Key>;
+    template <typename Key>
+    using const_proxy_type = typename placeholders_type::template const_proxy_type<Key>;
+
     template <typename... Bridges>
     basic_document(const udho::view::resources::const_store<Bridges...>& store): _js(store.js()), _css(store.css()) {}
     basic_document(const basic_document&) = delete;
