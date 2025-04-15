@@ -107,8 +107,6 @@ struct abstract_explorer {
 struct files: public abstract_explorer {
     using context_type = abstract_explorer::context_type;
 
-    // files* clone() const override { return new files(*this); }
-
     /**
      * @brief Gets the current document root
      * @return Const reference to the document root path
@@ -372,7 +370,7 @@ struct registry{
         auto layout = abstract_explorer::layout(ctx);
         layout.css().add("udho", "tabs.css");
 
-        udho::pages::system::data::listings listings;
+        udho::pages::system::data::listings listings{subject};
 
         bool result = false;
         for(const auto& pair: _explorers){
@@ -382,10 +380,12 @@ struct registry{
             }
         }
 
-        namespace places = udho::pages::system::layouts::places;
-        namespace placeholders = udho::pages::system::layouts::placeholders;
+        if(result){
+            namespace places = udho::pages::system::layouts::places;
+            namespace placeholders = udho::pages::system::layouts::placeholders;
 
-        layout[places::listing] = listings;
+            layout[places::listing] = listings;
+        }
 
         return result;
     }

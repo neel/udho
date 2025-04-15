@@ -214,6 +214,8 @@ constexpr static char css_tabs[] = R"TABS(
 .tab-buttons {
     display: none;
     margin-bottom: 1.5rem;
+    justify-content: space-between;
+    align-items: center;
 }
 .tab-content {
     width: 100%;
@@ -221,8 +223,11 @@ constexpr static char css_tabs[] = R"TABS(
 }
 
 .js-enabled .tab-buttons {
-    border-bottom-color: #e2e8f0;
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.75rem;
 }
+
 .js-enabled .listing-heading {
     display: none;
 }
@@ -269,6 +274,56 @@ constexpr static char css_tabs[] = R"TABS(
     background-color: #4299e1;
     border-radius: 2px;
 }
+
+.nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+/* Navigation text */
+.nav-current {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+    font-size: 0.9rem;
+    color: #718096;
+    margin-right: 0.5rem;
+}
+
+/* Up button styling */
+.nav-up {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    background-color: #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    text-decoration: none;
+}
+
+.nav-up:hover {
+    background-color: #cbd5e0;
+}
+
+.nav-up::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    background-color: #4a5568;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M13 19V7.8308L16.2426 11.0734L17.6568 9.65918L12 4.00244L6.34314 9.65918L7.75736 11.0734L11 7.8308V19H13Z'/%3E%3C/svg%3E");
+    transition: background-color 0.2s ease;
+}
+
+.nav-up:hover::before {
+    background-color: #2d3748;
+}
+
 )TABS";
 
 

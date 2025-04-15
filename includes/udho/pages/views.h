@@ -60,7 +60,8 @@ constexpr static char template_listing_page[] = R"TEMPLATE(
             <button class='tab-btn <?= (i == 1) and "active-tab" or "" ?>' data-target='<?= e.label ?>'><?= e.label ?></button>
         <? end ?>
         <div class="nav-buttons">
-            <span class="nav-current">Index of / </span>
+            <span class="nav-current">Index of <?= d.current ?> </span>
+            <a class="nav-up" href="<?= d.parent ?>">&nbsp;</a>
         </div>
     </div>
 

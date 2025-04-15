@@ -193,15 +193,20 @@ class listing{
 };
 
 class listings{
-    std::vector<listing> _collection;
+    std::vector<listing>  _collection;
+    std::filesystem::path _current;
     public:
         using container_type = std::vector<listing>;
         using const_iterator = typename container_type::const_iterator;
         using value_type     = typename container_type::value_type;
         using size_type      = typename container_type::size_type;
     public:
-        listings() = default;
+        listings() = delete;
         listings(const listings&) = default;
+
+        listings(const std::string& current): _current(current) {
+            assert(current[0] == '/');
+        }
 
         inline void add(listing&& l){
             _collection.emplace_back(std::move(l));
@@ -211,11 +216,17 @@ class listings{
         inline const listing& at(size_t i) const { return _collection.at(i); }
         inline const_iterator begin() const { return _collection.begin(); }
         inline const_iterator end() const { return _collection.end(); }
+        inline std::string current() const { return _current.string(); }
+        inline std::string parent() const {
+            return _current.parent_path();
+        }
 
         friend auto metatype(udho::view::data::type<listings>){
             using namespace udho::view::data;
 
             return assoc("listing"),
+                   fvar("current", &listings::current),
+                   fvar("parent", &listings::parent),
                    fvar("size", &listings::size),
                    iter(&listings::begin, &listings::end),
                    index(&listings::at, &listings::size);
