@@ -80,9 +80,6 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
 <div class="logo">
     <img src="<?= ctx.resources.img:get('udho', 'beral.gif').url ?>" />
 </div>
-<div class="location">
-    Index of <?= d.base ?>
-</div>
 )TEMPLATE";
 
 constexpr static char template_listing_status[] = R"TEMPLATE(

@@ -384,7 +384,9 @@ struct registry{
             namespace places = udho::pages::system::layouts::places;
             namespace placeholders = udho::pages::system::layouts::placeholders;
 
+            layout[placeholders::header] = udho::pages::system::data::listing_header{};
             layout[places::listing] = listings;
+            layout[placeholders::footer] = udho::pages::system::data::status_info{};
         }
 
         return result;

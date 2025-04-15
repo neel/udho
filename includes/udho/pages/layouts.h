@@ -58,7 +58,7 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
             stream << *_doc[p::header];
 
         if(_doc[places::listing].exists())
-        stream << *_doc[places::listing];
+            stream << *_doc[places::listing];
 
         if(_doc[placeholders::footer].exists())
             default_presenter_::present(placeholders::footer, *_doc[placeholders::footer], stream);

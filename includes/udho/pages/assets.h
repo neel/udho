@@ -54,13 +54,14 @@ constexpr static char css_system[] = R"ASSET(
     margin: 0;
     display: flex;
     flex-wrap: wrap;
-    /* gap: 1.5rem; */
+    gap: 1.5rem;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #495057;
     margin-top: 15px;
-    border-top: 1px solid #b4b4b4;
+    border-top: 2px solid #e2e8f0;
     padding-top: 5px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
 }
 
 .udho-deploy-info li {
@@ -71,7 +72,7 @@ constexpr static char css_system[] = R"ASSET(
 }
 
 .udho-deploy-info li:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    // box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     transform: translateY(-1px);
 }
 
