@@ -54,12 +54,17 @@ inline std::filesystem::path normalize_path(const std::basic_string<Ch>& subject
  * @note Requires libmagic development files during compilation
  */
 inline std::string mime_type(const std::filesystem::path& path) {
-    magic_t magic = magic_open(MAGIC_MIME_TYPE);
-    magic_load(magic, nullptr);
-    const char* mime_type = magic_file(magic, path.c_str());
-    std::string result = mime_type ? mime_type : "application/octet-stream";
-    magic_close(magic);
-    return result;
+    static std::unique_ptr<magic_set, decltype(&magic_close)> magic(
+        [](){
+            auto* ptr = magic_open(MAGIC_MIME_TYPE);
+            magic_load(ptr, nullptr);
+            return ptr;
+        }(),
+        &magic_close
+    );
+
+    const char* mime = magic_file(magic.get(), path.c_str());
+    return mime ? mime : "application/octet-stream";
 }
 
 /**
