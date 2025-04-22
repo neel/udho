@@ -33,7 +33,7 @@ constexpr static char template_listing_table[] = R"TEMPLATE(
                         local ext_class = e.extension and 'udho-ext-' .. e.extension:lower() or ''
                     ?>
                     <td>
-                        <a href="<?= e.url ?>">
+                        <a class="udho-listing-item-<?= d.label ?>" href="<?= e.url ?>">
                             <span class="<?= entry_class ?>"></span>
                             <?= e.name ?>
                         </a>

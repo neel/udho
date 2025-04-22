@@ -15,6 +15,7 @@
 #include <udho/view/resources/asset/const_store.h>
 #include <udho/url/utils.h>
 #include <udho/view/resources/asset/utils.h>
+#include <udho/url/mimes.h>
 
 #include <fstream>
 #ifdef _WIN32
@@ -40,7 +41,7 @@ class entry{
     std::string _type;
 
     public:
-    inline explicit entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root):
+    inline explicit entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root, const udho::url::mime_registry& mimes):
         _name(entry.path().filename()), _is_directory(entry.is_directory()), _size(_is_directory ? 0 : entry.file_size())
     {
         // { type
@@ -65,7 +66,16 @@ class entry{
         } else{
             _url = (url_path.front() == '/') ? url_path : "/" + url_path;
         }
+        if(_is_directory && _url.back() != '/'){
+            _url.push_back('/');
+        }
         // }
+
+        if(!_is_directory){
+            _mime = mimes.mime_type(entry.path());
+        } else {
+            _mime = "N/A";
+        }
     }
 
     inline explicit entry(const udho::view::resources::asset::asset_registration_info& info, const std::string& base):
@@ -108,7 +118,14 @@ class entry{
         }
 
         std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << size << ' ' << units[unit];
+        double intpart;
+        if (std::modf(size, &intpart) == 0.0) {
+            oss << static_cast<int>(intpart);
+        } else {
+            oss << std::fixed << std::setprecision(2) << size;
+        }
+
+        oss << ' ' << units[unit];
         return oss.str();
     }
 
@@ -144,10 +161,10 @@ class listing{
          * @param root base filesystem path
          * @note path is supposed to be subset of root
          */
-        inline listing(const std::string& label, const std::filesystem::path& path, const std::filesystem::path& root): _subject(path), _base(root), _label(label) {
+        inline listing(const std::string& label, const std::filesystem::path& path, const std::filesystem::path& root, const udho::url::mime_registry& mimes): _subject(path), _base(root), _label(label) {
             std::filesystem::directory_iterator dit{path};
             for(const std::filesystem::directory_entry& e: dit){
-                _entries.emplace_back( entry{e, root} );
+                _entries.emplace_back( entry{e, root, mimes} );
             }
         }
         inline listing(const std::string& label, const udho::view::resources::asset::const_store::prefix_proxy& proxy, const std::string& base, const std::string& subject): _base(base), _subject(subject), _label(label) {
@@ -218,7 +235,11 @@ class listings{
         inline const_iterator end() const { return _collection.end(); }
         inline std::string current() const { return _current.string(); }
         inline std::string parent() const {
-            return _current.parent_path();
+            std::filesystem::path p = _current.parent_path();
+            if(_current.string().back() != '/'){
+                return p;
+            }
+            return p.parent_path();
         }
 
         friend auto metatype(udho::view::data::type<listings>){

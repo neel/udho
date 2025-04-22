@@ -1,6 +1,7 @@
 #ifndef UDHO_NET_PROTOCOL_HTTP_H
 #define UDHO_NET_PROTOCOL_HTTP_H
 
+#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
