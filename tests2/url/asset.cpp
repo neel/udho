@@ -270,11 +270,88 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(found_files == expected_files);
         }
 
+        SECTION("Checking assets from store") {
+            const udho::view::resources::asset::const_store& store = cstore.assets();
+            udho::view::resources::asset::const_store::prefix_proxy prefixed_proxy = store.make_prefix_proxy();
+
+            // Verify base URL is set correctly
+            CHECK(store.base() == "/assets/");
+
+            // Expected assets by type
+            std::map<udho::view::resources::asset::type, std::set<std::string>> expected_assets = {
+                {udho::view::resources::asset::type::js,  {"0profile1.js", "1profile2.js"}},
+                {udho::view::resources::asset::type::css, {"2profile.css"}},
+                {udho::view::resources::asset::type::img, {"3profile.gif"}}
+            };
+
+            for(const auto& group: prefixed_proxy) {
+                CAPTURE(group.prefix());
+
+                if(group.prefix() != "primary")
+                    continue;
+
+                // Test prefix directory entry
+                std::string prefix = group.prefix();
+                udho::pages::system::data::entry dir_entry(prefix, store.base());
+
+                THEN("Directory entry for prefix '" + prefix + "' is valid") {
+                    CHECK(dir_entry.is_directory() == true);
+                    CHECK(dir_entry.name() == prefix);
+                    CHECK(dir_entry.url() == "/assets/" + prefix + "/");
+                    CHECK(dir_entry.type() == "prefix");
+                    CHECK(dir_entry.mime() == "N/A");
+                    CHECK(dir_entry.extension().empty());
+                    CHECK(dir_entry.size() == "N/A");
+                }
+
+                // Test asset entries
+                for(const udho::view::resources::asset::asset_registration_info& asset: group) {
+                    udho::pages::system::data::entry e{asset, store.base()};
+
+                    THEN("Asset entry '" + asset.name() + "' is valid") {
+                        // Basic properties
+                        CHECK(e.is_directory() == false);
+                        CHECK(e.name() == asset.name());
+
+                        // MIME type validation
+                        CHECK(e.mime() == asset.mime());
+
+                        // URL construction
+                        std::string expected_url = "/assets/" + prefix + "/" + asset.name();
+                        CHECK(e.url() == expected_url);
+
+                        // Type string composition
+                        std::string type_str = udho::view::resources::asset::utils::to_string(asset.source()) + " " +
+                                               udho::view::resources::asset::utils::to_string(asset.type());
+                        if(asset.owned()) type_str = "owned " + type_str;
+                        CHECK(e.type() == type_str);
+
+                        // Extension parsing
+                        std::string ext = asset.name().substr(asset.name().find_last_of('.') + 1);
+                        CHECK(e.extension() == ext);
+
+                        // Size validation (assuming binary data size)
+                        std::string size_str = e.size();
+                        CHECK(size_str.find("B") != std::string::npos); // Based on buffer sizes
+                    }
+
+                    // Verify existence in expected assets
+                    auto& expected_set = expected_assets[asset.type()];
+                    CHECK(expected_set.count(asset.name()) == 1);
+                    expected_set.erase(asset.name());
+                }
+            }
+
+            // Verify all expected assets were found
+            for(const auto& [type, names] : expected_assets) {
+                CHECK(names.empty());
+            }
+        }
 
     }
 
     SECTION("Overriding static files") {
-        SECTION("Alternate files accessible") {
+        THEN("Alternate files are accessible") {
             {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/c.txt");
                 CHECK(results.code == 200);
@@ -294,6 +371,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 404);
             }
         }
+
         std::map<std::string, std::string> docroot_files = {
             {"a.txt", "a"},
             {"b.txt", "b"},
@@ -306,7 +384,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 stream << f.second;
             }
         }
-        SECTION("docroot files accessible") {
+
+        THEN("docroot files are accessible") {
             {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/a.txt");
                 CHECK(results.code == 200);
@@ -323,7 +402,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.headers["Content-Type"] == "text/plain");
             }
         }
-        SECTION("Alternate files overridden by docroot") {
+
+        THEN("Alternate files can be overridden by creating a file with same name in the docroot") {
             {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/c.txt");
                 CHECK(results.code == 200);
@@ -333,7 +413,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.headers["Content-Type"] == "text/plain");
             }
         }
-        SECTION("Non existent files yield 404") {
+
+        THEN("Non existent files yield 404") {
             {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/e.txt");
                 CHECK(results.code == 404);
@@ -342,7 +423,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     }
 
     SECTION("Assets accessible from asset store") {
-        SECTION("HTTP Response js0") {
+        THEN("HTTP Response okay js0") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/0profile1.js");
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_js));
@@ -351,7 +432,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.headers["Content-Type"] == "application/javascript");
         }
 
-        SECTION("HTTP Response js1") {
+        THEN("HTTP Response okay js1") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/1profile2.js");
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_js1));
@@ -360,7 +441,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.headers["Content-Type"] == "application/javascript");
         }
 
-        SECTION("HTTP Response css") {
+        THEN("HTTP Response okay css") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_css));
@@ -369,7 +450,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.headers["Content-Type"] == "text/css");
         }
 
-        SECTION("HTTP Response img") {
+        THEN("HTTP Response okay img") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/3profile.gif");
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_img));
@@ -388,40 +469,42 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             stream << altered_content;
         }
 
-        SECTION("Overriding asset store") {
-            http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
-            CHECK(results.code == 200);
-            CHECK(results.body.size() == altered_content.size());
-            CHECK(results.body == altered_content);
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
-            CHECK(results.headers["Content-Type"] == "text/css");
-        }
+        GIVEN("order of explorers docroot < asset_store < alternate") {
+            THEN("assets in the asset store can be Overridden by creating a file with same name in the docroot") {
+                http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
+                CHECK(results.code == 200);
+                CHECK(results.body.size() == altered_content.size());
+                CHECK(results.body == altered_content);
+                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers["Content-Type"] == "text/css");
+            }
 
-        std::filesystem::remove(profile_css_overriding_path);
-        SECTION("Deleting docroot asset falls back to asset store") {
-            http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
-            CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_css));
-            CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
-            CHECK(results.headers["Content-Type"] == "text/css");
-        }
+            std::filesystem::remove(profile_css_overriding_path);
+            THEN("Deleting the docroot asset with same name falls back to asset store") {
+                http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
+                CHECK(results.code == 200);
+                CHECK(results.body.size() == sizeof(buffer_css));
+                CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
+                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers["Content-Type"] == "text/css");
+            }
 
-        std::filesystem::create_directories(assets_alternate);
-        std::filesystem::path profile_css_overriding_path_alt = assets_alternate / "2profile.css";
-        {
-            std::ofstream stream{profile_css_overriding_path_alt};
-            CHECK(stream.is_open());
-            stream << altered_content;
-        }
+            std::filesystem::create_directories(assets_alternate);
+            std::filesystem::path profile_css_overriding_path_alt = assets_alternate / "2profile.css";
+            {
+                std::ofstream stream{profile_css_overriding_path_alt};
+                CHECK(stream.is_open());
+                stream << altered_content;
+            }
 
-        SECTION("Alternate does not override asset store") {
-            http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
-            CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_css));
-            CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
-            CHECK(results.headers["Content-Type"] == "text/css");
+            THEN("Alternate does not override asset store") {
+                http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
+                CHECK(results.code == 200);
+                CHECK(results.body.size() == sizeof(buffer_css));
+                CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
+                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers["Content-Type"] == "text/css");
+            }
         }
     }
 
@@ -495,7 +578,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(difference.empty());
         };
 
-        SECTION("static files listed under docroot and alternate") {
+        THEN("static files listed under docroot and alternate are correct in the generated HTML") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/");
             CHECK(results.code == 200);
             std::string body = results.body;
@@ -514,7 +597,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             validate_observation(captured_links, "alternate", expected_items_set_alternate);
         }
 
-        SECTION("static files listed under docroot and alternate without / in the end") {
+        THEN("static files listed under docroot and alternate are correct in the generated HTML without trailing /") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000");
             CHECK(results.code == 200);
             std::string body = results.body;
@@ -533,7 +616,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             validate_observation(captured_links, "alternate", expected_items_set_alternate);
         }
 
-        SECTION("assets listed under docroot and asset store") {
+        THEN("assets listed under docroot and asset store are correct in the generated HTML") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets");
             CHECK(results.code == 200);
             std::string body = results.body;
@@ -545,7 +628,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             validate_observation(captured_links, "assets",  expected_items_set_assets);
         }
 
-        SECTION("assets listed under docroot and asset store with / in the end") {
+        THEN("assets listed under docroot and asset store are correct in the generated HTML with trailing /") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/");
             CHECK(results.code == 200);
             std::string body = results.body;
@@ -557,7 +640,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             validate_observation(captured_links, "assets",  expected_items_set_assets);
         }
 
-        SECTION("assets listed under docroot and asset store prefix") {
+        THEN("assets listed under docroot and asset store prefix are correct in the generated HTML") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary");
             CHECK(results.code == 200);
             std::string body = results.body;
@@ -569,7 +652,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             validate_observation(captured_links, "assets",  expected_items_set_assets);
         }
 
-        SECTION("assets listed under docroot and asset store prefix with / in the end") {
+        THEN("assets listed under docroot and asset store prefix are correct in the generated HTML with trailing /") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/");
             CHECK(results.code == 200);
             std::string body = results.body;
