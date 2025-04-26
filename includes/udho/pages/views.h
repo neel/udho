@@ -97,10 +97,16 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
 
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
+    static bool setup_done = false;
+    if(setup_done)
+        return;
+
     store["udho"] << udho::view::resources::lua{"listing_table",   std::begin(template_listing_table),  std::end(template_listing_table)}
                   << udho::view::resources::lua{"listing_page",    std::begin(template_listing_page),   std::end(template_listing_page)}
                   << udho::view::resources::lua{"header",          std::begin(template_listing_header), std::end(template_listing_header)}
                   << udho::view::resources::lua{"status",          std::begin(template_listing_status), std::end(template_listing_status)};
+
+    setup_done = true;
 }
 
 }

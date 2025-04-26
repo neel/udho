@@ -17,7 +17,6 @@
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
 #include <udho/net/server.h>
-#include <type_traits>
 #include <curl/curl.h>
 #include <udho/net/artifacts.h>
 
@@ -158,8 +157,6 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     std::thread thread([&]{
         service.run();
     });
-
-    CHECK(0 == 0);
 
     CURL* curl;
     curl = curl_easy_init();

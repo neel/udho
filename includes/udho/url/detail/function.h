@@ -29,7 +29,6 @@
 #define UDHO_URL_DETAIL_FUNCTION_H
 
 #include <utility>
-#include <functional>
 #include <type_traits>
 #include <sstream>
 #include <chrono>

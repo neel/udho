@@ -407,7 +407,7 @@ inline basic_router<void> router(udho::url::explorers::registry&& registry){
     return basic_router<void>{std::forward<udho::url::explorers::registry>(registry)};
 }
 
-template <typename... ExplorerT>
+template <typename... ExplorerT, std::enable_if_t< std::conjunction_v< std::is_base_of<udho::url::explorers::abstract_explorer,  std::decay_t<ExplorerT>>...>,  void >* = nullptr >
 inline basic_router<void> router(ExplorerT&&... explorers){
     return basic_router<void>{udho::url::explorers::registry{std::move(explorers)...}};
 }

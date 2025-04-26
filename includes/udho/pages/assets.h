@@ -758,10 +758,16 @@ static constexpr unsigned char beral_transp_gif[] = {
 
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
+    static bool setup_done = false;
+    if(setup_done)
+        return;
+
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
+
+    setup_done = true;
 }
 
 }
