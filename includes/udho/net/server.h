@@ -7,6 +7,7 @@
 #include <udho/net/context.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/url/summary.h>
+#include <udho/pages/system.h>
 
 namespace udho{
 namespace net{
@@ -83,19 +84,14 @@ struct server{
                 found = router(target, context);
                 // TODO the targetted function may perform async operations which may make this try...catch block unnecessary because you can't catch them like that anyway'
                 if(!found){
-                    if constexpr (std::is_void_v<typename router_type::mountpoints_type>){
-                        throw udho::http::error(address, context, boost::beast::http::status::not_found);
-                    } else {
-                        context.response().result(boost::beast::http::status::not_found);
-                        router.report(target, context);
-                    }
+                    throw udho::http::error(address, context, boost::beast::http::status::not_found);
                 }
             } catch(std::exception& ex) {
                 fail(address, context, ex);
             } catch(udho::http::exception& ex) {
                 fail(context, ex);
             } catch(udho::http::error& error) {
-                fail(context, error);
+                fail(router, target, context, error);
             }
         }
 
@@ -106,6 +102,7 @@ struct server{
          */
         template <typename ContextT>
         void fail(ContextT ctx, const udho::http::exception& ex){
+            ctx.response().result(boost::beast::http::status::internal_server_error);
             ctx << udho::url::format("Error: {}", ex.what());
             ctx.finish();
         }
@@ -115,12 +112,23 @@ struct server{
          * @param stream The network stream associated with the current request.
          * @param ex The HTTP error exception.
          */
-        template <typename ContextT>
-        void fail(ContextT ctx, const udho::http::error& ex){
-            const udho::http::error& error = dynamic_cast<const udho::http::error&>(ex);
-            ctx.response().result(error.status());
-            ctx << udho::url::format("Error: {}", error.reason());
-            ctx.finish();
+        template <typename RouterT, typename ContextT>
+        void fail(const RouterT& router, const std::string& target, ContextT ctx, const udho::http::error& ex){
+            ctx.response().result(ex.status());
+
+            auto layout = udho::pages::system::layouts::listing(ctx);
+
+            namespace places = udho::pages::system::layouts::places;
+            namespace placeholders = udho::pages::system::layouts::placeholders;
+
+            layout[placeholders::header] = udho::pages::system::data::listing_header{ex.status()};
+            layout[placeholders::footer] = udho::pages::system::data::status_info{};
+
+            if(ex.status() == boost::beast::http::status::not_found) {
+                if constexpr (!std::is_void_v<typename RouterT::mountpoints_type>){
+                    layout[places::routes] = router.summary();
+                }
+            }
         }
 
         /**
@@ -131,6 +139,7 @@ struct server{
          */
         template <typename ContextT>
         void fail(boost::asio::ip::address address, ContextT ctx, const std::exception& ex){
+            ctx.response().result(boost::beast::http::status::internal_server_error);
             ctx << udho::url::format("Error: {}", ex.what());
             ctx.finish();
         }

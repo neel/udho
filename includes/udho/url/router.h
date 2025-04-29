@@ -131,24 +131,6 @@ struct routing_table{
      */
     const udho::url::summary::router& summary() const { return _summary; }
 
-    template <typename ContextT>
-    bool report(const std::string& subject, ContextT ctx) const {
-        if(find(subject)){
-            throw std::runtime_error{"reporting routing table when the subject can already be found "+ subject};
-        }
-
-        auto layout = udho::pages::system::layouts::listing(ctx);
-
-        namespace places = udho::pages::system::layouts::places;
-        namespace placeholders = udho::pages::system::layouts::placeholders;
-
-        layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::not_found};
-        layout[places::routes]       = _summary;
-        layout[placeholders::footer] = udho::pages::system::data::status_info{};
-
-        return true;
-    }
-
     private:
 
         /**
@@ -176,7 +158,6 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
 
     using routing_table::operator[];
     using routing_table::summary;
-    using routing_table::report;
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
@@ -287,7 +268,6 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::find;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
-    using detail_basic_router::report;
 
     basic_router() = delete;
     basic_router(const basic_router<MountPointsT>&) = delete;

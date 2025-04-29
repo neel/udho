@@ -262,9 +262,9 @@ class listing_header{
     inline explicit listing_header(boost::beast::http::status status): _status(status) {}
     inline int code() const { return static_cast<int>(_status); }
     inline std::string message() const {
-        boost::beast::http::response<boost::beast::http::empty_body> res;
-        res.result(_status);
-        return std::string(res.reason());
+        std::stringstream stream;
+        stream << _status;
+        return stream.str();
     }
 
     friend auto metatype(udho::view::data::type<listing_header>){
