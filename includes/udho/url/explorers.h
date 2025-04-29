@@ -292,6 +292,13 @@ protected:
  */
 struct registry{
 
+    enum class status {
+        unknown,
+        file,
+        directory,
+        not_found
+    };
+
     /// @brief Pointer type for owned explorer instances
     using explorer_ptr    = std::unique_ptr<abstract_explorer>;
     using explorer_entry  = std::pair<std::string, explorer_ptr>;
@@ -393,7 +400,7 @@ struct registry{
             namespace places = udho::pages::system::layouts::places;
             namespace placeholders = udho::pages::system::layouts::placeholders;
 
-            layout[placeholders::header] = udho::pages::system::data::listing_header{};
+            layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::ok};
             layout[places::listing] = listings;
             layout[placeholders::footer] = udho::pages::system::data::status_info{};
         }
@@ -401,14 +408,15 @@ struct registry{
         return result;
     }
 
-    bool serve(const std::string& subject, context_type ctx) const {
-        bool found = false;
+    status serve(const std::string& subject, context_type ctx) const {
         if(exists(subject)){
-            found = cat(subject, ctx);
+            if(cat(subject, ctx))
+                return status::file;
         } else if(is_subset(subject)){
-            found = ls(subject, ctx);
+            if(ls(subject, ctx))
+                return status::directory;
         }
-        return found;
+        return status::not_found;
     }
 
   private:

@@ -207,7 +207,208 @@ table.udho-listing a {
 table.udho-listing a:hover {
     color: #4299e1;
 }
+)ASSET";
 
+constexpr static char css_routes[] = R"ASSET(
+/* Deepseek R1 generated CSS */
+
+.routes-container {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    padding: 20px;
+    background: #fff;
+}
+
+/* Mount Point Card */
+.mount-point {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.mount-header {
+    padding: 5px 14px;
+    background: #f7fafc;
+    border-bottom: 1px solid #e2e8f0;
+    color: #2d3748;
+    display: flex;
+    gap: 15px;
+}
+
+.mount-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2d3748;
+}
+
+.mount-path {
+    color: #4299e1;
+    font-size: 0.9em;
+}
+
+/* Routes Table */
+.routes-table {
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+    gap: 1px;
+    background: #e2e8f0;
+}
+
+.route-entry > *:nth-child(n+4) { /* Second group */
+    background: #f7fafc;
+}
+
+.table-header {
+    display: contents;
+}
+
+.table-header > span {
+    padding: 5px 15px;
+    font-weight: 600;
+    text-align: left;
+    background: #f7fafc;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.route-entry {
+    display: contents;
+}
+
+.route-entry > * {
+    padding: 2px 15px;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    background: #fff;
+    color: #4a5568;
+    border-bottom: 1px solid #edf2f7;
+}
+
+/* Column-specific Styling */
+.http-method {
+    font-weight: 600;
+    text-transform: uppercase;
+    justify-content: center;
+}
+
+.get { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+.post { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+.put { background: #f5f3ff; color: #553c9a; border: 1px solid #e9d8fd; }
+.delete { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+
+.route-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 10px);
+    padding: 2px 5px;
+}
+
+.route-label-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.route-label-args {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2d3748;
+    background: #ebf8ff;
+    border-radius: 9999px;
+    padding: 2px 0px;
+    min-width: 24px;
+    text-align: center;
+    border: 1px solid #bee3f8;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.route-pattern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 10px);
+    padding: 2px 5px;
+}
+
+.route-pattern-format {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2d3748;
+    background: #ebf8ff;
+    border-radius: 9999px;
+    padding: 2px 8px;
+    min-width: 24px;
+    text-align: center;
+    border: 1px solid #bee3f8;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.route-pattern-str {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Optional: Add hover effect to match table interactions */
+.route-entry:hover .route-label-args {
+    background: #bee3f8;
+    border-color: #90cdf4;
+}
+
+.route-entry:hover .route-pattern-format {
+    background: #bee3f8;
+    border-color: #90cdf4;
+}
+
+.route-entry:hover > * {
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.mount-path:hover {
+    color: #3182ce; /* Hover state for path */
+}
+
+.route-args,
+.route-pattern,
+.route-replacement,
+.route-callback {
+    font-family: inherit;
+    /*background: #f8f9fa;*/
+    color: #2c3e50;
+    overflow-x: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .routes-table {
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: minmax(40px, auto);
+    }
+
+    .table-header { display: none; }
+
+    .route-entry > * {
+        grid-column: span 3;
+        padding: 8px 12px;
+    }
+
+    .route-entry > *:nth-child(-n+3) {
+        grid-column: span 1;
+        background: #f7fafc !important;
+    }
+}
 
 )ASSET";
 
@@ -326,6 +527,27 @@ constexpr static char css_tabs[] = R"TABS(
 }
 
 )TABS";
+
+constexpr static char css_header[] = R"ASSET(
+
+.logo-parts{
+    display: inline-block;
+}
+.http-status{
+    margin-right: 5px;
+    margin-left: 0px;
+    margin-top: 0px;
+    margin-bottom: 2px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+.http-status-code{
+    font-size: 6rem;
+}
+.http-status-msg{
+    font-size: 1.5rem;
+}
+
+)ASSET";
 
 
 
@@ -763,7 +985,9 @@ void setup(udho::view::resources::store<Bridges...>& store){
         return;
 
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
+                    << udho::view::resources::asset::css("header.css",  std::begin(css_header),  std::end(css_header))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
+                    << udho::view::resources::asset::css("routes.css",  std::begin(css_routes),  std::end(css_routes))
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
 

@@ -174,8 +174,10 @@ struct mount_point{
     private:
         void summarize(){
             auto& replacements = _summary._replacements;
-            _actions.visit([&replacements](auto& action){
+            auto& actions      = _summary._actions;
+            _actions.visit([&replacements, &actions](auto& action){
                 replacements.emplace(action.key().c_str(), action.match().replacement());
+                actions.emplace(action.key().c_str(), action);
             });
         }
         void check(){

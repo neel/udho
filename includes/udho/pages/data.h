@@ -16,6 +16,7 @@
 #include <udho/url/utils.h>
 #include <udho/view/resources/asset/utils.h>
 #include <udho/url/mimes.h>
+#include <boost/beast/http.hpp>
 
 #include <fstream>
 #ifdef _WIN32
@@ -254,7 +255,26 @@ class listings{
         }
 };
 
-class listing_header{};
+class listing_header{
+    boost::beast::http::status _status;
+
+    public:
+    inline explicit listing_header(boost::beast::http::status status): _status(status) {}
+    inline int code() const { return static_cast<int>(_status); }
+    inline std::string message() const {
+        boost::beast::http::response<boost::beast::http::empty_body> res;
+        res.result(_status);
+        return std::string(res.reason());
+    }
+
+    friend auto metatype(udho::view::data::type<listing_header>){
+        using namespace udho::view::data;
+
+        return assoc("listing_header"),
+               fvar("code",     &listing_header::code),
+               fvar("message",  &listing_header::message);
+    }
+};
 
 struct status_info{
     std::string compiler;

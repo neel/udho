@@ -83,7 +83,12 @@ struct server{
                 found = router(target, context);
                 // TODO the targetted function may perform async operations which may make this try...catch block unnecessary because you can't catch them like that anyway'
                 if(!found){
-                    throw udho::http::error(address, context, boost::beast::http::status::not_found);
+                    if constexpr (std::is_void_v<typename router_type::mountpoints_type>){
+                        throw udho::http::error(address, context, boost::beast::http::status::not_found);
+                    } else {
+                        context.response().result(boost::beast::http::status::not_found);
+                        router.report(target, context);
+                    }
                 }
             } catch(std::exception& ex) {
                 fail(address, context, ex);
@@ -99,9 +104,10 @@ struct server{
          * @param stream The network stream associated with the current request.
          * @param ex The caught exception.
          */
-        void fail(udho::net::stream stream, const udho::http::exception& ex){
-            stream << udho::url::format("Error: {}", ex.what());
-            stream.finish();
+        template <typename ContextT>
+        void fail(ContextT ctx, const udho::http::exception& ex){
+            ctx << udho::url::format("Error: {}", ex.what());
+            ctx.finish();
         }
 
         /**
@@ -109,11 +115,12 @@ struct server{
          * @param stream The network stream associated with the current request.
          * @param ex The HTTP error exception.
          */
-        void fail(udho::net::stream stream, const udho::http::error& ex){
+        template <typename ContextT>
+        void fail(ContextT ctx, const udho::http::error& ex){
             const udho::http::error& error = dynamic_cast<const udho::http::error&>(ex);
-            stream.response().result(error.status());
-            stream << udho::url::format("Error: {}", error.reason());
-            stream.finish();
+            ctx.response().result(error.status());
+            ctx << udho::url::format("Error: {}", error.reason());
+            ctx.finish();
         }
 
         /**
@@ -122,9 +129,10 @@ struct server{
          * @param context The network stream associated with the current request.
          * @param ex The caught exception.
          */
-        void fail(boost::asio::ip::address address, udho::net::stream context, const std::exception& ex){
-            context << udho::url::format("Error: {}", ex.what());
-            context.finish();
+        template <typename ContextT>
+        void fail(boost::asio::ip::address address, ContextT ctx, const std::exception& ex){
+            ctx << udho::url::format("Error: {}", ex.what());
+            ctx.finish();
         }
     private:
         boost::asio::io_context&          _io;

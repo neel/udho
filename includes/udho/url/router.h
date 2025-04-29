@@ -131,6 +131,24 @@ struct routing_table{
      */
     const udho::url::summary::router& summary() const { return _summary; }
 
+    template <typename ContextT>
+    bool report(const std::string& subject, ContextT ctx) const {
+        if(find(subject)){
+            throw std::runtime_error{"reporting routing table when the subject can already be found "+ subject};
+        }
+
+        auto layout = udho::pages::system::layouts::listing(ctx);
+
+        namespace places = udho::pages::system::layouts::places;
+        namespace placeholders = udho::pages::system::layouts::placeholders;
+
+        layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::not_found};
+        layout[places::routes]       = _summary;
+        layout[placeholders::footer] = udho::pages::system::data::status_info{};
+
+        return true;
+    }
+
     private:
 
         /**
@@ -158,6 +176,7 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
 
     using routing_table::operator[];
     using routing_table::summary;
+    using routing_table::report;
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
@@ -179,7 +198,8 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
         bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
         if(!invoked){
             if constexpr (sizeof...(args) == 1){
-                invoked = _registry.serve(subject, std::forward<Args>(args)...);
+                udho::url::explorers::registry::status status = _registry.serve(subject, std::forward<Args>(args)...);
+                invoked = (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
             }
         }
         return invoked;
@@ -211,7 +231,8 @@ struct basic_router<void>{
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
         if constexpr (sizeof...(args) == 1){
-            return _registry.serve(subject, std::forward<Args>(args)...);
+            udho::url::explorers::registry::status status = _registry.serve(subject, std::forward<Args>(args)...);
+            return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
         }
     }
 
@@ -266,6 +287,7 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::find;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
+    using detail_basic_router::report;
 
     basic_router() = delete;
     basic_router(const basic_router<MountPointsT>&) = delete;
@@ -423,6 +445,20 @@ basic_router<MountPointsT> router(MountPointsT&& mountpoints, const udho::view::
                 }
             };
 }
+
+template <typename MountPointsT>
+basic_router<MountPointsT> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets, const std::filesystem::path& docroot){
+    using router_type = basic_router<MountPointsT>;
+
+    return  router_type{
+        std::forward<MountPointsT>(mountpoints),
+        udho::url::explorers::registry{
+            udho::url::explorers::files{"docroot", docroot},
+            udho::url::explorers::assets{"assets", assets}
+        }
+    };
+}
+
 
 inline basic_router<void> router(const udho::view::resources::asset::const_store& assets){
     using router_type = basic_router<void>;

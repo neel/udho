@@ -124,7 +124,10 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{resources};
 
-    auto router = udho::url::router(std::move(chain4), cstore.assets());
+    std::filesystem::path exe_path = std::filesystem::current_path();
+    std::filesystem::path docroot  = exe_path / "docroot";
+
+    auto router = udho::url::router(std::move(chain4), cstore.assets(), docroot);
 
     auto server = udho::net::server<http_listener>(service, 9000);
     auto artifacts  = udho::net::artifacts{router, resources};

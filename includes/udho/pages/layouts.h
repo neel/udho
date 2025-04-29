@@ -21,6 +21,7 @@ namespace l = udho::view::tmpl::layout;
 namespace places {
 namespace segments {
     struct listing{};
+    struct routes{};
 }
 }
 
@@ -29,12 +30,14 @@ namespace placeholders = l::placeholders;
 
 using minimal = l::basic_placeholder<
     l::spot<placeholders::segments::header>,
+    l::spot<places::segments::routes>,
     l::spot<places::segments::listing>,
     l::spot<placeholders::segments::footer>
 >;
 
 namespace places{
     static segments::listing listing;
+    static segments::routes  routes;
 }
 
 template <class DocumentT>
@@ -56,6 +59,9 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
         stream <<   "<div class='system'>";
         if(_doc[p::header].exists())
             stream << *_doc[p::header];
+
+        if(_doc[places::routes].exists())
+            stream << *_doc[places::routes];
 
         if(_doc[places::listing].exists())
             stream << *_doc[places::listing];
@@ -132,9 +138,10 @@ sys<ContextT> listing(ContextT context) {
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");
-    layout.properties(places::listing).classes("files").view("lua://udho/listing_page");
-    layout.properties(p::header).classes("header") .view("lua://udho/header");
-    layout.properties(p::footer).classes("footer") .view("lua://udho/status");
+    layout.properties(places::listing).classes("files")  .view("lua://udho/listing_page");
+    layout.properties(places::routes) .classes("routes") .view("lua://udho/routes_page");
+    layout.properties(p::header)      .classes("header") .view("lua://udho/header");
+    layout.properties(p::footer)      .classes("footer") .view("lua://udho/status");
 
     return layout;
 }

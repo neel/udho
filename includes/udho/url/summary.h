@@ -6,6 +6,7 @@
 
 #include <udho/url/fwd.h>
 #include <udho/url/detail/format.h>
+#include <udho/url/verb.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/view/data/data.h>
 #include <string>
@@ -16,6 +17,117 @@ namespace url{
 
 namespace summary{
 
+
+/**
+ * @brief Provides summarized information about a URL pattern match configuration
+ *
+ * This struct encapsulates the essential properties of a URL pattern matching
+ * configuration, including HTTP method, pattern format, and string representations
+ * for both matching and replacement.
+ */
+struct match {
+    match() = delete;
+
+    /**
+     * @brief Constructs a summary object
+     * @tparam format Pattern format type
+     * @tparam CharT Character type used in the match
+     * @param m Match instance to summarize
+     */
+    template <udho::url::pattern::formats format, typename CharT>
+    match(const udho::url::pattern::match<format, CharT>& m): _method(m.method()), _pattern(m.pattern()), _replacement(m.replacement()), _format(format) {}
+
+    /**
+     * @brief Gets the original pattern string
+     * @return Const reference to the pattern string
+     */
+    inline const std::string& pattern() const { return _pattern; }
+
+    /**
+     * @brief Gets the replacement pattern string
+     * @return Const reference to the replacement string
+     */
+    inline const std::string& replacement() const { return _replacement; }
+
+    /**
+     * @brief Converts HTTP method enum to string representation
+     * @return Human-readable method name
+     */
+    inline std::string method() const { return boost::beast::http::to_string(_method); }
+
+    /**
+     * @brief Converts format enum to string representation
+     * @return Human-readable format name
+     * @throw std::out_of_range if format isn't in format_names
+     */
+    inline std::string format() const { return format_names.at(_format); }
+
+    friend auto metatype(udho::view::data::type<match>){
+        using namespace udho::view::data;
+
+        return assoc("match"),
+               fvar("pattern",      &match::pattern),
+               fvar("replacement",  &match::replacement),
+               fvar("method",       &match::method),
+               fvar("format",       &match::format);
+    }
+private:
+    udho::url::verb _method;
+    std::string     _pattern;
+    std::string     _replacement;
+    udho::url::pattern::formats _format;
+
+    inline static const std::map<udho::url::pattern::formats, std::string> format_names = {
+        {udho::url::pattern::formats::p1729,    "p1729"},
+        {udho::url::pattern::formats::regex,    "regex"},
+        {udho::url::pattern::formats::fixed,    "fixed"},
+        {udho::url::pattern::formats::home,     "home" }
+    };
+};
+
+struct slot{
+    template <typename F, typename CharT, CharT... C>
+    inline explicit slot(const basic_slot<F, udho::hazo::string::str<CharT, C...>>& s): _key(s.key().c_str()), _symbol(s.symbol()), _nargs(s.args) {}
+
+    inline const std::string& key() const { return _key; }
+    inline const std::string& symbol() const { return _symbol; }
+    inline std::uint8_t nargs() const { return _nargs; }
+
+    friend auto metatype(udho::view::data::type<slot>){
+        using namespace udho::view::data;
+
+        return assoc("slot"),
+               fvar("key",     &slot::key),
+               fvar("symbol",  &slot::symbol),
+               fvar("nargs",   &slot::nargs);
+    }
+
+    private:
+    std::string  _key;
+    std::string  _symbol;
+    std::uint8_t _nargs;
+};
+
+struct action{
+    template <typename F, typename CharT, CharT... C, typename MatchT>
+    inline explicit action(const basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>& a): _slot(a), _match(a.match()) {}
+
+    inline const summary::slot& slot()   const { return _slot;}
+    inline const summary::match& match() const { return _match;}
+
+    friend auto metatype(udho::view::data::type<action>){
+        using namespace udho::view::data;
+
+        return assoc("action"),
+               fvar("slot",   &action::slot),
+               fvar("match",  &action::match);
+    }
+
+    private:
+    summary::slot  _slot;
+    summary::match _match;
+};
+
 /**
  * @class mount_point
  * @brief Represents a summarized view of a mount point in URL routing, containing replacements and mappings for URLs.
@@ -24,7 +136,8 @@ namespace summary{
  * associated with different parts of a URL. It is constructed from a @ref udho::url: mount_point::summary function.
  */
 struct mount_point{
-    using container_type = std::map<std::string, std::string>;
+    using mappings_type  = std::map<std::string, std::string>;
+    using container_type = std::map<std::string, action>;
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
 
@@ -120,10 +233,9 @@ struct mount_point{
         return operator[](hstr.str());
     }
 
-    const_iterator begin() const { return _replacements.cbegin(); }
-    const_iterator end()   const { return _replacements.cend();   }
-    size_type      size()  const { return _replacements.size();   }
-
+    const_iterator begin() const { return _actions.cbegin(); }
+    const_iterator end()   const { return _actions.cend();   }
+    size_type      size()  const { return _actions.size();   }
 
     friend auto metatype(udho::view::data::type<mount_point>){
         using namespace udho::view::data;
@@ -140,7 +252,8 @@ struct mount_point{
     private:
         std::string     _name;
         std::string     _path;
-        container_type  _replacements;
+        container_type  _actions;
+        mappings_type   _replacements;
 };
 
 /**

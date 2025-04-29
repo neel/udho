@@ -75,10 +75,64 @@ constexpr static char template_listing_page[] = R"TEMPLATE(
 
 )TEMPLATE";
 
+constexpr static char template_routes_page[] = R"TEMPLATE(
+<?! vars('d', 'ctx') include.css("udho", "system.css") include.css("udho", "routes.css") ?>
+
+<div class='routes-container'>
+    <? for k, m in d:pairs() do ?>
+        <div class="mount-point">
+            <div class="mount-header">
+                <span class="mount-label"><?= k ?></span>
+                <span class="mount-path"><?= m.path ?></span>
+            </div>
+
+            <div class="routes-table">
+                <div class="table-header">
+                    <span>Method</span>
+                    <span>Pattern</span>
+                    <span>Replacement</span>
+                    <span>Label</span>
+                    <span>Callback</span>
+                </div>
+
+                <? for l, r in m:pairs() do ?>
+                    <div class="route-entry">
+                        <span class="http-method <?= r.match.method:lower() ?>" data-label="Method"><?= r.match.method ?></span>
+                        <div class="route-pattern" data-label="Pattern">
+                            <span class="route-pattern-format" data-label="Format"><?= r.match.format ?></span>
+                            <span class="route-pattern-str" data-label="Pattern"><?= r.match.pattern ?></span>
+                        </div>
+                        <code class="route-replacement" data-label="Replacement"><?= r.match.replacement ?></code>
+
+                        <div class="route-label" data-label="Label">
+                            <span class="route-label-name"><?= r.slot.key ?></span>
+                            <span class="route-label-args"><?= r.slot.nargs -1 ?></span>
+                        </div>
+                        <code class="route-callback" data-label="Callback"><?= r.slot.symbol ?></code>
+                    </div>
+                <? end ?>
+            </div>
+        </div>
+    <? end ?>
+</div>
+
+)TEMPLATE";
+
 constexpr static char template_listing_header[] = R"TEMPLATE(
-<?! vars('d', 'ctx') ?>
+<?! vars('d', 'ctx') include.css("udho", "header.css") ?>
+
 <div class="logo">
-    <img src="<?= ctx.resources.img:get('udho', 'beral.gif').url ?>" />
+    <? if(d.code ~= 200) then ?>
+    <div class="logo-parts http-status">
+        <div class="http-status-code">
+            <?= d.code ?>
+        </div>
+        <div class="http-status-msg">
+            <?= d.message ?>
+        </div>
+    </div>
+    <? end ?>
+    <img class="logo-parts beral-logo" src="<?= ctx.resources.img:get('udho', 'beral.gif').url ?>" />
 </div>
 )TEMPLATE";
 
@@ -103,6 +157,7 @@ void setup(udho::view::resources::store<Bridges...>& store){
 
     store["udho"] << udho::view::resources::lua{"listing_table",   std::begin(template_listing_table),  std::end(template_listing_table)}
                   << udho::view::resources::lua{"listing_page",    std::begin(template_listing_page),   std::end(template_listing_page)}
+                  << udho::view::resources::lua{"routes_page",     std::begin(template_routes_page),    std::end(template_routes_page)}
                   << udho::view::resources::lua{"header",          std::begin(template_listing_header), std::end(template_listing_header)}
                   << udho::view::resources::lua{"status",          std::begin(template_listing_status), std::end(template_listing_status)};
 
