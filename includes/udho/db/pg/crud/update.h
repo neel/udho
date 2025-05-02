@@ -31,7 +31,7 @@
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/common/result.h>
 #include <udho/db/common/none.h>
-
+#include <udho/db/pg/schema/schema.h>
 #include <udho/db/pg/generators/set.h>
 #include <udho/db/pg/generators/where.h>
 
@@ -114,7 +114,7 @@ struct basic_update{
         template<typename DerivedT>
         struct activity: basic_activity<DerivedT>, schema_type{
             typedef basic_activity<DerivedT> activity_type;
-            
+
             template <typename CollectorT, typename... Args>
             activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... rest): 
                 activity_type(collector, pool, io), 
@@ -167,9 +167,10 @@ struct basic_update{
             const auto& operator[](const udho::hazo::element_t<ElementT>& e) const{
                 return where.template element<ElementT>(e);
             }
-            
-            private:
-                using schema_type::operator[];
+
+            // compilation fixes
+            // private:
+            //     using schema_type::operator[];
             public:
                 with_type where;     // where query
         };

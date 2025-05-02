@@ -105,6 +105,7 @@ struct view_header{
     std::string bridge;
     vars_       vars;
     includes_   includes;
+    includes_   embeds;
     bool        whitespace = false;
 
     friend auto metatype(udho::view::data::type<view_header>){
@@ -115,6 +116,7 @@ struct view_header{
             mvar("bridge",     &view_header::bridge),
             mvar("vars",       &view_header::vars),
             mvar("include",    &view_header::includes),
+            mvar("embed",      &view_header::embeds),
             mvar("whitespace", &view_header::whitespace);
     }
 };

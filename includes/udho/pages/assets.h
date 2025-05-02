@@ -976,6 +976,43 @@ static constexpr unsigned char beral_transp_gif[] = {
     0x7e, 0xfe, 0xb3, 0x45, 0x02, 0x02, 0x00, 0x3b
 };
 
+constexpr static char js_tabs[] = R"ASSET(
+    document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('js-enabled');
+
+        document.querySelectorAll('.system').forEach(system => {
+            const tabContainer = system.querySelector('.tab-container');
+            const buttons = tabContainer.querySelectorAll('.tab-btn');
+            const contents = tabContainer.querySelectorAll('.tab-content');
+            const headings = tabContainer.querySelectorAll('.listing-heading');
+
+            headings.forEach(heading => heading.style.display = 'none');
+            tabContainer.querySelector('.tab-buttons').style.display = 'flex';
+
+            const firstContent = contents[0];
+            const firstButton = buttons[0];
+
+            contents.forEach(content => content.classList.remove('active-content'));
+            buttons.forEach(button => button.classList.remove('active-tab'));
+
+            if (firstContent) firstContent.classList.add('active-content');
+            if (firstButton) firstButton.classList.add('active-tab');
+
+            tabContainer.querySelector('.tab-buttons').addEventListener('click', (e) => {
+                if (!e.target.classList.contains('tab-btn')) return;
+
+                const targetId = e.target.dataset.target;
+                const targetContent = tabContainer.querySelector(`#${targetId}`);
+
+                buttons.forEach(button => button.classList.remove('active-tab'));
+                e.target.classList.add('active-tab');
+
+                contents.forEach(content => content.classList.remove('active-content'));
+                if (targetContent) targetContent.classList.add('active-content');
+            });
+        });
+    });
+)ASSET";
 
 
 template <typename... Bridges>
@@ -989,6 +1026,7 @@ void setup(udho::view::resources::store<Bridges...>& store){
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
                     << udho::view::resources::asset::css("routes.css",  std::begin(css_routes),  std::end(css_routes))
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
+                    << udho::view::resources::asset::js("tabs.js",      std::begin(js_tabs),     std::end(js_tabs))->embedded(true)
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
 
     setup_done = true;

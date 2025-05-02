@@ -393,8 +393,8 @@ namespace asset{
          * @return bool True if the resource is owned, false otherwise.
          */
         inline bool owned() const { return _owned; }
-        asset::source::type source() const { return _source; }
-        asset::type type() const { return _type; }
+        inline asset::source::type source() const { return _source; }
+        inline asset::type type() const { return _type; }
 
         /**
          * @brief Write the resource to a given output stream.
@@ -451,7 +451,7 @@ namespace asset{
     struct asset_policy<asset::type::js>{
         using basic_type = basic_resource<asset::type::js>;
 
-        asset_policy(basic_type& res): _res(res), _async(false), _defer(false), _nomodule(false) {}
+        asset_policy(basic_type& res): _res(res), _async(false), _defer(false), _nomodule(false), _embedded(false) {}
 
         const bool& is_async() const { return _async; }
         basic_type& is_async(const bool& flag) { _async = flag; return _res; }
@@ -471,6 +471,9 @@ namespace asset{
         const std::string& referrer_policy() const { return _referrer_policy; }
         basic_type& referrer_policy(const std::string& v) { _referrer_policy = v; return _res; }
 
+        bool embedded() const { return _embedded; }
+        basic_type& embedded(bool flag) { _embedded = flag; return _res; }
+
         private:
             basic_type& _res;
 
@@ -478,6 +481,7 @@ namespace asset{
             bool _defer;
             bool _module;
             bool _nomodule;
+            bool _embedded;
             std::string _cross_origin;
             std::string _referrer_policy;
     };
@@ -602,6 +606,7 @@ namespace asset{
         std::size_t write(udho::net::stream& stream) const {
             return _storage.write(stream);
         }
+
         std::size_t write_contents(udho::net::stream& stream) const {
             return 0;
         }

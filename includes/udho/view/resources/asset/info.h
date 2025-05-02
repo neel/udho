@@ -5,6 +5,7 @@
 #include <memory>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/resource.h>
+#include <udho/view/resources/asset/utils.h>
 #include <udho/view/data/data.h>
 
 namespace udho{
@@ -60,6 +61,7 @@ class asset_registration_info{
      * @brief type of the asset
      */
     inline asset::type type() const { return _res->type(); }
+    inline std::string type_str() const { return udho::view::resources::asset::utils::to_string(_res->type()); }
 
     template <asset::type AssetType>
     const udho::view::resources::asset::basic_resource<AssetType>& cast() const {
@@ -84,17 +86,13 @@ class asset_registration_info{
         using namespace udho::view::data;
 
         return assoc("asset_description"),
-               fvar("name",   &asset_registration_info::name),
-               fvar("prefix", &asset_registration_info::prefix);
+                fvar("name",        &asset_registration_info::name),
+                fvar("prefix",      &asset_registration_info::prefix),
+                fvar("owned",       &asset_registration_info::owned),
+                fvar("mime",        &asset_registration_info::mime),
+                fvar("type",        &asset_registration_info::type_str);
     }
 };
-
-
-// inline bool operator==(const asset_registration_info& l, const asset_registration_info& r) {
-//     return (l.type()   == r.type())
-//         && (l.prefix() == r.prefix())
-//         && (l.name()   == r.name());
-// }
 
 }
 

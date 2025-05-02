@@ -26,6 +26,11 @@ namespace detail {
 template <typename T>
 inline constexpr bool has_less_than_operator_v = detail::has_less_than_operator<T>::value;
 
+/**
+ * @defgroup Placeholders Placeholder System
+ * @brief Flexible template system for managing layout sections with content and properties
+ */
+
 namespace proxy{
 
 template <typename ContainerT>
@@ -34,28 +39,103 @@ struct content;
 template <typename ContainerT>
 struct const_content;
 
+/**
+ * @struct placeholder_properties
+ * @brief Configures HTML placeholder elements and their styling attributes
+ */
 struct placeholder_properties{
-    placeholder_properties(): _tag("div") {}
+    /**
+     * @brief Default constructor
+     * @details Initializes the default HTML tag to "div"
+     */
+    inline explicit placeholder_properties(): _tag("div") {}
 
-    placeholder_properties& view(const std::string& view_address) { _mapped_view = view_address; return *this; }
-    const std::string& view() const { return _mapped_view; }
+    /**
+     * @brief Set the associated view address for this placeholder. Once set renders the passed data to the placeholder using the specified view.
+     * @param view_address Identifier for the mapped view
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& view(const std::string& view_address) { _mapped_view = view_address; return *this; }
 
-    placeholder_properties& tag(const std::string& tagname) { _tag = tagname; return *this; }
-    const std::string& tag() const { return _tag; }
+    /**
+     * @brief Get the associated view address (if any)
+     * @return Const reference to the stored view identifier
+     */
+    inline const std::string& view() const { return _mapped_view; }
 
-    placeholder_properties& id(const std::string& i) { _id = i; return *this; }
-    const std::string& id() const { return _id; }
+    /**
+     * @brief Set the HTML tag name for the placeholder
+     * @param tagname HTML element name (e.g., "div", "span")
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& tag(const std::string& tagname) { _tag = tagname; return *this; }
 
-    placeholder_properties& classes(const std::string& classnames) { _classes = classnames; return *this; }
-    const std::string& classes() const { return _classes; }
+    /**
+     * @brief Get the current HTML tag name
+     * @return Const reference to the stored tag name
+     */
+    inline const std::string& tag() const { return _tag; }
 
-    placeholder_properties& wrapper_tag(const std::string& wrapper_tag) { _wrapper_tag = wrapper_tag; return *this; }
-    const std::string& wrapper_tag() const { return _wrapper_tag; }
+    /**
+     * @brief Set the HTML element ID attribute
+     * @param i ID value to set
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& id(const std::string& i) { _id = i; return *this; }
 
-    placeholder_properties& wrapper_classes(const std::string& wrapper_classes) { _wrapper_classes = wrapper_classes; return *this; }
-    const std::string& wrapper_classes() const { return _wrapper_classes; }
+    /**
+     * @brief Get the current ID attribute
+     * @return Const reference to the stored ID value
+     */
+    inline const std::string& id() const { return _id; }
 
-    std::string opening() const {
+    /**
+     * @brief Set the HTML class attribute
+     * @param classnames Space-separated list of CSS classes
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& classes(const std::string& classnames) { _classes = classnames; return *this; }
+
+    /**
+     * @brief Get the current class attribute
+     * @return Const reference to the stored class list
+     */
+    inline const std::string& classes() const { return _classes; }
+
+    /**
+     * @brief Set the wrapper element's HTML tag
+     * @param wrapper_tag Wrapper element name
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& wrapper_tag(const std::string& wrapper_tag) { _wrapper_tag = wrapper_tag; return *this; }
+
+    /**
+     * @brief Get the current wrapper tag
+     * @return Const reference to the stored wrapper tag name
+     */
+    inline const std::string& wrapper_tag() const { return _wrapper_tag; }
+
+    /**
+     * @brief Set the wrapper element's class attribute
+     * @param wrapper_classes Space-separated list of CSS classes for wrapper
+     * @return Reference to self for method chaining
+     */
+    inline placeholder_properties& wrapper_classes(const std::string& wrapper_classes) { _wrapper_classes = wrapper_classes; return *this; }
+
+    /**
+     * @brief Get the wrapper's class attribute
+     * @return Const reference to the stored wrapper class list
+     */
+    inline const std::string& wrapper_classes() const { return _wrapper_classes; }
+
+    /**
+     * @brief Generate opening HTML tag with attributes
+     * @return Formatted HTML opening tag string including:
+     *         - ID attribute if set
+     *         - Class attribute if set
+     * @details Example output: "<div id='main' class='container'>"
+     */
+    inline std::string opening() const {
         std::vector<std::string> attr;
         if(!_id.empty())        attr.emplace_back(udho::url::format("id=\"{}\"", _id));
         if(!_classes.empty())   attr.emplace_back(udho::url::format("class=\"{}\"", _classes));
@@ -67,8 +147,20 @@ struct placeholder_properties{
 
         return tag;
     }
-    bool styled() const { return !_id.empty() || !_classes.empty() || !_wrapper_classes.empty(); }
-    std::string closing() const {
+
+    /**
+     * @brief Check if any styling attributes are present
+     * @return true if any of these are set: ID, classes, or wrapper classes
+     * @return false if all styling attributes are empty
+     */
+    inline bool styled() const { return !_id.empty() || !_classes.empty() || !_wrapper_classes.empty(); }
+
+    /**
+     * @brief Generate closing HTML tag
+     * @return Formatted HTML closing tag based on current tag name
+     * @details Example output: "</div>"
+     */
+    inline std::string closing() const {
         return "</" +_tag+ ">";
     }
 
@@ -500,12 +592,11 @@ struct const_content<std::vector<std::string>>{
 
 }
 
+#ifndef __DOXYGEN__
+
 template <bool Multi, typename KeyT, typename Enable = void>
 struct basic_placeholder_container;
 
-/**
- * If KeyT doesn't have operator< overloaded then either uses std::optional or uses std::vector depending on the value of Multi.
- */
 template <bool Multi, typename KeyT>
 struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<has_less_than_operator_v<KeyT>>>{
     using key_type          = KeyT;
@@ -523,11 +614,13 @@ struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<has_less_than_o
         }
         return proxy_type{_container, key, _locker};
     }
+
     const_proxy_type operator[](const key_type& key) const {
         return const_proxy_type{_container, key, _locker};
     }
 
     proxy::placeholder_properties& properties(const key_type& key) { return _properties[key]; }
+
     const proxy::placeholder_properties& properties(const key_type& key) const { return _properties.at(key); }
 
     template <typename F, typename Stream>
@@ -597,16 +690,139 @@ struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<!has_less_than_
     mutable locker_type _locker;
 };
 
+#else
+
+/**
+ * @struct basic_placeholder_container
+ * @ingroup Placeholders
+ * @brief Core container managing content and properties for layout placeholders
+ * @tparam Multi Whether to support multiple values (true) or single value (false)
+ * @tparam KeyT Type of placeholder identifier (typically enum or tag type)
+ *
+ * Provides:
+ * - Content storage (single value or collection)
+ * - HTML property management (classes, IDs, tags)
+ * - Thread-safe access through proxy objects
+ *
+ * @note Actual implementation uses template specializations based on KeyT ordering capabilities
+ */
+template <bool Multi, typename KeyT>
+struct basic_placeholder_container {
+    /// @brief Type-safe placeholder key
+    using key_type = KeyT;
+
+    /// @brief Content proxy for safe access/modification
+    using proxy_type = proxy::content<container_type>;
+
+    /// @brief HTML properties manager type
+    using properties_type = proxy::placeholder_properties;
+
+    /**
+     * @brief Access content for modification
+     * @param key Placeholder identifier
+     * @return Proxy object supporting assignment and += operations
+     *
+     * @code
+     * container[placeholders::header] = "Title";
+     * container[placeholders::nav] += "Item 1";
+     * @endcode
+     */
+    proxy_type operator[](const key_type& key);
+
+    /**
+     * @brief Access content for modification
+     * @param key Placeholder identifier
+     * @return Proxy object supporting assignment and += operations
+     *
+     * @code
+     * container[placeholders::header] = "Title";
+     * container[placeholders::nav] += "Item 1";
+     * @endcode
+     */
+    proxy_type operator[](const key_type& key) const;
+
+    /**
+     * @brief Access HTML properties
+     * @param key Placeholder identifier
+     * @return Mutable properties reference
+     *
+     * @code
+     * container.properties(placeholders::header)
+     *     .classes("main-header")
+     *     .id("page-header");
+     * @endcode
+     */
+    properties_type& properties(const key_type& key);
+
+    /**
+     * @brief Access HTML properties
+     * @param key Placeholder identifier
+     * @return Mutable properties reference
+     *
+     * @code
+     * container.properties(placeholders::header)
+     *     .classes("main-header")
+     *     .id("page-header");
+     * @endcode
+     */
+    properties_type& properties(const key_type& key) const;
+
+    /**
+     * @brief Apply function to all placeholders
+     * @tparam F Function type
+     * @tparam Stream Output stream type
+     * @param f Processing function
+     * @param stream Output stream
+     *
+     * If the placeholder is associated with multiple values then calls the callback
+     * multiple times with i, len indicating the current index and the length while
+     * calling for each values associated with the placeholder. If the placeholder
+     * is associated with a single value then calls the callback with the associated
+     * value once only if a value is set. Therefore it is safe to apply a function
+     * on the container even if the placeholder key is not associated with a value.
+     * However f should have a compatible overload depending on whether the container
+     * is single valued or multi valued. For single valued container expected overload
+     * is (Key, const std::string&, udho::net::stream&) and for multivalued container
+     * the expected overload is (Key, const std::string&, udho::net::stream&, std::size_t, std::size_t)
+     */
+    template <typename F, typename Stream>
+    void apply(F&& f, Stream& stream) const;
+};
+
+#endif
+
+/**
+ * @struct spot
+ * @ingroup Placeholders
+ * @brief Defines a single-value layout section
+ * @tparam KeyT Section identifier type
+ *
+ * @code
+ * using header = spot<segments::header>;
+ * @endcode
+ */
 template <typename KeyT, bool Multi = false>
 struct spot{
     static constexpr bool multiple = Multi;
     using key_type = KeyT;
 };
 
+/**
+ * @struct multispot
+ * @ingroup Placeholders
+ * @brief Defines a multi-value layout section
+ * @tparam KeyT Section identifier type
+ *
+ * @code
+ * using nav_items = multispot<segments::navigation>;
+ * @endcode
+ */
 template <typename KeyT>
 using multispot = spot<KeyT, true>;
 
 using nullspot = spot<std::nullptr_t, true>;
+
+#ifndef __DOXYGEN__
 
 template <typename Spot = nullspot, typename... Spots>
 struct basic_placeholder;
@@ -663,6 +879,48 @@ struct basic_placeholder<nullspot>: protected basic_placeholder_container<true, 
     }
 };
 
+#else
+/**
+ * @struct basic_placeholder
+ * @brief Composable placeholder system for building layout structures
+ * @tparam Spot First placeholder spot type
+ * @tparam Spots Remaining placeholder spot types
+ *
+ * Combines multiple placeholder containers using recursive inheritance.
+ * Supports both single-value (spot) and multi-value (multispot) placeholders.
+ */
+
+template <typename Spot, typename... Spots>
+struct basic_placeholder {
+    /**
+     * @brief Access placeholder content
+     * @tparam Key Placeholder key type
+     * @param key Placeholder identifier
+     * @return Proxy object for content manipulation
+     */
+    template <typename Key>
+    using proxy_type = typename std::conditional</*...*/>::type;
+
+    /**
+     * @brief Access placeholder properties
+     * @param key Placeholder identifier
+     * @return Reference to associated properties object
+     */
+    proxy::placeholder_properties& properties(const key_type& key);
+
+    /**
+     * @brief Process all placeholders in order
+     * @tparam F Processing function type
+     * @tparam Stream Output stream type
+     * @param f Processing function
+     * @param stream Output stream
+     */
+    template <typename F, typename Stream>
+    void apply(F&& f, Stream& stream) const;
+};
+
+#endif
+
 namespace placeholders{
 
 namespace segments{
@@ -680,6 +938,26 @@ static segments::footer  footer;
 static segments::left    left;
 static segments::right   right;
 
+/**
+ * @var standard
+ * @brief Standard page layout configuration
+ *
+ * Combines:
+ * - Single-value header
+ * - Multi-value left column
+ * - Single-value main content
+ * - Multi-value right column
+ * - Single-value footer
+ *
+ * Example usage:
+ * @code
+ * standard layout;
+ * layout[header] = "Page Title";
+ * layout[left] += "Navigation 1";
+ * layout[left] += "Navigation 2";
+ * layout[central] = "Main Content";
+ * @endcode
+ */
 using standard = basic_placeholder<
     spot<segments::header>,
     multispot<segments::left>,

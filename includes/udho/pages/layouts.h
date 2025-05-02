@@ -53,9 +53,6 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
     void render(Stream& stream) const {
         namespace p = l::placeholders;
 
-        bool tab_active = false;
-
-        stream << "<body>";
         stream <<   "<div class='system'>";
         if(_doc[p::header].exists())
             stream << *_doc[p::header];
@@ -66,8 +63,8 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
         if(_doc[places::listing].exists())
             stream << *_doc[places::listing];
 
-        if(_doc[placeholders::footer].exists())
-            default_presenter_::present(placeholders::footer, *_doc[placeholders::footer], stream);
+        default_presenter_::present(placeholders::footer, stream);
+
         stream <<   "</div>";
 
         stream <<     R"SCRIPT(<script>
@@ -114,7 +111,6 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
                 });
             });
         </script>)SCRIPT";
-        stream << "</body>";
     }
 
     private:
