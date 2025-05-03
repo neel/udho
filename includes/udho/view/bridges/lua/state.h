@@ -234,6 +234,11 @@ struct state{
         }
 
         std::size_t size = buff.str(output);
+        // If the returned output is null terminated remve the trailing null
+        if(output.back() == '\0'){
+            output.pop_back();
+            --size;
+        }
         return size;
     }
 
@@ -274,6 +279,10 @@ struct state{
 
         std::string output;
         buff.str(output);
+        // If the returned output is null terminated remve the trailing null
+        if(output.back() == '\0'){
+            output.pop_back();
+        }
         return output;
     }
 

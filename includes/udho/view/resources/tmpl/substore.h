@@ -93,7 +93,6 @@ struct proxy{
     udho::view::resources::results eval(T&& data, Aux&& aux){
         udho::view::resources::results res(_name);
         udho::view::data::bridges::results results = _bridge.exec(_name, _prefix, std::forward<T>(data), std::forward<Aux>(aux), res.output());
-        res.size(results.size());
         return res;
     }
 

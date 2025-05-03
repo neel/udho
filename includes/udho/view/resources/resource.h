@@ -182,6 +182,7 @@ namespace asset{
         private:
             std::size_t write(udho::net::stream& stream) const {
                 if (!_buffer.empty()) {
+                    assert(_buffer.back() != '\0' && "Null in owned storage!");
                     stream.write(_buffer.data(), _buffer.size());
                 }
                 return _buffer.size();
@@ -189,9 +190,14 @@ namespace asset{
 
         private:
             storage(Iterator begin, Iterator end) {
-                auto size = std::distance(begin, end);
-                _buffer.reserve(size);
-                std::copy(begin, end, _buffer.begin());
+                if (begin == end) return;
+
+                if constexpr (std::is_same_v<typename std::iterator_traits<Iterator>::value_type, char>) {
+                    if (*(std::prev(end)) == '\0') {
+                        --end;
+                    }
+                }
+                _buffer.assign(begin, end);
             }
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
@@ -230,13 +236,24 @@ namespace asset{
         private:
             std::size_t write(udho::net::stream& stream) const {
                 if (_size > 0) {
+                    assert(*(_end - 1) != '\0' && "Null in non-owned storage!");
                     stream.write(_begin, _end);
                 }
                 return _size;
             }
 
         private:
-            storage(iterator_type begin, iterator_type end): _begin(begin), _end(end), _size(std::distance(begin, end)) { }
+            storage(iterator_type begin, iterator_type end): _begin(begin), _end(adjust_end(begin, end)), _size(std::distance(_begin, _end)) { }
+
+            static iterator_type adjust_end(iterator_type begin, iterator_type end) {
+                if constexpr (std::is_same_v<value_type, char>) {
+                    if (begin != end && *(std::prev(end)) == '\0') {
+                        return std::prev(end);
+                    }
+                }
+                return end;
+            }
+
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (!magic) {
@@ -249,11 +266,17 @@ namespace asset{
                     return "application/octet-stream";
                 }
 
-                std::vector<unsigned char> buffer;
-                buffer.resize(_size);
-                std::copy(_begin, _end, buffer.begin());
-                const char* mime_type = magic_buffer(magic, buffer.data(), buffer.size());
-                std::string result = mime_type ? mime_type : "application/octet-stream";
+                std::string result;
+                if constexpr (std::is_pointer_v<iterator_type>) {
+                    const char* data = reinterpret_cast<const char*>(_begin);
+                    const char* mime_type = magic_buffer(magic, data, _size);
+                    result = mime_type ? mime_type : "application/octet-stream";
+                } else {
+                    std::vector<unsigned char> buffer(_begin, _end);
+                    const char* mime_type = magic_buffer(magic, buffer.data(), buffer.size());
+                    result = mime_type ? mime_type : "application/octet-stream";
+                }
+
                 magic_close(magic);
                 return result;
             }
@@ -451,7 +474,7 @@ namespace asset{
     struct asset_policy<asset::type::js>{
         using basic_type = basic_resource<asset::type::js>;
 
-        asset_policy(basic_type& res): _res(res), _async(false), _defer(false), _nomodule(false), _embedded(false) {}
+        asset_policy(basic_type& res): _res(res), _async(false), _defer(false), _module(false), _nomodule(false), _embedded(false) {}
 
         const bool& is_async() const { return _async; }
         basic_type& is_async(const bool& flag) { _async = flag; return _res; }

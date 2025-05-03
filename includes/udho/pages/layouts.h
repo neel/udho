@@ -66,51 +66,6 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
         default_presenter_::present(placeholders::footer, stream);
 
         stream <<   "</div>";
-
-        stream <<     R"SCRIPT(<script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Add JS-enabled class to body
-                document.body.classList.add('js-enabled');
-
-                // Initialize tab system for each .system container
-                document.querySelectorAll('.system').forEach(system => {
-                    const tabContainer = system.querySelector('.tab-container');
-                    const buttons = tabContainer.querySelectorAll('.tab-btn');
-                    const contents = tabContainer.querySelectorAll('.tab-content');
-                    const headings = tabContainer.querySelectorAll('.listing-heading');
-
-                    // Hide headings and show buttons
-                    headings.forEach(heading => heading.style.display = 'none');
-                    tabContainer.querySelector('.tab-buttons').style.display = 'flex';
-
-                    // Set initial active state
-                    const firstContent = contents[0];
-                    const firstButton = buttons[0];
-
-                    contents.forEach(content => content.classList.remove('active-content'));
-                    buttons.forEach(button => button.classList.remove('active-tab'));
-
-                    if (firstContent) firstContent.classList.add('active-content');
-                    if (firstButton) firstButton.classList.add('active-tab');
-
-                    // Add click handlers
-                    tabContainer.querySelector('.tab-buttons').addEventListener('click', (e) => {
-                        if (!e.target.classList.contains('tab-btn')) return;
-
-                        const targetId = e.target.dataset.target;
-                        const targetContent = tabContainer.querySelector(`#${targetId}`);
-
-                        // Update buttons
-                        buttons.forEach(button => button.classList.remove('active-tab'));
-                        e.target.classList.add('active-tab');
-
-                        // Update contents
-                        contents.forEach(content => content.classList.remove('active-content'));
-                        if (targetContent) targetContent.classList.add('active-content');
-                    });
-                });
-            });
-        </script>)SCRIPT";
     }
 
     private:

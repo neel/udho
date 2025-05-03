@@ -236,11 +236,6 @@ struct basic_document<basic_placeholder<Spots...>>: protected document_preamble,
     using loader_js  = asset_loader<udho::view::resources::asset::type::js>;
     using loader_css = asset_loader<udho::view::resources::asset::type::css>;
 
-    // struct loaders_{
-    //     loader_js  _js;
-    //     loader_css _css;
-    // };
-
     template <typename Key>
     using proxy_type = typename placeholders_type::template proxy_type<Key>;
     template <typename Key>

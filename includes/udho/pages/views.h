@@ -52,7 +52,7 @@ constexpr static char template_listing_table[] = R"TEMPLATE(
 )TEMPLATE";
 
 constexpr static char template_listing_page[] = R"TEMPLATE(
-<?! vars('d', 'ctx') include.css("udho", "system.css") include.css("udho", "listing.css") ?>
+<?! vars('d', 'ctx') include.css("udho", "system.css") include.css("udho", "listing.css") embed.js("udho", "tabs.js") ?>
 
 <div class='tab-container'>
     <div class='tab-buttons'>

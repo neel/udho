@@ -71,21 +71,8 @@ struct view_header{
             return {};
         }
 
-
-        // typename std::set<resource_info_>::const_iterator begin(asset_type type) const {
-        //     auto it = _includes.find(type);
-        //     return it != _includes.end() ? it->second.begin() : end(type);
-        // }
-        // typename std::set<resource_info_>::const_iterator end(asset_type type) const  {
-        //     auto it = _includes.find(type);
-        //     return it != _includes.end() ? it->second.end() : std::set<resource_info_>().end();  // Safe end iterator
-        // }
-
         void add_js(const std::string& prefix, const std::string& name)  { add(asset_type::js, prefix, name); }
         void add_css(const std::string& prefix, const std::string& name) { add(asset_type::css, prefix, name); }
-
-        // auto js() const { return boost::make_iterator_range(begin(asset_type::js), end(asset_type::js)); }
-        // auto css() const { return boost::make_iterator_range(begin(asset_type::css), end(asset_type::css)); }
 
         auto js() const { return resources(asset_type::js); }
         auto css() const { return resources(asset_type::css); }

@@ -56,16 +56,17 @@ struct header_renderer{
     header_renderer(layout_type& layout): _layout(layout) {}
     void apply(const udho::view::data::bridges::view_header& header){
         const udho::view::data::bridges::view_header::includes_& includes = header.includes;
+        const udho::view::data::bridges::view_header::includes_& embeds   = header.embeds;
 
-        auto includes_js = includes.js();
-        auto includes_css = includes.css();
+        auto includes_js    = includes.js();
+        auto includes_css   = includes.css();
+        auto embeds_js      = embeds.js();
+        auto embeds_css     = embeds.css();
 
-        for(const auto& js: includes_js){
-            _layout.js().add(js.prefix, js.name);
-        }
-        for(const auto& css: includes_css){
-            _layout.css().add(css.prefix, css.name);
-        }
+        for(const auto& js:  includes_js) { _layout.js() .add( js.prefix,  js.name, false); }
+        for(const auto& css: includes_css){ _layout.css().add(css.prefix, css.name, false); }
+        for(const auto& js:  embeds_js)   { _layout.js() .add( js.prefix,  js.name, true);  }
+        for(const auto& css: embeds_css)  { _layout.css().add(css.prefix, css.name, true);  }
     }
 };
 

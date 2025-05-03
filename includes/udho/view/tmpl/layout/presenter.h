@@ -180,6 +180,7 @@ struct default_presenter: basic_presenter<DocumentT>{
             basic_presenter_::head(stream);
             stream << basic_presenter_::document().body().open();
             static_cast<const Derived*>(this)->render(stream);
+            basic_presenter_::document().js().write_embedded(stream);
             stream << basic_presenter_::document().body().close();
         basic_presenter_::html_close(stream);
         return stream;
@@ -219,6 +220,7 @@ struct default_presenter<DocumentT, void>: basic_presenter<DocumentT>{
         StreamT& generate_body(StreamT& stream) const {
             stream << basic_presenter_::document().body().open();
             basic_presenter_::document().apply(*this, stream);
+            basic_presenter_::document().js().write_embedded(stream);
             stream << basic_presenter_::document().body().close();
             return stream;
         }

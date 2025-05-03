@@ -123,19 +123,21 @@ struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
 
     template <typename It, typename Function>
     udho::net::stream& importmap(udho::net::stream& stream, It begin, It end, Function&& f) const {
-        std::stringstream sstream;
-        sstream << "<script type=\"importmap\">" << "\n";
-        sstream << "{" << "\n";
-        sstream << "\t\"imports\": {" <<"\n";
-        for(It it = begin; it != end; ++it){
-            if(f(it)){
-                sstream << udho::url::format("\t\t\"{}/{}\": \"{}\",", it->prefix(), it->name(), it->url()) << "\n";
+        stream << "<script type=\"importmap\">" << "\n";
+        stream << "{" << "\n";
+        std::vector<std::string> imports;
+        for(It it = begin; it != end; ++it) {
+            const auto& asset_proxy = *it;
+            const auto& asset_js = asset_proxy.template cast<udho::view::resources::asset::type::js>();
+            if(!asset_js.embedded() && f(it)) {
+                imports.emplace_back(udho::url::format( "\t\t\"{}/{}\": \"{}\"", asset_proxy.prefix(), asset_proxy.name(), asset_proxy.url() ));
             }
         }
-        sstream << "\t}" <<"\n";
-        sstream << "}" << "\n";
-        sstream << "</script>" << "\n";
-        stream << sstream.str();
+        stream << "\t\"imports\": {" <<"\n";
+        if(!imports.empty()) {
+            stream << boost::algorithm::join(imports, ",\n") << "\n";
+        }
+        stream << "\t}\n}\n</script>\n";
         return stream;
     }
 
