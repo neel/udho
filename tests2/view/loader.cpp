@@ -59,7 +59,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         try{
             loader_css.add("primary", "non-existent.css");
         } catch(const std::exception& ex){
-            CHECK(std::string{ex.what()} == "Refering to asset :primary/non-existent.css which was nevered registered to the store");
+            CHECK(std::string{ex.what()} == "Refering to asset :primary/non-existent.css which was never registered to the store");
             exception_thrown = true;
         }
         CHECK(exception_thrown);
@@ -68,7 +68,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         try{
             loader_css.add("non-existent", "2profile.css");
         } catch(const std::exception& ex){
-            CHECK(std::string{ex.what()} == "Refering to asset :non-existent/2profile.css which was nevered registered to the store");
+            CHECK(std::string{ex.what()} == "Refering to asset :non-existent/2profile.css which was never registered to the store");
             exception_thrown = true;
         }
         CHECK(exception_thrown);
@@ -87,7 +87,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 	"imports": {
 		"primary/profile0.js": "/assets/primary/profile0.js",
 		"primary/0profile1.js": "/assets/primary/0profile1.js",
-		"primary/1profile2.js": "/assets/primary/1profile2.js",
+        "primary/1profile2.js": "/assets/primary/1profile2.js"
 	}
 }
 </script>

@@ -145,11 +145,11 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
                 "size" :  <?= mountpoint.size ?>,
                 "routes": [
                     <? local is_first_route = true ?>
-                    <? for name, pattern in mountpoint:pairs() do ?>
+                    <? for name, action in mountpoint:pairs() do ?>
                     <? if not is_first_route then ?>,<? end ?>
                     {
                         "name": "<?= name ?>",
-                        "pattern": "<?= pattern ?>"
+                        "pattern": "<?= action.match.replacement ?>"
                     }
                     <? is_first_route = false ?>
                     <? end ?>
