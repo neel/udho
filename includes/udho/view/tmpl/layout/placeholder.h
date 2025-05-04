@@ -782,8 +782,8 @@ struct basic_placeholder_container {
      * on the container even if the placeholder key is not associated with a value.
      * However f should have a compatible overload depending on whether the container
      * is single valued or multi valued. For single valued container expected overload
-     * is (Key, const std::string&, udho::net::stream&) and for multivalued container
-     * the expected overload is (Key, const std::string&, udho::net::stream&, std::size_t, std::size_t)
+     * is f(Key{}, const std::string&, udho::net::stream&) and for multivalued container
+     * the expected overload is f(Key{}, const std::string&, udho::net::stream&, std::size_t, std::size_t)
      */
     template <typename F, typename Stream>
     void apply(F&& f, Stream& stream) const;
@@ -914,6 +914,17 @@ struct basic_placeholder {
      * @tparam Stream Output stream type
      * @param f Processing function
      * @param stream Output stream
+     *
+     * If the placeholder is associated with multiple values then calls the callback
+     * multiple times with i, len indicating the current index and the length while
+     * calling for each values associated with the placeholder. If the placeholder
+     * is associated with a single value then calls the callback with the associated
+     * value once only if a value is set. Therefore it is safe to apply a function
+     * on the container even if the placeholder key is not associated with a value.
+     * However f should have a compatible overload depending on whether the container
+     * is single valued or multi valued. For single valued container expected overload
+     * is f(Key{}, const std::string&, udho::net::stream&) and for multivalued container
+     * the expected overload is f(Key{}, const std::string&, udho::net::stream&, std::size_t, std::size_t)
      */
     template <typename F, typename Stream>
     void apply(F&& f, Stream& stream) const;

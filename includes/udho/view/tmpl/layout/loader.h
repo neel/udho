@@ -216,13 +216,25 @@ struct asset_loader<udho::view::resources::asset::type::css>: common_asset_loade
         for(auto it: common_asset_loader_type::_selection){
             if(!it.second){ // Not embedded
                 const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
-                const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& a = asset_proxy.template cast<udho::view::resources::asset::type::css>();
-                const auto& policy = a.policy();
+                const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& asset_css = asset_proxy.template cast<udho::view::resources::asset::type::css>();
+                const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::css>& policy = asset_css.policy();
                 stream << udho::url::format("<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\" media=\"{}\">", asset_proxy.url(), policy.media()) << "\n";
             }
-            // stream << udho::url::format("<style media=\"{}\">", policy.media()) << "\n";
-            // it->write_contents(stream);
-            // stream << "</style>" << "\n";
+        }
+        return stream;
+    }
+
+    udho::net::stream& write_embedded(udho::net::stream& stream) const {
+        for(auto it: common_asset_loader_type::_selection){
+            if(it.second){ // Embedded
+                const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
+                const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& asset_css = asset_proxy.template cast<udho::view::resources::asset::type::css>();
+                const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::css>& policy = asset_css.policy();
+                stream << udho::url::format("<style media=\"{}\">", policy.media()) << "\n";
+                asset_proxy.write_contents(stream);
+                stream << "</style>" << "\n";
+            }
+
         }
         return stream;
     }

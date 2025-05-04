@@ -1,11 +1,7 @@
 #ifndef UDHO_VIEW_LAYOUT_PRESENTER_H
 #define UDHO_VIEW_LAYOUT_PRESENTER_H
 
-#include <set>
-#include <map>
 #include <string>
-#include <optional>
-#include <exception>
 #include <udho/url/detail/format.h>
 #include <udho/view/tmpl/layout/property_map.h>
 #include <udho/view/tmpl/layout/property_tree.h>
@@ -73,6 +69,17 @@ struct basic_presenter{
             return stream;
         }
         template <typename StreamT>
+        StreamT& body_open(StreamT& stream) const {
+            stream << _document.body().open();
+            return stream;
+        }
+        template <typename StreamT>
+        StreamT& body_close(StreamT& stream) const {
+            _document.js().write_embedded(stream);
+            stream << _document.body().close();
+            return stream;
+        }
+        template <typename StreamT>
         StreamT& title(StreamT& stream) const {
             stream << "<title>" << _document.preamble().title() << "</title>";
             return stream;
@@ -87,6 +94,7 @@ struct basic_presenter{
             _document.js().importmap(stream);
             _document.js().write(stream);
             _document.css().write(stream);
+            _document.css().write_embedded(stream);
             return stream;
         }
         template <typename StreamT>
@@ -111,6 +119,28 @@ struct basic_presenter{
         }
 
         template <typename KeyT, typename Stream>
+        void present(const KeyT& key, Stream& stream) const {
+            if(_document[key].exists())
+                present(key, *_document[key], stream);
+        }
+
+    protected:
+        template <typename KeyT, typename Stream>
+        void present(const KeyT& key, const std::string& str, Stream& stream) const {
+            const auto& properties = document().properties(key);
+            bool tag_opened = false;
+            if(properties.styled()){
+                stream << properties.opening();
+                tag_opened = true;
+            }
+            stream << str;
+            if(tag_opened){
+                stream << properties.closing();
+            }
+        }
+
+
+        template <typename KeyT, typename Stream>
         void present(const KeyT& key, const std::string& str, Stream& stream, std::size_t i, std::size_t len) const {
             const auto& properties = document().properties(key);
             if(i == 0 && properties.styled()){
@@ -127,26 +157,6 @@ struct basic_presenter{
             }
 
             if(i == len-1 && properties.styled()){
-                stream << properties.closing();
-            }
-        }
-
-        template <typename KeyT, typename Stream>
-        void present(const KeyT& key, Stream& stream) const {
-            if(_document[key].exists())
-                present(key, *_document[key], stream);
-        }
-
-        template <typename KeyT, typename Stream>
-        void present(const KeyT& key, const std::string& str, Stream& stream) const {
-            const auto& properties = document().properties(key);
-            bool tag_opened = false;
-            if(properties.styled()){
-                stream << properties.opening();
-                tag_opened = true;
-            }
-            stream << str;
-            if(tag_opened){
                 stream << properties.closing();
             }
         }
@@ -178,10 +188,9 @@ struct default_presenter: basic_presenter<DocumentT>{
     Stream& operator()(Stream& stream) const {
         basic_presenter_::html_open(stream);
             basic_presenter_::head(stream);
-            stream << basic_presenter_::document().body().open();
-            static_cast<const Derived*>(this)->render(stream);
-            basic_presenter_::document().js().write_embedded(stream);
-            stream << basic_presenter_::document().body().close();
+            basic_presenter_::body_open(stream);
+                static_cast<const Derived*>(this)->render(stream);
+            basic_presenter_::body_close(stream);
         basic_presenter_::html_close(stream);
         return stream;
     }
@@ -200,7 +209,9 @@ struct default_presenter<DocumentT, void>: basic_presenter<DocumentT>{
     Stream& operator()(Stream& stream) const {
         basic_presenter_::html_open(stream);
             basic_presenter_::head(stream);
-            generate_body(stream);
+            basic_presenter_::body_open(stream);
+                generate_body(stream);
+            basic_presenter_::body_close(stream);
         basic_presenter_::html_close(stream);
         return stream;
     }
@@ -218,10 +229,7 @@ struct default_presenter<DocumentT, void>: basic_presenter<DocumentT>{
     private:
         template <typename StreamT>
         StreamT& generate_body(StreamT& stream) const {
-            stream << basic_presenter_::document().body().open();
             basic_presenter_::document().apply(*this, stream);
-            basic_presenter_::document().js().write_embedded(stream);
-            stream << basic_presenter_::document().body().close();
             return stream;
         }
 
