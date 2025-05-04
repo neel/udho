@@ -9,6 +9,7 @@
 #include <udho/url/detail/format.h>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <udho/view/tmpl/layout/property_map.h>
 
 namespace udho{
 namespace view{
@@ -41,14 +42,15 @@ struct const_content;
 
 /**
  * @struct placeholder_properties
- * @brief Configures HTML placeholder elements and their styling attributes
+ * @brief Configures HTML placeholder elements and their styling attributes which could be used by a presenter
  */
-struct placeholder_properties{
+
+struct placeholder_properties: udho::view::tmpl::layout::html_tag{
     /**
      * @brief Default constructor
      * @details Initializes the default HTML tag to "div"
      */
-    inline explicit placeholder_properties(): _tag("div") {}
+    inline explicit placeholder_properties(): udho::view::tmpl::layout::html_tag("div") {}
 
     /**
      * @brief Set the associated view address for this placeholder. Once set renders the passed data to the placeholder using the specified view.
@@ -63,114 +65,14 @@ struct placeholder_properties{
      */
     inline const std::string& view() const { return _mapped_view; }
 
-    /**
-     * @brief Set the HTML tag name for the placeholder
-     * @param tagname HTML element name (e.g., "div", "span")
-     * @return Reference to self for method chaining
-     */
-    inline placeholder_properties& tag(const std::string& tagname) { _tag = tagname; return *this; }
+    inline bool styled() const { return (isset() && (has("id") || has("class"))) || _wrapper.isset(); }
 
-    /**
-     * @brief Get the current HTML tag name
-     * @return Const reference to the stored tag name
-     */
-    inline const std::string& tag() const { return _tag; }
-
-    /**
-     * @brief Set the HTML element ID attribute
-     * @param i ID value to set
-     * @return Reference to self for method chaining
-     */
-    inline placeholder_properties& id(const std::string& i) { _id = i; return *this; }
-
-    /**
-     * @brief Get the current ID attribute
-     * @return Const reference to the stored ID value
-     */
-    inline const std::string& id() const { return _id; }
-
-    /**
-     * @brief Set the HTML class attribute
-     * @param classnames Space-separated list of CSS classes
-     * @return Reference to self for method chaining
-     */
-    inline placeholder_properties& classes(const std::string& classnames) { _classes = classnames; return *this; }
-
-    /**
-     * @brief Get the current class attribute
-     * @return Const reference to the stored class list
-     */
-    inline const std::string& classes() const { return _classes; }
-
-    /**
-     * @brief Set the wrapper element's HTML tag
-     * @param wrapper_tag Wrapper element name
-     * @return Reference to self for method chaining
-     */
-    inline placeholder_properties& wrapper_tag(const std::string& wrapper_tag) { _wrapper_tag = wrapper_tag; return *this; }
-
-    /**
-     * @brief Get the current wrapper tag
-     * @return Const reference to the stored wrapper tag name
-     */
-    inline const std::string& wrapper_tag() const { return _wrapper_tag; }
-
-    /**
-     * @brief Set the wrapper element's class attribute
-     * @param wrapper_classes Space-separated list of CSS classes for wrapper
-     * @return Reference to self for method chaining
-     */
-    inline placeholder_properties& wrapper_classes(const std::string& wrapper_classes) { _wrapper_classes = wrapper_classes; return *this; }
-
-    /**
-     * @brief Get the wrapper's class attribute
-     * @return Const reference to the stored wrapper class list
-     */
-    inline const std::string& wrapper_classes() const { return _wrapper_classes; }
-
-    /**
-     * @brief Generate opening HTML tag with attributes
-     * @return Formatted HTML opening tag string including:
-     *         - ID attribute if set
-     *         - Class attribute if set
-     * @details Example output: "<div id='main' class='container'>"
-     */
-    inline std::string opening() const {
-        std::vector<std::string> attr;
-        if(!_id.empty())        attr.emplace_back(udho::url::format("id=\"{}\"", _id));
-        if(!_classes.empty())   attr.emplace_back(udho::url::format("class=\"{}\"", _classes));
-        std::string joined = boost::algorithm::join(attr, " ");
-
-        std::string tag = "<"+_tag;
-        if(!joined.empty()) tag += " "+joined;
-        tag += ">";
-
-        return tag;
-    }
-
-    /**
-     * @brief Check if any styling attributes are present
-     * @return true if any of these are set: ID, classes, or wrapper classes
-     * @return false if all styling attributes are empty
-     */
-    inline bool styled() const { return !_id.empty() || !_classes.empty() || !_wrapper_classes.empty(); }
-
-    /**
-     * @brief Generate closing HTML tag
-     * @return Formatted HTML closing tag based on current tag name
-     * @details Example output: "</div>"
-     */
-    inline std::string closing() const {
-        return "</" +_tag+ ">";
-    }
+    const udho::view::tmpl::layout::html_tag& wrapper() const { return _wrapper; }
+    udho::view::tmpl::layout::html_tag& wrapper() { return _wrapper; }
 
     private:
         std::string _mapped_view;
-        std::string _tag;
-        std::string _id;
-        std::string _classes;
-        std::string _wrapper_tag;
-        std::string _wrapper_classes;
+        udho::view::tmpl::layout::html_tag _wrapper;
 };
 
 namespace detail{

@@ -283,6 +283,43 @@ struct basic_html_tag: property_map<std::string, std::string>{
     inline const std::string& tag() const { return _name; }
 
     /**
+     * @brief checks whether an attribute is set or not
+     * @param attr the attribute to check
+     * @return bool
+     * @code
+     * html_tag div("div");
+     * div.has("id"); // should return false
+     * div.id("div_id");
+     * div.has("id"); // should return true
+     * @endcode
+     */
+    inline bool has(const std::string& attr) const {
+        return pmap_type::count(attr) > 0;
+    }
+
+    /**
+     * @brief sets id of the HTML element
+     * @param name the id to be set
+     * @return Reference to self for method chaining
+     */
+    inline tag_type& id(const std::string& name){
+        pmap_type::property("id", name);
+        return *this;
+    }
+
+    /**
+     * @brief returns id of the element if set, otherwise returns an empty string
+     * @return std::string representing the id of the element (empty string in case no id is set)
+     */
+    inline std::string id() const {
+        optional_value_type v = pmap_type::property("id");
+        if(v){
+            return *v;
+        }
+        return std::string{};
+    }
+
+    /**
      * @brief Adds multiple class names to the element
      * @param list Initializer list of class names to add
      * @return Reference to self for method chaining
@@ -298,6 +335,10 @@ struct basic_html_tag: property_map<std::string, std::string>{
         return *this;
     }
 
+    inline tag_type& classes(std::initializer_list<std::string>&& list){
+        return add_class(list);
+    }
+
     /**
      * @brief Adds a single class name to the element
      * @param class_name Class name to add
@@ -310,6 +351,10 @@ struct basic_html_tag: property_map<std::string, std::string>{
     inline tag_type& add_class(const std::string& class_name){
         pmap_type::property("class", class_name);
         return *this;
+    }
+
+    inline tag_type& classes(const std::string& class_name){
+        return add_class(class_name);
     }
 
     /**
@@ -428,14 +473,20 @@ struct basic_html_tag: property_map<std::string, std::string>{
 
 template <>
 struct basic_html_tag<true>: basic_html_tag<false>{
-    using basic_html_tag<false>::basic_html_tag;
+    inline explicit basic_html_tag(const std::string& name): basic_html_tag<false>(name), _isset(true) {}
+    inline explicit basic_html_tag(): basic_html_tag<false>(""), _isset(false) {}
 
     /**
      * @brief Sets the html_tag name
      * @param name New html_tag name
      * @return Reference to self for method chaining
      */
-    inline tag_type& tag(const std::string& name) { _name = name; return *this; }
+    inline tag_type& tag(const std::string& name) { _name = name; _isset = true; return *this; }
+
+    inline bool isset() const {return _isset; }
+
+    private:
+    bool _isset;
 };
 
 using html_tag = basic_html_tag<true>;

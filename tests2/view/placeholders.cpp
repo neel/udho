@@ -32,12 +32,12 @@ struct placeholder_value_printer{
             const auto& properties = _layout.properties(key);
             bool tag_opened = false;
             if(properties.styled()){
-                stream << properties.opening();
+                stream << properties.open();
                 tag_opened = true;
             }
             stream << str;
             if(tag_opened){
-                stream << properties.closing();
+                stream << properties.close();
             }
         }
     }
@@ -48,20 +48,17 @@ struct placeholder_value_printer{
         } else {
             const auto& properties = _layout.properties(key);
             if(i == 0 && properties.styled()){
-                stream << properties.opening();
+                stream << properties.open();
             }
-            const std::string& wrapper_tag = properties.wrapper_tag();
-            if(wrapper_tag.empty()){
+            const udho::view::tmpl::layout::html_tag& wrapper = properties.wrapper();
+            if(!wrapper.isset()){
                 stream << str;
             } else {
-                const std::string& wrapper_classes = properties.wrapper_classes();
-                stream << "<" << wrapper_tag;
-                if(!wrapper_classes.empty()) stream << "class=\"" << wrapper_classes << "\"";
-                stream << ">";
+                stream << wrapper.open();
             }
 
             if(i == len-1 && properties.styled()){
-                stream << properties.closing();
+                stream << properties.close();
             }
         }
     }
@@ -196,11 +193,11 @@ TEST_CASE("View layout placeholders", "[view][placeholder][layout]") {
             standard_layout.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"left_id\" class=\"left_class\">L1L2</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>\
-<div id=\"right_id\" class=\"right_class\">R1R2</div>\
-<div id=\"footer_id\" class=\"footer_class\">F</div>");
+<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"left_class\" id=\"left_id\">L1L2</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>\
+<div class=\"right_class\" id=\"right_id\">R1R2</div>\
+<div class=\"footer_class\" id=\"footer_id\">F</div>");
         }
 
         SECTION("partial properties"){
@@ -220,11 +217,11 @@ TEST_CASE("View layout placeholders", "[view][placeholder][layout]") {
             standard_layout.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"header_id\" class=\"header_class\">H</div>\
+<div class=\"header_class\" id=\"header_id\">H</div>\
 L1L2\
-<div id=\"central_id\" class=\"central_class\">C</div>\
-<div id=\"right_id\" class=\"right_class\">R1R2</div>\
-<div id=\"footer_id\" class=\"footer_class\">F</div>");
+<div class=\"central_class\" id=\"central_id\">C</div>\
+<div class=\"right_class\" id=\"right_id\">R1R2</div>\
+<div class=\"footer_class\" id=\"footer_id\">F</div>");
         }
 
         SECTION("missing values"){
@@ -243,10 +240,10 @@ L1L2\
             standard_layout.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>\
-<div id=\"right_id\" class=\"right_class\">R1R2</div>\
-<div id=\"footer_id\" class=\"footer_class\">F</div>");
+<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>\
+<div class=\"right_class\" id=\"right_id\">R1R2</div>\
+<div class=\"footer_class\" id=\"footer_id\">F</div>");
         }
 
         SECTION("partial properties and missing values"){
@@ -264,10 +261,10 @@ L1L2\
             standard_layout.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>\
-<div id=\"right_id\" class=\"right_class\">R1R2</div>\
-<div id=\"footer_id\" class=\"footer_class\">F</div>");
+<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>\
+<div class=\"right_class\" id=\"right_id\">R1R2</div>\
+<div class=\"footer_class\" id=\"footer_id\">F</div>");
         }
     }
 
@@ -306,11 +303,11 @@ L1L2\
             common_layout.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"north_id\" class=\"north_class\">H</div>\
-<div id=\"west_id\" class=\"west_class\">L</div>\
-<div id=\"main_id\" class=\"main_class\">C</div>\
-<div id=\"east_id\" class=\"east_class\">R</div>\
-<div id=\"south_id\" class=\"south_class\">F</div>");
+<div class=\"north_class\" id=\"north_id\">H</div>\
+<div class=\"west_class\" id=\"west_id\">L</div>\
+<div class=\"main_class\" id=\"main_id\">C</div>\
+<div class=\"east_class\" id=\"east_id\">R</div>\
+<div class=\"south_class\" id=\"south_id\">F</div>");
         }
 
         SECTION("partial properties") {
@@ -326,9 +323,9 @@ L1L2\
 
             common_layout.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"left_id\" class=\"left_class\">L</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>\
+            CHECK(stream.str() == "<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"left_class\" id=\"left_id\">L</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>\
 R\
 F");
         }
@@ -347,10 +344,10 @@ F");
 
             common_layout.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"north_id\" class=\"north_class\">H</div>\
-<div id=\"west_id\" class=\"west_class\">L</div>\
-<div id=\"main_id\" class=\"main_class\">C</div>\
-<div id=\"east_id\" class=\"east_class\">R</div>");
+            CHECK(stream.str() == "<div class=\"north_class\" id=\"north_id\">H</div>\
+<div class=\"west_class\" id=\"west_id\">L</div>\
+<div class=\"main_class\" id=\"main_id\">C</div>\
+<div class=\"east_class\" id=\"east_id\">R</div>");
         }
 
         SECTION("partial properties and missing values") {
@@ -363,8 +360,8 @@ F");
 
             common_layout.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>");
+            CHECK(stream.str() == "<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>");
         }
     }
 
@@ -403,11 +400,11 @@ F");
             multi_valued.apply(printer, stream);
 
             CHECK(stream.str() == "\
-<div id=\"north_id\" class=\"north_class\">H</div>\
-<div id=\"west_id\" class=\"west_class\">L</div>\
-<div id=\"main_id\" class=\"main_class\">C</div>\
-<div id=\"east_id\" class=\"east_class\">R</div>\
-<div id=\"south_id\" class=\"south_class\">F</div>");
+<div class=\"north_class\" id=\"north_id\">H</div>\
+<div class=\"west_class\" id=\"west_id\">L</div>\
+<div class=\"main_class\" id=\"main_id\">C</div>\
+<div class=\"east_class\" id=\"east_id\">R</div>\
+<div class=\"south_class\" id=\"south_id\">F</div>");
         }
 
         SECTION("partial properties") {
@@ -423,9 +420,9 @@ F");
 
             multi_valued.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"left_id\" class=\"left_class\">L</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>\
+            CHECK(stream.str() == "<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"left_class\" id=\"left_id\">L</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>\
 R\
 F");
         }
@@ -444,10 +441,10 @@ F");
 
             multi_valued.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"north_id\" class=\"north_class\">H</div>\
-<div id=\"west_id\" class=\"west_class\">L</div>\
-<div id=\"main_id\" class=\"main_class\">C</div>\
-<div id=\"east_id\" class=\"east_class\">R</div>");
+            CHECK(stream.str() == "<div class=\"north_class\" id=\"north_id\">H</div>\
+<div class=\"west_class\" id=\"west_id\">L</div>\
+<div class=\"main_class\" id=\"main_id\">C</div>\
+<div class=\"east_class\" id=\"east_id\">R</div>");
         }
 
         SECTION("partial properties and missing values") {
@@ -460,8 +457,8 @@ F");
 
             multi_valued.apply(printer, stream);
 
-            CHECK(stream.str() == "<div id=\"header_id\" class=\"header_class\">H</div>\
-<div id=\"central_id\" class=\"central_class\">C</div>");
+            CHECK(stream.str() == "<div class=\"header_class\" id=\"header_id\">H</div>\
+<div class=\"central_class\" id=\"central_id\">C</div>");
         }
     }
 

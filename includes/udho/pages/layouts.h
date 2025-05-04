@@ -89,10 +89,10 @@ sys<ContextT> listing(ContextT context) {
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");
-    layout.properties(places::listing).classes("files")  .view("lua://udho/listing_page");
-    layout.properties(places::routes) .classes("routes") .view("lua://udho/routes_page");
-    layout.properties(p::header)      .classes("header") .view("lua://udho/header");
-    layout.properties(p::footer)      .classes("footer") .view("lua://udho/status");
+    layout.properties(places::listing)  .view("lua://udho/listing_page") .classes("files")  ;
+    layout.properties(places::routes)   .view("lua://udho/routes_page")  .classes("routes") ;
+    layout.properties(p::header)        .view("lua://udho/header")       .classes("header") ;
+    layout.properties(p::footer)        .view("lua://udho/status")       .classes("footer") ;
 
     return layout;
 }
