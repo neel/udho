@@ -89,6 +89,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
     udho::pages::system::setup(resources);
+    std::cout << "resources setup" << std::endl;
 
     auto previous_size = resources.assets().size();
     resources["primary"] << udho::view::resources::asset::js ("0profile1.js", std::begin(buffer_js),  std::end(buffer_js) );
@@ -423,7 +424,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         THEN("HTTP Response okay js0") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/0profile1.js");
             CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_js));
+            CHECK(results.body.size() == sizeof(buffer_js) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js)));
             CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
             CHECK(results.headers["Content-Type"] == "application/javascript");
@@ -432,7 +433,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         THEN("HTTP Response okay js1") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/1profile2.js");
             CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_js1));
+            CHECK(results.body.size() == sizeof(buffer_js1) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js1)));
             CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
             CHECK(results.headers["Content-Type"] == "application/javascript");
@@ -441,7 +442,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         THEN("HTTP Response okay css") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
             CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_css));
+            CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
             CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
             CHECK(results.headers["Content-Type"] == "text/css");
@@ -450,7 +451,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         THEN("HTTP Response okay img") {
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/3profile.gif");
             CHECK(results.code == 200);
-            CHECK(results.body.size() == sizeof(buffer_img));
+            CHECK(results.body.size() == sizeof(buffer_img)); // don't subtract 1 because there is trailing null character in unsigned char array
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_img), [](const char& l, const unsigned char& r){ return static_cast<unsigned char>(l) == r; }));
             CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
             CHECK(results.headers["Content-Type"] == "image/gif");
@@ -480,7 +481,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             THEN("Deleting the docroot asset with same name falls back to asset store") {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
                 CHECK(results.code == 200);
-                CHECK(results.body.size() == sizeof(buffer_css));
+                CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract -1 because of trailing null character
                 CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
                 CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
                 CHECK(results.headers["Content-Type"] == "text/css");
@@ -497,7 +498,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             THEN("Alternate does not override asset store") {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/assets/primary/2profile.css");
                 CHECK(results.code == 200);
-                CHECK(results.body.size() == sizeof(buffer_css));
+                CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract -1 because of trailing null character
                 CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
                 CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
                 CHECK(results.headers["Content-Type"] == "text/css");
@@ -568,7 +569,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 observed_items_set.begin(), observed_items_set.end(),
                 expected_items_set.begin(), expected_items_set.end(),
                 std::back_inserter(difference)
-                );
+            );
 
             INFO("Checking listing for explorer " << label);
             CAPTURE(observed_items_set, expected_items_set);

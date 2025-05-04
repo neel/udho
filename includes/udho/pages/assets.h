@@ -1017,10 +1017,6 @@ constexpr static char js_tabs[] = R"ASSET(
 
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
-    static bool setup_done = false;
-    if(setup_done)
-        return;
-
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))
                     << udho::view::resources::asset::css("header.css",  std::begin(css_header),  std::end(css_header))
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
@@ -1028,8 +1024,6 @@ void setup(udho::view::resources::store<Bridges...>& store){
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
                     << udho::view::resources::asset::js("tabs.js",      std::begin(js_tabs),     std::end(js_tabs))->embedded(true)
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
-
-    setup_done = true;
 }
 
 }

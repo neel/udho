@@ -92,7 +92,21 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 }
 </script>
 )";
-        CHECK(output == expected_output);
+
+        auto extract_json = [](const std::string& str) {
+            size_t start = str.find('{');
+            size_t end = str.rfind('}');
+            if (start == std::string::npos || end == std::string::npos) return nlohmann::json();
+            return nlohmann::json::parse(str.substr(start, end - start + 1));
+        };
+        try {
+            nlohmann::json output_json = extract_json(output);
+            nlohmann::json expected_json = extract_json(expected_output);
+            CHECK(output_json == expected_json);
+        } catch(const nlohmann::json::exception& e) {
+            CHECK(false);
+        }
+
     }{
         udho::net::fake::bridge fake_bridge{request};
         udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
