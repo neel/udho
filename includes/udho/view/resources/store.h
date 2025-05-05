@@ -261,12 +261,12 @@ struct prefixed_store{
 
     template <typename Bridge>
     friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
-        pstore.template add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
+        pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return pstore;
     }
     template <typename Bridge>
     friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
-        pstore.template add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
+        pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return std::forward<prefixed_store<Bridges...>>(pstore);
     }
 
@@ -506,6 +506,10 @@ struct const_store{
      */
     const asset_substore_readonly_img& img() const { return _assets_img; }
 
+    std::string bridges_label() const {
+        return _tmpls_proxy.label();
+    }
+
     /**
      * @brief resources::const_store<XBridges...> is exposed to lua with the following properties
      * +------+------------------------+
@@ -522,7 +526,8 @@ struct const_store{
             fvar("assets", &self_type::assets),
             fvar("js",     &self_type::js),
             fvar("css",    &self_type::css),
-            fvar("img",    &self_type::img);
+            fvar("img",    &self_type::img),
+            fvar("bridges_label", &self_type::bridges_label);
     }
 
     // const_store_prefixed<XBridges...> operator[] (const std::string& prefix) const { return const_store_prefixed<XBridges...>{*this, prefix}; }

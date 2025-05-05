@@ -452,6 +452,7 @@ struct bridge{
 
 
     static constexpr auto name() { return state_type::name(); }
+    const std::pair<int, int>& version() { return _states.front()->version(); }
 
     bridge(std::size_t states = 1, bridges::policy policy = bridges::policy::no_policy): _pool_size(states), _semaphore_exec(_pool_size)
 #if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)

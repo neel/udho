@@ -23,12 +23,8 @@ constexpr static char css_system[] = R"ASSET(
 .header{
     border-bottom: 1px solid #b4b4b4;
 }
-.foooter {
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background-color: #f8f9fa;
-    border-top: 1px solid #e9ecef;
-    /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif; */
+.footer {
+    padding: 0rem 1.5rem;
 }
 .logo {
     text-align: center;
@@ -79,7 +75,7 @@ constexpr static char css_system[] = R"ASSET(
 /* Optional: Add subtle separators */
 .udho-deploy-info li:not(:last-child)::after {
     content: "|";
-    margin-left: 1.5rem;
+    margin-left: 1rem;
     color: #dee2e6;
     font-weight: 300;
 }

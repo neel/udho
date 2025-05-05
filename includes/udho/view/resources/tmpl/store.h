@@ -29,6 +29,7 @@
 #define UDHO_VIEW_RESOURCES_SUBSTORE_TMPL_STORE_H
 
 #include <udho/view/resources/tmpl/substore.h>
+#include <boost/algorithm/string/join.hpp>
 
 namespace udho{
 namespace view{
@@ -116,6 +117,7 @@ struct store: store_<Bridge, store<Bridges...>> {
 
     store(Bridge& bridge, Bridges&... bridges): base(bridge, tail(bridges...)) {}
     void lock() { base::lock(); }
+
 };
 
 template <typename Bridge>
@@ -125,6 +127,7 @@ struct store<Bridge>: store_<Bridge> {
 
     store(Bridge& bridge): base(bridge) {}
     void lock() { base::lock(); }
+
 };
 
 #else
@@ -189,6 +192,12 @@ class const_store<void>{
     public:
         template <typename... XBridges>
         explicit const_store(const store<XBridges...>&) {}
+
+        std::string label() const { return ""; }
+
+    private:
+        void _names(std::vector<std::string>& v) const {}
+        void _versions(std::vector<std::pair<int, int>>& v) const {}
 };
 
 template <typename BridgeT, typename... Bridges>
@@ -221,6 +230,34 @@ class const_store{
 
         template <typename XBridgeT, std::enable_if_t<!std::is_same_v<XBridgeT, BridgeT>>* = nullptr>
         const_substore_type<XBridgeT>& substore() { return _tail.template substore<XBridgeT>(); }
+
+        std::string label() const {
+            std::vector<std::string> names;
+            std::vector<std::pair<int, int>> versions;
+
+            _names(names);
+            _versions(versions);
+
+            assert(names.size() == versions.size());
+
+            std::vector<std::string> bridge_labels;
+            for(int i = 0; i != names.size(); ++i){
+                const auto& version = versions[i];
+                bridge_labels.emplace_back(udho::url::format("{} {}.{}", names[i], std::get<0>(version), std::get<1>(version)));
+            }
+            return boost::algorithm::join(bridge_labels, ", ");
+        }
+
+    private:
+        void _names(std::vector<std::string>& v) const {
+            v.emplace_back(_head.name().str());
+            _tail._names(v);
+        }
+
+        void _versions(std::vector<std::pair<int, int>>& v) const {
+            v.emplace_back(_head.version());
+            _tail._versions(v);
+        }
 };
 
 #else

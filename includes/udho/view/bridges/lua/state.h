@@ -287,7 +287,7 @@ struct state{
     }
 
     sol::table& udho() { return _udho; }
-    const std::pair<int, int>& lua_version() const { return _lua_version; }
+    const std::pair<int, int>& version() const { return _lua_version; }
 
     template <typename UnbinderF>
     void add_unbinder(UnbinderF&& unbinder) const {

@@ -325,6 +325,9 @@ struct substore{
      */
     void lock() { _locked = true; }
 
+    static constexpr auto name() { return bridge_type::name(); }
+    const std::pair<int, int>& version() const { return _bridge.version(); }
+
     private:
         resource_set _resources;
         bridge_type& _bridge;
@@ -410,6 +413,9 @@ struct const_substore{
      * @param name The name of the resource to retrieve.
      */
     const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const { return _substore.header(prefix, name); }
+
+    static constexpr auto name() { return bridge_type::name(); }
+    const std::pair<int, int>& version() const { return _substore.version(); }
 
     private:
         const store_type& _substore;

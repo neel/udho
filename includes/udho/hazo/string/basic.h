@@ -29,7 +29,7 @@
 #ifndef UDHO_HAZO_STRING_BASIC_H
 #define UDHO_HAZO_STRING_BASIC_H
 
-#include <utility>
+#include <string>
 #include <array>
 #include <type_traits>
 
