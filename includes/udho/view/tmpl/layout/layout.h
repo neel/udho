@@ -251,7 +251,7 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
  * ## Mapped Placeholders
  * Views can be mapped to placeholders
  * @code
- * layout[placeholders::central].view<lua>(prefix, name)
+ * layout[placeholders::central].view("lua://prefix/name")
  * @endcode
  * Once mapped a C++ object (with metatype bindings) can be passed to it.
  * If the placeholder is meant for accomodating multiple values then use += operator, otherwise using = operator.
@@ -310,22 +310,26 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     template <typename Key>
     const proxy::placeholder_properties& properties(const Key& key) const { return _pimpl->document().properties(key); }
 
-    void finish() {
-        if(!_finished){
-            _pimpl->presenter()(_context);
-            _finished = true;
-            _context.finish();
-        }
-    }
-
-    void operator()() {
-        finish();
-    }
-
     private:
         void on_delete() {
-            // layout_imple being deleted
             std::cout << "layout is being deleted" << std::endl;
+            finish();
+        }
+
+        /**
+         * @brief finish the layout by presenting it to the stream associated with the context
+         * @details calls the operator() overload of the presenter with the context as the only argument.
+         *          afterwards finishes the context
+         */
+        void finish() {
+            if(!_finished){
+                _pimpl->presenter()(_context);
+                _finished = true;
+                _context.finish();
+            }
+        }
+
+        void operator()() {
             finish();
         }
 

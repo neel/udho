@@ -40,50 +40,50 @@ struct nodef{
     nodef(int) {}
 };
 
-void f0(udho::net::stream context){
+BOOST_SYMBOL_EXPORT void f0(udho::net::stream context){
     context << "f0";
     context.finish();
     return;
 }
 
-int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
+BOOST_SYMBOL_EXPORT int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
     context << std::to_string(a+b.size()+c+d);
     context.finish();
     return 42;
 }
 
-std::string f2(udho::net::stream context, int a, const std::string& b){
+BOOST_SYMBOL_EXPORT std::string f2(udho::net::stream context, int a, const std::string& b){
     context << std::to_string(a+b.size());
     context.finish();
     return "hello";
 }
 
-std::string f_nodef(udho::net::stream context, nodef, int a){
+BOOST_SYMBOL_EXPORT std::string f_nodef(udho::net::stream context, nodef, int a){
     context << std::to_string(a);
     context.finish();
     return "hello";
 }
 
 struct X{
-    void f0(udho::net::stream context){
+    BOOST_SYMBOL_EXPORT void f0(udho::net::stream context){
         context << "f0";
         context.finish();
         return;
     }
 
-    int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
+    BOOST_SYMBOL_EXPORT int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
         context << std::to_string(a+b.size()+c+d);
         context.finish();
         return a+b.size()+c+d;
     }
 
-    std::string f2(udho::net::stream context, int a, const std::string& b){
+    BOOST_SYMBOL_EXPORT std::string f2(udho::net::stream context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "world";
     }
 
-    int f3(udho::net::stream context, int a, const std::string& b, const double& c, bool d) const{
+    BOOST_SYMBOL_EXPORT int f3(udho::net::stream context, int a, const std::string& b, const double& c, bool d) const{
         context << std::to_string(84);
         context.finish();
         return 0;
@@ -138,7 +138,7 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
         service.run();
     });
 
-    server.stop();
+    // server.stop();
     thread.join();
 
 }

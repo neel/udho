@@ -17,37 +17,37 @@ struct nodef{
     nodef(int) {}
 };
 
-void f0(){
+BOOST_SYMBOL_EXPORT void f0(){
     std::cout << "f0" << std::endl;
     return;
 }
 
-int f1(int a, const std::string& b, const double& c, bool d){
+BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
     return a+b.size()+c+d;
 }
 
-std::string f2(int a, const std::string& b){
+BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
     return std::to_string(a+b.size());
 }
 
-std::string f_nodef(nodef, int a){
+BOOST_SYMBOL_EXPORT std::string f_nodef(nodef, int a){
     return "hello";
 }
 
 struct X{
-    void f0(){
+    BOOST_SYMBOL_EXPORT void f0(){
         return;
     }
 
-    int f1(int a, const std::string& b, const double& c, bool d){
+    BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
         return a+b.size()+c+d;
     }
 
-    std::string f2(int a, const std::string& b){
+    BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
         return std::to_string(a+b.size());
     }
 
-    int f3(int a, const std::string& b, const double& c, bool d) const{
+    BOOST_SYMBOL_EXPORT int f3(int a, const std::string& b, const double& c, bool d) const{
         return 84;
     }
 };
@@ -65,9 +65,9 @@ TEST_CASE("DL_info", "[url][dlinfo]"){
     std::string f1_name{abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL)};
     std::string xf0_name{abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL)};
 
-    CHECK(f0_name == "f0");
-    CHECK(f1_name == "f1");
-    CHECK(xf0_name == "X::f0");
+    CHECK(f0_name == "f0()");
+    CHECK(f1_name == "f1(int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, double const&, bool)");
+    CHECK(xf0_name == "X::f0()");
 }
 
 TEST_CASE("Regex matching operations", "[url][regex]") {
