@@ -150,6 +150,34 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         }
     }
 
+    SECTION("Embedded-only JS doesn't appear in importmap") {
+        // Add the embedded-only asset to the loader
+        loader_js.add("secondary", "embedded_only.js", true);
+
+        udho::net::fake::bridge fake_bridge{request};
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+
+        // Should still exclude from importmap
+        loader_js.importmap(stream);
+        const std::string output = fake_bridge.stream().str();
+
+        CHECK(output.find("embedded_only.js") == std::string::npos);
+        CHECK(output.find("module.js") != std::string::npos); // Verify non-embedded still appears
+    }
+
+    SECTION("Embedded-only JS writes correctly") {
+        loader_js.add("secondary", "embedded_only.js", true);
+
+        udho::net::fake::bridge fake_bridge{request};
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+
+        loader_js.write(stream, true);
+        const std::string output = fake_bridge.stream().str();
+
+        CHECK(output.find("<script type=\"text/javascript\">") != std::string::npos);
+        CHECK(output.find(buffer_js_module) != std::string::npos);
+    }
+
     SECTION("JavaScript asset writing handles embedded and external correctly") {
         udho::net::fake::bridge fake_bridge{request};
         udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
