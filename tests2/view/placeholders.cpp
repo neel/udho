@@ -30,13 +30,11 @@ struct placeholder_value_printer{
             stream << str;
         } else {
             const auto& properties = _layout.properties(key);
-            bool tag_opened = false;
-            if(properties.styled()){
+            if(properties.isset()){
                 stream << properties.open();
-                tag_opened = true;
             }
             stream << str;
-            if(tag_opened){
+            if(properties.isset()){
                 stream << properties.close();
             }
         }
@@ -47,17 +45,14 @@ struct placeholder_value_printer{
             stream << str;
         } else {
             const auto& properties = _layout.properties(key);
-            if(i == 0 && properties.styled()){
+
+            if(i == 0 && properties.isset()){
                 stream << properties.open();
             }
-            const udho::view::tmpl::layout::html_tag& wrapper = properties.wrapper();
-            if(!wrapper.isset()){
-                stream << str;
-            } else {
-                stream << wrapper.open();
-            }
 
-            if(i == len-1 && properties.styled()){
+            stream << str;
+
+            if(i == len-1 && properties.isset()){
                 stream << properties.close();
             }
         }

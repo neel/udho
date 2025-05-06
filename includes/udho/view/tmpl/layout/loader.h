@@ -115,34 +115,39 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
     /**
      * @brief generate script tags only for the requested javascripts
      */
-    udho::net::stream& write(udho::net::stream& stream) const {
+    udho::net::stream& write(udho::net::stream& stream, bool embedded = false) const {
         for(auto it: common_asset_loader_type::_selection){
-            if(!it.second){ // Not embedded
+            if(it.second == embedded) {
                 const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
                 const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::js>& asset_js = asset_proxy.template cast<udho::view::resources::asset::type::js>();
                 const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::js>& policy = asset_js.policy();
 
                 html_tag_fixed script("script");
 
-                script.property("src", asset_proxy.url());
+                if (policy.is_nomodule())               script.property("nomodule",         "");
+                if (policy.is_module())                 script.property("type",             "module");
 
-                if (policy.is_async())      script.property("async", "");
-                if (policy.is_defer())      script.property("defer", "");
-                if (policy.is_nomodule())   script.property("nomodule", "");
+                if(!embedded){
+                    // async, defer requires fetching which depends on src attribute which is not set if the js is embedded.
+                    // crossorigin, referrerpolicy is relevant only when src attribute is set which is not set if the js is embedded.
 
-                if (policy.is_module()) {
-                    script.property("type", "module");
+                    script.property("src", asset_proxy.url());
+                    if (policy.is_async())                  script.property("async", "");
+                    if (policy.is_defer())                  script.property("defer", "");
+
+                    if (!policy.cross_origin().empty())     script.property("crossorigin",      policy.cross_origin());
+                    if (!policy.referrer_policy().empty())  script.property("referrerpolicy",   policy.referrer_policy());
+                } else {
+                    if (!policy.is_module())                script.property("type", "text/javascript");
                 }
 
-                if (!policy.cross_origin().empty()) {
-                    script.property("crossorigin", policy.cross_origin());
+                stream << script.open();
+                if(embedded) {
+                    stream << "\n";
+                    asset_proxy.write_contents(stream);
+                    stream << "\n";
                 }
-
-                if (!policy.referrer_policy().empty()) {
-                    script.property("referrerpolicy", policy.referrer_policy());
-                }
-
-                stream << script.open() << script.close() << "\n";
+                stream << script.close() << "\n";
             }
         }
         return stream;
@@ -152,40 +157,7 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
      * @brief generate script tags only for the requested javascripts
      */
     udho::net::stream& write_embedded(udho::net::stream& stream) const {
-        for(auto it: common_asset_loader_type::_selection){
-            if(it.second){ // Embedded
-                const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
-                const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::js>& asset_js = asset_proxy.template cast<udho::view::resources::asset::type::js>();
-                const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::js>& policy = asset_js.policy();
-
-                html_tag_fixed script("script");
-
-                if (policy.is_module()) {
-                    script.property("type", "module");
-                } else {
-                    script.property("type", "text/javascript");
-                }
-
-                if (policy.is_async()) script.property("async", "");
-                if (policy.is_defer()) script.property("defer", "");
-                if (policy.is_nomodule()) script.property("nomodule", "");
-
-                if (!policy.cross_origin().empty()) {
-                    script.property("crossorigin", policy.cross_origin());
-                }
-
-                if (!policy.referrer_policy().empty()) {
-                    script.property("referrerpolicy", policy.referrer_policy());
-                }
-
-                stream << script.open() << "\n";
-                asset_proxy.write_contents(stream);
-                stream << "\n" << script.close() << "\n";
-            }
-
-
-        }
-        return stream;
+        return write(stream, true);
     }
 };
 
@@ -212,31 +184,27 @@ struct asset_loader<udho::view::resources::asset::type::css>: common_asset_loade
     /**
      * @brief generate link or style tags only for the requested stylesheets
      */
-    udho::net::stream& write(udho::net::stream& stream) const {
+    udho::net::stream& write(udho::net::stream& stream, bool embedded = false) const {
         for(auto it: common_asset_loader_type::_selection){
-            if(!it.second){ // Not embedded
+            if(it.second == embedded) {
                 const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
                 const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& asset_css = asset_proxy.template cast<udho::view::resources::asset::type::css>();
                 const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::css>& policy = asset_css.policy();
-                stream << udho::url::format("<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\" media=\"{}\">", asset_proxy.url(), policy.media()) << "\n";
+
+                if (embedded) {
+                    stream << udho::url::format("<style media=\"{}\">", policy.media()) << "\n";
+                    asset_proxy.write_contents(stream);
+                    stream << "</style>\n";
+                } else {
+                    stream << udho::url::format("<link href=\"{}\" rel=\"stylesheet\" type=\"text/css\" media=\"{}\">", asset_proxy.url(), policy.media()  ) << "\n";
+                }
             }
         }
         return stream;
     }
 
     udho::net::stream& write_embedded(udho::net::stream& stream) const {
-        for(auto it: common_asset_loader_type::_selection){
-            if(it.second){ // Embedded
-                const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
-                const udho::view::resources::asset::basic_resource<udho::view::resources::asset::type::css>& asset_css = asset_proxy.template cast<udho::view::resources::asset::type::css>();
-                const udho::view::resources::asset::asset_policy<udho::view::resources::asset::type::css>& policy = asset_css.policy();
-                stream << udho::url::format("<style media=\"{}\">", policy.media()) << "\n";
-                asset_proxy.write_contents(stream);
-                stream << "</style>" << "\n";
-            }
-
-        }
-        return stream;
+        return write(stream, true);
     }
 };
 

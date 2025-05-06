@@ -129,7 +129,7 @@ struct basic_presenter{
         void present(const KeyT& key, const std::string& str, Stream& stream) const {
             const auto& properties = document().properties(key);
             bool tag_opened = false;
-            if(properties.styled()){
+            if(properties.isset()){
                 stream << properties.open();
                 tag_opened = true;
             }
@@ -143,17 +143,14 @@ struct basic_presenter{
         template <typename KeyT, typename Stream>
         void present(const KeyT& key, const std::string& str, Stream& stream, std::size_t i, std::size_t len) const {
             const auto& properties = document().properties(key);
-            if(i == 0 && properties.styled()){
+
+            if(i == 0 && properties.isset()){
                 stream << properties.open();
             }
-            const udho::view::tmpl::layout::html_tag& wrapper = properties.wrapper();
-            if(!wrapper.isset()){
-                stream << str;
-            } else {
-                stream << wrapper.open();
-            }
 
-            if(i == len-1 && properties.styled()){
+            stream << str;
+
+            if(i == len-1 && properties.isset()){
                 stream << properties.close();
             }
         }

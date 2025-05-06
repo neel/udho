@@ -47,12 +47,6 @@ struct const_content;
 
 struct placeholder_properties: udho::view::tmpl::layout::html_tag{
     /**
-     * @brief Default constructor
-     * @details Initializes the default HTML tag to "div"
-     */
-    inline explicit placeholder_properties(): udho::view::tmpl::layout::html_tag("div") {}
-
-    /**
      * @brief Set the associated view address for this placeholder. Once set renders the passed data to the placeholder using the specified view.
      * @param view_address Identifier for the mapped view
      * @return Reference to self for method chaining
@@ -65,14 +59,8 @@ struct placeholder_properties: udho::view::tmpl::layout::html_tag{
      */
     inline const std::string& view() const { return _mapped_view; }
 
-    inline bool styled() const { return (isset() && (has("id") || has("class"))) || _wrapper.isset(); }
-
-    const udho::view::tmpl::layout::html_tag& wrapper() const { return _wrapper; }
-    udho::view::tmpl::layout::html_tag& wrapper() { return _wrapper; }
-
     private:
         std::string _mapped_view;
-        udho::view::tmpl::layout::html_tag _wrapper;
 };
 
 namespace detail{

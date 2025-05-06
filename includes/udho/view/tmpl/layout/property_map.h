@@ -299,11 +299,15 @@ struct basic_html_tag: property_map<std::string, std::string>{
 
     /**
      * @brief sets id of the HTML element
+     * @details if no tag name is set yet, then sets name to div, to avoid creation of invalid HTML element
      * @param name the id to be set
      * @return Reference to self for method chaining
      */
     inline tag_type& id(const std::string& name){
         pmap_type::property("id", name);
+        if(_name.empty()){
+            _name = "div";
+        }
         return *this;
     }
 
@@ -330,7 +334,7 @@ struct basic_html_tag: property_map<std::string, std::string>{
      */
     inline tag_type& add_class(std::initializer_list<std::string>&& list){
         for(const auto& class_name: list){
-            pmap_type::property("class", class_name);
+            add_class(class_name);
         }
         return *this;
     }
@@ -341,6 +345,7 @@ struct basic_html_tag: property_map<std::string, std::string>{
 
     /**
      * @brief Adds a single class name to the element
+     * @details if no tag name is set yet, then sets name to div, to avoid creation of invalid HTML element
      * @param class_name Class name to add
      * @return Reference to self for method chaining
      * @example
@@ -350,6 +355,9 @@ struct basic_html_tag: property_map<std::string, std::string>{
      */
     inline tag_type& add_class(const std::string& class_name){
         pmap_type::property("class", class_name);
+        if(_name.empty()){
+            _name = "div";
+        }
         return *this;
     }
 
@@ -473,20 +481,17 @@ struct basic_html_tag: property_map<std::string, std::string>{
 
 template <>
 struct basic_html_tag<true>: basic_html_tag<false>{
-    inline explicit basic_html_tag(const std::string& name): basic_html_tag<false>(name), _isset(true) {}
-    inline explicit basic_html_tag(): basic_html_tag<false>(""), _isset(false) {}
+    inline explicit basic_html_tag(const std::string& name): basic_html_tag<false>(name) {}
+    inline explicit basic_html_tag(): basic_html_tag<false>("") {}
 
     /**
      * @brief Sets the html_tag name
      * @param name New html_tag name
      * @return Reference to self for method chaining
      */
-    inline tag_type& tag(const std::string& name) { _name = name; _isset = true; return *this; }
+    inline tag_type& tag(const std::string& name) { _name = name; return *this; }
 
-    inline bool isset() const {return _isset; }
-
-    private:
-    bool _isset;
+    inline bool isset() const {return !_name.empty(); }
 };
 
 using html_tag = basic_html_tag<true>;
