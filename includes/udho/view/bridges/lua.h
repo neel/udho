@@ -37,6 +37,7 @@
 #include <fmt/core.h>
 #include <fmt/args.h>
 #include <tabulate/table.hpp>
+#include <udho/view/bridges/lua/binder.h>
 
 namespace udho{
 namespace view{

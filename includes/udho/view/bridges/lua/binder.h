@@ -38,6 +38,7 @@
 #include <udho/view/bridges/fwd.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/state.h>
+#include <udho/view/bridges/bind.h>
 
 namespace udho{
 namespace view{
@@ -332,6 +333,9 @@ struct internal_iter_binder {
 
 }
 
+/**
+ * @brief The binder class defines how the NVP's in the metatype will be mapped to the requested lua construct
+ */
 template <typename X>
 struct binder{
     using user_type = sol::usertype<X>;

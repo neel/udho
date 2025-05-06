@@ -32,8 +32,9 @@
 #include <udho/view/bridges/fwd.h>
 #include <udho/view/data/nvp.h>
 #include <iostream>
-#include <atomic>
+#include <udho/view/data/type.h>
 #include <set>
+#include <cstdint>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
@@ -42,14 +43,6 @@
 namespace udho{
 namespace view{
 namespace data{
-
-// template <template<class> class BinderT, typename Class>
-// struct binder;
-//
-// namespace bridges{
-//     template <typename BridgeT>
-//     struct bind;
-// }
 
 /**
  * @class bindings

@@ -240,7 +240,7 @@ namespace ostreamed{
         ostreamed_helper(boost::asio::io_context& io, udho::loggers::ostream::stream_type& stream): _logger(stream), _server(io, _logger){}
         template <typename RouterT>
         void serve(RouterT&& router, int port=9198){
-            _server.template serve(router, port);
+            _server.serve(router, port);
         }
         template <typename FeatureT>
         auto operator+=(const FeatureT& feature){
