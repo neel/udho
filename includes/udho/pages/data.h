@@ -295,15 +295,15 @@ struct status_info{
 
     std::string compiler_info() const {
         std::ostringstream oss;
-#ifdef __GNUC__
-        oss << "GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
-#elif defined(__clang__)
+    #ifdef __clang__  // Check for Clang FIRST
         oss << "Clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
-#elif defined(_MSC_VER)
+    #elif defined(__GNUC__)  // Then check for GCC
+        oss << "GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
+    #elif defined(_MSC_VER)
         oss << "MSVC " << _MSC_FULL_VER;
-#else
+    #else
         oss << "Unknown";
-#endif
+    #endif
         return oss.str();
     }
 
