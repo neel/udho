@@ -64,7 +64,7 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
 }
 
 int main(){
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     udho::servers::ostreamed::stateless server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;

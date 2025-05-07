@@ -2,7 +2,7 @@
 #define UDHO_EXAMPLES_SIMPLE_APPS_USER_H
 
 #include <udho/core/application.h>
-#include <udho/net/context.h>
+#include <udho/net/stream.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/operators.h>
 
@@ -20,8 +20,8 @@ struct user: udho::core::application<apps::user>{
             udho::url::slot("profile"_h, &user::profile, this) << udho::url::scan(udho::url::verb::get, "/profile/{}")
         ;
     }
-    void home(udho::net::context context);
-    void profile(udho::net::context context, std::size_t id);
+    void home(udho::net::stream context);
+    void profile(udho::net::stream context, std::size_t id);
 };
 
 }

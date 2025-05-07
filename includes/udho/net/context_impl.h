@@ -24,10 +24,10 @@ class context_impl: public std::enable_shared_from_this<context_impl>{
     boost::asio::streambuf              _streambuf;
     std::ostream                        _stream;
 
-    friend class udho::net::context;
+    friend class udho::net::stream;
 
     context_impl() = delete;
-    context_impl(const context&) = delete;
+    context_impl(const stream&) = delete;
     context_impl(udho::net::types::socket&& socket): _socket(std::move(socket)), _strand(_socket.get_executor()), _stream(&_streambuf) { }
 
     auto shared_from_this(){

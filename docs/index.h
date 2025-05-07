@@ -4,6 +4,30 @@
  */
 
 /**
+  * @defgroup view
+  * @brief functionalities for storing and rendering views and assets
+  * @ingroup udho
+ */
+
+/**
+  * @defgroup resouorces
+  * @brief functionalities for storing views and assets
+  * @ingroup view
+ */
+
+/**
+  * @defgroup tmpl
+  * @brief functionalities for storing and rendering view templattes
+  * @ingroup resources
+ */
+
+/**
+  * @defgroup assets
+  * @brief functionalities for storing and rendering assets
+  * @ingroup resources
+ */
+
+/**
  * \defgroup hazo
  * \brief udho heterogenous data storage
  * \ingroup udho

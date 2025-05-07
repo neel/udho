@@ -54,10 +54,10 @@ struct bridge{
     typedef ConfigT configuration_type;
     typedef bridge<ConfigT> self_type;
     
-    boost::asio::io_service& _io;
+    boost::asio::io_context& _io;
     configuration_type _config; 
 
-    bridge(boost::asio::io_service& io): _io(io){}
+    bridge(boost::asio::io_context& io): _io(io){}
     
     configuration_type& config(){
         return _config;

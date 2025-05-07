@@ -1,6 +1,7 @@
 #ifndef UDHO_NET_PROTOCOL_HTTP_H
 #define UDHO_NET_PROTOCOL_HTTP_H
 
+#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -26,7 +27,9 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
     using stream_type               = StreamT;
 
     inline explicit http_reader(types::headers::request& request, stream_type& stream): _request(request), _stream(stream) {}
-
+    ~http_reader() {
+        std::cout << "~http_reader" << std::endl;
+    }
     template <typename Handler>
     void start(Handler&& handler){
         _handler = std::move(handler);
@@ -51,78 +54,78 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
         stream_type&                        _stream;
 };
 
+template <typename Handler, typename StreamT>
+struct http_writer_internal: public std::enable_shared_from_this<http_writer_internal<Handler, StreamT>>{
+    using self_type             = http_writer_internal<Handler, StreamT>;
+    using handler_type          = std::function<void (boost::system::error_code, std::size_t)>;
+    using response_headers_type = udho::net::types::headers::response;
+    using response_type         = boost::beast::http::response<boost::beast::http::empty_body>;
+    using serializer_type       = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
+    using stream_type           = StreamT;
+
+    explicit http_writer_internal(boost::asio::io_context& io, udho::net::types::strand& strand, const types::headers::response& headers, stream_type& stream, Handler&& handler)
+        : _io(io), _strand(strand), _headers(headers), _response(_headers), _serializer(_response), _stream(stream), _handler(std::move(handler)) {}
+    http_writer_internal(const http_writer_internal&) = delete;
+    ~http_writer_internal() { std::cout << "~http_writer_internal" << std::endl; }
+
+    void start() {
+        boost::beast::http::async_write_header(
+            _stream, _serializer,
+            std::bind(&self_type::finished, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+        );
+    }
+    void finished(boost::system::error_code ec, std::size_t bytes_transferred){
+        boost::asio::dispatch(_io,
+            boost::asio::bind_executor(
+                _strand,
+                std::bind(std::move(_handler), ec, bytes_transferred)
+            )
+        );
+    }
+    private:
+        auto shared_from_this() {
+            return std::enable_shared_from_this<self_type>::shared_from_this();
+        }
+
+        auto weak_from_this() {
+            return std::enable_shared_from_this<self_type>::weak_from_this();
+        }
+
+    private:
+        boost::asio::io_context&        _io;
+        udho::net::types::strand&       _strand;
+        const response_headers_type&    _headers;
+        response_type                   _response;
+        serializer_type                 _serializer;
+        stream_type&                    _stream;
+        handler_type                    _handler;
+};
+
 template <typename StreamT>
-struct http_writer: public std::enable_shared_from_this<http_writer<StreamT>>{
+struct http_writer{
     using handler_type    = std::function<void (boost::system::error_code, std::size_t)>;
     using response_type   = boost::beast::http::response<boost::beast::http::empty_body>;
     using serializer_type = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
     using stream_type     = StreamT;
 
-    template <typename Handler>
-    struct writer_initiate{
-        using self_type = writer_initiate<Handler>;
-
-        writer_initiate(boost::asio::io_service& io, udho::net::types::strand& strand, stream_type& stream, serializer_type& serializer, Handler&& handler): _io(io), _strand(strand), _stream(stream), _serializer(serializer), _handler(std::move(handler)) {}
-        void operator()(){
-            boost::beast::http::async_write_header(
-                _stream, _serializer,
-                std::bind(&self_type::finished, std::move(*this), std::placeholders::_1, std::placeholders::_2)
-            );
-        }
-        void finished(boost::system::error_code ec, std::size_t bytes_transferred){
-            // _handler(ec, bytes_transferred);
-            _io.dispatch(
-                boost::asio::bind_executor(
-                    _strand,
-                    std::bind(std::move(_handler), ec, bytes_transferred)
-                )
-            );
-        }
-
-        boost::asio::io_service&  _io;
-        udho::net::types::strand& _strand;
-        stream_type&              _stream;
-        serializer_type&          _serializer;
-        Handler                   _handler;
-    };
-
     explicit http_writer(const types::headers::response& headers, stream_type& stream): _headers(headers), _stream(stream) {}
     http_writer(const http_writer&) = delete;
-    ~http_writer() { std::cout << "http_writer dtor" << std::endl; }
+    ~http_writer() { std::cout << "~http_writer" << std::endl; }
 
     template <typename Handler>
-    void start(boost::asio::io_service& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
-        // std::cout << "_headers" << std::endl << _headers << std::endl;
-        _response = std::make_shared<response_type>(_headers);
-        _serializer = std::make_shared<serializer_type>(*_response);
-        // // _handler = std::move(handler);
-        // boost::beast::http::async_write_header(_stream, *_serializer, std::move(handler));
-        //
-        // // boost::asio::bind_executor(strand, std::bind(&http_writer::finished, std::enable_shared_from_this<http_writer<StreamT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2))
-        writer_initiate<Handler> initiate(io, strand_finished, _stream, *_serializer, std::move(handler));
-        io.dispatch(
+    void operator()(boost::asio::io_context& io, udho::net::types::strand& strand_write, udho::net::types::strand& strand_finished, Handler&& handler){
+        using internal_writer_type = http_writer_internal<Handler, stream_type>;
+        auto internal_writer = std::make_shared<internal_writer_type>(io, strand_finished, _headers, _stream, std::move(handler));
+        boost::asio::dispatch(io,
             boost::asio::bind_executor(
                 strand_write,
-                std::move(initiate)
+                std::bind(&internal_writer_type::start, internal_writer)
             )
         );
     }
-    // private:
-    //     void finished(boost::system::error_code ec, std::size_t bytes_transferred){
-    //         // std::cout << "_serializer.is_header_done(): " << _serializer->is_header_done() << std::endl;
-    //         // std::cout << "bytes_transferred: " << bytes_transferred << std::endl;
-    //         if(!ec){
-    //             // std::cout << "finished" << std::endl;
-    //         }else{
-    //             std::cout << "error: " << ec << std::endl;
-    //         }
-    //         _handler(ec, bytes_transferred);
-    //     }
+
     private:
         const udho::net::types::headers::response& _headers;
-        std::shared_ptr<response_type>             _response;
-        std::shared_ptr<serializer_type>           _serializer;
-        // handler_type                               _handler;
         stream_type&                               _stream;
 };
 

@@ -26,7 +26,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
     typedef AttachmentT attachment_type;
     typedef connection<RouterT, AttachmentT> connection_type;
     
-    boost::asio::io_service& _service;
+    boost::asio::io_context& _service;
     boost::asio::ip::tcp::acceptor _acceptor;
     socket_type _socket;
     boost::asio::signal_set _signals;
@@ -38,7 +38,7 @@ class listener : public std::enable_shared_from_this<listener<RouterT, Attachmen
      * @param service I/O service
      * @param endpoint HTTP server endpoint to listen on
      */
-    listener(RouterT& router, boost::asio::io_service& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
+    listener(RouterT& router, boost::asio::io_context& service, attachment_type& attachment, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _router(router), _attachment(attachment){
         boost::system::error_code ec;
         _acceptor.open(endpoint.protocol(), ec);
         if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());

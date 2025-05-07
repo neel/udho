@@ -15,6 +15,9 @@
 #include <curl/curl.h>
 #include <udho/url/url.h>
 #include <boost/algorithm/string.hpp>
+#include <udho/view/resources/store.h>
+#include <udho/net/artifacts.h>
+#include <udho/view/bridges/lua.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -24,41 +27,72 @@ using scgi_connection = udho::net::connection<scgi_protocol>;
 using http_listener   = udho::net::listener<http_connection>;
 using scgi_listener   = udho::net::listener<scgi_connection>;
 
-void chunk3(udho::net::context context){
+// TODO TEST async functions writing to the context (may be use deadline timer)
+// TODO TEST connection object should be destroyed once finished
+// TODO TEST bridge object should be destroyed once finished
+
+
+
+void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
     context.finish();
 }
 
-void chunk2(udho::net::context context){
+void chunk2(udho::net::stream context){
     context << "chunk 2";
     context.flush(std::bind(&chunk3, context));
 }
 
-void chunk(udho::net::context context){
+void chunk(udho::net::stream context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
     context.flush(std::bind(&chunk2, context));
 }
 
-void f0(udho::net::context context){
+void chunk3_ex(udho::net::stream context){
+    context << "Chunk 3 (Final)";
+    context.finish();
+}
+
+void chunk2_ex(udho::net::stream context){
+    context << "chunk 2";
+    // throw std::runtime_error{"Testing exceptions"};
+    context.flush(std::bind(&chunk3_ex, context));
+}
+
+void chunk_ex(udho::net::stream context){
+    context.encoding(udho::net::types::transfer::encoding::chunked);
+    context << "Chunk 1";
+    context.flush(std::bind(&chunk2_ex, context));
+}
+
+void f0(udho::net::stream context){
     context << "Hello f0";
     context.finish();
 }
 
-int f1(udho::net::context context, int a, const std::string& b, const double& c){
-        context << "Hello f1 ";
-        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
-        context.finish();
+int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+        context << udho::url::format("a: {}, b: {}, c: {} ", a, b, c);
+        auto timer = std::make_shared<boost::asio::deadline_timer>(context.io(), boost::posix_time::seconds(5));
+        timer->async_wait([context, timer](const boost::system::error_code& error) mutable {
+            if (!error) {
+                context << "Hello";
+            } else {
+                context << "error: " << error.message();
+            }
+            context.finish();
+        });
+        context << "f1 ";
         return a+b.size()+c;
 }
 
 struct X{
-    void f0(udho::net::context context){
+    void f0(udho::net::stream context){
         context << "Hello X::f0";
         context.finish();
     }
 
-    int f1(udho::net::context context, int a, const std::string& b, const double& c){
+    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
         context << "Hello X::f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -119,9 +153,10 @@ TEST_CASE("udho network", "[net]") {
     X x;
     auto router = udho::url::router(
         udho::url::root(
-            udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)                                                  |
-            udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
-            udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+            udho::url::slot("f0"_h,  &f0)           << udho::url::home  (udho::url::verb::get)                                                  |
+            udho::url::slot("xf0"_h, &X::f0, &x)    << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")                                |
+            udho::url::slot("chunked"_h,  &chunk)   << udho::url::fixed (udho::url::verb::get, "/chunk")                                        |
+            udho::url::slot("chunkx"_h,  &chunk_ex) << udho::url::fixed (udho::url::verb::get, "/chunkx")
         ) |
         udho::url::mount("b"_h, "/b",
             udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")      |
@@ -131,13 +166,23 @@ TEST_CASE("udho network", "[net]") {
 
     std::cout << router << std::endl;
 
+    const udho::url::summary::router& summary = router.summary();
+    std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"]["f1"]("hello", "world", 42) << std::endl;
+    std::cout << "summary[\"b\"][\"f1\"](\"hello\", \"world\", 42): " << summary["b"_h]["f1"_h]("hello", "world", 42) << std::endl;
+
+
     CHECK(router["b"_h]("f1"_h, 24, "Hello", 42) == "/b/f1/24/Hello/42");
 
-    boost::asio::io_service service;
+    boost::asio::io_context service;
 
-    auto server = udho::net::server<http_listener>(service, std::move(router), 9000);
+    auto server = udho::net::server<http_listener>(service, 9000);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    resources.lock();
+    auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resources};
 
-    server.run();
+    server.run(artifacts);
 
     std::thread thread([&]{
         service.run();
@@ -161,12 +206,14 @@ TEST_CASE("udho network", "[net]") {
         CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
     }
 
-    SECTION("HTTP Response from mountpoint") {
+    SECTION("Copying the context extends the connection lifetime") {
         http_results results_f1 = curl_fetch(curl, "GET", "http://localhost:9000/b/f1/10/hello/42");
         CHECK(results_f1.code == 200);
-        CHECK(results_f1.body == "Hello f1 a: 10, b: hello, c: 42");
+        CHECK(results_f1.body == "a: 10, b: hello, c: 42 f1 Hello");
         CHECK(results_f1.headers["Transfer-Encoding"] == "plain,plain");
+    }
 
+    SECTION("HTTP Response from mountpoint") {
         http_results results_xf1 = curl_fetch(curl, "GET", "http://localhost:9000/b/x/f1/567/ping/42.8");
         CHECK(results_xf1.code == 200);
         CHECK(results_xf1.body == "Hello X::f1 a: 567, b: ping, c: 42.8");
@@ -175,6 +222,13 @@ TEST_CASE("udho network", "[net]") {
 
     SECTION("HTTP Chunked Response") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunk");
+        CHECK(results.code == 200);
+        CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
+        CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
+    }
+
+    SECTION("HTTP Chunked Response with exceptions") {
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunkx");
         CHECK(results.code == 200);
         CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
         CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");

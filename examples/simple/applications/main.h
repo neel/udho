@@ -5,7 +5,7 @@
 #define UDHO_EXAMPLES_SIMPLE_APPLICATION_H
 
 #include <udho/core/application.h>
-#include <udho/net/context.h>
+#include <udho/net/stream.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/operators.h>
 
@@ -23,8 +23,8 @@ struct main: udho::core::application<apps::main>{
             udho::url::slot("contact"_h, &main::contact, this) << udho::url::fixed (udho::url::verb::get, "/contact")
         ;
     }
-    void home(udho::net::context context);
-    void contact(udho::net::context context);
+    void home(udho::net::stream context);
+    void contact(udho::net::stream context);
 };
 
 }

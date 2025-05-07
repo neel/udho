@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include <udho/view/sections.h>
+#include <udho/view/tmpl/sections.h>
 #include <udho/view/bridges/script.h>
 #include <udho/url/detail/format.h>
 
@@ -43,52 +43,120 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
-struct script: udho::view::data::bridges::script{
-    inline explicit script(const std::string& name): udho::view::data::bridges::script(name) {
-        *this << "return function(d, stream)" << std::endl;
-        ++*this;
-    }
-    inline void operator()(const udho::view::sections::section& section){
-        add_section(section);
-    }
-    void finish(){
-        --*this;
-        *this << "end";
-    }
+/**
+ * @class script
+ * @brief Extends the generic script functionality to implement Lua-specific script operations.
+ *
+ * This class generates and manages Lua scripts derived from various sections of a template (view). It processes different types of template sections such as meta, text, echo, and eval etc...
+ */
+struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
+    using base = udho::view::data::bridges::basic_script<detail::lua::script>;
+
+    friend struct udho::view::data::bridges::basic_script<detail::lua::script>;
+    /**
+     * @brief Constructs a Lua script with a specified name.
+     * @param name The identifier name of the script.
+     */
+    inline explicit script(const std::string& name): base(name), _min_size(0) {}
+
+    inline std::size_t min_size() { return _min_size; }
+
     private:
-        inline void add_section(const udho::view::sections::section& section){
+        inline void begin(const base::header_type& header){
+            *this << "return function(d, c, stream)" << std::endl;
+            *this << "  local function echo(...) stream:print(...) end" << std::endl;
+            *this << udho::url::format("  local function view({}, {}, stream)", header.vars.data, header.vars.context) << std::endl;
+            ++*this;
+        }
+        /**
+         * @brief Finalizes the script, ensuring proper closure in Lua syntax.
+         */
+        inline void end(){
+            --*this;
+            *this << "  end\n";  // Close the view function
+            // Use pcall to handle errors in view function
+            *this << "  local success, resultOrError = pcall(view, d, c, stream)\n";
+            *this << "  if not success then\n";
+            *this << "    print('Error executing view " << base::name() << ": '  .. resultOrError)\n";  // Or handle the error as needed
+            *this << "    print(debug.traceback())\n";
+            *this << "  end\n";
+            *this << "end";  // Close the anonymous function
+        }
+        /**
+         * @brief Adds a generic section to the Lua script.
+         * @param section The section to add.
+         */
+        inline void process(const udho::view::tmpl::section& section){
+            assert(section.type() != udho::view::tmpl::section::meta);
+
             switch(section.type()){
-                case udho::view::sections::section::text:
-                case udho::view::sections::section::verbatim:
-                case udho::view::sections::section::echo:
+                case udho::view::tmpl::section::text:
+                case udho::view::tmpl::section::verbatim:
+                case udho::view::tmpl::section::echo:
                     add_echo_section(section);
                     break;
-                case udho::view::sections::section::eval:
+                case udho::view::tmpl::section::eval:
                     add_eval_section(section);
                     break;
                 default:
                     break;
             }
         }
-        inline void add_eval_section(const udho::view::sections::section& section) {
-            udho::view::data::bridges::script::accept(section);
+        /**
+         * @brief Adds an evaluation (eval) section from the template into the Lua script.
+         * @details This function directly integrates Lua code found within eval blocks of the template into the script. It encapsulates code meant to be executed during the template rendering process, allowing dynamic content generation based on the evaluation results.
+         * @param section The eval section to add, containing Lua code.
+         */
+        inline void add_eval_section(const udho::view::tmpl::section& section) {
+            base::accept(section);
         }
 
-        inline void add_echo_section(const udho::view::sections::section& section) {
-            if (section.size() > 0) {
+        /**
+         * @brief Adds an echo section to the Lua script.
+         * @details Echo sections are processed to output text or expressions directly into the rendered template. This method formats these sections into Lua print statements or equivalent, ensuring they are executed and their outputs are captured during the template's rendering.
+         * @param section The echo section containing text or expressions to be output.
+         */
+        inline void add_echo_section(const udho::view::tmpl::section& section) {
+            std::size_t size = section.size();
+            const std::string& content = section.content();
+            if (size > 0) {
                 *this << std::endl;
-                *this << "do -- " + udho::url::format("{}", udho::view::sections::section::name(section.type())) << std::endl;
+                *this << "do -- " + udho::url::format("{} {}", udho::view::tmpl::section::name(section.type()), size) << std::endl;
                 ++*this;
-                if (section.type() == udho::view::sections::section::echo) {
-                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], {})", section.content()) << std::endl;
+                if (section.type() == udho::view::tmpl::section::echo) {
+                    *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], tostring({}))", content) << std::endl;
+                    _min_size += 1;
                 } else {
-                    *this << udho::url::format("local udho_view_str_ = [=====[{}]=====]", section.content()) << std::endl;
+                    bool starts_with_nl = (content[0] == '\n' || content[0] == '\r');
+                    std::string initial = "";
+                    if(starts_with_nl) initial = "\n";
+                    // Lua Reference Manual:
+                    // Long strings: A long string starts with an opening long bracket of any level [=*[ and ends at the first closing long
+                    // bracket of the same level ]=*]. It can contain any text except a closing bracket of the same level. It can contain newlines.
+                    // If the opening long bracket is immediately followed by a newline, the newline is not included in the string.
+                    *this << udho::url::format("local udho_view_str_ = [=====[{}{}]=====]", initial, content) << std::endl;
+                    _min_size += size;
+                    // content is a lua code which will return a value
+                    // the returned value will then be converted to string to fill the placeholder{}
+                    // so that string must take at least 1 bye of space
                 }
                 *this << "stream:write(udho_view_str_)" << std::endl;
                 --*this;
                 *this << "end" << std::endl;
             }
         }
+
+        /**
+         * @brief Adds a meta section to the Lua script.
+         * @details Meta sections typically contain configuration or directives that influence how the template is processed or how the scripting functions. These sections might modify the script's behavior, set up necessary preconditions, or provide metadata that affects the execution context. The implementation should parse and integrate these directives into the Lua script accordingly.
+         * @param section The meta section to integrate.
+         */
+        inline void add_meta_section(const udho::view::tmpl::section& section) {
+            // TODO implement
+        }
+
+    private:
+        std::size_t _min_size;
 
 };
 

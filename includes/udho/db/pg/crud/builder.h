@@ -72,7 +72,7 @@ struct builder{
             generators generate;
             
             template <typename CollectorT>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): base(collector, pool, io), generate(base::result) {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): base(collector, pool, io), generate(base::result) {}
             template <typename ContextT, typename... T>
             activity(pg::controller<ContextT, T...>& ctrl): base(ctrl), generate(base::result){}
             
@@ -105,7 +105,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): limit_activity(collector, pool, io), generate(limit_activity::result, limit_activity::limited()) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): limit_activity(collector, pool, io), generate(limit_activity::result, limit_activity::limited()) {}
                 template <typename ContextT, typename... T>
                 activity(pg::controller<ContextT, T...>& ctrl): limit_activity(ctrl), generate(limit_activity::result, limit_activity::limited()){}
                 
@@ -139,7 +139,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): base(collector, pool, io), generate(base::result) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): base(collector, pool, io), generate(base::result) {}
                 template <typename ContextT, typename... T>
                 activity(pg::controller<ContextT, T...>& ctrl): base(ctrl), generate(base::result){}
                 
@@ -173,7 +173,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io): limit_activity(collector, pool, io), generate(limit_activity::result, limit_activity::limited()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io): limit_activity(collector, pool, io), generate(limit_activity::result, limit_activity::limited()) {}
                     template <typename ContextT, typename... T>
                     activity(pg::controller<ContextT, T...>& ctrl): limit_activity(ctrl), generate(limit_activity::result, limit_activity::limited()){}
                     
@@ -214,7 +214,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): group_activity(collector, pool, io, args...), generate(group_activity::result) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): group_activity(collector, pool, io, args...), generate(group_activity::result) {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): group_activity(ctrl, args...), generate(group_activity::result){}
                 
@@ -248,7 +248,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): base(ctrl, args...), generate(base::result, base::with()){}
                     
@@ -284,7 +284,7 @@ struct builder{
                         generators generate;
                         
                         template <typename CollectorT, typename... Args>
-                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
+                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
                         template <typename ContextT, typename... T, typename... Args>
                         activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): limit_activity(ctrl, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()){}
                         
@@ -327,7 +327,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): base(ctrl, args...), generate(base::result, base::with()){}
                 
@@ -361,7 +361,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): limit_activity(ctrl, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()){}
                     
@@ -396,7 +396,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): base(ctrl, args...), generate(base::result, base::with()){}
                     
@@ -431,7 +431,7 @@ struct builder{
                         generators generate;
                         
                         template <typename CollectorT, typename... Args>
-                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
+                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
                         template <typename ContextT, typename... T, typename... Args>
                         activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): limit_activity(ctrl, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()){}
                         
@@ -473,7 +473,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): group_activity(collector, pool, io, args...), generate(group_activity::result, group_activity::with()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): group_activity(collector, pool, io, args...), generate(group_activity::result, group_activity::with()) {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): group_activity(ctrl, args...), generate(group_activity::result, group_activity::with()){}
                     
@@ -507,7 +507,7 @@ struct builder{
                         generators generate;
                         
                         template <typename CollectorT, typename... Args>
-                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
+                        activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): base(collector, pool, io, args...), generate(base::result, base::with()) {}
                         template <typename ContextT, typename... T, typename... Args>
                         activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): base(ctrl, args...), generate(base::result, base::with()){}
                         
@@ -542,7 +542,7 @@ struct builder{
                             generators generate;
                             
                             template <typename CollectorT, typename... Args>
-                            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
+                            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, const Args&... args): limit_activity(collector, pool, io, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()) {}
                             template <typename ContextT, typename... T, typename... Args>
                             activity(pg::controller<ContextT, T...>& ctrl, const Args&... args): limit_activity(ctrl, args...), generate(limit_activity::result, limit_activity::with(), limit_activity::limited()){}
                             
@@ -588,7 +588,7 @@ struct builder{
             generators generate;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
             template <typename ContextT, typename... T, typename... Args>
             activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema()) {}
             
@@ -623,7 +623,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
                 
@@ -659,7 +659,7 @@ struct builder{
                     generators generate;
                     
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
                     template <typename ContextT, typename... T, typename... Args>
                     activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema(), base::with()) {}
                     
@@ -700,7 +700,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema()) {}
                 
@@ -738,7 +738,7 @@ struct builder{
             generators generate;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
             template <typename ContextT, typename... T, typename... Args>
             activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema()) {}
             
@@ -773,7 +773,7 @@ struct builder{
                 generators generate;
                 
                 template <typename CollectorT, typename... Args>
-                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
+                activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::schema()) {}
                 template <typename ContextT, typename... T, typename... Args>
                 activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::schema()) {}
                 
@@ -811,7 +811,7 @@ struct builder{
             generators generate;
             
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::with()) {}
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io, Args&&... args): base(collector, pool, io, std::forward<Args>(args)...), generate(base::with()) {}
             template <typename ContextT, typename... T, typename... Args>
             activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): base(ctrl, std::forward<Args>(args)...), generate(base::with()){}
             

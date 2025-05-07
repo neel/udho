@@ -17,42 +17,60 @@ struct nodef{
     nodef(int) {}
 };
 
-void f0(){
+BOOST_SYMBOL_EXPORT void f0(){
     std::cout << "f0" << std::endl;
     return;
 }
 
-int f1(int a, const std::string& b, const double& c, bool d){
+BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
     return a+b.size()+c+d;
 }
 
-std::string f2(int a, const std::string& b){
+BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
     return std::to_string(a+b.size());
 }
 
-std::string f_nodef(nodef, int a){
+BOOST_SYMBOL_EXPORT std::string f_nodef(nodef, int a){
     return "hello";
 }
 
 struct X{
-    void f0(){
+    BOOST_SYMBOL_EXPORT void f0(){
         return;
     }
 
-    int f1(int a, const std::string& b, const double& c, bool d){
+    BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
         return a+b.size()+c+d;
     }
 
-    std::string f2(int a, const std::string& b){
+    BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
         return std::to_string(a+b.size());
     }
 
-    int f3(int a, const std::string& b, const double& c, bool d) const{
+    BOOST_SYMBOL_EXPORT int f3(int a, const std::string& b, const double& c, bool d) const{
         return 84;
     }
 };
 
-TEST_CASE("Regex matching operations", "[regex_match]") {
+TEST_CASE("DL_info", "[url][dlinfo]"){
+    void (X::* pFunc)() = &X::f0;
+    void* ptr = (void*&)pFunc;
+
+    Dl_info f0_info, f1_info, xf0_info;
+    dladdr(reinterpret_cast<void *>(&f0), &f0_info);
+    dladdr(reinterpret_cast<void *>(&f1), &f1_info);
+    dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
+
+    std::string f0_name{abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL)};
+    std::string f1_name{abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL)};
+    std::string xf0_name{abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL)};
+
+    CHECK(f0_name == "f0()");
+    CHECK(f1_name == "f1(int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, double const&, bool)");
+    CHECK(xf0_name == "X::f0()");
+}
+
+TEST_CASE("Regex matching operations", "[url][regex]") {
     udho::url::pattern::match<udho::url::pattern::formats::regex, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
 
     SECTION("Successful match") {
@@ -86,7 +104,7 @@ TEST_CASE("Regex matching operations", "[regex_match]") {
     }
 }
 
-TEST_CASE("String matching operations using p1729 format", "[string_match]") {
+TEST_CASE("String matching operations using p1729 format", "[url][p1729]") {
     udho::url::pattern::match<udho::url::pattern::formats::p1729, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
 
     SECTION("Successful string match and extraction") {
@@ -116,7 +134,7 @@ TEST_CASE("String matching operations using p1729 format", "[string_match]") {
     }
 }
 
-TEST_CASE("Fixed string matching operations", "[fixed_string_match]") {
+TEST_CASE("Fixed string matching operations", "[url][fixed]") {
     udho::url::pattern::match<udho::url::pattern::formats::fixed, char> matcher(udho::url::verb::get, "/example/path", "/example/path");
 
     SECTION("Successful string match") {
@@ -140,7 +158,7 @@ TEST_CASE("Fixed string matching operations", "[fixed_string_match]") {
     }
 }
 
-TEST_CASE("Home pattern matching operations", "[home_pattern_match]") {
+TEST_CASE("Home pattern matching operations", "[url][home]") {
     udho::url::pattern::match<udho::url::pattern::formats::home, char> matcher(udho::url::verb::get);
 
     SECTION("Match explicit home pattern") {
@@ -170,7 +188,7 @@ TEST_CASE("Home pattern matching operations", "[home_pattern_match]") {
 }
 
 
-TEST_CASE("url common functionalities using regex", "[url]") {
+TEST_CASE("url common functionalities using regex", "[url][router]") {
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);
@@ -285,7 +303,7 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     // std::cout << mount_point << std::endl;
     auto chain4 = std::move(mount_point) | udho::url::mount_point("root"_h, "/", std::move(chain3));
 
-    std::cout << chain4 << std::endl;
+    std::cout << "chain4" << std::endl << chain4 << std::endl;
 
     auto router = udho::url::router(std::move(chain4));
 
@@ -295,20 +313,4 @@ TEST_CASE("url common functionalities using regex", "[url]") {
     CHECK(router.find(std::string("/pchain/f1/23/hello/24/1")) == true);
     CHECK(router.find(std::string("/f1/23/hello/24/1"))        == true);
     CHECK(router.find(std::string("f1/23/hello/24/1"))         == false);
-
-
-
-    // auto chain4 = chain3 | udho::url::mount("/users", chain4) | chain5;
-
-    // void (X::* pFunc)() = &X::f0;
-    // void* ptr = (void*&)pFunc;
-    //
-    // Dl_info f0_info, f1_info, xf0_info;
-    // dladdr(reinterpret_cast<void *>(&f0), &f0_info);
-    // dladdr(reinterpret_cast<void *>(&f1), &f1_info);
-    // dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
-    //
-    // std::cout << abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    // std::cout << abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL) << std::endl;
-    // std::cout << abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL) << std::endl;
 }

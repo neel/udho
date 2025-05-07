@@ -15,7 +15,7 @@ std::string planet(udho::contexts::stateless ctx, std::string name){
 }
 
 int main(){
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     udho::servers::ostreamed::stateless server(io, std::cout);
 
     auto urls = udho::router() | "/world"          >> udho::get(&world).json() 

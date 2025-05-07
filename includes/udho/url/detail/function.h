@@ -29,12 +29,13 @@
 #define UDHO_URL_DETAIL_FUNCTION_H
 
 #include <utility>
-#include <functional>
 #include <type_traits>
 #include <sstream>
+#include <chrono>
 #include <boost/lexical_cast.hpp>
 #include <udho/url/detail/format.h>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/type_traits/has_right_shift.hpp>
 #include <dlfcn.h>
 #include <cxxabi.h>
 
@@ -42,6 +43,95 @@ namespace udho{
 namespace url{
 
 namespace detail{
+
+    // https://stackoverflow.com/a/28540769
+    template <std::size_t ...I, typename T1, typename T2>
+    void tuple_copy_impl(T1 const & from, T2 & to, std::index_sequence<I...>) {
+        int dummy[] = { (std::get<I>(to) = std::get<I>(from), 0)... };
+        static_cast<void>(dummy);
+    }
+
+    template <typename T1, typename T2>
+    void tuple_copy(T1 const & from, T2 & to) {
+        tuple_copy_impl(
+            from, to,
+            std::make_index_sequence<std::tuple_size<T1>::value>());
+    }
+
+
+    template <typename T, typename Enable = void>
+    struct convert_str_to_type{
+        static T apply(const std::string&, bool* ok = nullptr){
+            if(ok) *ok = false;
+            return T();
+        }
+    };
+
+    template <typename T>
+    struct convert_str_to_type<T, typename std::enable_if<boost::has_right_shift<std::basic_istream<char>, T >::value>::type>{
+        static T apply(const std::string& str, bool* ok = nullptr){
+            try{
+                if(ok) *ok = true;
+                return boost::lexical_cast<T>(str);
+            }catch(...){
+                if(ok) *ok = false;
+                return T();
+            }
+        }
+    };
+
+    template<>
+    struct convert_str_to_type<bool> {
+        static bool apply(const std::string& str, bool* ok = nullptr){
+            std::string lower_str = str;
+            std::transform(lower_str.begin(), lower_str.end(), lower_str.begin(), [](unsigned char c) { return std::tolower(c); });
+
+            if (lower_str == "true" || lower_str == "on" || lower_str == "1") {
+                if (ok) *ok = true;
+                return true;
+            } else if (lower_str == "false" || lower_str == "off" || lower_str == "0") {
+                if (ok) *ok = true;
+                return false;
+            } else {
+                if (ok) *ok = false;
+                return false;
+            }
+        }
+    };
+
+
+    template<typename T>
+    struct convert_str_to_type<std::chrono::duration<T>> {
+        static std::chrono::duration<T> apply(const std::string& str, bool* ok = nullptr) {
+            if (!str.empty()) {
+                char unit = str.back(); // Get the last character which should be the unit
+                double value = 0;
+                try {
+                    value = boost::lexical_cast<double>(str.substr(0, str.size() - 1)); // Convert the preceding part to double
+                    if (ok) *ok = true;
+                } catch (...) {
+                    if (ok) *ok = false;
+                    return std::chrono::duration<T>(0);
+                }
+
+                switch (unit) {
+                    case 's':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(value));
+                    case 'm':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::minutes(1).count() * value));
+                    case 'h':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::hours(1).count() * value));
+                    case 'd':
+                        return std::chrono::duration_cast<std::chrono::duration<T>>(std::chrono::duration<double>(std::chrono::hours(24).count() * value));
+                    default:
+                        if (ok) *ok = false;
+                        return std::chrono::duration<T>(0);
+                }
+            }
+            if (ok) *ok = false;
+            return std::chrono::duration<T>(0);
+        }
+    };
 
     template <typename T, int Index>
     struct cast_optionally{
@@ -56,12 +146,14 @@ namespace detail{
             IteratorT i = begin;
             std::advance(i, Index);
             std::string argstr = *i;
-            try{
-                return boost::lexical_cast<T>(argstr);
-            }catch(...){
+
+            bool success = false;
+            T res = convert_str_to_type<T>::apply(argstr, &success);
+            if(!success) {
                 throw std::invalid_argument(format("Failed to cast argument {} '{}' to expected type", Index+1, argstr));
-                return T();
             }
+
+            return res;
         }
     };
 
@@ -241,7 +333,12 @@ namespace detail{
             return operator()(prepare(begin, end));
         }
         std::string symbol_name() const{
-            std::string symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            std::string symbol;
+            if(_info.dli_saddr){
+                symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            } else {
+                symbol = "dli_saddr::dli_saddr null";
+            }
             static std::string cxx_string_expanded_type = "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >";
             boost::replace_all(symbol, cxx_string_expanded_type, "std::string");
             return symbol;

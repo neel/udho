@@ -194,7 +194,7 @@ pg::connection::config dbconfig;
 pg::connection::info conn_info("host=localhost dbname=wee user=postgres password=123456");
 auto pool = pg::connection::pool(conn_info, dbconfig);
 
-boost::asio::io_service io;
+boost::asio::io_context io;
 
 context_type::request_type req;
 server_type::attachment_type attachment(io);

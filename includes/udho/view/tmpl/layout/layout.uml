@@ -1,0 +1,225 @@
+@startuml
+enum "http_equiv"
+
+namespace udho::view::resources::asset {
+    enum type {
+        js
+        css
+        txt
+        img
+    }
+}
+
+
+' Define the base template for common_asset_loader
+class "common_asset_loader<AssetType>" as CAL {
+    -_store : const substore_type&
+    -_embed : bool
+    --
+    +add(const std::string& prefix, const std::string& name) : void
+    +embed(bool flag) : void
+    +embed() const : bool
+    --
+    #common_asset_loader(const substore_type& store)
+}
+
+' Define the template specializations for JavaScript and CSS asset loaders
+class "asset_loader<type::js>" as loader_js {
+    +importmap(udho::net::stream& stream) : udho::net::stream&
+    +write(udho::net::stream& stream) : udho::net::stream&
+}
+
+class "asset_loader<type::css>" as loader_css {
+    +write(udho::net::stream& stream) : udho::net::stream&
+}
+
+' Show inheritance relationships
+loader_js --|> CAL : AssetType = type::js
+loader_css --|> CAL : AssetType = type::css
+
+class "property_map<Key, Value>" as property_map {
+
+}
+
+class "meta_tags" {
+    -http_equiv_: property_map
+    --
+    +enum http_equiv {content_security_policy, content_type, default_style, x_ua_compatible, refresh}
+    +property(const http_equiv& key) const : http_equiv
+    +property(const http_equiv& key, const std::string& value) : void
+    +operator[](const http_equiv& key) const : http_equiv
+    +write(std::ostream& stream) : std::ostream&
+}
+
+meta_tags *-- property_map : Key = http_equiv
+meta_tags *-- http_equiv
+
+class "document_preamble" {
+    -_doctype : bool
+    -_doc_lang : std::string
+    -_xmlns : std::string
+    -_dir : std::string
+    -_doc_classes : std::string
+    -_title : std::string
+    --
+    +meta : meta_tags
+    --
+    +doctype(bool flag) : document_preamble&
+    +doctype() const : bool
+    +doclang(const std::string& dl) : document_preamble&
+    +doclang() const : std::string
+    +xmlns(const std::string& uri) : document_preamble&
+    +xmlns() const : std::string
+    +dir(const std::string& d) : document_preamble&
+    +dir() const : std::string
+    +classes(const std::string& classnames) : document_preamble&
+    +classes() const : std::string
+    +title(const std::string& t) : document_preamble&
+    +title() const : std::string
+}
+
+document_preamble -- meta_tags : meta
+
+class "placeholder_properties" {
+    -_tag : std::string
+    -_id : std::string
+    -_classes : std::string
+    -_wrapper_tag : std::string
+    -_wrapper_classes : std::string
+    --
+    +tag(const std::string& tagname) : placeholder_properties&
+    +tag() const : std::string
+    +id(const std::string& i) : placeholder_properties&
+    +id() const : std::string
+    +classes(const std::string& classnames) : placeholder_properties&
+    +classes() const : std::string
+    +wrapper_tag(const std::string& wrapper_tag) : placeholder_properties&
+    +wrapper_tag() const : std::string
+    +wrapper_classes(const std::string& wrapper_classes) : placeholder_properties&
+    +wrapper_classes() const : std::string
+    +opening() const : std::string
+    +styled() const : bool
+    +closing() const : std::string
+}
+
+' -----------------------------------------------------------------
+' spot<KeyT, Multi>
+' -----------------------------------------------------------------
+class "spot<KeyT, bool Multi>" as Spot {
+    +static constexpr bool multiple
+    +using key_type = KeyT
+}
+
+' -----------------------------------------------------------------
+' basic_placeholder_container<Multi, KeyT> (has_less_than_operator_v<KeyT> = true)
+' -----------------------------------------------------------------
+class "basic_placeholder_container<Multi, KeyT, std::enable_if_t<has_less_than_operator_v<KeyT>>> " as BPC_Ordered {
+    -container_type  _container
+    -properties_type _properties
+    --
+    +proxy_type operator[](const key_type& key)
+    +const_proxy_type operator[](const key_type& key) const
+    +proxy::placeholder_properties& properties(const key_type& key)
+    +const proxy::placeholder_properties& properties(const key_type& key) const
+    +template <typename F, typename Stream>
+      void apply(F&& f, Stream& stream) const
+}
+
+' -----------------------------------------------------------------
+' basic_placeholder_container<Multi, KeyT> (has_less_than_operator_v<KeyT> = false)
+' -----------------------------------------------------------------
+class "basic_placeholder_container<Multi, KeyT, std::enable_if_t<!has_less_than_operator_v<KeyT>>> " as BPC_Unordered {
+    -container_type  _container
+    -properties_type _properties
+    --
+    +proxy_type operator[](const key_type&)
+    +const_proxy_type operator[](const key_type&) const
+    +proxy::placeholder_properties& properties(const key_type&)
+    +const proxy::placeholder_properties& properties(const key_type&) const
+    +template <typename F, typename Stream>
+      void apply(F&& f, Stream& stream) const
+}
+
+' -----------------------------------------------------------------
+' basic_placeholder<spot<KeyT, Multi>, Spots...>
+' -----------------------------------------------------------------
+class "basic_placeholder<spot<KeyT, Multi>, Spots...>" as BP {
+    +template <typename F, typename Stream>
+      void apply(F&& f, Stream& stream) const
+    +template <typename F>
+      void operator()(F&& f) const
+}
+
+' Show that basic_placeholder inherits from:
+'   1) basic_placeholder_container<Multi, KeyT> (one of the specializations)
+'   2) basic_placeholder<Spots...> (recursive inheritance)
+BP --|> BPC_Ordered : when KeyT is ordered
+BP --|> BPC_Unordered : when KeyT is unordered
+BPC_Ordered *-- Spot
+BPC_Unordered *-- Spot
+BPC_Ordered -- placeholder_properties
+BPC_Unordered -- placeholder_properties
+
+' -----------------------------------------------------------------
+' basic_document<PlaceholderT>
+'    - Inherits from document_preamble
+'    - Inherits from PlaceholderT, which is an instance of basic_placeholder<...>
+' -----------------------------------------------------------------
+class "basic_document<PlaceholderT>" as BD {
+    -loader_js  _js
+    -loader_css _css
+
+    +template <typename... Bridges>
+      basic_document(const udho::view::resources::const_store<Bridges...>& store)
+    ---
+    +loader_js& js()
+    +loader_css& css()
+    +const loader_js& js() const
+    +const loader_css& css() const
+    +layout::document_preamble& preamble()
+    +const layout::document_preamble& preamble() const
+}
+
+BD --|> document_preamble
+BD --|> BP : PlaceholderT = basic_placeholder<...>
+BD *-- loader_js
+BD *-- loader_css
+
+' -----------------------------------------------------------------
+' basic_presenter<DocumentT>
+' -----------------------------------------------------------------
+class "basic_presenter<DocumentT>" as Presenter {
+    -const DocumentT& _document
+    --
+    +basic_presenter(const DocumentT& document)
+    +const DocumentT& document() const
+    --
+    +template <typename StreamT>
+      StreamT& html_open(StreamT& stream)
+    +template <typename StreamT>
+      StreamT& html_close(StreamT& stream)
+    +template <typename StreamT>
+      StreamT& title(StreamT& stream)
+    +template <typename StreamT>
+      StreamT& meta(StreamT& stream)
+    +template <typename StreamT>
+      StreamT& includes(StreamT& stream)
+    +template <typename StreamT>
+      StreamT& head(StreamT& stream)
+}
+
+Presenter --> BD : uses DocumentT
+
+' -----------------------------------------------------------------
+' default_presenter<DocumentT, Derived>
+' -----------------------------------------------------------------
+class "default_presenter<DocumentT, Derived = void>" as DefaultPresenter {
+    +default_presenter(const DocumentT& doc)
+    +template <typename Stream>
+      Stream& operator()(Stream& stream)
+}
+DefaultPresenter --|> Presenter
+
+' Show that the default_presenter may call methods on the DocumentT
+DefaultPresenter --> BD : calls apply on DocumentT
+@enduml

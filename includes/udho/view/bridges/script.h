@@ -29,106 +29,119 @@
 #define UDHO_VIEW_BRIDGES_SCRIPT_H
 
 #include <string>
-#include <array>
-#include <limits>
-#include <vector>
-#include <iomanip>
-#include <stdexcept>
-#include <udho/view/scope.h>
-#include <udho/view/sections.h>
+#include <udho/view/bridges/stream.h>
+#include <udho/view/bridges/header.h>
+#include <udho/view/tmpl/sections.h>
+#include <udho/view/meta.h>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
+#include <udho/view/resources/fwd.h>
 
 namespace udho{
 namespace view{
 namespace data{
 namespace bridges{
 
-template <typename CharT = char, CharT C = '\t'>
-struct stream{
-    using char_type = CharT;
-    static constexpr const char_type indent_char = C;
-
-    explicit stream(): _indent(0), _empty_newline(true) {
-        std::fill(_indent_str.begin(), _indent_str.end(), indent_char);
-    }
-
-    stream(const stream&) = delete;
-    stream& operator=(const stream&) = delete;
-
-    friend stream& operator<<(stream& s, const std::string& str){
-        s.append(str);
-        return s;
-    }
-    friend stream& operator<<(stream& s, std::ostream& (*manip)(std::ostream&)) {
-        if (manip == static_cast<std::ostream& (*)(std::ostream&)>(std::endl)) {
-            s.append_newline();
-        }
-        return s;
-    }
-
-    stream& operator++() {
-        indent(true);
-        return *this;
-    }
-
-    stream operator++(int) {
-        stream temp = *this;
-        indent(true);
-        return temp;
-    }
-
-    stream& operator--() {
-        indent(false);
-        return *this;
-    }
-
-    stream operator--(int) {
-        stream temp = *this;
-        indent(false);
-        return temp;
-    }
-
-    std::string body() const { return std::string(_buffer.begin(), _buffer.end()); }
-    const char* data() const { return _buffer.data(); }
-    std::size_t size() const { return _buffer.size(); }
-
-    protected:
-        void indent(bool positive){
-            std::int8_t indent = _indent;
-            indent += positive ? +1 : -1;
-            if(indent < 0){
-                throw std::underflow_error{"indentation < 0 is illegal"};
-            }
-            _indent = indent;
-        }
-    protected:
-        void append(const std::string& str) { append(str.begin(), str.end()); }
-        template <typename Iterator>
-        void append(Iterator begin, Iterator end) {
-            if(_empty_newline){
-                _buffer.insert(_buffer.end(), _indent_str.begin(), _indent_str.begin() + _indent);
-                _empty_newline = false;
-            }
-            _buffer.insert(_buffer.end(), begin, end);
-        }
-        void append_newline() {
-            _buffer.push_back('\n');
-            _empty_newline = true;
-        }
-    private:
-        std::vector<char_type> _buffer;
-        std::int8_t _indent;
-        bool _empty_newline;
-        std::array<char_type, std::numeric_limits<std::int8_t>::max()> _indent_str;
-};
-
-struct script: stream<char, '\t'>{
-    explicit script(const std::string& name): stream(), _name(name) {}
+/**
+ * @struct basic_script
+ * @ingroup view
+ * @brief A specialized stream for handling script generation, particularly useful in scenarios where scripts or code need to be dynamically generated from templates.
+ *
+ * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
+ */
+template <typename DerivedT>
+struct basic_script: stream<char, '\t'>{
+    using derived_type = DerivedT;
+    using header_type  = udho::view::data::bridges::view_header;
+    /**
+     * @brief Constructs a new script object with a specified name.
+     * @param name The name of the script, often used as an identifier.
+     */
+    explicit basic_script(const std::string& name): stream(), _name(name), _meta_processed(false) {}
+    /**
+     * @brief Returns the name of the script.
+     * @return The name of the script.
+     */
     std::string name() const { return _name; }
+
+    /**
+     * @brief Returns the meta information of the view.
+     * @return View header
+     */
+    const view_header& header() const{ return _header; }
+    /**
+     * @brief Processes a given template section into script format.
+     * @details Process the meta section inside basic_script as it is same for all template engine. For all other sections delegates the call to the derived class
+     * @param section The template section to process.
+     */
+    inline void operator()(const udho::view::tmpl::section& section){
+        if(section.type() == udho::view::tmpl::section::meta){
+            if(_meta_processed){
+                throw std::runtime_error{"Encountered multiple meta blocks"};
+            }
+
+            // pass the _description object through the contents of the meta block
+            // this may update the default values of the variables such as vars etc..
+
+            std::string instructions = section.content();
+            udho::view::data::meta::exec(_header, instructions);
+            self().begin(_header);
+
+            _meta_processed = true;
+        } else {
+            if(!_meta_processed){
+                // TODO warn discarding a block encountered before the meta block
+                discard(section);
+            } else {
+                if (section.size() == 0) {
+                    // empty section always discard
+                    discard(section);
+                } else if (section.type() == udho::view::tmpl::section::text && !_header.whitespace && section.is_whitespace() && section.size() > 1) {
+                    // whitespace if false and the section has only whitespaces and there are more than one white space
+                    // hence discard
+                    // Note: if the section has exactly one white space then keep it
+                    const std::string& content = section.content();
+                    discard(section);
+                    udho::view::tmpl::section space{udho::view::tmpl::section::text, std::string{content[0]}};
+                    self().process(space);
+                } else {
+                    self().process(section);
+                }
+            }
+        }
+    }
+
+    void finish(){
+        self().end();
+    }
+
     protected:
-        inline void accept(const udho::view::sections::section& section){ stream::append(section.begin(), section.end()); }
-        inline void discard(const udho::view::sections::section&){}
+        /**
+         * @brief Accepts a section from a template and appends it to the script.
+         * @param section The template section to append.
+         */
+        inline void accept(const udho::view::tmpl::section& section){ stream::append(section.begin(), section.end()); }
+        /**
+         * @brief Discards a section from a template. Currently, this function does not perform any operation.
+         * @param section The template section to discard.
+         */
+        inline void discard(const udho::view::tmpl::section&){}
+
+    private:
+        derived_type& self() { return static_cast<derived_type&>(*this); }
+        /**
+         * @brief Adds a meta section to the Lua script.
+         * @details Meta sections typically contain configuration or directives that influence how the template is processed or how the scripting functions. These sections might modify the script's behavior, set up necessary preconditions, or provide metadata that affects the execution context. The implementation should parse and integrate these directives into the Lua script accordingly.
+         * @param section The meta section to integrate.
+         */
+        inline void add_meta_section(const udho::view::tmpl::section& section) {
+            // TODO implement
+            throw std::runtime_error{"Need to parse view meta block"};
+        }
     private:
         std::string _name;
+        view_header _header;
+        bool        _meta_processed;
 };
 
 }

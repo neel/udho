@@ -34,6 +34,9 @@
     #include <fmt/format.h>
 #else
     #include <format>
+    #include <fmt/format.h>
+    // fmt/format has to be used for fmt::dynamic_format_arg_store which is not provided by std::format
+    // however for the functionalities that are provided by std::format we would prefer to use std::format
 #endif
 
 namespace udho{

@@ -85,7 +85,7 @@ struct ddl{
                     typename IfExistsT::drop::generators generate;
 
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io):
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                         activity_type(collector, pool, io)
                         {}
                     template <typename ContextT, typename... T, typename... Args>
@@ -114,7 +114,7 @@ struct ddl{
                     typename IfExistsT::skip::generators generate;
 
                     template <typename CollectorT, typename... Args>
-                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io):
+                    activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                         activity_type(collector, pool, io)
                         {}
                     template <typename ContextT, typename... T, typename... Args>
@@ -158,7 +158,7 @@ struct ddl{
             drop_generator generate;
 
             template <typename CollectorT, typename... Args>
-            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_service& io):
+            activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                 activity_type(collector, pool, io)
                 {}
             template <typename ContextT, typename... T, typename... Args>

@@ -110,14 +110,14 @@ struct watcher{
     typedef boost::posix_time::ptime                time_point_type;
     typedef boost::posix_time::time_duration        time_duration_type;
     
-    boost::asio::io_service&    _io;
+    boost::asio::io_context&    _io;
     time_duration_type          _duration;
     boost::asio::deadline_timer _timer;
     container_type              _watchers;
     index_type                  _index;
     mutable boost::mutex        _mutex;
     
-    watcher(boost::asio::io_service& io, const time_duration_type& duration): _io(io), _timer(io), _duration(duration){}    
+    watcher(boost::asio::io_context& io, const time_duration_type& duration): _io(io), _timer(io), _duration(duration){}    
     bool insert(watch_type watch){
         if(watch.released() || watch.valid()){
             // watch is valid iff an expiry time is set by the watcher

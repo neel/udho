@@ -40,7 +40,7 @@ struct E{
 };
 
 TEST_CASE( "activity data", "[activity]" ) {
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     udho::servers::quiet::stateless::request_type req;
     udho::servers::quiet::stateless::attachment_type attachment(io);
     udho::contexts::stateless ctx(attachment.aux(), req, attachment);

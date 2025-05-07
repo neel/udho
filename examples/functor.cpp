@@ -27,7 +27,7 @@ struct delayed{
     boost::asio::deadline_timer _timer;
     bool _started;
     
-    delayed(boost::asio::io_service& io): _timer(io), _started(false){}
+    delayed(boost::asio::io_context& io): _timer(io), _started(false){}
     void triggered(udho::contexts::stateless ctx, const boost::system::error_code& e){
         std::string content = "Hello Mars\n";
         ctx.respond(content, "text/plain");
@@ -46,7 +46,7 @@ struct delayed{
 };
 
 int main(){
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     
     simple s;
     boost::function<int (udho::defs::request_type, int, int)> add(s);

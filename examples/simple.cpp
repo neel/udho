@@ -230,7 +230,7 @@ void fetch_echo(udho::contexts::stateless ctx){
 }
 
 int main(){    
-    boost::asio::io_service io;
+    boost::asio::io_context io;
     udho::servers::ostreamed::stateful<udho::cache::storage::disk, user, appearence> server(io, std::cout);
     server[udho::configs::server::template_root] = TMPL_PATH;
     server[udho::configs::server::document_root] = WWW_PATH;
