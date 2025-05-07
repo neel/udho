@@ -11,8 +11,6 @@
 #include <catch2/catch_all.hpp>
 #endif
 #include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
 #include <boost/thread.hpp>
 #include <udho/view/bridges/lua.h>
 #include <udho/net/context.h>

@@ -28,12 +28,9 @@
 #ifndef UDHO_CONTEXT_H
 #define UDHO_CONTEXT_H
 
-#include <map>
 #include <stack>
 #include <string>
 #include <sstream>
-#include <iostream>
-#include <cstdint>
 #include <boost/optional.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/shared_ptr.hpp>
