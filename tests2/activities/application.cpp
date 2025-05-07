@@ -351,11 +351,6 @@ TEST_CASE( "activity application", "[activities]" ) {
             udho::url::slot("unprepared"_h,  &unprepared) << udho::url::fixed(udho::url::verb::get, "/unprepared", "/unprepared") |
             udho::url::slot("prepared"_h,    &prepared)   << udho::url::fixed(udho::url::verb::get, "/prepared",   "/prepared")   |
             udho::url::slot("unprepared_a1_fail"_h,  &unprepared_a1_fail) << udho::url::fixed(udho::url::verb::get, "/unprepared_a1_fail", "/unprepared_a1_fail")
-        } |
-        udho::url::mount_point{"root1"_h, "/3",
-            udho::url::slot("unprepared"_h,  &unprepared) << udho::url::fixed(udho::url::verb::get, "/unprepared", "/unprepared") |
-                udho::url::slot("prepared"_h,    &prepared)   << udho::url::fixed(udho::url::verb::get, "/prepared",   "/prepared")   |
-                udho::url::slot("unprepared_a1_fail"_h,  &unprepared_a1_fail) << udho::url::fixed(udho::url::verb::get, "/unprepared_a1_fail", "/unprepared_a1_fail")
         }
     );
 
