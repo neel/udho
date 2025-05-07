@@ -5,11 +5,7 @@
 #include <catch2/catch_all.hpp>
 #endif
 #include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
 #include <string>
-#include <tuple>
-#include <regex>
 #include <boost/hana/string.hpp>
 #include <udho/db/pg/schema/defs.h>
 #include <udho/db/pg/schema/field.h>

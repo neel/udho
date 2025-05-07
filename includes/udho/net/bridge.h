@@ -5,9 +5,8 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <udho/net/common.h>
-#include <udho/net/stream.h>
-#include <chrono>
 #include <iostream>
+#include <udho/hazo/detail/is_streamable.h>
 
 namespace udho{
 namespace net{
@@ -66,11 +65,10 @@ struct bridge{
      * @brief Writes data to the output stream.
      * @param str Data to write.
      */
-    template <typename CharT>
-    void write_latter(const std::basic_string<CharT>& str){
-        std::copy(str.begin(), str.end(), std::ostream_iterator<CharT>(_stream));
+    template <typename T, std::enable_if_t< !std::is_pointer_v<T> && udho::hazo::detail::is_streamable<std::ostream, T>::value, bool> = true>
+    void write_latter(const T& v){
+        _stream << v;
     }
-
     /**
      * @brief Writes data to the output stream.
      * @param str Data to write.
@@ -107,9 +105,9 @@ struct bridge{
      * @param str String to write.
      * @return Reference to this bridge object.
      */
-    template <typename CharT>
-    bridge& operator<<(const std::basic_string<CharT>& str){
-        write_latter<CharT>(str);
+    template <typename T, std::enable_if_t< !std::is_pointer_v<T> && udho::hazo::detail::is_streamable<std::ostream, T>::value, bool> = true>
+    bridge& operator<<(const T& v){
+        write_latter<T>(v);
         return *this;
     }
 
@@ -119,8 +117,9 @@ struct bridge{
      * @return Reference to this bridge object.
      */
     template <typename CharT>
-    bridge& operator<<(const CharT* str){
-        write_latter<CharT>(std::basic_string<CharT>(str));
+    bridge& operator<<(const CharT* s){
+        std::basic_string<CharT> str(s);
+        write_latter(str);
         return *this;
     }
 

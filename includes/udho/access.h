@@ -583,8 +583,8 @@ struct association_leaf{
 
 }
 
-struct assoc: detail::association_group<detail::association_leaf, void>{
-    assoc(): detail::association_group<detail::association_leaf, void>(detail::association_leaf()){}
+struct assoc_group: detail::association_group<detail::association_leaf, void>{
+    assoc_group(): detail::association_group<detail::association_leaf, void>(detail::association_leaf()){}
 };
 
 template <typename F>
@@ -831,7 +831,7 @@ struct prepare{
     }
     auto index() const{
         const DerivedT& obj = static_cast<const DerivedT&>(*this);
-        return obj.dict(udho::assoc());
+        return obj.dict(udho::assoc_group());
     }
 //     auto index(){
 //         DerivedT& obj = static_cast<DerivedT&>(*this);

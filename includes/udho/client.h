@@ -130,7 +130,7 @@ struct async_result{
             bool is_redirected = res.count(boost::beast::http::field::location);
             if(is_redirected && option(udho::client_options::follow_redirect)){
                 std::string redirected_url(res[boost::beast::http::field::location]);
-                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url::parse(redirected_url)).then(_callback).failed(_ecallback);
+                _ctx.client(_options).request(boost::beast::http::verb::get, udho::url_rfc1738::parse(redirected_url)).then(_callback).failed(_ecallback);
             }else{
                 _callback(_ctx, res);
             }
@@ -218,7 +218,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     using executor_type = boost::asio::executor;
 #endif
     
-    udho::url _url;
+    udho::url_rfc1738 _url;
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::ssl::context& _ssl_ctx;
     boost::asio::ssl::stream<boost::asio::ip::tcp::socket> stream;
@@ -226,14 +226,14 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     boost::beast::http::request<boost::beast::http::empty_body> req;
     boost::beast::http::response<boost::beast::http::string_body> res;
     
-    explicit https_client_connection(ContextT context, const udho::url& u, executor_type ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx){}
+    explicit https_client_connection(ContextT context, const udho::url_rfc1738& u, executor_type ex, boost::asio::ssl::context& ssl_ctx, options_type options): result_type(context, options), _url(u), resolver(ex), _ssl_ctx(ssl_ctx), stream(ex, ssl_ctx){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
-        std::string host   = _url[url::host];
-        std::string port   = std::to_string(_url[url::port]);
-        std::string target = _url[url::target];
+        std::string host   = _url[url_rfc1738::host];
+        std::string port   = std::to_string(_url[url_rfc1738::port]);
+        std::string target = _url[url_rfc1738::target];
 
         std::string host_str = host;
-        if(_url[url::port] != 443){
+        if(_url[url_rfc1738::port] != 443){
             host_str += ":"+port;
         }
         
@@ -247,7 +247,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_resolve(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type results){
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url::host] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url_rfc1738::host] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -261,17 +261,17 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_connect(boost::beast::error_code ec){
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
-        std::string host = _url[url::host];
+        std::string host = _url[url_rfc1738::host];
         boost::certify::set_server_hostname(stream, boost::string_view(host), ec);
         if(!ec){
             boost::certify::sni_hostname(stream, host, ec);
         }
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to set ssl hostname %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to set ssl hostname %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -282,7 +282,7 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
     }
     void on_handshake(boost::beast::error_code ec) {
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "ssl handshake failed with %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "ssl handshake failed with %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -312,13 +312,13 @@ struct https_client_connection: public std::enable_shared_from_this<https_client
             ec = {};
         }
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
     }
     
-    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url url, options_type options){
+    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url_rfc1738 url, options_type options){
         boost::asio::ssl::context ssl_ctx{boost::asio::ssl::context::tlsv12_client};
         ssl_ctx.set_default_verify_paths();
         boost::certify::enable_native_https_server_verification(ssl_ctx);
@@ -342,7 +342,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     typedef udho::config<udho::client_options> options_type;
     typedef boost::function<void (const std::string&)> redirector_type;
     
-    udho::url _url;
+    udho::url_rfc1738 _url;
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::ip::tcp::socket socket;
     boost::beast::flat_buffer buffer;
@@ -355,15 +355,15 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     using executor_type = boost::asio::executor;
 #endif
     
-    explicit http_client_connection(ContextT context, const udho::url& u, executor_type ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex){}
+    explicit http_client_connection(ContextT context, const udho::url_rfc1738& u, executor_type ex, options_type options): result_type(context, options), _url(u), resolver(ex), socket(ex){}
     void start(boost::beast::http::verb method = boost::beast::http::verb::get){
-        std::string host   = _url[url::host];
-        std::string port   = std::to_string(_url[url::port]);
-        std::string target = _url[url::target];
+        std::string host   = _url[url_rfc1738::host];
+        std::string port   = std::to_string(_url[url_rfc1738::port]);
+        std::string target = _url[url_rfc1738::target];
         int version = result_type::option(udho::client_options::http_version);
         
         std::string host_str = host;
-        if(_url[url::port] != 80){
+        if(_url[url_rfc1738::port] != 80){
             host_str += ":"+port;
         }
         
@@ -379,7 +379,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_resolve(boost::beast::error_code ec, boost::asio::ip::tcp::resolver::results_type results){
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url::host] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to resolve %1% with error %2%") % _url[url_rfc1738::host] % ec.message();
             result_type::failure( ec);
             return;
         }
@@ -387,7 +387,7 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
     }
     void on_connect(boost::beast::error_code ec){
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to connect to %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
@@ -419,13 +419,13 @@ struct http_client_connection: public std::enable_shared_from_this<http_client_c
             ec = {};
         }
         if(ec){
-            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url::host] % _url[url::port] % ec.message();
+            result_type::context() << udho::logging::messages::formatted::error("client", "Failed to shutdown connection %1%:%2% with error %3%") % _url[url_rfc1738::host] % _url[url_rfc1738::port] % ec.message();
             result_type::failure(ec);
             return;
         }
     }
     
-    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url url, options_type options){
+    static std::shared_ptr<self_type> create(boost::asio::io_context& io, ContextT ctx, udho::url_rfc1738 url, options_type options){
         std::shared_ptr<self_type> connection = std::make_shared<self_type>(ctx, url, boost::asio::make_strand(io), options);
         return connection;
     }
@@ -445,10 +445,10 @@ struct client_connection_wrapper{
     options_type _options;
     
     explicit inline client_connection_wrapper(boost::asio::io_context& io, ContextT ctx, options_type options): _io(io), _context(ctx), _options(options){}
-    result_type& request(boost::beast::http::verb method, udho::url url){
+    result_type& request(boost::beast::http::verb method, udho::url_rfc1738 url){
         self_type self(*this);
         
-        std::string protocol = url[udho::url::protocol];
+        std::string protocol = url[udho::url_rfc1738::protocol];
         if(protocol == "https"){
             auto connection = udho::detail::https_client_connection<ContextT>::create(_io, _context, url, _options);
             connection->start(method);
@@ -459,24 +459,24 @@ struct client_connection_wrapper{
             return connection->result();
         }
     }
-    result_type& get(udho::url url){
+    result_type& get(udho::url_rfc1738 url){
         return request(boost::beast::http::verb::get, url);
     }
-    result_type& post(udho::url url){
+    result_type& post(udho::url_rfc1738 url){
         return request(boost::beast::http::verb::post, url);
     }
-    result_type& put(udho::url url){
+    result_type& put(udho::url_rfc1738 url){
         return request(boost::beast::http::verb::put, url);
     }
     
     result_type& get(const std::string& url){
-        return get(udho::url::parse(url));
+        return get(udho::url_rfc1738::parse(url));
     }
     result_type& post(const std::string& url){
-        return post(udho::url::parse(url));
+        return post(udho::url_rfc1738::parse(url));
     }
     result_type& put(const std::string& url){
-        return put(udho::url::parse(url));
+        return put(udho::url_rfc1738::parse(url));
     }
 };
 

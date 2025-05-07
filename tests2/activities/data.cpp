@@ -5,9 +5,10 @@
 #include <catch2/catch_all.hpp>
 #endif
 #include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
 #include <string>
+#include <udho/view/bridges/lua.h>
+#include <udho/net/context.h>
+#include <udho/url/router.h>
 
 namespace activities = udho::activities;
 
@@ -41,9 +42,21 @@ struct E{
 
 TEST_CASE( "activity data", "[activity]" ) {
     boost::asio::io_context io;
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.assets().base("assets");
+    resource_store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+    auto router = udho::url::router();
+
+    udho::net::types::headers::request  request;
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     GIVEN( "a collector<A, B, C, D>" ) {
         WHEN( "some data has been inserted into it in the ABCD order" ) {

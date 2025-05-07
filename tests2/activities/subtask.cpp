@@ -4,8 +4,6 @@
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/thread/thread_time.hpp>
-#include <iterator>
-#include <type_traits>
 #define CATCH_CONFIG_MAIN
 #if WITH_CATCH_VERSION_2
 #include <catch2/catch.hpp>
@@ -15,8 +13,10 @@
 #include <udho/activities.h>
 #include <udho/contexts.h>
 #include <udho/server.h>
-#include <string>
 #include <boost/thread.hpp>
+#include <udho/view/bridges/lua.h>
+#include <udho/net/context.h>
+#include <udho/url/router.h>
 
 namespace activities = udho::activities;
 
@@ -125,9 +125,22 @@ using A7 = A<7>;
 
 TEST_CASE("subtask flow", "[activities]") {
     boost::asio::io_context io;
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.assets().base("assets");
+    resource_store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+    auto router = udho::url::router();
+
+    udho::net::types::headers::request  request;
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
+
 
     WHEN("All subtasks succeed") {
         std::cout << "---------------------------0" << std::endl;
