@@ -63,14 +63,14 @@ BOOST_AUTO_TEST_CASE(https){
         .option(udho::client_options::follow_redirect, true)
         .option(udho::client_options::verify_certificate, false);
         
-    udho::url url1 = udho::url::build("https://postman-echo.com/get", {
+    udho::url_rfc1738 url1 = udho::url_rfc1738::build("https://postman-echo.com/get", {
         {"foo", "bar"},
         {"key", "value"}
     });
     
     BOOST_CHECK_MESSAGE(url1.stringify() == "https://postman-echo.com:443/get?foo=bar&key=value", "unexpected " << url1.stringify());
     
-    udho::url url2 = udho::url::build("https://postman-echo.com/get?id=42", {
+    udho::url_rfc1738 url2 = udho::url_rfc1738::build("https://postman-echo.com/get?id=42", {
         {"foo", "bar"},
         {"key", "value"}
     });

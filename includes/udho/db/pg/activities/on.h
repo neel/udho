@@ -31,7 +31,6 @@
 #include <udho/db/common/none.h>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/status.hpp>
-#include <udho/contexts.h>
 #include <udho/page.h>
 #include <udho/db/pg/activities/failure.h>
 #include <udho/db/common/results.h>
@@ -188,14 +187,14 @@ namespace on{
      * Specialize this template to customize error message on SQL failure
      * @ingroup pg
      */
-    template <typename ActivityT>
+    template <typename ActivityT, typename ContextT>
     struct failure{
         /**
         * Initialized by any context, which is stored as a stateless context.
         * Default status is initialized as internel server error.
         */
-        template <typename ContextT>
         failure(ContextT ctx): _ctx(ctx){}
+
         /**
         * The parenthesis operator is called to throw HTTP errors
         */
@@ -205,21 +204,22 @@ namespace on{
             return true;
         }
         private:
-            udho::contexts::stateless _ctx;
+            ContextT _ctx;
     };
 
     /**
      * Specialize this template to customize error message on error (unexpected response from SQL query)
      * @ingroup pg
      */
-    template <typename ActivityT>
+    template <typename ActivityT, typename ContextT>
     struct error{
+
         /**
         * Initialized by any context, which is stored as a stateless context.
         * Default status is initialized as internel server error.
         */
-        template <typename ContextT>
         error(ContextT ctx): _ctx(ctx){}
+
         /**
         * The parenthesis operator is called to throw HTTP errors
         */
@@ -229,7 +229,7 @@ namespace on{
             return true;
         }
         private:
-            udho::contexts::stateless _ctx;
+            ContextT _ctx;
     };
 
     /**

@@ -89,7 +89,6 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
     udho::pages::system::setup(resources);
-    std::cout << "resources setup" << std::endl;
 
     auto previous_size = resources.assets().size();
     resources["primary"] << udho::view::resources::asset::js ("0profile1.js", std::begin(buffer_js),  std::end(buffer_js) );
@@ -146,7 +145,6 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
         }
     }
 
-    std::cout << router << std::endl;
 
     boost::asio::io_context service;
 

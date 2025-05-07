@@ -89,7 +89,7 @@ namespace activities{
         template <typename U, typename... DependenciesU>
         friend struct subtask;
 
-        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator), _interaction(other._interaction){}
+        subtask(const self_type& other): _activity(other._activity), _combinator(other._combinator)/*, _interaction(other._interaction)*/{}
 
         std::shared_ptr<activity_type> activity_ptr() { return _activity; }
         activity_type& activity(){ return *(_activity.get()); }
@@ -146,14 +146,14 @@ namespace activities{
         self_type& force(bool flag = true) { _activity->force(flag); return *this; }
         protected:
             template <typename ContextT, typename... T, typename... U>
-            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): _interaction(collector_ptr->context().interaction()){
+            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u)/*: _interaction(collector_ptr->context().interaction())*/{
                 _activity = std::make_shared<activity_type>(collector_ptr, u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
             
             std::shared_ptr<activity_type> _activity;
             std::shared_ptr<combinator_type> _combinator;
-            udho::detail::interaction_& _interaction;
+            // udho::detail::interaction_& _interaction;
     };
     
     namespace detail{

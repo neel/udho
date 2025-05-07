@@ -3,11 +3,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string_regex.hpp>
-#include <udho/router.h>
 #include <boost/lexical_cast.hpp>
-#include <udho/server.h>
-#include <iostream>
-#include <udho/configuration.h>
 #include <udho/activities.h>
 #define CATCH_CONFIG_MAIN
 #if WITH_CATCH_VERSION_2
@@ -15,6 +11,66 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
+#include <curl/curl.h>
+#include <udho/net/listener.h>
+#include <udho/net/connection.h>
+#include <udho/net/protocols/protocols.h>
+#include <udho/net/common.h>
+#include <udho/net/server.h>
+#include <curl/curl.h>
+#include <udho/net/artifacts.h>
+#include <udho/url/url.h>
+
+using socket_type     = udho::net::types::socket;
+using http_protocol   = udho::net::protocols::http<socket_type>;
+using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
+using http_connection = udho::net::connection<http_protocol>;
+using scgi_connection = udho::net::connection<scgi_protocol>;
+using http_listener   = udho::net::listener<http_connection>;
+using scgi_listener   = udho::net::listener<scgi_connection>;
+
+static size_t curl_writef(void *contents, size_t size, size_t nmemb, void *userp){
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+struct http_results{
+    long code;
+    std::string   body;
+    std::map<std::string, std::string> headers;
+};
+
+http_results curl_fetch(CURL* curl, const std::string method, const std::string& url){
+    CURLcode res;
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "http");
+    struct curl_slist *headers = NULL;
+    std::string response_headers;
+    std::string response_body;
+    std::map<std::string, std::string> headers_map;
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER,      headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,   curl_writef);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,  curl_writef);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA,      &response_headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA,       &response_body);
+    res = curl_easy_perform(curl);
+    long response_code = 0;
+    if(res == CURLE_OK) {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+        std::vector<std::string> header_lines;
+        boost::algorithm::split(header_lines, response_headers, boost::is_any_of("\r\n"));
+        for(const std::string& line: header_lines){
+            std::vector<std::string> header_parts;
+            boost::algorithm::split(header_parts, line, boost::is_any_of(":"));
+            if(header_parts.size() >= 2){
+                headers_map.insert(std::make_pair(boost::algorithm::trim_copy(header_parts[0]), boost::algorithm::trim_copy(header_parts[1])));
+            }
+        }
+    }
+    return http_results{response_code, response_body, headers_map};
+}
 
 #define SMALL_TIMEOUT 1
 #define LARGE_TIMEOUT 2
@@ -170,8 +226,8 @@ struct A3i: udho::activity<A3i, A3SData, A3FData>{
     }
 };
 
-void unprepared(udho::contexts::stateless ctx){
-    auto& io = ctx.aux()._io;
+void unprepared(udho::net::stream ctx){
+    auto& io = ctx.io();
     
     auto data = udho::collect<A1, A2, A3>(ctx);
     
@@ -199,14 +255,16 @@ void unprepared(udho::contexts::stateless ctx){
             sum += pre.value;
         }
         
-        ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
+        ctx << sum;
+        ctx.response().set(boost::beast::http::field::content_type, "text/plain");
+        ctx.finish();
     }).after(t2).after(t3);
     
     t1();
 }
 
-void prepared(udho::contexts::stateless ctx){
-    auto& io = ctx.aux()._io;
+void prepared(udho::net::stream ctx){
+    auto& io = ctx.io();
     
     auto data = udho::collect<A1, A2i, A3i>(ctx);
     
@@ -242,14 +300,16 @@ void prepared(udho::contexts::stateless ctx){
             sum += pre.value;
         }
         
-        ctx.respond(boost::lexical_cast<std::string>(sum), "text/plain");
+        ctx << sum;
+        ctx.response().set(boost::beast::http::field::content_type, "text/plain");
+        ctx.finish();
     }).after(t2).after(t3);
     
     t1();
 }
 
-void unprepared_a1_fail(udho::contexts::stateless ctx){
-    auto& io = ctx.aux()._io;
+void unprepared_a1_fail(udho::net::stream ctx){
+    auto& io = ctx.io();
     
     auto data = udho::collect<A1, A2, A3>(ctx);
     
@@ -265,75 +325,71 @@ void unprepared_a1_fail(udho::contexts::stateless ctx){
         
         A1FData pre = d.failure<A1>();
         
-        ctx.respond(boost::lexical_cast<std::string>(pre.reason), "text/plain");
+        ctx << pre.reason;
+        ctx.response().set(boost::beast::http::field::content_type, "text/plain");
+        ctx.finish();
     }).after(t2).after(t3).force();
     
     t1();
 }
 
 TEST_CASE( "activity application", "[activities]" ) {
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+    udho::pages::system::setup(resources);
+    resources.assets().base("assets");
+    resources.lock();
+
+
+    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{resources};
+    using namespace udho::hazo::string::literals;
+    auto router = udho::url::router(
+        udho::url::mount_point{"root"_h, "/",
+            udho::url::slot("unprepared"_h,  &unprepared) << udho::url::fixed(udho::url::verb::get, "/unprepared", "/unprepared") |
+            udho::url::slot("prepared"_h,    &prepared)   << udho::url::fixed(udho::url::verb::get, "/prepared",   "/prepared")   |
+            udho::url::slot("unprepared_a1_fail"_h,  &unprepared_a1_fail) << udho::url::fixed(udho::url::verb::get, "/unprepared_a1_fail", "/unprepared_a1_fail")
+        }
+    );
+
+    boost::asio::io_context service;
+
+    auto server     = udho::net::server<http_listener>(service, 9000);
+    auto artifacts  = udho::net::artifacts{router, resources};
+
+    server.run(artifacts);
+
+    std::thread thread([&]{
+        service.run();
+    });
+
+    CURL* curl;
+    curl = curl_easy_init();
+    CHECK(curl != 0x0);
+
 
     SECTION("unprepared_subtasks"){
-        boost::asio::io_context io;
-        udho::servers::quiet::stateless server(io);
-        auto urls = udho::router()
-            | (udho::get(&unprepared).deferred() = "^/unprepared");
-        server.serve(urls, 9198);
-        
-        udho::servers::quiet::stateless::request_type req;
-        udho::servers::quiet::stateless::attachment_type attachment(io);
-        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-        
-        ctx.client().get("http://localhost:9198/unprepared")
-            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-                CHECK(status == boost::beast::http::status::ok);
-                CHECK(body == "128");
-                io.stop();
-            });
-        
-        io.run();
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/unprepared");
+        CHECK(results.code == 200);
+        CHECK(results.body == "128");
     }
 
     SECTION("prepared_subtasks"){
-        boost::asio::io_context io;
-        udho::servers::quiet::stateless server(io);
-        auto urls = udho::router()
-            | (udho::get(&prepared).deferred() = "^/prepared");
-        server.serve(urls, 9198);
-        
-        udho::servers::quiet::stateless::request_type req;
-        udho::servers::quiet::stateless::attachment_type attachment(io);
-        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-        
-        ctx.client().get("http://localhost:9198/prepared")
-            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-                CHECK(status == boost::beast::http::status::ok);
-                CHECK(body == "128");
-                io.stop();
-            });
-        
-        io.run();
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/prepared");
+        CHECK(results.code == 200);
+        CHECK(results.body == "128");
     }
 
     SECTION("unprepared_subtasks_a1_fail"){
-        boost::asio::io_context io;
-        udho::servers::quiet::stateless server(io);
-        auto urls = udho::router()
-            | (udho::get(&unprepared_a1_fail).deferred() = "^/unprepared_a1_fail");
-        server.serve(urls, 9198);
-        
-        udho::servers::quiet::stateless::request_type req;
-        udho::servers::quiet::stateless::attachment_type attachment(io);
-        udho::contexts::stateless ctx(attachment.aux(), req, attachment);
-        
-        ctx.client().get("http://localhost:9198/unprepared_a1_fail")
-            .done([ctx, &io](boost::beast::http::status status, const std::string& body) mutable {
-                CHECK(status == boost::beast::http::status::ok);
-                CHECK(body == "100");
-                io.stop();
-            });
-        
-        io.run();
+        http_results results = curl_fetch(curl, "GET", "http://localhost:9000/unprepared_a1_fail");
+        CHECK(results.code == 200);
+        CHECK(results.body == "100");
     }
+
+    curl_easy_cleanup(curl);
+    server.stop();
+    thread.join();
 
 }

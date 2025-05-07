@@ -148,6 +148,115 @@ struct routing_table{
         udho::url::summary::router _summary;
 };
 
+template <typename StrT, typename ActionsT>
+struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
+
+    // /**
+    //  * @brief operator overload for streaming the routing table's mount points
+    //  * @param stream Output stream
+    //  * @param router Routing table
+    //  * @return Reference to the output stream
+    //  */
+    // template <typename Mountpoints>
+    // friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
+    //     stream << router._mountpoints;
+    //     return stream;
+    // }
+
+    /// Type alias for the mount points collection
+    using mountpoint_type = udho::url::mount_point<StrT, ActionsT>;
+
+    routing_table() = delete;
+    routing_table(const routing_table<mountpoint_type>&) = delete;
+    routing_table(routing_table<mountpoint_type>&&) = delete;
+
+    /**
+     * @brief Constructs a routing table with mount points
+     * @param mountpoints Rvalue reference to mount points collection
+     * @post Initializes internal summary that can be accessed through the @ref summary function
+     */
+    routing_table(mountpoint_type&& mountpoints): _mountpoint(std::move(mountpoints)) { summarize(); }
+
+    /**
+     * @brief Subscript operator for accessing mount points
+     * @tparam XStrT Type of the mount point key
+     * @param xstr Key to access in mount points
+     * @return Reference to the associated mount point
+     */
+    template <typename XStrT>
+    auto& operator[](XStrT&& xstr) { return _mountpoint[std::move(xstr)]; }
+
+    /**
+     * @brief Const subscript operator for accessing mount points
+     * @tparam XStrT Type of the mount point key (deduced)
+     * @param xstr Key to access in mount points
+     * @return Const reference to the associated mount point
+     */
+    template <typename XStrT>
+    const auto& operator[](XStrT&& xstr) const { return _mountpoint[std::move(xstr)]; }
+
+    /**
+     * @brief Checks if a URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return true if path is found in mount points or filesystem, false otherwise
+     */
+    template <typename Ch>
+    bool find(const std::basic_string<Ch>& subject) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return false;
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        return _mountpoint.find(rest);
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return false;
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        return _mountpoint.invoke(rest, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Function call operator that delegates to invoke()
+     * @param url URL path to process
+     * @param args Arguments to forward to the action
+     * @return bool indicating if request was handled
+     */
+    template <typename... Args>
+    bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
+
+    /**
+     * @brief Gets the routing summary
+     * @return Const reference to the summary object
+     */
+    const udho::url::summary::router& summary() const { return _summary; }
+
+private:
+
+    /**
+     * @brief Builds summary information by visiting all mount points
+     * @post Populates the _summary member with mount point information
+     */
+    void summarize(){
+        _summary.add(_mountpoint);
+    }
+
+private:
+    mountpoint_type           _mountpoint;
+    udho::url::summary::router _summary;
+};
+
 template <typename RoutingTableT = void>
 struct basic_router;
 

@@ -28,7 +28,6 @@
 #ifndef UDHO_DB_PG_START_H
 #define UDHO_DB_PG_START_H
 
-#include <udho/contexts.h>
 #include <udho/db/pg/ozo/connection.h>
 #include <udho/db/pg/activities/controller.h>
 #include <udho/activities/start.h>

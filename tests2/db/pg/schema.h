@@ -28,12 +28,6 @@
 #ifndef UDHO_DB_PG_TESTS_SCHEMA_H
 #define UDHO_DB_PG_TESTS_SCHEMA_H
 
-#include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
-#include <string>
-#include <tuple>
-#include <regex>
 #include <boost/hana/string.hpp>
 #include <udho/db/pg/schema/defs.h>
 #include <udho/db/pg/schema/field.h>

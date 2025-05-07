@@ -98,7 +98,7 @@ typedef url_data_<> url_data;
       
 }
 
-struct url: udho::configuration<detail::url_data>, udho::forms::drivers::urlencoded_raw{
+struct url_rfc1738: udho::configuration<detail::url_data>, udho::forms::drivers::urlencoded_raw{
     
     typedef udho::forms::drivers::urlencoded_raw urlencoded_type;
     
@@ -111,29 +111,29 @@ struct url: udho::configuration<detail::url_data>, udho::forms::drivers::urlenco
         inline std::string value() const{return _value;}
         inline std::string to_string() const{return _key+"="+_value;}
     };
-    static url build(const std::string& base, const std::initializer_list<param>& params){
+    static url_rfc1738 build(const std::string& base, const std::initializer_list<param>& params){
         std::vector<std::string> stringified_params;
         std::transform(params.begin(), params.end(), std::back_inserter(stringified_params), std::bind(&param::to_string, std::placeholders::_1));
         std::string joined = boost::algorithm::join(stringified_params, "&");
         std::string::const_iterator it = std::find(base.begin(), base.end(), '?');
         if(it != base.end()){
-            return url(base+"&"+joined);
+            return url_rfc1738(base+"&"+joined);
         }else{
-            return url(base+"?"+joined);
+            return url_rfc1738(base+"?"+joined);
         }
     }
-    static inline url parse(const std::string& str){
-        return url(str);
+    static inline url_rfc1738 parse(const std::string& str){
+        return url_rfc1738(str);
     }
     
-    url() = delete;
-    url(const url& other): udho::configuration<detail::url_data>(other), urlencoded_type(other){}
+    url_rfc1738() = delete;
+    url_rfc1738(const url_rfc1738& other): udho::configuration<detail::url_data>(other), urlencoded_type(other){}
     
     std::string stringify() const{
         return to_string();
     }
     private:
-        explicit url(const std::string& url_str){
+        explicit url_rfc1738(const std::string& url_str){
             from_string(url_str);
         }
         inline void from_string(const std::string& url){

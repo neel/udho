@@ -4,12 +4,7 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
-#include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
 #include <string>
-#include <tuple>
-#include <regex>
 #include <boost/hana/string.hpp>
 #include <udho/db/pg/schema/defs.h>
 #include <udho/db/pg/schema/field.h>
@@ -24,18 +19,34 @@
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include <udho/view/bridges/lua.h>
+#include <udho/net/context.h>
+#include <udho/url/router.h>
+
 using namespace udho::db;
 using namespace ozo::literals;
 using namespace boost::hana::literals;
 
 TEST_CASE("postgresql crud join", "[pg]"){
     boost::asio::io_context io;
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.assets().base("assets");
+    resource_store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+    auto router = udho::url::router();
+
+    udho::net::types::headers::request  request;
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     ozo::connection_pool_config dbconfig;
-    ozo::connection_info<> conn_info("host=localhost dbname=postgres user=postgres");
+    ozo::connection_info<> conn_info("dbname=postgres user=postgres");
     auto pool = ozo::connection_pool(conn_info, dbconfig);
 
     using autojoin_test = pg::from<articles::table>

@@ -10,6 +10,7 @@
 #include <udho/net/bridge.h>
 #include <udho/net/fwd.h>
 #include <udho/hazo/string/basic.h>
+#include <udho/hazo/detail/is_streamable.h>
 
 namespace udho{
 namespace net{
@@ -56,8 +57,14 @@ class stream{
             *_bridge << header;
             return *this;
         }
-        template <typename StrT>
-        stream& operator<<(const StrT& str){
+
+        stream& operator<<(const std::exception& ex){
+            *_bridge << ex.what();
+            return *this;
+        }
+
+        template <typename T, std::enable_if_t< !std::is_pointer_v<T> && udho::hazo::detail::is_streamable<std::ostream, T>::value, bool> = true>
+        stream& operator<<(const T& str){
              *_bridge << str;
             return *this;
         }

@@ -8,9 +8,9 @@
 #include <catch2/catch_all.hpp>
 #endif
 #include <udho/activities.h>
-#include <udho/contexts.h>
-#include <udho/server.h>
-#include <string>
+#include <udho/view/bridges/lua.h>
+#include <udho/net/context.h>
+#include <udho/url/router.h>
 
 namespace activities = udho::activities;
 
@@ -50,13 +50,25 @@ struct MinimalA3: activities::activity<MinimalA3, success_t, failure_t>{
 
 TEST_CASE( "activity basic", "[activities]" ) {
     boost::asio::io_context io;
-    udho::servers::quiet::stateless::request_type req;
-    udho::servers::quiet::stateless::attachment_type attachment(io);
-    udho::contexts::stateless ctx(attachment.aux(), req, attachment);
+    udho::view::data::bridges::lua lua;
+    lua.init();
+    lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+
+    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
+    resource_store.assets().base("assets");
+    resource_store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
+
+    auto router = udho::url::router();
+
+    udho::net::types::headers::request  request;
+    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     SECTION( "construction" ) {
-        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, MinimalA1, MinimalA2>>&, bool>::value);
-        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::contexts::stateless, MinimalA1>>&, bool>::value);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::net::context<udho::view::data::bridges::lua>, MinimalA1, MinimalA2>>&, bool>::value);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::net::context<udho::view::data::bridges::lua>, MinimalA1>>&, bool>::value);
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){
