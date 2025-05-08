@@ -41,7 +41,7 @@ namespace udho{
 template <typename RequestT, typename ShadowT>
 struct session_{
     typedef RequestT request_type;
-    typedef udho::cookies_<request_type> cookies_type;
+    typedef udho::cookies::jar<request_type> cookies_type;
     typedef ShadowT shadow_type;
     typedef typename shadow_type::key_type key_type;
     typedef session_<request_type, shadow_type> self_type;

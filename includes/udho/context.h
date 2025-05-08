@@ -102,7 +102,7 @@ struct context_impl: interaction_{
     typedef RequestT                                     request_type;
     typedef context_impl<request_type>                   self_type;
     typedef udho::forms::form_<request_type>             form_type;
-    typedef udho::cookies_<request_type>                 cookies_type;
+    typedef udho::cookies::jar<request_type>                 cookies_type;
     typedef boost::beast::http::header<true>             headers_type;
     typedef udho::forms::query_                          query_parser_type;
     typedef std::stack<udho::detail::route>              route_stack_type;
@@ -213,7 +213,7 @@ struct context_common{
     typedef detail::context_impl<request_type>              impl_type;
     typedef boost::shared_ptr<impl_type>                    pimple_type;
     typedef udho::forms::form_<RequestT>                    form_type;
-    typedef udho::cookies_<RequestT>                        cookies_type;
+    typedef udho::cookies::jar<RequestT>                        cookies_type;
     typedef udho::forms::query_                             query_parser_type;
     
     pimple_type _pimpl;
