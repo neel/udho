@@ -80,14 +80,24 @@ test:ubuntu:noble:
     - cp /tmp/pg_hba.conf $PSQL_CONF_DIR/pg_hba.conf
     - service postgresql start
     - service postgresql status
+  # script:
+  #   - cd build
+  #   - ctest --output-on-failure
+  #   - tar -czvf results.tar.gz results
+  # artifacts:
+  #   paths:
+  #     - build/results.tar.gz
+  # dependencies:
+  #   - build:ubuntu:noble
   script:
     - cd build
-    - ctest --output-on-failure
-    - tar -czvf results.tar.gz results
+    - ctest --output-on-failure || ctest_exit=$?
+    - exit ${ctest_exit:-0}
   artifacts:
     paths:
-      - build/results.tar.gz
+      - build/results/
+    reports:
+      junit: build/results/**/*.xml
   dependencies:
     - build:ubuntu:noble
-
     
