@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(udho-tests2-url LANGUAGES CXX VERSION 0.0.1)
+project(udho-tests-url LANGUAGES CXX VERSION 0.0.1)
 
 find_package(CURL REQUIRED)
 find_package(Boost REQUIRED)

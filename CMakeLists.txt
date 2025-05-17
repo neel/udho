@@ -88,7 +88,7 @@ TARGET_LINK_LIBRARIES(sandbox udho)
 # TARGET_LINK_LIBRARIES(sandbox2 udho)
 
 if(UDHO_BUILD_EXAMPLES)
-    ADD_SUBDIRECTORY(examples)
+    # ADD_SUBDIRECTORY(examples)
 endif()
 
 add_subdirectory(vendor)

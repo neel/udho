@@ -34,93 +34,23 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/beast/http/message.hpp>
+#include <udho/utils/encoding.h>
+#include <udho/cookies/cookie.h>
 
 namespace udho{
 
-// https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.h
-// https://github.com/cmakified/cgicc/blob/master/cgicc/HTTPCookie.cpp
 namespace cookies{
-
-template <typename ValueT>
-struct cookie{
-    typedef cookie<ValueT> self_type;
-    
-    cookie(const std::string& name): _name(name), _removed(false), _path("/"){}
-    cookie(const std::string& name, const ValueT& value): _name(name), _value(value), _removed(false), _path("/"){}
-    cookie(const std::string& name, const ValueT& value, const std::string& path): _name(name), _value(value), _removed(false), _path(path){}
-    
-    self_type& path(const std::string& p){
-        _path = p;
-        return *this;
-    }
-    std::string path() const{
-        return !!_path ? *_path : std::string();
-    }
-    
-    self_type& domain(const std::string& d){
-        _domain = d;
-        return *this;
-    }
-    std::string domain() const{
-        return !!_domain ? *_domain : std::string();
-    }
-    
-    self_type& age(unsigned long age){
-        _age = age;
-        return *this;
-    }
-    unsigned long age() const{
-        return !!_age ? *_age : 0;
-    }
-    
-    template <typename StreamT>
-    StreamT& render(StreamT& stream) const{
-        stream << _name << '=' << boost::lexical_cast<std::string>(_value);
-        if(!!_comment && !(*_comment).empty())
-            stream << "; Comment=" << *_comment;
-        if(!!_domain && !(*_domain).empty())
-            stream << "; Domain=" << *_domain;
-        if(_removed){
-            stream << "; Expires=Fri, 01-Jan-1971 01:00:00 GMT;";
-        }else if(!!_age && 0 != *_age){
-            stream << "; Max-Age=" << *_age;
-        }
-        if(!!_path && !(*_path).empty())
-            stream << "; Path=" << *_path;
-        if(!!_secure && *_secure)
-            stream << "; Secure";
-        
-        stream << "; Version=1";
-        
-        return stream;
-    }
-    std::string to_string() const{
-        std::stringstream ss;
-        render(ss);
-        return ss.str();
-    }
-
-    private:
-        std::string                     _name;
-        ValueT                          _value;
-        bool                            _removed;
-        boost::optional<std::string>    _comment;
-        boost::optional<std::string>    _domain;
-        boost::optional<std::string>    _path;
-        boost::optional<unsigned long>  _age;
-        boost::optional<bool>           _secure;
-};
 
 template <typename RequestT>
 struct jar{
     typedef RequestT request_type;
     typedef boost::beast::http::header<true> headers_type;
     typedef std::map<std::string, std::string> cookie_jar_type;
-    
+
     const request_type& _request;
     headers_type&       _headers;
     cookie_jar_type     _jar;
-    
+
     jar(const jar&) = delete;
     jar& operator=(const jar&) = delete;
 

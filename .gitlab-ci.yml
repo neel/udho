@@ -92,6 +92,7 @@ test:ubuntu:noble:
   script:
     - cd build
     - ctest --output-on-failure || ctest_exit=$?
+    - if [ -f Testing/Temporary/LastTestsFailed.log ]; then cat Testing/Temporary/LastTestsFailed.log; fi
     - exit ${ctest_exit:-0}
   artifacts:
     paths:

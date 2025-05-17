@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(udho-tests2-view LANGUAGES CXX VERSION 0.0.1)
+project(udho-tests-view LANGUAGES CXX VERSION 0.0.1)
 
 add_catch_test(udho-test-view-parser parser.cpp)
 add_catch_test(udho-test-view-data-meta meta.cpp)

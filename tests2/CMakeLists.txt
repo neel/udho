@@ -23,7 +23,7 @@ function(add_catch_test TARGET_NAME SOURCE_FILE)
     set(RESULTS_DIR "${CMAKE_BINARY_DIR}/results/${SOURCE_DIR}")
     file(MAKE_DIRECTORY ${RESULTS_DIR})
     catch_discover_tests(${TARGET_NAME}
-        REPORTER xml
+        REPORTER junit
         OUTPUT_DIR ${RESULTS_DIR}
         OUTPUT_PREFIX "${TARGET_NAME}_"
         OUTPUT_SUFFIX ".xml"
@@ -37,3 +37,4 @@ add_subdirectory(url)
 add_subdirectory(net)
 add_subdirectory(view)
 add_subdirectory(utils)
+add_subdirectory(cookies)
