@@ -187,9 +187,7 @@ namespace encoding {
         BIO*    chain = BIO_push(b64.get(), mem.release());
 
         BIO_set_flags(chain, BIO_FLAGS_BASE64_NO_NL);
-
-        BIO_write(chain, input.data(),
-                  static_cast<int>(input.size()));
+        BIO_write(chain, input.data(), static_cast<int>(input.size()));
         BIO_flush(chain);
 
         BUF_MEM* buf;
@@ -226,8 +224,10 @@ namespace encoding {
         if constexpr (F == flavours::base64_url) {
             std::replace(proc.begin(), proc.end(), '-', '+');
             std::replace(proc.begin(), proc.end(), '_', '/');
-            proc.append((4 - proc.size() % 4) % 4, '=');
         }
+        proc.append((4 - proc.size() % 4) % 4, '=');
+        if (proc.size() > static_cast<std::size_t>(INT_MAX))
+            throw std::length_error("Base64 input too large for OpenSSL BIO");
 
         // Validate character set
         const std::string legal =
@@ -235,7 +235,7 @@ namespace encoding {
             "abcdefghijklmnopqrstuvwxyz"
             "0123456789+/=";
         if (proc.find_first_not_of(legal) != std::string::npos)
-            throw std::runtime_error("Invalid base64 input (illegal character)");
+            throw std::invalid_argument("Invalid base64 input (illegal character)");
 
         // Validate padding positions (only at end, max 2)
         size_t pad_cnt = 0;
@@ -243,7 +243,7 @@ namespace encoding {
             ++pad_cnt;
         }
         if (pad_cnt > 2 || proc.find('=') < proc.size() - pad_cnt)
-            throw std::runtime_error("Invalid base64 input (padding error)");
+            throw std::invalid_argument("Invalid base64 input (padding error)");
 
         // Prepare BIO chain
 
@@ -252,13 +252,17 @@ namespace encoding {
         bio_ptr b64{BIO_new(BIO_f_base64()), BIO_free_all};
         BIO*   mem   = BIO_new_mem_buf(proc.data(), static_cast<int>(proc.size()));
         BIO*   chain = BIO_push(b64.get(), mem);
+        if (!chain) {
+            BIO_free(mem);
+            throw std::bad_alloc{};
+        }
         BIO_set_flags(chain, BIO_FLAGS_BASE64_NO_NL);
 
         // Decode into buffer sized to max possible
         std::string out;
         out.resize(proc.size() / 4 * 3);
         int decoded = BIO_read(chain, out.data(), static_cast<int>(out.size()));
-        if (decoded < 0)
+        if (decoded <= 0)
             throw std::runtime_error("Invalid base64 input (decode error)");
 
         // Resize to actual decoded length

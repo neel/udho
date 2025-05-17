@@ -91,9 +91,15 @@ TEST_CASE("Base64 Encoding/Decoding", "[encoding][base64]") {
         CHECK(decoded == input);
     }
 
+    SECTION("Padded input handling") {
+        CHECK(udho::utils::decode::base64("SGVsbG8gV29ybGQ") == "Hello World");
+        CHECK(udho::utils::decode::base64("SGVsbG8gV29ybGQ=") == "Hello World");
+        CHECK_THROWS_AS(udho::utils::decode::base64("SGVsbG8gV29ybGQ=="), std::invalid_argument);
+    }
+
     SECTION("Invalid input handling") {
-        CHECK_THROWS_AS(udho::utils::decode::base64("SGVsbG8gV29ybGQ"), std::runtime_error);
-        CHECK_THROWS_AS(udho::utils::decode::base64("SGVsbG8!V29ybGQ="), std::runtime_error);
+        CHECK_THROWS_AS(udho::utils::decode::base64("SGVsbG8!V29ybGQ="), std::invalid_argument);
+        CHECK_THROWS_AS(udho::utils::decode::base64("SGVsbG8=V29ybGQ="), std::invalid_argument);
     }
 }
 

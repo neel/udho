@@ -27,6 +27,7 @@ function(add_catch_test TARGET_NAME SOURCE_FILE)
         OUTPUT_DIR ${RESULTS_DIR}
         OUTPUT_PREFIX "${TARGET_NAME}_"
         OUTPUT_SUFFIX ".xml"
+        TEST_ARGS "--reporter console"
     )
 endfunction()
 
