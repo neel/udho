@@ -12,7 +12,7 @@ template <typename StorageT>
 struct catalogue;
 
 namespace storage{
-    struct disk;
+    struct fs;
 }
 
 }

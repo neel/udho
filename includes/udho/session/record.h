@@ -21,7 +21,7 @@ struct record_data{
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
 
-    friend udho::session::storage::disk;
+    friend udho::session::storage::fs;
     template <typename StorageT>
     friend struct udho::session::catalogue;
 
@@ -61,6 +61,16 @@ struct record_data{
             _dirty = true;
     }
 
+    bool remove(const std::string& key) {
+        auto it = _container.find(key);
+        if(it != _container.end()){
+            _container.erase(it);
+            _dirty = true;
+            return true;
+        }
+        return false;
+    }
+
     inline const_iterator begin() const { return _container.begin(); }
     inline const_iterator end() const { return _container.end(); }
     inline size_type size() const { return _container.size(); }
@@ -78,7 +88,7 @@ struct record: private record_data{
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
 
-    friend udho::session::storage::disk;
+    friend udho::session::storage::fs;
     template <typename StorageT>
     friend struct udho::session::catalogue;
     friend struct udho::session::note;
@@ -114,7 +124,12 @@ struct record: private record_data{
         template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
         void set(const std::string& key, T&& value) {
             std::lock_guard<std::mutex> lock(_mutex_data);
-            return record_data::template set<T>(key, std::move(value));
+            record_data::template set<T>(key, std::move(value));
+        }
+
+        bool remove(const std::string& key) {
+            std::lock_guard<std::mutex> lock(_mutex_data);
+            return record_data::remove(key);
         }
 
         template <typename F>

@@ -36,6 +36,8 @@ struct note{
         template <typename T>
         operator T() const { return as<T>(); }
 
+        bool unset(){ return _self.unset(_key); }
+
         private:
             note& _self;
             std::string _key;
@@ -60,14 +62,12 @@ struct note{
     note(note&& other) noexcept : _record(other._record), _releasef(std::move(other._releasef)) {}
 
     template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
-    T get(const std::string& key) const {
-        return _record->template get<T>(key);
-    }
+    T get(const std::string& key) const { return _record->template get<T>(key); }
 
     template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
-    void set(const std::string& key, T&& value) {
-        return _record->template set<T>(key, std::forward<T>(value));
-    }
+    void set(const std::string& key, T&& value) { _record->template set<T>(key, std::forward<T>(value)); }
+
+    bool unset(const std::string& key) { return _record->remove(key); }
 
     bool dirty() const { return _record->dirty(); }
 

@@ -1,48 +1,27 @@
-#ifndef UDHO_SESSION_STORAGE_DISK_H
-#define UDHO_SESSION_STORAGE_DISK_H
+#ifndef UDHO_SESSION_STORAGE_FS_H
+#define UDHO_SESSION_STORAGE_FS_H
 
 #include <udho/utils/filesystem.h>
 #include <fstream>
-#define UDHO_SESSION_ALLOW_RECORD_H
 #include <udho/session/record.h>
-#undef UDHO_SESSION_ALLOW_RECORD_H
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <vector>
+#include <udho/session/storage/detail.h>
 
 namespace udho{
 namespace session{
 namespace storage{
 
-namespace detail{
-
-static constexpr std::uint32_t SESSION_FILE_MAGIC = 0x53B0E79E;
-
-#pragma pack(push, 1)
-struct attr_meta{
-    std::uint32_t offset;
-    std::uint32_t key_len;
-    std::uint32_t value_len;
-};
-struct record_preamble{
-    std::uint32_t MAGIC = detail::SESSION_FILE_MAGIC;
-    std::uint16_t VERSION = 1;
-};
-#pragma pack(pop)
-
-constexpr auto MIN_SIZE = sizeof(record_preamble) + sizeof(udho::session::record_data::sessid_type) + sizeof(std::uint32_t);
-}
-
 /**
  * @brief on disk storage for HTTP session
  */
-struct disk{
+struct fs{
     static_assert(std::is_trivially_copyable_v<udho::session::record_data::sessid_type>);
     static_assert(sizeof(detail::attr_meta)==12);
 
-    inline explicit disk(const udho::utils::filesystem::path& root): _root(root) {
+    inline explicit fs(const udho::utils::filesystem::path& root): _root(root) {
         if(!udho::utils::filesystem::exists(_root)) {
             udho::utils::filesystem::create_directories(_root);
         }
@@ -128,6 +107,11 @@ struct disk{
      */
     template<class CharT, class Traits = std::char_traits<CharT>>
     inline bool _fetch(std::basic_istream<CharT, Traits>& file, udho::session::record_data& record) const {
+        file.seekg(0, std::ios::end);
+        const std::streamoff file_size = file.tellg();
+        if (file_size < static_cast<std::streamoff>(detail::MIN_SIZE)) {
+            throw std::runtime_error("Corrupt file: too small");
+        }
         file.seekg(0, std::ios::beg);
         detail::record_preamble preamble;
         file.read(reinterpret_cast<char*>(&preamble), static_cast<std::streamsize>(sizeof(detail::record_preamble)));
@@ -146,10 +130,6 @@ struct disk{
         }
 
         file.seekg(0, std::ios::end);
-        const std::streamoff file_size = file.tellg();
-        if (file_size < static_cast<std::streamoff>(detail::MIN_SIZE)) {
-            throw std::runtime_error("Corrupt file: too small");
-        }
 
         file.seekg(-static_cast<std::streamoff>(sizeof(std::uint32_t)), std::ios::end);
         uint32_t entry_count;
@@ -238,4 +218,4 @@ struct disk{
 }
 }
 
-#endif // UDHO_SESSION_STORAGE_DISK_H
+#endif // UDHO_SESSION_STORAGE_FS_H

@@ -7,10 +7,10 @@
 #endif
 
 #include <udho/session/session.h>
-#include <udho/session/storage/disk.h>
+#include <udho/session/storage/fs.h>
 
 TEST_CASE("session", "[session]") {
-    using session_store = udho::session::catalogue<udho::session::storage::disk>;
+    using session_store = udho::session::catalogue<udho::session::storage::fs>;
 
     udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
     session_store store{root};
@@ -89,5 +89,15 @@ TEST_CASE("session", "[session]") {
             CHECK(note["last_name"].as<std::string>() == "Basu");
             CHECK(!note.dirty());
         }
+    }
+
+    SECTION("no-op borrow does not serialize") {
+        auto before = file_size(sesspath);
+        {
+            udho::session::note note = store.borrow(sessid);
+            (void) note["hello"].as<std::string>();
+            CHECK(!note.dirty());
+        }
+        CHECK(file_size(sesspath) == before);
     }
 }
