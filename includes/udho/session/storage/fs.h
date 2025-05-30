@@ -3,9 +3,8 @@
 
 #include <udho/utils/filesystem.h>
 #include <fstream>
-#include <udho/session/record.h>
+#include <udho/session/record_data.h>
 #include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <udho/session/storage/detail.h>
@@ -122,6 +121,9 @@ struct fs{
             throw std::runtime_error("Unsupported file version");
         }
 
+        record.created(preamble.created_at());
+        record.updated(preamble.updated_at());
+
         udho::session::record_data::sessid_type sessid;
         file.read(reinterpret_cast<char*>(&sessid), static_cast<std::streamsize>(sizeof(udho::session::record_data::sessid_type)));
 
@@ -169,6 +171,8 @@ struct fs{
     template<class CharT, class Traits = std::char_traits<CharT> >
     inline bool _save(std::basic_ostream<CharT, Traits>& file, const udho::session::record_data& record) const {
         detail::record_preamble preamble{};
+        preamble.created_at(record.created());
+        preamble.update();
         file.write(reinterpret_cast<const char*>(&preamble), sizeof(preamble));
 
         udho::session::record_data::sessid_type sessid = record.sessid();

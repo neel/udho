@@ -1,0 +1,102 @@
+#ifndef UDHO_SESSION_RECORD_DATA_H
+#define UDHO_SESSION_RECORD_DATA_H
+
+#include <map>
+#include <stdexcept>
+#include <chrono>
+#include <boost/lexical_cast.hpp>
+#include <udho/session/fwd.h>
+#include <udho/utils/traits.h>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
+namespace udho{
+namespace session{
+
+struct record_data{
+    using sessid_type    = boost::uuids::uuid;
+    using container_type = std::map<std::string, std::string>;
+    using const_iterator = typename container_type::const_iterator;
+    using size_type      = typename container_type::size_type;
+    using time_point     = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
+    using duration_type  = time_point::duration;
+
+    template <typename StorageT>
+    friend struct udho::session::catalogue;
+
+    inline record_data(): _dirty(false) {}
+    inline explicit record_data(const sessid_type& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()) {}
+
+    inline const sessid_type& sessid() const { return _sessid; }
+
+    inline bool dirty() const { return _dirty; }
+
+    inline bool exists(const std::string& key) const {
+        auto it = _container.find(key);
+        return (it != _container.end());
+    }
+
+    template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
+    T get(const std::string& key) const {
+        auto it = _container.find(key);
+        if(it != _container.end()){
+            const std::string& value_str = it->second;
+            return boost::lexical_cast<T>(value_str);
+        }
+        throw std::out_of_range{"out of range key: " + key};
+    }
+
+    template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
+    void set(const std::string& key, T&& value, bool initial = false) {
+        std::string value_str = boost::lexical_cast<std::string>(std::forward<T>(value));
+
+        auto it = _container.find(key);
+        if(it != _container.end()){
+            it->second = std::move(value_str);
+        } else {
+            _container.insert(std::make_pair(key, std::move(value_str)));
+        }
+        if(!initial){
+            _dirty = true;
+            updated(std::chrono::system_clock::now());
+        }
+    }
+
+    bool remove(const std::string& key) {
+        auto it = _container.find(key);
+        if(it != _container.end()){
+            _container.erase(it);
+            _dirty = true;
+            return true;
+        }
+        return false;
+    }
+
+    inline const_iterator begin() const { return _container.begin(); }
+    inline const_iterator end() const { return _container.end(); }
+    inline size_type size() const { return _container.size(); }
+
+    const time_point& created() const { return _created; }
+    record_data& created(const time_point& time) {
+        _created = time;
+        return *this;
+    }
+
+    const time_point& updated() const { return _updated; }
+    record_data& updated(const time_point& time) {
+        _updated = time;
+        return *this;
+    }
+
+private:
+    bool           _dirty;
+    sessid_type    _sessid;
+    container_type _container;
+    time_point     _created;
+    time_point     _updated;
+};
+
+}
+}
+
+#endif // UDHO_SESSION_RECORD_DATA_H

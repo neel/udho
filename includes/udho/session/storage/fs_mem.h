@@ -6,6 +6,7 @@
 #include <udho/utils/filesystem.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <udho/session/record_data.h>
 #include <fstream>
 
 namespace udho{
@@ -123,10 +124,60 @@ private:
     }
 
 
+    bool _fetch(const char* src, std::size_t len, udho::session::record_data& record) const {
+        if (len < detail::MIN_SIZE) {
+            throw std::runtime_error("Corrupt file: too small");
+        }
+
+        const char* cursor = src;
+        detail::record_preamble preamble{};
+        std::memcpy(&preamble, cursor, sizeof(preamble));
+        if(preamble.MAGIC != detail::SESSION_FILE_MAGIC){
+            throw std::runtime_error("Magic didn't match");
+        }
+        if (preamble.VERSION != 1) {
+            throw std::runtime_error("Unsupported file version");
+        }
+        record.created(preamble.created_at());
+        record.updated(preamble.updated_at());
+        cursor += sizeof(detail::record_preamble);
+
+        udho::session::record_data::sessid_type sid{};
+        std::memcpy(&sid, cursor, sizeof(sid));
+
+        if (sid != record.sessid()) {
+            throw std::runtime_error("Session ID mismatch");
+        }
+        cursor += sizeof(sid);
+
+        const std::uint32_t entry_count = *reinterpret_cast<const std::uint32_t*>(src + len - sizeof(std::uint32_t));
+        const char* metadata_base = src + len - sizeof(std::uint32_t) - entry_count * sizeof(detail::attr_meta);
+
+        for (std::uint32_t i = 0; i < entry_count; ++i) {
+            detail::attr_meta meta{};
+            std::memcpy(&meta, metadata_base + i * sizeof(detail::attr_meta), sizeof(detail::attr_meta));
+
+            if (meta.offset + meta.key_len + meta.value_len > static_cast<std::uint32_t>(metadata_base - src)) {
+                throw std::runtime_error("Corrupt file: attribute out of bounds");
+            }
+
+            const char* key_ptr   = src + meta.offset;
+            const char* value_ptr = key_ptr + meta.key_len;
+
+            std::string key(key_ptr,   key_ptr   + meta.key_len);
+            std::string val(value_ptr, value_ptr + meta.value_len);
+
+            record.set(std::move(key), std::move(val), true);
+        }
+        return true;
+    }
+
     bool _save(char* dst, std::size_t len, const udho::session::record_data& record) const {
         char* cursor = dst;
 
-        detail::record_preamble preamble{};          // MAGIC + VERSION
+        detail::record_preamble preamble{};
+        preamble.created_at(record.created());
+        preamble.update();
         std::memcpy(cursor, &preamble, sizeof(preamble));
         cursor += sizeof(preamble);
 
@@ -154,48 +205,6 @@ private:
 
         if (offset + sizeof(entry_count) != len) {
             throw std::runtime_error("Size mismatch while writing mem_fs");
-        }
-        return true;
-    }
-
-    bool _fetch(const char* src, std::size_t len, udho::session::record_data& record) const {
-        if (len < detail::MIN_SIZE) {
-            throw std::runtime_error("Corrupt file: too small");
-        }
-
-        const char* cursor = src;
-        detail::record_preamble preamble{};
-        std::memcpy(&preamble, cursor, sizeof(preamble));
-        if (preamble.MAGIC != udho::session::storage::detail::SESSION_FILE_MAGIC || preamble.VERSION != 1) {
-            throw std::runtime_error("Bad magic/version");
-        }
-        cursor += sizeof(preamble);
-
-        udho::session::record_data::sessid_type sid{};
-        std::memcpy(&sid, cursor, sizeof(sid));
-        if (sid != record.sessid()) {
-            throw std::runtime_error("Session ID mismatch");
-        }
-        cursor += sizeof(sid);
-
-        const std::uint32_t entry_count = *reinterpret_cast<const std::uint32_t*>(src + len - sizeof(std::uint32_t));
-        const char* metadata_base = src + len - sizeof(std::uint32_t) - entry_count * sizeof(detail::attr_meta);
-
-        for (std::uint32_t i = 0; i < entry_count; ++i) {
-            detail::attr_meta meta{};
-            std::memcpy(&meta, metadata_base + i * sizeof(detail::attr_meta), sizeof(detail::attr_meta));
-
-            if (meta.offset + meta.key_len + meta.value_len > static_cast<std::uint32_t>(metadata_base - src)) {
-                throw std::runtime_error("Corrupt file: attribute out of bounds");
-            }
-
-            const char* key_ptr   = src + meta.offset;
-            const char* value_ptr = key_ptr + meta.key_len;
-
-            std::string key(key_ptr,   key_ptr   + meta.key_len);
-            std::string val(value_ptr, value_ptr + meta.value_len);
-
-            record.set(std::move(key), std::move(val), true);
         }
         return true;
     }
