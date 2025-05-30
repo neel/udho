@@ -3,31 +3,26 @@
 
 #include <map>
 #include <stdexcept>
-#include <chrono>
 #include <boost/lexical_cast.hpp>
 #include <udho/session/fwd.h>
 #include <udho/utils/traits.h>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <udho/session/defs.h>
 
 namespace udho{
 namespace session{
 
 struct record_data{
-    using sessid_type    = boost::uuids::uuid;
     using container_type = std::map<std::string, std::string>;
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
-    using time_point     = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
-    using duration_type  = time_point::duration;
 
     template <typename StorageT>
     friend struct udho::session::catalogue;
 
     inline record_data(): _dirty(false) {}
-    inline explicit record_data(const sessid_type& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()) {}
+    inline explicit record_data(const udho::session::id& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()) {}
 
-    inline const sessid_type& sessid() const { return _sessid; }
+    inline const udho::session::id& sessid() const { return _sessid; }
 
     inline bool dirty() const { return _dirty; }
 
@@ -90,7 +85,7 @@ struct record_data{
 
 private:
     bool           _dirty;
-    sessid_type    _sessid;
+    udho::session::id    _sessid;
     container_type _container;
     time_point     _created;
     time_point     _updated;

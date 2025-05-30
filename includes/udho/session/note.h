@@ -1,9 +1,12 @@
 #ifndef UDHO_SESSION_NOTE_H
 #define UDHO_SESSION_NOTE_H
 
+#include <string>
 #include <memory>
+#include <functional>
 #include <udho/utils/traits.h>
 #include <udho/session/fwd.h>
+#include <udho/session/defs.h>
 #include <udho/session/record.h>
 
 namespace udho{
@@ -17,7 +20,7 @@ namespace session{
  */
 struct note{
     using record_type   = record;
-    using key_type      = typename record_type::sessid_type;
+    using key_type      = udho::session::id;
     using record_ptr    = std::unique_ptr<record_type>;
     using relesef_type  = std::function<void (const key_type&)>;
 

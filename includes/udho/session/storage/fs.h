@@ -8,6 +8,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <udho/session/storage/detail.h>
+#include <udho/session/defs.h>
 
 namespace udho{
 namespace session{
@@ -17,7 +18,7 @@ namespace storage{
  * @brief on disk storage for HTTP session
  */
 struct fs{
-    static_assert(std::is_trivially_copyable_v<udho::session::record_data::sessid_type>);
+    static_assert(std::is_trivially_copyable_v<udho::session::id>);
     static_assert(sizeof(detail::attr_meta)==12);
 
     inline explicit fs(const udho::utils::filesystem::path& root): _root(root) {
@@ -31,7 +32,7 @@ struct fs{
      * @param id session id
      * @return
      */
-    inline bool exists(const udho::session::record_data::sessid_type& id) const {
+    inline bool exists(const udho::session::id& id) const {
         return udho::utils::filesystem::exists(path(id));
     }
 
@@ -124,8 +125,8 @@ struct fs{
         record.created(preamble.created_at());
         record.updated(preamble.updated_at());
 
-        udho::session::record_data::sessid_type sessid;
-        file.read(reinterpret_cast<char*>(&sessid), static_cast<std::streamsize>(sizeof(udho::session::record_data::sessid_type)));
+        udho::session::id sessid;
+        file.read(reinterpret_cast<char*>(&sessid), static_cast<std::streamsize>(sizeof(udho::session::id)));
 
         if (sessid != record.sessid()) {
             throw std::runtime_error("Session ID mismatch");
@@ -175,11 +176,11 @@ struct fs{
         preamble.update();
         file.write(reinterpret_cast<const char*>(&preamble), sizeof(preamble));
 
-        udho::session::record_data::sessid_type sessid = record.sessid();
-        file.write(reinterpret_cast<const char*>(&sessid), sizeof(udho::session::record_data::sessid_type));
+        udho::session::id sessid = record.sessid();
+        file.write(reinterpret_cast<const char*>(&sessid), sizeof(udho::session::id));
 
         std::vector<detail::attr_meta> metadata;
-        std::uint32_t offset = sizeof(detail::record_preamble) + sizeof(udho::session::record_data::sessid_type);
+        std::uint32_t offset = sizeof(detail::record_preamble) + sizeof(udho::session::id);
 
         for (const auto& [key, value] : record) {
             file.write(key.data(),   key.size());
@@ -203,14 +204,12 @@ struct fs{
         return true;
     }
 
-    static std::string session_filename(const udho::session::record_data::sessid_type& id) {
-        using namespace std;
-        using namespace boost::uuids;
-        return to_string(id) + ".udho.session";
+    static std::string session_filename(const udho::session::id& id) {
+        return udho::session::to_string(id) + ".udho.session";
     }
 
     public:
-        udho::utils::filesystem::path path(const udho::session::record_data::sessid_type& id) const {
+        udho::utils::filesystem::path path(const udho::session::id& id) const {
             return _root / session_filename(id);
         }
 

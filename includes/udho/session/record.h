@@ -6,6 +6,7 @@
 #include <mutex>
 #include <udho/session/fwd.h>
 #include <udho/session/record_data.h>
+#include <udho/session/defs.h>
 #include <boost/uuid/uuid.hpp>
 
 namespace udho{
@@ -13,7 +14,6 @@ namespace session{
 
 struct record: private record_data{
     using record_type    = record;
-    using sessid_type    = typename record_data::sessid_type;
     using container_type = typename record_data::container_type;
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
@@ -23,7 +23,7 @@ struct record: private record_data{
 
     friend struct udho::session::note;
 
-    inline record(const sessid_type& sessid): record_data(sessid) {}
+    inline record(const udho::session::id& sessid): record_data(sessid) {}
 
     using record_data::sessid;
 

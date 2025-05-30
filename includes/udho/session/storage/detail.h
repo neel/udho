@@ -2,7 +2,7 @@
 #define UDHO_SESSION_STORAGE_DETAIL_H
 
 #include <cstdint>
-#include <udho/session/record_data.h>
+#include <udho/session/defs.h>
 
 namespace udho{
 namespace session{
@@ -18,7 +18,7 @@ namespace detail{
         std::uint32_t value_len;
     };
     struct record_preamble{
-        using time_type = udho::session::record_data::time_point;
+        using time_type = udho::session::time_point;
         using duration_type = typename time_type::duration;
 
         std::uint32_t MAGIC = detail::SESSION_FILE_MAGIC;
@@ -44,7 +44,7 @@ namespace detail{
 
     static_assert(sizeof(record_preamble) == 4+2+8+8, "preamble must be exactly 22 bytes");
 
-    static constexpr auto MIN_SIZE = sizeof(record_preamble) + sizeof(udho::session::record_data::sessid_type) + sizeof(std::uint32_t);
+    static constexpr auto MIN_SIZE = sizeof(record_preamble) + sizeof(udho::session::id) + sizeof(std::uint32_t);
 }
 
 }

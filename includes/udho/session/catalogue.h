@@ -10,6 +10,7 @@
 #include <udho/utils/traits.h>
 #include <boost/lexical_cast.hpp>
 #include <udho/session/fwd.h>
+#include <udho/session/defs.h>
 #include <udho/session/note.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -24,7 +25,7 @@ struct catalogue: private StorageT{
     using record_type       = record;
     using record_ptr        = std::unique_ptr<record_type>;
     using record_iptr       = boost::intrusive_ptr<record_type>;
-    using key_type          = typename record_type::sessid_type;
+    using key_type          = udho::session::id;
     using container_type    = std::map<key_type, record_ptr>;
     using ref_counts        = std::map<key_type, std::atomic<int>>;
     using note_type         = note;

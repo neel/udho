@@ -13,12 +13,11 @@ namespace udho{
 namespace session{
 namespace storage{
 
-
 /**
  * @brief Memory-mapped file storage for HTTP sessions
  */
 class mem_fs {
-    static_assert(std::is_trivially_copyable_v<udho::session::record_data::sessid_type>);
+    static_assert(std::is_trivially_copyable_v<udho::session::id>);
     static_assert(sizeof(detail::attr_meta)==12);
 
 public:
@@ -33,7 +32,7 @@ public:
      * @param id session id
      * @return
      */
-    bool exists(const udho::session::record_data::sessid_type& id) const {
+    bool exists(const udho::session::id& id) const {
         return udho::utils::filesystem::exists(path(id));
     }
 
@@ -93,15 +92,13 @@ public:
         return _save(mm.data(), len, record);
     }
 
-    udho::utils::filesystem::path path(const udho::session::record_data::sessid_type& id) const {
+    udho::utils::filesystem::path path(const udho::session::id& id) const {
         return _root / session_filename(id);
     }
 
 private:
-    static std::string session_filename(const udho::session::record_data::sessid_type& id) {
-        using namespace std;
-        using namespace boost::uuids;
-        return to_string(id) + ".udho.session";
+    static std::string session_filename(const udho::session::id& id) {
+        return udho::session::to_string(id) + ".udho.session";
     }
 
     static void prepare_file(const udho::utils::filesystem::path& file, std::size_t len) {
@@ -114,7 +111,7 @@ private:
     }
 
     std::size_t required_size(const udho::session::record_data& record) const {
-        std::size_t size = sizeof(detail::record_preamble) + sizeof(udho::session::record_data::sessid_type);
+        std::size_t size = sizeof(detail::record_preamble) + sizeof(udho::session::id);
         for (const auto& [k, v] : record) {
             size += k.size() + v.size();
         }
@@ -142,7 +139,7 @@ private:
         record.updated(preamble.updated_at());
         cursor += sizeof(detail::record_preamble);
 
-        udho::session::record_data::sessid_type sid{};
+        udho::session::id sid{};
         std::memcpy(&sid, cursor, sizeof(sid));
 
         if (sid != record.sessid()) {
@@ -204,7 +201,7 @@ private:
         std::memcpy(dst + offset, &entry_count, sizeof(entry_count));
 
         if (offset + sizeof(entry_count) != len) {
-            throw std::runtime_error("Size mismatch while writing mem_fs");
+            throw std::runtime_error("Size mismatch while writing");
         }
         return true;
     }
