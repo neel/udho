@@ -214,7 +214,6 @@ TEST_CASE("session storage fs_mem", "[session][storage][fs_mem]") {
     }
 
     SECTION("mismatched sessid") {
-        // create a valid file
         udho::session::record_data record_data{uuid_generator()};
         record_data.set("x","1");
         disk.create(record_data);

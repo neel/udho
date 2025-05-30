@@ -9,7 +9,7 @@ namespace session{
 namespace storage{
 
 namespace detail{
-    static constexpr std::uint32_t SESSION_FILE_MAGIC = 0x53B0E79E;
+    static constexpr std::uint32_t SESSION_FILE_MAGIC = 0x4F484455;
 
     #pragma pack(push, 1)
     struct attr_meta{
