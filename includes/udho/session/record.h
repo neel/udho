@@ -18,7 +18,7 @@ struct record: private record_data{
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
 
-    template <typename StorageT>
+    template <typename StorageT, udho::session::modes>
     friend struct udho::session::catalogue;
 
     friend struct udho::session::note;

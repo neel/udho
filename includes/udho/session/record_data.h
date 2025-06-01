@@ -16,11 +16,11 @@ struct record_data{
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
 
-    template <typename StorageT>
+    template <typename StorageT, udho::session::modes>
     friend struct udho::session::catalogue;
 
-    inline record_data(): _dirty(false) {}
-    inline explicit record_data(const udho::session::id& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()) {}
+    inline record_data(): _dirty(false), _created(std::chrono::system_clock::now()), _revision(0) {}
+    inline explicit record_data(const udho::session::id& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()), _revision(0) {}
 
     inline const udho::session::id& sessid() const { return _sessid; }
 
@@ -83,12 +83,19 @@ struct record_data{
         return *this;
     }
 
+    std::uint64_t revision() const { return _revision; }
+    record_data& revision(const std::uint64_t& rev) {
+        _revision = rev;
+        return *this;
+    }
+
 private:
     bool           _dirty;
     udho::session::id    _sessid;
     container_type _container;
     time_point     _created;
     time_point     _updated;
+    std::uint64_t  _revision;
 };
 
 }

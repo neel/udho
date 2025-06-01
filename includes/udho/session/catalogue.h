@@ -14,14 +14,18 @@
 #include <udho/session/note.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <udho/session/defs.h>
+#include <udho/session/storage/features.h>
 
 namespace udho{
 namespace session{
 
-template <typename StorageT>
+template <typename StorageT, udho::session::modes Mode>
 struct catalogue: private StorageT{
+    static_assert(StorageT::has(Mode), "Storage is incompatible with the specified mode");
+
     using storage_type      = StorageT;
-    using catalog_type      = catalogue<StorageT>;
+    using catalog_type      = catalogue<StorageT, Mode>;
     using record_type       = record;
     using record_ptr        = std::unique_ptr<record_type>;
     using record_iptr       = boost::intrusive_ptr<record_type>;
@@ -131,7 +135,7 @@ struct catalogue: private StorageT{
         }
 
         bool _storage_serialize(const std::unique_ptr<record_type>& record) {
-            bool result = storage_type::save(*record);
+            bool result = storage_type::save(*record, Mode == udho::session::modes::optimistic);
             _records.erase(record->sessid());
             return result;
         }

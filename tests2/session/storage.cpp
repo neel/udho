@@ -226,4 +226,126 @@ TEST_CASE("session storage fs_mem", "[session][storage][fs_mem]") {
         udho::session::record_data broken{wrong_id};
         CHECK_THROWS_AS(disk.fetch(broken), std::runtime_error);
     }
+
+}
+
+
+TEST_CASE("session storage fs (optimistic/CAS)", "[session][storage][fs][optimistic]") {
+    udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
+    udho::session::storage::fs disk{root};
+    boost::uuids::random_generator ugen;
+
+    SECTION("optimistic save succeeds when no one else modified") {
+        udho::session::record_data rec1{ugen()};
+        rec1.set("foo", "bar");
+        CHECK_NOTHROW(disk.create(rec1));
+
+        CHECK_NOTHROW(disk.save(rec1, true));
+        udho::session::record_data out{rec1.sessid()};
+        CHECK_NOTHROW(disk.fetch(out));
+        CHECK(out.get<std::string>("foo") == "bar");
+        CHECK(out.revision() == rec1.revision());
+    }
+
+    SECTION("optimistic save throws conflict if another writer updated first") {
+        udho::session::record_data original{ugen()};
+        original.set("x", "1");
+        disk.create(original);
+
+        udho::session::record_data clientA{original.sessid()};
+        disk.fetch(clientA);
+        REQUIRE(clientA.revision() == 1);
+
+        udho::session::record_data clientB{original.sessid()};
+        disk.fetch(clientB);
+        REQUIRE(clientB.revision() == 1);
+
+        clientA.set("x", "2");
+        CHECK_NOTHROW(disk.save(clientA, true));
+        CHECK(clientA.revision() == 2);
+
+        clientB.set("y", "alpha");
+        CHECK_THROWS_AS(disk.save(clientB, true), udho::session::errors::conflict);
+    }
+
+    SECTION("mixed modes: optimistic=false still overwrites on conflict (last‐writer‐wins)") {
+        udho::session::record_data rA{ugen()};
+        rA.set("m", "initial");
+        disk.create(rA);
+
+        udho::session::record_data A{rA.sessid()};
+        disk.fetch(A);
+        A.set("m", "A1");
+        CHECK_NOTHROW(disk.save(A, false));
+
+        udho::session::record_data B{rA.sessid()};
+        disk.fetch(B);
+        REQUIRE(B.revision() == 2);
+        B.set("m", "B1");
+        CHECK_NOTHROW(disk.save(B, false));
+
+        udho::session::record_data final{rA.sessid()};
+        disk.fetch(final);
+        CHECK(final.get<std::string>("m") == "B1");
+    }
+}
+
+TEST_CASE("session storage fs_mem (optimistic/CAS)", "[session][storage][fs_mem][optimistic]") {
+    udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
+    udho::session::storage::mem_fs disk{root};
+    boost::uuids::random_generator ugen;
+
+    SECTION("optimistic save succeeds when no one else modified") {
+        udho::session::record_data rec1{ugen()};
+        rec1.set("foo", "bar");
+        CHECK_NOTHROW(disk.create(rec1));
+
+        CHECK_NOTHROW(disk.save(rec1, true));
+        udho::session::record_data out{rec1.sessid()};
+        CHECK_NOTHROW(disk.fetch(out));
+        CHECK(out.get<std::string>("foo") == "bar");
+        CHECK(out.revision() == rec1.revision());
+    }
+
+    SECTION("optimistic save throws conflict if another writer updated first") {
+        udho::session::record_data original{ugen()};
+        original.set("x", "1");
+        disk.create(original);
+
+        udho::session::record_data clientA{original.sessid()};
+        disk.fetch(clientA);
+        REQUIRE(clientA.revision() == 1);
+
+        udho::session::record_data clientB{original.sessid()};
+        disk.fetch(clientB);
+        REQUIRE(clientB.revision() == 1);
+
+        clientA.set("x", "2");
+        CHECK_NOTHROW(disk.save(clientA, true));
+        CHECK(clientA.revision() == 2);
+
+        clientB.set("y", "alpha");
+        CHECK_THROWS_AS(disk.save(clientB, true), udho::session::errors::conflict);
+    }
+
+    SECTION("mixed modes: optimistic=false still overwrites on conflict (last‐writer‐wins)") {
+        udho::session::record_data rA{ugen()};
+        rA.set("m", "initial");
+        disk.create(rA);
+
+        udho::session::record_data A{rA.sessid()};
+        disk.fetch(A);
+        A.set("m", "A1");
+        CHECK_NOTHROW(disk.save(A, false));
+
+        udho::session::record_data B{rA.sessid()};
+        disk.fetch(B);
+        REQUIRE(B.revision() == 2);
+        B.set("m", "B1");
+        CHECK_NOTHROW(disk.save(B, false));
+
+        udho::session::record_data final{rA.sessid()};
+        disk.fetch(final);
+        CHECK(final.get<std::string>("m") == "B1");
+    }
 }

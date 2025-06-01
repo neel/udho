@@ -33,6 +33,53 @@ inline session::id random() {
 using time_point     = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
 using duration_type  = time_point::duration;
 
+/**
+ * @enum modes
+ * @brief Session write‐policy modes for catalogue implementations.
+ *
+ * This enum specifies four different session‐save behaviors:
+ *  - @c none:        No automatic saving; user must manually invoke save.
+ *  - @c lazy:        Classic write‐back: session is written only when
+ *                    the last in‐memory “note” is destroyed.
+ *  - @c optimistic:  Lazy + CAS (optimistic concurrency):
+ *                    uses a version check before writing to detect conflicts.
+ *  - @c immediate:   Write‐through: every @c set(...) calls save() immediately.
+ */
+enum class modes{
+    /**
+     * @brief No automatic saving is performed.
+     */
+    none,
+    /**
+     * @brief Lazy write‐back mode.
+     *
+     * The session is only persisted when the last borrower (e.g., @c note
+     * object) goes out of scope and its destructor is invoked. If multiple
+     * @c note instances exist, destruction of inner ones does not trigger
+     * a save. This is the classic write‐back cache pattern.
+     */
+    lazy,
+    /**
+     * @brief Lazy write‐back with optimistic concurrency (CAS).
+     *
+     * Works like @c lazy for when to write, but before performing the write,
+     * an atomic Compare‐And‐Swap (CAS) check on the session’s version/revision
+     * is done. If the on‐disk revision does not match the in‐memory revision,
+     * a conflict exception (@c udho::session::errors::conflict) is thrown,
+     * preventing unintentional overwrites in distributed or multi‐process setups.
+     */
+    optimistic,
+    /**
+     * @brief Immediate write‐through mode.
+     *
+     * Every time @c set(...) (or @c unset(...)) is called on a @c note, the
+     * storage backend’s save() is invoked immediately. This ensures the
+     * on‐disk (or remote) session state is always up to date, at the cost of
+     * higher I/O overhead per session mutation.
+     */
+    immediate
+};
+
 }
 }
 

@@ -21,10 +21,11 @@ namespace detail{
         using time_type = udho::session::time_point;
         using duration_type = typename time_type::duration;
 
-        std::uint32_t MAGIC = detail::SESSION_FILE_MAGIC;
-        std::uint16_t VERSION = 1;
-        std::uint64_t created = 0;
-        std::uint64_t updated = 0;
+        std::uint32_t MAGIC    = detail::SESSION_FILE_MAGIC;
+        std::uint16_t VERSION  = 1;
+        std::uint64_t created  = 0;
+        std::uint64_t updated  = 0;
+        std::uint64_t revision = 0;
 
         time_type created_at() const { return time_type{duration_type{created}}; }
         time_type updated_at() const { return time_type{duration_type{updated}}; }
@@ -34,15 +35,17 @@ namespace detail{
             created = since_epoch.count();
         }
 
-        void update() {
-            time_type current_time = std::chrono::system_clock::now();
-            duration_type since_epoch = current_time.time_since_epoch();
+        void update(time_type time) {
+            duration_type since_epoch = time.time_since_epoch();
             updated = since_epoch.count();
+        }
+        void update() {
+            update(std::chrono::system_clock::now());
         }
     };
     #pragma pack(pop)
 
-    static_assert(sizeof(record_preamble) == 4+2+8+8, "preamble must be exactly 22 bytes");
+    static_assert(sizeof(record_preamble) == 4+2+8+8+8, "preamble must be exactly 30 bytes");
 
     static constexpr auto MIN_SIZE = sizeof(record_preamble) + sizeof(udho::session::id) + sizeof(std::uint32_t);
 }

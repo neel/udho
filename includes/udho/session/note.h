@@ -83,7 +83,7 @@ struct note{
             _releasef(_record->sessid());
     }
 
-    template <typename StorageT>
+    template <typename StorageT, udho::session::modes>
     friend struct catalogue;
 
     private:
