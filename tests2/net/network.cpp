@@ -31,8 +31,6 @@ using scgi_listener   = udho::net::listener<scgi_connection>;
 // TODO TEST connection object should be destroyed once finished
 // TODO TEST bridge object should be destroyed once finished
 
-
-
 void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
     context.finish();
@@ -196,43 +194,44 @@ TEST_CASE("udho network", "[net]") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/");
         CHECK(results.code == 200);
         CHECK(results.body == "Hello f0");
-        CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+        CHECK(results.headers.count("Transfer-Encoding") == 0);
     }
 
     SECTION("HTTP Response") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/x/f0");
         CHECK(results.code == 200);
         CHECK(results.body == "Hello X::f0");
-        CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+        CHECK(results.headers.count("Transfer-Encoding") == 0);
     }
 
     SECTION("Copying the context extends the connection lifetime") {
         http_results results_f1 = curl_fetch(curl, "GET", "http://localhost:9000/b/f1/10/hello/42");
         CHECK(results_f1.code == 200);
         CHECK(results_f1.body == "a: 10, b: hello, c: 42 f1 Hello");
-        CHECK(results_f1.headers["Transfer-Encoding"] == "plain,plain");
+        CHECK(results_f1.headers.count("Transfer-Encoding") == 0);
     }
 
     SECTION("HTTP Response from mountpoint") {
         http_results results_xf1 = curl_fetch(curl, "GET", "http://localhost:9000/b/x/f1/567/ping/42.8");
         CHECK(results_xf1.code == 200);
         CHECK(results_xf1.body == "Hello X::f1 a: 567, b: ping, c: 42.8");
-        CHECK(results_xf1.headers["Transfer-Encoding"] == "plain,plain");
+        CHECK(results_xf1.headers.count("Transfer-Encoding") == 0);
     }
 
     SECTION("HTTP Chunked Response") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunk");
         CHECK(results.code == 200);
         CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
-        CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
+        CHECK(results.headers["Transfer-Encoding"] == "chunked");
     }
 
     SECTION("HTTP Chunked Response with exceptions") {
         http_results results = curl_fetch(curl, "GET", "http://localhost:9000/chunkx");
         CHECK(results.code == 200);
         CHECK(results.body == "Chunk 1chunk 2Chunk 3 (Final)");
-        CHECK(results.headers["Transfer-Encoding"] == "chunked,plain");
+        CHECK(results.headers["Transfer-Encoding"] == "chunked");
     }
+
 
     curl_easy_cleanup(curl);
 
