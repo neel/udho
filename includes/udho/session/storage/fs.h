@@ -53,7 +53,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         udho::utils::filesystem::path file_path = path(record.sessid());
         std::fstream file(file_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
         if (!file)
-            throw std::runtime_error("Failed to open file for reading");
+            throw udho::session::errors::io(file_path, "Failed to open file for reading");
 
         auto exceptbits = file.exceptions();
         file.exceptions(std::ios::failbit | std::ios::badbit);
@@ -76,7 +76,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         udho::utils::filesystem::path file_path = path(record.sessid());
         std::ifstream file(file_path, std::ios::binary);
         if (!file)
-            throw std::runtime_error("Failed to open file for reading");
+            throw udho::session::errors::io(file_path, "Failed to open file for reading");
 
         auto exceptbits = file.exceptions();
         file.exceptions(std::ios::failbit | std::ios::badbit);
@@ -117,7 +117,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         if(versioning) {
             std::ifstream file(file_path, std::ios::binary | std::ios::in);
             if (!file)
-                throw std::runtime_error("Failed to open session file for reading");
+                throw udho::session::errors::io(file_path, "Failed to open session file for reading");
 
             file.exceptions(std::ios::failbit | std::ios::badbit);
             file.seekg(0);
@@ -137,12 +137,12 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         { // RAII close
             std::ofstream tmp_file(temp_file_path, std::ios::binary | std::ios::out | std::ios::trunc);
             if (!tmp_file)
-                throw std::runtime_error("Failed to open session temp file for writing");
+                throw udho::session::errors::io(temp_file_path, "Failed to open session temp file for writing");
             tmp_file.exceptions(std::ios::failbit | std::ios::badbit);
             result = _save(tmp_file, record);
 
             if(!result){
-                throw std::runtime_error{"Failed to save sessiion to a temporary file"};
+                throw udho::session::errors::io{temp_file_path, "Failed to save sessiion to a temporary file"};
             }
         }
 
@@ -164,15 +164,15 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         file.seekg(0, std::ios::end);
         const std::streamoff file_size = file.tellg();
         if (file_size < static_cast<std::streamoff>(detail::MIN_SIZE)) {
-            throw std::runtime_error("Corrupt file: too small");
+            throw udho::session::errors::corruption::too_small();
         }
         file.seekg(0, std::ios::beg);
         file.read(reinterpret_cast<char*>(&preamble), static_cast<std::streamsize>(sizeof(detail::record_preamble)));
         if(preamble.MAGIC != detail::SESSION_FILE_MAGIC){
-            throw std::runtime_error("Magic didn't match");
+            throw udho::session::errors::corruption::magic_invalid();
         }
         if (preamble.VERSION != 1) {
-            throw std::runtime_error("Unsupported file version");
+            throw udho::session::errors::corruption::unsupported_version();
         }
         return file_size;
     }
@@ -202,7 +202,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         file.read(reinterpret_cast<char*>(&sessid), static_cast<std::streamsize>(sizeof(udho::session::id)));
 
         if (sessid != record.sessid()) {
-            throw std::runtime_error("Session ID mismatch");
+            throw udho::session::errors::corruption::sessid_mismatch();
         }
 
         file.seekg(0, std::ios::end);
@@ -220,7 +220,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
 
             for (const detail::attr_meta& meta : metadata) {
                 if (meta.offset + meta.key_len + meta.value_len > metadata_start) {
-                    throw std::runtime_error("Corrupt file: attribute out of bounds");
+                    throw udho::session::errors::corruption::invalid_offset();
                 }
 
                 file.seekg(meta.offset); // meta.offset contains absolute offset and seekg takes absolute offset as input
@@ -283,6 +283,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
             auto& mutable_record = const_cast<udho::session::record_data&>(record);
             mutable_record.revision(preamble.revision);
             mutable_record.updated(current_time);
+            mutable_record.clear_removed();
         }
 
         return result;

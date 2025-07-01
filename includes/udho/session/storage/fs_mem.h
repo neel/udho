@@ -60,7 +60,7 @@ public:
         prm.flags  = boost::iostreams::mapped_file::mapmode::readwrite;
         boost::iostreams::mapped_file mm(prm);
         if (!mm.is_open()) {
-            throw std::runtime_error("mmap open failed in create()");
+            throw udho::session::errors::io(file_path, "mmap open failed in create()");
         }
 
         bool ok1 = _save(mm.data(), len, record);
@@ -75,11 +75,11 @@ public:
 
         const auto file_path = path(record.sessid());
         if (!udho::utils::filesystem::exists(file_path)) {
-            throw std::runtime_error("Session file not found");
+            throw udho::session::errors::io(file_path, "Session file not found");
         }
         boost::iostreams::mapped_file_source src(file_path.string());
         if (!src.is_open()) {
-            throw std::runtime_error("mmap open failed in fetch()");
+            throw udho::session::errors::io(file_path, "mmap open failed in fetch()");
         }
         return _fetch(src.data(), src.size(), record);
     }
@@ -100,7 +100,7 @@ public:
         if(versioning) {
             boost::iostreams::mapped_file_source src(file_path.string());
             if (!src.is_open()) {
-                throw std::runtime_error("mmap open failed in fetch()");
+                throw udho::session::errors::io(file_path, "mmap open failed in fetch()");
             }
 
             revision = _revision(src.data(), src.size());
@@ -121,7 +121,7 @@ public:
         try{
             boost::iostreams::mapped_file mm(prm);
             if (!mm.is_open()) {
-                throw std::runtime_error("mmap open failed in save()");
+                throw udho::session::errors::io(temp_file_path, "mmap open failed in save()");
             }
             result = _save(mm.data(), len, record);
         } catch(const std::exception& ex){
@@ -131,7 +131,7 @@ public:
 
         if(!result){
             udho::utils::filesystem::remove(temp_file_path);
-            throw std::runtime_error{"Failed to save session to a temporary file"};
+            throw udho::session::errors::io{temp_file_path, "Failed to save session to a temporary file"};
         }
 
         udho::utils::filesystem::remove(file_path);
@@ -164,7 +164,7 @@ private:
     static void prepare_file(const udho::utils::filesystem::path& file, std::size_t len) {
         std::ofstream f(file, std::ios::binary);
         if (!f) {
-            throw std::runtime_error("Failed to create session file");
+            throw udho::session::errors::io(file, "Failed to create session file");
         }
         f.seekp(static_cast<std::streamoff>(len - 1));
         f.put('\0');
@@ -182,16 +182,16 @@ private:
 
     const char* _preamble(const char* src, std::size_t len, detail::record_preamble& preamble) const {
         if (len < detail::MIN_SIZE) {
-            throw std::runtime_error("Corrupt file: too small");
+            throw udho::session::errors::corruption::too_small();
         }
 
         const char* cursor = src;
         std::memcpy(&preamble, cursor, sizeof(preamble));
         if(preamble.MAGIC != detail::SESSION_FILE_MAGIC){
-            throw std::runtime_error("Magic didn't match");
+            throw udho::session::errors::corruption::magic_invalid();
         }
         if (preamble.VERSION != 1) {
-            throw std::runtime_error("Unsupported file version");
+            throw udho::session::errors::corruption::unsupported_version();
         }
         cursor += sizeof(detail::record_preamble);
         return cursor;
@@ -213,7 +213,7 @@ private:
         std::memcpy(&sid, cursor, sizeof(sid));
 
         if (sid != record.sessid()) {
-            throw std::runtime_error("Session ID mismatch");
+            throw udho::session::errors::corruption::sessid_mismatch();
         }
         cursor += sizeof(sid);
 
@@ -226,7 +226,7 @@ private:
 
             std::size_t limit = static_cast<std::size_t>(metadata_base - src);
             if (static_cast<std::size_t>(meta.offset) + meta.key_len + meta.value_len > limit) {
-                throw std::runtime_error("Corrupt file: attribute out of bounds");
+                throw udho::session::errors::corruption::invalid_offset();
             }
 
             const char* key_ptr   = src + meta.offset;
@@ -274,12 +274,13 @@ private:
         std::memcpy(dst + offset, &entry_count, sizeof(entry_count));
 
         if (offset + sizeof(entry_count) != len) {
-            throw std::runtime_error("Size mismatch while writing");
+            throw udho::session::errors::corruption(udho::session::errors::corruption::type::unknown, "Size mismatch while writing");
         }
 
         auto& mutable_record = const_cast<udho::session::record_data&>(record);
         mutable_record.revision(preamble.revision);
         mutable_record.updated(current_time);
+        mutable_record.clear_removed();
 
         return true;
     }

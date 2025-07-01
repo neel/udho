@@ -2,6 +2,7 @@
 #define UDHO_SESSION_RECORD_DATA_H
 
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <boost/lexical_cast.hpp>
 #include <udho/session/fwd.h>
@@ -51,6 +52,11 @@ struct record_data{
         } else {
             _container.insert(std::make_pair(key, std::move(value_str)));
         }
+
+        if(_removed.count(key)){
+            _removed.erase(key);
+        }
+
         if(!initial){
             _dirty = true;
             updated(std::chrono::system_clock::now());
@@ -61,6 +67,7 @@ struct record_data{
         auto it = _container.find(key);
         if(it != _container.end()){
             _container.erase(it);
+            _removed.insert(key);
             _dirty = true;
             return true;
         }
@@ -89,6 +96,14 @@ struct record_data{
         return *this;
     }
 
+    const std::set<std::string>& removed() const {
+        return _removed;
+    }
+    record_data& clear_removed() {
+        _removed.clear();
+        return *this;
+    }
+
 private:
     bool           _dirty;
     udho::session::id    _sessid;
@@ -96,6 +111,7 @@ private:
     time_point     _created;
     time_point     _updated;
     std::uint64_t  _revision;
+    std::set<std::string> _removed;
 };
 
 }
