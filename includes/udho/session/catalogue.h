@@ -116,7 +116,7 @@ struct catalogue: private StorageT{
         bool _storage_exists(const key_type& sessid) { return storage_type::exists(sessid); }
 
         bool _storage_create_load(const key_type& sessid) {
-            auto record = std::make_unique<record_type>(sessid);
+            auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
             bool result = storage_type::create(*record);
             _records.emplace(sessid, std::move(record));
             _references.emplace(sessid, 0);
@@ -127,7 +127,7 @@ struct catalogue: private StorageT{
          * @brief load the record from the storage into _record assuming it exists in the storage
          */
         bool _storage_fetch(const key_type& sessid) {
-            auto record = std::make_unique<record_type>(sessid);
+            auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
             bool result = storage_type::fetch(*record);
             _records.emplace(sessid, std::move(record));
             _references.emplace(sessid, 0);
@@ -141,6 +141,12 @@ struct catalogue: private StorageT{
         }
 
     private:
+        void notify(const record_type& record) {
+            if constexpr (Mode == udho::session::modes::immediate) {
+                bool result = storage_type::save(record);
+            }
+        }
+
         void release(const key_type& sessid) {
             std::lock_guard<std::mutex> lock(_mutex);
 

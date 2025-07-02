@@ -20,12 +20,12 @@ struct record_data{
     template <typename StorageT, udho::session::modes>
     friend struct udho::session::catalogue;
 
-    inline record_data(): _dirty(false), _created(std::chrono::system_clock::now()), _revision(0) {}
-    inline explicit record_data(const udho::session::id& sessid): _dirty(false), _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()), _revision(0) {}
+    inline record_data(): _created(std::chrono::system_clock::now()), _revision(0) {}
+    inline explicit record_data(const udho::session::id& sessid): _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()), _revision(0) {}
 
     inline const udho::session::id& sessid() const { return _sessid; }
 
-    inline bool dirty() const { return _dirty; }
+    inline bool dirty() const { return _updated_fields.size() > 0 || _removed_fields.size() > 0; }
 
     inline bool exists(const std::string& key) const {
         auto it = _container.find(key);
@@ -53,12 +53,12 @@ struct record_data{
             _container.insert(std::make_pair(key, std::move(value_str)));
         }
 
-        if(_removed.count(key)){
-            _removed.erase(key);
+        if(_removed_fields.count(key)){
+            _removed_fields.erase(key);
         }
 
         if(!initial){
-            _dirty = true;
+            _updated_fields.insert(key);
             updated(std::chrono::system_clock::now());
         }
     }
@@ -67,8 +67,9 @@ struct record_data{
         auto it = _container.find(key);
         if(it != _container.end()){
             _container.erase(it);
-            _removed.insert(key);
-            _dirty = true;
+            _removed_fields.insert(key);
+            if(_updated_fields.count(key) > 0)
+                _updated_fields.erase(key);
             return true;
         }
         return false;
@@ -96,22 +97,31 @@ struct record_data{
         return *this;
     }
 
-    const std::set<std::string>& removed() const {
-        return _removed;
+    bool is_updated(const std::string& k) const {
+        return _updated_fields.count(k) > 0;
     }
-    record_data& clear_removed() {
-        _removed.clear();
-        return *this;
+    const std::set<std::string>& updated_fields() const {
+        return _updated_fields;
+    }
+    const std::set<std::string>& removed_fields() const {
+        return _removed_fields;
+    }
+
+    void sync(const std::uint64_t& rev, const time_point& time) {
+        revision(rev);
+        updated(time);
+        _removed_fields.clear();
+        _updated_fields.clear();
     }
 
 private:
-    bool           _dirty;
     udho::session::id    _sessid;
     container_type _container;
     time_point     _created;
     time_point     _updated;
     std::uint64_t  _revision;
-    std::set<std::string> _removed;
+    std::set<std::string> _updated_fields;
+    std::set<std::string> _removed_fields;
 };
 
 }

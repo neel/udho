@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <mutex>
+#include <functional>
 #include <udho/session/fwd.h>
 #include <udho/session/record_data.h>
 #include <udho/session/defs.h>
@@ -17,13 +18,14 @@ struct record: private record_data{
     using container_type = typename record_data::container_type;
     using const_iterator = typename container_type::const_iterator;
     using size_type      = typename container_type::size_type;
+    using notifier_type  = std::function<void (const record_type&)>;
 
     template <typename StorageT, udho::session::modes>
     friend struct udho::session::catalogue;
 
     friend struct udho::session::note;
 
-    inline record(const udho::session::id& sessid): record_data(sessid) {}
+    inline record(const udho::session::id& sessid, notifier_type&& notifier): record_data(sessid), _notifier(std::move(notifier)) {}
 
     using record_data::sessid;
 
@@ -60,11 +62,18 @@ struct record: private record_data{
         void set(const std::string& key, T&& value) {
             std::lock_guard<std::mutex> lock(_mutex_data);
             record_data::template set<T>(key, std::move(value));
+            if(record_data::dirty()) {
+                _notifier(*this);
+            }
         }
 
         bool remove(const std::string& key) {
             std::lock_guard<std::mutex> lock(_mutex_data);
-            return record_data::remove(key);
+            bool res = record_data::remove(key);
+            if(record_data::dirty()) {
+                _notifier(*this);
+            }
+            return res;
         }
 
         template <typename F>
@@ -77,6 +86,7 @@ struct record: private record_data{
 
     private:
         mutable std::mutex _mutex_data;
+        notifier_type      _notifier;
 };
 
 }

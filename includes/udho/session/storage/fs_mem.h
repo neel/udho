@@ -278,9 +278,7 @@ private:
         }
 
         auto& mutable_record = const_cast<udho::session::record_data&>(record);
-        mutable_record.revision(preamble.revision);
-        mutable_record.updated(current_time);
-        mutable_record.clear_removed();
+        mutable_record.sync(preamble.revision, current_time);
 
         return true;
     }

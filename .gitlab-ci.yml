@@ -53,8 +53,8 @@ test:ubuntu:noble:
     - cp /tmp/pg_hba.conf $PSQL_CONF_DIR/pg_hba.conf
     - service postgresql start
     - service postgresql status
-    - systemctl start redis-server
-    - systemctl status redis-server
+    - nohup redis-server --daemonize yes
+    - redis-cli ping
   # script:
   #   - cd build
   #   - ctest --output-on-failure

@@ -392,13 +392,15 @@ private:
             _queue("HSET", key, "revision", std::to_string(new_rev));
             nsends++;
         }
-        for (const auto& k : record.removed()) {
+        for (const auto& k : record.removed_fields()) {
             _queue("HDEL", key, k);
             nsends++;
         }
         for (const auto& [k, v] : record) {
-            _queue("HSET", key, k, v);
-            nsends++;
+            if(record.is_updated(k)) {
+                _queue("HSET", key, k, v);
+                nsends++;
+            }
         }
         _queue("EXEC");
 
@@ -410,9 +412,7 @@ private:
         bool result = !exec_resp.is_nil();
         if(result){
             auto& mutable_rec = const_cast<udho::session::record_data&>(record);
-            mutable_rec.revision(record.revision() + 1);
-            mutable_rec.updated(current_time);
-            mutable_rec.clear_removed();
+            mutable_rec.sync(record.revision() + 1, current_time);
         }
 
         return result;
