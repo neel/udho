@@ -35,6 +35,11 @@ struct record: private record_data{
             return record_data::dirty();
         }
 
+        inline std::uint64_t revision() const {
+            std::lock_guard<std::mutex> lock(_mutex_data);
+            return record_data::revision();
+        }
+
         inline size_type size() const {
             std::lock_guard<std::mutex> lock(_mutex_data);
             return record_data::size();

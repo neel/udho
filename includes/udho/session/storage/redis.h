@@ -340,6 +340,11 @@ struct redis: public udho::session::storage::features<udho::session::modes::lazy
         return result;
     }
 
+    template<typename... Args>
+    detail::redis_commander::command_response _command(const std::string& cmd, Args&&... args) const {
+        _queue(cmd, std::forward<Args>(args)...);
+        return _execute();
+    }
 
 private:
     template<typename... Args>
@@ -350,12 +355,6 @@ private:
 
     detail::redis_commander::command_response _execute() const {
         return const_cast<detail::redis_commander&>(_commander).execute(_redis);
-    }
-
-    template<typename... Args>
-    detail::redis_commander::command_response _command(const std::string& cmd, Args&&... args) const {
-        _queue(cmd, std::forward<Args>(args)...);
-        return _execute();
     }
 
     template<typename... Args>
