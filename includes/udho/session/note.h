@@ -64,6 +64,7 @@ struct note{
     note(const note&) = delete;
     note(note&& other) noexcept : _record(other._record), _releasef(std::move(other._releasef)) {}
 
+    bool exists(const std::string& key) const { return _record->exists(key); }
     template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
     T get(const std::string& key) const { return _record->template get<T>(key); }
     template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>

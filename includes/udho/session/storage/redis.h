@@ -225,7 +225,7 @@ struct redis_commander{
 
 }
 
-struct redis: public udho::session::storage::features<udho::session::modes::lazy, udho::session::modes::optimistic> {
+struct redis: public udho::session::storage::features<udho::session::modes::lazy, udho::session::modes::optimistic, udho::session::modes::immediate> {
 
     inline explicit redis(const std::string& host = "localhost", std::uint32_t port = 6379) {
         _redis = redisConnect(host.c_str(), port);
