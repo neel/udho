@@ -25,34 +25,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UDHO_UTILS_OPTIONAL_H
-#define UDHO_UTILS_OPTIONAL_H
+#ifndef UDHO_UTILS_FILESYSTEM_H
+#define UDHO_UTILS_FILESYSTEM_H
 
-#if defined(__cpp_lib_optional) && (__cpp_lib_optional >= 201606L)
-    #include <optional>
-    #define UDHO_INTERNAL_USING_STD_OPTIONAL
+#if defined(__cpp_lib_filesystem) && (__cpp_lib_filesystem >= 201703L)
+    #include <filesystem>
+    #define UDHO_INTERNAL_USING_STD_FILESYSTEM
+#elif defined(__cpp_lib_experimental_filesystem)
+    #include <experimental/filesystem>
+    #define UDHO_INTERNAL_USING_STD_EXPERIMENTAL_FILESYSTEM
 #else
     #if __cplusplus >= 201703L
-        #include <optional>
-        #define UDHO_INTERNAL_USING_STD_OPTIONAL
+        #include <filesystem>
+        #define UDHO_INTERNAL_USING_STD_FILESYSTEM
+    #elif __cplusplus >= 201402L
+        #include <experimental/filesystem>
+        #define UDHO_INTERNAL_USING_STD_EXPERIMENTAL_FILESYSTEM
     #else
-        #include <boost/optional.hpp>
-        #define UDHO_INTERNAL_USING_BOOST_OPTIONAL
+        #include <boost/filesystem.hpp>
+        #define UDHO_INTERNAL_USING_BOOST_FILESYSTEM
     #endif
 #endif
 
 namespace udho {
 namespace utils {
 
-#if defined(UDHO_INTERNAL_USING_STD_OPTIONAL)
-    template <typename T>
-    using optional = std::optional<T>;
+#if defined(UDHO_INTERNAL_USING_STD_FILESYSTEM)
+    namespace filesystem = std::filesystem;
+#elif defined(UDHO_INTERNAL_USING_STD_EXPERIMENTAL_FILESYSTEM)
+    namespace filesystem = std::experimental::filesystem;
 #else
-    template <typename T>
-    using optional = boost::optional<T>;
+    namespace filesystem = boost::filesystem;
 #endif
 
 }
 }
 
-#endif // UDHO_UTILS_OPTIONAL_H
+#endif // UDHO_UTILS_FILESYSTEM_H

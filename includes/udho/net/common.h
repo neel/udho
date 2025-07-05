@@ -67,7 +67,7 @@ namespace transfer{
         }
         std::string operator[](compression c) const {
             switch(c){
-                case compression::none:     return "plain"; break;
+                case compression::none:     return "none"; break;
                 case compression::compress: return "compress"; break;
                 case compression::deflate:  return "deflate"; break;
                 case compression::gzip:     return "gzip"; break;
@@ -93,8 +93,14 @@ class transfer_encoding{
         inline void compression(transfer::compression compress) { _compression = compress; }
         inline transfer::compression compression() const { return _compression; }
         inline void prepare(headers::response& response){
-            std::string value = udho::url::format("{},{}", _names[_encoding], _names[_compression]);
-            response.set(boost::beast::http::field::transfer_encoding, value);
+            if (_encoding == transfer::encoding::plain && _compression == transfer::compression::none) {
+                return;
+            } else {
+                std::string value = (_compression == transfer::compression::none)
+                                            ? udho::url::format("{}", _names[_encoding])
+                                            : udho::url::format("{},{}", _names[_compression], _names[_encoding]);
+                response.set(boost::beast::http::field::transfer_encoding, value);
+            }
         }
 };
 

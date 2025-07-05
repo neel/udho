@@ -8,22 +8,20 @@
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
 
-using namespace udho::cookies;
-
 TEST_CASE("Cookie Construction", "[cookie]") {
     SECTION("Valid name initialization") {
-        cookie<std::string> c("session");
+        udho::cookies::cookie<std::string> c("session");
         CHECK(c.valid());
         CHECK(c.name() == "session");
     }
 
     SECTION("Invalid name characters") {
-        cookie<std::string> c("session(123");
+        udho::cookies::cookie<std::string> c("session(123");
         CHECK_FALSE(c.valid());
     }
 
     SECTION("Name-Value construction") {
-        cookie<int> c("counter", 42);
+        udho::cookies::cookie<int> c("counter", 42);
         CHECK(c.value() == 42);
         CHECK(c.secure() == false);
     }
@@ -31,12 +29,12 @@ TEST_CASE("Cookie Construction", "[cookie]") {
 
 TEST_CASE("Special Prefix Handling", "[cookie][security]") {
     SECTION("__Secure- prefix forces Secure") {
-        cookie<std::string> c("__Secure-token", "abc");
+        udho::cookies::cookie<std::string> c("__Secure-token", "abc");
         CHECK(c.secure() == true);
     }
 
     SECTION("__Host- prefix CHECKments") {
-        cookie<std::string> c("__Host-auth", "data");
+        udho::cookies::cookie<std::string> c("__Host-auth", "data");
         CHECK(c.secure() == true);
         CHECK(c.path() == "/");
         CHECK_FALSE(c.domain().has_value());
@@ -47,7 +45,7 @@ TEST_CASE("Special Prefix Handling", "[cookie][security]") {
 }
 
 TEST_CASE("Attribute Setters", "[cookie][attributes]") {
-    cookie<std::string> c("test");
+    udho::cookies::cookie<std::string> c("test");
 
     SECTION("Path validation") {
         CHECK_THROWS(c.path("api"));
@@ -62,7 +60,7 @@ TEST_CASE("Attribute Setters", "[cookie][attributes]") {
     }
 
     SECTION("SameSite None forces Secure") {
-        c.same_site(policy::none);
+        c.same_site(udho::cookies::policy::none);
         CHECK(c.secure() == true);
     }
 
@@ -74,18 +72,18 @@ TEST_CASE("Attribute Setters", "[cookie][attributes]") {
 
 TEST_CASE("Cookie Serialization (write)", "[cookie][serialization]") {
     SECTION("Basic cookie") {
-        cookie<std::string> c("id", "aBc123");
+        udho::cookies::cookie<std::string> c("id", "aBc123");
         CHECK(to_string(c) == "id=aBc123");
     }
 
     SECTION("Full-featured cookie") {
-        cookie<int> c("prefs", 42);
+        udho::cookies::cookie<int> c("prefs", 42);
         c.domain("example.com")
             .path("/")
             .max_age(3600)
             .http_only(true)
             .secure(true)
-            .same_site(policy::lax);
+            .same_site(udho::cookies::policy::lax);
 
         auto s = to_string(c);
         CHECK(s.find("Domain=example.com") != std::string::npos);
@@ -95,7 +93,7 @@ TEST_CASE("Cookie Serialization (write)", "[cookie][serialization]") {
     }
 
     SECTION("Expired cookie") {
-        cookie<std::string> c("session", "123");
+        udho::cookies::cookie<std::string> c("session", "123");
         c.remove();
         CHECK(to_string(c).find("Max-Age=0") != std::string::npos);
         CHECK(to_string(c).find("Expires=Fri, 01 Jan 1971") != std::string::npos);
@@ -104,30 +102,30 @@ TEST_CASE("Cookie Serialization (write)", "[cookie][serialization]") {
 
 TEST_CASE("Cookie Parsing (read)", "[cookie][parsing]") {
     SECTION("Basic cookie") {
-        auto c = read("session=abc123");
+        auto c = udho::cookies::read("session=abc123");
         CHECK(c.valid());
         CHECK(c.name() == "session");
         CHECK(c.value() == "abc123");
     }
 
     SECTION("Cookie with attributes") {
-        auto c = read("id=42; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Strict");
+        auto c = udho::cookies::read("id=42; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Strict");
 
         CHECK(c.domain() == "example.com");
         CHECK(*c.path() == "/");
         CHECK(c.secure() == true);
         CHECK(c.http_only() == true);
-        CHECK(*c.same_site() == policy::strict);
+        CHECK(*c.same_site() == udho::cookies::policy::strict);
     }
 
     SECTION("Malformed cookies") {
         SECTION("Missing equals sign") {
-            auto c = read("session");
+            auto c = udho::cookies::read("session");
             CHECK_FALSE(c.valid());
         }
 
         SECTION("Invalid attributes") {
-            auto c = read("test=val; Invalid; Secure=123; SameSite=Invalid");
+            auto c = udho::cookies::read("test=val; Invalid; Secure=123; SameSite=Invalid");
             CHECK(c.valid());
             CHECK(c.secure() == true);  // Secure should be set despite invalid value
             CHECK_FALSE(c.same_site().has_value());
@@ -135,7 +133,7 @@ TEST_CASE("Cookie Parsing (read)", "[cookie][parsing]") {
     }
 
     SECTION("Special prefixes during parsing") {
-        auto c = read("__Secure-token=abc; Secure");
+        auto c = udho::cookies::read("__Secure-token=abc; Secure");
         CHECK(c.valid());
         CHECK(c.secure() == true);
     }
@@ -143,13 +141,13 @@ TEST_CASE("Cookie Parsing (read)", "[cookie][parsing]") {
 
 TEST_CASE("Type Conversion", "[cookie][conversion]") {
     SECTION("String to numeric") {
-        cookie<std::string> c("count", "42");
+        udho::cookies::cookie<std::string> c("count", "42");
         auto numeric = c.as<int>();
         CHECK(numeric.value() == 42);
     }
 
     SECTION("Numeric to string") {
-        cookie<int> c("version", 3);
+        udho::cookies::cookie<int> c("version", 3);
         auto str = c.as<std::string>();
         CHECK(str.value() == "3");
     }
@@ -157,41 +155,41 @@ TEST_CASE("Type Conversion", "[cookie][conversion]") {
 
 TEST_CASE("Edge Cases", "[cookie][edge]") {
     SECTION("Empty header") {
-        auto c = read("");
+        auto c = udho::cookies::read("");
         CHECK_FALSE(c.valid());
     }
 
     SECTION("Cookie with empty value") {
-        auto c = read("session=;");
+        auto c = udho::cookies::read("session=;");
         CHECK(c.valid());
         CHECK(c.value().empty());
     }
 
     SECTION("Case-insensitive attributes") {
-        auto c = read("id=1; DOMAIN=example.com; sAMESITE=lAx");
+        auto c = udho::cookies::read("id=1; DOMAIN=example.com; sAMESITE=lAx");
         CHECK(c.domain() == "example.com");
-        CHECK(*c.same_site() == policy::lax);
+        CHECK(*c.same_site() == udho::cookies::policy::lax);
     }
 
     SECTION("Expires parsing") {
-        auto c = read("test=val; Expires=Wed, 21 Oct 2025 07:28:00 GMT");
+        auto c = udho::cookies::read("test=val; Expires=Wed, 21 Oct 2025 07:28:00 GMT");
         CHECK(c.expires_at().has_value());
     }
 }
 
 TEST_CASE("Policy Enum", "[policy]") {
     SECTION("String conversion") {
-        CHECK(detail::same_site_str(policy::none) == "None");
-        CHECK(detail::same_site_str(policy::lax) == "Lax");
-        CHECK(detail::same_site_str(policy::strict) == "Strict");
+        CHECK(udho::cookies::detail::same_site_str(udho::cookies::policy::none) == "None");
+        CHECK(udho::cookies::detail::same_site_str(udho::cookies::policy::lax) == "Lax");
+        CHECK(udho::cookies::detail::same_site_str(udho::cookies::policy::strict) == "Strict");
     }
 
     SECTION("Policy parsing") {
-        policy p;
-        CHECK(detail::parse_policy("None", p));
-        CHECK(p == policy::none);
-        CHECK(detail::parse_policy("LAX", p));
-        CHECK(p == policy::lax);
-        CHECK_FALSE(detail::parse_policy("Invalid", p));
+        udho::cookies::policy p;
+        CHECK(udho::cookies::detail::parse_policy("None", p));
+        CHECK(p == udho::cookies::policy::none);
+        CHECK(udho::cookies::detail::parse_policy("LAX", p));
+        CHECK(p == udho::cookies::policy::lax);
+        CHECK_FALSE(udho::cookies::detail::parse_policy("Invalid", p));
     }
 }

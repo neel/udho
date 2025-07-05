@@ -149,7 +149,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     boost::asio::io_context service;
 
     auto server = udho::net::server<http_listener>(service, 9000);
-    auto artifacts  = udho::net::artifacts{router, resources};
+    auto artifacts = udho::net::artifacts{router, resources};
 
     server.run(artifacts);
 
@@ -353,14 +353,14 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == 1);
                 CHECK(results.body == "c");
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/plain");
             } {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/d.txt");
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == 1);
                 CHECK(results.body == "d");
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/plain");
             } {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/b.txt");
@@ -387,14 +387,14 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == 1);
                 CHECK(results.body == "a");
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/plain");
             } {
                 http_results results = curl_fetch(curl, "GET", "http://localhost:9000/d.txt");
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == 1);
                 CHECK(results.body == "d");
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/plain");
             }
         }
@@ -405,7 +405,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == 2);
                 CHECK(results.body == "!C");
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/plain");
             }
         }
@@ -424,7 +424,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_js) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js)));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+            CHECK(results.headers.count("Transfer-Encoding") == 0);
             CHECK(results.headers["Content-Type"] == "application/javascript");
         }
 
@@ -433,7 +433,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_js1) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_js1)));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+            CHECK(results.headers.count("Transfer-Encoding") == 0);
             CHECK(results.headers["Content-Type"] == "application/javascript");
         }
 
@@ -442,7 +442,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract 1 because of trailing null character
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+            CHECK(results.headers.count("Transfer-Encoding") == 0);
             CHECK(results.headers["Content-Type"] == "text/css");
         }
 
@@ -451,7 +451,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             CHECK(results.code == 200);
             CHECK(results.body.size() == sizeof(buffer_img)); // don't subtract 1 because there is trailing null character in unsigned char array
             CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_img), [](const char& l, const unsigned char& r){ return static_cast<unsigned char>(l) == r; }));
-            CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+            CHECK(results.headers.count("Transfer-Encoding") == 0);
             CHECK(results.headers["Content-Type"] == "image/gif");
         }
     }
@@ -471,7 +471,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == altered_content.size());
                 CHECK(results.body == altered_content);
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/css");
             }
 
@@ -481,7 +481,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract -1 because of trailing null character
                 CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/css");
             }
 
@@ -498,7 +498,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 200);
                 CHECK(results.body.size() == sizeof(buffer_css) -1); // subtract -1 because of trailing null character
                 CHECK(std::equal(results.body.begin(), results.body.end(), std::begin(buffer_css)));
-                CHECK(results.headers["Transfer-Encoding"] == "plain,plain");
+                CHECK(results.headers.count("Transfer-Encoding") == 0);
                 CHECK(results.headers["Content-Type"] == "text/css");
             }
         }
