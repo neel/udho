@@ -1,6 +1,11 @@
 #ifndef UDHO_SESSION_SESSION_H
 #define UDHO_SESSION_SESSION_H
 
+#include <udho/session/fwd.h>
+#include <udho/session/record.h>
+#include <udho/session/note.h>
+#include <udho/session/catalogue.h>
+
 namespace udho {
 
 /**
@@ -36,12 +41,8 @@ namespace udho {
 namespace session {
 
 }
+
 }
 
-
-#include <udho/session/fwd.h>
-#include <udho/session/record.h>
-#include <udho/session/note.h>
-#include <udho/session/catalogue.h>
 
 #endif // UDHO_SESSION_SESSION_H

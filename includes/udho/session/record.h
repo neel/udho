@@ -13,6 +13,11 @@
 namespace udho{
 namespace session{
 
+/**
+ * @struct record
+ * @brief Thread-safe session record
+ * @details Wraps record_data with mutex protection
+ */
 struct record: private record_data{
     using record_type    = record;
     using container_type = typename record_data::container_type;

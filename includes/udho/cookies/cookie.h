@@ -58,6 +58,11 @@ struct cookie{
     /// @brief Static assertion for value type convertibility
     static_assert( udho::hazo::detail::is_streamable<std::ostream, value_type>::value, "Cookie value must be convertible to std::string" );
 
+    /**
+     * @brief convert the cookie value into a different type and return the transformed cookie
+     * @tparam T target type
+     * @return cookie<T>
+     */
     template <typename T, std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, std::string>, bool> = true>
     cookie<T> as() const {
         cookie<T> res{_name};
@@ -327,6 +332,10 @@ struct cookie{
         return std::chrono::duration_cast<std::chrono::seconds>(*_expires - now);
     }
 
+    /**
+     * @brief Create a canonical id of a cookie of teh format “`name[:domain][:path]`”
+     * @return string
+     */
     std::string id() const {
         if(_name.empty()) return "";
 
@@ -340,6 +349,10 @@ struct cookie{
         return cookie_id;
     }
 
+    /**
+     * @brief a cookies is valid if it has a non-empty name
+     * @return
+     */
     bool valid() const { return !_name.empty(); }
 private:
     bool validate_name() const {
@@ -386,10 +399,7 @@ private:
  * @param stream Output stream
  * @return Reference to stream
  *
- * Produces RFC-compliant Set-Cookie header with:
- * - URL-encoded value
- * - Proper attribute ordering
- * - Automatic Expires for Max-Age=0
+ * Produces RFC-compliant Set-Cookie header with URL-encoded value and Automatic Expires for Max-Age=0
  */
 template <typename StreamT, typename ValueT>
 inline StreamT& write(StreamT& stream, const cookie<ValueT>& c) {
@@ -435,10 +445,7 @@ inline std::string to_string(const cookie<ValueT>& c) {
  * @param header Set-Cookie header value
  * @return Parsed cookie<std::string>
  *
- * Efficiently parses RFC 6265-compliant cookies with:
- * - Zero dynamic allocations for flag attributes
- * - Single-pass parsing
- * - Case-insensitive attribute handling
+ * Parses RFC 6265-compliant cookies with case-insensitive attribute handling
  */
 inline cookie<std::string> read(std::string_view header) {
     if (header.empty()) {
