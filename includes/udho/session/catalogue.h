@@ -20,28 +20,74 @@
 namespace udho{
 namespace session{
 
+/**
+ * @class catalogue
+ * @brief Central session management system with configurable persistence strategies
+ *
+ * @tparam StorageT Storage backend type providing persistence operations
+ * @tparam Mode Synchronization mode (lazy, optimistic or immediate)
+ *
+ * The catalogue manages the lifecycle of session records, providing:
+ * - Creation, loading and saving from storage
+ * - Reference counting
+ * - Configurable persistence strategies
+ * - Thread-safe access
+ *
+ * @note Storage backend must satisfy the required interface for the selected mode
+ */
 template <typename StorageT, udho::session::modes Mode>
 struct catalogue: private StorageT{
     static_assert(StorageT::has(Mode), "Storage is incompatible with the specified mode");
 
-    using storage_type      = StorageT;
+    using storage_type      = StorageT;                                 ///< Storage backend type
     using catalog_type      = catalogue<StorageT, Mode>;
-    using record_type       = record;
-    using record_ptr        = std::unique_ptr<record_type>;
+    using record_type       = record;                                   ///< Session record type
+    using record_ptr        = std::unique_ptr<record_type>;             ///< Unique ownership pointer
     using record_iptr       = boost::intrusive_ptr<record_type>;
-    using key_type          = udho::session::id;
-    using container_type    = std::map<key_type, record_ptr>;
+    using key_type          = udho::session::id;                        ///< Session identifier type
+    using container_type    = std::map<key_type, record_ptr>;           ///< Active sessions container
     using ref_counts        = std::map<key_type, std::atomic<int>>;
-    using note_type         = note;
+    using note_type         = note;                                     ///< Session access handle type
 
+    /**
+     * @brief Construct catalogue with storage arguments
+     * @tparam Args Storage backend constructor argument types
+     * @param args Arguments forwarded to storage backend
+     *
+     * @par Example:
+     * @code
+     * using catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+     * udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
+     * catalogue cat{root};
+     * @endcode
+     */
     template <typename... Args>
     inline explicit catalogue(Args&&... args): storage_type(std::forward<Args>(args)...) {}
-    catalogue(const catalogue&) = delete;
-    catalogue(catalogue&&) = delete;
 
+    catalogue(const catalogue&) = delete;   ///< Non-copyable
+    catalogue(catalogue&&) = delete;        ///< Non-movable
+
+    /// @brief Access storage backend
     inline storage_type& storage() { return *this; }
+
+    /// @brief Access storage backend (const)
     inline const storage_type& storage() const { return *this; }
 
+    /**
+     * @brief Acquire session access handle
+     * @param sessid Session identifier
+     * @return note_type Session access handle
+     *
+     * @par Workflow:
+     * Borrows a session record and provides a @ref note refering to the borrowed @ref record.
+     * Multiple notes may refer to the same borrowed @ref record at the same time in a thread
+     * safe way. In lazy or optimistic mode, destruction of the last note triggers serialization
+     * of the record through the storage. However, if immediate mode is used then the updated
+     * fields are synchronized immediately.
+     *
+     * @throws std::runtime_error on storage failures
+     * @note Thread-safe through internal locking
+     */
     note_type borrow(const key_type& sessid) {
         std::lock_guard<std::mutex> lock(_mutex);
         auto it = _records.find(sessid);
@@ -81,6 +127,8 @@ struct catalogue: private StorageT{
     protected:
         /**
          * @brief load the record from the memory if it exists on memory, otherwise load it from the storage into the memory.
+         * @param sessid Session identifier
+         * @return true if loaded, false if already present
          */
         bool load(const key_type& sessid) {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -96,6 +144,11 @@ struct catalogue: private StorageT{
             }
         }
 
+        /**
+         * @brief Check if session is loaded in memory
+         * @param sessid Session identifier
+         * @return true if loaded, false otherwise
+         */
         bool loaded(const key_type& sessid) const {
             std::lock_guard<std::mutex> lock(_mutex);
             return _records.count(sessid) > 0;
@@ -103,7 +156,12 @@ struct catalogue: private StorageT{
 
     private:
         /**
-         * @brief load the record from the storage into _record if it exists in the storage
+         * @brief Load session from storage into memory
+         * @param sessid Session identifier
+         * @return true on success, false on failure
+         *
+         * @pre Session must exist in storage
+         * @post Record added to _records container
          */
         bool _storage_load(const key_type& sessid) {
             assert(_records.count(sessid) == 0);
@@ -113,8 +171,14 @@ struct catalogue: private StorageT{
             return _storage_fetch(sessid);
         }
 
+        /// @brief Check if session exists in persistent storage
         bool _storage_exists(const key_type& sessid) { return storage_type::exists(sessid); }
 
+        /**
+         * @brief Create new session in storage and load into memory
+         * @param sessid Session identifier
+         * @return true on success, false on failure
+         */
         bool _storage_create_load(const key_type& sessid) {
             auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
             bool result = storage_type::create(*record);
@@ -125,6 +189,8 @@ struct catalogue: private StorageT{
 
         /**
          * @brief load the record from the storage into _record assuming it exists in the storage
+         * @param sessid Session identifier
+         * @return true on success, false on failure
          */
         bool _storage_fetch(const key_type& sessid) {
             auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
@@ -134,6 +200,13 @@ struct catalogue: private StorageT{
             return result;
         }
 
+        /**
+         * @brief Serialize record to storage
+         * @param record Record to serialize
+         * @return true on success, false on failure
+         *
+         * @note In optimistic mode, only dirty records are saved
+         */
         bool _storage_serialize(const std::unique_ptr<record_type>& record) {
             bool result = storage_type::save(*record, Mode == udho::session::modes::optimistic);
             _records.erase(record->sessid());
@@ -141,12 +214,25 @@ struct catalogue: private StorageT{
         }
 
     private:
+
+        /**
+         * @brief Handle record modification notifications
+         * @param record Modified record
+         */
         void notify(const record_type& record) {
             if constexpr (Mode == udho::session::modes::immediate) {
                 bool result = storage_type::save(record);
             }
         }
 
+        /**
+         * @brief Release reference to session record
+         * @param sessid Session identifier
+         * @details decrements reference count, if reference count is 1 (implying the only note pointing
+         *          to the same record) then 1. triggers serialization 2. removal from catalog
+         * @note does not serialize if the record is not dirty.
+         * @throws std::out_of_range if session not loaded
+         */
         void release(const key_type& sessid) {
             std::lock_guard<std::mutex> lock(_mutex);
 

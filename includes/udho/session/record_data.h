@@ -27,25 +27,25 @@ struct record_data{
     friend struct udho::session::catalogue;
 
     /**
-     * @brief Default constructor
+     * @brief Default constructor, initializes meta information such as creation and last updated time to now and revision to 0.
      */
-    inline record_data(): _created(std::chrono::system_clock::now()), _revision(0) {}
+    inline record_data(): _created(std::chrono::system_clock::now()), _updated(_created), _revision(0) {}
 
     /**
-     * @brief Construct with session ID
+     * @brief Construct with session ID, initializes meta information such as creation and last updated time to now and revision to 0.
      * @param sessid Session identifier
      */
-    inline explicit record_data(const udho::session::id& sessid): _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()), _revision(0) {}
+    inline explicit record_data(const udho::session::id& sessid): _sessid(std::move(sessid)), _created(std::chrono::system_clock::now()), _updated(_created), _revision(0) {}
 
     /**
      * @brief Get session ID
-     * @return
+     * @return sessiion id
      */
     inline const udho::session::id& sessid() const { return _sessid; }
 
     /**
      * @brief Check if record has modifications that have not been synchronized to the storage yet.
-     * @return
+     * @return bool
      */
     inline bool dirty() const { return _updated_fields.size() > 0 || _removed_fields.size() > 0; }
 
@@ -110,7 +110,7 @@ struct record_data{
     }
 
     /**
-     * @brief Remove key-value pair
+     * @brief Remove a key
      * @param key Data key
      * @return true if key was removed
      * @pre key should exist (noop otherwise)

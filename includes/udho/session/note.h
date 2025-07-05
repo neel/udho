@@ -15,11 +15,12 @@ namespace session{
 /**
  * @brief The note class
  * A note can only be created by the catalog. It is created using a reference to the unique_ptr to the record.
- * All get and set calls to the note are forwarded to the record. While constructing the note, catalog passes
- * a release callback which is called when a note is destroyed. That release callback checks whether it is the
- * last note corresponding to a record or not. If there is no other note pointing to the actual record then
- * serialize the record_data to the storage, otherwise keep it in the memory.
+ * All get and set calls to the note are forwarded to the @ref record. While constructing the note, catalog
+ * passes a release callback which is called when a note is destroyed. That release callback checks whether it
+ * is the last note corresponding to a record or not. If there is no other note pointing to the actual record
+ * then serialize the record_data to the storage, otherwise keep it in the memory.
  *
+ * @note all operations are thread safe
  * @note unless immediate mode is used, modification operations will not be synced to the storage immediately.
  */
 struct note{
@@ -94,8 +95,20 @@ struct note{
             std::string _key;
     };
 
+    /**
+     * @brief note is not default constructible
+     */
     note() = delete;
+
+    /**
+     * @brief note is not copiable
+     */
     note(const note&) = delete;
+
+    /**
+     * @brief note is movable
+     * @param other
+     */
     note(note&& other) noexcept : _record(other._record), _releasef(std::move(other._releasef)) {}
 
     /**
