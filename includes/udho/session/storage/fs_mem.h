@@ -25,7 +25,7 @@ struct mem_fs: public udho::session::storage::features<udho::session::modes::laz
     static_assert(sizeof(detail::attr_meta)==12);
 
 public:
-    explicit mem_fs(const udho::utils::filesystem::path& root) : _root(root) {
+    explicit mem_fs(const udho::utils::filesystem::path& root = udho::utils::filesystem::current_path()) : _root(root) {
         if (!udho::utils::filesystem::exists(_root)) {
             udho::utils::filesystem::create_directories(_root);
         }
@@ -141,6 +141,16 @@ public:
 
     udho::utils::filesystem::path path(const udho::session::id& id, bool temporary = false) const {
         return _root / session_filename(id, temporary);
+    }
+
+    inline bool remove(udho::session::record_data& record) {
+        udho::utils::filesystem::path lock_file_path = lock_path(record.sessid());
+        boost::interprocess::file_lock lk(lock_file_path.c_str());
+        boost::interprocess::scoped_lock< boost::interprocess::file_lock > guard(lk);
+
+        udho::utils::filesystem::path file_path = path(record.sessid());
+        bool result = udho::utils::filesystem::remove(file_path);
+        return result;
     }
 
 

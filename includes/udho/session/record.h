@@ -39,7 +39,7 @@ struct record: private record_data{
      * @details The notifier is used to notify the storage about any modification, it is upto the storage to decide whether to synchronize
      *          it then or wait for more modifications.
      */
-    inline record(const udho::session::id& sessid, notifier_type&& notifier): record_data(sessid), _notifier(std::move(notifier)) {}
+    inline record(const udho::session::id& sessid, notifier_type&& notifier): record_data(sessid), _notifier(std::move(notifier)), _removed(false) {}
 
     using record_data::sessid;
 
@@ -113,12 +113,16 @@ struct record: private record_data{
          * @post sets last update time as now for the session data
          * @post removes the key from the deleted keys, if it was previously deleted
          * @post makes the session as dirty untill synchronized with the storage
+         * @throw std::runtime_error if session is marked as removed
          */
         template <typename T, std::enable_if_t<udho::utils::traits::is_ostreamable_v<T>, bool> = true>
         void set(const std::string& key, T&& value) {
             std::lock_guard<std::mutex> lock(_mutex_data);
+            if(_removed) {
+                throw std::runtime_error{"trying to perform set key operations in a deleted session"};
+            }
             record_data::template set<T>(key, std::move(value));
-            if(record_data::dirty()) {
+            if(record_data::dirty() || _removed) {
                 _notifier(*this);
             }
         }
@@ -132,14 +136,36 @@ struct record: private record_data{
          * @post sets last update time as now for the session data
          * @post removes the key from the updated keys, if it was previously updated
          * @post makes the session as dirty untill synchronized with the storage
+         * @throw std::runtime_error if session is marked as removed
          */
         bool remove(const std::string& key) {
             std::lock_guard<std::mutex> lock(_mutex_data);
+            if(_removed) {
+                throw std::runtime_error{"trying to perform remove key operations in a deleted session"};
+            }
             bool res = record_data::remove(key);
-            if(record_data::dirty()) {
+            if(record_data::dirty() || _removed) {
                 _notifier(*this);
             }
             return res;
+        }
+
+        /**
+         * @brief remove mark the session record as removed
+         * @details All set operations on removed session record will throw exception.
+         */
+        void remove() {
+            std::lock_guard<std::mutex> lock(_mutex_data);
+            _removed = true;
+        }
+
+        /**
+         * @brief check whether the session record is flagged as removed or not
+         * @return
+         */
+        bool removed() const {
+            std::lock_guard<std::mutex> lock(_mutex_data);
+            return _removed;
         }
 
         /**
@@ -158,6 +184,7 @@ struct record: private record_data{
     private:
         mutable std::mutex _mutex_data;
         notifier_type      _notifier;
+        bool               _removed;
 };
 
 }

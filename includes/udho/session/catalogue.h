@@ -36,7 +36,7 @@ namespace session{
  * @note Storage backend must satisfy the required interface for the selected mode
  */
 template <typename StorageT, udho::session::modes Mode>
-struct catalogue: private StorageT{
+struct catalogue{
     static_assert(StorageT::has(Mode), "Storage is incompatible with the specified mode");
 
     using storage_type      = StorageT;                                 ///< Storage backend type
@@ -58,20 +58,19 @@ struct catalogue: private StorageT{
      * @code
      * using catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
      * udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
-     * catalogue cat{root};
+     * catalogue cat{udho::session::storage::fs{root}};
      * @endcode
      */
-    template <typename... Args>
-    inline explicit catalogue(Args&&... args): storage_type(std::forward<Args>(args)...) {}
+    inline explicit catalogue(storage_type&& storage): _storage(std::move(storage)) {}
 
     catalogue(const catalogue&) = delete;   ///< Non-copyable
     catalogue(catalogue&&) = delete;        ///< Non-movable
 
     /// @brief Access storage backend
-    inline storage_type& storage() { return *this; }
+    inline storage_type& storage() { return _storage; }
 
     /// @brief Access storage backend (const)
-    inline const storage_type& storage() const { return *this; }
+    inline const storage_type& storage() const { return _storage; }
 
     /**
      * @brief Acquire session access handle
@@ -124,6 +123,39 @@ struct catalogue: private StorageT{
         return note;         // create a note from the record and return
     }
 
+    /**
+     * @brief remove marks a session as to_be_removed
+     * @details does not delete the session immediately from the storage
+     *          rather waits for the last note to be destroyed. Any set
+     *          or remove operation on a note referencing a session which
+     *          is marked to be removed will lead to std::runtime_errror
+     *          exception being thrown.
+     * @param sessid
+     */
+    void remove(const key_type& sessid) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto it = _records.find(sessid);
+        if(it != _records.end()){
+            record_ptr& record = it->second;
+            record->remove();
+        }
+    }
+
+    /**
+     * @brief checks whether a session exists for the given sessid
+     * @param sessid
+     * @return boolean
+     */
+    bool exists(const key_type& sessid) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto it = _records.find(sessid);
+        if(it != _records.end()){
+            return true;
+        } else {
+            return _storage_exists(sessid);
+        }
+    }
+
     protected:
         /**
          * @brief load the record from the memory if it exists on memory, otherwise load it from the storage into the memory.
@@ -172,7 +204,7 @@ struct catalogue: private StorageT{
         }
 
         /// @brief Check if session exists in persistent storage
-        bool _storage_exists(const key_type& sessid) { return storage_type::exists(sessid); }
+        bool _storage_exists(const key_type& sessid) { return _storage.exists(sessid); }
 
         /**
          * @brief Create new session in storage and load into memory
@@ -181,7 +213,7 @@ struct catalogue: private StorageT{
          */
         bool _storage_create_load(const key_type& sessid) {
             auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
-            bool result = storage_type::create(*record);
+            bool result = _storage.create(*record);
             _records.emplace(sessid, std::move(record));
             _references.emplace(sessid, 0);
             return result;
@@ -194,7 +226,7 @@ struct catalogue: private StorageT{
          */
         bool _storage_fetch(const key_type& sessid) {
             auto record = std::make_unique<record_type>(sessid, std::bind(&catalog_type::notify, this, std::placeholders::_1));
-            bool result = storage_type::fetch(*record);
+            bool result = _storage.fetch(*record);
             _records.emplace(sessid, std::move(record));
             _references.emplace(sessid, 0);
             return result;
@@ -208,9 +240,15 @@ struct catalogue: private StorageT{
          * @note In optimistic mode, only dirty records are saved
          */
         bool _storage_serialize(const std::unique_ptr<record_type>& record) {
-            bool result = storage_type::save(*record, Mode == udho::session::modes::optimistic);
+            bool result = _storage.save(*record, Mode == udho::session::modes::optimistic);
             _records.erase(record->sessid());
             return result;
+        }
+
+        bool _storage_remove(const std::unique_ptr<record_type>& record) {
+            _records.erase(record->sessid());
+            bool result = _storage.remove(*record);
+            return false;
         }
 
     private:
@@ -221,7 +259,7 @@ struct catalogue: private StorageT{
          */
         void notify(const record_type& record) {
             if constexpr (Mode == udho::session::modes::immediate) {
-                bool result = storage_type::save(record);
+                bool result = _storage.save(record);
             }
         }
 
@@ -244,10 +282,15 @@ struct catalogue: private StorageT{
 
                 if (refit->second.fetch_sub(1, std::memory_order_acq_rel) == 1) {
                     try{
-                        if(record->_dirty()){
-                            _storage_serialize(record);
+                        if(record->removed()) {
+                            _records.erase(sessid);
+                            _storage_remove(record);
+                        } else {
+                            if(record->_dirty()){
+                                _storage_serialize(record);
+                            }
+                            _records.erase(sessid);
                         }
-                        _records.erase(sessid);
                     } catch(const std::exception& ex) {
                         // TODO log fatal error
                     } catch (...) {
@@ -261,6 +304,7 @@ struct catalogue: private StorageT{
 
     private:
         container_type _records;
+        storage_type   _storage;
         ref_counts     _references;
         mutable std::mutex _mutex;
 };

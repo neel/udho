@@ -11,9 +11,10 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-#include <udho/context.h>
+// #include <udho/context.h>
 #include <iostream>
 #include <udho/visitor.h>
+#include <udho/defs.h>
 
 namespace udho{
     
@@ -130,10 +131,10 @@ namespace visual{
          * @param ctx The udho Request Context
          * @return boost::beast::http::response<boost::beast::http::string_body> 
          */
-        template <typename AuxT, typename U, typename V>
-        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx) const{
-            return response(ctx.request());
-        }
+        // template <typename AuxT, typename U, typename V>
+        // boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx) const{
+        //     return response(ctx.request());
+        // }
         /**
          * @brief Given an HTTP request and the URL Router Generates HTTP response 
          * 
@@ -173,10 +174,10 @@ namespace visual{
          * @param router The URL Router
          * @return boost::beast::http::response<boost::beast::http::string_body> 
          */
-        template <typename AuxT, typename U, typename V, typename RouterT>
-        boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx, RouterT& router) const{
-            return response(ctx.request(), router);
-        }
+        // template <typename AuxT, typename U, typename V, typename RouterT>
+        // boost::beast::http::response<boost::beast::http::string_body> response(const udho::context<AuxT, U, V>& ctx, RouterT& router) const{
+        //     return response(ctx.request(), router);
+        // }
         /**
          * @brief Renders the HTML string using the target and the content
          * 
@@ -215,13 +216,13 @@ namespace visual{
     };
 }
 
-template <typename AuxT, typename RequestT, typename ShadowT>
-udho::context<AuxT, RequestT, ShadowT>& operator<<(udho::context<AuxT, RequestT, ShadowT>& context, const exceptions::http_error& error){
-    std::cout << "Uncaught HTTP Error" << " " << error.result() << " " << error.what() << std::endl;
-    auto response = error.response(context);
-    context.respond(response);
-    return context;
-}
+// template <typename AuxT, typename RequestT, typename ShadowT>
+// udho::context<AuxT, RequestT, ShadowT>& operator<<(udho::context<AuxT, RequestT, ShadowT>& context, const exceptions::http_error& error){
+//     std::cout << "Uncaught HTTP Error" << " " << error.result() << " " << error.what() << std::endl;
+//     auto response = error.response(context);
+//     context.respond(response);
+//     return context;
+// }
     
 }
 

@@ -15,8 +15,7 @@
 TEST_CASE("session fs lazy", "[session][fs][lazy]") {
     using session_store = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
-    udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
-    session_store store{root};
+    session_store store{udho::session::storage::fs{}};
 
     boost::uuids::random_generator uuid_generator;
     boost::uuids::string_generator uuid_string_generator;
@@ -119,8 +118,7 @@ TEST_CASE("session fs lazy", "[session][fs][lazy]") {
 TEST_CASE("session fs optimistic", "[session][fs][optimistic]") {
     using session_store = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::optimistic>;
 
-    udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
-    session_store store{root};
+    session_store store{udho::session::storage::fs{}};
 
     boost::uuids::random_generator uuid_generator;
     boost::uuids::string_generator uuid_string_generator;

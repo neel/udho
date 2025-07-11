@@ -9,6 +9,7 @@
 #include <udho/net/server.h>
 #include <curl/curl.h>
 #include <udho/net/artifacts.h>
+#include <udho/session/storage/fs.h>
 
 // { experiment
 // template <typename Policy, template<typename...> class T, typename X>
@@ -128,6 +129,8 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
     std::filesystem::path docroot  = exe_path / "docroot";
 
     auto router = udho::url::router(std::move(chain4), cstore.assets(), docroot);
+
+    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
 
     auto server = udho::net::server<http_listener>(service, 9000);
     auto artifacts  = udho::net::artifacts{router, resources};

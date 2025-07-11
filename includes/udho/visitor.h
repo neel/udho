@@ -30,6 +30,8 @@
 #include <string>
 #include <cstdint>
 #include <algorithm>
+#include <iomanip>
+#include <boost/format.hpp>
 
 namespace udho{    
     template <typename U>

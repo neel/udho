@@ -16,7 +16,7 @@
 TEST_CASE("session redis lazy", "[session][redis][lazy]") {
     using session_store = udho::session::catalogue<udho::session::storage::redis, udho::session::modes::lazy>;
 
-    session_store store{"localhost", 6379};
+    session_store store{udho::session::storage::redis{"localhost", 6379}};
 
     boost::uuids::random_generator uuid_generator;
     boost::uuids::string_generator uuid_string_generator;
@@ -120,7 +120,7 @@ TEST_CASE("session redis lazy", "[session][redis][lazy]") {
 TEST_CASE("session redis optimistic", "[session][redis][lazy]") {
     using session_store = udho::session::catalogue<udho::session::storage::redis, udho::session::modes::optimistic>;
 
-    session_store store{"localhost", 6379};
+    session_store store{udho::session::storage::redis{"localhost", 6379}};
 
     boost::uuids::random_generator uuid_generator;
     boost::uuids::string_generator uuid_string_generator;
@@ -224,7 +224,7 @@ TEST_CASE("session redis optimistic", "[session][redis][lazy]") {
 TEST_CASE("session redis immediate", "[session][redis][immediate]") {
     using session_store = udho::session::catalogue<udho::session::storage::redis, udho::session::modes::immediate>;
 
-    session_store store{"localhost", 6379};
+    session_store store{udho::session::storage::redis{"localhost", 6379}};
 
     boost::uuids::random_generator uuid_generator;
     boost::uuids::string_generator uuid_string_generator;

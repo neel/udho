@@ -50,6 +50,10 @@ class stream{
 
         inline const udho::net::types::headers::request& request() const { return _bridge->request(); }
         inline udho::net::types::headers::response& response() { return _bridge->response(); }
+
+        const udho::cookies::jar& cookies() const { return _bridge->cookies(); }
+        udho::cookies::jar& cookies() { return _bridge->cookies(); }
+
         boost::asio::io_context& io() { return _service; }
 
         template <typename ValueT>

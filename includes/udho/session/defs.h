@@ -30,6 +30,10 @@ inline session::id random() {
     return uuid_generator();
 }
 
+inline bool is_nill(const session::id& sessid) {
+    return sessid.is_nil();
+}
+
 using time_point     = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
 using duration_type  = time_point::duration;
 

@@ -20,6 +20,7 @@
 #include <curl/curl.h>
 #include <udho/net/artifacts.h>
 #include <udho/url/url.h>
+#include <udho/session/storage/fs.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -355,6 +356,7 @@ TEST_CASE( "activity application", "[activities]" ) {
     );
 
     boost::asio::io_context service;
+    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
 
     auto server     = udho::net::server<http_listener>(service, 9000);
     auto artifacts  = udho::net::artifacts{router, resources};

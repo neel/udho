@@ -142,6 +142,25 @@ struct jar{
     jar() = default;
 
     /**
+     * @brief Parse and store cookies from an HTTP request
+     *
+     * Extracts cookies from the Cookie header of an HTTP request and stores
+     * them in the jar. This method clears any existing cookies before parsing.
+     *
+     * @tparam Fields The fields type of the HTTP request
+     *
+     * @param request The HTTP request containing cookies to parse
+     * @return The number of valid cookies successfully parsed and stored
+     *
+     * @note This method is thread-safe and will clear existing cookies
+     * @note Invalid cookies are silently ignored
+     */
+    template <typename Fields>
+    jar(const boost::beast::http::header<true, Fields>& request) {
+        apply(request);
+    }
+
+    /**
      * @brief Copy constructor (deleted)
      *
      * Cookie jars cannot be copied due to internal mutex and to prevent
@@ -164,7 +183,6 @@ struct jar{
      * Extracts cookies from the Cookie header of an HTTP request and stores
      * them in the jar. This method clears any existing cookies before parsing.
      *
-     * @tparam Body The body type of the HTTP request
      * @tparam Fields The fields type of the HTTP request
      *
      * @param request The HTTP request containing cookies to parse
@@ -173,8 +191,8 @@ struct jar{
      * @note This method is thread-safe and will clear existing cookies
      * @note Invalid cookies are silently ignored
      */
-    template <typename Body, typename Fields>
-    std::size_t apply(const boost::beast::http::request<Body, Fields>& request){
+    template <typename Fields>
+    std::size_t apply(const boost::beast::http::header<true, Fields>& request){
         clear();
         const std::lock_guard<std::mutex> lock(_mutex);
         std::size_t count = 0;
@@ -199,7 +217,6 @@ struct jar{
      * Adds Set-Cookie headers to an HTTP response for all valid cookies
      * currently stored in the jar.
      *
-     * @tparam Body The body type of the HTTP response
      * @tparam Fields The fields type of the HTTP response
      *
      * @param response The HTTP response to add Set-Cookie headers to
@@ -208,8 +225,8 @@ struct jar{
      * @note This method is thread-safe
      * @note Only valid cookies are added to the response
      */
-    template <typename Body, typename Fields>
-    std::size_t apply(boost::beast::http::response<Body, Fields>& response) const{
+    template <typename Fields>
+    std::size_t apply(boost::beast::http::header<false, Fields>& response) const{
         const std::lock_guard<std::mutex> lock(_mutex);
         std::size_t count = 0;
         for (const cookie_str_type& cookie : _cookies) {
@@ -448,6 +465,18 @@ struct jar{
 
         throw std::out_of_range{udho::utils::format("no cookie found with name or id: {}", key)};
     }
+
+    /**
+     * @brief returns a list of cookies with matching name
+     * @param domain
+     * @return vector of cookies
+     */
+    std::vector<cookie_str_type> by_name(const std::string& name) const {
+        const std::lock_guard<std::mutex> lock(_mutex);
+        auto [lo, hi] = _by<tags::by_name>(name);
+        return {lo, hi};
+    }
+
 
     /**
      * @brief returns a list of cookies with matching domain

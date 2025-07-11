@@ -9,6 +9,8 @@
 #include <udho/url/summary.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
+#include <udho/cookies/jar.h>
+#include <udho/session/catalogue.h>
 
 namespace udho{
 namespace net{
@@ -33,6 +35,8 @@ struct is_resource_store<udho::view::resources::store<Bridges...>>: std::true_ty
  * It contains the following items:
  * - routing table
  * - resource store
+ * - cookie jar
+ * - session catalog
  */
 template <typename RouterT, typename ResourcesStoreT>
 struct artifacts{
@@ -42,7 +46,6 @@ struct artifacts{
     using router_type               = RouterT;
     using resource_store_type       = ResourcesStoreT;
     using const_resource_store_type = typename ResourcesStoreT::const_store_type;
-
     artifacts(router_type& router, const resource_store_type& resources): _router(router), _resources(resources) {}
     artifacts(const artifacts&) = delete;
     artifacts(artifacts&&) = delete;

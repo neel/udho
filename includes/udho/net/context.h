@@ -47,7 +47,6 @@ struct proxy_wrapper{
      */
     const context_type& context() const { return _ctx; }
 
-
     friend auto metatype(udho::view::data::type<self_type>){
         using namespace udho::view::data;
 
@@ -76,6 +75,7 @@ struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public
     using self_type = basic_context;
 
     basic_context(boost::asio::io_context& io, udho::net::bridge::ptr bridge, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(io, bridge), _summary(summary), _resources(resources) {}
+
     basic_context(udho::net::stream&& stream, const udho::url::summary::router& summary, const resource_store& resources): udho::net::stream(std::move(stream)), _summary(summary), _resources(resources) {}
 
     const udho::url::summary::mount_point& route(const std::string& name) const {
@@ -85,6 +85,7 @@ struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public
     const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
         return route(hstr.str());
     }
+
     template <typename XArg>
     const udho::url::summary::mount_point& operator[](XArg&& xarg) const {
         return route(std::forward<XArg>(xarg));
@@ -102,6 +103,8 @@ struct basic_context<udho::view::resources::const_store<ViewBridgeT...>>: public
     proxy_wrapper<XBridgeT, ViewBridgeT...> view(const std::string& prefix, const std::string& name) const {
         return proxy_wrapper<XBridgeT, ViewBridgeT...>{*this, std::move(_resources.template view<XBridgeT>(prefix, name))};
     }
+
+
 
     friend auto metatype(udho::view::data::type<self_type>){
         using namespace udho::view::data;

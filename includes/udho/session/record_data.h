@@ -171,11 +171,11 @@ struct record_data{
     /// @}
 
 private:
-    udho::session::id    _sessid;
-    container_type _container;
-    time_point     _created;
-    time_point     _updated;
-    std::uint64_t  _revision;
+    udho::session::id     _sessid;
+    container_type        _container;
+    time_point            _created;
+    time_point            _updated;
+    std::uint64_t         _revision;
     std::set<std::string> _updated_fields;
     std::set<std::string> _removed_fields;
 };

@@ -27,6 +27,7 @@
 #include <curl/curl.h>
 #include <boost/algorithm/string.hpp>
 #include <tabulate/table.hpp>
+#include <udho/session/storage/fs.h>
 
 #include <udho/view/tmpl/layout/loader.h>
 
@@ -114,6 +115,27 @@ void chunk(udho::net::stream context){
 }
 
 void f0(udho::net::stream context){
+    /*
+    auto session = context.session(udho::session::collection::strategy<strategies::cookies>{});
+    // collect session id using cookie strategy
+    // this session object is different from the catalogue
+    // rather it has access to the catalogue
+    auto sessid  = session.id();
+    // returns std::optional<udho::session::id>
+    if(!sessid) {
+        sessid  = session.generate();
+        // generate a new session id
+    } else {
+        sessid  = session.renew();
+        // request catalogue to delete the old session from server side storage
+        // generate a new session id with no data associated with it
+    }
+    auto note = session.borrow(sessid);
+    // note is copiable but not default constructible and it uses RAII. So it should be possible to call borrow from usercode without a scope.
+    // with this style it is possible. However if it was if(session.requested()) auto note = session.borrow(sessid); then lifetime of note ends with the if block
+    // usercode can pass a copy of this note
+    */
+
     context << "Hello f0";
     context.finish();
 }
@@ -483,6 +505,7 @@ int main(){
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua.view("primary", "temp");
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_store    = tmpl_lua.view("primary", "temp2");
 
+    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
 
     boost::asio::io_context io;
     auto server     = http_server{io, 9000};

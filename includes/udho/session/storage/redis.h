@@ -340,6 +340,19 @@ struct redis: public udho::session::storage::features<udho::session::modes::lazy
         return result;
     }
 
+    inline bool remove(udho::session::record_data& record) {
+        const std::string key = std::string("sess:")  + udho::session::to_string(record.sessid());
+        detail::redis_commander::command_response r = _command("DEL", key);
+        if(r.is_int()){
+            return r.as_int() == 1;
+        } else if(r.is_bool()) {
+            return r.as_bool();
+        } else {
+            throw std::runtime_error("DEL returned unexpected type");
+        }
+        return false;
+    }
+
     template<typename... Args>
     detail::redis_commander::command_response _command(const std::string& cmd, Args&&... args) const {
         _queue(cmd, std::forward<Args>(args)...);

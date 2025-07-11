@@ -25,7 +25,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
     static_assert(std::is_trivially_copyable_v<udho::session::id>);
     static_assert(sizeof(detail::attr_meta)==12);
 
-    inline explicit fs(const udho::utils::filesystem::path& root): _root(root) {
+    inline explicit fs(const udho::utils::filesystem::path& root = udho::utils::filesystem::current_path()): _root(root) {
         if(!udho::utils::filesystem::exists(_root)) {
             udho::utils::filesystem::create_directories(_root);
         }
@@ -148,6 +148,16 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
 
         udho::utils::filesystem::remove(file_path);
         udho::utils::filesystem::rename(temp_file_path, file_path);
+        return result;
+    }
+
+    inline bool remove(udho::session::record_data& record) {
+        udho::utils::filesystem::path lock_file_path = lock_path(record.sessid());
+        boost::interprocess::file_lock lk(lock_file_path.c_str());
+        boost::interprocess::scoped_lock< boost::interprocess::file_lock > guard(lk);
+
+        udho::utils::filesystem::path file_path = path(record.sessid());
+        bool result = udho::utils::filesystem::remove(file_path);
         return result;
     }
 

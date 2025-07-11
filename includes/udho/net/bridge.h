@@ -5,6 +5,8 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <udho/net/common.h>
+#include <udho/session/collect.h>
+#include <udho/cookies/jar.h>
 #include <iostream>
 #include <udho/hazo/detail/is_streamable.h>
 
@@ -29,6 +31,7 @@ struct bridge{
     types::transfer_encoding&                  _transfer_encoding;
     flush_callback                             _flush;
     finish_callback                            _finish;
+    udho::cookies::jar                         _cookies;
 
     /**
      * Constructor initializing the bridge with all necessary components for handling a HTTP transaction.
@@ -40,7 +43,7 @@ struct bridge{
      * @param finish Callback function to finalize the response.
      */
     inline bridge(const udho::net::types::headers::request& request, udho::net::types::headers::response& response, std::ostream& stream, types::transfer_encoding& encoding, flush_callback&& flush, finish_callback&& finish)
-        : _request(request), _response(response), _stream(stream), _transfer_encoding(encoding), _flush(std::move(flush)), _finish(finish)
+        : _request(request), _response(response), _stream(stream), _transfer_encoding(encoding), _flush(std::move(flush)), _finish(finish), _cookies(request)
         {}
     ~bridge() {
         std::cout << "~bridge" << std::endl;
@@ -60,6 +63,18 @@ struct bridge{
      * @return reference to the response headers.
      */
     udho::net::types::headers::response& response() const { return _response; }
+
+    /**
+     * @brief cookies
+     * @return reference to the cookie jar
+     */
+    const udho::cookies::jar& cookies() const { return _cookies; }
+
+    /**
+     * @brief cookies
+     * @return const reference to the cookie jar
+     */
+    udho::cookies::jar& cookies() { return _cookies; }
 
     /**
      * @brief Writes data to the output stream.
@@ -139,6 +154,7 @@ struct bridge{
      * @param only_headers Whether to flush only headers (true) or all data (false).
      */
     void flush(handler_type&& handler, bool only_headers = false){
+        cookies().apply(response());
         _flush(handler, only_headers);
     }
 

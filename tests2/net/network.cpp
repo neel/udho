@@ -18,6 +18,7 @@
 #include <udho/view/resources/store.h>
 #include <udho/net/artifacts.h>
 #include <udho/view/bridges/lua.h>
+#include <udho/session/storage/fs.h>
 
 using socket_type     = udho::net::types::socket;
 using http_protocol   = udho::net::protocols::http<socket_type>;
@@ -178,7 +179,9 @@ TEST_CASE("udho network", "[net]") {
     lua.init();
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
     resources.lock();
-    auto artifacts  = udho::net::artifacts<decltype(router), udho::view::resources::store<udho::view::data::bridges::lua> >{router, resources};
+
+    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
+    auto artifacts  = udho::net::artifacts{router, resources};
 
     server.run(artifacts);
 
