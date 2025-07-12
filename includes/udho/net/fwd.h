@@ -12,7 +12,7 @@ namespace net{
 template <typename ProtocolT>
 struct connection;
 
-template <typename ListenerT>
+template <typename ListenerT, typename SessionT>
 struct server;
 
 class stream;

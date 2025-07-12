@@ -17,7 +17,11 @@
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/tmpl/layout/document.h>
 #include <udho/view/tmpl/layout/presenter.h>
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/storage/fs.h>
+#include <udho/session/catalogue.h>
 
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     static char buffer_js[]       = "console.log(\"Hello, world!\");";
@@ -118,9 +122,12 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     boost::asio::io_context io;
     udho::net::types::headers::request request;
 
+    auto sessions = session_catalogue::create(udho::session::storage::fs{});
+
     SECTION("Importmap includes all registered javascripts except the embedded one regardless of selection") {
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
         loader_js.importmap(stream);
         const std::stringstream& actual_stream = fake_bridge.stream();
         std::string output = actual_stream.str();
@@ -155,7 +162,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         loader_js.add("secondary", "embedded_only.js", true);
 
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
 
         // Should still exclude from importmap
         loader_js.importmap(stream);
@@ -169,7 +176,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         loader_js.add("secondary", "embedded_only.js", true);
 
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
 
         loader_js.write(stream, true);
         const std::string output = fake_bridge.stream().str();
@@ -180,7 +187,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 
     SECTION("JavaScript asset writing handles embedded and external correctly") {
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
 
         SECTION("Non-embedded scripts generate correct link tags") {
             loader_js.write(stream, false);
@@ -207,7 +214,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 
     SECTION("CSS asset writing handles media queries and embedding") {
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
 
         SECTION("Linked CSS generates proper link tags") {
             loader_css.write(stream, false);
@@ -229,7 +236,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 
     SECTION("Asset policies are properly reflected in output") {
         udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get(), *sessions);
 
         SECTION("JS async/defer attributes") {
             loader_js.write(stream, false);

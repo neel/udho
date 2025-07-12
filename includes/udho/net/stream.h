@@ -11,6 +11,8 @@
 #include <udho/net/fwd.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/hazo/detail/is_streamable.h>
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/collect.h>
 
 namespace udho{
 namespace net{
@@ -34,11 +36,12 @@ class stream{
 
     boost::asio::io_context&            _service;
     udho::net::bridge::ptr              _bridge;
+    udho::session::abstract_catalogue&  _sessions;
 
     stream() = delete;
 
     protected:
-        inline stream(boost::asio::io_context& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
+    inline stream(boost::asio::io_context& io, udho::net::bridge::ptr bridge, udho::session::abstract_catalogue& sessions) : _service(io), _bridge(bridge), _sessions(sessions) { }
 
         struct noop{
             void operator()(boost::system::error_code, std::size_t){}
@@ -46,13 +49,18 @@ class stream{
 
     public:
         stream(const stream&) = default;
-        stream(stream&& other): _service(other._service), _bridge(std::move(other._bridge)) {}
+        stream(stream&& other): _service(other._service), _bridge(std::move(other._bridge)), _sessions(other._sessions) {}
 
         inline const udho::net::types::headers::request& request() const { return _bridge->request(); }
         inline udho::net::types::headers::response& response() { return _bridge->response(); }
 
         const udho::cookies::jar& cookies() const { return _bridge->cookies(); }
         udho::cookies::jar& cookies() { return _bridge->cookies(); }
+
+        template <typename StrategyT>
+        udho::session::collection::collector<StrategyT, boost::beast::http::fields> session(StrategyT&& strategy) {
+            return udho::session::collection::collector<StrategyT, boost::beast::http::fields>{std::forward<StrategyT>(strategy), request(), response(), _sessions};
+        }
 
         boost::asio::io_context& io() { return _service; }
 
@@ -110,8 +118,8 @@ class stream{
 namespace fake{
 
 struct stream{
-    static udho::net::stream create(boost::asio::io_context& io, udho::net::bridge::ptr bridge){
-        return udho::net::stream{io, bridge};
+    static udho::net::stream create(boost::asio::io_context& io, udho::net::bridge::ptr bridge, udho::session::abstract_catalogue& catalog){
+        return udho::net::stream{io, bridge, catalog};
     }
 };
 

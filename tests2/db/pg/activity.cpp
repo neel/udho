@@ -17,6 +17,11 @@
 #include <udho/net/context.h>
 #include <udho/url/router.h>
 
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/storage/fs.h>
+#include <udho/session/catalogue.h>
+
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 namespace db = udho::db;
 namespace pg = db::pg;
@@ -127,9 +132,11 @@ TEST_CASE("postgresql activity with plain OZO SQL query", "[pg]") {
 
     auto router = udho::url::router();
 
+    auto sessions = session_catalogue::create(udho::session::storage::fs{});
+
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
 
     ozo::connection_pool_config dbconfig;
     ozo::connection_info<> conn_info("dbname=postgres user=postgres");

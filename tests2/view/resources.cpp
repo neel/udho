@@ -16,6 +16,12 @@
 #include <udho/net/context.h>
 #include <udho/url/router.h>
 
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/storage/fs.h>
+#include <udho/session/catalogue.h>
+
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+
 #include "data.h"
 
 TEST_CASE("Resource storage and retrieval of on memory resources", "[view][resource][memory]") {
@@ -130,9 +136,10 @@ Hello World
 
             // TEST asset types are enum class type{ js, css, txt, img };
 
+            auto sessions = session_catalogue::create(udho::session::storage::fs{});
             udho::net::types::headers::request request;
             udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
+            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge, *sessions);
             asset.write(stream);
 
             const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
@@ -287,9 +294,10 @@ Hello World
 
             // TEST asset types are enum class type{ js, css, txt, img };
 
+            auto sessions = session_catalogue::create(udho::session::storage::fs{});
             udho::net::types::headers::request request;
             udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
+            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge, *sessions);
             asset.write(stream);
 
             const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>

@@ -70,11 +70,12 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
      * @brief starts the async accept loop
      * @details leads to on_accept once an incoming connection is accepted
      */
-    void listen(processer_type&& processor){
+    template <typename SessionT>
+    void listen(processer_type&& processor, SessionT& session){
         _processor = std::move(processor);
         if(! _acceptor.is_open())
             return;
-        accept();
+        accept(session);
     }
     private:
         auto shared_from_this(){
@@ -83,9 +84,10 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
         /**
          * @brief accept an incomming connection asynchronously through on_accept callback
          */
-        void accept(){
+        template <typename SessionT>
+        void accept(SessionT& session){
             _running = true;
-            _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
+            _acceptor.async_accept(_socket, std::bind(&self_type::on_accept<SessionT>, std::enable_shared_from_this<self_type>::shared_from_this(), std::ref(session), std::placeholders::_1));
         }
 
         /**
@@ -93,7 +95,8 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
          * @details calls the connection start method of the connection which starts reading the incomming payload
          * @param ec
          */
-        void on_accept(boost::system::error_code ec){
+        template <typename SessionT>
+        void on_accept(SessionT& session, boost::system::error_code ec){
             if(!_running) {
                 for(auto pair : _connections){
                     connection_type* conn = pair.first;
@@ -127,12 +130,12 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
                 };
                 _connections.insert(std::make_pair(conn.get(), std::weak_ptr<connection_type>{conn}));
                 std::cout << "conn.use_count() " << conn.use_count() << std::endl;
-                conn->start(std::bind(&self_type::on_ready, shared_from_this(), remote_address, std::placeholders::_1));
+                conn->start(std::bind(&self_type::on_ready, shared_from_this(), remote_address, std::placeholders::_1), session);
             }else{
                 // TODO failed to accept
                 std::cout << "Server: Error while accepting " << ec.category().name() << " : " << ec.value() << " : " << ec.message() << std::endl;
             }
-            accept();
+            accept(session);
         }
         void on_ready(boost::asio::ip::address address, udho::net::stream&& context){
             boost::asio::post(_service, [address, context = std::move(context), this] () mutable {

@@ -12,13 +12,14 @@
 #include <udho/session/fwd.h>
 #include <udho/session/defs.h>
 #include <udho/session/note.h>
+#include <udho/session/abstract_catalogue.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <udho/session/defs.h>
 #include <udho/session/storage/features.h>
 
 namespace udho{
 namespace session{
+
 
 /**
  * @class catalogue
@@ -36,7 +37,7 @@ namespace session{
  * @note Storage backend must satisfy the required interface for the selected mode
  */
 template <typename StorageT, udho::session::modes Mode>
-struct catalogue{
+struct catalogue: abstract_catalogue{
     static_assert(StorageT::has(Mode), "Storage is incompatible with the specified mode");
 
     using storage_type      = StorageT;                                 ///< Storage backend type
@@ -48,6 +49,7 @@ struct catalogue{
     using container_type    = std::map<key_type, record_ptr>;           ///< Active sessions container
     using ref_counts        = std::map<key_type, std::atomic<int>>;
     using note_type         = note;                                     ///< Session access handle type
+    using ptr               = std::unique_ptr<catalog_type>;
 
     /**
      * @brief Construct catalogue with storage arguments
@@ -58,10 +60,14 @@ struct catalogue{
      * @code
      * using catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
      * udho::utils::filesystem::path root = udho::utils::filesystem::current_path();
-     * catalogue cat{udho::session::storage::fs{root}};
+     * auto cat = catalogue::create(udho::session::storage::fs{root});
      * @endcode
      */
-    inline explicit catalogue(storage_type&& storage): _storage(std::move(storage)) {}
+    static std::unique_ptr<catalog_type> create(storage_type&& storage) {
+        return std::make_unique<catalog_type>(std::forward<storage_type>(storage));
+    }
+
+    inline explicit catalogue(storage_type&& storage): abstract_catalogue(Mode), _storage(std::move(storage)) {}
 
     catalogue(const catalogue&) = delete;   ///< Non-copyable
     catalogue(catalogue&&) = delete;        ///< Non-movable
@@ -87,7 +93,7 @@ struct catalogue{
      * @throws std::runtime_error on storage failures
      * @note Thread-safe through internal locking
      */
-    note_type borrow(const key_type& sessid) {
+    virtual note_type borrow(const key_type& sessid) override {
         std::lock_guard<std::mutex> lock(_mutex);
         auto it = _records.find(sessid);
         if(it != _records.end()){                       // record already loaded
@@ -132,7 +138,7 @@ struct catalogue{
      *          exception being thrown.
      * @param sessid
      */
-    void remove(const key_type& sessid) {
+    virtual void remove(const key_type& sessid) override {
         std::lock_guard<std::mutex> lock(_mutex);
         auto it = _records.find(sessid);
         if(it != _records.end()){
@@ -146,7 +152,7 @@ struct catalogue{
      * @param sessid
      * @return boolean
      */
-    bool exists(const key_type& sessid) {
+    virtual bool exists(const key_type& sessid) override {
         std::lock_guard<std::mutex> lock(_mutex);
         auto it = _records.find(sessid);
         if(it != _records.end()){
@@ -187,6 +193,7 @@ struct catalogue{
         }
 
     private:
+
         /**
          * @brief Load session from storage into memory
          * @param sessid Session identifier

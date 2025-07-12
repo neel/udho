@@ -20,6 +20,11 @@
 #include <udho/view/tmpl/layout/layout.h>
 #include <udho/url/url.h>
 #include "data.h"
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/storage/fs.h>
+#include <udho/session/catalogue.h>
+
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 static char buffer_router[] = R"TEMPLATE(
 <?! vars(\"d\", \"ctx\") ?>
@@ -318,7 +323,8 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
 
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
+    auto sessions = session_catalogue::create(udho::session::storage::fs{});
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
 
     using context_type = udho::net::context<udho::view::data::bridges::lua>;
 

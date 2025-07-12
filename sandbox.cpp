@@ -88,15 +88,16 @@ struct info{
     }
 };
 
-using socket_type     = udho::net::types::socket;
-using http_protocol   = udho::net::protocols::http<socket_type>;
-using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
-using http_connection = udho::net::connection<http_protocol>;
-using scgi_connection = udho::net::connection<scgi_protocol>;
-using http_listener   = udho::net::listener<http_connection>;
-using scgi_listener   = udho::net::listener<scgi_connection>;
-using http_server     = udho::net::server<http_listener>;
-using scgi_server     = udho::net::server<scgi_listener>;
+using socket_type       = udho::net::types::socket;
+using http_protocol     = udho::net::protocols::http<socket_type>;
+using scgi_protocol     = udho::net::protocols::scgi<socket_type>;
+using http_connection   = udho::net::connection<http_protocol>;
+using scgi_connection   = udho::net::connection<scgi_protocol>;
+using http_listener     = udho::net::listener<http_connection>;
+using scgi_listener     = udho::net::listener<scgi_connection>;
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+using http_server       = udho::net::server<http_listener, session_catalogue>;
+using scgi_server       = udho::net::server<scgi_listener, session_catalogue>;
 
 void chunk3(udho::net::stream context){
     context << "Chunk 3 (Final)";
@@ -115,27 +116,6 @@ void chunk(udho::net::stream context){
 }
 
 void f0(udho::net::stream context){
-    /*
-    auto session = context.session(udho::session::collection::strategy<strategies::cookies>{});
-    // collect session id using cookie strategy
-    // this session object is different from the catalogue
-    // rather it has access to the catalogue
-    auto sessid  = session.id();
-    // returns std::optional<udho::session::id>
-    if(!sessid) {
-        sessid  = session.generate();
-        // generate a new session id
-    } else {
-        sessid  = session.renew();
-        // request catalogue to delete the old session from server side storage
-        // generate a new session id with no data associated with it
-    }
-    auto note = session.borrow(sessid);
-    // note is copiable but not default constructible and it uses RAII. So it should be possible to call borrow from usercode without a scope.
-    // with this style it is possible. However if it was if(session.requested()) auto note = session.borrow(sessid); then lifetime of note ends with the if block
-    // usercode can pass a copy of this note
-    */
-
     context << "Hello f0";
     context.finish();
 }
@@ -505,15 +485,15 @@ int main(){
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_prefixed = tmpl_lua.view("primary", "temp");
     udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> view_store    = tmpl_lua.view("primary", "temp2");
 
-    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
+    auto sessions = session_catalogue::create(udho::session::storage::fs{});
 
     boost::asio::io_context io;
-    auto server     = http_server{io, 9000};
+    auto server     = http_server{io, *sessions, 9000};
     auto artifacts  = udho::net::artifacts(router, resource_store);
 
     udho::net::types::headers::request request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
 
     std::cout << view_prefixed(inf, context).str() << std::endl;
     std::cout << view_store(inf, context).str() << std::endl;

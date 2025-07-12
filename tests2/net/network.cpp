@@ -20,13 +20,16 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/session/storage/fs.h>
 
-using socket_type     = udho::net::types::socket;
-using http_protocol   = udho::net::protocols::http<socket_type>;
-using scgi_protocol   = udho::net::protocols::scgi<socket_type>;
-using http_connection = udho::net::connection<http_protocol>;
-using scgi_connection = udho::net::connection<scgi_protocol>;
-using http_listener   = udho::net::listener<http_connection>;
-using scgi_listener   = udho::net::listener<scgi_connection>;
+using socket_type       = udho::net::types::socket;
+using http_protocol     = udho::net::protocols::http<socket_type>;
+using scgi_protocol     = udho::net::protocols::scgi<socket_type>;
+using http_connection   = udho::net::connection<http_protocol>;
+using scgi_connection   = udho::net::connection<scgi_protocol>;
+using http_listener     = udho::net::listener<http_connection>;
+using scgi_listener     = udho::net::listener<scgi_connection>;
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+using http_server       = udho::net::server<http_listener, session_catalogue>;
+using scgi_server       = udho::net::server<scgi_listener, session_catalogue>;
 
 // TODO TEST async functions writing to the context (may be use deadline timer)
 // TODO TEST connection object should be destroyed once finished
@@ -174,13 +177,15 @@ TEST_CASE("udho network", "[net]") {
 
     boost::asio::io_context service;
 
-    auto server = udho::net::server<http_listener>(service, 9000);
+
+    session_catalogue sessions{udho::session::storage::fs{}};
+
+    auto server = http_server(service,sessions,  9000);
     udho::view::data::bridges::lua lua;
     lua.init();
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
     resources.lock();
 
-    udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy> sessions{udho::session::storage::fs{}};
     auto artifacts  = udho::net::artifacts{router, resources};
 
     server.run(artifacts);

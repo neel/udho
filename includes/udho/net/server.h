@@ -17,10 +17,11 @@ namespace net{
  * @tparam ListenerT The type of the listener that handles incoming connections.
  * \ingroup server
  */
-template <typename ListenerT>
+template <typename ListenerT, typename SessionT>
 struct server{
     using listener_type = ListenerT;
-    using server_type   = server<ListenerT>;
+    using session_type  = SessionT;
+    using server_type   = server<ListenerT, SessionT>;
 
     /**
      * @brief Constructs a server bound to the specified IP address and port.
@@ -28,7 +29,7 @@ struct server{
      * @param port Port number to bind the server.
      * @param ip IP address to bind the server. Defaults to "0.0.0.0" (all interfaces).
      */
-    server(boost::asio::io_context& io, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
+    server(boost::asio::io_context& io, session_type& session, std::uint32_t port, const std::string& ip = "0.0.0.0"): _io(io), _session(session), _endpoint(boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)) {
         _listener = std::make_shared<listener_type>(_io, _endpoint);
     }
 
@@ -39,7 +40,7 @@ struct server{
      */
     template <typename ArtifactsT>
     void run(const ArtifactsT& artifacts){
-        _listener->listen(std::bind(&server_type::serve<ArtifactsT>, this, std::placeholders::_1, std::placeholders::_2, std::cref(artifacts)));
+        _listener->listen(std::bind(&server_type::serve<ArtifactsT>, this, std::placeholders::_1, std::placeholders::_2, std::cref(artifacts)), _session);
     }
 
     /**
@@ -145,6 +146,7 @@ struct server{
         }
     private:
         boost::asio::io_context&          _io;
+        session_type&                     _session;
         boost::asio::ip::tcp::endpoint    _endpoint;
         std::shared_ptr<listener_type>    _listener;
 };

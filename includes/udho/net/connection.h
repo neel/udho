@@ -219,7 +219,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
      * @param processor a function callback which is called once the incomming payload has been read
      * @details processor is called from the io_loop
      */
-    void start(processer_type&& processor){
+    template <typename SessionT>
+    void start(processer_type&& processor, SessionT& session){
         std::cout << "start() connection ref_count " << weak_from_this().use_count() << std::endl;
         _processor = std::move(processor);
         _start = std::chrono::system_clock::now();
@@ -230,7 +231,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         });
         // connection outlives the reader, because we pass a callback to on_read_header bound on shared_from_this()
         reader->start(
-            std::bind(&self_type::on_read_header, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+            std::bind(&self_type::on_read_header<SessionT>, shared_from_this(), std::ref(session), std::placeholders::_1, std::placeholders::_2)
         );
         _reader = reader;
     }
@@ -243,14 +244,15 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
             return std::enable_shared_from_this<self_type>::weak_from_this();
         }
 
-        void on_read_header(boost::system::error_code ec, std::size_t bytes_transferred){
+        template <typename SessionT>
+        void on_read_header(SessionT& session, boost::system::error_code ec, std::size_t bytes_transferred){
             std::cout << "on_read_header() connection ref_count " << weak_from_this().use_count() << std::endl;
             if(ec){
                 _stage = types::stages::rejected;
                 return;
             }
             _stage = types::stages::headers_read;
-            boost::asio::post(_io, std::bind(&self_type::process, shared_from_this()));
+            boost::asio::post(_io, std::bind(&self_type::process<SessionT>, shared_from_this(), std::ref(session)));
             _bytes_read += bytes_transferred;
             assert(_reader.use_count() == 1);
         }
@@ -258,7 +260,8 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
         /**
          * @brief process the connection by creating a bridge and a stream object with that bridge
          */
-        void process(){
+        template <typename SessionT>
+        void process(SessionT& session){
             std::cout << "process() connection ref_count " << weak_from_this().use_count() << std::endl;
             auto self = shared_from_this();
             auto bridge_ptr = std::make_shared<udho::net::bridge>(
@@ -266,7 +269,7 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
                 std::bind(&self_type::flush<handler_type>, self, std::placeholders::_1, std::placeholders::_2),
                 std::bind(&self_type::finish, self)
             );
-            udho::net::stream stream(_io, bridge_ptr);
+            udho::net::stream stream(_io, bridge_ptr, session);
             _processor(std::move(stream));
         }
 
