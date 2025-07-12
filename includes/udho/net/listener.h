@@ -68,6 +68,7 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
     }
     /**
      * @brief starts the async accept loop
+     * @details leads to on_accept once an incoming connection is accepted
      */
     void listen(processer_type&& processor){
         _processor = std::move(processor);
@@ -80,12 +81,18 @@ class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
             return std::enable_shared_from_this<listener<ConnectionT>>::shared_from_this();
         }
         /**
-         * accept an incomming connection
+         * @brief accept an incomming connection asynchronously through on_accept callback
          */
         void accept(){
             _running = true;
             _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
         }
+
+        /**
+         * @brief on_accept creates a connection object once an incomming connection is successfully accepted
+         * @details calls the connection start method of the connection which starts reading the incomming payload
+         * @param ec
+         */
         void on_accept(boost::system::error_code ec){
             if(!_running) {
                 for(auto pair : _connections){

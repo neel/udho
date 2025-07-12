@@ -213,6 +213,12 @@ struct connection: public std::enable_shared_from_this<connection<ProtocolT>>, p
     ~connection(){
         std::cout << "~connection" << std::endl;
     }
+
+    /**
+     * @brief starts reading the incomming payload
+     * @param processor a function callback which is called once the incomming payload has been read
+     * @details processor is called from the io_loop
+     */
     void start(processer_type&& processor){
         std::cout << "start() connection ref_count " << weak_from_this().use_count() << std::endl;
         _processor = std::move(processor);

@@ -511,7 +511,7 @@ int main(){
     auto server     = http_server{io, 9000};
     auto artifacts  = udho::net::artifacts(router, resource_store);
 
-    udho::net::types::headers::request  request;
+    udho::net::types::headers::request request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
     udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
 
