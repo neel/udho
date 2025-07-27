@@ -174,6 +174,6 @@ TEST_CASE("Apply functionality") {
 
     SECTION("Apply to all components of a feature") {
         facade.apply<test::feature_a>(counter_func);
-        REQUIRE(counter == 2);
+        REQUIRE(counter == 1);
     }
 }

@@ -7,7 +7,7 @@ namespace udho {
 namespace middleware {
 
 template <typename HeadT, typename... Tail>
-struct facade;
+struct facade_chain;
 
 template <typename HeadT, typename... Tail>
 struct states;
