@@ -92,29 +92,29 @@ struct states: private states<Tail...> {
 
 
     template <typename FeatureT, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return 1+facade_chain<Tail...>::template count<FeatureT>(); }
+    static constexpr int count() { return 1+states<Tail...>::template count<FeatureT>(); }
 
     template <typename FeatureT, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return facade_chain<Tail...>::template count<FeatureT>(); }
+    static constexpr int count() { return states<Tail...>::template count<FeatureT>(); }
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
-    state_type& get() { return _state; }
+    state_type& at() { return _state; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
-    const state_type& get() const { return _state; }
+    const state_type& at() const { return _state; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    result_type_by_feature<FeatureT>& get() { return facade_chain<Tail...>::template get<FeatureT, Idx>(); }
+    result_type_by_feature<FeatureT>& at() { return states<Tail...>::template at<FeatureT, Idx>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    const result_type_by_feature<FeatureT>& get() const { return facade_chain<Tail...>::template get<FeatureT, Idx>(); }
+    const result_type_by_feature<FeatureT>& at() const { return states<Tail...>::template at<FeatureT, Idx>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx != 0, bool> = true>
-    result_type_by_feature<FeatureT>& get() { return facade_chain<Tail...>::template get<FeatureT, Idx-1>(); }
+    result_type_by_feature<FeatureT>& at() { return states<Tail...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx != 0, bool> = true>
-    const result_type_by_feature<FeatureT>& get() const { return facade_chain<Tail...>::template get<FeatureT, Idx-1>(); }
+    const result_type_by_feature<FeatureT>& at() const { return states<Tail...>::template at<FeatureT, Idx-1>(); }
 
 private:
     states<Tail...>& tail() { return *this; }
@@ -159,10 +159,10 @@ struct states<ComponentT> {
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
-    state_type& get() { return _state; }
+    state_type& at() { return _state; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
-    const state_type& get() const { return _state; }
+    const state_type& at() const { return _state; }
 
 private:
     state_type _state;

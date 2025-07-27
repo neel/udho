@@ -110,8 +110,9 @@ struct arguments {
      * @tparam Count expected number of feasible argument
      */
     template <std::size_t Count, typename... Components>
-    static constexpr void expect() {
+    static constexpr int expect() {
         static_assert(arguments_mapped<Components...> == Count, "at least one of the arguments passed is not feasible for any component");
+        return 0;
     }
 
     /**

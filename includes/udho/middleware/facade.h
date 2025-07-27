@@ -18,7 +18,7 @@ std::size_t facade_apply(FacadeT& facade, Function&& function) { return 0; }
 
 template <typename FacadeT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< FacadeT::template count<FeatureT>() != Idx , bool> = true>
 std::size_t facade_apply(FacadeT& facade, Function&& function) {
-    bool result = function(facade.template get<FeatureT, Idx>());
+    bool result = function(facade.template at<FeatureT, Idx>());
     std::size_t count = result;
     if(result) {
         count += facade_apply<FacadeT, FeatureT, Function, Idx+1>(facade, std::forward<Function>(function));
@@ -33,7 +33,7 @@ std::size_t facade_apply(const FacadeT& facade, Function&& function) { return 0;
 
 template <typename FacadeT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< FacadeT::template count<FeatureT>() != Idx , bool> = true>
 std::size_t facade_apply(const FacadeT& facade, Function&& function) {
-    bool result = function(facade.template get<FeatureT, Idx>());
+    bool result = function(facade.template at<FeatureT, Idx>());
     std::size_t count = result;
     if(result) {
         count += facade_apply<FacadeT, FeatureT, Function, Idx+1>(facade, std::forward<Function>(function));
@@ -91,22 +91,22 @@ struct facade_chain: private facade_chain<Tail...> {
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
-    component_type& get() { return _component; }
+    component_type& at() { return _component; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
-    const component_type& get() const { return _component; }
+    const component_type& at() const { return _component; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
-    result_type_by_feature<FeatureT>& get() { return facade_chain<Tail...>::template get<FeatureT, Idx-1>(); }
+    result_type_by_feature<FeatureT>& at() { return facade_chain<Tail...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
-    const result_type_by_feature<FeatureT>& get() const { return facade_chain<Tail...>::template get<FeatureT, Idx-1>(); }
+    const result_type_by_feature<FeatureT>& at() const { return facade_chain<Tail...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
-    result_type_by_feature<FeatureT>& get() { return facade_chain<Tail...>::template get<FeatureT, Idx>(); }
+    result_type_by_feature<FeatureT>& at() { return facade_chain<Tail...>::template at<FeatureT, Idx>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
-    const result_type_by_feature<FeatureT>& get() const { return facade_chain<Tail...>::template get<FeatureT, Idx>(); }
+    const result_type_by_feature<FeatureT>& at() const { return facade_chain<Tail...>::template at<FeatureT, Idx>(); }
 
 
     template <typename FeatureT, typename Function>
@@ -141,8 +141,8 @@ struct facade_chain<ComponentT> {
     using has_component = std::is_same<ComponentQ, ComponentT>;
 
 
-    template < typename ArgT, typename... Args>
-    inline explicit facade_chain(ArgT&& arg, Args&&... args): _component(std::forward<ArgT>(arg), std::forward<Args>(args)...) {}
+    template < typename... Args>
+    inline explicit facade_chain(Args&&... args): _component(std::forward<Args>(args)...) {}
 
 
     template <typename OtherComponentT, typename... OtherTail>
@@ -166,10 +166,10 @@ struct facade_chain<ComponentT> {
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
-    component_type& get() { return _component; }
+    component_type& at() { return _component; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
-    const component_type& get() const { return _component; }
+    const component_type& at() const { return _component; }
 
 
     template <typename FeatureT, typename Function>
@@ -191,7 +191,7 @@ public:
 
     template <typename... Args>
     facade(Args&&... args): facade_chain_type(std::forward<Args>(args)...) {
-        detail::arguments<Args...>::template expect<sizeof...(Args), Components...>();
+        // detail::arguments<Args...>::template expect<sizeof...(Args), Components...>();
     }
 
     using facade_chain_type::get;
