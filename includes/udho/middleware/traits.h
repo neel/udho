@@ -19,6 +19,8 @@ struct component_traits{
     static constexpr const bool prefer_reference = !std::is_move_constructible_v<ComponentT> || !std::is_default_constructible_v<ComponentT>;
 };
 
+struct default_constructed{};
+
 
 }
 }

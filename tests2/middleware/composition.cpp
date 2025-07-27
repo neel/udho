@@ -14,16 +14,24 @@
 namespace testing {
 
 template <std::size_t Index>
-struct Feature{};
+struct Feature{ };
 
 template <std::size_t Index, int FeatureIndex = -1>
 struct Component{
     using feature = Feature<(FeatureIndex >= 0) ? FeatureIndex : Index>;
     static constexpr const std::size_t component_index = Index;
 
+    Component(): is_default_constructed(true) { }
+    Component(const std::string& msg): is_default_constructed(false), message(msg) {}
+    Component(const Component&) = delete;
+    Component(Component&& other): is_default_constructed(false), message(std::move(other.message)) {}
+
     struct state {
         bool accepted() const { return true; }
     };
+
+    bool is_default_constructed;
+    std::string message;
 };
 
 };
@@ -38,7 +46,13 @@ TEST_CASE("Compilation") {
             testing::Component<4, 1>
         >;
 
-    composition_type composition;
+    composition_type composition{
+        udho::middleware::default_constructed{},
+        udho::middleware::default_constructed{},
+        udho::middleware::default_constructed{},
+        udho::middleware::default_constructed{},
+        udho::middleware::default_constructed{}
+    };
 
     CHECK(composition.get<testing::Component<0>>().component_index == 0);
     CHECK(composition.get<testing::Component<1>>().component_index == 1);
@@ -52,4 +66,31 @@ TEST_CASE("Compilation") {
 
     CHECK(composition.at<testing::Feature<1>, 0>().component_index == 1);
     CHECK(composition.at<testing::Feature<1>, 1>().component_index == 4);
+
+    {
+        auto mw = composition_type::compose();
+
+        CHECK(mw.get<testing::Component<0>>().component_index == 0);
+        CHECK(mw.get<testing::Component<1>>().component_index == 1);
+        CHECK(mw.get<testing::Component<2, 0>>().component_index == 2);
+        CHECK(mw.get<testing::Component<3>>().component_index == 3);
+        CHECK(mw.get<testing::Component<4, 1>>().component_index == 4);
+
+        CHECK(mw.get<testing::Component<0>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<1>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<2, 0>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<3>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<4, 1>>().is_default_constructed);
+    } {
+        auto mw = composition_type::compose(testing::Component<3>{"moved"}, testing::Component<1>{"moved"});
+
+        CHECK(mw.get<testing::Component<0>>().is_default_constructed);
+        CHECK(!mw.get<testing::Component<1>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<2, 0>>().is_default_constructed);
+        CHECK(!mw.get<testing::Component<3>>().is_default_constructed);
+        CHECK(mw.get<testing::Component<4, 1>>().is_default_constructed);
+
+        CHECK(mw.get<testing::Component<1>>().message == "moved");
+        CHECK(mw.get<testing::Component<3>>().message == "moved");
+    }
 }

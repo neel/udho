@@ -54,13 +54,13 @@ struct arguments_lookup<ArgT>{
     static constexpr const int index_of = arguments_lookup<ComponentT>::template is_feasible<ArgT> ? Idx+1 : -1;
 
     template <typename ComponentT>
-    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, std::false_type>;
+    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, default_constructed>;
 
     template <typename ComponentT, std::enable_if_t<argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
     static constexpr ArgT arg_for(ArgT&& arg) { return std::forward<ArgT>(arg); }
 
     template <typename ComponentT, std::enable_if_t<!argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
-    static constexpr std::false_type arg_for(ArgT&& arg) { return std::false_type{}; }
+    static constexpr default_constructed arg_for(ArgT&& arg) { return default_constructed{}; }
 };
 
 
@@ -120,7 +120,7 @@ struct arguments {
      * @tparam ComponentT component for which a feasible type has to be found
      * @tparam Args... types of the arguments from where to select
      * @param args... variadic arguments from which to select the first feasible argument
-     * @return the first feasible argument or std::false_type instance
+     * @return the first feasible argument or default_constructed instance
      */
     template <typename ComponentT>
     static constexpr type_for<ComponentT> find(Args&&... args) { return arguments_lookup<Args...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
