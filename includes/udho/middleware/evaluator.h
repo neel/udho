@@ -35,12 +35,12 @@ struct evaluator<FeatureX, Features...>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Components>
-    std::size_t operator()(udho::middleware::composition<Components...>& facade, udho::middleware::states<Components...>& states) {
-        static_assert(facade.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
+    std::size_t operator()(udho::middleware::composition<Components...>& composition, udho::middleware::states<Components...>& states) {
+        static_assert(composition.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
 
-        std::size_t count = facade.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
+        std::size_t count = composition.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
         evaluator<Features...> ev{_address, _request};
-        count += ev(facade.tail(), states.tail());
+        count += ev(composition, states);
         return count;
     }
 
@@ -53,10 +53,10 @@ struct evaluator<FeatureX>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Components>
-    std::size_t operator()(udho::middleware::composition<Components...>& facade, udho::middleware::states<Components...>& states) {
-        static_assert(facade.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
+    std::size_t operator()(udho::middleware::composition<Components...>& composition, udho::middleware::states<Components...>& states) {
+        static_assert(composition.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
 
-        return facade.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
+        return composition.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
     }
 
     const boost::asio::ip::address& _address;

@@ -20,8 +20,7 @@ struct pipeline: public udho::middleware::composition<Components...>{
 
     template <typename... Features>
     std::size_t operator()(udho::middleware::evaluator<Features...>&& evaluator) {
-        using evaluator_type = udho::middleware::evaluator<Features...>;
-        return std::forward<evaluator_type>(evaluator)(*this, _states);
+        return evaluator(*this, _states);
     }
 
     private:

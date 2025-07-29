@@ -78,7 +78,7 @@ struct states<ComponentT, Rest...>: private states<Rest...> {
     static_assert(std::is_default_constructible_v<state_type>);
     static_assert(std::is_move_constructible_v<state_type>);
 
-    template <typename FeatureX, typename... Features>
+    template <typename... Features>
     friend struct evaluator;
 
     states() = default;
@@ -144,7 +144,7 @@ struct states<ComponentT> {
     static_assert(std::is_default_constructible_v<state_type>);
     static_assert(std::is_move_constructible_v<state_type>);
 
-    template <typename FeatureX, typename... Features>
+    template <typename... Features>
     friend struct evaluator;
 
     states() = default;

@@ -164,9 +164,9 @@ struct wrapper: interface<ComponentT, typename ComponentT::feature>{
     template <typename ArgX, std::enable_if_t<std::is_same_v<ArgX, default_constructed>, bool> = true>
     wrapper(ArgX&&): interface_type() {}
 
-    template <typename Head, typename... Tail, typename... Args>
-    bool eval(udho::middleware::states<Head, Tail...>& states, Args... args) {
-        using states_facade_type = udho::middleware::states<Head, Tail...>;
+    template <typename... Components, typename... Args>
+    bool eval(udho::middleware::states<Components...>& states, Args... args) {
+        using states_facade_type = udho::middleware::states<Components...>;
         state_type state = std::move(interface_type::eval(states, std::forward<Args>(args)...));
         bool result = state.accepted();
         states.template get<ComponentT>() = std::move(state);
