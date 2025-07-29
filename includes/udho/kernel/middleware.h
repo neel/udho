@@ -1,5 +1,5 @@
-#ifndef UDHO_MIDDLEWARE_H
-#define UDHO_MIDDLEWARE_H
+#ifndef UDHO_KERNEL_H
+#define UDHO_KERNEL_H
 
 #include <set>
 #include <deque>
@@ -7,7 +7,7 @@
 #include <chrono>
 
 namespace udho {
-namespace middleware {
+namespace kernel {
 
 // struct ip_filter{
 //     enum class mode{
@@ -86,4 +86,4 @@ namespace middleware {
 }
 }
 
-#endif // UDHO_MIDDLEWARE_H
+#endif // UDHO_KERNEL_H

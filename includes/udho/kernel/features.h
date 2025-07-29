@@ -1,14 +1,14 @@
-#ifndef UDHO_MIDDLEWARE_FEATURES_H
-#define UDHO_MIDDLEWARE_FEATURES_H
+#ifndef UDHO_KERNEL_FEATURES_H
+#define UDHO_KERNEL_FEATURES_H
 
 namespace udho {
-namespace middleware {
+namespace kernel {
 
 /**
  * @enum features
- * @brief Enumerates available middleware features
+ * @brief Enumerates available kernel features
  *
- * Defines the types of functionality a middleware component can provide
+ * Defines the types of functionality a kernel component can provide
  */
 namespace features{
 
@@ -58,4 +58,4 @@ namespace features{
 }
 }
 
-#endif // UDHO_MIDDLEWARE_FEATURES_H
+#endif // UDHO_KERNEL_FEATURES_H

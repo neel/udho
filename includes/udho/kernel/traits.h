@@ -1,10 +1,10 @@
-#ifndef UDHO_MIDDLEWARE_TRAITS_H
-#define UDHO_MIDDLEWARE_TRAITS_H
+#ifndef UDHO_KERNEL_TRAITS_H
+#define UDHO_KERNEL_TRAITS_H
 
 #include <type_traits>
 
 namespace udho{
-namespace middleware{
+namespace kernel{
 
 /**
  * @brief The component_traits class
@@ -25,4 +25,4 @@ struct default_constructed{};
 }
 }
 
-#endif // UDHO_MIDDLEWARE_TRAITS_H
+#endif // UDHO_KERNEL_TRAITS_H

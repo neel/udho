@@ -1,12 +1,12 @@
-#ifndef UDHO_MIDDLEWARE_DETAIL_H
-#define UDHO_MIDDLEWARE_DETAIL_H
+#ifndef UDHO_KERNEL_DETAIL_H
+#define UDHO_KERNEL_DETAIL_H
 
 #include <utility>
 #include <boost/type_traits.hpp>
-#include <udho/middleware/traits.h>
+#include <udho/kernel/traits.h>
 
 namespace udho{
-namespace middleware {
+namespace kernel {
 
 namespace detail {
 
@@ -133,4 +133,4 @@ struct arguments {
 }
 }
 
-#endif // UDHO_MIDDLEWARE_DETAIL_H
+#endif // UDHO_KERNEL_DETAIL_H

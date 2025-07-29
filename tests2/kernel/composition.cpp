@@ -11,9 +11,9 @@
 
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
-#include <udho/middleware/composition.h>
-#include <udho/middleware/evaluator.h>
-#include <udho/middleware/pipeline.h>
+#include <udho/kernel/composition.h>
+#include <udho/kernel/evaluator.h>
+#include <udho/kernel/pipeline.h>
 
 #include <iostream>
 
@@ -45,7 +45,7 @@ struct Component {
     Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
 
     template <typename... Components>
-    state eval(const udho::middleware::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+    state eval(const udho::kernel::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
         return state(message == "accept");
     }
 
@@ -56,12 +56,12 @@ struct Component {
 }
 
 template <>
-struct udho::middleware::component_traits<testing::Component<5>> {
+struct udho::kernel::component_traits<testing::Component<5>> {
     static constexpr const bool prefer_reference = true;
 };
 
-TEST_CASE("Middleware Construction & Composition") {
-    using composition_type = udho::middleware::composition<
+TEST_CASE("kernel Construction & Composition") {
+    using composition_type = udho::kernel::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -75,13 +75,13 @@ TEST_CASE("Middleware Construction & Composition") {
 
     SECTION("Basic Construction") {
         composition_type composition{
-            udho::middleware::default_constructed{},
-            udho::middleware::default_constructed{},
-            udho::middleware::default_constructed{},
-            udho::middleware::default_constructed{},
-            udho::middleware::default_constructed{},
+            udho::kernel::default_constructed{},
+            udho::kernel::default_constructed{},
+            udho::kernel::default_constructed{},
+            udho::kernel::default_constructed{},
+            udho::kernel::default_constructed{},
             component_5,
-            udho::middleware::default_constructed{}
+            udho::kernel::default_constructed{}
         };
 
         CHECK(composition.get<testing::Component<0>>().component().component_index == 0);
@@ -150,9 +150,9 @@ TEST_CASE("Middleware Construction & Composition") {
     }
 }
 
-TEST_CASE("Middleware Pipeline") {
+TEST_CASE("kernel Pipeline") {
     SECTION("eval & states basic operations") {
-        using composition_type = udho::middleware::composition<
+        using composition_type = udho::kernel::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -162,7 +162,7 @@ TEST_CASE("Middleware Pipeline") {
             testing::Component<6>
         >;
 
-        using states_type = udho::middleware::states<
+        using states_type = udho::kernel::states<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -198,7 +198,7 @@ TEST_CASE("Middleware Pipeline") {
     }
 
     SECTION("Feature-based evaluation pipeline") {
-        using pipeline_type = udho::middleware::pipeline<
+        using pipeline_type = udho::kernel::pipeline<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -214,7 +214,7 @@ TEST_CASE("Middleware Pipeline") {
             testing::Component<0>{"accept"},
             testing::Component<1>{"accept"},
             testing::Component<2, 0>{"accept"},
-            udho::middleware::default_constructed{},
+            udho::kernel::default_constructed{},
             testing::Component<4, 1>{"accept"},
             component_5,
             testing::Component<6>{"accept"}
@@ -225,7 +225,7 @@ TEST_CASE("Middleware Pipeline") {
         udho::net::types::headers::request request;
 
         // Create evaluator for Feature<0> and Feature<1>
-        using evaluator_type = udho::middleware::evaluator<
+        using evaluator_type = udho::kernel::evaluator<
             testing::Feature<0>,
             testing::Feature<1>
         >;
@@ -249,7 +249,7 @@ TEST_CASE("Middleware Pipeline") {
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
-        using pipeline_type = udho::middleware::pipeline<
+        using pipeline_type = udho::kernel::pipeline<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -265,7 +265,7 @@ TEST_CASE("Middleware Pipeline") {
             testing::Component<0>{"accept"},
             testing::Component<1>{"reject"},
             testing::Component<2, 0>{"accept"},
-            udho::middleware::default_constructed{},
+            udho::kernel::default_constructed{},
             testing::Component<4, 1>{"accept"},
             component_5,
             testing::Component<6>{"accept"}
@@ -276,7 +276,7 @@ TEST_CASE("Middleware Pipeline") {
         udho::net::types::headers::request request;
 
         // Create evaluator for Feature<0> and Feature<1>
-        using evaluator_type = udho::middleware::evaluator<
+        using evaluator_type = udho::kernel::evaluator<
             testing::Feature<0>,
             testing::Feature<1>
         >;
@@ -304,9 +304,9 @@ TEST_CASE("Middleware Pipeline") {
     }
 }
 
-TEST_CASE("Middleware Extra") {
+TEST_CASE("kernel Extra") {
     SECTION("Error handling in state access") {
-        udho::middleware::state_wrapper<testing::State, testing::Feature<0>> state;
+        udho::kernel::state_wrapper<testing::State, testing::Feature<0>> state;
         CHECK(!state.ready());
 
         // Accessing unready state should throw
@@ -325,7 +325,7 @@ TEST_CASE("Middleware Extra") {
     SECTION("Component with reference storage semantics") {
         testing::Component<5> non_movable{"non_movable"};
 
-        using composition_type = udho::middleware::composition<
+        using composition_type = udho::kernel::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -333,7 +333,7 @@ TEST_CASE("Middleware Extra") {
             testing::Component<4, 1>,
             testing::Component<5>,
             testing::Component<6>
-            >;
+        >;
 
         composition_type composition = composition_type::compose(non_movable);
         auto& wrapper = composition.get<testing::Component<5>>();

@@ -1,16 +1,16 @@
-#ifndef UDHO_MIDDLEWARE_STATE_H
-#define UDHO_MIDDLEWARE_STATE_H
+#ifndef UDHO_KERNEL_STATE_H
+#define UDHO_KERNEL_STATE_H
 
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
-#include <udho/middleware/features.h>
-#include <udho/middleware/fwd.h>
-// #include <udho/middleware/wrapper.h>
+#include <udho/kernel/features.h>
+#include <udho/kernel/fwd.h>
+// #include <udho/kernel/wrapper.h>
 
 namespace udho {
-namespace middleware {
+namespace kernel {
 
 #ifndef __DOXYGEN__
 
@@ -191,4 +191,4 @@ private:
 }
 
 
-#endif // UDHO_MIDDLEWARE_STATE_H
+#endif // UDHO_KERNEL_STATE_H

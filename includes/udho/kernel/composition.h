@@ -1,14 +1,14 @@
-#ifndef UDHO_MIDDLEWARE_COMPOSITION_H
-#define UDHO_MIDDLEWARE_COMPOSITION_H
+#ifndef UDHO_KERNEL_COMPOSITION_H
+#define UDHO_KERNEL_COMPOSITION_H
 
 #include <type_traits>
-#include <udho/middleware/fwd.h>
-#include <udho/middleware/features.h>
-#include <udho/middleware/wrapper.h>
-#include <udho/middleware/detail.h>
+#include <udho/kernel/fwd.h>
+#include <udho/kernel/features.h>
+#include <udho/kernel/wrapper.h>
+#include <udho/kernel/detail.h>
 
 namespace udho{
-namespace middleware{
+namespace kernel{
 
 template <typename... Components>
 struct compositor;
@@ -219,4 +219,4 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
 }
 }
 
-#endif // UDHO_MIDDLEWARE_COMPOSITION_H
+#endif // UDHO_KERNEL_COMPOSITION_H
