@@ -1,10 +1,10 @@
 #ifndef UDHO_MIDDLEWARE_EVALUATOR_H
 #define UDHO_MIDDLEWARE_EVALUATOR_H
 
+#include <boost/asio/ip/address.hpp>
+#include <udho/net/common.h>
 #include <udho/middleware/fwd.h>
 #include <udho/middleware/features.h>
-#include <udho/middleware/component.h>
-#include <udho/middleware/facade.h>
 #include <udho/middleware/state.h>
 
 namespace udho {
@@ -13,16 +13,17 @@ namespace middleware {
 
 namespace detail {
 
-template <typename HeadT, typename... Tail>
+template <typename... Components>
 struct component_evaluator{
-    component_evaluator(udho::middleware::states<HeadT, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _states(states), _address(address), _request(request) {}
+    component_evaluator(udho::middleware::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _states(states), _address(address), _request(request) {}
 
     template <typename ComponentT>
     bool operator()(ComponentT& component) {
         return component.eval(_states, _address, _request);
     }
 
-    udho::middleware::states<HeadT, Tail...>& _states;
+    udho::middleware::states<Components...>& _states;
+
     const boost::asio::ip::address& _address;
     const udho::net::types::headers::request& _request;
 };
@@ -30,14 +31,14 @@ struct component_evaluator{
 }
 
 template <typename FeatureX, typename... Features>
-struct evaluator{
+struct evaluator<FeatureX, Features...>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
-    template <typename HeadT, typename... Tail>
-    std::size_t operator()(udho::middleware::facade_chain<HeadT, Tail...>& facade, udho::middleware::states<HeadT, Tail...>& states) {
+    template <typename... Components>
+    std::size_t operator()(udho::middleware::composition<Components...>& facade, udho::middleware::states<Components...>& states) {
         static_assert(facade.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
 
-        std::size_t count = facade.template apply<FeatureX>( detail::component_evaluator<HeadT, Tail...>{states, _address, _request} );
+        std::size_t count = facade.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
         evaluator<Features...> ev{_address, _request};
         count += ev(facade.tail(), states.tail());
         return count;
@@ -51,11 +52,11 @@ template <typename FeatureX>
 struct evaluator<FeatureX>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
-    template <typename HeadT, typename... Tail>
-    std::size_t operator()(udho::middleware::facade_chain<HeadT, Tail...>& facade, udho::middleware::states<HeadT, Tail...>& states) {
+    template <typename... Components>
+    std::size_t operator()(udho::middleware::composition<Components...>& facade, udho::middleware::states<Components...>& states) {
         static_assert(facade.template count<FeatureX>() > 0, "Feature missing in the middleware facade");
 
-        return facade.template apply<FeatureX>( detail::component_evaluator<HeadT, Tail...>{states, _address, _request} );
+        return facade.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
     }
 
     const boost::asio::ip::address& _address;

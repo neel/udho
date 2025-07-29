@@ -11,14 +11,50 @@ namespace udho{
 namespace middleware{
 
 template <typename... Components>
-struct composition;
-
-template <typename... Components>
 struct compositor;
+
+namespace detail{
+
+template <std::size_t Index, bool Status>
+struct feasible_for_atleast_one_component{
+    static constexpr const bool value = Status;
+};
+
+template <typename...>
+struct feasible_for;
+
+template <typename ArgT>
+struct feasible_for<ArgT>{
+
+    template <std::size_t Index, typename... Components>
+    static constexpr void assert_msg(ArgT&& arg) {
+        constexpr const bool count = detail::accumulate<
+                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
+            >::value == 1;
+        static_assert(feasible_for_atleast_one_component<Index, count>::value, "constraint feasible_for_atleast_one_component<Index, true> must be satisfied for all arguments");
+    }
+};
+
+template <typename ArgT, typename... Args>
+struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
+
+    template <std::size_t Index, typename... Components>
+    static constexpr void assert_msg(ArgT&& arg, Args&&... args) {
+        constexpr const bool count = detail::accumulate<
+                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
+            >::value == 1;
+
+        static_assert(feasible_for_atleast_one_component<Index, count>::value, "constraint feasible_for_atleast_one_component<Index, true> must be satisfied for all arguments");
+        feasible_for<Args...>::template assert_msg<Index+1, Components...>(std::forward<Args>(args)...);
+    }
+};
+
+}
 
 template <typename... Components>
 struct compositor {
     using composition_type = composition<Components...>;
+
     /**
      * @brief creates a composition with inputs for subsets of Components while assuming that the left outs will use default_constructed
      * @param args
@@ -26,6 +62,7 @@ struct compositor {
      */
     template <typename ArgT, typename... Args>
     static composition_type compose(ArgT&& arg, Args&&... args) {
+        detail::feasible_for<ArgT, Args...>::template assert_msg<0, Components...>(std::forward<ArgT>(arg), std::forward<Args>(args)...);
         return composition_type{detail::arguments<ArgT, Args...>::template find<Components>(std::forward<ArgT>(arg), std::forward<Args>(args)...)...};
     }
 
@@ -45,7 +82,11 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     static composition<ComponentT, Rest...> compose(Args&&... args) { return compositor<ComponentT, Rest...>::compose(std::forward<Args>(args)...); }
 
     template <typename ArgT, typename... Args>
-    composition(ArgT&& arg, Args&&... args): wrapper_type(std::forward<ArgT>(arg)), composition<Rest...>(std::forward<Args>(args)...) {}
+    composition(ArgT&& arg, Args&&... args): wrapper_type(std::forward<ArgT>(arg)), composition<Rest...>(std::forward<Args>(args)...) {
+        static constexpr const std::size_t arguments_provided = sizeof...(Args);
+        static constexpr const std::size_t expected_arguments = sizeof...(Rest);
+        static_assert(arguments_provided == expected_arguments, "insufficient number of arguments passed to the composition constructor");
+    }
 
     /// @{
     template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>

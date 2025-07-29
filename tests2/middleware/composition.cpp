@@ -9,6 +9,8 @@
 #include <boost/lexical_cast.hpp>
 #include <udho/middleware/composition.h>
 
+#include <udho/middleware/pipeline.h>
+
 #include <iostream>
 
 namespace testing {
@@ -36,6 +38,10 @@ struct Component{
 
 };
 
+template <>
+struct udho::middleware::component_traits<testing::Component<5>> {
+    static constexpr const bool prefer_reference = true;
+};
 
 TEST_CASE("Compilation") {
     using composition_type = udho::middleware::composition<
@@ -43,14 +49,20 @@ TEST_CASE("Compilation") {
             testing::Component<1>,
             testing::Component<2, 0>,
             testing::Component<3>,
-            testing::Component<4, 1>
+            testing::Component<4, 1>,
+            testing::Component<5>,
+            testing::Component<6>
         >;
+
+    testing::Component<5> component_5;
 
     composition_type composition{
         udho::middleware::default_constructed{},
         udho::middleware::default_constructed{},
         udho::middleware::default_constructed{},
         udho::middleware::default_constructed{},
+        udho::middleware::default_constructed{},
+        component_5,
         udho::middleware::default_constructed{}
     };
 
@@ -68,7 +80,7 @@ TEST_CASE("Compilation") {
     CHECK(composition.at<testing::Feature<1>, 1>().component_index == 4);
 
     {
-        auto mw = composition_type::compose();
+        auto mw = composition_type::compose(component_5);
 
         CHECK(mw.get<testing::Component<0>>().component_index == 0);
         CHECK(mw.get<testing::Component<1>>().component_index == 1);
@@ -82,7 +94,7 @@ TEST_CASE("Compilation") {
         CHECK(mw.get<testing::Component<3>>().is_default_constructed);
         CHECK(mw.get<testing::Component<4, 1>>().is_default_constructed);
     } {
-        auto mw = composition_type::compose(testing::Component<3>{"moved"}, testing::Component<1>{"moved"});
+        auto mw = composition_type::compose(component_5, testing::Component<3>{"moved"}, testing::Component<1>{"moved"});
 
         CHECK(mw.get<testing::Component<0>>().is_default_constructed);
         CHECK(!mw.get<testing::Component<1>>().is_default_constructed);

@@ -1,9 +1,13 @@
 #ifndef UDHO_MIDDLEWARE_STATE_H
 #define UDHO_MIDDLEWARE_STATE_H
 
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <udho/middleware/features.h>
-#include <udho/middleware/component.h>
+#include <udho/middleware/fwd.h>
+// #include <udho/middleware/wrapper.h>
 
 namespace udho {
 namespace middleware {
@@ -17,6 +21,10 @@ namespace middleware {
  */
 template <typename StateT, typename Feature>
 struct state_wrapper{
+    static_assert(std::is_move_constructible_v<StateT>);
+    static_assert(std::is_move_assignable_v<StateT>);
+    static_assert(std::is_copy_constructible_v<StateT>);
+
     using type      = StateT;
     using feature   = Feature;
     using opt_type  = std::optional<type>;
@@ -58,67 +66,71 @@ private:
     opt_type _state;
 };
 
-template <typename ComponentT, typename... Tail>
-struct states: private states<Tail...> {
+
+
+
+
+template <typename ComponentT, typename... Rest>
+struct states<ComponentT, Rest...>: private states<Rest...> {
+    using component_type = ComponentT;
     using state_type    = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
 
-    template <typename HeadQ>
-    using result_type = std::conditional_t<std::is_same_v<HeadQ, ComponentT>, state_type, typename states<Tail...>::template result_type<HeadQ>>;
-
-    template <typename F>
-    using result_type_by_feature = std::conditional_t<std::is_same_v<typename state_type::feature, F>, state_type, typename states<Tail...>::template result_type_by_feature<F>>;
-
+    static_assert(std::is_default_constructible_v<state_type>);
+    static_assert(std::is_move_constructible_v<state_type>);
 
     template <typename FeatureX, typename... Features>
     friend struct evaluator;
 
-    inline explicit states() {}
-
+    states() = default;
     template <typename OtherHeadT, typename... OtherTail>
-    inline explicit states(const states<OtherHeadT, OtherTail...>& other): _state(other.template get<ComponentT>()), states<Tail...>(other) {}
+    inline explicit states(states<OtherHeadT, OtherTail...>&& other):
+        _state(std::move(other.template get<ComponentT>())),
+        states<Rest...>(std::forward<states<OtherHeadT, OtherTail...>>(other))
+    {}
 
-
-    template <typename HeadQ, std::enable_if_t<std::is_same_v<HeadQ, ComponentT>, bool> = true>
+    /// @{
+    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     state_type& get() { return _state; }
 
-    template <typename HeadQ, std::enable_if_t<std::is_same_v<HeadQ, ComponentT>, bool> = true>
+    template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
+    auto& get() { return states<Rest...>::template get<ComponentQ>(); }
+
+    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     const state_type& get() const { return _state; }
 
-    template <typename HeadQ, std::enable_if_t<!std::is_same_v<HeadQ, ComponentT>, bool> = true>
-    result_type<HeadQ>& get() { return states<Tail...>::template get<HeadQ>(); }
+    template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
+    const auto& get() const { return states<Rest...>::template get<ComponentQ>(); }
+    /// @}
 
-    template <typename HeadQ, std::enable_if_t<!std::is_same_v<HeadQ, ComponentT>, bool> = true>
-    const result_type<HeadQ>& get() const { return states<Tail...>::template get<HeadQ>(); }
-
-
-    template <typename FeatureT, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return 1+states<Tail...>::template count<FeatureT>(); }
-
-    template <typename FeatureT, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return states<Tail...>::template count<FeatureT>(); }
-
-
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
+    /// @{
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
     state_type& at() { return _state; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    auto& at() { return states<Rest...>::template at<FeatureT, Idx-1>(); }
+
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    auto& at() { return states<Rest...>::template at<FeatureT, Idx>(); }
+
+
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
     const state_type& at() const { return _state; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    result_type_by_feature<FeatureT>& at() { return states<Tail...>::template at<FeatureT, Idx>(); }
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    const auto& at() const { return states<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    const result_type_by_feature<FeatureT>& at() const { return states<Tail...>::template at<FeatureT, Idx>(); }
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    const auto& at() const { return states<Rest...>::template at<FeatureT, Idx>(); }
+    /// @}
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx != 0, bool> = true>
-    result_type_by_feature<FeatureT>& at() { return states<Tail...>::template at<FeatureT, Idx-1>(); }
-
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx != 0, bool> = true>
-    const result_type_by_feature<FeatureT>& at() const { return states<Tail...>::template at<FeatureT, Idx-1>(); }
+    /// @{
+    template <typename FeatureT>
+    static constexpr int count() { return std::is_same_v<typename component_type::feature, FeatureT> + states<Rest...>::template count<FeatureT>(); }
+    /// @}
 
 private:
-    states<Tail...>& tail() { return *this; }
-    const states<Tail...>& tail() const { return *this; }
+    states<Rest...>& tail() { return *this; }
+    const states<Rest...>& tail() const { return *this; }
 
 private:
     state_type _state;
@@ -126,43 +138,44 @@ private:
 
 template <typename ComponentT>
 struct states<ComponentT> {
-    using state_type    = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
+    using component_type = ComponentT;
+    using state_type     = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
 
-    template <typename HeadQ>
-    using result_type = std::enable_if_t<std::is_same_v<HeadQ, ComponentT>, state_type>;
-
-    template <typename FeatureT>
-    using result_type_by_feature = std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT>, state_type>;
-
+    static_assert(std::is_default_constructible_v<state_type>);
+    static_assert(std::is_move_constructible_v<state_type>);
 
     template <typename FeatureX, typename... Features>
     friend struct evaluator;
 
-
-    inline explicit states() {}
-
+    states() = default;
     template <typename OtherHeadT, typename... OtherTail>
-    inline explicit states(const states<OtherHeadT, OtherTail...>& other): state_type(other.template get<ComponentT>()) {}
+    inline explicit states(states<OtherHeadT, OtherTail...>&& other):
+        _state(std::move(other.template get<ComponentT>()))
+    {}
 
-    template <typename HeadQ, std::enable_if_t<std::is_same_v<HeadQ, ComponentT>, bool> = true>
+
+    /// @{
+    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     state_type& get() { return _state; }
 
-    template <typename HeadQ, std::enable_if_t<std::is_same_v<HeadQ, ComponentT>, bool> = true>
+    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     const state_type& get() const { return _state; }
+    /// @}
 
 
-    template <typename FeatureT, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return 1; }
-
-    template <typename FeatureT, std::enable_if_t<!std::is_same_v<typename state_type::feature, FeatureT>, bool> = true>
-    static constexpr int count() { return 0; }
-
-
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
+    /// @{
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
     state_type& at() { return _state; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename state_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
     const state_type& at() const { return _state; }
+    /// @}
+
+    /// @{
+    template <typename FeatureT>
+    static constexpr int count() { return std::is_same_v<typename component_type::feature, FeatureT>; }
+    /// @}
+
 
 private:
     state_type _state;

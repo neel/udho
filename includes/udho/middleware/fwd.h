@@ -6,13 +6,13 @@
 namespace udho {
 namespace middleware {
 
-template <typename HeadT, typename... Tail>
-struct facade_chain;
+template <typename...>
+struct composition;
 
-template <typename HeadT, typename... Tail>
+template <typename...>
 struct states;
 
-template <typename FeatureX, typename... Features>
+template <typename...>
 struct evaluator;
 
 

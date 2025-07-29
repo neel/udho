@@ -26,8 +26,12 @@ struct component_member{
     static constexpr bool const is_default_constructible = false;
     static constexpr bool const is_move_constructible    = false;
 
+    inline explicit component_member(): _component(*dummy) {
+        static_assert(is_default_constructible, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::prefer_reference is true, but no feasible argument was found");
+    }
+
     inline explicit component_member(component_type& component_ref): _component(component_ref) {}
-    inline explicit component_member(std::false_type&&): _component(*dummy) {
+    inline explicit component_member(default_constructed&&): _component(*dummy) {
         static_assert(false, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::prefer_reference is true, but no feasible argument was found");
     }
 
@@ -49,7 +53,7 @@ struct component_member<ComponentT, false, true>{
     inline explicit component_member(Arg component_rval): _component(std::move(component_rval)) {}
 
     inline explicit component_member(): _component() {}
-    inline explicit component_member(std::false_type&&): _component() {}
+    inline explicit component_member(default_constructed&&): _component() {}
 
     component_type& component() { return _component; }
     const component_type& component() const { return _component; }
@@ -69,7 +73,9 @@ struct component_member<ComponentT, false, false>{
     template <typename Arg, std::enable_if_t<detail::argument_traits<ComponentT>::template should_move<Arg>, bool> = true>
     inline explicit component_member(Arg component_rval): _component(std::move(component_rval)) {}
 
-    inline explicit component_member() = delete;
+    inline explicit component_member() {
+        static_assert(is_default_constructible, "No argument supplied for non-default constructible Component");
+    }
 
     component_type& component() { return _component; }
     const component_type& component() const { return _component; }
