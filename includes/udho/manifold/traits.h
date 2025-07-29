@@ -1,10 +1,10 @@
-#ifndef UDHO_KERNEL_TRAITS_H
-#define UDHO_KERNEL_TRAITS_H
+#ifndef UDHO_MANIFOLD_TRAITS_H
+#define UDHO_MANIFOLD_TRAITS_H
 
 #include <type_traits>
 
 namespace udho{
-namespace kernel{
+namespace manifold{
 
 /**
  * @brief The component_traits class
@@ -25,4 +25,4 @@ struct default_constructed{};
 }
 }
 
-#endif // UDHO_KERNEL_TRAITS_H
+#endif // UDHO_MANIFOLD_TRAITS_H

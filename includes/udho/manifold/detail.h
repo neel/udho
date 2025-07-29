@@ -1,12 +1,12 @@
-#ifndef UDHO_KERNEL_DETAIL_H
-#define UDHO_KERNEL_DETAIL_H
+#ifndef UDHO_MANIFOLD_DETAIL_H
+#define UDHO_MANIFOLD_DETAIL_H
 
 #include <utility>
 #include <boost/type_traits.hpp>
-#include <udho/kernel/traits.h>
+#include <udho/manifold/traits.h>
 
 namespace udho{
-namespace kernel {
+namespace manifold {
 
 namespace detail {
 
@@ -133,4 +133,4 @@ struct arguments {
 }
 }
 
-#endif // UDHO_KERNEL_DETAIL_H
+#endif // UDHO_MANIFOLD_DETAIL_H

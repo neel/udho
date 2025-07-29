@@ -1,14 +1,14 @@
-#ifndef UDHO_KERNEL_COMPOSITION_H
-#define UDHO_KERNEL_COMPOSITION_H
+#ifndef UDHO_MANIFOLD_COMPOSITION_H
+#define UDHO_MANIFOLD_COMPOSITION_H
 
 #include <type_traits>
-#include <udho/kernel/fwd.h>
-#include <udho/kernel/features.h>
-#include <udho/kernel/wrapper.h>
-#include <udho/kernel/detail.h>
+#include <udho/manifold/fwd.h>
+#include <udho/manifold/features.h>
+#include <udho/manifold/wrapper.h>
+#include <udho/manifold/detail.h>
 
 namespace udho{
-namespace kernel{
+namespace manifold{
 
 template <typename... Components>
 struct compositor;
@@ -219,4 +219,4 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
 }
 }
 
-#endif // UDHO_KERNEL_COMPOSITION_H
+#endif // UDHO_MANIFOLD_COMPOSITION_H

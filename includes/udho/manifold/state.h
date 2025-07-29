@@ -1,16 +1,16 @@
-#ifndef UDHO_KERNEL_STATE_H
-#define UDHO_KERNEL_STATE_H
+#ifndef UDHO_MANIFOLD_STATE_H
+#define UDHO_MANIFOLD_STATE_H
 
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
-#include <udho/kernel/features.h>
-#include <udho/kernel/fwd.h>
-// #include <udho/kernel/wrapper.h>
+#include <udho/manifold/features.h>
+#include <udho/manifold/fwd.h>
+// #include <udho/manifold/wrapper.h>
 
 namespace udho {
-namespace kernel {
+namespace manifold {
 
 #ifndef __DOXYGEN__
 
@@ -191,4 +191,4 @@ private:
 }
 
 
-#endif // UDHO_KERNEL_STATE_H
+#endif // UDHO_MANIFOLD_STATE_H

@@ -1,14 +1,14 @@
-#ifndef UDHO_KERNEL_FEATURES_H
-#define UDHO_KERNEL_FEATURES_H
+#ifndef UDHO_MANIFOLD_FEATURES_H
+#define UDHO_MANIFOLD_FEATURES_H
 
 namespace udho {
-namespace kernel {
+namespace manifold {
 
 /**
  * @enum features
- * @brief Enumerates available kernel features
+ * @brief Enumerates available manifold features
  *
- * Defines the types of functionality a kernel component can provide
+ * Defines the types of functionality a manifold component can provide
  */
 namespace features{
 
@@ -58,4 +58,4 @@ namespace features{
 }
 }
 
-#endif // UDHO_KERNEL_FEATURES_H
+#endif // UDHO_MANIFOLD_FEATURES_H

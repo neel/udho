@@ -11,11 +11,9 @@
 
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
-#include <udho/kernel/composition.h>
-#include <udho/kernel/evaluator.h>
-#include <udho/kernel/pipeline.h>
-
-#include <iostream>
+#include <udho/manifold/composition.h>
+#include <udho/manifold/evaluator.h>
+#include <udho/manifold/pipeline.h>
 
 namespace testing {
 
@@ -45,7 +43,7 @@ struct Component {
     Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
 
     template <typename... Components>
-    state eval(const udho::kernel::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+    state eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
         return state(message == "accept");
     }
 
@@ -56,12 +54,12 @@ struct Component {
 }
 
 template <>
-struct udho::kernel::component_traits<testing::Component<5>> {
+struct udho::manifold::component_traits<testing::Component<5>> {
     static constexpr const bool prefer_reference = true;
 };
 
-TEST_CASE("kernel Construction & Composition") {
-    using composition_type = udho::kernel::composition<
+TEST_CASE("manifold Construction & Composition") {
+    using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -75,13 +73,13 @@ TEST_CASE("kernel Construction & Composition") {
 
     SECTION("Basic Construction") {
         composition_type composition{
-            udho::kernel::default_constructed{},
-            udho::kernel::default_constructed{},
-            udho::kernel::default_constructed{},
-            udho::kernel::default_constructed{},
-            udho::kernel::default_constructed{},
+            udho::manifold::default_constructed{},
+            udho::manifold::default_constructed{},
+            udho::manifold::default_constructed{},
+            udho::manifold::default_constructed{},
+            udho::manifold::default_constructed{},
             component_5,
-            udho::kernel::default_constructed{}
+            udho::manifold::default_constructed{}
         };
 
         CHECK(composition.get<testing::Component<0>>().component().component_index == 0);
@@ -150,9 +148,9 @@ TEST_CASE("kernel Construction & Composition") {
     }
 }
 
-TEST_CASE("kernel Pipeline") {
+TEST_CASE("manifold Pipeline") {
     SECTION("eval & states basic operations") {
-        using composition_type = udho::kernel::composition<
+        using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -162,7 +160,7 @@ TEST_CASE("kernel Pipeline") {
             testing::Component<6>
         >;
 
-        using states_type = udho::kernel::states<
+        using states_type = udho::manifold::states<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -198,7 +196,7 @@ TEST_CASE("kernel Pipeline") {
     }
 
     SECTION("Feature-based evaluation pipeline") {
-        using pipeline_type = udho::kernel::pipeline<
+        using pipeline_type = udho::manifold::pipeline<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -214,7 +212,7 @@ TEST_CASE("kernel Pipeline") {
             testing::Component<0>{"accept"},
             testing::Component<1>{"accept"},
             testing::Component<2, 0>{"accept"},
-            udho::kernel::default_constructed{},
+            udho::manifold::default_constructed{},
             testing::Component<4, 1>{"accept"},
             component_5,
             testing::Component<6>{"accept"}
@@ -225,7 +223,7 @@ TEST_CASE("kernel Pipeline") {
         udho::net::types::headers::request request;
 
         // Create evaluator for Feature<0> and Feature<1>
-        using evaluator_type = udho::kernel::evaluator<
+        using evaluator_type = udho::manifold::evaluator<
             testing::Feature<0>,
             testing::Feature<1>
         >;
@@ -249,7 +247,7 @@ TEST_CASE("kernel Pipeline") {
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
-        using pipeline_type = udho::kernel::pipeline<
+        using pipeline_type = udho::manifold::pipeline<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -265,7 +263,7 @@ TEST_CASE("kernel Pipeline") {
             testing::Component<0>{"accept"},
             testing::Component<1>{"reject"},
             testing::Component<2, 0>{"accept"},
-            udho::kernel::default_constructed{},
+            udho::manifold::default_constructed{},
             testing::Component<4, 1>{"accept"},
             component_5,
             testing::Component<6>{"accept"}
@@ -276,7 +274,7 @@ TEST_CASE("kernel Pipeline") {
         udho::net::types::headers::request request;
 
         // Create evaluator for Feature<0> and Feature<1>
-        using evaluator_type = udho::kernel::evaluator<
+        using evaluator_type = udho::manifold::evaluator<
             testing::Feature<0>,
             testing::Feature<1>
         >;
@@ -304,9 +302,9 @@ TEST_CASE("kernel Pipeline") {
     }
 }
 
-TEST_CASE("kernel Extra") {
+TEST_CASE("manifold Extra") {
     SECTION("Error handling in state access") {
-        udho::kernel::state_wrapper<testing::State, testing::Feature<0>> state;
+        udho::manifold::state_wrapper<testing::State, testing::Feature<0>> state;
         CHECK(!state.ready());
 
         // Accessing unready state should throw
@@ -325,7 +323,7 @@ TEST_CASE("kernel Extra") {
     SECTION("Component with reference storage semantics") {
         testing::Component<5> non_movable{"non_movable"};
 
-        using composition_type = udho::kernel::composition<
+        using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,

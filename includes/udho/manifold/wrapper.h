@@ -1,16 +1,16 @@
-#ifndef UDHO_KERNEL_WRAPPER_H
-#define UDHO_KERNEL_WRAPPER_H
+#ifndef UDHO_MANIFOLD_WRAPPER_H
+#define UDHO_MANIFOLD_WRAPPER_H
 
-#include <udho/kernel/fwd.h>
-#include <udho/kernel/features.h>
+#include <udho/manifold/fwd.h>
+#include <udho/manifold/features.h>
 #include <boost/asio/ip/address.hpp>
 #include <udho/utils/traits.h>
 #include <udho/net/common.h>
-#include <udho/kernel/traits.h>
-#include <udho/kernel/detail.h>
+#include <udho/manifold/traits.h>
+#include <udho/manifold/detail.h>
 
 namespace udho {
-namespace kernel {
+namespace manifold {
 
 template <typename ComponentT, typename FeatureT>
 struct interface;
@@ -95,7 +95,7 @@ struct interface: protected detail::component_member<ComponentT> {
     using feature           = FeatureT;
 
     template <typename Head, typename... Tail>
-    state_type eval(const udho::kernel::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
         return member_type::component().eval(states, address, request);
     }
 
@@ -112,7 +112,7 @@ struct interface<ComponentT, features::filter>: protected detail::component_memb
     inline bool operator()(const boost::asio::ip::address& address){ return member_type::component()(address); }
 
     template <typename Head, typename... Tail>
-    state_type eval(const udho::kernel::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
         return member_type::component().eval(states, address, request);
     }
 
@@ -133,7 +133,7 @@ struct interface<ComponentT, features::token>: protected detail::component_membe
     inline bool verify(const token_type& token){ return member_type::component().verify(); }
 
     template <typename Head, typename... Tail>
-    state_type eval(const udho::kernel::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
         return member_type::component().eval(states, address, request);
     }
 
@@ -165,8 +165,8 @@ struct wrapper: interface<ComponentT, typename ComponentT::feature>{
     wrapper(ArgX&&): interface_type() {}
 
     template <typename... Components, typename... Args>
-    bool eval(udho::kernel::states<Components...>& states, Args... args) {
-        using states_facade_type = udho::kernel::states<Components...>;
+    bool eval(udho::manifold::states<Components...>& states, Args... args) {
+        using states_facade_type = udho::manifold::states<Components...>;
         state_type state = std::move(interface_type::eval(states, std::forward<Args>(args)...));
         bool result = state.accepted();
         states.template get<ComponentT>() = std::move(state);
@@ -177,4 +177,4 @@ struct wrapper: interface<ComponentT, typename ComponentT::feature>{
 }
 }
 
-#endif // UDHO_KERNEL_WRAPPER_H
+#endif // UDHO_MANIFOLD_WRAPPER_H

@@ -1,10 +1,10 @@
-#ifndef UDHO_KERNEL_FWD_H
-#define UDHO_KERNEL_FWD_H
+#ifndef UDHO_MANIFOLD_FWD_H
+#define UDHO_MANIFOLD_FWD_H
 
-#include <udho/kernel/features.h>
+#include <udho/manifold/features.h>
 
 namespace udho {
-namespace kernel {
+namespace manifold {
 
 template <typename...>
 struct composition;
@@ -19,4 +19,4 @@ struct evaluator;
 }
 }
 
-#endif // UDHO_KERNEL_FWD_H
+#endif // UDHO_MANIFOLD_FWD_H
