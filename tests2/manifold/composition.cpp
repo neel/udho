@@ -58,7 +58,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
     static constexpr const bool prefer_reference = true;
 };
 
-TEST_CASE("manifold Construction & Composition") {
+TEST_CASE("manifold Construction & Composition", "[manifold][composition]") {
     using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
@@ -148,7 +148,7 @@ TEST_CASE("manifold Construction & Composition") {
     }
 }
 
-TEST_CASE("manifold Pipeline") {
+TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
     SECTION("eval & states basic operations") {
         using composition_type = udho::manifold::composition<
             testing::Component<0>,
@@ -302,7 +302,7 @@ TEST_CASE("manifold Pipeline") {
     }
 }
 
-TEST_CASE("manifold Extra") {
+TEST_CASE("manifold Extra", "[manifold]") {
     SECTION("Error handling in state access") {
         udho::manifold::state_wrapper<testing::State, testing::Feature<0>> state;
         CHECK(!state.ready());
