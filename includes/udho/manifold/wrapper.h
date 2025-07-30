@@ -85,74 +85,104 @@ private:
     component_type _component;
 };
 
+template <typename ComponentT, bool HasState = udho::manifold::has_state<ComponentT>::value>
+struct component_storage: detail::component_member<ComponentT>{
+    using member_type       = detail::component_member<ComponentT>;
+    using state_type        = typename udho::manifold::component_traits<ComponentT>::state;
+
+    using member_type::member_type;
+    using member_type::component;
+
+    template <typename Head, typename... Tail>
+    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+        return member_type::component().eval(states, address, request);
+    }
+};
+
+template <typename ComponentT>
+struct component_storage<ComponentT, false>: detail::component_member<ComponentT>{
+    using member_type       = detail::component_member<ComponentT>;
+
+    using member_type::member_type;
+    using member_type::component;
+
+};
+
 }
 
 template <typename ComponentT, typename FeatureT>
-struct interface: protected detail::component_member<ComponentT> {
+struct interface: protected detail::component_storage<ComponentT> {
     using component_type    = ComponentT;
-    using member_type       = detail::component_member<ComponentT>;
-    using state_type        = typename ComponentT::state;
+    using storage_type      = detail::component_storage<ComponentT>;
     using feature           = FeatureT;
 
-    template <typename Head, typename... Tail>
-    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return member_type::component().eval(states, address, request);
-    }
 
-    using member_type::member_type;
+    using storage_type::storage_type;
 };
 
 template <typename ComponentT>
-struct interface<ComponentT, features::filter>: protected detail::component_member<ComponentT> {
+struct interface<ComponentT, features::filter>: protected detail::component_storage<ComponentT> {
     using component_type    = ComponentT;
-    using member_type       = detail::component_member<ComponentT>;
-    using state_type        = typename ComponentT::state;
+    using storage_type      = detail::component_storage<ComponentT>;
     using feature           = features::filter;
 
-    inline bool operator()(const boost::asio::ip::address& address){ return member_type::component()(address); }
+    inline bool operator()(const boost::asio::ip::address& address){ return storage_type::component()(address); }
 
-    template <typename Head, typename... Tail>
-    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return member_type::component().eval(states, address, request);
-    }
-
-    using member_type::member_type;
+    using storage_type::storage_type;
 };
 
 template <typename ComponentT>
-struct interface<ComponentT, features::token>: protected detail::component_member<ComponentT>  {
+struct interface<ComponentT, features::token>: protected detail::component_storage<ComponentT>  {
     using component_type = ComponentT;
-    using member_type    = detail::component_member<ComponentT>;
-    using state_type     = typename ComponentT::state;
+    using storage_type   = detail::component_storage<ComponentT>;
     using feature        = features::token;
 
     using token_type  = typename ComponentT::token_type;
     static_assert(udho::utils::traits::is_ostreamable_v<token_type>);
 
-    inline token_type generate(){ return member_type::component().generate(); }
-    inline bool verify(const token_type& token){ return member_type::component().verify(); }
+    inline token_type generate(){ return storage_type::component().generate(); }
+    inline bool verify(const token_type& token){ return storage_type::component().verify(); }
 
-    template <typename Head, typename... Tail>
-    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return member_type::component().eval(states, address, request);
-    }
 
-    using member_type::member_type;
+    using storage_type::storage_type;
 };
 
 
 /**
  * @brief The component_wrapper class
  */
-template <typename ComponentT>
+template <typename ComponentT, bool HasState = udho::manifold::has_state<ComponentT>::value>
 struct wrapper: interface<ComponentT, typename ComponentT::feature>{
+    using component_type = ComponentT;
+    using feature        = typename ComponentT::feature;
+    using interface_type = interface<ComponentT, feature>;
+
+    static constexpr const bool has_state = false;
+
+    using interface_type::component;
+
+    wrapper(const wrapper&) = default;
+
+    template <typename ArgX, std::enable_if_t<!std::is_same_v<ArgX, default_constructed>, bool> = true>
+    wrapper(ArgX&& arg): interface_type(std::forward<ArgX>(arg)) {}
+
+    template <typename ArgX, std::enable_if_t<std::is_same_v<ArgX, default_constructed>, bool> = true>
+    wrapper(ArgX&&): interface_type() {}
+
+    // template <typename... Components, typename... Args>
+    // bool eval(udho::manifold::states<Components...>& states, Args... args) {
+    //     return true;
+    // }
+};
+
+template <typename ComponentT>
+struct wrapper<ComponentT, true>: interface<ComponentT, typename ComponentT::feature>{
     using component_type = ComponentT;
     using feature        = typename ComponentT::feature;
     using interface_type = interface<ComponentT, feature>;
     using state_type     = typename interface_type::state_type;
 
-
-    static_assert(std::is_class_v<state_type>);
+    static constexpr const bool has_state = true;
 
     using interface_type::component;
 

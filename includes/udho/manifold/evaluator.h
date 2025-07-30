@@ -18,8 +18,13 @@ struct component_evaluator{
     component_evaluator(udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _states(states), _address(address), _request(request) {}
 
     template <typename ComponentT>
-    bool operator()(ComponentT& component) {
-        return component.eval(_states, _address, _request);
+    bool operator()(udho::manifold::wrapper<ComponentT, true>& wrapper) {
+        return wrapper.eval(_states, _address, _request);
+    }
+
+    template <typename ComponentT>
+    bool operator()(udho::manifold::wrapper<ComponentT, false>&) {
+        return false;
     }
 
     udho::manifold::states<Components...>& _states;

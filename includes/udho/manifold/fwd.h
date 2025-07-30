@@ -15,6 +15,9 @@ struct states;
 template <typename...>
 struct evaluator;
 
+template <typename ComponentT, bool HasState>
+struct wrapper;
+
 
 }
 }

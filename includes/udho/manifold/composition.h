@@ -53,9 +53,10 @@ std::size_t composition_apply(CompositionT& composition, Function&& function) { 
 
 template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() != Idx , bool> = true>
 std::size_t composition_apply(CompositionT& composition, Function&& function) {
-    bool result = function(composition.template at<FeatureT, Idx>());
+    auto& wrapper = composition.template at<FeatureT, Idx>();
+    bool result = function(wrapper);
     std::size_t count = result;
-    if(result) {
+    if(!wrapper.has_state || result) {
         count += composition_apply<CompositionT, FeatureT, Function, Idx+1>(composition, std::forward<Function>(function));
     }
     return count;
@@ -68,9 +69,10 @@ std::size_t composition_apply(const CompositionT& composition, Function&& functi
 
 template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() != Idx , bool> = true>
 std::size_t composition_apply(const CompositionT& composition, Function&& function) {
-    bool result = function(composition.template at<FeatureT, Idx>());
+    auto& wrapper = composition.template at<FeatureT, Idx>();
+    bool result = function(wrapper);
     std::size_t count = result;
-    if(result) {
+    if(!wrapper.has_state || result) {
         count += composition_apply<CompositionT, FeatureT, Function, Idx+1>(composition, std::forward<Function>(function));
     }
     return count;
