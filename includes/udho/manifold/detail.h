@@ -28,8 +28,8 @@ struct argument_traits {
 
 
     template <typename ArgT>
-    static constexpr const bool is_feasible = (component_traits<ComponentT>::prefer_reference && feasible_lvalue_reference<ArgT>) ||
-                                              (!component_traits<ComponentT>::prefer_reference && should_move<ArgT>);
+    static constexpr const bool is_feasible = (component_traits<ComponentT>::shared && feasible_lvalue_reference<ArgT>) ||
+                                              (!component_traits<ComponentT>::shared && should_move<ArgT>);
 };
 
 template <typename ArgT, typename... Args>
@@ -92,7 +92,7 @@ struct arguments {
     //  * @brief boolean sequence of size sizeof...(Components) such that position i of that sequence denote whether passing no argument is okay for that component or not
     //  */
     // template <typename... Components>
-    // using default_allowed = std::integer_sequence<bool, (std::is_default_constructible_v<Components> && !component_traits<Components>::prefer_reference)...>;
+    // using default_allowed = std::integer_sequence<bool, (std::is_default_constructible_v<Components> && !component_traits<Components>::shared)...>;
 
     // template <typename... Components>
     // static constexpr const std::size_t arguments_mapped = accumulate<std::integral_constant<bool, (index_of<0, Components> > 0) >...>::value;

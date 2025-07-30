@@ -17,7 +17,7 @@ struct interface;
 
 namespace detail{
 
-template <typename ComponentT, bool ReferencePreferred = component_traits<ComponentT>::prefer_reference, bool DefaultConstructible = std::is_default_constructible_v<ComponentT>>
+template <typename ComponentT, bool ReferencePreferred = component_traits<ComponentT>::shared, bool DefaultConstructible = std::is_default_constructible_v<ComponentT>>
 struct component_member{
     using component_type   = ComponentT;
 
@@ -27,12 +27,12 @@ struct component_member{
     static constexpr bool const is_move_constructible    = false;
 
     inline explicit component_member(): _component(*dummy) {
-        static_assert(is_default_constructible, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::prefer_reference is true, but no feasible argument was found");
+        static_assert(is_default_constructible, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::shared is true, but no feasible argument was found");
     }
 
     inline explicit component_member(component_type& component_ref): _component(component_ref) {}
     inline explicit component_member(default_constructed&&): _component(*dummy) {
-        static_assert(false, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::prefer_reference is true, but no feasible argument was found");
+        static_assert(false, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::shared is true, but no feasible argument was found");
     }
 
     component_type& component() { return _component; }

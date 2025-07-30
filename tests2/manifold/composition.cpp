@@ -67,7 +67,7 @@ struct XComponent {
 
 template <>
 struct udho::manifold::component_traits<testing::Component<5>> {
-    static constexpr const bool prefer_reference = true;
+    static constexpr const bool shared = true;
     using state = testing::State;
 };
 
