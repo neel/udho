@@ -177,6 +177,8 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<6>
         >;
 
+        using expected_states_type = udho::manifold::detail::states_for_composition<composition_type>::type;
+
         using states_type = udho::manifold::states<
             testing::Component<0>,
             testing::Component<1>,
@@ -187,6 +189,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<6>
         >;
 
+        static_assert(std::is_same_v<expected_states_type, states_type>);
 
         testing::Component<5> component_5;
 
@@ -227,16 +230,14 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
         testing::Component<5> component_5;
 
-        pipeline_type pipeline(
-            testing::Component<0>{"accept"},
-            testing::Component<1>{"accept"},
-            testing::Component<2, 0>{"accept"},
-            udho::manifold::default_constructed{},
-            testing::Component<4, 1>{"accept"},
-            testing::XComponent<0, 1>{},
-            component_5,
-            testing::Component<6>{"accept"}
-        );
+        pipeline_type pipeline =  pipeline_type::compose(
+                testing::Component<0>{"accept"},
+                testing::Component<1>{"accept"},
+                testing::Component<2, 0>{"accept"},
+                testing::Component<4, 1>{"accept"},
+                component_5,
+                testing::Component<6>{"accept"}
+            );
 
         // Mock request objects
         boost::asio::ip::address address;
@@ -280,12 +281,10 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
         testing::Component<5> component_5;
 
-        pipeline_type pipeline(
+        pipeline_type pipeline = pipeline_type::compose(
             testing::Component<0>{"accept"},
             testing::Component<1>{"reject"},
-            testing::XComponent<0, 1>{},
             testing::Component<2, 0>{"accept"},
-            udho::manifold::default_constructed{},
             testing::Component<4, 1>{"accept"},
             component_5,
             testing::Component<6>{"accept"}
@@ -321,6 +320,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(!pipeline.states().get<testing::Component<3>>().ready());
         CHECK(!pipeline.states().get<testing::Component<5>>().ready());
         CHECK(!pipeline.states().get<testing::Component<6>>().ready());
+
+        // verify that components that don't have state do not exist in the states type
+        //pipeline.states().get<testing::XComponent<0, 1>>();
     }
 }
 

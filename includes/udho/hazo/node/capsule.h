@@ -488,7 +488,8 @@ class capsule<DataT, true>: public encapsulate<DataT>{
     /**
      * Default constructor
      */
-    capsule(): _data(value_type()) {}
+    // capsule(): _data(value_type()) {} // issue: use default constructor of the element instead of using value_type
+    capsule(): _data() {}
     /**
      * Copy constructor
      */

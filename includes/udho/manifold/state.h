@@ -71,7 +71,7 @@ private:
 
 namespace detail{
 
-template <typename ComponentT, bool Skip = udho::manifold::has_state<ComponentT>::value>
+template <typename ComponentT, bool Skip = !udho::manifold::has_state<ComponentT>::value>
 struct state_container{
     using component_type = ComponentT;
     using state_type     = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
@@ -117,7 +117,7 @@ private:
 
 
 template <typename ComponentT>
-struct state_container<ComponentT, false>{
+struct state_container<ComponentT, true>{
     using component_type = ComponentT;
     // using state_type     = void;
 
@@ -128,6 +128,60 @@ struct state_container<ComponentT, false>{
 
     // template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
     // void at() { }
+};
+
+
+template <typename... Components>
+struct temporary_storage{};
+
+template <typename X, typename StorageT>
+struct prepend_helper;
+
+template <typename X, typename... Components>
+struct prepend_helper<X, temporary_storage<Components...>>{
+    using type = temporary_storage<X, Components...>;
+};
+
+template <typename... Components>
+struct composition_states_helper;
+
+template <typename ComponentT, typename... Rest>
+struct composition_states_helper<ComponentT, Rest...> {
+    using type = std::conditional_t<
+            !has_state<ComponentT>::value,
+            typename composition_states_helper<Rest...>::type,
+            typename prepend_helper<ComponentT, typename composition_states_helper<Rest...>::type>::type
+        >;
+};
+
+template <typename ComponentT>
+struct composition_states_helper<ComponentT> {
+    using type = std::conditional_t<
+            !has_state<ComponentT>::value,
+            temporary_storage<>,
+            temporary_storage<ComponentT>
+        >;
+};
+
+template <typename ComponentHelperT>
+struct get_states_type_helper;
+
+template <typename... Components>
+struct get_states_type_helper<temporary_storage<Components...>>{
+    using type = states<Components...>;
+};
+
+template <typename CompositionT>
+struct states_for_composition;
+
+template <typename... Components>
+struct states_for_composition<composition<Components...>>{
+    using type = typename get_states_type_helper<typename composition_states_helper<Components...>::type>::type;
+};
+
+template <typename... Components>
+struct states_for_components{
+    using type = typename get_states_type_helper<typename composition_states_helper<Components...>::type>::type;
 };
 
 }
