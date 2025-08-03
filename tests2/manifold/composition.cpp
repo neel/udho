@@ -8,6 +8,7 @@
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
 #include <udho/manifold/composition.h>
+#include <udho/manifold/delegate.h>
 #include <udho/manifold/evaluator.h>
 #include <udho/manifold/pipeline.h>
 
@@ -38,13 +39,8 @@ struct Component {
     Component(const Component&) = delete;
     Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
 
-    template <typename... Components>
-    state eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
-        return state(message == "accept");
-    }
-
     bool is_default_constructed;
-    mutable std::string message;  // mutable for testing move semantics
+    std::string message;
 };
 
 template <std::size_t Index, int FeatureIndex = Index>
@@ -60,7 +56,37 @@ struct XComponent {
     XComponent(XComponent&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
 
     bool is_default_constructed;
-    mutable std::string message;  // mutable for testing move semantics
+    std::string message;
+};
+
+}
+
+namespace udho::manifold {
+
+template <std::size_t Index, int FeatureIndex>
+struct delegate<testing::Component<Index, FeatureIndex>> {
+    using component_type = testing::Component<Index, FeatureIndex>;
+    using state_type     = typename testing::Component<Index, FeatureIndex>::state;
+
+    delegate(component_type& component): _component(component) {}
+
+    template <typename... Components>
+    state_type eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+        return state_type(_component.message == "accept");
+    }
+
+    private:
+        component_type& _component;
+};
+
+template <std::size_t Index, int FeatureIndex>
+struct delegate<testing::XComponent<Index, FeatureIndex>> {
+    using component_type = testing::XComponent<Index, FeatureIndex>;
+
+    delegate(component_type& component): _component(component) {}
+
+    private:
+        component_type& _component;
 };
 
 }
@@ -71,7 +97,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
     using state = testing::State;
 };
 
-TEST_CASE("manifold Construction & Composition", "[manifold][composition]") {
+TEST_CASE("manifold composition Construction & Composition", "[manifold][composition]") {
     using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::XComponent<0, 1>,
@@ -116,52 +142,83 @@ TEST_CASE("manifold Construction & Composition", "[manifold][composition]") {
 
     SECTION("Ordered Composition") {
         {
-            auto manifold = composition_type::compose(component_5);
+            auto composition = composition_type::compose(component_5);
 
-            CHECK(manifold.get<testing::Component<0>>().component().component_index == 0);
-            CHECK(manifold.get<testing::Component<1>>().component().component_index == 1);
-            CHECK(manifold.get<testing::Component<2, 0>>().component().component_index == 2);
-            CHECK(manifold.get<testing::Component<3>>().component().component_index == 3);
-            CHECK(manifold.get<testing::Component<4, 1>>().component().component_index == 4);
+            CHECK(composition.get<testing::Component<0>>().component().component_index == 0);
+            CHECK(composition.get<testing::Component<1>>().component().component_index == 1);
+            CHECK(composition.get<testing::Component<2, 0>>().component().component_index == 2);
+            CHECK(composition.get<testing::Component<3>>().component().component_index == 3);
+            CHECK(composition.get<testing::Component<4, 1>>().component().component_index == 4);
 
-            CHECK(manifold.get<testing::Component<0>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<1>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<2, 0>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<3>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<4, 1>>().component().is_default_constructed);
-            CHECK(!manifold.get<testing::Component<5>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<6>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<0>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<1>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<2, 0>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<3>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<4, 1>>().component().is_default_constructed);
+            CHECK(!composition.get<testing::Component<5>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<6>>().component().is_default_constructed);
         } {
-            auto manifold = composition_type::compose(testing::Component<1>{"moved"}, testing::Component<3>{"moved"}, component_5);
+            auto composition = composition_type::compose(testing::Component<1>{"moved"}, testing::Component<3>{"moved"}, component_5);
 
-            CHECK(manifold.get<testing::Component<0>>().component().component_index == 0);
-            CHECK(manifold.get<testing::Component<1>>().component().component_index == 1);
-            CHECK(manifold.get<testing::Component<2, 0>>().component().component_index == 2);
-            CHECK(manifold.get<testing::Component<3>>().component().component_index == 3);
-            CHECK(manifold.get<testing::Component<4, 1>>().component().component_index == 4);
+            CHECK(composition.get<testing::Component<0>>().component().component_index == 0);
+            CHECK(composition.get<testing::Component<1>>().component().component_index == 1);
+            CHECK(composition.get<testing::Component<2, 0>>().component().component_index == 2);
+            CHECK(composition.get<testing::Component<3>>().component().component_index == 3);
+            CHECK(composition.get<testing::Component<4, 1>>().component().component_index == 4);
 
-            CHECK(manifold.get<testing::Component<0>>().component().is_default_constructed);
-            CHECK(!manifold.get<testing::Component<1>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<2, 0>>().component().is_default_constructed);
-            CHECK(!manifold.get<testing::Component<3>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<4, 1>>().component().is_default_constructed);
-            CHECK(!manifold.get<testing::Component<5>>().component().is_default_constructed);
-            CHECK(manifold.get<testing::Component<6>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<0>>().component().is_default_constructed);
+            CHECK(!composition.get<testing::Component<1>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<2, 0>>().component().is_default_constructed);
+            CHECK(!composition.get<testing::Component<3>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<4, 1>>().component().is_default_constructed);
+            CHECK(!composition.get<testing::Component<5>>().component().is_default_constructed);
+            CHECK(composition.get<testing::Component<6>>().component().is_default_constructed);
         }
     }
 
     SECTION("Unordered Composition") {
-        auto manifold = composition_type::compose(component_5, testing::Component<3>{"moved"}, testing::Component<1>{"moved"});
+        auto composition = composition_type::compose(component_5, testing::Component<3>{"moved"}, testing::Component<1>{"moved"});
 
-        CHECK(manifold.get<testing::Component<0>>().component().is_default_constructed);
-        CHECK(!manifold.get<testing::Component<1>>().component().is_default_constructed);
-        CHECK(manifold.get<testing::Component<2, 0>>().component().is_default_constructed);
-        CHECK(!manifold.get<testing::Component<3>>().component().is_default_constructed);
-        CHECK(manifold.get<testing::Component<4, 1>>().component().is_default_constructed);
+        CHECK(composition.get<testing::Component<0>>().component().is_default_constructed);
+        CHECK(!composition.get<testing::Component<1>>().component().is_default_constructed);
+        CHECK(composition.get<testing::Component<2, 0>>().component().is_default_constructed);
+        CHECK(!composition.get<testing::Component<3>>().component().is_default_constructed);
+        CHECK(composition.get<testing::Component<4, 1>>().component().is_default_constructed);
 
-        CHECK(manifold.get<testing::Component<1>>().component().message == "moved");
-        CHECK(manifold.get<testing::Component<3>>().component().message == "moved");
+        CHECK(composition.get<testing::Component<1>>().component().message == "moved");
+        CHECK(composition.get<testing::Component<3>>().component().message == "moved");
     }
+}
+
+TEST_CASE("manifold delegate Construction & Composition", "[manifold][delegates]") {
+    using composition_type = udho::manifold::composition<
+        testing::Component<0>,
+        testing::XComponent<0, 1>,
+        testing::Component<1>,
+        testing::Component<2, 0>,
+        testing::Component<3>,
+        testing::Component<4, 1>,
+        testing::Component<5>,
+        testing::Component<6>
+    >;
+
+    using delegates_type = udho::manifold::delegates<
+        testing::Component<0>,
+        testing::XComponent<0, 1>,
+        testing::Component<1>,
+        testing::Component<2, 0>,
+        testing::Component<3>,
+        testing::Component<4, 1>,
+        testing::Component<5>,
+        testing::Component<6>
+    >;
+
+    testing::Component<5> component_5{"C5"};
+
+    auto composition = composition_type::compose(component_5);
+
+    delegates_type delegates{composition};
+
 }
 
 TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
@@ -176,6 +233,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<5>,
             testing::Component<6>
         >;
+        using delegates_type = composition_type::delegates_type;
 
         using expected_states_type = udho::manifold::detail::states_for_composition<composition_type>::type;
 
@@ -193,7 +251,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
         testing::Component<5> component_5;
 
-        auto manifold = composition_type::compose(
+        auto composition = composition_type::compose(
                 testing::XComponent<0, 1>{},
                 testing::Component<0>{"accept"},  // Will evaluate to true
                 testing::Component<1>{"reject"},  // Will evaluate to false
@@ -205,8 +263,10 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         boost::asio::ip::address address;
         udho::net::types::headers::request request;
 
-        bool s0 = manifold.get<testing::Component<0>>().eval(states, address, request);
-        bool s1 = manifold.get<testing::Component<1>>().eval(states, address, request);
+        delegates_type delegates{composition};
+
+        bool s0 = delegates.get<testing::Component<0>>().eval(states, address, request);
+        bool s1 = delegates.get<testing::Component<1>>().eval(states, address, request);
 
         CHECK(s0);
         CHECK(!s1);
@@ -216,8 +276,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(!states.get<testing::Component<2, 0>>().ready());
     }
 
+
     SECTION("Feature-based evaluation pipeline") {
-        using pipeline_type = udho::manifold::pipeline<
+        using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
             testing::Component<2, 0>,
@@ -227,10 +288,11 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<5>,
             testing::Component<6>
          >;
+        using delegates_type = composition_type::delegates_type;
 
         testing::Component<5> component_5;
 
-        pipeline_type pipeline =  pipeline_type::compose(
+        composition_type composition =  composition_type::compose(
                 testing::Component<0>{"accept"},
                 testing::Component<1>{"accept"},
                 testing::Component<2, 0>{"accept"},
@@ -249,6 +311,18 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Feature<1>
         >;
 
+        using pipeline_type = udho::manifold::pipeline<
+            testing::Component<0>,
+            testing::Component<1>,
+            testing::Component<2, 0>,
+            testing::Component<3>,
+            testing::Component<4, 1>,
+            testing::XComponent<0, 1>,
+            testing::Component<5>,
+            testing::Component<6>
+        >;
+
+        pipeline_type pipeline{composition};
         evaluator_type evaluator(address, request);
         std::size_t count = pipeline(std::move(evaluator));
 
@@ -268,20 +342,22 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
-        using pipeline_type = udho::manifold::pipeline<
+        using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::Component<1>,
-            testing::XComponent<0, 1>,
             testing::Component<2, 0>,
             testing::Component<3>,
             testing::Component<4, 1>,
+            testing::XComponent<0, 1>,
             testing::Component<5>,
             testing::Component<6>
         >;
+        using delegates_type = composition_type::delegates_type;
+        using pipeline_type  = composition_type::pipeline_type;
 
         testing::Component<5> component_5;
 
-        pipeline_type pipeline = pipeline_type::compose(
+        composition_type composition =  composition_type::compose(
             testing::Component<0>{"accept"},
             testing::Component<1>{"reject"},
             testing::Component<2, 0>{"accept"},
@@ -300,6 +376,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Feature<1>
         >;
 
+        pipeline_type pipeline{composition};
         evaluator_type evaluator(address, request);
         std::size_t count = pipeline(std::move(evaluator));
 

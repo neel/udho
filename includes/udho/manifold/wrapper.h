@@ -12,13 +12,10 @@
 namespace udho {
 namespace manifold {
 
-template <typename ComponentT, typename FeatureT>
-struct interface;
-
 namespace detail{
 
 template <typename ComponentT, bool ReferencePreferred = component_traits<ComponentT>::shared, bool DefaultConstructible = std::is_default_constructible_v<ComponentT>>
-struct component_member{
+struct component_storage{
     using component_type   = ComponentT;
 
     static constexpr component_type* dummy = 0x0;
@@ -26,12 +23,12 @@ struct component_member{
     static constexpr bool const is_default_constructible = false;
     static constexpr bool const is_move_constructible    = false;
 
-    inline explicit component_member(): _component(*dummy) {
+    inline explicit component_storage(): _component(*dummy) {
         static_assert(is_default_constructible, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::shared is true, but no feasible argument was found");
     }
 
-    inline explicit component_member(component_type& component_ref): _component(component_ref) {}
-    inline explicit component_member(default_constructed&&): _component(*dummy) {
+    inline explicit component_storage(component_type& component_ref): _component(component_ref) {}
+    inline explicit component_storage(default_constructed&&): _component(*dummy) {
         static_assert(false, "Expecting lvalue reference for ComponentT because component_traits<ComponentT>::shared is true, but no feasible argument was found");
     }
 
@@ -43,17 +40,17 @@ private:
 };
 
 template <typename ComponentT>
-struct component_member<ComponentT, false, true>{
+struct component_storage<ComponentT, false, true>{
     using component_type   = ComponentT;
 
     static constexpr bool const is_default_constructible = true;
     static constexpr bool const is_move_constructible    = true;
 
     template <typename Arg, std::enable_if_t<detail::argument_traits<ComponentT>::template should_move<Arg>, bool> = true>
-    inline explicit component_member(Arg component_rval): _component(std::move(component_rval)) {}
+    inline explicit component_storage(Arg component_rval): _component(std::move(component_rval)) {}
 
-    inline explicit component_member(): _component() {}
-    inline explicit component_member(default_constructed&&): _component() {}
+    inline explicit component_storage(): _component() {}
+    inline explicit component_storage(default_constructed&&): _component() {}
 
     component_type& component() { return _component; }
     const component_type& component() const { return _component; }
@@ -64,16 +61,16 @@ private:
 };
 
 template <typename ComponentT>
-struct component_member<ComponentT, false, false>{
+struct component_storage<ComponentT, false, false>{
     using component_type   = ComponentT;
 
     static constexpr bool const is_default_constructible = false;
     static constexpr bool const is_move_constructible    = true;
 
     template <typename Arg, std::enable_if_t<detail::argument_traits<ComponentT>::template should_move<Arg>, bool> = true>
-    inline explicit component_member(Arg component_rval): _component(std::move(component_rval)) {}
+    inline explicit component_storage(Arg component_rval): _component(std::move(component_rval)) {}
 
-    inline explicit component_member() {
+    inline explicit component_storage() {
         static_assert(is_default_constructible, "No argument supplied for non-default constructible Component");
     }
 
@@ -85,123 +82,22 @@ private:
     component_type _component;
 };
 
-template <typename ComponentT, bool HasState = udho::manifold::has_state<ComponentT>::value>
-struct component_storage: detail::component_member<ComponentT>{
-    using member_type       = detail::component_member<ComponentT>;
-    using state_type        = typename udho::manifold::component_traits<ComponentT>::state;
-
-    using member_type::member_type;
-    using member_type::component;
-
-    template <typename Head, typename... Tail>
-    state_type eval(const udho::manifold::states<Head, Tail...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return member_type::component().eval(states, address, request);
-    }
-};
-
-template <typename ComponentT>
-struct component_storage<ComponentT, false>: detail::component_member<ComponentT>{
-    using member_type       = detail::component_member<ComponentT>;
-
-    using member_type::member_type;
-    using member_type::component;
-
-};
-
 }
-
-template <typename ComponentT, typename FeatureT>
-struct interface: protected detail::component_storage<ComponentT> {
-    using component_type    = ComponentT;
-    using storage_type      = detail::component_storage<ComponentT>;
-    using feature           = FeatureT;
-
-
-    using storage_type::storage_type;
-};
-
-template <typename ComponentT>
-struct interface<ComponentT, features::filter>: protected detail::component_storage<ComponentT> {
-    using component_type    = ComponentT;
-    using storage_type      = detail::component_storage<ComponentT>;
-    using feature           = features::filter;
-
-    inline bool operator()(const boost::asio::ip::address& address){ return storage_type::component()(address); }
-
-    using storage_type::storage_type;
-};
-
-template <typename ComponentT>
-struct interface<ComponentT, features::token>: protected detail::component_storage<ComponentT>  {
-    using component_type = ComponentT;
-    using storage_type   = detail::component_storage<ComponentT>;
-    using feature        = features::token;
-
-    using token_type  = typename ComponentT::token_type;
-    static_assert(udho::utils::traits::is_ostreamable_v<token_type>);
-
-    inline token_type generate(){ return storage_type::component().generate(); }
-    inline bool verify(const token_type& token){ return storage_type::component().verify(); }
-
-
-    using storage_type::storage_type;
-};
-
 
 /**
  * @brief The component_wrapper class
  */
-template <typename ComponentT, bool HasState = udho::manifold::has_state<ComponentT>::value>
-struct wrapper: interface<ComponentT, typename ComponentT::feature>{
-    using component_type = ComponentT;
-    using feature        = typename ComponentT::feature;
-    using interface_type = interface<ComponentT, feature>;
-
-    static constexpr const bool has_state = false;
-
-    using interface_type::component;
-
-    wrapper(const wrapper&) = default;
-
-    template <typename ArgX, std::enable_if_t<!std::is_same_v<ArgX, default_constructed>, bool> = true>
-    wrapper(ArgX&& arg): interface_type(std::forward<ArgX>(arg)) {}
-
-    template <typename ArgX, std::enable_if_t<std::is_same_v<ArgX, default_constructed>, bool> = true>
-    wrapper(ArgX&&): interface_type() {}
-
-    // template <typename... Components, typename... Args>
-    // bool eval(udho::manifold::states<Components...>& states, Args... args) {
-    //     return true;
-    // }
-};
-
 template <typename ComponentT>
-struct wrapper<ComponentT, true>: interface<ComponentT, typename ComponentT::feature>{
+struct wrapper: detail::component_storage<ComponentT>{
     using component_type = ComponentT;
     using feature        = typename ComponentT::feature;
-    using interface_type = interface<ComponentT, feature>;
-    using state_type     = typename interface_type::state_type;
+    using storage_type   = detail::component_storage<ComponentT>;
+    using delegate_type  = delegate<ComponentT>;
+    using config_type    = config<ComponentT>;
 
-    static constexpr const bool has_state = true;
+    static constexpr const bool has_state = udho::manifold::has_state<ComponentT>::vlue;
 
-    using interface_type::component;
-
-    wrapper(const wrapper&) = default;
-
-    template <typename ArgX, std::enable_if_t<!std::is_same_v<ArgX, default_constructed>, bool> = true>
-    wrapper(ArgX&& arg): interface_type(std::forward<ArgX>(arg)) {}
-
-    template <typename ArgX, std::enable_if_t<std::is_same_v<ArgX, default_constructed>, bool> = true>
-    wrapper(ArgX&&): interface_type() {}
-
-    template <typename... Components, typename... Args>
-    bool eval(udho::manifold::states<Components...>& states, Args... args) {
-        using states_facade_type = udho::manifold::states<Components...>;
-        state_type state = std::move(interface_type::eval(states, std::forward<Args>(args)...));
-        bool result = state.accepted();
-        states.template get<ComponentT>() = std::move(state);
-        return result;
-    }
+    using storage_type::storage_type;
 };
 
 }

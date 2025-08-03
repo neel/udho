@@ -6,6 +6,7 @@
 #include <udho/manifold/features.h>
 #include <udho/manifold/wrapper.h>
 #include <udho/manifold/detail.h>
+#include <udho/manifold/utils.h>
 
 namespace udho{
 namespace manifold{
@@ -47,37 +48,6 @@ struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
     }
 };
 
-
-template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() == Idx , bool> = true>
-std::size_t composition_apply(CompositionT& composition, Function&& function) { return 0; }
-
-template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() != Idx , bool> = true>
-std::size_t composition_apply(CompositionT& composition, Function&& function) {
-    auto& wrapper = composition.template at<FeatureT, Idx>();
-    bool result = function(wrapper);
-    std::size_t count = result;
-    if(!wrapper.has_state || result) {
-        count += composition_apply<CompositionT, FeatureT, Function, Idx+1>(composition, std::forward<Function>(function));
-    }
-    return count;
-}
-
-
-
-template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() == Idx , bool> = true>
-std::size_t composition_apply(const CompositionT& composition, Function&& function) { return 0; }
-
-template <typename CompositionT, typename FeatureT, typename Function, std::uint32_t Idx, std::enable_if_t< CompositionT::template count<FeatureT>() != Idx , bool> = true>
-std::size_t composition_apply(const CompositionT& composition, Function&& function) {
-    auto& wrapper = composition.template at<FeatureT, Idx>();
-    bool result = function(wrapper);
-    std::size_t count = result;
-    if(!wrapper.has_state || result) {
-        count += composition_apply<CompositionT, FeatureT, Function, Idx+1>(composition, std::forward<Function>(function));
-    }
-    return count;
-}
-
 }
 
 template <typename... Components>
@@ -106,9 +76,14 @@ template <typename ComponentT, typename... Rest>
 struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private composition<Rest...>{
     using component_type = ComponentT;
     using wrapper_type   = wrapper<component_type>;
+    using delegates_type = delegates<ComponentT, Rest...>;
+    using pipeline_type  = pipeline<ComponentT, Rest...>;
 
     template <typename... Features>
     friend struct evaluator;
+
+    template <typename... Components>
+    friend struct delegates;
 
     template <typename... Args>
     static composition<ComponentT, Rest...> compose(Args&&... args) { return compositor<ComponentT, Rest...>::compose(std::forward<Args>(args)...); }
@@ -162,10 +137,10 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return detail::composition_apply<composition<ComponentT, Rest...>, FeatureT, Function, 0>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<composition<ComponentT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return detail::composition_apply<composition<ComponentT, Rest...>, FeatureT, Function, 0>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<composition<ComponentT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
 private:
@@ -178,9 +153,14 @@ template <typename ComponentT>
 struct composition<ComponentT>: private wrapper<ComponentT> {
     using component_type = ComponentT;
     using wrapper_type   = wrapper<component_type>;
+    using delegates_type = delegates<ComponentT>;
+    using pipeline_type  = pipeline<ComponentT>;
 
     template <typename... Features>
     friend struct evaluator;
+
+    template <typename... Components>
+    friend struct delegates;
 
     template <typename... Args>
     static composition<ComponentT> compose(Args&&... args) { return compositor<ComponentT>::compose(std::forward<Args>(args)...); }
@@ -211,10 +191,10 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return detail::composition_apply<composition<ComponentT>, FeatureT, Function, 0>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<composition<ComponentT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return detail::composition_apply<composition<ComponentT>, FeatureT, Function, 0>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<composition<ComponentT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 };
 

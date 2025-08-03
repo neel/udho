@@ -14,20 +14,16 @@ namespace manifold {
 namespace detail {
 
 template <typename... Components>
-struct component_evaluator{
+struct delegate_evaluator{
     using states_type = typename udho::manifold::detail::states_for_components<Components...>::type;
 
-    component_evaluator(states_type& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _states(states), _address(address), _request(request) {}
+    delegate_evaluator(states_type& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _states(states), _address(address), _request(request) {}
 
     template <typename ComponentT>
-    bool operator()(udho::manifold::wrapper<ComponentT, true>& wrapper) {
-        return wrapper.eval(_states, _address, _request);
-    }
+    bool operator()(udho::manifold::delegate_wrapper<ComponentT, true>& wrapper) { return wrapper.eval(_states, _address, _request); }
 
     template <typename ComponentT>
-    bool operator()(udho::manifold::wrapper<ComponentT, false>&) {
-        return false;
-    }
+    bool operator()(udho::manifold::delegate_wrapper<ComponentT, false>&) { return false; }
 
     states_type& _states;
 
@@ -42,12 +38,12 @@ struct evaluator<FeatureX, Features...>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Components>
-    std::size_t operator()(udho::manifold::composition<Components...>& composition, typename udho::manifold::detail::states_for_components<Components...>::type& states) {
-        static_assert(composition.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::delegates<Components...>& delegates, typename udho::manifold::detail::states_for_components<Components...>::type& states) {
+        static_assert(delegates.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        std::size_t count = composition.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
+        std::size_t count = delegates.template apply<FeatureX>( detail::delegate_evaluator<Components...>{states, _address, _request} );
         evaluator<Features...> ev{_address, _request};
-        count += ev(composition, states);
+        count += ev(delegates, states);
         return count;
     }
 
@@ -60,10 +56,10 @@ struct evaluator<FeatureX>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Components>
-    std::size_t operator()(udho::manifold::composition<Components...>& composition, typename udho::manifold::detail::states_for_components<Components...>::type& states) {
-        static_assert(composition.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::delegates<Components...>& delegates, typename udho::manifold::detail::states_for_components<Components...>::type& states) {
+        static_assert(delegates.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        return composition.template apply<FeatureX>( detail::component_evaluator<Components...>{states, _address, _request} );
+        return delegates.template apply<FeatureX>( detail::delegate_evaluator<Components...>{states, _address, _request} );
     }
 
     const boost::asio::ip::address& _address;

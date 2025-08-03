@@ -2,6 +2,7 @@
 #define UDHO_MANIFOLD_TRAITS_H
 
 #include <type_traits>
+#include <udho/manifold/fwd.h>
 
 namespace udho{
 namespace manifold{
@@ -18,6 +19,16 @@ struct has_state<T, std::void_t<typename T::state>> : std::true_type {
     using type = typename T::state;
 };
 
+template<typename, typename = void>
+struct has_params : std::false_type {
+    using type = udho::manifold::params<>;
+};
+
+template<typename T>
+struct has_params<T, std::void_t<typename T::config>> : std::true_type {
+    using type = typename T::params;
+};
+
 }
 
 /**
@@ -32,11 +43,15 @@ struct has_state<T, std::void_t<typename T::state>> : std::true_type {
 template <typename ComponentT>
 struct component_traits{
     static constexpr const bool shared = !std::is_move_constructible_v<ComponentT> || !std::is_default_constructible_v<ComponentT>;
-    using state = typename detail::has_state<ComponentT>::type;
+    using state  = typename detail::has_state<ComponentT>::type;
+    using params = typename detail::has_params<ComponentT>::type;
 };
 
 template <typename ComponentT>
 struct has_state: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::state>::value> {};
+
+template <typename ComponentT>
+struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::config>::value> {};
 
 struct default_constructed{};
 
