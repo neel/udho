@@ -385,6 +385,17 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
     return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), match);
 }
 
+namespace detail {
+
+template <typename T>
+struct is_basic_action : std::false_type {};
+
+template <typename FunctionT, typename StrT, typename MatchT>
+struct is_basic_action<basic_action<FunctionT, StrT, MatchT>> : std::true_type {
+    using type = basic_action<FunctionT, StrT, MatchT>;
+};
+
+}
 
 }
 }

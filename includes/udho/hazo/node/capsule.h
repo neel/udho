@@ -193,17 +193,16 @@ class capsule<DataT, false>{
      * Calls a function with the encapsulated data and returns the returned output of that function
      * @param f function
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) const {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) const {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
     /**
-     * Calls a function with the encapsulated data and returns the returned output of that function
-     * @param f function
+     * Apply a function on the data inside
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
 };
 
@@ -317,20 +316,19 @@ class capsule<char[N], false>{
      * Calls a function with the encapsulated data and returns the returned output of that function
      * @param f function
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) const {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) const {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
     /**
-     * Calls a function with the encapsulated data and returns the returned output of that function
-     * @param f function
+     * Apply a function on the data inside
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
-};
 
+};
 /**
  * capsule for basic_string
  * @ingroup capsule
@@ -441,17 +439,16 @@ class capsule<std::basic_string<CharT, Traits, Alloc>, true>{
      * Calls a function with the encapsulated data and returns the returned output of that function
      * @param f function
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) const {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) const {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
     /**
-     * Calls a function with the encapsulated data and returns the returned output of that function
-     * @param f function
+     * Apply a function on the data inside
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
 };
 
@@ -553,16 +550,16 @@ class capsule<DataT, true>: public encapsulate<DataT>{
     /**
      * Apply a function on the data inside
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) const {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) const {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
     /**
      * Apply a function on the data inside
      */
-    template <typename FunctionT>
-    auto call(FunctionT&& f) {
-        return std::forward<FunctionT>(f)(_data);
+    template <typename FunctionT, typename... Args>
+    auto call(FunctionT&& f, Args&&...args) {
+        return std::forward<FunctionT>(f)(_data, std::forward<Args>(args)...);
     }
 };
 

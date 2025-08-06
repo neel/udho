@@ -30,48 +30,48 @@
 
 #include <udho/url/action.h>
 #include <udho/url/mount.h>
-#include <udho/hazo/seq/seq.h>
+#include <udho/url/tables.h>
 
 namespace udho{
 namespace url{
 
 template <typename LFunctionT, typename LStrT, typename LMatchT, typename RFunctionT, typename RStrT, typename RMatchT>
 auto operator|(basic_action<LFunctionT, LStrT, LMatchT>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
-    return udho::hazo::make_seq_d(std::move(left), std::move(right));
+    return action_table{
+                std::forward<basic_action<LFunctionT, LStrT, LMatchT>>(left),
+                std::forward<basic_action<RFunctionT, RStrT, RMatchT>>(right)
+            };
 }
 
 template <typename... Args, typename RFunctionT, typename RStrT, typename RMatchT>
-auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
-    using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, Args...>;
-    using rhs_type = basic_action<RFunctionT, RStrT, RMatchT>;
-    return typename lhs_type::template extend<rhs_type>(left, std::move(right));
+auto operator|(action_table<Args...>&& left, basic_action<RFunctionT, RStrT, RMatchT>&& right){
+    return left.append(std::forward<basic_action<RFunctionT, RStrT, RMatchT>>(right));
 }
 
 template <typename LStrT, typename LActionsT, typename RStrT, typename RActionsT>
 auto operator|(mount_point<LStrT, LActionsT>&& left, mount_point<RStrT, RActionsT>&& right){
-    return udho::hazo::make_seq_d(std::move(left), std::move(right));
+    return mountpoints_table{
+                std::forward<mount_point<LStrT, LActionsT>>(left),
+                std::forward<mount_point<RStrT, RActionsT>>(right)
+            };
 }
 
-template <typename... Args, typename RStrT, typename RActionsT>
-auto operator|(udho::hazo::basic_seq<udho::hazo::by_data, Args...>&& left, mount_point<RStrT, RActionsT>&& right){
-    using lhs_type = udho::hazo::basic_seq<udho::hazo::by_data, Args...>;
-    using rhs_type = mount_point<RStrT, RActionsT>;
-    return typename lhs_type::template extend<rhs_type>(left, std::move(right));
+template <typename... Mountpoints, typename RStrT, typename RActionsT>
+auto operator|(mountpoints_table<Mountpoints...>&& left,  mount_point<RStrT, RActionsT>&& right){
+    return left.append(std::forward<mount_point<RStrT, RActionsT>>(right));
 }
 
-namespace detail{
 
-template <typename T>
-struct is_basic_action : std::false_type {};
-
-template <typename FunctionT, typename StrT, typename MatchT>
-struct is_basic_action<basic_action<FunctionT, StrT, MatchT>> : std::true_type {};
-
-}
 
 template <typename... ArgsL, typename... ArgsR>
-auto operator|(const udho::hazo::basic_seq<udho::hazo::by_data, ArgsL...>& left, const udho::hazo::basic_seq<udho::hazo::by_data, ArgsR...>& right)
+auto operator|(const action_table<ArgsL...>& left, const action_table<ArgsR...>& right)
     -> std::enable_if_t<(std::conjunction_v<detail::is_basic_action<ArgsL>...> && std::conjunction_v<detail::is_basic_action<ArgsR>...>), decltype(left.concat(right))>
+{ return left.concat(right); }
+
+
+template <typename... ArgsL, typename... ArgsR>
+auto operator|(const mountpoints_table<ArgsL...>& left, const mountpoints_table<ArgsR...>& right)
+    -> std::enable_if_t<(std::conjunction_v<detail::is_mount_point<ArgsL>...> && std::conjunction_v<detail::is_mount_point<ArgsR>...>), decltype(left.concat(right))>
 { return left.concat(right); }
 
 

@@ -126,6 +126,23 @@ struct mount_point{
     }
 
     /**
+     * Finds if a given URL matches any of the actions in the mount point.
+     * @tparam Ch Character type of the URL string.
+     * @param subject URL to be matched.
+     * @return index of the matched element, -1 if not fouond
+     */
+    int index_of(const std::string& subject) const {
+        int index = -1;
+        _actions.visit_at([&subject, &index](const auto& action, std::size_t depth){
+            if(index >= 0) return;
+            if(action.find(subject)){
+                index = depth;
+            }
+        });
+        return index;
+    }
+
+    /**
      * Invokes the appropriate action based on the given URL and arguments.
      * @tparam Ch Character type of the URL string.
      * @tparam Args Types of arguments passed to the action.
@@ -141,6 +158,27 @@ struct mount_point{
             found = action.invoke(subject, std::forward<Args>(args)...);
         });
         return found;
+    }
+
+    /**
+     * Invokes the appropriate action at a given index.
+     * @param subject URL to be processed.
+     * @param args Arguments to pass to the action handler.
+     * @return True if an action was successfully invoked, otherwise false.
+     */
+    template <typename... Args>
+    bool invoke_at(int index, const std::string& subject, Args&&... args) const {
+        assert(index > -1);
+        bool found = false;
+        bool result = false;
+        _actions.visit_at([index, &subject, &found, &result, &args...](auto& action, std::size_t depth){
+            if(found) return;
+            found = (depth == index);
+            if(found) {
+                result = action.invoke(subject, std::forward<Args>(args)...);
+            }
+        });
+        return found && result;
     }
 
 
@@ -222,6 +260,18 @@ mount_point<udho::hazo::string::str<char, 'r', 'o', 'o', 't'>, ActionsT> root(Ac
     return mount_point<udho::hazo::string::str<char, 'r', 'o', 'o', 't'>, ActionsT>{"root"_h, "/", std::move(actions)};
 }
 
+namespace detail {
+
+template <typename T>
+struct is_mount_point : std::false_type {};
+
+template <typename StrT, typename ActionsT>
+struct is_mount_point<mount_point<StrT, ActionsT>> : std::true_type {
+    using type = mount_point<StrT, ActionsT>;
+};
+
+
+}
 
 }
 }

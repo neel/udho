@@ -35,19 +35,25 @@ BOOST_SYMBOL_EXPORT std::string f_nodef(nodef, int a){
 }
 
 struct X{
+    mutable std::string _msg;
+
     BOOST_SYMBOL_EXPORT void f0(){
+        _msg ="f0";
         return;
     }
 
     BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
+        _msg ="f1";
         return a+b.size()+c+d;
     }
 
     BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
+        _msg ="f2";
         return std::to_string(a+b.size());
     }
 
     BOOST_SYMBOL_EXPORT int f3(int a, const std::string& b, const double& c, bool d) const{
+        _msg ="f3";
         return 84;
     }
 };
@@ -279,8 +285,9 @@ TEST_CASE("url common functionalities using regex", "[url][router]") {
     CHECK(f_nodef(nodef(2), 42) == "hello");
 
     auto chain2 =
-        udho::url::regx(udho::url::verb::get, "/x/f2-(\\d+)/(\\w+)", "/x/f2-{}/{}")                  >> udho::url::slot("xf2"_h, &X::f0, &x)  |
-        udho::url::regx(udho::url::verb::get, "/x/f3/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/x/f3/{}/{}/{}") >> udho::url::slot("xf3"_h, &X::f1, &x);
+        udho::url::regx(udho::url::verb::get, "/x/f2-(\\d+)/(\\w+)", "/x/f2-{}/{}")                  >> udho::url::slot("xf2"_h, &X::f2, &x)  |
+        udho::url::regx(udho::url::verb::get, "/x/f3/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/x/f3/{}/{}/{}") >> udho::url::slot("xf3"_h, &X::f3, &x);
+
 
     auto chain3 = chain | chain2;
     // chain3.xyz;
@@ -300,8 +307,28 @@ TEST_CASE("url common functionalities using regex", "[url][router]") {
     CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "/pchain/f1/24/world/2.4");
     CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "/pchain/f1/24/world/2.4");
 
+    CHECK(mount_point.index_of("/") == 4);
+    CHECK(mount_point.index_of("/f1/23/hello/24/1") == 3);
+    CHECK(mount_point.index_of("/f2-23/hello") == 2);
+    CHECK(mount_point.index_of("/x/f0") == 1);
+    CHECK(mount_point.index_of("/x/f1/23/hello/24/1") == 0);
+
     // std::cout << mount_point << std::endl;
-    auto chain4 = std::move(mount_point) | udho::url::mount_point("root"_h, "/", std::move(chain3));
+    auto m2 = udho::url::mount_point("root"_h, "/", std::move(chain3));
+
+    CHECK(m2.index_of("/x/f2-23/hello") == 1);
+    CHECK(m2.index_of("/x/f3/hello/world/24/1") == 0);
+
+    {
+        m2.invoke_at(1, "/x/f2-23/hello");
+        CHECK(x._msg == "f2");
+    } {
+        m2.invoke_at(0, "/x/f3/42/world/24/1");
+        CHECK(x._msg == "f3");
+    }
+
+
+    auto chain4 = std::move(mount_point) | std::move(m2);
 
     std::cout << "chain4" << std::endl << chain4 << std::endl;
 
@@ -314,3 +341,39 @@ TEST_CASE("url common functionalities using regex", "[url][router]") {
     CHECK(router.find(std::string("/f1/23/hello/24/1"))        == true);
     CHECK(router.find(std::string("f1/23/hello/24/1"))         == false);
 }
+
+TEST_CASE("Extended pattern matching operations", "[url][pattern][extended]") {
+    SECTION("Fixed pattern edge cases") {
+        auto matcher = udho::url::fixed(udho::url::verb::get, "/fixed//path", "/fixed//path");
+        CHECK(matcher.find("/fixed//path") == true);
+        CHECK(matcher.find("/fixed/path") == false);
+
+        auto case_sensitive = udho::url::fixed(udho::url::verb::get, "/CASE", "/CASE");
+        CHECK(case_sensitive.find("/case") == false);
+    }
+
+    SECTION("Home pattern edge cases") {
+        auto matcher = udho::url::home(udho::url::verb::get);
+        CHECK(matcher.find("") == true);
+        CHECK(matcher.find("/") == true);
+        CHECK(matcher.find("/home") == false);
+        CHECK(matcher.find("//") == false);
+    }
+
+    SECTION("P1729 pattern with different types") {
+        auto matcher = udho::url::scan(udho::url::verb::get, "/data/{:d}/{:f}/{}", "/data/{}/{}/{}");
+
+        std::string subject = "/data/42/3.14/hello";
+        std::tuple<int, float, std::string> args;
+        REQUIRE(matcher.find(subject, args) == true);
+        REQUIRE(std::get<0>(args) == 42);
+        REQUIRE(std::get<1>(args) == Catch::Approx(3.14));
+        REQUIRE(std::get<2>(args) == "hello");
+
+        SECTION("Replacement correctness") {
+            auto replaced = matcher.replace(std::make_tuple(100, 2.718, "world"));
+            REQUIRE(replaced == "/data/100/2.718/world");
+        }
+    }
+}
+

@@ -30,30 +30,30 @@
 
 #include <udho/url/action.h>
 #include <udho/url/mount.h>
-#include <udho/hazo/seq/seq.h>
+#include <udho/url/tables.h>
 #include <udho/url/tabulate.h>
 
 namespace udho{
 namespace url{
 
-template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
-tabulate::Table& operator<<(tabulate::Table& table, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
+template <typename... Args>
+tabulate::Table& operator<<(tabulate::Table& table, const action_table<Args...>& actions){
     table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
     for(size_t i = 0; i < 6; ++i) {
         table[0][i].format().font_color(tabulate::Color::yellow).font_style({tabulate::FontStyle::bold});
     }
     tabulize tab(table);
-    chain.visit(tab);
+    actions.visit(tab);
     for(size_t i = 0; i < table.size(); ++i) {
         table[i][1].format().font_style({tabulate::FontStyle::bold});
     }
     return table;
 }
 
-template <typename FunctionT, typename MatchT, typename StrT, typename... TailT>
-std::ostream& operator<<(std::ostream& stream, const udho::hazo::basic_seq_d<basic_action<FunctionT, StrT, MatchT>, TailT...>& chain){
+template <typename... Args>
+std::ostream& operator<<(std::ostream& stream, const action_table<Args...>& actions){
     tabulate::Table table;
-    table << chain;
+    table << actions;
     stream << table;
     return stream;
 }
@@ -75,26 +75,20 @@ std::ostream& operator<<(std::ostream& stream, const mount_point<StrT, ActionsT>
     return stream;
 }
 
-template <typename StrT, typename ActionsT, typename... TailT>
-tabulate::Table& operator<<(tabulate::Table& table, const udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, TailT...>& chain){
+template <typename... Args>
+tabulate::Table& operator<<(tabulate::Table& table, const mountpoints_table<Args...>& mountpoints){
     tabulize tab(table);
-    chain.visit(tab);
+    mountpoints.visit(tab);
     return table;
 }
 
-template <typename StrT, typename ActionsT, typename... TailT>
-std::ostream& operator<<(std::ostream& stream, const udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, TailT...>& chain){
+template <typename... Args>
+std::ostream& operator<<(std::ostream& stream, const mountpoints_table<Args...>& mountpoints){
     tabulate::Table tab;
-    tab << chain;
+    tab << mountpoints;
     stream << tab;
     return stream;
 }
-
-// template <typename Mountpoints>
-// std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-//     stream << router._mountpoints;
-//     return stream;
-// }
 
 }
 }

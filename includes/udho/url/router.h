@@ -117,6 +117,58 @@ struct routing_table{
     }
 
     /**
+     * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
+     */
+    template <typename Ch>
+    std::pair<int, int> index_of(const std::basic_string<Ch>& subject) const {
+        int mountpoint_index = -1;
+        int action_index = -1;
+        _mountpoints.visit_at([&subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
+            if(mountpoint_index >= 0) return;
+            auto path = mountpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            int action_idx = mountpoint.index_of(rest);
+            if(action_idx >= 0){
+                mountpoint_index = depth;
+                action_index = action_idx;
+            }
+        });
+        return std::make_pair(mountpoint_index, action_index);
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename Ch, typename... Args>
+    bool invoke_at(const std::pair<int, int>& indexes, const std::basic_string<Ch>& subject, Args&&... args) const {
+        int mountpoint_index = std::get<0>(indexes);
+        int action_index = std::get<1>(indexes);
+
+        assert(mountpoint_index > -1);
+        assert(action_index > -1);
+
+        bool found = false;
+        _mountpoints.visit_at([&subject, &mountpoint_index, &action_index, &found, &args...](const auto& mointpoint, std::size_t depth){
+            if(found)  return;
+            found = (depth == mountpoint_index);
+            if(found){
+                mointpoint.invoke_at(action_index, subject, std::forward<Args>(args)...);
+            }
+        });
+        return found;
+    }
+
+    /**
      * @brief Function call operator that delegates to invoke()
      * @param url URL path to process
      * @param args Arguments to forward to the action
@@ -201,8 +253,7 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @param subject URL path to search for
      * @return true if path is found in mount points or filesystem, false otherwise
      */
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
+    bool find(const std::string& subject) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
             return false;
@@ -218,13 +269,57 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @param args Arguments to forward to the action
      * @return true if action was invoked or file was served, false otherwise
      */
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+    template <typename... Args>
+    bool invoke(const std::string& subject, Args&&... args) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
             return false;
         auto rest = path == "/" ? subject : subject.substr(path.size());
         return _mountpoint.invoke(rest, std::forward<Args>(args)...);
+    }
+
+
+    /**
+     * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
+     */
+    std::pair<int, int> index_of(const std::string& subject) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return std::make_pair(-1, -1);
+
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        int action_idx = _mountpoint.index_of(rest);
+        if(action_idx >= 0){
+            return std::make_pair(_mountpoint.depth, action_idx);
+        }
+
+        return std::make_pair(-1, -1);
+    }
+
+    /**
+     * @brief Invokes the action associated with an index
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename... Args>
+    bool invoke_at(const std::pair<int, int>&& indexes, Args&&... args) const {
+        int mountpoint_index = std::get<0>(indexes);
+        int action_index = std::get<1>(indexes);
+
+        assert(mountpoint_index > -1);
+        assert(action_index > -1);
+
+        bool found = (_mountpoint.depth == mountpoint_index);
+        if(found){
+            _mountpoint.invoke_at(action_index, std::forward<Args>(args)...);
+        }
+
+        return found;
     }
 
     /**
@@ -267,6 +362,8 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
 
     using routing_table::operator[];
     using routing_table::summary;
+    using routing_table::index_of;
+    using routing_table::invoke_at;
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
@@ -315,8 +412,12 @@ struct basic_router<void>{
 
     basic_router(udho::url::explorers::registry&& registry): _registry(std::move(registry)) {}
 
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const { return _registry.exists(subject); }
+    bool find(const std::string& subject) const { return _registry.exists(subject); }
+
+    template <typename... Args>
+    bool invoke_at(const std::pair<int, int>&& indexes, Args&&... args) const { return false; }
+
+    std::pair<int, int> index_of(const std::string& subject) const { return std::make_pair(-1, -1); }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
