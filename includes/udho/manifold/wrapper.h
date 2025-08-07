@@ -8,6 +8,7 @@
 #include <udho/net/common.h>
 #include <udho/manifold/traits.h>
 #include <udho/manifold/detail.h>
+#include <udho/manifold/config.h>
 
 namespace udho {
 namespace manifold {
@@ -90,14 +91,19 @@ private:
 template <typename ComponentT>
 struct wrapper: detail::component_storage<ComponentT>{
     using component_type = ComponentT;
-    using feature        = typename ComponentT::feature;
     using storage_type   = detail::component_storage<ComponentT>;
-    using delegate_type  = delegate<ComponentT>;
-    using config_type    = config<ComponentT>;
+    using config_type    = udho::manifold::config<ComponentT>;
 
     static constexpr const bool has_state = udho::manifold::has_state<ComponentT>::vlue;
 
     using storage_type::storage_type;
+
+    const config_type& config() const { return _config; }
+
+    config_type& config() { return _config; }
+
+    private:
+    config_type _config;
 };
 
 }

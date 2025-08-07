@@ -1,6 +1,9 @@
 #ifndef UDHO_MANIFOLD_FEATURES_H
 #define UDHO_MANIFOLD_FEATURES_H
 
+#include  <type_traits>
+#include <udho/manifold/fwd.h>
+
 namespace udho {
 namespace manifold {
 
@@ -10,7 +13,7 @@ namespace manifold {
  *
  * Defines the types of functionality a manifold component can provide
  */
-namespace features{
+namespace feature{
 
     /**
      * @brief generates an unique signature for the request
@@ -54,6 +57,11 @@ namespace features{
 
 }
 
+template <typename... Features>
+struct features{
+    template <typename FeatureT>
+    using has = std::disjunction<std::is_same<FeatureT, Features>...>;
+};
 
 }
 }

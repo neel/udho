@@ -11,8 +11,8 @@ namespace manifold {
 template <typename... Components>
 struct pipeline{
     using composition_type = udho::manifold::composition<Components...>;
-    using delegates_type   = udho::manifold::delegates<Components...>;
-    using states_type      = typename udho::manifold::detail::states_for_composition<composition_type>::type;
+    using delegates_type   = typename composition_type::delegates_type;
+    using states_type      = typename udho::manifold::detail::states_for_delegates<delegates_type>::type;
 
     pipeline(composition_type& composition): _delegates(composition) {}
 

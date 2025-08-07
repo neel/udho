@@ -71,10 +71,12 @@ private:
 
 namespace detail{
 
-template <typename ComponentT, bool Skip = !udho::manifold::has_state<ComponentT>::value>
+template <typename DelegateT, bool Skip = !udho::manifold::has_state<DelegateT>::value>
 struct state_container{
-    using component_type = ComponentT;
-    using state_type     = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
+    using delegate_type  = DelegateT;
+    using feature        = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
+    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
+    using state_type     = state_wrapper<typename udho::manifold::delegate_traits<DelegateT>::state, typename delegate_type::feature>;
 
     static constexpr const bool skipped = false;
 
@@ -86,29 +88,29 @@ struct state_container{
 
     state_container() = default;
     template <typename OtherHeadT, typename... OtherTail>
-    inline explicit state_container(states<OtherHeadT, OtherTail...>&& other): _state(std::move(other.template get<ComponentT>())) {}
+    inline explicit state_container(states<OtherHeadT, OtherTail...>&& other): _state(std::move(other.template get<DelegateT>())) {}
 
 
     /// @{
-    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
+    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
     state_type& get() { return _state; }
 
-    template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
+    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
     const state_type& get() const { return _state; }
     /// @}
 
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature, FeatureT> && Idx == 0, bool> = true>
     state_type& at() { return _state; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature, FeatureT> && Idx == 0, bool> = true>
     const state_type& at() const { return _state; }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return std::is_same_v<typename component_type::feature, FeatureT>; }
+    static constexpr int count() { return std::is_same_v<feature, FeatureT>; }
     /// @}
 
 private:
@@ -131,66 +133,67 @@ struct state_container<ComponentT, true>{
 };
 
 
-template <typename... Components>
+template <typename... Delegates>
 struct temporary_storage{};
 
 template <typename X, typename StorageT>
 struct prepend_helper;
 
-template <typename X, typename... Components>
-struct prepend_helper<X, temporary_storage<Components...>>{
-    using type = temporary_storage<X, Components...>;
+template <typename X, typename... Delegates>
+struct prepend_helper<X, temporary_storage<Delegates...>>{
+    using type = temporary_storage<X, Delegates...>;
 };
 
-template <typename... Components>
+template <typename... Delegates>
 struct composition_states_helper;
 
-template <typename ComponentT, typename... Rest>
-struct composition_states_helper<ComponentT, Rest...> {
+template <typename DelegateT, typename... Rest>
+struct composition_states_helper<DelegateT, Rest...> {
     using type = std::conditional_t<
-            !has_state<ComponentT>::value,
+            !has_state<DelegateT>::value,
             typename composition_states_helper<Rest...>::type,
-            typename prepend_helper<ComponentT, typename composition_states_helper<Rest...>::type>::type
+            typename prepend_helper<DelegateT, typename composition_states_helper<Rest...>::type>::type
         >;
 };
 
-template <typename ComponentT>
-struct composition_states_helper<ComponentT> {
+template <typename DelegateT>
+struct composition_states_helper<DelegateT> {
     using type = std::conditional_t<
-            !has_state<ComponentT>::value,
+            !has_state<DelegateT>::value,
             temporary_storage<>,
-            temporary_storage<ComponentT>
+            temporary_storage<DelegateT>
         >;
 };
 
-template <typename ComponentHelperT>
+template <typename>
 struct get_states_type_helper;
 
-template <typename... Components>
-struct get_states_type_helper<temporary_storage<Components...>>{
-    using type = states<Components...>;
+template <typename... Delegates>
+struct get_states_type_helper<temporary_storage<Delegates...>>{
+    using type = states<Delegates...>;
 };
 
-template <typename CompositionT>
-struct states_for_composition;
+template <typename DelegatesT>
+struct states_for_delegates;
 
-template <typename... Components>
-struct states_for_composition<composition<Components...>>{
-    using type = typename get_states_type_helper<typename composition_states_helper<Components...>::type>::type;
+template <typename... Delegates>
+struct states_for_delegates<delegates<Delegates...>>{
+    using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
 };
 
-template <typename... Components>
+template <typename... Delegates>
 struct states_for_components{
-    using type = typename get_states_type_helper<typename composition_states_helper<Components...>::type>::type;
+    using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
 };
 
 }
 
 
-template <typename ComponentT, typename... Rest>
-struct states<ComponentT, Rest...>: private detail::state_container<ComponentT>, private states<Rest...> {
-    using component_type = ComponentT;
-    using container_type = detail::state_container<ComponentT>;
+template <typename DelegateT, typename... Rest>
+struct states<DelegateT, Rest...>: private detail::state_container<DelegateT>, private states<Rest...> {
+    using component_type = DelegateT;
+    using feature        = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
+    using container_type = detail::state_container<DelegateT>;
     // using state_type     = state_wrapper<typename ComponentT::state, typename ComponentT::feature>;
 
     // static_assert(std::is_default_constructible_v<state_type>);
@@ -202,41 +205,41 @@ struct states<ComponentT, Rest...>: private detail::state_container<ComponentT>,
     using container_type::container_type;
 
     /// @{
-    template <typename ComponentQ, std::enable_if_t<!container_type::skipped && std::is_same_v<ComponentQ, ComponentT>, bool> = true>
-    auto& get() { return container_type::template get<ComponentQ>(); }
+    template <typename DelegateQ, std::enable_if_t<!container_type::skipped && std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    auto& get() { return container_type::template get<DelegateQ>(); }
 
-    template <typename ComponentQ, std::enable_if_t<!container_type::skipped && std::is_same_v<ComponentQ, ComponentT>, bool> = true>
-    const auto& get() const { return container_type::template get<ComponentQ>(); }
+    template <typename DelegateQ, std::enable_if_t<!container_type::skipped && std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    const auto& get() const { return container_type::template get<DelegateQ>(); }
 
     // using container_type::get;
 
-    template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
-    auto& get() { return states<Rest...>::template get<ComponentQ>(); }
+    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    auto& get() { return states<Rest...>::template get<DelegateQ>(); }
 
-    template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
-    const auto& get() const { return states<Rest...>::template get<ComponentQ>(); }
+    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    const auto& get() const { return states<Rest...>::template get<DelegateQ>(); }
     /// @}
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<feature, FeatureT> && Idx == 0, bool> = true>
     auto& at() { return container_type::template get<FeatureT>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<feature, FeatureT> && Idx == 0, bool> = true>
     const auto& at() const { return container_type::template get<FeatureT>(); }
 
     // using container_type::at;
 
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature, FeatureT> && Idx != 0, bool> = true>
     auto& at() { return states<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature, FeatureT>, bool> = true>
     auto& at() { return states<Rest...>::template at<FeatureT, Idx>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature, FeatureT> && Idx != 0, bool> = true>
     const auto& at() const { return states<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature, FeatureT>, bool> = true>
     const auto& at() const { return states<Rest...>::template at<FeatureT, Idx>(); }
     /// @}
 
@@ -250,10 +253,11 @@ private:
     const states<Rest...>& tail() const { return *this; }
 };
 
-template <typename ComponentT>
-struct states<ComponentT> : private detail::state_container<ComponentT>{
-    using component_type = ComponentT;
-    using container_type = detail::state_container<ComponentT>;
+template <typename DelegateT>
+struct states<DelegateT> : private detail::state_container<DelegateT>{
+    using component_type = DelegateT;
+    using feature        = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
+    using container_type = detail::state_container<DelegateT>;
 
     template <typename... Features>
     friend struct evaluator;

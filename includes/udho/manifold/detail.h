@@ -4,12 +4,12 @@
 #include <utility>
 #include <boost/type_traits.hpp>
 #include <udho/manifold/traits.h>
+#include <udho/manifold/features.h>
 
 namespace udho{
 namespace manifold {
 
 namespace detail {
-
 
 /**
  * @brief helper class to check wheather an argument ArgT is feasible initialization argument for the component ComponentT
@@ -34,9 +34,6 @@ struct argument_traits {
 
 template <typename ArgT, typename... Args>
 struct arguments_lookup{
-    // template <int Idx, typename ComponentT>
-    // static constexpr const int index_of = argument_traits<ComponentT>::template is_feasible<ArgT> ? Idx+1 : arguments_lookup<Args...>::template index_of<Idx+1, ComponentT>;
-
     template <typename ComponentT>
     using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, typename arguments_lookup<Args...>::template type_for<ComponentT> >;
 
@@ -50,9 +47,6 @@ struct arguments_lookup{
 
 template <typename ArgT>
 struct arguments_lookup<ArgT>{
-    // template <int Idx, typename ComponentT>
-    // static constexpr const int index_of = arguments_lookup<ComponentT>::template is_feasible<ArgT> ? Idx+1 : -1;
-
     template <typename ComponentT>
     using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, default_constructed>;
 
@@ -76,44 +70,8 @@ struct accumulate<T, Ts...> : std::integral_constant<std::size_t,  T::value + ac
  */
 template <typename... Args>
 struct arguments {
-    // template <int Idx, typename ComponentT>
-    // static constexpr const int index_of = arguments_lookup<Args...>::template index_of<Idx+1, ComponentT>;
-
     template <typename ComponentT>
     using type_for = typename arguments_lookup<Args...>::template type_for<ComponentT>;
-
-    // /**
-    //  * @brief integer sequence of size sizeof...(Components) such that position i of that sequence denote the index of the feasible argument in Args, -1 if none feasible
-    //  */
-    // template <typename... Components>
-    // using indexes = std::index_sequence<index_of<0, Components>...>;
-
-    // /**
-    //  * @brief boolean sequence of size sizeof...(Components) such that position i of that sequence denote whether passing no argument is okay for that component or not
-    //  */
-    // template <typename... Components>
-    // using default_allowed = std::integer_sequence<bool, (std::is_default_constructible_v<Components> && !component_traits<Components>::shared)...>;
-
-    // template <typename... Components>
-    // static constexpr const std::size_t arguments_mapped = accumulate<std::integral_constant<bool, (index_of<0, Components> > 0) >...>::value;
-
-    // template <typename... Components>
-    // static constexpr const bool no_args_skipped = indexes<Components...>::size() == sizeof...(Args);
-
-    // template <typename... Components>
-    // static constexpr void none_skipped() {
-    //     static_assert(indexes<Components...>::size() == sizeof...(Args), "at least one of the arguments passed is not feasible for any component");
-    // }
-
-    // /**
-    //  * @brief expect
-    //  * @tparam Count expected number of feasible argument
-    //  */
-    // template <std::size_t Count, typename... Components>
-    // static constexpr int expect() {
-    //     static_assert(arguments_mapped<Components...> == Count, "at least one of the arguments passed is not feasible for any component");
-    //     return 0;
-    // }
 
     /**
      * @brief finds the first suitable argument for the given component
@@ -126,6 +84,53 @@ struct arguments {
     static constexpr type_for<ComponentT> find(Args&&... args) { return arguments_lookup<Args...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
 };
 
+template <typename FeatureT>
+struct expand_feature_pairs;
+
+template <typename... Features>
+struct expand_feature_pairs<udho::manifold::features<Features...>>{
+    template <typename ComponentT>
+    using delegates_type = udho::manifold::delegates<udho::manifold::delegate<ComponentT, Features>...>;
+};
+
+template <typename ComponentT>
+struct get_delegates{
+    using type = typename expand_feature_pairs<typename ComponentT::features>::template delegates_type<ComponentT>;
+};
+
+template <typename... DelegatesSet>
+struct flatten;
+
+template <typename... Delegates>
+struct flattened{
+    using type = udho::manifold::delegates<Delegates ...>;
+};
+
+template <typename L, typename R>
+struct combined;
+
+template <typename... X, typename... Y>
+struct combined<flattened<X...>, flattened<Y...>>{
+    using type = flattened<X..., Y...>;
+};
+
+template <typename... Delegates, typename... Rest>
+struct flatten<udho::manifold::delegates<Delegates...>, Rest...> {
+    using type = flattened<Delegates...>;
+    using rest = typename flatten<Rest...>::combined;
+    using combined = typename combined<type, rest>::type;
+};
+
+template <>
+struct flatten<>{
+    using type = flattened<>;
+    using combined = flattened<>;
+};
+
+template <typename... Components>
+struct flatten_all{
+    using type = typename flatten<typename get_delegates<Components>::type...>::combined::type;
+};
 
 
 }

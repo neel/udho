@@ -8,6 +8,7 @@
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
 #include <udho/manifold/composition.h>
+#include <udho/manifold/features.h>
 #include <udho/manifold/delegate.h>
 #include <udho/manifold/evaluator.h>
 #include <udho/manifold/pipeline.h>
@@ -28,8 +29,9 @@ struct State {
 
 template <std::size_t Index, int FeatureIndex = Index>
 struct Component {
-    using feature = Feature<FeatureIndex>;
-    using state   = State;
+    // using feature   = Feature<FeatureIndex>;
+    using features  = udho::manifold::features<Feature<FeatureIndex>>;
+    using state     = State;
 
     static constexpr const std::size_t component_index = Index;
     static constexpr const int feature_index = FeatureIndex;
@@ -43,9 +45,24 @@ struct Component {
     std::string message;
 };
 
+template <>
+struct Component<5, 5> {
+    using features  = udho::manifold::features<Feature<1>, Feature<5>, Feature<6>>;
+    using state     = State;
+
+    Component(): is_default_constructed(true) {}
+    Component(const std::string& msg): is_default_constructed(false), message(msg) {}
+    Component(const Component&) = delete;
+    Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
+
+    bool is_default_constructed;
+    std::string message;
+};
+
 template <std::size_t Index, int FeatureIndex = Index>
 struct XComponent {
-    using feature = Feature<FeatureIndex>;
+    // using feature  = Feature<FeatureIndex>;
+    using features = udho::manifold::features<Feature<FeatureIndex>>;
 
     static constexpr const std::size_t component_index = Index;
     static constexpr const int feature_index = FeatureIndex;
@@ -61,27 +78,30 @@ struct XComponent {
 
 }
 
-namespace udho::manifold {
+namespace udho {
+namespace manifold {
 
-template <std::size_t Index, int FeatureIndex>
-struct delegate<testing::Component<Index, FeatureIndex>> {
+template <std::size_t Index, int FeatureIndex, typename F>
+struct delegate<testing::Component<Index, FeatureIndex>, F> {
     using component_type = testing::Component<Index, FeatureIndex>;
-    using state_type     = typename testing::Component<Index, FeatureIndex>::state;
+    using feature        = F;
+    using state          = typename testing::Component<Index, FeatureIndex>::state;
 
     delegate(component_type& component): _component(component) {}
 
     template <typename... Components>
-    state_type eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
-        return state_type(_component.message == "accept");
+    state eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+        return state(_component.message == "accept");
     }
 
     private:
         component_type& _component;
 };
 
-template <std::size_t Index, int FeatureIndex>
-struct delegate<testing::XComponent<Index, FeatureIndex>> {
+template <std::size_t Index, int FeatureIndex, typename F>
+struct delegate<testing::XComponent<Index, FeatureIndex>, F> {
     using component_type = testing::XComponent<Index, FeatureIndex>;
+    using feature = F;
 
     delegate(component_type& component): _component(component) {}
 
@@ -89,13 +109,111 @@ struct delegate<testing::XComponent<Index, FeatureIndex>> {
         component_type& _component;
 };
 
+
+}
 }
 
 template <>
 struct udho::manifold::component_traits<testing::Component<5>> {
     static constexpr const bool shared = true;
     using state = testing::State;
+    using params = udho::manifold::params<>;
 };
+
+// {
+
+// namespace lib{
+
+// template <typename... D>
+// struct delegates{};
+
+// template <typename C, typename F>
+// struct delegate{};
+
+// template <typename ComponentT, typename... Features>
+// struct features{
+//     using delegates_type = delegates<delegate<ComponentT, Features>...>;
+// };
+
+// }
+
+// //-----
+
+
+
+// namespace detail {
+
+// template <typename... DelegatesSet>
+// struct flatten;
+
+// template <typename... Delegates>
+// struct flattened{
+//     using type = lib::delegates<Delegates ...>;
+// };
+
+// template <typename L, typename R>
+// struct combined;
+
+// template <typename... X, typename... Y>
+// struct combined<flattened<X...>, flattened<Y...>>{
+//     using type = flattened<X..., Y...>;
+// };
+
+// template <typename... Delegates, typename... Rest>
+// struct flatten<lib::delegates<Delegates...>, Rest...> {
+//     using type = flattened<Delegates...>;
+//     using rest = typename flatten<Rest...>::combined;
+//     using combined = typename combined<type, rest>::type;
+// };
+
+// template <>
+// struct flatten<>{
+//     using type = flattened<>;
+//     using combined = flattened<>;
+// };
+
+// template <typename... Components>
+// struct flatten_all{
+//     using type = typename flatten<typename Components::features::delegates_type...>::combined;
+// };
+
+// }
+
+// namespace x {
+
+// template <int I>
+// struct F{};
+
+// struct C1{
+//     using features = lib::features<C1, F<1>, F<2>, F<3>>;
+// };
+
+// struct C2{
+//     using features = lib::features<C2, F<1>, F<5>>;
+// };
+
+// struct C3{
+//     using features = lib::features<C3, F<3>, F<8>>;
+// };
+
+// struct C4{
+//     using features = lib::features<C4, F<4>>;
+// };
+
+// }
+
+// int main() {
+
+//     using flattened_type = typename detail::flatten_all<x::C1, x::C2, x::C4, x::C3>::type;
+
+//     flattened_type::xyz();
+//     // x::C1::features::delegates_type::xyz();
+
+//     return 0;
+// }
+
+
+// }
 
 TEST_CASE("manifold composition Construction & Composition", "[manifold][composition]") {
     using composition_type = udho::manifold::composition<
@@ -137,7 +255,9 @@ TEST_CASE("manifold composition Construction & Composition", "[manifold][composi
         CHECK(composition.at<testing::Feature<1>, 0>().component().component_index == 0);
         CHECK(composition.at<testing::Feature<1>, 1>().component().component_index == 1);
         CHECK(composition.at<testing::Feature<1>, 2>().component().component_index == 4);
-        CHECK(composition.count<testing::Feature<1>>() == 3);
+        CHECK(composition.count<testing::Feature<1>>() == 4);
+        CHECK(composition.count<testing::Feature<5>>() == 1);
+        CHECK(composition.count<testing::Feature<6>>() == 2);
     }
 
     SECTION("Ordered Composition") {
@@ -202,23 +322,42 @@ TEST_CASE("manifold delegate Construction & Composition", "[manifold][delegates]
         testing::Component<6>
     >;
 
-    using delegates_type = udho::manifold::delegates<
-        testing::Component<0>,
-        testing::XComponent<0, 1>,
-        testing::Component<1>,
-        testing::Component<2, 0>,
-        testing::Component<3>,
-        testing::Component<4, 1>,
-        testing::Component<5>,
-        testing::Component<6>
-    >;
-
     testing::Component<5> component_5{"C5"};
 
     auto composition = composition_type::compose(component_5);
 
+    using delegates_type = composition_type::delegates_type;
+    using expected_delegates_type = udho::manifold::delegates<
+        udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
+        udho::manifold::delegate<testing::XComponent<0, 1>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>,
+        udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>,
+        udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<6>>,
+        udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>
+    >;
+    static_assert(std::is_same_v<expected_delegates_type, delegates_type>);
+
     delegates_type delegates{composition};
 
+    using states_type = udho::manifold::detail::states_for_delegates<delegates_type>::type;
+    using expected_states_type = udho::manifold::states<
+        udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
+        udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>,
+        udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>,
+        udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<1>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>,
+        udho::manifold::delegate<testing::Component<5>, testing::Feature<6>>,
+        udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>
+    >;
+    static_assert(std::is_same_v<expected_states_type, states_type>);
+
+    states_type states;
 }
 
 TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
@@ -235,19 +374,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         >;
         using delegates_type = composition_type::delegates_type;
 
-        using expected_states_type = udho::manifold::detail::states_for_composition<composition_type>::type;
-
-        using states_type = udho::manifold::states<
-            testing::Component<0>,
-            testing::Component<1>,
-            testing::Component<2, 0>,
-            testing::Component<3>,
-            testing::Component<4, 1>,
-            testing::Component<5>,
-            testing::Component<6>
-        >;
-
-        static_assert(std::is_same_v<expected_states_type, states_type>);
+        using states_type = udho::manifold::detail::states_for_delegates<delegates_type>::type;
 
         testing::Component<5> component_5;
 
@@ -265,15 +392,15 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
         delegates_type delegates{composition};
 
-        bool s0 = delegates.get<testing::Component<0>>().eval(states, address, request);
-        bool s1 = delegates.get<testing::Component<1>>().eval(states, address, request);
+        bool s0 = delegates.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
+        bool s1 = delegates.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
 
         CHECK(s0);
         CHECK(!s1);
 
-        CHECK(states.get<testing::Component<0>>().ready());
-        CHECK(states.get<testing::Component<1>>().ready());
-        CHECK(!states.get<testing::Component<2, 0>>().ready());
+        CHECK(states.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(states.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!states.get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>().ready());
     }
 
 
@@ -330,15 +457,15 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(count == 4);
 
         // Verify states
-        CHECK(pipeline.states().get<testing::Component<0>>()->accepted());
-        CHECK(pipeline.states().get<testing::Component<1>>()->accepted());
-        CHECK(pipeline.states().get<testing::Component<2, 0>>()->accepted());
-        CHECK(pipeline.states().get<testing::Component<4, 1>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>()->accepted());
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<testing::Component<3>>().ready());
-        CHECK(!pipeline.states().get<testing::Component<5>>().ready());
-        CHECK(!pipeline.states().get<testing::Component<6>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>>().ready());
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
@@ -384,19 +511,19 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(count == 2);
 
         // Verify states
-        CHECK(pipeline.states().get<testing::Component<0>>()->accepted());
-        CHECK(!pipeline.states().get<testing::Component<1>>()->accepted());
-        CHECK(pipeline.states().get<testing::Component<2, 0>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
         CHECK_THROWS_WITH(
-            (pipeline.states().get<testing::Component<4, 1>>()->accepted()),
+            (pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
             Catch::Matchers::EndsWith("unevaluated state")
         );
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<testing::Component<4, 1>>().ready());
-        CHECK(!pipeline.states().get<testing::Component<3>>().ready());
-        CHECK(!pipeline.states().get<testing::Component<5>>().ready());
-        CHECK(!pipeline.states().get<testing::Component<6>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>>().ready());
 
         // verify that components that don't have state do not exist in the states type
         //pipeline.states().get<testing::XComponent<0, 1>>();

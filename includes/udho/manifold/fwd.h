@@ -29,7 +29,7 @@ struct wrapper;
 template <typename ComponentT, bool>
 struct delegate_wrapper;
 
-template <typename ComponentT>
+template <typename ComponentT, typename FeatureT>
 struct delegate;
 
 template <typename ComponentT>

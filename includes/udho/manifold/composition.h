@@ -75,8 +75,9 @@ struct compositor {
 template <typename ComponentT, typename... Rest>
 struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private composition<Rest...>{
     using component_type = ComponentT;
+    using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using delegates_type = delegates<ComponentT, Rest...>;
+    using delegates_type = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
     using pipeline_type  = pipeline<ComponentT, Rest...>;
 
     template <typename... Features>
@@ -110,29 +111,29 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     /// @}
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     wrapper_type& at() { return *this; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx != 0, bool> = true>
     auto& at() { return composition<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!features_type::template has<FeatureT>::value, bool> = true>
     auto& at() { return composition<Rest...>::template at<FeatureT, Idx>(); }
 
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     const wrapper_type& at() const { return *this; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx != 0, bool> = true>
     const auto& at() const { return composition<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<typename component_type::feature, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!features_type::template has<FeatureT>::value, bool> = true>
     const auto& at() const { return composition<Rest...>::template at<FeatureT, Idx>(); }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return std::is_same_v<typename component_type::feature, FeatureT> + composition<Rest...>::template count<FeatureT>(); }
+    static constexpr int count() { return features_type::template has<FeatureT>::value + composition<Rest...>::template count<FeatureT>(); }
     /// @}
 
     /// @{
@@ -152,8 +153,9 @@ private:
 template <typename ComponentT>
 struct composition<ComponentT>: private wrapper<ComponentT> {
     using component_type = ComponentT;
+    using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using delegates_type = delegates<ComponentT>;
+    using delegates_type = typename udho::manifold::detail::flatten_all<ComponentT>::type;
     using pipeline_type  = pipeline<ComponentT>;
 
     template <typename... Features>
@@ -177,16 +179,16 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     /// @}
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     wrapper_type& at() { return *this; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<typename component_type::feature, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     const wrapper_type& at() const { return *this; }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return std::is_same_v<typename component_type::feature, FeatureT>; }
+    static constexpr int count() { return features_type::template has<FeatureT>::value; }
     /// @}
 
     /// @{
