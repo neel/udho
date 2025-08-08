@@ -90,12 +90,12 @@ struct expand_feature_pairs;
 template <typename... Features>
 struct expand_feature_pairs<udho::manifold::features<Features...>>{
     template <typename ComponentT>
-    using delegates_type = udho::manifold::mediator<udho::manifold::delegate<ComponentT, Features>...>;
+    using mediator_type = udho::manifold::mediator<udho::manifold::delegate<ComponentT, Features>...>;
 };
 
 template <typename ComponentT>
 struct get_delegates{
-    using type = typename expand_feature_pairs<typename ComponentT::features>::template delegates_type<ComponentT>;
+    using type = typename expand_feature_pairs<typename ComponentT::features>::template mediator_type<ComponentT>;
 };
 
 template <typename... DelegatesSet>

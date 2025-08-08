@@ -8,7 +8,7 @@
 #include <udho/cookies/cookie.h>
 #include <boost/lexical_cast.hpp>
 #include <udho/manifold/composition.h>
-#include <udho/manifold/delegate.h>
+#include <udho/manifold/mediator.h>
 #include <udho/manifold/state.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/evaluator.h>

@@ -38,12 +38,12 @@ struct evaluator<FeatureX, Features...>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Delegates>
-    std::size_t operator()(udho::manifold::mediator<Delegates...>& delegates, typename udho::manifold::detail::states_for_delegates<Delegates...>::type& states) {
-        static_assert(delegates.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::mediator<Delegates...>& mediator, typename udho::manifold::detail::states_for_delegates<Delegates...>::type& states) {
+        static_assert(mediator.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        std::size_t count = delegates.template apply<FeatureX>( detail::delegate_evaluator<Delegates...>{states, _address, _request} );
+        std::size_t count = mediator.template apply<FeatureX>( detail::delegate_evaluator<Delegates...>{states, _address, _request} );
         evaluator<Features...> ev{_address, _request};
-        count += ev(delegates, states);
+        count += ev(mediator, states);
         return count;
     }
 
@@ -56,10 +56,10 @@ struct evaluator<FeatureX>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Delegates>
-    std::size_t operator()(udho::manifold::mediator<Delegates...>& delegates, typename udho::manifold::detail::states_for_delegates<Delegates...>::type& states) {
-        static_assert(delegates.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::mediator<Delegates...>& mediator, typename udho::manifold::detail::states_for_delegates<Delegates...>::type& states) {
+        static_assert(mediator.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        return delegates.template apply<FeatureX>( detail::delegate_evaluator<Delegates...>{states, _address, _request} );
+        return mediator.template apply<FeatureX>( detail::delegate_evaluator<Delegates...>{states, _address, _request} );
     }
 
     const boost::asio::ip::address& _address;
