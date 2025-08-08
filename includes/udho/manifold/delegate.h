@@ -55,8 +55,6 @@ private:
     delegate_type _delegate;
 };
 
-}
-
 template <typename DelegateT>
 struct delegate_interface: detail::delegate_interface_internal<DelegateT> {
     using internal_interface_type = detail::delegate_interface_internal<DelegateT>;
@@ -104,11 +102,13 @@ struct delegate_wrapper<DelegateT, true>: delegate_interface<DelegateT>{
     }
 };
 
+}
+
 template <typename DelegateT, typename... Rest>
-struct delegates<DelegateT, Rest...>: private delegate_wrapper<DelegateT>, private delegates<Rest...>{
+struct delegates<DelegateT, Rest...>: private detail::delegate_wrapper<DelegateT>, private delegates<Rest...>{
     using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
     using feature        = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using wrapper_type   = delegate_wrapper<DelegateT>;
+    using wrapper_type   = detail::delegate_wrapper<DelegateT>;
 
     template <typename... Components>
     delegates(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), delegates<Rest...>(composition) {}
@@ -164,10 +164,10 @@ struct delegates<DelegateT, Rest...>: private delegate_wrapper<DelegateT>, priva
 };
 
 template <typename DelegateT>
-struct delegates<DelegateT>: private delegate_wrapper<DelegateT>{
+struct delegates<DelegateT>: private detail::delegate_wrapper<DelegateT>{
     using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
     using feature        = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using wrapper_type   = delegate_wrapper<DelegateT>;
+    using wrapper_type   = detail::delegate_wrapper<DelegateT>;
 
     template <typename... Components>
     delegates(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
