@@ -1,5 +1,5 @@
-#ifndef UDHO_MANIFOLD_DELEGATE_H
-#define UDHO_MANIFOLD_DELEGATE_H
+#ifndef UDHO_MANIFOLD_FACET_H
+#define UDHO_MANIFOLD_FACET_H
 
 #include <cstdint>
 #include <utility>
@@ -15,116 +15,116 @@ namespace manifold{
 
 namespace detail {
 
-template <typename DelegateT, bool HasResult = udho::manifold::has_result<DelegateT>::value>
-struct delegate_interface_internal {
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using delegate_type  = DelegateT;
-    using result_type     = typename udho::manifold::delegate_traits<DelegateT>::result_type;
+template <typename FacetT, bool HasResult = udho::manifold::has_result<FacetT>::value>
+struct facet_interface_internal {
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using facet_type  = FacetT;
+    using result_type     = typename udho::manifold::facet_traits<FacetT>::result_type;
 
-    static_assert(std::is_constructible_v<delegate_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::delegate<DelegateT> must be constructible with lvalue reference of ComponentT");
+    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    delegate_interface_internal(component_type& component): _delegate(component) {}
+    facet_interface_internal(component_type& component): _facet(component) {}
 
-    template <typename... Delegates>
-    result_type eval(const udho::manifold::states<Delegates...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return _delegate.eval(states, address, request);
+    template <typename... Facets>
+    result_type eval(const udho::manifold::states<Facets...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+        return _facet.eval(states, address, request);
     }
 
-    delegate_type& delegate() { return _delegate; }
-    const delegate_type& delegate() const { return _delegate; }
+    facet_type& facet() { return _facet; }
+    const facet_type& facet() const { return _facet; }
 
 private:
-    delegate_type _delegate;
+    facet_type _facet;
 };
 
-template <typename DelegateT>
-struct delegate_interface_internal<DelegateT, false> {
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using delegate_type  = DelegateT;
+template <typename FacetT>
+struct facet_interface_internal<FacetT, false> {
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using facet_type  = FacetT;
 
-    static_assert(std::is_constructible_v<delegate_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::delegate<DelegateT> must be constructible with lvalue reference of ComponentT");
+    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    delegate_interface_internal(component_type& component): _delegate(component) {}
+    facet_interface_internal(component_type& component): _facet(component) {}
 
-    delegate_type& delegate() { return _delegate; }
-    const delegate_type& delegate() const { return _delegate; }
+    facet_type& facet() { return _facet; }
+    const facet_type& facet() const { return _facet; }
 
 private:
-    delegate_type _delegate;
+    facet_type _facet;
 };
 
-template <typename DelegateT>
-struct delegate_interface: detail::delegate_interface_internal<DelegateT> {
-    using internal_interface_type = detail::delegate_interface_internal<DelegateT>;
+template <typename FacetT>
+struct facet_interface: detail::facet_interface_internal<FacetT> {
+    using internal_interface_type = detail::facet_interface_internal<FacetT>;
 
     using internal_interface_type::internal_interface_type;
 };
 
-template <typename DelegateT, bool HasResult = udho::manifold::has_result<DelegateT>::value>
-struct delegate_wrapper: delegate_interface<DelegateT>{
-    using delegate_type  = DelegateT;
-    using interface_type = delegate_interface<DelegateT>;
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
+template <typename FacetT, bool HasResult = udho::manifold::has_result<FacetT>::value>
+struct facet_wrapper: facet_interface<FacetT>{
+    using facet_type  = FacetT;
+    using interface_type = facet_interface<FacetT>;
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using config_type    = udho::manifold::config<component_type>;
 
     static constexpr const bool has_result = false;
 
-    static_assert(std::is_constructible_v<delegate_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::delegate<DelegateT> must be constructible with lvalue reference of ComponentT");
+    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    delegate_wrapper(component_type& component): interface_type(component) {}
+    facet_wrapper(component_type& component): interface_type(component) {}
 };
 
-template <typename DelegateT>
-struct delegate_wrapper<DelegateT, true>: delegate_interface<DelegateT>{
-    using delegate_type  = DelegateT;
-    using interface_type = delegate_interface<DelegateT>;
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
+template <typename FacetT>
+struct facet_wrapper<FacetT, true>: facet_interface<FacetT>{
+    using facet_type  = FacetT;
+    using interface_type = facet_interface<FacetT>;
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using config_type    = udho::manifold::config<component_type>;
-    using result_type    = typename udho::manifold::delegate_traits<DelegateT>::result_type;
+    using result_type    = typename udho::manifold::facet_traits<FacetT>::result_type;
 
     static constexpr const bool has_result = true;
 
-    static_assert(std::is_constructible_v<delegate_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::delegate<DelegateT> must be constructible with lvalue reference of ComponentT");
+    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    delegate_wrapper(component_type& component): interface_type(component) {}
+    facet_wrapper(component_type& component): interface_type(component) {}
 
-    template <typename... Delegates, typename... Args>
-    bool eval(udho::manifold::states<Delegates...>& states, Args... args) {
-        using states_facade_type = udho::manifold::states<Delegates...>;
+    template <typename... Facets, typename... Args>
+    bool eval(udho::manifold::states<Facets...>& states, Args... args) {
+        using states_facade_type = udho::manifold::states<Facets...>;
         result_type result = std::move(interface_type::eval(states, std::forward<Args>(args)...));
         bool accepted = result.accepted();
-        states.template get<delegate_type>() = std::move(result);
+        states.template get<facet_type>() = std::move(result);
         return accepted;
     }
 };
 
 }
 
-template <typename DelegateT, typename... Rest>
-struct mediator<DelegateT, Rest...>: private detail::delegate_wrapper<DelegateT>, private mediator<Rest...>{
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using wrapper_type   = detail::delegate_wrapper<DelegateT>;
+template <typename FacetT, typename... Rest>
+struct mediator<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private mediator<Rest...>{
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using wrapper_type   = detail::facet_wrapper<FacetT>;
 
     template <typename... Components>
     mediator(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), mediator<Rest...>(composition) {}
 
     /// @{
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     wrapper_type& get() { return *this; }
 
-    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    auto& get() { return mediator<Rest...>::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get() { return mediator<Rest...>::template get<FacetQ>(); }
 
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     const wrapper_type& get() const { return *this; }
 
-    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    const auto& get() const { return mediator<Rest...>::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get() const { return mediator<Rest...>::template get<FacetQ>(); }
     /// @}
 
     /// @{
@@ -155,28 +155,28 @@ struct mediator<DelegateT, Rest...>: private detail::delegate_wrapper<DelegateT>
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<mediator<DelegateT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<mediator<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<mediator<DelegateT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<mediator<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
 };
 
-template <typename DelegateT>
-struct mediator<DelegateT>: private detail::delegate_wrapper<DelegateT>{
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using wrapper_type   = detail::delegate_wrapper<DelegateT>;
+template <typename FacetT>
+struct mediator<FacetT>: private detail::facet_wrapper<FacetT>{
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using wrapper_type   = detail::facet_wrapper<FacetT>;
 
     template <typename... Components>
     mediator(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
 
     /// @{
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     wrapper_type& get() { return *this; }
 
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     const wrapper_type& get() const { return *this; }
     /// @}
 
@@ -195,14 +195,14 @@ struct mediator<DelegateT>: private detail::delegate_wrapper<DelegateT>{
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<mediator<DelegateT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<mediator<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<mediator<DelegateT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<mediator<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 };
 
 }
 }
 
-#endif // UDHO_MANIFOLD_DELEGATE_H
+#endif // UDHO_MANIFOLD_FACET_H

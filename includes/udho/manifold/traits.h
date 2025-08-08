@@ -57,19 +57,19 @@ struct component_traits{
     using params = typename detail::has_params<ComponentT>::type;
 };
 
-template <typename DelegateT>
-struct delegate_traits;
+template <typename FacetT>
+struct facet_traits;
 
 template <typename ComponentT, typename FeatureT>
-struct delegate_traits<udho::manifold::delegate<ComponentT, FeatureT>> {
+struct facet_traits<udho::manifold::facet<ComponentT, FeatureT>> {
     using component_type = ComponentT;
     using feature_type   = FeatureT;
-    using delegate_type  = udho::manifold::delegate<ComponentT, FeatureT>;
-    using result_type    = typename detail::has_result<delegate_type>::type;
+    using facet_type  = udho::manifold::facet<ComponentT, FeatureT>;
+    using result_type    = typename detail::has_result<facet_type>::type;
 };
 
-template <typename DelegateT>
-struct has_result: std::bool_constant<!std::is_void<typename delegate_traits<DelegateT>::result_type>::value> {};
+template <typename FacetT>
+struct has_result: std::bool_constant<!std::is_void<typename facet_traits<FacetT>::result_type>::value> {};
 
 template <typename ComponentT>
 struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::config>::value> {};

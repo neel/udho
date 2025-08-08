@@ -44,12 +44,12 @@ struct result_wrapper{
     bool ready() const { return _result.has_value(); }
 
     const type& value() const {
-        if(!ready()) throw std::runtime_error{"trying to get result from unevaluated delegate"};
+        if(!ready()) throw std::runtime_error{"trying to get result from unevaluated facet"};
         return *_result;
     }
 
     type& value() {
-        if(!ready()) throw std::runtime_error{"trying to get result from unevaluated delegate"};
+        if(!ready()) throw std::runtime_error{"trying to get result from unevaluated facet"};
         return *_result;
     }
 
@@ -71,12 +71,12 @@ private:
 
 namespace detail{
 
-template <typename DelegateT, bool Skip = !udho::manifold::has_result<DelegateT>::value>
+template <typename FacetT, bool Skip = !udho::manifold::has_result<FacetT>::value>
 struct result_container{
-    using delegate_type  = DelegateT;
-    using result_type    = typename udho::manifold::delegate_traits<DelegateT>::result_type;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
+    using facet_type  = FacetT;
+    using result_type    = typename udho::manifold::facet_traits<FacetT>::result_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using wrapper_type   = result_wrapper<result_type, feature_type>;
 
     static constexpr const bool skipped = false;
@@ -89,14 +89,14 @@ struct result_container{
 
     result_container() = default;
     template <typename OtherHeadT, typename... OtherTail>
-    inline explicit result_container(states<OtherHeadT, OtherTail...>&& other): _result(std::move(other.template get<DelegateT>())) {}
+    inline explicit result_container(states<OtherHeadT, OtherTail...>&& other): _result(std::move(other.template get<FacetT>())) {}
 
 
     /// @{
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     wrapper_type& get() { return _result; }
 
-    template <typename DelegateQ, std::enable_if_t<std::is_same_v<DelegateQ, DelegateT>, bool> = true>
+    template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     const wrapper_type& get() const { return _result; }
     /// @}
 
@@ -119,76 +119,76 @@ private:
 };
 
 
-template <typename DelegateT>
-struct result_container<DelegateT, true>{
-    using delegate_type  = DelegateT;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using component_type = typename udho::manifold::delegate_traits<DelegateT>::component_type;
+template <typename FacetT>
+struct result_container<FacetT, true>{
+    using facet_type  = FacetT;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     static constexpr const bool skipped = true;
 };
 
 
-template <typename... Delegates>
+template <typename... Facets>
 struct temporary_storage{};
 
 template <typename X, typename StorageT>
 struct prepend_helper;
 
-template <typename X, typename... Delegates>
-struct prepend_helper<X, temporary_storage<Delegates...>>{
-    using type = temporary_storage<X, Delegates...>;
+template <typename X, typename... Facets>
+struct prepend_helper<X, temporary_storage<Facets...>>{
+    using type = temporary_storage<X, Facets...>;
 };
 
-template <typename... Delegates>
+template <typename... Facets>
 struct composition_states_helper;
 
-template <typename DelegateT, typename... Rest>
-struct composition_states_helper<DelegateT, Rest...> {
+template <typename FacetT, typename... Rest>
+struct composition_states_helper<FacetT, Rest...> {
     using type = std::conditional_t<
-            !has_result<DelegateT>::value,
+            !has_result<FacetT>::value,
             typename composition_states_helper<Rest...>::type,
-            typename prepend_helper<DelegateT, typename composition_states_helper<Rest...>::type>::type
+            typename prepend_helper<FacetT, typename composition_states_helper<Rest...>::type>::type
         >;
 };
 
-template <typename DelegateT>
-struct composition_states_helper<DelegateT> {
+template <typename FacetT>
+struct composition_states_helper<FacetT> {
     using type = std::conditional_t<
-            !has_result<DelegateT>::value,
+            !has_result<FacetT>::value,
             temporary_storage<>,
-            temporary_storage<DelegateT>
+            temporary_storage<FacetT>
         >;
 };
 
 template <typename>
 struct get_states_type_helper;
 
-template <typename... Delegates>
-struct get_states_type_helper<temporary_storage<Delegates...>>{
-    using type = states<Delegates...>;
+template <typename... Facets>
+struct get_states_type_helper<temporary_storage<Facets...>>{
+    using type = states<Facets...>;
 };
 
-template <typename DelegatesT>
+template <typename FacetsT>
 struct states_for_mediator;
 
-template <typename... Delegates>
-struct states_for_mediator<mediator<Delegates...>>{
-    using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
+template <typename... Facets>
+struct states_for_mediator<mediator<Facets...>>{
+    using type = typename get_states_type_helper<typename composition_states_helper<Facets...>::type>::type;
 };
 
-template <typename... Delegates>
-struct states_for_delegates{
-    using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
+template <typename... Facets>
+struct states_for_facets{
+    using type = typename get_states_type_helper<typename composition_states_helper<Facets...>::type>::type;
 };
 
 }
 
 
-template <typename DelegateT, typename... Rest>
-struct states<DelegateT, Rest...>: private detail::result_container<DelegateT>, private states<Rest...> {
-    using component_type = DelegateT;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using container_type = detail::result_container<DelegateT>;
+template <typename FacetT, typename... Rest>
+struct states<FacetT, Rest...>: private detail::result_container<FacetT>, private states<Rest...> {
+    using component_type = FacetT;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using container_type = detail::result_container<FacetT>;
 
     // static_assert(std::is_default_constructible_v<state_type>);
     // static_assert(std::is_move_constructible_v<state_type>);
@@ -199,19 +199,19 @@ struct states<DelegateT, Rest...>: private detail::result_container<DelegateT>, 
     using container_type::container_type;
 
     /// @{
-    template <typename DelegateQ, std::enable_if_t<!container_type::skipped && std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    auto& get() { return container_type::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get() { return container_type::template get<FacetQ>(); }
 
-    template <typename DelegateQ, std::enable_if_t<!container_type::skipped && std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    const auto& get() const { return container_type::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get() const { return container_type::template get<FacetQ>(); }
 
     // using container_type::get;
 
-    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    auto& get() { return states<Rest...>::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get() { return states<Rest...>::template get<FacetQ>(); }
 
-    template <typename DelegateQ, std::enable_if_t<!std::is_same_v<DelegateQ, DelegateT>, bool> = true>
-    const auto& get() const { return states<Rest...>::template get<DelegateQ>(); }
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get() const { return states<Rest...>::template get<FacetQ>(); }
     /// @}
 
     /// @{
@@ -247,11 +247,11 @@ private:
     const states<Rest...>& tail() const { return *this; }
 };
 
-template <typename DelegateT>
-struct states<DelegateT> : private detail::result_container<DelegateT>{
-    using component_type = DelegateT;
-    using feature_type   = typename udho::manifold::delegate_traits<DelegateT>::feature_type;
-    using container_type = detail::result_container<DelegateT>;
+template <typename FacetT>
+struct states<FacetT> : private detail::result_container<FacetT>{
+    using component_type = FacetT;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using container_type = detail::result_container<FacetT>;
 
     template <typename... Features>
     friend struct evaluator;

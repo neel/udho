@@ -43,7 +43,7 @@ std::size_t visit(const FacadeT& facade, Function&& function) {
 
 /**
  * @brief visits a facade and applies the given function on all elements providing the requested feature
- * @tparam FacadeT type of the facade, could be a composition, states, or delegates
+ * @tparam FacadeT type of the facade, could be a composition, states, or facets
  * @tparam FeatureT target feature
  * @param facade
  * @param function
@@ -57,7 +57,7 @@ std::size_t visit(FacadeT& facade, Function&& function) {
 
 /**
  * @brief visits a facade and applies the given function on all elements providing the requested feature
- * @tparam FacadeT type of the facade, could be a composition, states, or delegates
+ * @tparam FacadeT type of the facade, could be a composition, states, or facets
  * @tparam FeatureT target feature
  * @param facade
  * @param function

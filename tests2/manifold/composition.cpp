@@ -82,12 +82,12 @@ namespace udho {
 namespace manifold {
 
 template <std::size_t Index, int FeatureIndex, typename F>
-struct delegate<testing::Component<Index, FeatureIndex>, F> {
+struct facet<testing::Component<Index, FeatureIndex>, F> {
     using component_type = testing::Component<Index, FeatureIndex>;
     using feature        = F;
     using result         = typename testing::Component<Index, FeatureIndex>::result;
 
-    delegate(component_type& component): _component(component) {}
+    facet(component_type& component): _component(component) {}
 
     template <typename... Components>
     result eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
@@ -99,11 +99,11 @@ struct delegate<testing::Component<Index, FeatureIndex>, F> {
 };
 
 template <std::size_t Index, int FeatureIndex, typename F>
-struct delegate<testing::XComponent<Index, FeatureIndex>, F> {
+struct facet<testing::XComponent<Index, FeatureIndex>, F> {
     using component_type = testing::XComponent<Index, FeatureIndex>;
     using feature = F;
 
-    delegate(component_type& component): _component(component) {}
+    facet(component_type& component): _component(component) {}
 
     private:
         component_type& _component;
@@ -128,11 +128,11 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 // struct mediator{};
 
 // template <typename C, typename F>
-// struct delegate{};
+// struct facet{};
 
 // template <typename ComponentT, typename... Features>
 // struct features{
-//     using mediator_type = mediator<delegate<ComponentT, Features>...>;
+//     using mediator_type = mediator<facet<ComponentT, Features>...>;
 // };
 
 // }
@@ -143,12 +143,12 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 
 // namespace detail {
 
-// template <typename... DelegatesSet>
+// template <typename... FacetsSet>
 // struct flatten;
 
-// template <typename... Delegates>
+// template <typename... Facets>
 // struct flattened{
-//     using type = lib::mediator<Delegates ...>;
+//     using type = lib::mediator<Facets ...>;
 // };
 
 // template <typename L, typename R>
@@ -159,9 +159,9 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 //     using type = flattened<X..., Y...>;
 // };
 
-// template <typename... Delegates, typename... Rest>
-// struct flatten<lib::mediator<Delegates...>, Rest...> {
-//     using type = flattened<Delegates...>;
+// template <typename... Facets, typename... Rest>
+// struct flatten<lib::mediator<Facets...>, Rest...> {
+//     using type = flattened<Facets...>;
 //     using rest = typename flatten<Rest...>::combined;
 //     using combined = typename combined<type, rest>::type;
 // };
@@ -310,7 +310,7 @@ TEST_CASE("manifold composition Construction & Composition", "[manifold][composi
     }
 }
 
-TEST_CASE("manifold delegate Construction & Composition", "[manifold][mediator]") {
+TEST_CASE("manifold facet Construction & Composition", "[manifold][mediator]") {
     using composition_type = udho::manifold::composition<
         testing::Component<0>,
         testing::XComponent<0, 1>,
@@ -328,16 +328,16 @@ TEST_CASE("manifold delegate Construction & Composition", "[manifold][mediator]"
 
     using mediator_type = composition_type::mediator_type;
     using expected_mediator_type = udho::manifold::mediator<
-        udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
-        udho::manifold::delegate<testing::XComponent<0, 1>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>,
-        udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>,
-        udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<6>>,
-        udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>
+        udho::manifold::facet<testing::Component<0>, testing::Feature<0>>,
+        udho::manifold::facet<testing::XComponent<0, 1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>,
+        udho::manifold::facet<testing::Component<3>, testing::Feature<3>>,
+        udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<5>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<6>>,
+        udho::manifold::facet<testing::Component<6>, testing::Feature<6>>
     >;
     static_assert(std::is_same_v<expected_mediator_type, mediator_type>);
 
@@ -345,15 +345,15 @@ TEST_CASE("manifold delegate Construction & Composition", "[manifold][mediator]"
 
     using states_type = udho::manifold::detail::states_for_mediator<mediator_type>::type;
     using expected_states_type = udho::manifold::states<
-        udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
-        udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>,
-        udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>,
-        udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<1>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>,
-        udho::manifold::delegate<testing::Component<5>, testing::Feature<6>>,
-        udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>
+        udho::manifold::facet<testing::Component<0>, testing::Feature<0>>,
+        udho::manifold::facet<testing::Component<1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>,
+        udho::manifold::facet<testing::Component<3>, testing::Feature<3>>,
+        udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<1>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<5>>,
+        udho::manifold::facet<testing::Component<5>, testing::Feature<6>>,
+        udho::manifold::facet<testing::Component<6>, testing::Feature<6>>
     >;
     static_assert(std::is_same_v<expected_states_type, states_type>);
 
@@ -392,15 +392,15 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
         mediator_type mediator{composition};
 
-        bool s0 = mediator.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
-        bool s1 = mediator.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
+        bool s0 = mediator.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
+        bool s1 = mediator.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
 
         CHECK(s0);
         CHECK(!s1);
 
-        CHECK(states.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().ready());
-        CHECK(states.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().ready());
-        CHECK(!states.get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(states.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(states.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!states.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
     }
 
 
@@ -457,15 +457,15 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(count == 4);
 
         // Verify states
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted());
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
@@ -511,19 +511,19 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(count == 2);
 
         // Verify states
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>()->accepted());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
         CHECK_THROWS_WITH(
-            (pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
+            (pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
             Catch::Matchers::ContainsSubstring("unevaluated", Catch::CaseSensitive::No)
         );
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<3>, testing::Feature<3>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
 
         // verify that components that don't have result do not exist in the states type
         //pipeline.states().get<testing::XComponent<0, 1>>();

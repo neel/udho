@@ -29,12 +29,12 @@ struct wrapper;
 namespace detail{
 
 template <typename ComponentT, bool>
-struct delegate_wrapper;
+struct facet_wrapper;
 
 }
 
 template <typename ComponentT, typename FeatureT>
-struct delegate;
+struct facet;
 
 template <typename ComponentT>
 struct config;

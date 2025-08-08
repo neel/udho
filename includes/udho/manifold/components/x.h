@@ -32,16 +32,16 @@ namespace udho{
 namespace manifold{
 
 /**
- * @brief The delegate class is created per connection
+ * @brief The facet class is created per connection
  * @details it is created with a mutable reference to the persistent component instance and immutable configuration
  *          responsible for providing usercode facilities to interact with teh component while adhering to the specific
  *          configurations
  */
 template <>
-struct delegate<components::ComponentX>{
+struct facet<components::ComponentX>{
     using config_type = config<components::ComponentX>;
 
-    delegate(components::ComponentX& component, const config_type& config): _component(component), _config(config) {}
+    facet(components::ComponentX& component, const config_type& config): _component(component), _config(config) {}
 
 private:
     components::ComponentX& _component;

@@ -78,7 +78,7 @@ struct arguments {
 };
 
 /**
- * expands a component C having features {F1, F2, ...} into mediator<delegate<C, F_i>> \forall i through mediator_type typedef
+ * expands a component C having features {F1, F2, ...} into mediator<facet<C, F_i>> \forall i through mediator_type typedef
  * @{
  */
 template <typename FeatureT>
@@ -87,22 +87,22 @@ struct expand_feature_pairs;
 template <typename... Features>
 struct expand_feature_pairs<udho::manifold::features<Features...>>{
     template <typename ComponentT>
-    using mediator_type = udho::manifold::mediator<udho::manifold::delegate<ComponentT, Features>...>;
+    using mediator_type = udho::manifold::mediator<udho::manifold::facet<ComponentT, Features>...>;
 };
 /// @}
 
 
 template <typename ComponentT>
-struct get_delegates{
+struct get_facets{
     using type = typename expand_feature_pairs<typename ComponentT::features>::template mediator_type<ComponentT>;
 };
 
-template <typename... DelegatesSet>
+template <typename... FacetsSet>
 struct flatten;
 
-template <typename... Delegates>
+template <typename... Facets>
 struct flattened{
-    using type = udho::manifold::mediator<Delegates ...>;
+    using type = udho::manifold::mediator<Facets ...>;
 };
 
 template <typename L, typename R>
@@ -113,9 +113,9 @@ struct combined<flattened<X...>, flattened<Y...>>{
     using type = flattened<X..., Y...>;
 };
 
-template <typename... Delegates, typename... Rest>
-struct flatten<udho::manifold::mediator<Delegates...>, Rest...> {
-    using type = flattened<Delegates...>;
+template <typename... Facets, typename... Rest>
+struct flatten<udho::manifold::mediator<Facets...>, Rest...> {
+    using type = flattened<Facets...>;
     using rest = typename flatten<Rest...>::combined;
     using combined = typename combined<type, rest>::type;
 };
@@ -128,7 +128,7 @@ struct flatten<>{
 
 template <typename... Components>
 struct flatten_all{
-    using type = typename flatten<typename get_delegates<Components>::type...>::combined::type;
+    using type = typename flatten<typename get_facets<Components>::type...>::combined::type;
 };
 
 
