@@ -12,7 +12,7 @@ template <typename...>
 struct params;
 
 template <typename...>
-struct delegates;
+struct mediator;
 
 template <typename...>
 struct states;
@@ -26,8 +26,12 @@ struct pipeline;
 template <typename ComponentT>
 struct wrapper;
 
+namespace detail{
+
 template <typename ComponentT, bool>
 struct delegate_wrapper;
+
+}
 
 template <typename ComponentT, typename FeatureT>
 struct delegate;
