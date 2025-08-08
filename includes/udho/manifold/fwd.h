@@ -15,7 +15,7 @@ template <typename...>
 struct mediator;
 
 template <typename...>
-struct states;
+struct journal;
 
 template <typename...>
 struct evaluator;

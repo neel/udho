@@ -27,8 +27,8 @@ struct facet_interface_internal {
     facet_interface_internal(component_type& component): _facet(component) {}
 
     template <typename... Facets>
-    result_type eval(const udho::manifold::states<Facets...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return _facet.eval(states, address, request);
+    result_type eval(const udho::manifold::journal<Facets...>& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
+        return _facet.eval(journal, address, request);
     }
 
     facet_type& facet() { return _facet; }
@@ -93,11 +93,11 @@ struct facet_wrapper<FacetT, true>: facet_interface<FacetT>{
     facet_wrapper(component_type& component): interface_type(component) {}
 
     template <typename... Facets, typename... Args>
-    bool eval(udho::manifold::states<Facets...>& states, Args... args) {
-        using states_facade_type = udho::manifold::states<Facets...>;
-        result_type result = std::move(interface_type::eval(states, std::forward<Args>(args)...));
+    bool eval(udho::manifold::journal<Facets...>& journal, Args... args) {
+        using journal_facade_type = udho::manifold::journal<Facets...>;
+        result_type result = std::move(interface_type::eval(journal, std::forward<Args>(args)...));
         bool accepted = result.accepted();
-        states.template get<facet_type>() = std::move(result);
+        journal.template get<facet_type>() = std::move(result);
         return accepted;
     }
 };

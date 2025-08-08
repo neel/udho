@@ -90,7 +90,7 @@ struct facet<testing::Component<Index, FeatureIndex>, F> {
     facet(component_type& component): _component(component) {}
 
     template <typename... Components>
-    result eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+    result eval(const udho::manifold::journal<Components...>& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
         return result(_component.message == "accept");
     }
 
@@ -343,8 +343,8 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][mediator]") {
 
     mediator_type mediator{composition};
 
-    using states_type = udho::manifold::detail::states_for_mediator<mediator_type>::type;
-    using expected_states_type = udho::manifold::states<
+    using journal_type = udho::manifold::detail::journal_for_mediator<mediator_type>::type;
+    using expected_journal_type = udho::manifold::journal<
         udho::manifold::facet<testing::Component<0>, testing::Feature<0>>,
         udho::manifold::facet<testing::Component<1>, testing::Feature<1>>,
         udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>,
@@ -355,13 +355,13 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][mediator]") {
         udho::manifold::facet<testing::Component<5>, testing::Feature<6>>,
         udho::manifold::facet<testing::Component<6>, testing::Feature<6>>
     >;
-    static_assert(std::is_same_v<expected_states_type, states_type>);
+    static_assert(std::is_same_v<expected_journal_type, journal_type>);
 
-    states_type states;
+    journal_type journal;
 }
 
 TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
-    SECTION("eval & states basic operations") {
+    SECTION("eval & journal basic operations") {
         using composition_type = udho::manifold::composition<
             testing::Component<0>,
             testing::XComponent<0, 1>,
@@ -374,7 +374,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         >;
         using mediator_type = composition_type::mediator_type;
 
-        using states_type = udho::manifold::detail::states_for_mediator<mediator_type>::type;
+        using journal_type = udho::manifold::detail::journal_for_mediator<mediator_type>::type;
 
         testing::Component<5> component_5;
 
@@ -385,22 +385,22 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 component_5
             );
 
-        states_type states;
+        journal_type journal;
 
         boost::asio::ip::address address;
         udho::net::types::headers::request request;
 
         mediator_type mediator{composition};
 
-        bool s0 = mediator.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
-        bool s1 = mediator.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
+        bool s0 = mediator.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().eval(journal, address, request);
+        bool s1 = mediator.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().eval(journal, address, request);
 
         CHECK(s0);
         CHECK(!s1);
 
-        CHECK(states.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
-        CHECK(states.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
-        CHECK(!states.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
     }
 
 
@@ -456,16 +456,16 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         // Should have evaluated 4 components (2 for Feature<0>, 2 for Feature<1>)
         CHECK(count == 4);
 
-        // Verify states
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted());
+        // Verify journal
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted());
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
     }
 
     SECTION("Feature-based evaluation pipeline stops after one component rejects") {
@@ -510,23 +510,23 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         // Should have evaluated 4 components (2 for Feature<0>, 2 for Feature<1>)
         CHECK(count == 2);
 
-        // Verify states
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
-        CHECK(pipeline.states().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
+        // Verify journal
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>()->accepted());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>()->accepted());
+        CHECK(pipeline.journal().get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
         CHECK_THROWS_WITH(
-            (pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
+            (pipeline.journal().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
             Catch::Matchers::ContainsSubstring("unevaluated", Catch::CaseSensitive::No)
         );
 
         // Components without features shouldn't be evaluated
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
-        CHECK(!pipeline.states().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<3>, testing::Feature<3>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!pipeline.journal().get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
 
-        // verify that components that don't have result do not exist in the states type
-        //pipeline.states().get<testing::XComponent<0, 1>>();
+        // verify that components that don't have result do not exist in the journal type
+        //pipeline.journal().get<testing::XComponent<0, 1>>();
     }
 }
 

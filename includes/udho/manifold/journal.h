@@ -1,5 +1,5 @@
-#ifndef UDHO_MANIFOLD_STATE_H
-#define UDHO_MANIFOLD_STATE_H
+#ifndef UDHO_MANIFOLD_JOURNAL_H
+#define UDHO_MANIFOLD_JOURNAL_H
 
 #include <cstdint>
 #include <optional>
@@ -16,7 +16,7 @@ namespace manifold {
 #ifndef __DOXYGEN__
 
 /**
- * @brief The state_wrapper class
+ * @brief The journal_wrapper class
  * @tparam ResultT
  * @note expects ResultT to be movable (it is default constructibility and copy constructibility is not necessary)
  */
@@ -89,7 +89,7 @@ struct result_container{
 
     result_container() = default;
     template <typename OtherHeadT, typename... OtherTail>
-    inline explicit result_container(states<OtherHeadT, OtherTail...>&& other): _result(std::move(other.template get<FacetT>())) {}
+    inline explicit result_container(journal<OtherHeadT, OtherTail...>&& other): _result(std::move(other.template get<FacetT>())) {}
 
 
     /// @{
@@ -140,19 +140,19 @@ struct prepend_helper<X, temporary_storage<Facets...>>{
 };
 
 template <typename... Facets>
-struct composition_states_helper;
+struct composition_journal_helper;
 
 template <typename FacetT, typename... Rest>
-struct composition_states_helper<FacetT, Rest...> {
+struct composition_journal_helper<FacetT, Rest...> {
     using type = std::conditional_t<
             !has_result<FacetT>::value,
-            typename composition_states_helper<Rest...>::type,
-            typename prepend_helper<FacetT, typename composition_states_helper<Rest...>::type>::type
+            typename composition_journal_helper<Rest...>::type,
+            typename prepend_helper<FacetT, typename composition_journal_helper<Rest...>::type>::type
         >;
 };
 
 template <typename FacetT>
-struct composition_states_helper<FacetT> {
+struct composition_journal_helper<FacetT> {
     using type = std::conditional_t<
             !has_result<FacetT>::value,
             temporary_storage<>,
@@ -161,37 +161,37 @@ struct composition_states_helper<FacetT> {
 };
 
 template <typename>
-struct get_states_type_helper;
+struct get_journal_type_helper;
 
 template <typename... Facets>
-struct get_states_type_helper<temporary_storage<Facets...>>{
-    using type = states<Facets...>;
+struct get_journal_type_helper<temporary_storage<Facets...>>{
+    using type = journal<Facets...>;
 };
 
 template <typename FacetsT>
-struct states_for_mediator;
+struct journal_for_mediator;
 
 template <typename... Facets>
-struct states_for_mediator<mediator<Facets...>>{
-    using type = typename get_states_type_helper<typename composition_states_helper<Facets...>::type>::type;
+struct journal_for_mediator<mediator<Facets...>>{
+    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
 };
 
 template <typename... Facets>
-struct states_for_facets{
-    using type = typename get_states_type_helper<typename composition_states_helper<Facets...>::type>::type;
+struct journal_for_facets{
+    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
 };
 
 }
 
 
 template <typename FacetT, typename... Rest>
-struct states<FacetT, Rest...>: private detail::result_container<FacetT>, private states<Rest...> {
+struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, private journal<Rest...> {
     using component_type = FacetT;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using container_type = detail::result_container<FacetT>;
 
-    // static_assert(std::is_default_constructible_v<state_type>);
-    // static_assert(std::is_move_constructible_v<state_type>);
+    // static_assert(std::is_default_constructible_v<journal_type>);
+    // static_assert(std::is_move_constructible_v<journal_type>);
 
     template <typename... Features>
     friend struct evaluator;
@@ -208,10 +208,10 @@ struct states<FacetT, Rest...>: private detail::result_container<FacetT>, privat
     // using container_type::get;
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    auto& get() { return states<Rest...>::template get<FacetQ>(); }
+    auto& get() { return journal<Rest...>::template get<FacetQ>(); }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    const auto& get() const { return states<Rest...>::template get<FacetQ>(); }
+    const auto& get() const { return journal<Rest...>::template get<FacetQ>(); }
     /// @}
 
     /// @{
@@ -225,30 +225,30 @@ struct states<FacetT, Rest...>: private detail::result_container<FacetT>, privat
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    auto& at() { return states<Rest...>::template at<FeatureT, Idx-1>(); }
+    auto& at() { return journal<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    auto& at() { return states<Rest...>::template at<FeatureT, Idx>(); }
+    auto& at() { return journal<Rest...>::template at<FeatureT, Idx>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    const auto& at() const { return states<Rest...>::template at<FeatureT, Idx-1>(); }
+    const auto& at() const { return journal<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    const auto& at() const { return states<Rest...>::template at<FeatureT, Idx>(); }
+    const auto& at() const { return journal<Rest...>::template at<FeatureT, Idx>(); }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return container_type::template count<FeatureT>() + states<Rest...>::template count<FeatureT>(); }
+    static constexpr int count() { return container_type::template count<FeatureT>() + journal<Rest...>::template count<FeatureT>(); }
     /// @}
 
 private:
-    states<Rest...>& tail() { return *this; }
-    const states<Rest...>& tail() const { return *this; }
+    journal<Rest...>& tail() { return *this; }
+    const journal<Rest...>& tail() const { return *this; }
 };
 
 template <typename FacetT>
-struct states<FacetT> : private detail::result_container<FacetT>{
+struct journal<FacetT> : private detail::result_container<FacetT>{
     using component_type = FacetT;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using container_type = detail::result_container<FacetT>;
@@ -272,4 +272,4 @@ struct states<FacetT> : private detail::result_container<FacetT>{
 }
 
 
-#endif // UDHO_MANIFOLD_STATE_H
+#endif // UDHO_MANIFOLD_JOURNAL_H

@@ -3,7 +3,7 @@
 
 #include <udho/manifold/features.h>
 #include <udho/manifold/composition.h>
-#include <udho/manifold/state.h>
+#include <udho/manifold/journal.h>
 
 namespace udho {
 namespace manifold {
@@ -12,22 +12,22 @@ template <typename... Components>
 struct pipeline{
     using composition_type = udho::manifold::composition<Components...>;
     using mediator_type    = typename composition_type::mediator_type;
-    using states_type      = typename udho::manifold::detail::states_for_mediator<mediator_type>::type;
+    using journal_type      = typename udho::manifold::detail::journal_for_mediator<mediator_type>::type;
 
     pipeline(composition_type& composition): _mediator(composition) {}
 
-    states_type& states() { return _states; }
-    const states_type& states() const { return _states; }
+    journal_type& journal() { return _journal; }
+    const journal_type& journal() const { return _journal; }
 
     template <typename... Features>
     std::size_t operator()(udho::manifold::evaluator<Features...>&& evaluator) {
-        return evaluator(_mediator, _states);
+        return evaluator(_mediator, _journal);
     }
 
 
     private:
     mediator_type  _mediator;
-    states_type    _states;
+    journal_type    _journal;
 };
 
 }
