@@ -9,7 +9,7 @@
 #include <boost/lexical_cast.hpp>
 #include <udho/manifold/composition.h>
 #include <udho/manifold/features.h>
-#include <udho/manifold/delegate.h>
+#include <udho/manifold/mediator.h>
 #include <udho/manifold/evaluator.h>
 #include <udho/manifold/pipeline.h>
 
@@ -125,14 +125,14 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 // namespace lib{
 
 // template <typename... D>
-// struct delegates{};
+// struct mediator{};
 
 // template <typename C, typename F>
 // struct delegate{};
 
 // template <typename ComponentT, typename... Features>
 // struct features{
-//     using delegates_type = delegates<delegate<ComponentT, Features>...>;
+//     using mediator_type = mediator<delegate<ComponentT, Features>...>;
 // };
 
 // }
@@ -148,7 +148,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 
 // template <typename... Delegates>
 // struct flattened{
-//     using type = lib::delegates<Delegates ...>;
+//     using type = lib::mediator<Delegates ...>;
 // };
 
 // template <typename L, typename R>
@@ -160,7 +160,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 // };
 
 // template <typename... Delegates, typename... Rest>
-// struct flatten<lib::delegates<Delegates...>, Rest...> {
+// struct flatten<lib::mediator<Delegates...>, Rest...> {
 //     using type = flattened<Delegates...>;
 //     using rest = typename flatten<Rest...>::combined;
 //     using combined = typename combined<type, rest>::type;
@@ -174,7 +174,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 
 // template <typename... Components>
 // struct flatten_all{
-//     using type = typename flatten<typename Components::features::delegates_type...>::combined;
+//     using type = typename flatten<typename Components::features::mediator_type...>::combined;
 // };
 
 // }
@@ -207,7 +207,7 @@ struct udho::manifold::component_traits<testing::Component<5>> {
 //     using flattened_type = typename detail::flatten_all<x::C1, x::C2, x::C4, x::C3>::type;
 
 //     flattened_type::xyz();
-//     // x::C1::features::delegates_type::xyz();
+//     // x::C1::features::mediator_type::xyz();
 
 //     return 0;
 // }
@@ -310,7 +310,7 @@ TEST_CASE("manifold composition Construction & Composition", "[manifold][composi
     }
 }
 
-TEST_CASE("manifold delegate Construction & Composition", "[manifold][delegates]") {
+TEST_CASE("manifold delegate Construction & Composition", "[manifold][mediator]") {
     using composition_type = udho::manifold::composition<
         testing::Component<0>,
         testing::XComponent<0, 1>,
@@ -326,8 +326,8 @@ TEST_CASE("manifold delegate Construction & Composition", "[manifold][delegates]
 
     auto composition = composition_type::compose(component_5);
 
-    using delegates_type = composition_type::delegates_type;
-    using expected_delegates_type = udho::manifold::delegates<
+    using mediator_type = composition_type::mediator_type;
+    using expected_mediator_type = udho::manifold::mediator<
         udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
         udho::manifold::delegate<testing::XComponent<0, 1>, testing::Feature<1>>,
         udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
@@ -339,11 +339,11 @@ TEST_CASE("manifold delegate Construction & Composition", "[manifold][delegates]
         udho::manifold::delegate<testing::Component<5>, testing::Feature<6>>,
         udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>
     >;
-    static_assert(std::is_same_v<expected_delegates_type, delegates_type>);
+    static_assert(std::is_same_v<expected_mediator_type, mediator_type>);
 
-    delegates_type delegates{composition};
+    mediator_type mediator{composition};
 
-    using states_type = udho::manifold::detail::states_for_delegates<delegates_type>::type;
+    using states_type = udho::manifold::detail::states_for_mediator<mediator_type>::type;
     using expected_states_type = udho::manifold::states<
         udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>,
         udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>,
@@ -372,9 +372,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<5>,
             testing::Component<6>
         >;
-        using delegates_type = composition_type::delegates_type;
+        using mediator_type = composition_type::mediator_type;
 
-        using states_type = udho::manifold::detail::states_for_delegates<delegates_type>::type;
+        using states_type = udho::manifold::detail::states_for_mediator<mediator_type>::type;
 
         testing::Component<5> component_5;
 
@@ -390,10 +390,10 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         boost::asio::ip::address address;
         udho::net::types::headers::request request;
 
-        delegates_type delegates{composition};
+        mediator_type mediator{composition};
 
-        bool s0 = delegates.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
-        bool s1 = delegates.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
+        bool s0 = mediator.get<udho::manifold::delegate<testing::Component<0>, testing::Feature<0>>>().eval(states, address, request);
+        bool s1 = mediator.get<udho::manifold::delegate<testing::Component<1>, testing::Feature<1>>>().eval(states, address, request);
 
         CHECK(s0);
         CHECK(!s1);
@@ -415,7 +415,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<5>,
             testing::Component<6>
          >;
-        using delegates_type = composition_type::delegates_type;
+        using mediator_type = composition_type::mediator_type;
 
         testing::Component<5> component_5;
 
@@ -479,7 +479,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Component<5>,
             testing::Component<6>
         >;
-        using delegates_type = composition_type::delegates_type;
+        using mediator_type = composition_type::mediator_type;
         using pipeline_type  = composition_type::pipeline_type;
 
         testing::Component<5> component_5;

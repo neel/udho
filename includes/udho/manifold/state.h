@@ -174,15 +174,15 @@ struct get_states_type_helper<temporary_storage<Delegates...>>{
 };
 
 template <typename DelegatesT>
-struct states_for_delegates;
+struct states_for_mediator;
 
 template <typename... Delegates>
-struct states_for_delegates<delegates<Delegates...>>{
+struct states_for_mediator<mediator<Delegates...>>{
     using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
 };
 
 template <typename... Delegates>
-struct states_for_components{
+struct states_for_delegates{
     using type = typename get_states_type_helper<typename composition_states_helper<Delegates...>::type>::type;
 };
 
