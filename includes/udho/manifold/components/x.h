@@ -11,7 +11,7 @@ namespace components{
 /**
  * @brief A ComponentX instance serves as the persistent entity having a full application lifetime
  * @details responsible for maintining the component and provide definitions on how this component may be used
- *          such as configuration parameters, state typedef etc...
+ *          such as configuration parameters, result typedef etc...
  */
 struct ComponentX{
     UDHO_CONFIG_PARAM(hostname, std::string,    "localhost" );

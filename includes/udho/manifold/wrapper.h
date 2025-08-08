@@ -71,9 +71,7 @@ struct component_storage<ComponentT, false, false>{
     template <typename Arg, std::enable_if_t<detail::argument_traits<ComponentT>::template should_move<Arg>, bool> = true>
     inline explicit component_storage(Arg component_rval): _component(std::move(component_rval)) {}
 
-    inline explicit component_storage() {
-        static_assert(is_default_constructible, "No argument supplied for non-default constructible Component");
-    }
+    inline explicit component_storage() { static_assert(is_default_constructible, "No argument supplied for non-default constructible Component"); }
 
     component_type& component() { return _component; }
     const component_type& component() const { return _component; }
@@ -94,7 +92,7 @@ struct wrapper: detail::component_storage<ComponentT>{
     using storage_type   = detail::component_storage<ComponentT>;
     using config_type    = udho::manifold::config<ComponentT>;
 
-    static constexpr const bool has_state = udho::manifold::has_state<ComponentT>::vlue;
+    static constexpr const bool has_result = udho::manifold::has_result<ComponentT>::vlue;
 
     using storage_type::storage_type;
 

@@ -11,7 +11,7 @@ namespace manifold {
 template <typename... Components>
 struct pipeline{
     using composition_type = udho::manifold::composition<Components...>;
-    using mediator_type   = typename composition_type::mediator_type;
+    using mediator_type    = typename composition_type::mediator_type;
     using states_type      = typename udho::manifold::detail::states_for_mediator<mediator_type>::type;
 
     pipeline(composition_type& composition): _mediator(composition) {}
@@ -27,7 +27,7 @@ struct pipeline{
 
     private:
     mediator_type  _mediator;
-    states_type     _states;
+    states_type    _states;
 };
 
 }

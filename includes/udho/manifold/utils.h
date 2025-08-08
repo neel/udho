@@ -18,7 +18,7 @@ std::size_t visit(FacadeT& facade, Function&& function) {
     auto& wrapper = facade.template at<FeatureT, Idx>();
     bool result = function(wrapper);
     std::size_t count = result;
-    if(!wrapper.has_state || result) {
+    if(!wrapper.has_result || result) {
         count += visit<FacadeT, FeatureT, Function, Idx+1>(facade, std::forward<Function>(function));
     }
     return count;
@@ -34,7 +34,7 @@ std::size_t visit(const FacadeT& facade, Function&& function) {
     auto& wrapper = facade.template at<FeatureT, Idx>();
     bool result = function(wrapper);
     std::size_t count = result;
-    if(!wrapper.has_state || result) {
+    if(!wrapper.has_result || result) {
         count += visit<FacadeT, FeatureT, Function, Idx+1>(facade, std::forward<Function>(function));
     }
     return count;

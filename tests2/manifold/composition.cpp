@@ -31,7 +31,7 @@ template <std::size_t Index, int FeatureIndex = Index>
 struct Component {
     // using feature   = Feature<FeatureIndex>;
     using features  = udho::manifold::features<Feature<FeatureIndex>>;
-    using state     = State;
+    using result    = State;
 
     static constexpr const std::size_t component_index = Index;
     static constexpr const int feature_index = FeatureIndex;
@@ -48,7 +48,7 @@ struct Component {
 template <>
 struct Component<5, 5> {
     using features  = udho::manifold::features<Feature<1>, Feature<5>, Feature<6>>;
-    using state     = State;
+    using result    = State;
 
     Component(): is_default_constructed(true) {}
     Component(const std::string& msg): is_default_constructed(false), message(msg) {}
@@ -85,13 +85,13 @@ template <std::size_t Index, int FeatureIndex, typename F>
 struct delegate<testing::Component<Index, FeatureIndex>, F> {
     using component_type = testing::Component<Index, FeatureIndex>;
     using feature        = F;
-    using state          = typename testing::Component<Index, FeatureIndex>::state;
+    using result         = typename testing::Component<Index, FeatureIndex>::result;
 
     delegate(component_type& component): _component(component) {}
 
     template <typename... Components>
-    state eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
-        return state(_component.message == "accept");
+    result eval(const udho::manifold::states<Components...>& states, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+        return result(_component.message == "accept");
     }
 
     private:
@@ -116,7 +116,7 @@ struct delegate<testing::XComponent<Index, FeatureIndex>, F> {
 template <>
 struct udho::manifold::component_traits<testing::Component<5>> {
     static constexpr const bool shared = true;
-    using state = testing::State;
+    using result = testing::State;
     using params = udho::manifold::params<>;
 };
 
@@ -516,7 +516,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(pipeline.states().get<udho::manifold::delegate<testing::Component<2, 0>, testing::Feature<0>>>()->accepted());
         CHECK_THROWS_WITH(
             (pipeline.states().get<udho::manifold::delegate<testing::Component<4, 1>, testing::Feature<1>>>()->accepted()),
-            Catch::Matchers::EndsWith("unevaluated state")
+            Catch::Matchers::ContainsSubstring("unevaluated", Catch::CaseSensitive::No)
         );
 
         // Components without features shouldn't be evaluated
@@ -525,27 +525,27 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<5>, testing::Feature<5>>>().ready());
         CHECK(!pipeline.states().get<udho::manifold::delegate<testing::Component<6>, testing::Feature<6>>>().ready());
 
-        // verify that components that don't have state do not exist in the states type
+        // verify that components that don't have result do not exist in the states type
         //pipeline.states().get<testing::XComponent<0, 1>>();
     }
 }
 
 TEST_CASE("manifold Extra", "[manifold]") {
-    SECTION("Error handling in state access") {
-        udho::manifold::state_wrapper<testing::State, testing::Feature<0>> state;
-        CHECK(!state.ready());
+    SECTION("Error handling in result access") {
+        udho::manifold::result_wrapper<testing::State, testing::Feature<0>> result;
+        CHECK(!result.ready());
 
-        // Accessing unready state should throw
-        CHECK_THROWS_AS(state.value(), std::runtime_error);
-        CHECK_THROWS_AS(*state, std::runtime_error);
-        CHECK_THROWS_AS(state.operator->(), std::runtime_error);
+        // Accessing unready result should throw
+        CHECK_THROWS_AS(result.value(), std::runtime_error);
+        CHECK_THROWS_AS(*result, std::runtime_error);
+        CHECK_THROWS_AS(result.operator->(), std::runtime_error);
 
         // After assignment, should be accessible
-        state = testing::State{true};
-        CHECK(state.ready());
-        CHECK(state.value()._value == true);
-        CHECK((*state)._value == true);
-        CHECK(state->accepted() == true);  // Using operator->
+        result = testing::State{true};
+        CHECK(result.ready());
+        CHECK(result.value()._value == true);
+        CHECK((*result)._value == true);
+        CHECK(result->accepted() == true);  // Using operator->
     }
 
     SECTION("Component with reference storage semantics") {

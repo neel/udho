@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <udho/manifold/fwd.h>
+#include <udho/manifold/features.h>
 
 namespace udho{
 namespace manifold{
@@ -10,13 +11,13 @@ namespace manifold{
 namespace detail{
 
 template<typename, typename = void>
-struct has_state : std::false_type {
+struct has_result : std::false_type {
     using type = void;
 };
 
 template<typename T>
-struct has_state<T, std::void_t<typename T::state>> : std::true_type {
-    using type = typename T::state;
+struct has_result<T, std::void_t<typename T::result>> : std::true_type {
+    using type = typename T::result;
 };
 
 template<typename, typename = void>
@@ -27,6 +28,16 @@ struct has_params : std::false_type {
 template<typename T>
 struct has_params<T, std::void_t<typename T::config>> : std::true_type {
     using type = typename T::params;
+};
+
+template<typename, typename = void>
+struct has_features : std::false_type {
+    using type = udho::manifold::features<>;
+};
+
+template<typename T>
+struct has_features<T, std::void_t<typename T::features>> : std::true_type {
+    using type = typename T::features;
 };
 
 }
@@ -54,14 +65,17 @@ struct delegate_traits<udho::manifold::delegate<ComponentT, FeatureT>> {
     using component_type = ComponentT;
     using feature_type   = FeatureT;
     using delegate_type  = udho::manifold::delegate<ComponentT, FeatureT>;
-    using state          = typename detail::has_state<delegate_type>::type;
+    using result_type    = typename detail::has_result<delegate_type>::type;
 };
 
 template <typename DelegateT>
-struct has_state: std::bool_constant<!std::is_void<typename delegate_traits<DelegateT>::state>::value> {};
+struct has_result: std::bool_constant<!std::is_void<typename delegate_traits<DelegateT>::result_type>::value> {};
 
 template <typename ComponentT>
 struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::config>::value> {};
+
+template <typename ComponentT>
+struct has_features: std::bool_constant<!std::is_void<detail::has_features<ComponentT>>::value> {};
 
 struct default_constructed{};
 

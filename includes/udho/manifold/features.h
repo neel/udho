@@ -1,7 +1,7 @@
 #ifndef UDHO_MANIFOLD_FEATURES_H
 #define UDHO_MANIFOLD_FEATURES_H
 
-#include  <type_traits>
+#include <type_traits>
 #include <udho/manifold/fwd.h>
 
 namespace udho {

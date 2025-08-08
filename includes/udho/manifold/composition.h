@@ -28,7 +28,7 @@ template <typename ArgT>
 struct feasible_for<ArgT>{
     template <std::size_t Index, typename... Components>
     static constexpr void assert_msg(ArgT&& arg) {
-        constexpr const bool count = detail::accumulate<
+        constexpr const bool count = udho::utils::traits::accumulate<
                 std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
             >::value == 1;
         static_assert(feasible_for_atleast_one_component<Index, count>::value, "constraint feasible_for_atleast_one_component<Index, true> must be satisfied for all arguments");
@@ -39,7 +39,7 @@ template <typename ArgT, typename... Args>
 struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
     template <std::size_t Index, typename... Components>
     static constexpr void assert_msg(ArgT&& arg, Args&&... args) {
-        constexpr const bool count = detail::accumulate<
+        constexpr const bool count = udho::utils::traits::accumulate<
                 std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
             >::value == 1;
 
@@ -77,7 +77,7 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using mediator_type = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
+    using mediator_type  = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
     using pipeline_type  = pipeline<ComponentT, Rest...>;
 
     template <typename... Features>

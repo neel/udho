@@ -33,6 +33,12 @@ using is_ostreamable_t = is_ostreamable<T>;
 template<typename T>
 constexpr bool is_ostreamable_v = is_ostreamable_t<T>::value;
 
+template <typename...>
+struct accumulate : std::integral_constant<std::size_t, 0> {};
+
+template <typename T, typename... Ts>
+struct accumulate<T, Ts...> : std::integral_constant<std::size_t,  T::value + accumulate<Ts...>::value> {};
+
 }
 }
 }

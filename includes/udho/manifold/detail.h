@@ -57,13 +57,6 @@ struct arguments_lookup<ArgT>{
     static constexpr default_constructed arg_for(ArgT&& arg) { return default_constructed{}; }
 };
 
-
-template <typename...>
-struct accumulate : std::integral_constant<std::size_t, 0> {};
-
-template <typename T, typename... Ts>
-struct accumulate<T, Ts...> : std::integral_constant<std::size_t,  T::value + accumulate<Ts...>::value> {};
-
 /**
  * @brief Helper class to facilitate variadic unorder arguments while ensuring that no user provided argument has been skipped
  * @tparam Args... variadic arguments
@@ -84,6 +77,10 @@ struct arguments {
     static constexpr type_for<ComponentT> find(Args&&... args) { return arguments_lookup<Args...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
 };
 
+/**
+ * expands a component C having features {F1, F2, ...} into mediator<delegate<C, F_i>> \forall i through mediator_type typedef
+ * @{
+ */
 template <typename FeatureT>
 struct expand_feature_pairs;
 
@@ -92,6 +89,8 @@ struct expand_feature_pairs<udho::manifold::features<Features...>>{
     template <typename ComponentT>
     using mediator_type = udho::manifold::mediator<udho::manifold::delegate<ComponentT, Features>...>;
 };
+/// @}
+
 
 template <typename ComponentT>
 struct get_delegates{
