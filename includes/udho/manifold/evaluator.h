@@ -38,12 +38,12 @@ struct evaluator<FeatureX, Features...>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Facets>
-    std::size_t operator()(udho::manifold::mediator<Facets...>& mediator, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
-        static_assert(mediator.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::fabric<Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
+        static_assert(fabric.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        std::size_t count = mediator.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
+        std::size_t count = fabric.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
         evaluator<Features...> ev{_address, _request};
-        count += ev(mediator, journal);
+        count += ev(fabric, journal);
         return count;
     }
 
@@ -56,10 +56,10 @@ struct evaluator<FeatureX>{
     evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
 
     template <typename... Facets>
-    std::size_t operator()(udho::manifold::mediator<Facets...>& mediator, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
-        static_assert(mediator.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
+    std::size_t operator()(udho::manifold::fabric<Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
+        static_assert(fabric.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
 
-        return mediator.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
+        return fabric.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
     }
 
     const boost::asio::ip::address& _address;

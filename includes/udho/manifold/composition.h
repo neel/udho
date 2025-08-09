@@ -77,14 +77,14 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using mediator_type  = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
+    using fabric_type  = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
     using pipeline_type  = pipeline<ComponentT, Rest...>;
 
     template <typename... Features>
     friend struct evaluator;
 
     template <typename... Components>
-    friend struct mediator;
+    friend struct fabric;
 
     template <typename... Args>
     static composition<ComponentT, Rest...> compose(Args&&... args) { return compositor<ComponentT, Rest...>::compose(std::forward<Args>(args)...); }
@@ -155,14 +155,14 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using mediator_type = typename udho::manifold::detail::flatten_all<ComponentT>::type;
+    using fabric_type = typename udho::manifold::detail::flatten_all<ComponentT>::type;
     using pipeline_type  = pipeline<ComponentT>;
 
     template <typename... Features>
     friend struct evaluator;
 
     template <typename... Components>
-    friend struct mediator;
+    friend struct fabric;
 
     template <typename... Args>
     static composition<ComponentT> compose(Args&&... args) { return compositor<ComponentT>::compose(std::forward<Args>(args)...); }

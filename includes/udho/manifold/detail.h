@@ -78,7 +78,7 @@ struct arguments {
 };
 
 /**
- * expands a component C having features {F1, F2, ...} into mediator<facet<C, F_i>> \forall i through mediator_type typedef
+ * expands a component C having features {F1, F2, ...} into fabric<facet<C, F_i>> \forall i through fabric_type typedef
  * @{
  */
 template <typename FeatureT>
@@ -87,14 +87,14 @@ struct expand_feature_pairs;
 template <typename... Features>
 struct expand_feature_pairs<udho::manifold::features<Features...>>{
     template <typename ComponentT>
-    using mediator_type = udho::manifold::mediator<udho::manifold::facet<ComponentT, Features>...>;
+    using fabric_type = udho::manifold::fabric<udho::manifold::facet<ComponentT, Features>...>;
 };
 /// @}
 
 
 template <typename ComponentT>
 struct get_facets{
-    using type = typename expand_feature_pairs<typename ComponentT::features>::template mediator_type<ComponentT>;
+    using type = typename expand_feature_pairs<typename ComponentT::features>::template fabric_type<ComponentT>;
 };
 
 template <typename... FacetsSet>
@@ -102,7 +102,7 @@ struct flatten;
 
 template <typename... Facets>
 struct flattened{
-    using type = udho::manifold::mediator<Facets ...>;
+    using type = udho::manifold::fabric<Facets ...>;
 };
 
 template <typename L, typename R>
@@ -114,7 +114,7 @@ struct combined<flattened<X...>, flattened<Y...>>{
 };
 
 template <typename... Facets, typename... Rest>
-struct flatten<udho::manifold::mediator<Facets...>, Rest...> {
+struct flatten<udho::manifold::fabric<Facets...>, Rest...> {
     using type = flattened<Facets...>;
     using rest = typename flatten<Rest...>::combined;
     using combined = typename combined<type, rest>::type;

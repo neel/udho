@@ -105,26 +105,26 @@ struct facet_wrapper<FacetT, true>: facet_interface<FacetT>{
 }
 
 template <typename FacetT, typename... Rest>
-struct mediator<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private mediator<Rest...>{
+struct fabric<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private fabric<Rest...>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using wrapper_type   = detail::facet_wrapper<FacetT>;
 
     template <typename... Components>
-    mediator(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), mediator<Rest...>(composition) {}
+    fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), fabric<Rest...>(composition) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     wrapper_type& get() { return *this; }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    auto& get() { return mediator<Rest...>::template get<FacetQ>(); }
+    auto& get() { return fabric<Rest...>::template get<FacetQ>(); }
 
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     const wrapper_type& get() const { return *this; }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    const auto& get() const { return mediator<Rest...>::template get<FacetQ>(); }
+    const auto& get() const { return fabric<Rest...>::template get<FacetQ>(); }
     /// @}
 
     /// @{
@@ -132,45 +132,45 @@ struct mediator<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private
     wrapper_type& at() { return *this; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    auto& at() { return mediator<Rest...>::template at<FeatureT, Idx-1>(); }
+    auto& at() { return fabric<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    auto& at() { return mediator<Rest...>::template at<FeatureT, Idx>(); }
+    auto& at() { return fabric<Rest...>::template at<FeatureT, Idx>(); }
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
     const wrapper_type& at() const { return *this; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    const auto& at() const { return mediator<Rest...>::template at<FeatureT, Idx-1>(); }
+    const auto& at() const { return fabric<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    const auto& at() const { return mediator<Rest...>::template at<FeatureT, Idx>(); }
+    const auto& at() const { return fabric<Rest...>::template at<FeatureT, Idx>(); }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return std::is_same_v<feature_type, FeatureT> + mediator<Rest...>::template count<FeatureT>(); }
+    static constexpr int count() { return std::is_same_v<feature_type, FeatureT> + fabric<Rest...>::template count<FeatureT>(); }
     /// @}
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<mediator<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<fabric<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<mediator<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<fabric<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
 };
 
 template <typename FacetT>
-struct mediator<FacetT>: private detail::facet_wrapper<FacetT>{
+struct fabric<FacetT>: private detail::facet_wrapper<FacetT>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using wrapper_type   = detail::facet_wrapper<FacetT>;
 
     template <typename... Components>
-    mediator(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
+    fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
@@ -195,10 +195,10 @@ struct mediator<FacetT>: private detail::facet_wrapper<FacetT>{
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<mediator<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<fabric<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<mediator<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<fabric<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 };
 

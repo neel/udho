@@ -169,10 +169,10 @@ struct get_journal_type_helper<temporary_storage<Facets...>>{
 };
 
 template <typename FacetsT>
-struct journal_for_mediator;
+struct journal_for_fabric;
 
 template <typename... Facets>
-struct journal_for_mediator<mediator<Facets...>>{
+struct journal_for_fabric<fabric<Facets...>>{
     using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
 };
 

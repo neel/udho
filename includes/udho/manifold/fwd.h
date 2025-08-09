@@ -12,7 +12,7 @@ template <typename...>
 struct params;
 
 template <typename...>
-struct mediator;
+struct fabric;
 
 template <typename...>
 struct journal;
