@@ -77,13 +77,14 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using fabric_type  = typename udho::manifold::detail::flatten_all<ComponentT, Rest...>::type;
-    using pipeline_type  = pipeline<ComponentT, Rest...>;
+    template <std::size_t Stage>
+    using fabric_type  = typename udho::manifold::detail::flatten_all<Stage, ComponentT, Rest...>::type;
+    // using pipeline_type  = pipeline<ComponentT, Rest...>;
 
-    template <typename... Features>
-    friend struct evaluator;
+    // template <typename... Features>
+    // friend struct evaluator;
 
-    template <typename... Components>
+    template <std::size_t, typename... Components>
     friend struct fabric;
 
     template <typename... Args>
@@ -144,6 +145,18 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     std::size_t apply(Function&& f) const { return utils::visit<composition<ComponentT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
+
+    // @{
+    void load(const nlohmann::json& json){
+        wrapper_type::config().load(json);
+        composition<Rest...>::load(json);
+    }
+
+    void save(nlohmann::json& json) const {
+        wrapper_type::config().save(json);
+        composition<Rest...>::save(json);
+    }
+    // @}
 private:
     composition<Rest...>& tail() { return *this; }
 
@@ -155,13 +168,14 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
-    using fabric_type = typename udho::manifold::detail::flatten_all<ComponentT>::type;
-    using pipeline_type  = pipeline<ComponentT>;
+    template <std::size_t Stage>
+    using fabric_type = typename udho::manifold::detail::flatten_all<Stage, ComponentT>::type;
+    // using pipeline_type  = pipeline<ComponentT>;
 
-    template <typename... Features>
-    friend struct evaluator;
+    // template <typename... Features>
+    // friend struct evaluator;
 
-    template <typename... Components>
+    template <std::size_t, typename... Components>
     friend struct fabric;
 
     template <typename... Args>
@@ -198,6 +212,16 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     template <typename FeatureT, typename Function>
     std::size_t apply(Function&& f) const { return utils::visit<composition<ComponentT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
+
+    // @{
+    void load(const nlohmann::json& json){
+        wrapper_type::config().load(json);
+    }
+
+    void save(nlohmann::json& json) const {
+        wrapper_type::config().save(json);
+    }
+    // @}
 };
 
 }

@@ -27,8 +27,8 @@ struct facet_interface_internal {
     facet_interface_internal(component_type& component): _facet(component) {}
 
     template <typename... Facets>
-    result_type eval(const udho::manifold::journal<Facets...>& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) {
-        return _facet.eval(journal, address, request);
+    result_type eval(const udho::manifold::journal<Facets...>& journal) {
+        return _facet.eval(journal);
     }
 
     facet_type& facet() { return _facet; }
@@ -104,27 +104,39 @@ struct facet_wrapper<FacetT, true>: facet_interface<FacetT>{
 
 }
 
-template <typename FacetT, typename... Rest>
-struct fabric<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private fabric<Rest...>{
+template <std::size_t Stage, typename FacetT, bool Enabled=facet_traits<FacetT>::stage == Stage, typename... Rest>
+struct basic_fabric;
+
+template <std::size_t Stage, typename FacetT, typename... Rest>
+struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_wrapper<FacetT>, private fabric<Stage, Rest...>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using wrapper_type   = detail::facet_wrapper<FacetT>;
+    using self_type      = basic_fabric<Stage, FacetT, true, Rest...>;
+    using rest_type      = fabric<Stage, Rest...>;
+
+    template <typename FeatureT, std::uint32_t Idx>
+    using facet_type = std::conditional_t<
+            std::is_same_v<feature_type, FeatureT> && Idx == 0,
+            FacetT,
+            typename rest_type::template facet_type<FeatureT, Idx-std::is_same_v<feature_type, FeatureT>>
+        >;
 
     template <typename... Components>
-    fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), fabric<Rest...>(composition) {}
+    basic_fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), rest_type(composition) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     wrapper_type& get() { return *this; }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    auto& get() { return fabric<Rest...>::template get<FacetQ>(); }
+    auto& get() { return rest_type::template get<FacetQ>(); }
 
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
     const wrapper_type& get() const { return *this; }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
-    const auto& get() const { return fabric<Rest...>::template get<FacetQ>(); }
+    const auto& get() const { return rest_type::template get<FacetQ>(); }
     /// @}
 
     /// @{
@@ -132,45 +144,96 @@ struct fabric<FacetT, Rest...>: private detail::facet_wrapper<FacetT>, private f
     wrapper_type& at() { return *this; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    auto& at() { return fabric<Rest...>::template at<FeatureT, Idx-1>(); }
+    auto& at() { return rest_type::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    auto& at() { return fabric<Rest...>::template at<FeatureT, Idx>(); }
+    auto& at() { return rest_type::template at<FeatureT, Idx>(); }
 
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
     const wrapper_type& at() const { return *this; }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
-    const auto& at() const { return fabric<Rest...>::template at<FeatureT, Idx-1>(); }
+    const auto& at() const { return rest_type::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
-    const auto& at() const { return fabric<Rest...>::template at<FeatureT, Idx>(); }
+    const auto& at() const { return rest_type::template at<FeatureT, Idx>(); }
     /// @}
 
     /// @{
     template <typename FeatureT>
-    static constexpr int count() { return std::is_same_v<feature_type, FeatureT> + fabric<Rest...>::template count<FeatureT>(); }
+    static constexpr int count() { return std::is_same_v<feature_type, FeatureT> + rest_type::template count<FeatureT>(); }
     /// @}
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<fabric<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<fabric<FacetT, Rest...>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
 };
 
-template <typename FacetT>
-struct fabric<FacetT>: private detail::facet_wrapper<FacetT>{
+template <std::size_t Stage, typename FacetT, typename... Rest>
+struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...>{
+    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
+    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
+    using wrapper_type   = detail::facet_wrapper<FacetT>;
+    using self_type      = basic_fabric<Stage, FacetT, true, Rest...>;
+    using rest_type      = fabric<Stage, Rest...>;
+
+    template <typename FeatureT, std::uint32_t Idx>
+    using facet_type = typename rest_type::template facet_type<FeatureT, Idx>;
+
+    template <typename... Components>
+    basic_fabric(composition<Components...>& composition): rest_type(composition) {}
+
+    /// @{
+    template <typename FacetQ>
+    auto& get() { return rest_type::template get<FacetQ>(); }
+
+    template <typename FacetQ>
+    const auto& get() const { return rest_type::template get<FacetQ>(); }
+    /// @}
+
+    /// @{
+    template <typename FeatureT, std::uint32_t Idx>
+    auto& at() { return rest_type::template at<FeatureT, Idx>(); }
+
+    template <typename FeatureT, std::uint32_t Idx>
+    const auto& at() const { return rest_type::template at<FeatureT, Idx>(); }
+    /// @}
+
+    /// @{
+    template <typename FeatureT>
+    static constexpr int count() { return rest_type::template count<FeatureT>(); }
+    /// @}
+
+    /// @{
+    template <typename FeatureT, typename Function>
+    std::size_t apply(Function&& f) { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
+
+    template <typename FeatureT, typename Function>
+    std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    /// @}
+};
+
+template <std::size_t Stage, typename FacetT>
+struct basic_fabric<Stage, FacetT, true>: private detail::facet_wrapper<FacetT>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using wrapper_type   = detail::facet_wrapper<FacetT>;
 
+    template <typename FeatureT, std::uint32_t Idx>
+    using facet_type = std::conditional_t<
+        std::is_same_v<feature_type, FeatureT> && Idx == 0,
+        FacetT,
+        void
+    >;
+
     template <typename... Components>
-    fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
+    basic_fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
@@ -195,11 +258,30 @@ struct fabric<FacetT>: private detail::facet_wrapper<FacetT>{
 
     /// @{
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) { return utils::visit<fabric<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) { return utils::visit<fabric<Stage, FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
 
     template <typename FeatureT, typename Function>
-    std::size_t apply(Function&& f) const { return utils::visit<fabric<FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    std::size_t apply(Function&& f) const { return utils::visit<fabric<Stage, FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
+};
+
+template <std::size_t Stage, typename FacetT, typename... Rest>
+struct fabric<Stage, FacetT, Rest...>: basic_fabric<Stage, FacetT, facet_traits<FacetT>::stage == Stage, Rest...>{
+    using basic_fabric_type = basic_fabric<Stage, FacetT, facet_traits<FacetT>::stage == Stage, Rest...>;
+
+    using basic_fabric_type::basic_fabric_type;
+};
+
+template <std::size_t Stage>
+struct fabric<Stage>{
+    template <typename FeatureT, std::uint32_t Idx>
+    using facet_type = void;
+
+    template <typename... Components>
+    fabric(composition<Components...>&) {}
+
+    template <typename FeatureT>
+    static constexpr int count() { return 0; }
 };
 
 }

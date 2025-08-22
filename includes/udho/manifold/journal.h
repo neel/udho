@@ -171,8 +171,8 @@ struct get_journal_type_helper<temporary_storage<Facets...>>{
 template <typename FacetsT>
 struct journal_for_fabric;
 
-template <typename... Facets>
-struct journal_for_fabric<fabric<Facets...>>{
+template <std::size_t Stage, typename... Facets>
+struct journal_for_fabric<fabric<Stage, Facets...>>{
     using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
 };
 
@@ -193,8 +193,8 @@ struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, priva
     // static_assert(std::is_default_constructible_v<journal_type>);
     // static_assert(std::is_move_constructible_v<journal_type>);
 
-    template <typename... Features>
-    friend struct evaluator;
+    // template <typename... Features>
+    // friend struct evaluator;
 
     using container_type::container_type;
 
@@ -253,8 +253,8 @@ struct journal<FacetT> : private detail::result_container<FacetT>{
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using container_type = detail::result_container<FacetT>;
 
-    template <typename... Features>
-    friend struct evaluator;
+    // template <typename... Features>
+    // friend struct evaluator;
 
     using container_type::container_type;
     using container_type::get;

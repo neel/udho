@@ -1,5 +1,5 @@
-#ifndef UDHO_MANIFOLD_EVALUATOR_H
-#define UDHO_MANIFOLD_EVALUATOR_H
+#ifndef UDHO_MANIFOLD_EVALUATOR_helper_H
+#define UDHO_MANIFOLD_EVALUATOR_helper_H
 
 #include <boost/asio/ip/address.hpp>
 #include <udho/net/common.h>
@@ -13,61 +13,220 @@ namespace manifold {
 
 namespace detail {
 
-template <typename... Facets>
-struct facet_evaluator{
-    using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT, bool YieldsResult=udho::manifold::has_result<FacetT>::value>
+class next_evaluator_helper_internal{
+    using facet_type      = FacetT;
+    using handler_type    = HandlerT;
+    using args_tuple_type = ArgsTupleT;
+    using result_type     = typename udho::manifold::facet_traits<facet_type>::result_type;
+    using journal_type    = typename HandlerT::journal_type;
 
-    facet_evaluator(journal_type& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _journal(journal), _address(address), _request(request) {}
+    handler_type _handler;
+    args_tuple_type _args;
+public:
+    inline explicit next_evaluator_helper_internal(handler_type&& handler, args_tuple_type&& args): _handler(std::move(handler)), _args(std::move(args)) {}
+    next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
+    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)) {}
 
-    template <typename FacetT>
-    bool operator()(udho::manifold::detail::facet_wrapper<FacetT, true>& wrapper) { return wrapper.eval(_journal, _address, _request); }
-
-    template <typename FacetT>
-    bool operator()(udho::manifold::detail::facet_wrapper<FacetT, false>&) { return false; }
-
-    journal_type& _journal;
-
-    const boost::asio::ip::address& _address;
-    const udho::net::types::headers::request& _request;
-};
-
-}
-
-template <typename FeatureX, typename... Features>
-struct evaluator<FeatureX, Features...>{
-    evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
-
-    template <typename... Facets>
-    std::size_t operator()(udho::manifold::fabric<Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
-        static_assert(fabric.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
-
-        std::size_t count = fabric.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
-        evaluator<Features...> ev{_address, _request};
-        count += ev(fabric, journal);
-        return count;
+    void pass(result_type&& result) {
+        _handler.journal().template get<facet_type>() = std::move(result);
+        proceed();
     }
 
-    const boost::asio::ip::address& _address;
-    const udho::net::types::headers::request& _request;
-};
-
-template <typename FeatureX>
-struct evaluator<FeatureX>{
-    evaluator(const boost::asio::ip::address& address, const udho::net::types::headers::request& request): _address(address), _request(request) {}
-
-    template <typename... Facets>
-    std::size_t operator()(udho::manifold::fabric<Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal) {
-        static_assert(fabric.template count<FeatureX>() > 0, "Feature missing in the manifold facade");
-
-        return fabric.template apply<FeatureX>( detail::facet_evaluator<Facets...>{journal, _address, _request} );
+    void skip(){
+        proceed();
     }
 
-    const boost::asio::ip::address& _address;
-    const udho::net::types::headers::request& _request;
+    void fail(result_type&& result){
+        _handler.journal().template get<facet_type>() = std::move(result);
+        _handler.promise().set_value(false);
+    }
+
+    void proceed(){
+        std::apply([&](auto&&... args){
+            _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
+        }, _args);
+    }
+
+    void operator()(result_type&& result, bool success = true){
+        if(success) pass(std::forward<result_type>(result));
+        else        fail(std::forward<result_type>(result));
+    }
+};
+
+template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT>
+class next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT, false>{
+    using facet_type      = FacetT;
+    using handler_type    = HandlerT;
+    using args_tuple_type = ArgsTupleT;
+    using result_type     = typename udho::manifold::facet_traits<facet_type>::result_type;
+    using journal_type    = typename HandlerT::journal_type;
+
+    handler_type _handler;
+    args_tuple_type _args;
+public:
+    inline explicit next_evaluator_helper_internal(handler_type&& handler, args_tuple_type&& args): _handler(std::move(handler)), _args(std::move(args)) {}
+    next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
+    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)) {}
+
+    void pass() {
+        std::apply([&](auto&&... args){
+            _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
+        }, _args);
+    }
+
+    void skip(){
+        pass();
+    }
+
+    void fail(){
+        _handler.promise().set_value(false);
+    }
+
+    void operator()(bool success = true){
+        if(success) pass();
+        else        fail();
+    }
+};
+
+template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT>
+struct next_evaluator_helper: next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT>{
+    using base_type = next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT>;
+
+    using base_type::base_type;
 };
 
 
+
+template <std::size_t, typename...>
+struct evaluator_helper;
+
+template <std::size_t Stage, typename FeatureX, typename... Features>
+struct evaluator_helper<Stage, FeatureX, Features...>{
+
+    template <typename... Facets>
+    struct handler{
+        using handler_type = handler<Facets...>;
+        using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
+        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+        using promise_type = std::promise<bool>;
+
+        handler(fabric_type& fabric, journal_type& journal, promise_type& promise): _fabric(fabric), _journal(journal), _promise(promise) {}
+        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _promise(other._promise) {}
+        handler(const handler&) = delete;
+
+        journal_type& journal() { return _journal; }
+
+        promise_type& promise() { return _promise; }
+
+        template <std::size_t Idx, typename... Args, std::enable_if_t<std::is_void_v<typename fabric_type::template facet_type<FeatureX, Idx>>, bool> = true>
+        void eval(Args&&... args){
+            using args_tuple_type   = std::tuple<Args&&...>;
+            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<Facets...>;
+
+            rest_handler_type rest_handler{_fabric, _journal, _promise};
+            rest_handler.template operator()<0, Args...>(std::forward<Args>(args)...);
+        }
+
+        template <std::size_t Idx, typename... Args, std::enable_if_t<(fabric_type::template count<FeatureX>() > 0 && fabric_type::template count<FeatureX>()-1 > Idx), bool> = true>
+        void eval(Args&&... args){
+            using facet_type      = typename fabric_type::template facet_type<FeatureX, Idx>;
+            using args_tuple_type = std::tuple<Args&&...>;
+            using next_type       = next_evaluator_helper<Idx+1, args_tuple_type, facet_type, handler_type>;
+
+            auto& wrapper = _fabric.template at<FeatureX, Idx>();
+            auto& facet   = wrapper.facet();
+
+            try{
+                facet(_journal, next_type{std::move(*this), std::forward_as_tuple(args...)}, std::forward<Args>(args)...); // facet will call the pass or fail method of the next_evaluator_helper
+            } catch(...) {
+                _promise.set_exception(std::current_exception());
+            }
+        }
+
+        template <std::size_t Idx, typename... Args, std::enable_if_t<(fabric_type::template count<FeatureX>() > 0 && fabric_type::template count<FeatureX>()-1 == Idx), bool> = true>
+        void eval(Args&&... args){
+            using facet_type        = typename fabric_type::template facet_type<FeatureX, Idx>;
+            using args_tuple_type   = std::tuple<Args&&...>;
+            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<Facets...>;
+            using next_type         = next_evaluator_helper<0, args_tuple_type, facet_type, rest_handler_type>;
+
+            auto& wrapper = _fabric.template at<FeatureX, Idx>();
+            auto& facet   = wrapper.facet();
+
+            try{
+                facet(_journal, next_type{rest_handler_type{_fabric, _journal, _promise}, std::forward_as_tuple(args...)}, std::forward<Args>(args)...); // facet will call the pass or fail method of the next_evaluator_helper
+            } catch(...) {
+                _promise.set_exception(std::current_exception());
+            }
+        }
+
+        template <std::size_t Idx, typename... Args>
+        void operator()(Args&&... args){
+            eval<Idx>(std::forward<Args>(args)...);
+        }
+
+        private:
+            fabric_type&  _fabric;
+            journal_type& _journal;
+            promise_type& _promise;
+    };
+
+
+};
+
+template <std::size_t Stage>
+struct evaluator_helper<Stage>{
+    template <typename... Facets>
+    struct handler{
+        using handler_type = handler<Facets...>;
+        using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
+        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+        using promise_type = std::promise<bool>;
+
+        handler(fabric_type& fabric, journal_type& journal, promise_type& promise): _fabric(fabric), _journal(journal), _promise(promise) {}
+        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _promise(other._promise) {}
+        handler(const handler&) = delete;
+
+        journal_type& journal() { return _journal; }
+
+        template <std::size_t Idx, typename... Args>
+        void operator()(Args&&... args){
+            _promise.set_value(true);
+        }
+
+        private:
+            fabric_type&  _fabric;
+            journal_type& _journal;
+            promise_type& _promise;
+    };
+};
+
+}
+
+template <std::size_t Stage, typename... Features>
+struct evaluator{
+    template <typename... Facets, typename... Args>
+    void eval(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args) {
+        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+        using helper_type  = detail::evaluator_helper<Stage, Features...>;
+        using handler_type = typename helper_type::template helper_type<Facets...>;
+
+        handler_type handler{fabric, journal, _promise};
+        handler(std::forward<Args>(args)...);
+    }
+
+    template <typename... Facets, typename... Args>
+    std::future<bool> operator()(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args){
+        eval(fabric, journal, std::forward<Args>(args)...);
+        return _promise.get_future();
+    }
+
+private:
+    std::promise<bool> _promise;
+};
+
 }
 }
 
-#endif // UDHO_MANIFOLD_EVALUATOR_H
+#endif // UDHO_MANIFOLD_EVALUATOR_helper_H

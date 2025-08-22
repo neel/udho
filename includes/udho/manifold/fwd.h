@@ -1,6 +1,7 @@
 #ifndef UDHO_MANIFOLD_FWD_H
 #define UDHO_MANIFOLD_FWD_H
 
+#include <cstdint>
 
 namespace udho {
 namespace manifold {
@@ -11,16 +12,16 @@ struct composition;
 template <typename...>
 struct params;
 
-template <typename...>
+template <std::size_t, typename...>
 struct fabric;
 
 template <typename...>
 struct journal;
 
-template <typename...>
+template <std::size_t, typename...>
 struct evaluator;
 
-template <typename...>
+template <std::size_t, typename...>
 struct pipeline;
 
 template <typename ComponentT>

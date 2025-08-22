@@ -19,6 +19,23 @@ namespace udho{
 namespace url{
 
 namespace detail{
+
+class route_index{
+    int _mountpoint;
+    int _action;
+    std::string _target;
+
+public:
+    inline route_index(const std::string& target, int mountpoint, int action): _target(target), _mountpoint(mountpoint), _action(action) {}
+    route_index(const route_index&) = default;
+
+    inline bool valid() const { return _mountpoint > 0 && _action > 0; }
+
+    inline int mountpoint() const { return _mountpoint; }
+    inline int action() const { return _action; }
+    inline const std::string target() const { return _target; }
+};
+
 /**
  * @class routing_table
  * @brief Template class for managing URL routing with mount points and file serving capabilities
@@ -123,7 +140,7 @@ struct routing_table{
      * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
      */
     template <typename Ch>
-    std::pair<int, int> index_of(const std::basic_string<Ch>& subject) const {
+    route_index index_of(const std::basic_string<Ch>& subject) const {
         int mountpoint_index = -1;
         int action_index = -1;
         _mountpoints.visit_at([&subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
@@ -138,7 +155,7 @@ struct routing_table{
                 action_index = action_idx;
             }
         });
-        return std::make_pair(mountpoint_index, action_index);
+        return route_index{subject, mountpoint_index, action_index};
     }
 
     /**
@@ -149,20 +166,16 @@ struct routing_table{
      * @param args Arguments to forward to the action
      * @return true if action was invoked or file was served, false otherwise
      */
-    template <typename Ch, typename... Args>
-    bool invoke_at(const std::pair<int, int>& indexes, const std::basic_string<Ch>& subject, Args&&... args) const {
-        int mountpoint_index = std::get<0>(indexes);
-        int action_index = std::get<1>(indexes);
-
-        assert(mountpoint_index > -1);
-        assert(action_index > -1);
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        assert(index.valid());
 
         bool found = false;
-        _mountpoints.visit_at([&subject, &mountpoint_index, &action_index, &found, &args...](const auto& mointpoint, std::size_t depth){
+        _mountpoints.visit_at([&index, &found, &args...](const auto& mointpoint, std::size_t depth){
             if(found)  return;
-            found = (depth == mountpoint_index);
+            found = (depth == index.mountpoint());
             if(found){
-                mointpoint.invoke_at(action_index, subject, std::forward<Args>(args)...);
+                mointpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
             }
         });
         return found;

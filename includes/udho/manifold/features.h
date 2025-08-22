@@ -18,42 +18,66 @@ namespace feature{
     /**
      * @brief generates an unique signature for the request
      */
-    struct hash{};
+    struct hash{
+        static constexpr const std::size_t stage = 0;
+    };
 
     /**
      * @brief tracks events associated with the request (e.g. mini logging)
      */
-    struct track{};
+    struct track{
+        static constexpr const std::size_t stage = 0;
+    };
 
     /**
      * @brief decides whether to accept or reject this request
      */
-    struct filter{};
+    struct filter{
+        static constexpr const std::size_t stage = 0;
+    };
 
     /**
      * @brief rate control, reject requests when exceeds server capacity
      */
-    struct throttle{};
+    struct throttle{
+        static constexpr const std::size_t stage = 0;
+    };
+
+    struct locator{
+        static constexpr const std::size_t stage = 1;
+    };
+
+    struct responder{
+        static constexpr const std::size_t stage = 2;
+    };
 
     /**
      * @brief provides global and local cache facility
      */
-    struct cache{};
+    struct cache{
+        static constexpr const std::size_t stage = 1;
+    };
 
     /**
      * @brief provides facilities for generating, and verification of scalar tokens with TTL
      */
-    struct token{};
+    struct token{
+        static constexpr const std::size_t stage = 1;
+    };
 
     /**
      * @brief provide policy based session extraction policy connected with session storage and management system
      */
-    struct session{};
+    struct session{
+        static constexpr const std::size_t stage = 1;
+    };
 
     /**
      * @brief checks uploaded file satisfies constraints and if it does then copies
      */
-    struct upload{};
+    struct upload{
+        static constexpr const std::size_t stage = 1;
+    };
 
 }
 

@@ -81,54 +81,91 @@ struct arguments {
  * expands a component C having features {F1, F2, ...} into fabric<facet<C, F_i>> \forall i through fabric_type typedef
  * @{
  */
-template <typename FeatureT>
+template <std::size_t Stage, typename FeatureT>
 struct expand_feature_pairs;
 
-template <typename... Features>
-struct expand_feature_pairs<udho::manifold::features<Features...>>{
+template <std::size_t Stage, typename... EnabledFacets>
+struct enabled_facets_set;
+
+template <typename L, typename R>
+struct merged_fabric;
+
+template <typename... Rest>
+struct facet_container{
+    template <typename X>
+    using prepend = std::conditional_t<std::is_void_v<X>, facet_container<Rest...>, facet_container<X, Rest...>>;
+
+    template <std::size_t Stage>
+    using fabric_type = udho::manifold::fabric<Stage, Rest...>;
+};
+
+
+template <std::size_t Stage, typename EnabledFacet, typename... Rest>
+struct enabled_facets_set<Stage, EnabledFacet, Rest...>{
+    using rest_type = enabled_facets_set<Stage, Rest...>;
+    using container_type = typename rest_type::container_type::template prepend<EnabledFacet>;
+    using fabric_type = typename container_type::template fabric_type<Stage>;
+};
+
+template <std::size_t Stage>
+struct enabled_facets_set<Stage>{
+    using container_type = facet_container<>;
+};
+
+template <std::size_t Stage, typename... Features>
+struct expand_feature_pairs<Stage, udho::manifold::features<Features...>>{
     template <typename ComponentT>
-    using fabric_type = udho::manifold::fabric<udho::manifold::facet<ComponentT, Features>...>;
+    using fabric_enabled_type = enabled_facets_set<Stage,
+            std::conditional_t<Features::stage == Stage, udho::manifold::facet<ComponentT, Features>, void>...
+        >;
+
+    // template <typename ComponentT>
+    // using fabric_type = udho::manifold::fabric<Stage, udho::manifold::facet<ComponentT, Features>...>;
+
+    template <typename ComponentT>
+    using fabric_type = typename fabric_enabled_type<ComponentT>::fabric_type;
 };
 /// @}
 
 
-template <typename ComponentT>
+template <std::size_t Stage, typename ComponentT>
 struct get_facets{
-    using type = typename expand_feature_pairs<typename ComponentT::features>::template fabric_type<ComponentT>;
+    using type = typename expand_feature_pairs<Stage, typename ComponentT::features>::template fabric_type<ComponentT>;
 };
 
-template <typename... FacetsSet>
-struct flatten;
+template <std::size_t Stage, typename... FacetsSet>
+struct flatten_fabric;
 
-template <typename... Facets>
-struct flattened{
-    using type = udho::manifold::fabric<Facets ...>;
+template <std::size_t Stage, typename... Facets>
+struct flattened_fabric{
+    using type = udho::manifold::fabric<Stage, Facets ...>;
 };
 
-template <typename L, typename R>
-struct combined;
 
-template <typename... X, typename... Y>
-struct combined<flattened<X...>, flattened<Y...>>{
-    using type = flattened<X..., Y...>;
+
+template <std::size_t Stage, typename... Facets, typename... Rest>
+struct flatten_fabric<Stage, udho::manifold::fabric<Stage, Facets...>, Rest...> {
+    using type   = flattened_fabric<Stage, Facets...>;
+    using rest   = typename flatten_fabric<Stage, Rest...>::merged;
+    using merged = typename merged_fabric<type, rest>::type;
 };
 
-template <typename... Facets, typename... Rest>
-struct flatten<udho::manifold::fabric<Facets...>, Rest...> {
-    using type = flattened<Facets...>;
-    using rest = typename flatten<Rest...>::combined;
-    using combined = typename combined<type, rest>::type;
+template <std::size_t Stage>
+struct flatten_fabric<Stage>{
+    using type   = flattened_fabric<Stage>;
+    using merged = flattened_fabric<Stage>;
 };
 
-template <>
-struct flatten<>{
-    using type = flattened<>;
-    using combined = flattened<>;
+
+template <std::size_t Stage, typename... X, typename... Y>
+struct merged_fabric<flattened_fabric<Stage, X...>, flattened_fabric<Stage, Y...>>{
+    using type = flattened_fabric<Stage, X..., Y...>;
 };
 
-template <typename... Components>
+
+template <std::size_t Stage, typename... Components>
 struct flatten_all{
-    using type = typename flatten<typename get_facets<Components>::type...>::combined::type;
+    using type = typename flatten_fabric<Stage, typename get_facets<Stage, Components>::type...>::merged::type;
 };
 
 

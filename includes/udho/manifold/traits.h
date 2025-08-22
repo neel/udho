@@ -4,6 +4,8 @@
 #include <type_traits>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/features.h>
+#include <udho/utils/string_view.h>
+#include <udho/utils/polyfill.h>
 
 namespace udho{
 namespace manifold{
@@ -26,7 +28,7 @@ struct has_params : std::false_type {
 };
 
 template<typename T>
-struct has_params<T, std::void_t<typename T::config>> : std::true_type {
+struct has_params<T, std::void_t<typename T::params>> : std::true_type {
     using type = typename T::params;
 };
 
@@ -39,7 +41,6 @@ template<typename T>
 struct has_features<T, std::void_t<typename T::features>> : std::true_type {
     using type = typename T::features;
 };
-
 }
 
 /**
@@ -57,6 +58,38 @@ struct component_traits{
     using params = typename detail::has_params<ComponentT>::type;
 };
 
+namespace detail {
+
+template<typename, typename = void>
+struct has_static_name : std::false_type {};
+
+template<typename T>
+struct has_static_name<T, udho::utils::void_t<decltype(T::name)>> : std::bool_constant<std::is_convertible_v<decltype(T::name), udho::utils::string_view>> {
+    static constexpr udho::utils::string_view get() { return T::name; }
+};
+
+template<typename, typename = void>
+struct has_traits_name : std::false_type { };
+
+template<typename T>
+struct has_traits_name<T, udho::utils::void_t<decltype(component_traits<T>::name)>> : std::bool_constant<std::is_convertible_v<decltype(component_traits<T>::name), udho::utils::string_view>> {
+    static constexpr udho::utils::string_view get() { return component_traits<T>::name; }
+};
+
+template <typename T>
+struct has_name: udho::utils::conditional_t<has_static_name<T>::value, has_static_name<T>, has_traits_name<T>>{};
+
+}
+
+template <typename ComponentT>
+struct has_name: detail::has_name<ComponentT> {};
+
+template <typename ComponentT>
+static constexpr udho::utils::string_view component_name() {
+    static_assert(has_name<ComponentT>::value, "ComponentT doesn't have a name. Either set ComponentT::name as a static constexpr member or set component_traits<ComponentT>:");
+    return has_name<ComponentT>::get();
+}
+
 template <typename FacetT>
 struct facet_traits;
 
@@ -64,15 +97,17 @@ template <typename ComponentT, typename FeatureT>
 struct facet_traits<udho::manifold::facet<ComponentT, FeatureT>> {
     using component_type = ComponentT;
     using feature_type   = FeatureT;
-    using facet_type  = udho::manifold::facet<ComponentT, FeatureT>;
+    using facet_type     = udho::manifold::facet<ComponentT, FeatureT>;
     using result_type    = typename detail::has_result<facet_type>::type;
+
+    static constexpr const std::size_t stage = FeatureT::stage;
 };
 
 template <typename FacetT>
 struct has_result: std::bool_constant<!std::is_void<typename facet_traits<FacetT>::result_type>::value> {};
 
 template <typename ComponentT>
-struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::config>::value> {};
+struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::params>::value> {};
 
 template <typename ComponentT>
 struct has_features: std::bool_constant<!std::is_void<detail::has_features<ComponentT>>::value> {};
