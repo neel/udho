@@ -22,38 +22,38 @@ struct argument_traits {
                                                             std::is_same_v<std::remove_reference_t<ArgT>, ComponentT>;
 
     template <typename ArgT>
-    static constexpr const bool feasible_rvalue_reference =  std::is_same_v<std::remove_reference_t<ArgT>, ComponentT>;
+    static constexpr const bool feasible_rvalue_reference = !std::is_lvalue_reference_v<ArgT> &&
+                                                            std::is_rvalue_reference_v<ArgT> &&
+                                                            std::is_same_v<std::remove_reference_t<ArgT>, ComponentT>;
     template <typename ArgT>
     static constexpr const bool should_move = feasible_rvalue_reference<ArgT>;
 
-
     template <typename ArgT>
-    static constexpr const bool is_feasible = (component_traits<ComponentT>::shared && feasible_lvalue_reference<ArgT>) ||
-                                              (!component_traits<ComponentT>::shared && should_move<ArgT>);
+    static constexpr const bool is_feasible = feasible_lvalue_reference<ArgT> || (std::is_move_constructible_v<ComponentT> && feasible_rvalue_reference<ArgT>);
 };
 
 template <typename ArgT, typename... Args>
 struct arguments_lookup{
     template <typename ComponentT>
-    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, typename arguments_lookup<Args...>::template type_for<ComponentT> >;
+    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT&&>, ArgT, typename arguments_lookup<Args&&...>::template type_for<ComponentT> >;
 
-    template <typename ComponentT, std::enable_if_t<argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
+    template <typename ComponentT, std::enable_if_t<argument_traits<ComponentT>::template is_feasible<ArgT&&>, bool> = true>
     static constexpr ArgT arg_for(ArgT&& arg, Args&&... args) { return std::forward<ArgT>(arg); }
 
-    template <typename ComponentT, std::enable_if_t<!argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
-    static constexpr type_for<ComponentT> arg_for(ArgT&& arg, Args&&... args) { return arguments_lookup<Args...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
+    template <typename ComponentT, std::enable_if_t<!argument_traits<ComponentT>::template is_feasible<ArgT&&>, bool> = true>
+    static constexpr type_for<ComponentT> arg_for(ArgT&& arg, Args&&... args) { return arguments_lookup<Args&&...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
 
 };
 
 template <typename ArgT>
 struct arguments_lookup<ArgT>{
     template <typename ComponentT>
-    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT>, ArgT, default_constructed>;
+    using type_for = std::conditional_t<argument_traits<ComponentT>::template is_feasible<ArgT&&>, ArgT, default_constructed>;
 
-    template <typename ComponentT, std::enable_if_t<argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
+    template <typename ComponentT, std::enable_if_t<argument_traits<ComponentT>::template is_feasible<ArgT&&>, bool> = true>
     static constexpr ArgT arg_for(ArgT&& arg) { return std::forward<ArgT>(arg); }
 
-    template <typename ComponentT, std::enable_if_t<!argument_traits<ComponentT>::template is_feasible<ArgT>, bool> = true>
+    template <typename ComponentT, std::enable_if_t<!argument_traits<ComponentT>::template is_feasible<ArgT&&>, bool> = true>
     static constexpr default_constructed arg_for(ArgT&& arg) { return default_constructed{}; }
 };
 
@@ -74,7 +74,7 @@ struct arguments {
      * @return the first feasible argument or default_constructed instance
      */
     template <typename ComponentT>
-    static constexpr type_for<ComponentT> find(Args&&... args) { return arguments_lookup<Args...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
+    static constexpr type_for<ComponentT> find(Args&&... args) { return arguments_lookup<Args&&...>::template arg_for<ComponentT>(std::forward<Args>(args)...); }
 };
 
 /**

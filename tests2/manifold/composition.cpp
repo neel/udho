@@ -45,7 +45,7 @@ struct Component {
     Component(): is_default_constructed(true) {}
     Component(const std::string& msg): is_default_constructed(false), message(msg) {}
     Component(const Component&) = delete;
-    Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
+    Component(Component&& other) noexcept : is_default_constructed(std::move(other.is_default_constructed)), message(std::move(other.message))  { }
 
     bool is_default_constructed;
     std::string message;
@@ -59,7 +59,7 @@ struct Component<5, 5> {
     Component(): is_default_constructed(true) {}
     Component(const std::string& msg): is_default_constructed(false), message(msg) {}
     Component(const Component&) = delete;
-    Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
+    Component(Component&& other) noexcept : is_default_constructed(other.is_default_constructed), message(std::move(other.message))  { }
 
     bool is_default_constructed;
     std::string message;
@@ -75,7 +75,7 @@ struct XComponent {
     XComponent(): is_default_constructed(true) {}
     XComponent(const std::string& msg): is_default_constructed(false), message(msg) {}
     XComponent(const XComponent&) = delete;
-    XComponent(XComponent&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
+    XComponent(XComponent&& other) noexcept : is_default_constructed(other.is_default_constructed), message(std::move(other.message))  { }
 
     bool is_default_constructed;
     std::string message;
@@ -140,6 +140,8 @@ struct udho::manifold::component_traits<testing::Component<5>> {
     using result = testing::State;
     using params = udho::manifold::params<>;
 };
+
+
 
 TEST_CASE("manifold composition Construction & Composition", "[manifold][composition]") {
     using composition_type = udho::manifold::composition<

@@ -29,7 +29,7 @@ struct feasible_for<ArgT>{
     template <std::size_t Index, typename... Components>
     static constexpr void assert_msg(ArgT&& arg) {
         constexpr const bool count = udho::utils::traits::accumulate<
-                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
+                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT&&>) >...
             >::value == 1;
         static_assert(feasible_for_atleast_one_component<Index, count>::value, "constraint feasible_for_atleast_one_component<Index, true> must be satisfied for all arguments");
     }
@@ -40,7 +40,7 @@ struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
     template <std::size_t Index, typename... Components>
     static constexpr void assert_msg(ArgT&& arg, Args&&... args) {
         constexpr const bool count = udho::utils::traits::accumulate<
-                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT>) >...
+                std::integral_constant<bool, (detail::argument_traits<Components>::template is_feasible<ArgT&&>) >...
             >::value == 1;
 
         static_assert(feasible_for_atleast_one_component<Index, count>::value, "constraint feasible_for_atleast_one_component<Index, true> must be satisfied for all arguments");
@@ -61,8 +61,8 @@ struct compositor {
      */
     template <typename ArgT, typename... Args>
     static composition_type compose(ArgT&& arg, Args&&... args) {
-        detail::feasible_for<ArgT, Args...>::template assert_msg<0, Components...>(std::forward<ArgT>(arg), std::forward<Args>(args)...);
-        return composition_type{detail::arguments<ArgT, Args...>::template find<Components>(std::forward<ArgT>(arg), std::forward<Args>(args)...)...};
+        detail::feasible_for<ArgT&&, Args&&...>::template assert_msg<0, Components...>(std::forward<ArgT>(arg), std::forward<Args>(args)...);
+        return composition_type{detail::arguments<ArgT&&, Args&&...>::template find<Components>(std::forward<ArgT>(arg), std::forward<Args>(args)...)...};
     }
 
     static composition_type compose() {
