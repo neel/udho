@@ -33,22 +33,20 @@ struct basic_pipeline{
 
     template <typename... Features>
     struct evaluator{
-        using helper_type  = detail::evaluator_helper<Stage, Features...>;
-        using handler_type = typename detail::get_handler_type<fabric_type>::template for_features<Features...>;
-        using promise_type = std::promise<bool>;
+        using helper_type         = detail::evaluator_helper<Stage, Features...>;
+        using handler_type        = typename detail::get_handler_type<fabric_type>::template for_features<Features...>;
+        using safe_success_type   = typename handler_type::safe_success_type;
+        using async_callback_type = typename handler_type::async_callback_type;
 
-        evaluator(fabric_type& fabric, journal_type& journal): _handler(fabric, journal, _promise) {}
+        evaluator(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _handler(fabric, journal, callback) {}
 
         template <typename... Args>
         void eval(Args&&... args){
             _handler.template operator()<0>(std::forward<Args>(args)...);
         }
 
-        promise_type& promise() { return _promise; }
-
         private:
         handler_type _handler;
-        promise_type _promise;
     };
 
     fabric_type& fabric() { return _fabric; }
@@ -74,14 +72,17 @@ class common_pipepine<Stage, order<Features...>, udho::manifold::composition<Com
     using composition_type    = udho::manifold::composition<Components...>;
     using basic_pipeline_type = basic_pipeline<Stage, Components...>;
     using evaluator_type      = typename basic_pipeline_type::template evaluator<Features...>;
-    using promise_type        = typename evaluator_type::promise_type;
+    using safe_success_type   = typename evaluator_type::safe_success_type;
+    using async_callback_type = typename evaluator_type::async_callback_type;
 
     evaluator_type _evaluator;
 
 public:
-    common_pipepine(composition_type& composition): basic_pipeline_type(composition), _evaluator(basic_pipeline_type::fabric(), basic_pipeline_type::journal()) {}
-
-    promise_type& promise() { return _evaluator.promise(); }
+    common_pipepine(composition_type& composition):
+        basic_pipeline_type(composition),
+        _evaluator(basic_pipeline_type::fabric(), basic_pipeline_type::journal(), _callback),
+        _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1))
+    {}
 
     using basic_pipeline_type::fabric;
     using basic_pipeline_type::journal;
@@ -91,11 +92,27 @@ public:
         _evaluator.eval(std::forward<Args>(args)...);
     }
 
-    template <typename... Args>
-    std::future<bool> operator()(Args&&... args){
-        eval(std::forward<Args>(args)...);
-        return promise().get_future();
+    common_pipepine& then(async_callback_type&& callback){
+        _user_callback = std::move(callback);
+        return *this;
     }
+
+    common_pipepine& then(boost::asio::io_context& io, async_callback_type&& callback){
+        _user_callback = [&io, &callback](safe_success_type&& success){
+            boost::asio::post(io, std::bind(std::forward<async_callback_type>(callback), std::move(success)));
+        };
+        return *this;
+    }
+private:
+    void on_completion(safe_success_type&& success){
+        if(_user_callback) {
+            _user_callback(std::forward<safe_success_type>(success));
+        }
+    }
+
+private:
+    async_callback_type _callback;
+    async_callback_type _user_callback;
 };
 
 // template <typename... Components>

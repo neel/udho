@@ -39,7 +39,7 @@ public:
 
     void fail(result_type&& result){
         _handler.journal().template get<facet_type>() = std::move(result);
-        _handler.promise().set_value(false);
+        _handler.completion()(false);
     }
 
     void proceed(){
@@ -80,7 +80,7 @@ public:
     }
 
     void fail(){
-        _handler.promise().set_value(false);
+        _handler.completion()(false);
     }
 
     void operator()(bool success = true){
@@ -109,22 +109,23 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         using handler_type = handler<Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using promise_type = std::promise<bool>;
+        using safe_success_type = std::variant<bool, std::exception_ptr>;
+        using async_callback_type = std::function<void (safe_success_type)>;
 
-        handler(fabric_type& fabric, journal_type& journal, promise_type& promise): _fabric(fabric), _journal(journal), _promise(promise) {}
-        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _promise(other._promise) {}
+        handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
+        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _callback(other._callback) {}
         handler(const handler&) = delete;
 
         journal_type& journal() { return _journal; }
 
-        promise_type& promise() { return _promise; }
+        async_callback_type& completion() { return _callback; }
 
         template <std::size_t Idx, typename... Args, std::enable_if_t<std::is_void_v<typename fabric_type::template facet_type<FeatureX, Idx>>, bool> = true>
         void eval(Args&&... args){
             using args_tuple_type   = std::tuple<Args&&...>;
             using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<Facets...>;
 
-            rest_handler_type rest_handler{_fabric, _journal, _promise};
+            rest_handler_type rest_handler{_fabric, _journal, _callback};
             rest_handler.template operator()<0, Args...>(std::forward<Args>(args)...);
         }
 
@@ -140,7 +141,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
             try{
                 facet(_journal, next_type{std::move(*this), std::forward_as_tuple(args...)}, std::forward<Args>(args)...); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _promise.set_exception(std::current_exception());
+                _callback(std::current_exception());
             }
         }
 
@@ -155,9 +156,9 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
             auto& facet   = wrapper.facet();
 
             try{
-                facet(_journal, next_type{rest_handler_type{_fabric, _journal, _promise}, std::forward_as_tuple(args...)}, std::forward<Args>(args)...); // facet will call the pass or fail method of the next_evaluator_helper
+                facet(_journal, next_type{rest_handler_type{_fabric, _journal, _callback}, std::forward_as_tuple(args...)}, std::forward<Args>(args)...); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _promise.set_exception(std::current_exception());
+                _callback(std::current_exception());
             }
         }
 
@@ -169,7 +170,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         private:
             fabric_type&  _fabric;
             journal_type& _journal;
-            promise_type& _promise;
+            async_callback_type& _callback;
     };
 
 
@@ -182,49 +183,56 @@ struct evaluator_helper<Stage>{
         using handler_type = handler<Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using promise_type = std::promise<bool>;
+        using safe_success_type = std::variant<bool, std::exception_ptr>;
+        using async_callback_type = std::function<void (safe_success_type)>;
 
-        handler(fabric_type& fabric, journal_type& journal, promise_type& promise): _fabric(fabric), _journal(journal), _promise(promise) {}
-        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _promise(other._promise) {}
+        handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
+        handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _callback(other._callback) {}
         handler(const handler&) = delete;
 
         journal_type& journal() { return _journal; }
 
+        async_callback_type& completion() { return _callback; }
+
         template <std::size_t Idx, typename... Args>
         void operator()(Args&&... args){
-            _promise.set_value(true);
+            _callback(true);
         }
 
         private:
             fabric_type&  _fabric;
             journal_type& _journal;
-            promise_type& _promise;
+            async_callback_type& _callback;
     };
 };
 
 }
 
-template <std::size_t Stage, typename... Features>
-struct evaluator{
-    template <typename... Facets, typename... Args>
-    void eval(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args) {
-        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using helper_type  = detail::evaluator_helper<Stage, Features...>;
-        using handler_type = typename helper_type::template helper_type<Facets...>;
+// template <std::size_t Stage, typename... Features>
+// struct evaluator{
+//     using safe_success_type = std::variant<bool, std::exception_ptr>;
+//     using async_callback_type = std::function<void (safe_success_type)>;
 
-        handler_type handler{fabric, journal, _promise};
-        handler(std::forward<Args>(args)...);
-    }
 
-    template <typename... Facets, typename... Args>
-    std::future<bool> operator()(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args){
-        eval(fabric, journal, std::forward<Args>(args)...);
-        return _promise.get_future();
-    }
+//     template <typename... Facets, typename... Args>
+//     void eval(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args) {
+//         using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+//         using helper_type  = detail::evaluator_helper<Stage, Features...>;
+//         using handler_type = typename helper_type::template helper_type<Facets...>;
 
-private:
-    std::promise<bool> _promise;
-};
+//         handler_type handler{fabric, journal, _callback};
+//         handler(std::forward<Args>(args)...);
+//     }
+
+//     template <typename... Facets, typename... Args>
+//     std::future<bool> operator()(udho::manifold::fabric<Stage, Facets...>& fabric, typename udho::manifold::detail::journal_for_facets<Facets...>::type& journal, Args&&... args){
+//         eval(fabric, journal, std::forward<Args>(args)...);
+//         return _promise.get_future();
+//     }
+
+// private:
+//     async_callback_type _callback;
+// };
 
 }
 }
