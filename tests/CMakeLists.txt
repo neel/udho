@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-FIND_PACKAGE(Boost COMPONENTS regex unit_test_framework system REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS regex unit_test_framework REQUIRED)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
 ADD_EXECUTABLE(routing routing.cpp)

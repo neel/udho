@@ -28,10 +28,13 @@
 #ifndef UDHO_URL_IO_H
 #define UDHO_URL_IO_H
 
+#include <udho/url/fwd.h>
+#include <udho/url/io_fwd.h>
+#include <udho/url/tabulate.h>
+
 #include <udho/url/action.h>
 #include <udho/url/mount.h>
 #include <udho/url/tables.h>
-#include <udho/url/tabulate.h>
 
 namespace udho{
 namespace url{
@@ -87,6 +90,23 @@ std::ostream& operator<<(std::ostream& stream, const mountpoints_table<Args...>&
     tabulate::Table tab;
     tab << mountpoints;
     stream << tab;
+    return stream;
+}
+
+template <typename Mountpoints>
+std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
+    router.print(stream);
+    return stream;
+}
+
+template <typename Mountpoints>
+std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router){
+    const detail::routing_table<Mountpoints>& table = router.table();
+    stream << table;
+    return stream;
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
     return stream;
 }
 

@@ -10,25 +10,32 @@ namespace manifold{
 
 namespace components{
 
-template <typename RoutingTable>
-struct routing;
+// template <typename RoutingTable>
+// struct routing;
 
-template <typename MountpointsT>
-class routing<udho::url::detail::routing_table<MountpointsT>> {
-    using routing_table_type = udho::url::detail::routing_table<MountpointsT>;
+template <typename RoutingTableT>
+class routing {
+    using routing_table_type = RoutingTableT;
 
-    routing_table_type _table;
+    const routing_table_type& _table;
 
 public:
-    using features = udho::manifold::features<udho::manifold::feature::locator, udho::manifold::feature::responder>;
+    using features = udho::manifold::features<
+        udho::manifold::feature::locator,
+        udho::manifold::feature::responder
+    >;
     using params   = udho::manifold::params<>;
 
     static constexpr const udho::utils::string_view name = "router";
 
-    routing(routing_table_type&& table): _table(std::move(table)) {}
+    routing(const routing_table_type& table): _table(table) {}
 
     udho::url::detail::route_index locate(const std::string& subject) {
-        return _table.index_of(subject);
+        udho::url::detail::route_index route = _table.index_of(subject);
+        if(!route.valid()) {
+            throw std::out_of_range{udho::utils::format("Failed to locate resource corresponding to identifier {}", subject)};
+        }
+        return route;
     }
 };
 
@@ -36,52 +43,53 @@ public:
 
 
 
-template <typename MountpointsT>
-struct facet<components::routing<MountpointsT>, udho::manifold::feature::locator> {
-    using component_type = components::routing<MountpointsT>;
-    using result = udho::url::detail::route_index;
+template <typename RoutingTableT>
+struct facet<components::routing<RoutingTableT>, udho::manifold::feature::locator> {
+    using component_type = components::routing<RoutingTableT>;
+    using config_type    = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const typename component_type::params& params): _component(component), _params(params) {}
+    facet(component_type& component, const config_type& config): _component(component), _config(config) {}
 
-    template <typename... Components>
-    result eval(const udho::manifold::journal<Components...>& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
-        udho::utils::string_view tgt = request.target();
+    template <typename... Components, typename NextT, typename Stream>
+    void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+        udho::manifold::feature::identifier::result res = journal.template at<udho::manifold::feature::identifier>();
+        udho::utils::string_view tgt = res.resource();
         std::string target(tgt.begin(), tgt.end());
-        return _component.locate(target);
+        udho::url::detail::route_index index = _component.locate(target);
+        next.pass(std::move(index));
+    }
+
+    template <typename... Components, typename NextT, typename Stream>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+        eval(journal, std::forward<NextT>(next), stream);
     }
 
 private:
     component_type& _component;
-    typename component_type::params& _params;
-};
-
-class routing_invocation_result{
-    bool _success;
-public:
-    inline explicit routing_invocation_result(bool success): _success(success) {}
-    routing_invocation_result(const routing_invocation_result&) = default;
-
-    inline bool success() const { return _success; }
+    const config_type& _config;
 };
 
 template <typename MountpointsT>
 struct facet<components::routing<MountpointsT>, udho::manifold::feature::responder> {
     using component_type = components::routing<MountpointsT>;
-    using result = routing_invocation_result;
-    using facet_type = facet<component_type, udho::manifold::feature::locator>;
+    using facet_type     = facet<component_type, udho::manifold::feature::locator>;
+    using config_type    = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const typename component_type::params& params): _component(component), _params(params) {}
+    facet(component_type& component, const config_type& config): _component(component), _config(config) {}
 
-    template <typename... Components>
-    result eval(const udho::manifold::journal<Components...>& journal, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
+    template <typename... Components, typename NextT>
+    void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {
         udho::url::detail::route_index route_index = journal.template get<facet_type>();
         bool success = _component.invoke_at(route_index);
-        return routing_invocation_result{success};
+        if(success) next.pass();
+        else        next.fail();
     }
+
+
 
 private:
     component_type& _component;
-    typename component_type::params& _params;
+    const config_type& _config;
 };
 
 }

@@ -54,7 +54,7 @@ if(UDHO_USE_PUGIXML)
 endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex system serialization iostreams REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS filesystem regex serialization iostreams REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
 find_package(pegtl REQUIRED)
 find_package(LibMagic REQUIRED)
@@ -82,8 +82,8 @@ SET(UDHO_SOURCES
     sources/udho/page.cpp
 )
 
-ADD_EXECUTABLE(sandbox sandbox.cpp)
-TARGET_LINK_LIBRARIES(sandbox udho)
+# ADD_EXECUTABLE(sandbox sandbox.cpp)
+# TARGET_LINK_LIBRARIES(sandbox udho)
 # ADD_EXECUTABLE(sandbox2 sandbox2.cpp)
 # TARGET_LINK_LIBRARIES(sandbox2 udho)
 

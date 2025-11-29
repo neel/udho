@@ -76,8 +76,8 @@ TEST_CASE("DL_info", "[url][dlinfo]"){
     CHECK(xf0_name == "X::f0()");
 }
 
-TEST_CASE("Regex matching operations", "[url][regex]") {
-    udho::url::pattern::match<udho::url::pattern::formats::regex, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
+TEST_CASE("Regex matching operations", "[url][pattern][regex]") {
+    udho::url::pattern::match<udho::url::pattern::formats::regex, udho::url::no_options, char> match(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
 
     SECTION("Successful match") {
         std::string subject = "/user/alexa/12345";
@@ -110,8 +110,8 @@ TEST_CASE("Regex matching operations", "[url][regex]") {
     }
 }
 
-TEST_CASE("String matching operations using p1729 format", "[url][p1729]") {
-    udho::url::pattern::match<udho::url::pattern::formats::p1729, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
+TEST_CASE("String matching operations using p1729 format", "[url][pattern][p1729]") {
+    udho::url::pattern::match<udho::url::pattern::formats::p1729, udho::url::no_options, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
 
     SECTION("Successful string match and extraction") {
         std::string subject = "/user/john/12345";
@@ -128,7 +128,7 @@ TEST_CASE("String matching operations using p1729 format", "[url][p1729]") {
     }
 
     SECTION("Pattern and replacement equality when replacement is omitted") {
-        udho::url::pattern::match<udho::url::pattern::formats::p1729, char> simple_matcher(udho::url::verb::get, "/user/{}/{:d}");
+        udho::url::pattern::match<udho::url::pattern::formats::p1729, udho::url::no_options, char> simple_matcher(udho::url::verb::get, "/user/{}/{:d}");
         REQUIRE(simple_matcher.pattern() == "/user/{}/{:d}");
         REQUIRE(simple_matcher.replacement() == "/user/{}/{:d}");
         REQUIRE(simple_matcher.replace(std::make_tuple("john", 12345)) == "/user/john/12345");
@@ -140,8 +140,8 @@ TEST_CASE("String matching operations using p1729 format", "[url][p1729]") {
     }
 }
 
-TEST_CASE("Fixed string matching operations", "[url][fixed]") {
-    udho::url::pattern::match<udho::url::pattern::formats::fixed, char> matcher(udho::url::verb::get, "/example/path", "/example/path");
+TEST_CASE("Fixed string matching operations", "[url][pattern][fixed]") {
+    udho::url::pattern::match<udho::url::pattern::formats::fixed, udho::url::no_options, char> matcher(udho::url::verb::get, "/example/path", "/example/path");
 
     SECTION("Successful string match") {
         std::string subject = "/example/path";
@@ -164,8 +164,8 @@ TEST_CASE("Fixed string matching operations", "[url][fixed]") {
     }
 }
 
-TEST_CASE("Home pattern matching operations", "[url][home]") {
-    udho::url::pattern::match<udho::url::pattern::formats::home, char> matcher(udho::url::verb::get);
+TEST_CASE("Home pattern matching operations", "[url][pattern][home]") {
+    udho::url::pattern::match<udho::url::pattern::formats::home, udho::url::no_options, char> matcher(udho::url::verb::get);
 
     SECTION("Match explicit home pattern") {
         std::string subject = "/";
@@ -194,7 +194,7 @@ TEST_CASE("Home pattern matching operations", "[url][home]") {
 }
 
 
-TEST_CASE("url common functionalities using regex", "[url][router]") {
+TEST_CASE("url common functionalities using regex", "[url][pattern][router]") {
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);

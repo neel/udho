@@ -15,8 +15,20 @@ struct http{
 };
 
 template <typename StreamT>
+struct http2{
+    using reader = http_reader2<StreamT>;
+    using writer = http_writer<StreamT>;
+};
+
+template <typename StreamT>
 struct scgi{
     using reader = scgi_reader<StreamT>;
+    using writer = http_writer<StreamT>;
+};
+
+template <typename StreamT>
+struct scgi2{
+    using reader = scgi_reader2<StreamT>;
     using writer = http_writer<StreamT>;
 };
 

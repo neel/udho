@@ -12,32 +12,45 @@
 #include <udho/manifold/fabric.h>
 #include <udho/manifold/evaluator.h>
 #include <udho/manifold/pipeline.h>
-
+#include <udho/manifold/config.h>
 #include <iostream>
 
 namespace testing {
+
+struct State {
+    State() = delete;
+    State(const State&) = default;
+    inline explicit State(bool val) : _value(val) {
+        static std::size_t counter = 0;
+        _counter = ++counter;
+    }
+    inline bool accepted() const { return _value; }
+
+    bool _value;
+    std::size_t _counter;
+};
+
 
 template <std::size_t Index>
 struct Feature{
     static constexpr const std::size_t idx = Index;
 
     static constexpr const std::size_t stage = 1;
+
+    using result    = State;
 };
 
-struct State {
-    State() = delete;
+template <std::size_t Index>
+struct XFeature{
+    static constexpr const std::size_t idx = Index;
 
-    inline explicit State(bool val) : _value(val) {}
-    inline bool accepted() const { return _value; }
-
-    bool _value;
+    static constexpr const std::size_t stage = 1;
 };
+
 
 template <std::size_t Index, int FeatureIndex = Index>
 struct Component {
-    // using feature   = Feature<FeatureIndex>;
     using features  = udho::manifold::features<Feature<FeatureIndex>>;
-    using result    = State;
 
     static constexpr const std::size_t component_index = Index;
     static constexpr const int feature_index = FeatureIndex;
@@ -54,7 +67,9 @@ struct Component {
 template <>
 struct Component<5, 5> {
     using features  = udho::manifold::features<Feature<1>, Feature<5>, Feature<6>>;
-    using result    = State;
+
+    static constexpr const std::size_t component_index = 5;
+    static constexpr const int feature_index = 5;
 
     Component(): is_default_constructed(true) {}
     Component(const std::string& msg): is_default_constructed(false), message(msg) {}
@@ -67,7 +82,7 @@ struct Component<5, 5> {
 
 template <std::size_t Index, int FeatureIndex = Index>
 struct XComponent {
-    using features = udho::manifold::features<Feature<FeatureIndex>>;
+    using features = udho::manifold::features<XFeature<FeatureIndex>>;
 
     static constexpr const std::size_t component_index = Index;
     static constexpr const int feature_index = FeatureIndex;
@@ -95,9 +110,10 @@ template <std::size_t Index, int FeatureIndex, typename F>
 struct facet<testing::Component<Index, FeatureIndex>, F> {
     using component_type = testing::Component<Index, FeatureIndex>;
     using feature        = F;
-    using result         = typename testing::Component<Index, FeatureIndex>::result;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component): _component(component) {}
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -112,14 +128,16 @@ struct facet<testing::Component<Index, FeatureIndex>, F> {
 
     private:
         component_type& _component;
+        const config& _config;
 };
 
 template <std::size_t Index, int FeatureIndex, typename F>
 struct facet<testing::XComponent<Index, FeatureIndex>, F> {
     using component_type = testing::XComponent<Index, FeatureIndex>;
-    using feature = F;
+    using feature        = F;
+    using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component): _component(component) {}
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -129,6 +147,7 @@ struct facet<testing::XComponent<Index, FeatureIndex>, F> {
 
     private:
         component_type& _component;
+        const config& _config;
 };
 
 }
@@ -180,10 +199,12 @@ TEST_CASE("manifold composition Construction & Composition", "[manifold][composi
         CHECK(composition.at<testing::Feature<0>, 1>().component().component_index == 2);
         CHECK(composition.count<testing::Feature<0>>() == 2);
 
-        CHECK(composition.at<testing::Feature<1>, 0>().component().component_index == 0);
-        CHECK(composition.at<testing::Feature<1>, 1>().component().component_index == 1);
-        CHECK(composition.at<testing::Feature<1>, 2>().component().component_index == 4);
-        CHECK(composition.count<testing::Feature<1>>() == 4);
+        CHECK(composition.at<testing::XFeature<1>, 0>().component().component_index == 0);
+        CHECK(composition.at<testing::Feature<1>, 0>().component().component_index == 1);
+        CHECK(composition.at<testing::Feature<1>, 1>().component().component_index == 4);
+        CHECK(composition.at<testing::Feature<1>, 2>().component().component_index == 5);
+        CHECK(composition.count<testing::XFeature<1>>() == 1);
+        CHECK(composition.count<testing::Feature<1>>() == 3);
         CHECK(composition.count<testing::Feature<5>>() == 1);
         CHECK(composition.count<testing::Feature<6>>() == 2);
     }
@@ -250,6 +271,17 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][fabric]") {
         testing::Component<6>
     >;
 
+    using configs_type = udho::manifold::configs<
+        testing::Component<0>,
+        testing::XComponent<0, 1>,
+        testing::Component<1>,
+        testing::Component<2, 0>,
+        testing::Component<3>,
+        testing::Component<4, 1>,
+        testing::Component<5>,
+        testing::Component<6>
+    >;
+
     testing::Component<5> component_5{"C5"};
 
     auto composition = composition_type::compose(component_5);
@@ -259,7 +291,7 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][fabric]") {
     using expected_fabric_type = udho::manifold::fabric<
         1,
         udho::manifold::facet<testing::Component<0>, testing::Feature<0>>,
-        udho::manifold::facet<testing::XComponent<0, 1>, testing::Feature<1>>,
+        udho::manifold::facet<testing::XComponent<0, 1>, testing::XFeature<1>>,
         udho::manifold::facet<testing::Component<1>, testing::Feature<1>>,
         udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>,
         udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>,
@@ -270,7 +302,8 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][fabric]") {
     >;
     static_assert(std::is_same_v<expected_fabric_type, fabric_type>);
 
-    fabric_type fabric{composition};
+    configs_type conf;
+    fabric_type fabric{composition, conf};
 
     using journal_type = udho::manifold::detail::journal_for_fabric<fabric_type>::type;
     using expected_journal_type = udho::manifold::journal<
@@ -285,12 +318,206 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][fabric]") {
     >;
     static_assert(std::is_same_v<expected_journal_type, journal_type>);
 
-    journal_type journal;
+    SECTION("Initially all facets in the journal are unevaluated") {
+        journal_type journal;
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(!journal.at<testing::Feature<0>>().ready());
+        CHECK(!journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(!journal.at<testing::Feature<5>>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 1>().ready());
+    }
+
+    SECTION("Setting first facet result makes it ready and keeps all unevaluated") {
+        journal_type journal;
+
+        auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
+        state_00 = testing::State{true};
+        CHECK(state_00.ready());
+        CHECK(state_00.value().accepted());
+
+        CHECK(journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().ready());
+        CHECK(!journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(!journal.at<testing::Feature<5>>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 1>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().value().accepted());
+    }
+
+    SECTION("Setting first facet result rejected makes it ready and keeps all unevaluated") {
+        journal_type journal;
+
+        auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
+        state_00 = testing::State{false};
+        CHECK(state_00.ready());
+        CHECK(!state_00.value().accepted());
+
+        CHECK(journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().ready());
+        CHECK(!journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(!journal.at<testing::Feature<5>>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 1>().ready());
+
+        CHECK(!journal.at<testing::Feature<0>>().value().accepted());
+    }
+
+    SECTION("Setting another one facet result makes it ready and keeps all unevaluated") {
+        journal_type journal;
+
+        auto& state_51 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>();
+        state_51 = testing::State{true};
+        CHECK(state_51.ready());
+        CHECK(state_51.value().accepted());
+
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(!journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(!journal.at<testing::Feature<0>>().ready());
+        CHECK(!journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(!journal.at<testing::Feature<1>>().ready());
+        CHECK(!journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(!journal.at<testing::Feature<5>>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(!journal.at<testing::Feature<6>, 1>().ready());
+    }
+
+    SECTION("Initially all facets in the journal are evaluated") {
+        journal_type journal;
+
+        journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>() = testing::State{true};
+        journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>() = testing::State{true};
+
+        CHECK(journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().ready());
+        CHECK(journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(journal.at<testing::Feature<1>>().ready());
+        CHECK(journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(journal.at<testing::Feature<5>>().ready());
+        CHECK(journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(journal.at<testing::Feature<6>, 1>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().value().accepted());
+        CHECK(journal.at<testing::Feature<0>, 1>().value().accepted());
+        CHECK(journal.at<testing::Feature<1>>().value().accepted());
+        CHECK(journal.at<testing::Feature<1>, 1>().value().accepted());
+        CHECK(journal.at<testing::Feature<1>, 2>().value().accepted());
+        CHECK(journal.at<testing::Feature<5>>().value().accepted());
+        CHECK(journal.at<testing::Feature<6>, 0>().value().accepted());
+        CHECK(journal.at<testing::Feature<6>, 1>().value().accepted());
+    }
+
+    SECTION("Initially all facets in the journal are evaluated but rejected") {
+        journal_type journal;
+
+        journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>() = testing::State{false};
+        journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>() = testing::State{false};
+
+        CHECK(journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>().ready());
+        CHECK(journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>().ready());
+
+        CHECK(journal.at<testing::Feature<0>>().ready());
+        CHECK(journal.at<testing::Feature<0>, 1>().ready());
+        CHECK(journal.at<testing::Feature<1>>().ready());
+        CHECK(journal.at<testing::Feature<1>, 1>().ready());
+        CHECK(journal.at<testing::Feature<1>, 2>().ready());
+        CHECK(journal.at<testing::Feature<5>>().ready());
+        CHECK(journal.at<testing::Feature<6>, 0>().ready());
+        CHECK(journal.at<testing::Feature<6>, 1>().ready());
+
+        CHECK(!journal.at<testing::Feature<0>>().value().accepted());
+        CHECK(!journal.at<testing::Feature<0>, 1>().value().accepted());
+        CHECK(!journal.at<testing::Feature<1>>().value().accepted());
+        CHECK(!journal.at<testing::Feature<1>, 1>().value().accepted());
+        CHECK(!journal.at<testing::Feature<1>, 2>().value().accepted());
+        CHECK(!journal.at<testing::Feature<5>>().value().accepted());
+        CHECK(!journal.at<testing::Feature<6>, 0>().value().accepted());
+        CHECK(!journal.at<testing::Feature<6>, 1>().value().accepted());
+    }
 }
 
 TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
     SECTION("eval & journal basic operations") {
         using composition_type = udho::manifold::composition<
+            testing::Component<0>,
+            testing::XComponent<0, 1>,
+            testing::Component<1>,
+            testing::Component<2, 0>,
+            testing::Component<3>,
+            testing::Component<4, 1>,
+            testing::Component<5>,
+            testing::Component<6>
+        >;
+        using conffigs_type = udho::manifold::configs<
             testing::Component<0>,
             testing::XComponent<0, 1>,
             testing::Component<1>,
@@ -317,7 +544,8 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         boost::asio::ip::address address;
         udho::net::types::headers::request request;
 
-        fabric_type fabric{composition};
+        conffigs_type configs;
+        fabric_type fabric{composition, configs};
 
         auto& facet11= fabric.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>();
     }
@@ -337,6 +565,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         using order_type = udho::manifold::order<
             testing::Feature<0>,
             testing::Feature<1>,
+            testing::XFeature<1>,
             testing::Feature<2>,
             testing::Feature<3>,
             testing::Feature<4>,
@@ -359,48 +588,62 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<6>{"accept"}
             );
 
-            pipeline_type pipeline{composition};
+
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
 
             bool evaluated = true;
 
             pipeline.then([&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\nC5F5\nC5F6\nC6F6\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
                 const auto& journal = pipeline.journal();
 
                 const auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
                 CHECK(state_00.ready());
                 CHECK(state_00.value().accepted());
+                CHECK(state_00->_counter == journal.at<testing::Feature<0>>()->_counter);
 
                 const auto& state_20 = journal.get<udho::manifold::facet<testing::Component<2, 0>, testing::Feature<0>>>();
                 CHECK(state_20.ready());
                 CHECK(state_20.value().accepted());
+                CHECK(state_20->_counter == journal.at<testing::Feature<0>, 1>()->_counter);
 
                 const auto& state_11 = journal.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>();
                 CHECK(state_11.ready());
                 CHECK(state_11.value().accepted());
+                CHECK(state_11->_counter == journal.at<testing::Feature<1>, 0>()->_counter);
 
                 const auto& state_41 = journal.get<udho::manifold::facet<testing::Component<4, 1>, testing::Feature<1>>>();
                 CHECK(state_41.ready());
                 CHECK(state_41.value().accepted());
+                CHECK(state_41->_counter == journal.at<testing::Feature<1>, 1>()->_counter);
 
-                const auto& statex_51 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>();
-                CHECK(statex_51.ready());
-                CHECK(statex_51.value().accepted());
+                const auto& state_51 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>();
+                CHECK(state_51.ready());
+                CHECK(state_51.value().accepted());
+                CHECK(state_51->_counter == journal.at<testing::Feature<1>, 2>()->_counter);
 
-                const auto& statex_55 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>();
-                CHECK(statex_55.ready());
-                CHECK(statex_55.value().accepted());
+                const auto& state_55 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>();
+                CHECK(state_55.ready());
+                CHECK(state_55.value().accepted());
+                CHECK(state_55->_counter == journal.at<testing::Feature<5>>()->_counter);
 
-                const auto& statex_56 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>();
-                CHECK(statex_56.ready());
-                CHECK(statex_56.value().accepted());
+                const auto& state_56 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>();
+                CHECK(state_56.ready());
+                CHECK(state_56.value().accepted());
+                CHECK(state_56->_counter == journal.at<testing::Feature<6>, 0>()->_counter);
 
-                const auto& statex_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
-                CHECK(statex_66.ready());
-                CHECK(statex_66.value().accepted());
+                const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
+                CHECK(state_66.ready());
+                CHECK(state_66.value().accepted());
+                CHECK(state_66->_counter == journal.at<testing::Feature<6>, 1>()->_counter);
+
+                CHECK(success.index() == 0);
+                CHECK(std::get<0>(success));
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -417,7 +660,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<6>{"accept"}
             );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
 
@@ -453,6 +698,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -469,13 +717,15 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<6>{"accept"}
             );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
             pipeline.then([&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
 
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
                 const auto& journal = pipeline.journal();
 
                 const auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
@@ -506,6 +756,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -522,14 +775,16 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<6>{"reject"}
             );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
 
             pipeline.then([&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
 
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\nC5F5\nC5F6\nC6F6\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
                 const auto& journal = pipeline.journal();
 
                 const auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
@@ -563,6 +818,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -579,11 +837,12 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::XComponent<0, 1>,
             testing::Component<5>,
             testing::Component<6>
-            >;
+        >;
 
         using order_type = udho::manifold::order<
             testing::Feature<0>,
             testing::Feature<1>,
+            testing::XFeature<1>,
             testing::Feature<2>,
             testing::Feature<3>,
             testing::Feature<4>,
@@ -591,7 +850,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             testing::Feature<6>,
             testing::Feature<7>,
             testing::Feature<8>
-            >;
+        >;
 
         using pipeline_type = udho::manifold::common_pipepine<1, order_type, composition_type>;
 
@@ -604,9 +863,11 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<4, 1>{"accept"},
                 component_5,
                 testing::Component<6>{"accept"}
-                );
+            );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
 
             boost::asio::io_context io;
@@ -615,7 +876,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             pipeline.then(io, [&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\nC5F5\nC5F6\nC6F6\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
                 const auto& journal = pipeline.journal();
 
@@ -635,21 +896,24 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_41.ready());
                 CHECK(state_41.value().accepted());
 
-                const auto& statex_51 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>();
-                CHECK(statex_51.ready());
-                CHECK(statex_51.value().accepted());
+                const auto& state_51 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<1>>>();
+                CHECK(state_51.ready());
+                CHECK(state_51.value().accepted());
 
-                const auto& statex_55 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>();
-                CHECK(statex_55.ready());
-                CHECK(statex_55.value().accepted());
+                const auto& state_55 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<5>>>();
+                CHECK(state_55.ready());
+                CHECK(state_55.value().accepted());
 
-                const auto& statex_56 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>();
-                CHECK(statex_56.ready());
-                CHECK(statex_56.value().accepted());
+                const auto& state_56 = journal.get<udho::manifold::facet<testing::Component<5>, testing::Feature<6>>>();
+                CHECK(state_56.ready());
+                CHECK(state_56.value().accepted());
 
-                const auto& statex_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
-                CHECK(statex_66.ready());
-                CHECK(statex_66.value().accepted());
+                const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
+                CHECK(state_66.ready());
+                CHECK(state_66.value().accepted());
+
+                CHECK(success.index() == 0);
+                CHECK(std::get<0>(success));
             }).eval(stream);
 
             io.run();
@@ -665,9 +929,11 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<4, 1>{"accept"},
                 component_5,
                 testing::Component<6>{"accept"}
-                );
+            );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
@@ -703,6 +969,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);
@@ -717,16 +986,18 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<4, 1>{"accept"},
                 component_5,
                 testing::Component<6>{"accept"}
-                );
+            );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
             pipeline.then(io, [&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
 
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
                 const auto& journal = pipeline.journal();
 
                 const auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
@@ -757,6 +1028,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
             io.run();
 
@@ -774,14 +1048,16 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 testing::Component<6>{"reject"}
             );
 
-            pipeline_type pipeline{composition};
+            using configs_type  = pipeline_type::configs_type;
+            configs_type configs;
+            pipeline_type pipeline{composition, configs};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
             pipeline.then(io, [&stream, &pipeline, &evaluated](std::variant<bool, std::exception_ptr> success){
                 evaluated = true;
 
-                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nX0F1\nC5F1\nC5F5\nC5F6\nC6F6\n");
+                CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
                 const auto& journal = pipeline.journal();
 
                 const auto& state_00 = journal.get<udho::manifold::facet<testing::Component<0>, testing::Feature<0>>>();
@@ -815,6 +1091,9 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
+
+                CHECK(success.index() == 0);
+                CHECK(!std::get<0>(success));
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);

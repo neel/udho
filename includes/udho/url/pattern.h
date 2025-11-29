@@ -9,11 +9,13 @@
 #include <vector>
 #include <udho/url/fwd.h>
 #include <udho/url/detail/format.h>
+#include <udho/url/detail/function.h>
 #include <scn/scn.h>
 #include <scn/tuple_return.h>
 #include <udho/url/word.h>
 #include <udho/url/verb.h>
 #include <boost/algorithm/string.hpp>
+#include <udho/url/options.h>
 #include <exception>
 #include <iostream>
 
@@ -90,10 +92,11 @@ namespace detail{
  *     // Outputs: /user/john/42
  * }
  */
-template <typename CharT>
-struct match<pattern::formats::p1729, CharT>{
+template <typename CharT, typename... Params>
+struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT>{
     using string_type  = std::basic_string<CharT>;
     using pattern_type = std::basic_string<CharT>;
+    using options_type = udho::url::basic_options<Params...>;
 
     /**
      * @brief Constructs a new match object with method, pattern, and optionally a replacement string (The pattern is copied as replacement if replacement is not provided).
@@ -102,7 +105,27 @@ struct match<pattern::formats::p1729, CharT>{
      * @param format p1729 scanf-like pattern string for matching.
      * @param replace Replacement string (in p2216 format std::format or fmt) for the matched pattern, using placeholders {} that correspond to captured groups in the format.
      */
-    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) { check(); }
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = "", options_type&& options = options_type{}): _method(method), _format(format), _replace(!replace.empty() ? replace : format), _options(std::move(options)) { check(); }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::p1729, udho::url::basic_options<XParams...>, CharT> options(udho::url::basic_options<XParams...>&& opts) const {
+        return match<pattern::formats::p1729, udho::url::basic_options<XParams...>, CharT>{_method, _format, _replace, std::forward<udho::url::basic_options<XParams...>>(opts)};
+    }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::p1729, udho::url::basic_options<XParams...>, CharT> options(XParams&&... xp) const {
+        return match<pattern::formats::p1729, udho::url::basic_options<XParams...>, CharT>{_method, _format, _replace, udho::url::basic_options<XParams...>(std::forward<XParams>(xp)...)};
+    }
 
     /**
      * @brief Returns the scanf-like format string.
@@ -159,6 +182,8 @@ struct match<pattern::formats::p1729, CharT>{
      */
     udho::url::verb method() const { return _method; }
 
+    const options_type& options() const { return _options; }
+
     private:
         void check(){
             if(_format.empty()){
@@ -171,10 +196,10 @@ struct match<pattern::formats::p1729, CharT>{
         }
     private:
         udho::url::verb _method;
-        pattern_type _format;
-        pattern_type _replace;
+        pattern_type    _format;
+        pattern_type    _replace;
+        options_type    _options;
 };
-
 
 /**
  * @brief A template struct for strict URL pattern matching
@@ -194,10 +219,11 @@ struct match<pattern::formats::p1729, CharT>{
  *     // Outputs: /example/path
  * }
  */
-template <typename CharT>
-struct match<pattern::formats::fixed, CharT>{
+template <typename CharT, typename... Params>
+struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT>{
     using string_type  = std::basic_string<CharT>;
     using pattern_type = std::basic_string<CharT>;
+    using options_type = udho::url::basic_options<Params...>;
 
     /**
      * @brief Constructs a new match object with an HTTP method, a pattern for matching, and optionally a replacement string.
@@ -206,25 +232,49 @@ struct match<pattern::formats::fixed, CharT>{
      * @param format Fixed string pattern for matching.
      * @param replace String used for URL generation, defaults to the format if not specified.
      */
-    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = ""): _method(method), _format(format), _replace(!replace.empty() ? replace : format) { check(); }
+    match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = "", options_type&& options = options_type{}): _method(method), _format(format), _replace(!replace.empty() ? replace : format), _options(std::move(options)) { check(); }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::fixed, udho::url::basic_options<XParams...>, CharT> options(udho::url::basic_options<XParams...>&& opts) const {
+        return match<pattern::formats::fixed, udho::url::basic_options<XParams...>, CharT>{_method, _format, _replace, std::forward<udho::url::basic_options<XParams...>>(opts)};
+    }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::fixed, udho::url::basic_options<XParams...>, CharT> options(XParams&&... xp) const {
+        return match<pattern::formats::fixed, udho::url::basic_options<XParams...>, CharT>{_method, _format, _replace, udho::url::basic_options<XParams...>(std::forward<XParams>(xp)...)};
+    }
+
     /**
      * @brief Returns the fixed format string used for matching.
      *
      * @return The fixed format pattern.
      */
     const pattern_type format() const { return _format; }
+
     /**
      * @brief Returns the pattern as a string.
      *
      * @return The pattern as a standard string.
      */
     std::string pattern() const { return format(); }
+
     /**
      * @brief Returns the string.
      *
      * @return The string used for URL generation.
      */
     std::string replacement() const { return _replace; }
+
     /**
      * @brief Returns a string combining the pattern and replacement if they differ, indicating the template for generating URLs.
      *
@@ -243,6 +293,7 @@ struct match<pattern::formats::fixed, CharT>{
         auto result = subject == _format;
         return (bool) result;
     }
+
     /**
      * @brief Checks if the subject exactly matches the fixed pattern.
      *
@@ -272,6 +323,8 @@ struct match<pattern::formats::fixed, CharT>{
      */
     udho::url::verb method() const { return _method; }
 
+    const options_type& options() const { return _options; }
+
     private:
         void check(){
             if(_format.empty()){
@@ -284,8 +337,9 @@ struct match<pattern::formats::fixed, CharT>{
         }
     private:
         udho::url::verb _method;
-        pattern_type _format;
-        pattern_type _replace;
+        pattern_type    _format;
+        pattern_type    _replace;
+        options_type    _options;
 };
 
 /**
@@ -309,17 +363,38 @@ struct match<pattern::formats::fixed, CharT>{
  *     std::cout << "Empty URL treated as home." << std::endl; // Outputs: Empty URL treated as home.
  * }
  */
-template <>
-struct match<pattern::formats::home, char>{
+template <typename... Params>
+struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
     using string_type  = std::basic_string<char>;
     using pattern_type = std::basic_string<char>;
+    using options_type = udho::url::basic_options<Params...>;
 
     /**
      * @brief Constructs a new match object with an HTTP method, implicitly set to handle the root or home pattern.
      *
      * @param method HTTP method associated with the root URL pattern, typically GET for home page requests.
      */
-    match(udho::url::verb method): _method(method) {  }
+    match(udho::url::verb method, options_type&& options = options_type{}): _method(method), _options(std::move(options)) {  }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::home, udho::url::basic_options<XParams...>> options(udho::url::basic_options<XParams...>&& opts) const {
+        return match<pattern::formats::home, udho::url::basic_options<XParams...>>{_method, std::forward<udho::url::basic_options<XParams...>>(opts)};
+    }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::home, udho::url::basic_options<XParams...>> options(XParams&&... xp) const {
+        return match<pattern::formats::home, udho::url::basic_options<XParams...>>{_method, udho::url::basic_options<XParams...>(std::forward<XParams>(xp)...)};
+    }
 
     /**
      * @brief Returns the root path as the pattern for matching.
@@ -327,6 +402,7 @@ struct match<pattern::formats::home, char>{
      * @return Always returns "/", the root path.
      */
     std::string pattern() const { return "/"; }
+
     /**
      * @brief Returns the root path as the replacement output.
      *
@@ -377,8 +453,11 @@ struct match<pattern::formats::home, char>{
      */
     udho::url::verb method() const { return _method; }
 
+    const options_type& options() const { return _options; }
+
     private:
         udho::url::verb _method;
+        options_type    _options;
 };
 
 /**
@@ -403,11 +482,12 @@ struct match<pattern::formats::home, char>{
  *     // Outputs: /user/john/42
  * }
  */
-template <typename CharT>
-struct match<pattern::formats::regex, CharT>{
+template <typename CharT, typename... Params>
+struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT>{
     using string_type  = std::basic_string<CharT>;
     using regex_type   = std::basic_regex<CharT>;
     using pattern_type = regex_type;
+    using options_type = udho::url::basic_options<Params...>;
 
     /**
      * @brief Constructs a new match object.
@@ -416,7 +496,28 @@ struct match<pattern::formats::regex, CharT>{
      * @param pattern Regex pattern for matching URLs must begin with a /
      * @param replace Replacement string (in p2216 format std::format or fmt) for the matched pattern must begin with a /
      */
-    match(udho::url::verb method, const string_type& pattern, const std::string& replace): _method(method), _regex(pattern), _pattern(pattern), _replace(replace) { check(); }
+    match(udho::url::verb method, const string_type& pattern, const std::string& replace, options_type&& options = options_type{}): _method(method), _regex(pattern), _pattern(pattern), _replace(replace), _options(std::move(options)) { check(); }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::regex, udho::url::basic_options<XParams...>, CharT> options(udho::url::basic_options<XParams...>&& opts) const {
+        return match<pattern::formats::regex, udho::url::basic_options<XParams...>, CharT>{_method, _pattern, _replace, std::forward<udho::url::basic_options<XParams...>>(opts)};
+    }
+
+    /**
+     * @brief returned a new match with the same method, format, replace string but with new options
+     * @param options
+     * @return
+     */
+    template <typename... XParams>
+    match<pattern::formats::regex, udho::url::basic_options<XParams...>, CharT> options(XParams&&... xp) const {
+        return match<pattern::formats::regex, udho::url::basic_options<XParams...>, CharT>{_method, _pattern, _replace, udho::url::basic_options<XParams...>(std::forward<XParams>(xp)...)};
+    }
+
     /**
      * @brief getter for the regex pattern.
      *
@@ -430,18 +531,21 @@ struct match<pattern::formats::regex, CharT>{
      * @return The pattern as a string.
      */
     std::string pattern() const { return _pattern; }
+
     /**
      * @brief Returns the replacement string.
      *
      * @return The string used for replacements.
      */
     std::string replacement() const { return _replace; }
+
     /**
      * @brief Returns a string combining the pattern and replacement.
      *
      * @return Concatenation of pattern and replacement with " -> " in between.
      */
     std::string str() const { return pattern() + " -> " + replacement(); }
+
     /**
      * @brief Attempts to find and match the regex pattern within the given subject string, storing the results in a tuple.
      * @note The tuple will be filled only if the pattern is completely matched.
@@ -502,6 +606,8 @@ struct match<pattern::formats::regex, CharT>{
      */
     udho::url::verb method() const { return _method; }
 
+    const options_type& options() const { return _options; }
+
     private:
         void check(){
             if(_pattern.empty()){
@@ -514,9 +620,10 @@ struct match<pattern::formats::regex, CharT>{
         }
     private:
         udho::url::verb _method;
-        regex_type  _regex;
-        std::string _pattern;
-        std::string _replace;
+        regex_type      _regex;
+        std::string     _pattern;
+        std::string     _replace;
+        options_type    _options;
 };
 
 }
@@ -536,12 +643,12 @@ struct match<pattern::formats::regex, CharT>{
  * @see pattern::match<pattern::formats::regex, CharT>
  */
 template <typename CharT>
-struct pattern::match<pattern::formats::regex, CharT> regx(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
-    return pattern::match<pattern::formats::regex, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> regx(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::regex, udho::url::no_options, CharT>{method, pattern, replace};
 }
 template <typename CharT, std::size_t M, std::size_t N>
-struct pattern::match<pattern::formats::regex, CharT> regx(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
-    return pattern::match<pattern::formats::regex, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> regx(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::regex, udho::url::no_options, CharT>{method, pattern, replace};
 }
 
 /**
@@ -559,16 +666,16 @@ struct pattern::match<pattern::formats::regex, CharT> regx(boost::beast::http::v
  * @see pattern::match<pattern::formats::p1729, CharT>
  */
 template <typename CharT>
-struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
-    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, replace};
 }
 template <typename CharT, std::size_t M, std::size_t N>
-struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
-    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, replace};
 }
 template <typename CharT, std::size_t M>
-struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M]){
-    return pattern::match<pattern::formats::p1729, CharT>{method, pattern, pattern};
+struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M]){
+    return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, pattern};
 }
 
 /**
@@ -584,16 +691,16 @@ struct pattern::match<pattern::formats::p1729, CharT> scan(boost::beast::http::v
  * @see pattern::match<pattern::formats::fixed, CharT>
  */
 template <typename CharT>
-struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
-    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
+    return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, replace};
 }
 template <typename CharT, std::size_t M, std::size_t N>
-struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
-    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, replace};
+struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
+    return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, replace};
 }
 template <typename CharT, std::size_t M>
-struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M]){
-    return pattern::match<pattern::formats::fixed, CharT>{method, pattern, pattern};
+struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M]){
+    return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, pattern};
 }
 
 /**
@@ -605,8 +712,8 @@ struct pattern::match<pattern::formats::fixed, CharT> fixed(boost::beast::http::
  * @return A `match<pattern::formats::home, char>` object.
  * @see pattern::match<pattern::formats::home, char>
  */
-inline struct pattern::match<pattern::formats::home, char> home(boost::beast::http::verb method){
-    return pattern::match<pattern::formats::home, char>{method};
+inline struct pattern::match<pattern::formats::home, udho::url::no_options, char> home(boost::beast::http::verb method){
+    return pattern::match<pattern::formats::home, udho::url::no_options, char>{method};
 }
 
 

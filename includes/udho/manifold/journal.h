@@ -24,7 +24,7 @@ template <typename ResultT, typename Feature>
 struct result_wrapper{
     static_assert(std::is_move_constructible_v<ResultT>);
     static_assert(std::is_move_assignable_v<ResultT>);
-    static_assert(std::is_copy_constructible_v<ResultT>);
+    // static_assert(std::is_copy_constructible_v<ResultT>);
 
     using type      = ResultT;
     using feature   = Feature;
@@ -68,7 +68,6 @@ private:
 };
 
 
-
 namespace detail{
 
 template <typename FacetT, bool Skip = !udho::manifold::has_result<FacetT>::value>
@@ -81,7 +80,7 @@ struct result_container{
 
     static constexpr const bool skipped = false;
 
-    static_assert(std::is_default_constructible_v<wrapper_type>);
+    // static_assert(std::is_default_constructible_v<wrapper_type>);
     static_assert(std::is_move_constructible_v<wrapper_type>);
 
     template <typename... Features>
@@ -102,10 +101,10 @@ struct result_container{
 
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
     wrapper_type& at() { return _result; }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
     const wrapper_type& at() const { return _result; }
     /// @}
 
@@ -145,7 +144,7 @@ struct composition_journal_helper;
 template <typename FacetT, typename... Rest>
 struct composition_journal_helper<FacetT, Rest...> {
     using type = std::conditional_t<
-            !has_result<FacetT>::value,
+            !udho::manifold::has_result<FacetT>::value,
             typename composition_journal_helper<Rest...>::type,
             typename prepend_helper<FacetT, typename composition_journal_helper<Rest...>::type>::type
         >;
@@ -154,7 +153,7 @@ struct composition_journal_helper<FacetT, Rest...> {
 template <typename FacetT>
 struct composition_journal_helper<FacetT> {
     using type = std::conditional_t<
-            !has_result<FacetT>::value,
+            !udho::manifold::has_result<FacetT>::value,
             temporary_storage<>,
             temporary_storage<FacetT>
         >;
@@ -190,12 +189,6 @@ struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, priva
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using container_type = detail::result_container<FacetT>;
 
-    // static_assert(std::is_default_constructible_v<journal_type>);
-    // static_assert(std::is_move_constructible_v<journal_type>);
-
-    // template <typename... Features>
-    // friend struct evaluator;
-
     using container_type::container_type;
 
     /// @{
@@ -215,31 +208,79 @@ struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, priva
     /// @}
 
     /// @{
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
-    auto& at() { return container_type::template get<FeatureT>(); }
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<!container_type::skipped && std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
+    auto& at() { return container_type::template at<FeatureT>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!container_type::skipped && std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
-    const auto& at() const { return container_type::template get<FeatureT>(); }
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<!container_type::skipped && std::is_same_v<feature_type, FeatureT> && Idx == 0, bool> = true>
+    const auto& at() const { return container_type::template at<FeatureT>(); }
 
-    // using container_type::at;
-
-
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
     auto& at() { return journal<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
     auto& at() { return journal<Rest...>::template at<FeatureT, Idx>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<std::is_same_v<feature_type, FeatureT> && Idx != 0, bool> = true>
     const auto& at() const { return journal<Rest...>::template at<FeatureT, Idx-1>(); }
 
-    template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<!std::is_same_v<feature_type, FeatureT>, bool> = true>
     const auto& at() const { return journal<Rest...>::template at<FeatureT, Idx>(); }
     /// @}
 
     /// @{
     template <typename FeatureT>
     static constexpr int count() { return container_type::template count<FeatureT>() + journal<Rest...>::template count<FeatureT>(); }
+    /// @}
+
+    /// @{
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 > Idx), bool> = true>
+    bool ready() const {
+        const auto& result = at<FeatureT, Idx>();
+        if(!result.ready()){
+            return ready<FeatureT, Idx+1>();
+        } else {
+            return true;
+        }
+    }
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 == Idx), bool> = true>
+    bool ready() const {
+        const auto& result = at<FeatureT, Idx>();
+        return result.ready();
+    }
+    /// @}
+
+    /// @{
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 > Idx), bool> = true>
+    const auto& first_of() const {
+        const auto& result = at<FeatureT, Idx>();
+        if(!result.ready()){
+            return first_of<FeatureT, Idx+1>();
+        }
+    }
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 == Idx), bool> = true>
+    const auto& first_of() const {
+        const auto& result = at<FeatureT, Idx>();
+        if(!result.ready()){
+            throw std::out_of_range{"feature not ready"};
+        }
+        return result;
+    }
+
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 > Idx), bool> = true>
+    auto& first_of() {
+        const auto& result = at<FeatureT, Idx>();
+        if(!result.ready()){
+            return first_of<FeatureT, Idx+1>();
+        }
+    }
+    template <typename FeatureT, std::uint32_t Idx = 0, std::enable_if_t<(count<FeatureT>()-1 == Idx), bool> = true>
+    auto& first_of() {
+        const auto& result = at<FeatureT, Idx>();
+        if(!result.ready()){
+            throw std::out_of_range{"feature not ready"};
+        }
+        return result;
+    }
     /// @}
 
 private:
@@ -252,9 +293,6 @@ struct journal<FacetT> : private detail::result_container<FacetT>{
     using component_type = FacetT;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
     using container_type = detail::result_container<FacetT>;
-
-    // template <typename... Features>
-    // friend struct evaluator;
 
     using container_type::container_type;
     using container_type::get;

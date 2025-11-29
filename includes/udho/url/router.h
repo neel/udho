@@ -14,6 +14,7 @@
 #include <udho/view/resources/asset/io.h>
 #include <udho/url/explorers.h>
 #include <udho/pages/system.h>
+#include <udho/url/io_fwd.h>
 
 namespace udho{
 namespace url{
@@ -29,7 +30,7 @@ public:
     inline route_index(const std::string& target, int mountpoint, int action): _target(target), _mountpoint(mountpoint), _action(action) {}
     route_index(const route_index&) = default;
 
-    inline bool valid() const { return _mountpoint > 0 && _action > 0; }
+    inline bool valid() const { return _mountpoint >= 0 && _action >= 0; }
 
     inline int mountpoint() const { return _mountpoint; }
     inline int action() const { return _action; }
@@ -52,10 +53,7 @@ struct routing_table{
      * @return Reference to the output stream
      */
     template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-        stream << router._mountpoints;
-        return stream;
-    }
+    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
 
     /// Type alias for the mount points collection
     using mountpoints_type = MountPointsT;
@@ -143,6 +141,7 @@ struct routing_table{
     route_index index_of(const std::basic_string<Ch>& subject) const {
         int mountpoint_index = -1;
         int action_index = -1;
+
         _mountpoints.visit_at([&subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
             if(mountpoint_index >= 0) return;
             auto path = mountpoint.path();
@@ -155,7 +154,12 @@ struct routing_table{
                 action_index = action_idx;
             }
         });
-        return route_index{subject, mountpoint_index, action_index};
+        if(mountpoint_index < 0) {
+            return route_index{subject, mountpoint_index, action_index};
+        } else {
+            std::size_t total_depth = _mountpoints.length();
+            return route_index{subject, static_cast<int>(total_depth) - mountpoint_index, action_index};
+        }
     }
 
     /**
@@ -171,9 +175,11 @@ struct routing_table{
         assert(index.valid());
 
         bool found = false;
-        _mountpoints.visit_at([&index, &found, &args...](const auto& mointpoint, std::size_t depth){
+        std::size_t total_depth = _mountpoints.length();
+        _mountpoints.visit_at([total_depth, &index, &found, &args...](const auto& mointpoint, std::size_t depth){
             if(found)  return;
-            found = (depth == index.mountpoint());
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index.mountpoint());
             if(found){
                 mointpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
             }
@@ -196,6 +202,11 @@ struct routing_table{
      */
     const udho::url::summary::router& summary() const { return _summary; }
 
+    std::ostream& print(std::ostream& stream) const {
+        stream << _mountpoints;
+        return stream;
+    }
+
     private:
 
         /**
@@ -216,17 +227,14 @@ struct routing_table{
 template <typename StrT, typename ActionsT>
 struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
 
-    // /**
-    //  * @brief operator overload for streaming the routing table's mount points
-    //  * @param stream Output stream
-    //  * @param router Routing table
-    //  * @return Reference to the output stream
-    //  */
-    // template <typename Mountpoints>
-    // friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-    //     stream << router._mountpoints;
-    //     return stream;
-    // }
+    /**
+     * @brief operator overload for streaming the routing table's mount points
+     * @param stream Output stream
+     * @param router Routing table
+     * @return Reference to the output stream
+     */
+    template <typename Mountpoints>
+    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
 
     /// Type alias for the mount points collection
     using mountpoint_type = udho::url::mount_point<StrT, ActionsT>;
@@ -298,18 +306,18 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @param subject URL path to search for
      * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
      */
-    std::pair<int, int> index_of(const std::string& subject) const {
+    route_index index_of(const std::string& subject) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
-            return std::make_pair(-1, -1);
+            return route_index(subject, -1, -1);
 
         auto rest = path == "/" ? subject : subject.substr(path.size());
         int action_idx = _mountpoint.index_of(rest);
         if(action_idx >= 0){
-            return std::make_pair(_mountpoint.depth, action_idx);
+            return route_index(subject, 0, action_idx);
         }
 
-        return std::make_pair(-1, -1);
+        return route_index(subject, -1, -1);
     }
 
     /**
@@ -320,14 +328,14 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @return true if action was invoked or file was served, false otherwise
      */
     template <typename... Args>
-    bool invoke_at(const std::pair<int, int>&& indexes, Args&&... args) const {
-        int mountpoint_index = std::get<0>(indexes);
-        int action_index = std::get<1>(indexes);
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        int mountpoint_index = index.mountpoint();
+        int action_index     = index.action();
 
         assert(mountpoint_index > -1);
         assert(action_index > -1);
 
-        bool found = (_mountpoint.depth == mountpoint_index);
+        bool found = (0 == mountpoint_index);
         if(found){
             _mountpoint.invoke_at(action_index, std::forward<Args>(args)...);
         }
@@ -349,6 +357,12 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @return Const reference to the summary object
      */
     const udho::url::summary::router& summary() const { return _summary; }
+
+    std::ostream& print(std::ostream& stream) const {
+        stream << _mountpoint;
+        return stream;
+    }
+
 
 private:
 
@@ -428,9 +442,9 @@ struct basic_router<void>{
     bool find(const std::string& subject) const { return _registry.exists(subject); }
 
     template <typename... Args>
-    bool invoke_at(const std::pair<int, int>&& indexes, Args&&... args) const { return false; }
+    bool invoke_at(const route_index& index, Args&&... args) const { return false; }
 
-    std::pair<int, int> index_of(const std::string& subject) const { return std::make_pair(-1, -1); }
+    route_index index_of(const std::string& subject) const { return route_index(subject, -1, -1); }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
@@ -489,8 +503,12 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::operator[];
     using detail_basic_router::summary;
     using detail_basic_router::find;
+    using detail_basic_router::index_of;
+    using detail_basic_router::invoke_at;
     using detail_basic_router::invoke;
+    using detail_basic_router::table;
     using detail_basic_router::operator();
+
 
     basic_router() = delete;
     basic_router(const basic_router<MountPointsT>&) = delete;
@@ -499,12 +517,7 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): detail_basic_router(std::forward<mountpoints_type>(mountpoints), std::forward<udho::url::explorers::registry>(registry)) {}
 
     template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router){
-        const detail::routing_table<Mountpoints>& table = router.table();
-        stream << table;
-        return stream;
-    }
-
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router);
 };
 
 /**
@@ -520,6 +533,8 @@ struct basic_router<void>: private detail::basic_router<void>{
 
     using detail_basic_router::summary;
     using detail_basic_router::find;
+    using detail_basic_router::index_of;
+    using detail_basic_router::invoke_at;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
 
@@ -528,9 +543,7 @@ struct basic_router<void>: private detail::basic_router<void>{
     basic_router(basic_router<void>&&) = delete;
     basic_router(udho::url::explorers::registry&& registry): detail_basic_router(std::forward<udho::url::explorers::registry>(registry)) {}
 
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
-        return stream;
-    }
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router);
 
 };
 

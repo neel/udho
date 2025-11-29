@@ -5,6 +5,7 @@
 #include <utility>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/traits.h>
+#include <udho/manifold/config.h>
 #include <udho/manifold/utils.h>
 #include <udho/manifold/features.h>
 #include <boost/asio/ip/address.hpp>
@@ -19,17 +20,13 @@ template <typename FacetT, bool HasResult = udho::manifold::has_result<FacetT>::
 struct facet_interface_internal {
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using facet_type  = FacetT;
-    using result_type     = typename udho::manifold::facet_traits<FacetT>::result_type;
+    using facet_type     = FacetT;
+    using result_type    = typename udho::manifold::facet_traits<FacetT>::result_type;
+    using config_type    = udho::manifold::config<component_type>;
 
-    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
+    // static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    facet_interface_internal(component_type& component): _facet(component) {}
-
-    template <typename... Facets>
-    result_type eval(const udho::manifold::journal<Facets...>& journal) {
-        return _facet.eval(journal);
-    }
+    facet_interface_internal(component_type& component, const config_type& config): _facet(component, config) {}
 
     facet_type& facet() { return _facet; }
     const facet_type& facet() const { return _facet; }
@@ -42,11 +39,12 @@ template <typename FacetT>
 struct facet_interface_internal<FacetT, false> {
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using facet_type  = FacetT;
+    using facet_type     = FacetT;
+    using config_type    = udho::manifold::config<component_type>;
 
-    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
+    // static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    facet_interface_internal(component_type& component): _facet(component) {}
+    facet_interface_internal(component_type& component, const config_type& config): _facet(component, config) {}
 
     facet_type& facet() { return _facet; }
     const facet_type& facet() const { return _facet; }
@@ -62,56 +60,16 @@ struct facet_interface: detail::facet_interface_internal<FacetT> {
     using internal_interface_type::internal_interface_type;
 };
 
-template <typename FacetT, bool HasResult = udho::manifold::has_result<FacetT>::value>
-struct facet_wrapper: facet_interface<FacetT>{
-    using facet_type  = FacetT;
-    using interface_type = facet_interface<FacetT>;
-    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
-    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using config_type    = udho::manifold::config<component_type>;
-
-    static constexpr const bool has_result = false;
-
-    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
-
-    facet_wrapper(component_type& component): interface_type(component) {}
-};
-
-template <typename FacetT>
-struct facet_wrapper<FacetT, true>: facet_interface<FacetT>{
-    using facet_type  = FacetT;
-    using interface_type = facet_interface<FacetT>;
-    using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
-    using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using config_type    = udho::manifold::config<component_type>;
-    using result_type    = typename udho::manifold::facet_traits<FacetT>::result_type;
-
-    static constexpr const bool has_result = true;
-
-    static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
-
-    facet_wrapper(component_type& component): interface_type(component) {}
-
-    template <typename... Facets, typename... Args>
-    bool eval(udho::manifold::journal<Facets...>& journal, Args... args) {
-        using journal_facade_type = udho::manifold::journal<Facets...>;
-        result_type result = std::move(interface_type::eval(journal, std::forward<Args>(args)...));
-        bool accepted = result.accepted();
-        journal.template get<facet_type>() = std::move(result);
-        return accepted;
-    }
-};
-
 }
 
 template <std::size_t Stage, typename FacetT, bool Enabled=facet_traits<FacetT>::stage == Stage, typename... Rest>
 struct basic_fabric;
 
 template <std::size_t Stage, typename FacetT, typename... Rest>
-struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_wrapper<FacetT>, private fabric<Stage, Rest...>{
+struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interface<FacetT>, private fabric<Stage, Rest...>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using wrapper_type   = detail::facet_wrapper<FacetT>;
+    using wrapper_type   = detail::facet_interface<FacetT>;
     using self_type      = basic_fabric<Stage, FacetT, true, Rest...>;
     using rest_type      = fabric<Stage, Rest...>;
 
@@ -123,7 +81,8 @@ struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_wrapper
         >;
 
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()), rest_type(composition) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf)
+        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>()), rest_type(composition, conf) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
@@ -179,7 +138,7 @@ template <std::size_t Stage, typename FacetT, typename... Rest>
 struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using wrapper_type   = detail::facet_wrapper<FacetT>;
+    using wrapper_type   = detail::facet_interface<FacetT>;
     using self_type      = basic_fabric<Stage, FacetT, true, Rest...>;
     using rest_type      = fabric<Stage, Rest...>;
 
@@ -187,7 +146,7 @@ struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...
     using facet_type = typename rest_type::template facet_type<FeatureT, Idx>;
 
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition): rest_type(composition) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf): rest_type(composition, conf) {}
 
     /// @{
     template <typename FacetQ>
@@ -220,10 +179,10 @@ struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...
 };
 
 template <std::size_t Stage, typename FacetT>
-struct basic_fabric<Stage, FacetT, true>: private detail::facet_wrapper<FacetT>{
+struct basic_fabric<Stage, FacetT, true>: private detail::facet_interface<FacetT>{
     using component_type = typename udho::manifold::facet_traits<FacetT>::component_type;
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
-    using wrapper_type   = detail::facet_wrapper<FacetT>;
+    using wrapper_type   = detail::facet_interface<FacetT>;
 
     template <typename FeatureT, std::uint32_t Idx>
     using facet_type = std::conditional_t<
@@ -233,7 +192,8 @@ struct basic_fabric<Stage, FacetT, true>: private detail::facet_wrapper<FacetT>{
     >;
 
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition): wrapper_type(composition.template get<component_type>().component()) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf)
+        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>()) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
@@ -278,7 +238,7 @@ struct fabric<Stage>{
     using facet_type = void;
 
     template <typename... Components>
-    fabric(composition<Components...>&) {}
+    fabric(composition<Components...>&, const configs<Components...>&) {}
 
     template <typename FeatureT>
     static constexpr int count() { return 0; }

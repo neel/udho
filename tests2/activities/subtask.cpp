@@ -18,6 +18,7 @@
 #include <udho/session/abstract_catalogue.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/catalogue.h>
+#include <boost/asio/deadline_timer.hpp>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 namespace activities = udho::activities;

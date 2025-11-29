@@ -32,6 +32,9 @@ namespace detail{
 template <typename ComponentT, bool>
 struct facet_wrapper;
 
+template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT, bool YieldsResult>
+class next_evaluator_helper_internal;
+
 }
 
 template <typename ComponentT, typename FeatureT>

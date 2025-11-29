@@ -54,6 +54,38 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
         stream_type&                        _stream;
 };
 
+template <typename StreamT>
+struct http_reader2: public std::enable_shared_from_this<http_reader2<StreamT>>{
+    using http_request_parser_type  = boost::beast::http::parser<true, boost::beast::http::empty_body>;
+    using stream_type               = StreamT;
+
+    inline explicit http_reader2(stream_type& stream): _stream(stream) {}
+
+    template <typename Handler>
+    void start(Handler&& handler){
+        auto self = this->shared_from_this();
+        boost::beast::http::async_read_header(
+            _stream, _buffer, _parser,
+            [self, handler = std::move(handler)] (boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                self->finished(std::move(handler), ec, bytes_transferred);
+            }
+        );
+    }
+private:
+    template <typename Handler>
+    void finished(Handler&& handler, boost::system::error_code ec, std::size_t bytes_transferred){
+        if(!ec){
+            _request = _parser.release();
+        }
+        handler(std::move(_request), ec, bytes_transferred);
+    }
+private:
+    udho::net::types::headers::request  _request;
+    http_request_parser_type            _parser;
+    boost::beast::flat_buffer           _buffer;
+    stream_type&                        _stream;
+};
+
 template <typename Handler, typename StreamT>
 struct http_writer_internal: public std::enable_shared_from_this<http_writer_internal<Handler, StreamT>>{
     using self_type             = http_writer_internal<Handler, StreamT>;

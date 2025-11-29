@@ -32,6 +32,8 @@ endfunction()
 add_catch_test(udho-test-url-patterns url.cpp)
 target_enable_symbol_export(udho-test-url-patterns)
 
+add_catch_test(udho-test-url-options options.cpp)
+
 add_catch_test(udho-test-url-router-asset asset.cpp)
 target_link_libraries(udho-test-url-router-asset PRIVATE CURL::libcurl)
 

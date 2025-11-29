@@ -166,10 +166,6 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     using wrapper_type   = wrapper<component_type>;
     template <std::size_t Stage>
     using fabric_type = typename udho::manifold::detail::flatten_all<Stage, ComponentT>::type;
-    // using pipeline_type  = pipeline<ComponentT>;
-
-    // template <typename... Features>
-    // friend struct evaluator;
 
     template <std::size_t, typename... Components>
     friend struct fabric;

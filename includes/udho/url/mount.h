@@ -38,6 +38,8 @@ struct mount_point{
     using name_type    = StrT;
     using key_type     = StrT;
 
+    static constexpr const std::size_t depth = actions_type::depth;
+
     /**
      * Constructs a mount_point with a name, base path, and actions.
      * @param name Compile-time string name of the mount point.

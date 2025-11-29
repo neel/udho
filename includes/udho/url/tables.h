@@ -21,9 +21,9 @@ class action_table: private udho::hazo::basic_seq<udho::hazo::by_data, Actions..
     const sequence_type& sequence() const { return *this; }
 
 public:
-
     using sequence_type::visit;
     using sequence_type::visit_at;
+    using sequence_type::depth;
 
     action_table(Actions&&... actions): sequence_type(std::forward<Actions>(actions)...) {}
 
@@ -47,6 +47,7 @@ public:
     template <typename CharT, CharT... X>
     const auto& operator[](const udho::hazo::string::str<CharT, X...>& key) const { return sequence_type::operator[](key); }
 
+    constexpr std::size_t length() const { return sequence_type::depth; }
 };
 
 template <typename... Mountpoints>
@@ -87,6 +88,7 @@ public:
     template <typename CharT, CharT... X>
     const auto& operator[](const udho::hazo::string::str<CharT, X...>& key) const { return sequence_type::operator[](key); }
 
+    constexpr std::size_t length() const { return sequence_type::depth; }
 };
 
 

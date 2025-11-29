@@ -119,9 +119,6 @@ struct expand_feature_pairs<Stage, udho::manifold::features<Features...>>{
             std::conditional_t<Features::stage == Stage, udho::manifold::facet<ComponentT, Features>, void>...
         >;
 
-    // template <typename ComponentT>
-    // using fabric_type = udho::manifold::fabric<Stage, udho::manifold::facet<ComponentT, Features>...>;
-
     template <typename ComponentT>
     using fabric_type = typename fabric_enabled_type<ComponentT>::fabric_type;
 };

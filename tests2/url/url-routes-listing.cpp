@@ -144,7 +144,7 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
         service.run();
     });
 
-    // server.stop();
+    server.stop();
     thread.join();
 
 }

@@ -29,7 +29,7 @@ struct basic_pipeline{
     using journal_type     = typename udho::manifold::detail::journal_for_fabric<fabric_type>::type;
 
     template <typename... XComponents>
-    basic_pipeline(udho::manifold::composition<XComponents...>& composition): _fabric(composition) {}
+    basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs): _fabric(composition, configs) {}
 
     template <typename... Features>
     struct evaluator{
@@ -78,8 +78,12 @@ class common_pipepine<Stage, order<Features...>, udho::manifold::composition<Com
     evaluator_type _evaluator;
 
 public:
-    common_pipepine(composition_type& composition):
-        basic_pipeline_type(composition),
+    using configs_type        = udho::manifold::configs<Components...>;
+    using journal_type        = typename basic_pipeline_type::journal_type;
+
+public:
+    common_pipepine(composition_type& composition, const configs_type& configs):
+        basic_pipeline_type(composition, configs),
         _evaluator(basic_pipeline_type::fabric(), basic_pipeline_type::journal(), _callback),
         _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1))
     {}
@@ -106,6 +110,7 @@ public:
 private:
     void on_completion(safe_success_type&& success){
         if(_user_callback) {
+            // Will be called in case of failure
             _user_callback(std::forward<safe_success_type>(success));
         }
     }
@@ -114,16 +119,6 @@ private:
     async_callback_type _callback;
     async_callback_type _user_callback;
 };
-
-// template <typename... Components>
-// class pipeline<0, Components...>: basic_pipeline<0, Components...> {
-//     using basic_pipeline_type = basic_pipeline<0, Components...>;
-
-//     template <typename ConnectionT, typename... Features>
-//     std::size_t operator()(ConnectionT&& conn, udho::manifold::evaluator<Features...>&& evaluator) {
-//         return evaluator(basic_pipeline_type::fabric(), basic_pipeline_type::journal());
-//     }
-// };
 
 }
 }

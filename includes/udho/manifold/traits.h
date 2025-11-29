@@ -98,7 +98,7 @@ struct facet_traits<udho::manifold::facet<ComponentT, FeatureT>> {
     using component_type = ComponentT;
     using feature_type   = FeatureT;
     using facet_type     = udho::manifold::facet<ComponentT, FeatureT>;
-    using result_type    = typename detail::has_result<facet_type>::type;
+    using result_type    = typename detail::has_result<feature_type>::type;
 
     static constexpr const std::size_t stage = FeatureT::stage;
 };
