@@ -78,6 +78,23 @@ struct Component {
 };
 
 template <>
+struct Component<0, 2> {
+    using features  = udho::manifold::features<Feature<2>>;
+
+    static constexpr const std::string_view name = name_generator<0, 2>::name;
+
+    using params = udho::manifold::params<>;
+
+    Component(): is_default_constructed(true) {}
+    Component(const std::string& msg): is_default_constructed(false), message(msg) {}
+    Component(const Component&) = delete;
+    Component(Component&& other) noexcept : is_default_constructed(false), message(std::move(other.message))  { }
+
+    bool is_default_constructed;
+    std::string message;
+};
+
+template <>
 struct Component<5, 5> {
     using features  = udho::manifold::features<Feature<1>, Feature<5>, Feature<6>>;
 
@@ -164,6 +181,7 @@ using F6 = Feature<6>;
 
 using C00 = Component<0>;
 using C01 = Component<0, 1>;
+using C02 = Component<0, 2>;
 using C11 = Component<1>;
 using C22 = Component<2>;
 using C20 = Component<2, 0>;
@@ -219,6 +237,12 @@ struct udho::manifold::component_traits<testing::Component<5>> {
     using params = udho::manifold::params<>;
 };
 
+
+TEST_CASE("config instance", "[manifold][config]") {
+    udho::manifold::configs<testing::C02> configs_c02;
+    udho::manifold::configs<testing::C00> configs_c00;
+    udho::manifold::configs<testing::C00, testing::C11> configs_c00_11;
+}
 
 TEST_CASE("manifold components params & config", "[manifold][config][params]") {
     SECTION("save and load params from json") {

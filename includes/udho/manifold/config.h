@@ -1,6 +1,7 @@
 #ifndef UDHO_MANIFOLD_CONFIG_H
 #define UDHO_MANIFOLD_CONFIG_H
 
+#include <type_traits>
 #include <nlohmann/json_fwd.hpp>
 #include <udho/manifold/fwd.h>
 #include <udho/hazo/map.h>

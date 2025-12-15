@@ -81,7 +81,11 @@ struct params<>{
     }
 
     template <typename>
-    using contains = std::false_type;
+    struct contains {
+        enum {
+            value = false
+        };
+    };
 };
 
 namespace detail {
