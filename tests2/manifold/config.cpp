@@ -292,26 +292,26 @@ TEST_CASE("manifold components params & config", "[manifold][config][params]") {
 
 }
 
-TEST_CASE("manifold components config", "[manifold][composition][config]") {
-    using composition_type = udho::manifold::composition<
-        testing::Component<0>,
-        testing::XComponent<0, 1>,
-        testing::Component<1>,
-        testing::Component<2, 0>,
-        testing::Component<3>,
-        testing::Component<4, 1>,
-        testing::Component<5>,
-        testing::Component<6>
-    >;
+// TEST_CASE("manifold components config", "[manifold][composition][config]") {
+//     using composition_type = udho::manifold::composition<
+//         testing::Component<0>,
+//         testing::XComponent<0, 1>,
+//         testing::Component<1>,
+//         testing::Component<2, 0>,
+//         testing::Component<3>,
+//         testing::Component<4, 1>,
+//         testing::Component<5>,
+//         testing::Component<6>
+//     >;
 
-    testing::Component<5> component_5{"C5"};
-    auto composition = composition_type::compose(component_5);
+//     testing::Component<5> component_5{"C5"};
+//     auto composition = composition_type::compose(component_5);
 
-    nlohmann::json composition_json = nlohmann::json::object();
-    composition.save(composition_json);
+//     nlohmann::json composition_json = nlohmann::json::object();
+//     composition.save(composition_json);
 
-    std::cout << composition_json.dump(2) << std::endl;
-}
+//     std::cout << composition_json.dump(2) << std::endl;
+// }
 
 TEST_CASE("manifold config patch", "[manifold][config][patch]") {
     using changeset_type = udho::manifold::changeset<

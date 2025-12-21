@@ -22,6 +22,9 @@ struct basic_config{
     template <typename ParamT>
     using contains = typename params_type::template contains<ParamT>;
 
+    basic_config() = default;
+
+    basic_config(const basic_config<ComponentT>& other): _params(other._params) {}
 
     /**
      * @brief save
@@ -66,17 +69,30 @@ private:
  */
 template <typename ComponentT = void>
 struct config: basic_config<ComponentT>{
+    using base = basic_config<ComponentT>;
+
+    using base::base;
+
     bool valid() const { return true; }
 };
 
 template <typename...>
 class configs;
 
+template <>
+class configs<>{};
+
 template <typename ComponentT>
 class configs<ComponentT>{
     using config_type = config<ComponentT>;
 
     config_type _config;
+
+public:
+    configs() = default;
+
+    template <typename... XComponents>
+    configs(const configs<XComponents...>& other): _config(other.template get<ComponentT>()) { }
 
 public:
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
@@ -90,7 +106,9 @@ public:
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return _config[key]; }
 
     template <typename... Params>
-    void patch(const changeset<Params...>&) {}
+    void patch(const changeset<Params...>&) {
+
+    }
 };
 
 template <typename ComponentT, typename... Components>
@@ -99,6 +117,12 @@ class configs<ComponentT, Components...>: configs<Components...> {
     using rest_type   = configs<Components...>;
 
     config_type _config;
+
+public:
+    configs() = default;
+
+    template <typename... XComponents>
+    configs(const configs<XComponents...>& other): configs<Components...>(other), _config(other.template get<ComponentT>()) { }
 
 public:
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>

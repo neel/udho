@@ -160,11 +160,11 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
      * @tparam Facets... The facets
      * Contains a reference to the fabric and the journal for all the facets
      */
-    template <typename... Facets>
+    template <typename JournalT, typename... Facets>
     struct handler{
-        using handler_type = handler<Facets...>;
+        using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
-        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+        using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
         using safe_success_type = std::variant<bool, std::exception_ptr>;
         using async_callback_type = std::function<void (safe_success_type)>;
 
@@ -191,7 +191,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         template <std::size_t Idx, typename... Args, std::enable_if_t<std::is_void_v<typename fabric_type::template facet_type<FeatureX, Idx>>, bool> = true>
         void eval(Args&&... args){
             using args_tuple_type   = std::tuple<Args&&...>;
-            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<Facets...>;
+            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<journal_type, Facets...>;
 
             rest_handler_type rest_handler{_fabric, _journal, _callback};
             rest_handler.template operator()<0, Args...>(std::forward<Args>(args)...);
@@ -229,7 +229,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         void eval(Args&&... args){
             using facet_type        = typename fabric_type::template facet_type<FeatureX, Idx>;
             using args_tuple_type   = std::tuple<Args&&...>;
-            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<Facets...>;
+            using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<journal_type, Facets...>;
             using next_type         = next_evaluator_helper<0, args_tuple_type, facet_type, rest_handler_type>;
 
             auto& wrapper = _fabric.template at<FeatureX, Idx>();
@@ -276,11 +276,11 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
  */
 template <std::size_t Stage>
 struct evaluator_helper<Stage>{
-    template <typename... Facets>
+    template <typename JournalT, typename... Facets>
     struct handler{
-        using handler_type = handler<Facets...>;
+        using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
-        using journal_type = typename udho::manifold::detail::journal_for_facets<Facets...>::type;
+        using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
         using safe_success_type = std::variant<bool, std::exception_ptr>;
         using async_callback_type = std::function<void (safe_success_type)>;
 

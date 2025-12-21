@@ -8,7 +8,7 @@
 #include <udho/net/common.h>
 #include <udho/manifold/traits.h>
 #include <udho/manifold/detail.h>
-#include <udho/manifold/config.h>
+// #include <udho/manifold/config.h>
 
 namespace udho {
 namespace manifold {
@@ -123,13 +123,6 @@ struct wrapper: detail::hybrid_storage<ComponentT>{
     static constexpr const bool has_result = udho::manifold::has_result<ComponentT>::vlue;
 
     using storage_type::storage_type;
-
-    const config_type& config() const { return _config; }
-
-    config_type& config() { return _config; }
-
-    private:
-    config_type _config;
 };
 
 }

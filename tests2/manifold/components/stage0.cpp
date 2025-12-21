@@ -104,12 +104,14 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         >;
 
         using pipeline_type = udho::manifold::common_pipepine<0, order_type, composition_type>;
+        using journal_type  = pipeline_type::full_journal_type;
 
         auto composition = composition_type::compose(std::move(routing));
 
         SECTION("Invalid route identifier") {
+            journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs};
+            pipeline_type pipeline{composition, configs, journal};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -120,8 +122,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline](std::variant<bool, std::exception_ptr> success){
-                const auto& journal = pipeline.journal();
+            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+                // const auto& journal = pipeline.journal();
 
                 CHECK(success.index() == 1);
 
@@ -148,8 +150,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         }
 
         SECTION("Valid route identifier") {
+            journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs};
+            pipeline_type pipeline{composition, configs, journal};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -160,8 +163,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline](std::variant<bool, std::exception_ptr> success){
-                const auto& journal = pipeline.journal();
+            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+                // const auto& journal = pipeline.journal();
 
                 CHECK(success.index() == 0);
 
@@ -228,12 +231,14 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         >;
 
         using pipeline_type = udho::manifold::common_pipepine<0, order_type, composition_type>;
+        using journal_type  = pipeline_type::full_journal_type;
 
         auto composition = composition_type::compose(std::move(routing));
 
         SECTION("Invalid route identifier") {
+            journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs};
+            pipeline_type pipeline{composition, configs, journal};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -244,8 +249,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline](std::variant<bool, std::exception_ptr> success){
-                const auto& journal = pipeline.journal();
+            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+                // const auto& journal = pipeline.journal();
 
                 CHECK(success.index() == 1);
 
@@ -272,8 +277,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         }
 
         SECTION("Valid route identifier") {
+            journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs};
+            pipeline_type pipeline{composition, configs, journal};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -284,8 +290,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline](std::variant<bool, std::exception_ptr> success){
-                const auto& journal = pipeline.journal();
+            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+                // const auto& journal = pipeline.journal();
 
                 CHECK(success.index() == 0);
 
@@ -323,8 +329,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         }
 
         SECTION("Valid route identifier") {
+            journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs};
+            pipeline_type pipeline{composition, configs, journal};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /m2/f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -335,8 +342,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline](std::variant<bool, std::exception_ptr> success){
-                const auto& journal = pipeline.journal();
+            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+                // const auto& journal = pipeline.journal();
 
                 CHECK(success.index() == 0);
 

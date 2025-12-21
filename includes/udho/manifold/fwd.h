@@ -21,8 +21,8 @@ struct journal;
 template <std::size_t, typename...>
 struct evaluator;
 
-template <std::size_t, typename...>
-struct pipeline;
+// template <std::size_t, typename...>
+// struct pipeline;
 
 template <typename ComponentT>
 struct wrapper;

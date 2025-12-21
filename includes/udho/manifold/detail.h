@@ -81,10 +81,39 @@ struct arguments {
  * expands a component C having features {F1, F2, ...} into fabric<facet<C, F_i>> \forall i through fabric_type typedef
  * @{
  */
-template <std::size_t Stage, typename FeatureT>
+
+enum stage_comp_op{
+    eq, neq, le, gt, leq, gte, all
+};
+
+template <stage_comp_op Op, std::size_t Lhs, std::size_t Rhs>
+struct stage_compare;
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::eq,  Lhs, Rhs>: std::integral_constant<bool, (Lhs == Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::neq,  Lhs, Rhs>: std::integral_constant<bool, (Lhs != Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::le,   Lhs, Rhs>: std::integral_constant<bool, (Lhs < Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::gt,  Lhs, Rhs>: std::integral_constant<bool, (Lhs > Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::leq, Lhs, Rhs>: std::integral_constant<bool, (Lhs <= Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::gte, Lhs, Rhs>: std::integral_constant<bool, (Lhs >= Rhs)> {};
+
+template <std::size_t Lhs, std::size_t Rhs>
+struct stage_compare<stage_comp_op::all, Lhs, Rhs>: std::integral_constant<bool, true> {};
+
+template <stage_comp_op Op, std::size_t Stage, typename FeatureT>
 struct expand_feature_pairs;
 
-template <std::size_t Stage, typename... EnabledFacets>
+template <stage_comp_op Op, std::size_t Stage, typename... EnabledFacets>
 struct enabled_facets_set;
 
 template <typename L, typename R>
@@ -100,23 +129,23 @@ struct facet_container{
 };
 
 
-template <std::size_t Stage, typename EnabledFacet, typename... Rest>
-struct enabled_facets_set<Stage, EnabledFacet, Rest...>{
-    using rest_type = enabled_facets_set<Stage, Rest...>;
+template <stage_comp_op Op, std::size_t Stage, typename EnabledFacet, typename... Rest>
+struct enabled_facets_set<Op, Stage, EnabledFacet, Rest...>{
+    using rest_type = enabled_facets_set<Op, Stage, Rest...>;
     using container_type = typename rest_type::container_type::template prepend<EnabledFacet>;
     using fabric_type = typename container_type::template fabric_type<Stage>;
 };
 
-template <std::size_t Stage>
-struct enabled_facets_set<Stage>{
+template <stage_comp_op Op, std::size_t Stage>
+struct enabled_facets_set<Op, Stage>{
     using container_type = facet_container<>;
 };
 
-template <std::size_t Stage, typename... Features>
-struct expand_feature_pairs<Stage, udho::manifold::features<Features...>>{
+template <stage_comp_op Op, std::size_t Stage, typename... Features>
+struct expand_feature_pairs<Op, Stage, udho::manifold::features<Features...>>{
     template <typename ComponentT>
-    using fabric_enabled_type = enabled_facets_set<Stage,
-            std::conditional_t<Features::stage == Stage, udho::manifold::facet<ComponentT, Features>, void>...
+    using fabric_enabled_type = enabled_facets_set<Op, Stage,
+            std::conditional_t<stage_compare<Op, Features::stage, Stage>::value, udho::manifold::facet<ComponentT, Features>, void>...
         >;
 
     template <typename ComponentT>
@@ -125,9 +154,9 @@ struct expand_feature_pairs<Stage, udho::manifold::features<Features...>>{
 /// @}
 
 
-template <std::size_t Stage, typename ComponentT>
+template <stage_comp_op Op, std::size_t Stage, typename ComponentT>
 struct get_facets{
-    using type = typename expand_feature_pairs<Stage, typename ComponentT::features>::template fabric_type<ComponentT>;
+    using type = typename expand_feature_pairs<Op, Stage, typename ComponentT::features>::template fabric_type<ComponentT>;
 };
 
 template <std::size_t Stage, typename... FacetsSet>
@@ -160,11 +189,31 @@ struct merged_fabric<flattened_fabric<Stage, X...>, flattened_fabric<Stage, Y...
 };
 
 
-template <std::size_t Stage, typename... Components>
-struct flatten_all{
-    using type = typename flatten_fabric<Stage, typename get_facets<Stage, Components>::type...>::merged::type;
+template <stage_comp_op Op, std::size_t Stage, typename... Components>
+struct flatten_all_{
+    using type = typename flatten_fabric<Stage, typename get_facets<Op, Stage, Components>::type...>::merged::type;
 };
 
+template <std::size_t Stage, typename... Components>
+using flatten_all = flatten_all_<stage_comp_op::eq, Stage, Components...>;
+
+template <std::size_t Stage, typename... Components>
+using flatten_all_except = flatten_all_<stage_comp_op::neq, Stage, Components...>;
+
+template <std::size_t Stage, typename... Components>
+using flatten_all_before = flatten_all_<stage_comp_op::le, Stage, Components...>;
+
+template <std::size_t Stage, typename... Components>
+using flatten_all_before_including = flatten_all_<stage_comp_op::leq, Stage, Components...>;
+
+template <std::size_t Stage, typename... Components>
+using flatten_all_after = flatten_all_<stage_comp_op::gt, Stage, Components...>;
+
+template <std::size_t Stage, typename... Components>
+using flatten_all_after_including = flatten_all_<stage_comp_op::gte, Stage, Components...>;
+
+template <typename... Components>
+using flatten_all_of = flatten_all_<stage_comp_op::all, 0, Components...>;
 
 }
 
