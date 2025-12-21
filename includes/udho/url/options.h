@@ -7,6 +7,9 @@
 namespace udho{
 namespace url{
 
+/**
+ * @brief The basic_options encapsulates multiple configurable parameters
+ */
 template <typename... Params>
 class basic_options: private udho::hazo::map_d<Params...>{
     typedef udho::hazo::map_d<Params...> map_type;
@@ -15,6 +18,10 @@ public:
     using map_type::map_type;
     using map_type::operator[];
     enum {
+
+        /**
+         * @brief number of parameters
+         */
         length = map_type::depth +1
     };
 
@@ -24,10 +31,10 @@ public:
      * @return number of properties in the superset modified
      */
     template <typename SupersetT>
-    std::size_t apply(SupersetT& superset){
+    std::size_t apply(SupersetT& superset) const {
         std::size_t count = 0;
         const basic_options& self = *this;
-        map_type::visit([&superset, &count](auto& p){
+        map_type::visit([&superset, &count](auto& p) mutable {
             superset[p.val] = p;
             ++count;
         });
@@ -47,7 +54,7 @@ struct basic_options<>{
      * @return number of properties in the superset modified
      */
     template <typename SupersetT>
-    std::size_t apply(SupersetT& superset){
+    std::size_t apply(SupersetT& superset) const {
         return 0;
     }
 };

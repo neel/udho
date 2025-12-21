@@ -106,20 +106,6 @@ struct Component<5, 5> {
 
     static constexpr const std::string_view name = name_generator<5, 5>::name;
 
-    struct Name: udho::hazo::element<Name , std::string>{
-        using base_element = udho::hazo::element<Name , std::string>;
-
-        inline Name(): base_element("FullName") {}
-        inline explicit Name(const std::string& value): base_element(value) {}
-        Name(const Name&) = default;
-        Name(Name&&) = default;
-        using base_element::operator=;
-        inline static constexpr auto key() {
-            using namespace udho::hazo::string::literals;
-            return "Name"_h;
-        }
-    };
-
     using params = udho::manifold::params<enabled, p1, p2, p3, p4>;
 
     Component(): is_default_constructed(true) {}
@@ -142,20 +128,6 @@ struct XComponent {
     UDHO_CONFIG_PARAM(p4,       std::string,     ""     );
 
     static constexpr const char name[3] = {'x', 'c', 0};
-
-    struct Name: udho::hazo::element<Name , std::string>{
-        using base_element = udho::hazo::element<Name , std::string>;
-
-        inline Name(): base_element("FullName") {}
-        inline explicit Name(const std::string& value): base_element(value) {}
-        Name(const Name&) = default;
-        Name(Name&&) = default;
-        using base_element::operator=;
-        inline static constexpr auto key() {
-            using namespace udho::hazo::string::literals;
-            return "Name"_h;
-        }
-    };
 
     using params = udho::manifold::params<enabled, p1, p2, p3, p4>;
 

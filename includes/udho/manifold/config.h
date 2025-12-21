@@ -19,6 +19,9 @@ struct basic_config{
     using components_type = ComponentT;
     using params_type = typename udho::manifold::component_traits<ComponentT>::params;
 
+    /**
+     * @brief checks if the configuration contains the parameter
+     */
     template <typename ParamT>
     using contains = typename params_type::template contains<ParamT>;
 
@@ -38,15 +41,29 @@ struct basic_config{
         json[udho::manifold::component_name<ComponentT>()]= params;
     }
 
+    /**
+     * @brief load
+     * @param json
+     */
     void load(const nlohmann::json& json) {
         assert(json.is_object());
         assert(json.contains(ComponentT::name));
         _params.load(json[udho::manifold::component_name<ComponentT>()]);
     }
 
+    /**
+     * @brief operator [] for accessing the value of a parameter contained in the component configuration
+     * @param key
+     * @return
+     */
     template <typename ParamT>
     auto& operator[](const udho::hazo::element_t<ParamT>& key){ return _params[key]; }
 
+    /**
+     * @brief operator [] for accessing the value of a parameter contained in the component configuration
+     * @param key
+     * @return
+     */
     template <typename ParamT>
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return _params[key]; }
 
@@ -65,7 +82,10 @@ private:
 
 
 /**
- * @brief The config specialization provides facilities to con mantain configuration of a component
+ * @brief The config specialization provides facilities to con mantain configuration of a component.
+ * @note the config template can be specialized for a component by providing a different implementation
+ *       of the valid function to enforce runtime validation of the configuration.
+ * @tparam ComponentT
  */
 template <typename ComponentT = void>
 struct config: basic_config<ComponentT>{
@@ -75,6 +95,8 @@ struct config: basic_config<ComponentT>{
 
     bool valid() const { return true; }
 };
+
+#ifndef __DOXYGEN__
 
 template <typename...>
 class configs;
@@ -143,12 +165,48 @@ public:
 
     template <typename ParamT, std::enable_if_t<!config_type::template contains<ParamT>::value, bool> = true>
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return rest_type::template operator[]<ParamT>(key); }
-
-    template <typename... Params>
-    void patch(const changeset<Params...>& changeset) {
-
-    }
 };
+
+#else
+
+/**
+ * @brief The configs template encapsulates configurations of a set of components
+ */
+template <typename... Components>
+class configs<Components...> {
+public:
+    /**
+     * @brief get configuration for a component
+     * @return
+     */
+    template <typename XComponentT>
+    const config_type& get();
+
+    /**
+     * @brief get configuration for a component
+     * @return
+     */
+    template <typename XComponentT>
+    const auto& get() const;
+
+    /**
+     * @brief operator [] for accessing value of a configuration parameter
+     * @param key
+     * @return
+     */
+    template <typename ParamT>
+    auto& operator[](const udho::hazo::element_t<ParamT>& key);
+
+    /**
+     * @brief operator [] for accessing value of a configuration parameter
+     * @param key
+     * @return
+     */
+    template <typename ParamT>
+    const auto& operator[](const udho::hazo::element_t<ParamT>& key);
+};
+
+#endif // __DOXYGEN__
 
 }
 }

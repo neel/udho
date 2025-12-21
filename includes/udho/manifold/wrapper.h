@@ -13,6 +13,8 @@
 namespace udho {
 namespace manifold {
 
+#ifndef __DOXYGEN__
+
 namespace detail{
 
 template <typename T>
@@ -124,6 +126,80 @@ struct wrapper: detail::hybrid_storage<ComponentT>{
 
     using storage_type::storage_type;
 };
+
+#else
+
+/**
+ * @brief Wraps a component instance.
+ *
+ * This wrapper provides a uniform way to carry a component instance.
+ *
+ * The wrapper can operate in **two modes**:
+ * - **Borrowing mode:** the wrapper references an external component object.
+ * - **Owning mode:** the wrapper stores its own component object.
+ *
+ * ### Ownership / lifetime rules
+ *
+ * | Constructor                                   | Ownership  | Requirement                                | 
+ * |:----------------------------------------------|:-----------|:-------------------------------------------|
+ * | `wrapper(ComponentT& c)`                      | Borrowing  | `c` must be a valid lvalue                 |
+ * | `wrapper(ComponentT&& c)`                     | Owning     | `ComponentT` must be movable               |
+ * | `wrapper()` / `wrapper(default_constructed{})`| Owning     | `ComponentT` must be default-constructible |
+ *
+ * In borrowing mode, the wrapper never takes ownership. In owning mode, the wrapper’s
+ * component value is independent of the original argument (moved-in or default-constructed).
+ *
+ * ### Accessing the component
+ *
+ * The wrapper behaves like a handle to the component object:
+ * - use dereference (`*w`) or the inherited accessors to reach the component
+ *
+ * @tparam ComponentT Component type being wrapped.
+ *
+ * @warning If you construct from `ComponentT&`, you must ensure the referenced component outlives the wrapper (no dangling references).
+ */
+template <typename ComponentT>
+struct wrapper: detail::hybrid_storage<ComponentT>{
+    using component_type = ComponentT;
+    using storage_type   = detail::hybrid_storage<ComponentT>;
+    using config_type    = udho::manifold::config<ComponentT>;
+    using reference_type = std::add_lvalue_reference_t<ComponentT>;
+    using const_reference_type = std::add_const_t<reference_type>;
+
+    static constexpr const bool has_result = udho::manifold::has_result<ComponentT>::value;
+
+    /// @brief Borrow an external component. The referenced component must outlive this wrapper.
+    explicit wrapper(ComponentT& c);
+
+    /// @brief Own a component by moving it into the wrapper.
+    explicit wrapper(ComponentT&& c);
+
+    /// @brief Default-construct an owned component (only if ComponentT is default-constructible).
+    explicit wrapper();
+
+    /// @brief Tag-based default construction for an owned component.
+    explicit wrapper(default_constructed);
+
+    /// @brief Get a mutable reference to the wrapped component (borrowed or owned).
+    reference_type component();
+
+    /// @brief Get a const reference to the wrapped component (borrowed or owned).
+    const_reference_type component() const;
+
+    /// @brief True if the wrapper owns its component (stored internally).
+    bool owned() const;
+
+    /// @brief True if the wrapper borrows its component (refers to external storage).
+    bool borrowed() const;
+
+    /// @brief Dereference convenience; equivalent to `component()`.
+    reference_type operator*() { return component(); }
+
+    /// @brief Const dereference convenience; equivalent to `component() const`.
+    const_reference_type operator*() const { return component(); }
+
+};
+#endif // __DOXYGEN__
 
 }
 }

@@ -184,6 +184,21 @@ struct mount_point{
     }
 
 
+    template <typename ConfigSupersetT>
+    bool reconfigure_for(int index, ConfigSupersetT& config) const {
+        assert(index > -1);
+        bool found = false;
+        bool result = false;
+        _actions.visit_at([index, &found, &result, &config](auto& action, std::size_t depth){
+            if(found) return;
+            found = (depth == index);
+            if(found) {
+                result = action.options().apply(config);
+            }
+        });
+        return found && result;
+    }
+
     /**
      * Formats and returns a complete URL for a specific action using provided arguments.
      * @tparam XStrT Type of the compile-time string key for the action.

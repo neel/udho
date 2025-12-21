@@ -195,6 +195,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     using arguments_type         = typename function_type::arguments_type;
     using decayed_arguments_type = typename function_type::decayed_arguments_type;
     using match_type             = MatchT;
+    using options_type           = typename match_type::options_type;
     using pattern_type           = typename match_type::pattern_type;
 
     /**
@@ -267,6 +268,9 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      * @return A constant reference to the match object.
      */
     const match_type& match() const { return _match; }
+
+    const options_type& options() const { return _match.options(); }
+
     private:
         match_type    _match;
 };

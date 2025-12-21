@@ -176,12 +176,29 @@ struct routing_table{
 
         bool found = false;
         std::size_t total_depth = _mountpoints.length();
-        _mountpoints.visit_at([total_depth, &index, &found, &args...](const auto& mointpoint, std::size_t depth){
+        _mountpoints.visit_at([total_depth, &index, &found, &args...](const auto& mountpoint, std::size_t depth){
             if(found)  return;
             std::size_t expected_depth = (total_depth - depth);
             found = (expected_depth == index.mountpoint());
             if(found){
-                mointpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
+                mountpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
+            }
+        });
+        return found;
+    }
+
+    template <typename ConfigSupersetT>
+    std::size_t reconfigure_for(const route_index& index, ConfigSupersetT& config) const {
+        assert(index.valid());
+
+        bool found = false;
+        std::size_t total_depth = _mountpoints.length();
+        _mountpoints.visit_at([total_depth, &index, &found, &config](const auto& mountpoint, std::size_t depth) mutable {
+            if(found)  return;
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index.mountpoint());
+            if(found){
+                mountpoint.reconfigure_for(index.action(), config);
             }
         });
         return found;
@@ -343,6 +360,22 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
         return found;
     }
 
+    template <typename ConfigSupersetT>
+    std::size_t reconfigure_for(const route_index& index, ConfigSupersetT& config) const {
+        int mountpoint_index = index.mountpoint();
+        int action_index     = index.action();
+
+        assert(mountpoint_index > -1);
+        assert(action_index > -1);
+
+        bool found = (0 == mountpoint_index);
+        if(found){
+            _mountpoint.reconfigure_for(index.action(), config);
+        }
+
+        return found;
+    }
+
     /**
      * @brief Function call operator that delegates to invoke()
      * @param url URL path to process
@@ -391,6 +424,7 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
     using routing_table::summary;
     using routing_table::index_of;
     using routing_table::invoke_at;
+    using routing_table::reconfigure_for;
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
@@ -443,6 +477,9 @@ struct basic_router<void>{
 
     template <typename... Args>
     bool invoke_at(const route_index& index, Args&&... args) const { return false; }
+
+    template <typename SupersetT>
+    bool reconfigure_for(const route_index& index, SupersetT& superset) { return false; }
 
     route_index index_of(const std::string& subject) const { return route_index(subject, -1, -1); }
 
@@ -505,6 +542,7 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::find;
     using detail_basic_router::index_of;
     using detail_basic_router::invoke_at;
+    using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
     using detail_basic_router::table;
     using detail_basic_router::operator();
@@ -535,6 +573,7 @@ struct basic_router<void>: private detail::basic_router<void>{
     using detail_basic_router::find;
     using detail_basic_router::index_of;
     using detail_basic_router::invoke_at;
+    using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
 
