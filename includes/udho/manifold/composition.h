@@ -251,7 +251,6 @@ struct compositor {
     }
 };
 
-
 /**
  * @class composition
  * @brief A type-safe container of component instances with feature-based access

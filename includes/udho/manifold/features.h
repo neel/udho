@@ -135,10 +135,34 @@ namespace feature{
 
 }
 
+namespace detail{
+
+template <typename... Features>
+struct feature_max_stage;
+
+template <typename F, typename... Features>
+struct feature_max_stage<F, Features...>{
+private:
+    static constexpr std::size_t value_rest = feature_max_stage<Features...>::value;
+public:
+    static constexpr std::size_t value = F::stage >= value_rest ? F::stage : value_rest;
+};
+
+template <typename F>
+struct feature_max_stage<F>{
+private:
+public:
+    static constexpr std::size_t value = F::stage;
+};
+
+}
+
 template <typename... Features>
 struct features{
     template <typename FeatureT>
     using has = std::disjunction<std::is_same<FeatureT, Features>...>;
+
+    static constexpr std::size_t max_stage = detail::feature_max_stage<Features...>::value;
 };
 
 }

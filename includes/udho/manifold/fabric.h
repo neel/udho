@@ -132,6 +132,15 @@ struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interfa
     std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
+
+    /// @{
+    // static std::ostream& print(std::ostream& stream) {
+    //     stream << "{ Component: " << component_type::name << ", Stage: " << Stage << "}" << " ";
+    //     rest_type::print(stream);
+    //     return stream;
+    // }
+    /// @}
+
 };
 
 template <std::size_t Stage, typename FacetT, typename... Rest>
@@ -175,6 +184,14 @@ struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...
 
     template <typename FeatureT, typename Function>
     std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    /// @}
+
+    /// @{
+    // static std::ostream& print(std::ostream& stream) {
+    //     stream << "{ Component: " << component_type::name << ", Stage: " << Stage << "}" << " ";
+    //     rest_type::print(stream);
+    //     return stream;
+    // }
     /// @}
 };
 
@@ -222,6 +239,13 @@ struct basic_fabric<Stage, FacetT, true>: private detail::facet_interface<FacetT
 
     template <typename FeatureT, typename Function>
     std::size_t apply(Function&& f) const { return utils::visit<fabric<Stage, FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
+    /// @}
+
+    /// @{
+    // static std::ostream& print(std::ostream& stream) {
+    //     stream << "{ Component: " << component_type::name << ", Stage: " << Stage << "}" << " ";
+    //     return stream;
+    // }
     /// @}
 };
 

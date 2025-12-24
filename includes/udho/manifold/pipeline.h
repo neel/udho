@@ -349,59 +349,6 @@ template <typename LabelT>
 struct flow;
 
 template <typename CompositionT, typename OrderT, std::size_t Count, int Stage = 0>
-struct pipeline;
-
-template <typename CompositionT, typename OrderT, std::size_t Count>
-struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
-    using prev_pipeline_type = pipeline<CompositionT, OrderT, Count, Count-1>;
-    using configs_type = udho::manifold::configs<>;
-
-    template <typename JournalT>
-    pipeline(CompositionT&, typename CompositionT::configs_type&, JournalT&, const prev_pipeline_type& previous): _previous(previous) {}
-
-    configs_type& configs() { return _configs; }
-
-    template <typename... Args>
-    void operator()(Args&&...){
-        // Finished
-    }
-
-private:
-    configs_type _configs;
-    const prev_pipeline_type& _previous;
-};
-
-template <typename CompositionT, typename OrderT, std::size_t Count>
-struct pipeline<CompositionT, OrderT, Count, -1> {
-    using composition_type   = CompositionT;
-    using order_type         = OrderT;
-    using full_journal_type  = typename detail::get_journal_for_full_fabric<CompositionT>::type;
-    using next_pipeline_type = pipeline<composition_type, order_type, Count, 0>;
-    using self_type          = pipeline<CompositionT, OrderT, Count, -1>;
-    using ptr                = std::shared_ptr<self_type>;
-
-    pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline): _composition(composition), _next(composition, baseline, _journal, *this) {}
-
-    template <typename... Args>
-    void operator()(Args&&... args){
-        _next(std::forward<Args>(args)...);
-    }
-
-    template <std::size_t N>
-    pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
-
-    template <std::size_t N>
-    const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
-
-    const full_journal_type& journal() const { return _journal; }
-
-private:
-    composition_type&   _composition;
-    full_journal_type   _journal;
-    next_pipeline_type  _next;
-};
-
-template <typename CompositionT, typename OrderT, std::size_t Count, int Stage>
 struct pipeline{
     static_assert (Stage < Count);
     using composition_type   = CompositionT;
@@ -412,7 +359,6 @@ struct pipeline{
     using next_pipeline_type = pipeline<composition_type, order_type, Count, Stage+1>;
 
     friend class pipeline<composition_type, order_type, Count, Stage-1>;
-    // pipeline<..., Count, -1> would be maolformed, so making friend with pipeline<..., Count, Count> instead which is harmless
 
     template <typename JournalT>
     pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous)
@@ -421,6 +367,7 @@ struct pipeline{
         // _configs copy constructor picks the relevant configs from the baseline
     }
 
+    configs_type& configs() { return _configs; }
     const configs_type& configs() const { return _configs; }
 
     template <typename FlowT, typename... Args>
@@ -430,61 +377,19 @@ struct pipeline{
         using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
         args_tuple_t args_tuple(std::forward<Args>(args)...);
 
-        next_pipeline_type& next    = _next;
-
-        auto lambda = [flow, &next, this, args_tuple](std::variant<bool, std::exception_ptr> success){
-            if(success.index() == 0 && std::get<0>(success)) {
-                typename next_pipeline_type::configs_type& next_configs = next.configs();
-                flow->apply(*this, next_configs);
-                std::apply(
-                    [&](auto&... args) {
-                        next(flow, args...);
-                    },
-                    args_tuple
-                );
-            } else {
-                // terminate
-            }
-        };
-
-        std::apply(
-            [&](auto&... args) {
-                _pipeline.then(std::move(lambda)).eval(args...);
-            },
-            args_tuple
-        );
+        _then(flow, args_tuple);
+        _pipeline.eval(std::forward<Args>(args)...);
     }
 
     template <typename FlowT, typename... Args>
     void operator()(std::shared_ptr<FlowT> flow, boost::asio::io_context& io, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
-        using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
-        args_tuple_t args_tuple(std::forward<Args>(args)...);
+        using args_tuple_t = std::tuple<boost::asio::io_context&, std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
+        args_tuple_t args_tuple(io, std::forward<Args>(args)...);
 
-        next_pipeline_type& next    = _next;
-
-        auto lambda = [flow, &io, &next, this, args_tuple](std::variant<bool, std::exception_ptr> success){
-            if(success.index() == 0 && std::get<0>(success)) {
-                typename next_pipeline_type::configs_type& next_configs = next.configs();
-                flow->apply(*this, next_configs);
-                std::apply(
-                    [&](auto&... args) {
-                        next(flow, io, args...);
-                    },
-                    args_tuple
-                );
-            } else {
-                // terminate
-            }
-        };
-
-        std::apply(
-            [&](auto&... args) {
-                _pipeline.then(std::move(lambda)).eval(args...);
-            },
-            args_tuple
-        );
+        _then(flow, args_tuple);
+        _pipeline.eval(std::forward<Args>(args)...);
     }
 
     template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
@@ -503,17 +408,87 @@ struct pipeline{
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
 
 private:
-    configs_type& configs() { return _configs; }
+    template <typename FlowT, typename ArgsTupleT>
+    void _then(std::shared_ptr<FlowT> flow, ArgsTupleT& args_tuple){
+        auto lambda = [flow, this, args_tuple](std::variant<bool, std::exception_ptr> success){
+            if(success.index() == 0 && std::get<0>(success)) {
+                flow->apply(*this, configs());
+                std::apply(
+                    [&](auto&... args) {
+                        _next(flow, args...);
+                    },
+                    args_tuple
+                );
+            } else {
+                flow->terminate(false);
+            }
+        };
+        _pipeline.then(std::move(lambda));
+    }
 
 private:
     composition_type&   _composition;
     const prev_pipeline_type& _previous;
-    configs_type        _configs;   // per stage copy of configs
+    configs_type&        _configs;
     pipeline_type       _pipeline;
     next_pipeline_type  _next;
 };
 
+template <typename CompositionT, typename OrderT, std::size_t Count>
+struct pipeline<CompositionT, OrderT, Count, -1> {
+    using composition_type   = CompositionT;
+    using configs_type       = typename composition_type::configs_type;
+    using order_type         = OrderT;
+    using full_journal_type  = typename detail::get_journal_for_full_fabric<CompositionT>::type;
+    using next_pipeline_type = pipeline<composition_type, order_type, Count, 0>;
+    using self_type          = pipeline<CompositionT, OrderT, Count, -1>;
+    using ptr                = std::shared_ptr<self_type>;
 
+    pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline): _composition(composition), _next(composition, baseline, _journal, *this) {}
+
+    configs_type& configs() { return _configs; }
+    const configs_type& configs() const { return _configs; }
+
+    template <typename... Args>
+    void operator()(Args&&... args){
+        _next(std::forward<Args>(args)...);
+    }
+
+    template <std::size_t N>
+    pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
+
+    template <std::size_t N>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
+
+    const full_journal_type& journal() const { return _journal; }
+
+private:
+    composition_type&   _composition;
+    configs_type        _configs;
+    full_journal_type   _journal;
+    next_pipeline_type  _next;
+};
+
+template <typename CompositionT, typename OrderT, std::size_t Count>
+struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
+    using prev_pipeline_type = pipeline<CompositionT, OrderT, Count, Count-1>;
+    using configs_type       = typename prev_pipeline_type::configs_type;
+
+    template <typename JournalT>
+    pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, const prev_pipeline_type& previous): _configs(configs), _previous(previous) {}
+
+    configs_type& configs() { return _configs; }
+    const configs_type& configs() const { return _configs; }
+
+    template <typename FlowT, typename... Args>
+    void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
+        flow->terminate(true);
+    }
+
+private:
+    configs_type& _configs;
+    const prev_pipeline_type& _previous;
+};
 
 /**
  * @brief provides the sketch of executaion plan for the label
@@ -527,6 +502,36 @@ private:
 template <typename LabelT>
 struct sketch;
 
+namespace detail{
+
+template <typename... Components>
+struct component_max_stage;
+
+template <typename Component, typename... Components>
+struct component_max_stage<Component, Components...>{
+private:
+    static constexpr std::size_t value_rest = component_max_stage<Components...>::value;
+public:
+    static constexpr std::size_t value = Component::features::max_stage >= value_rest ? Component::features::max_stage : value_rest;
+};
+
+template <typename Component>
+struct component_max_stage<Component>{
+private:
+public:
+    static constexpr std::size_t value = Component::features::max_stage;
+};
+
+template <typename CompositionT>
+struct composition_max_stage;
+
+template <typename... Components>
+struct composition_max_stage<udho::manifold::composition<Components...>>{
+    static constexpr std::size_t value = component_max_stage<Components...>::value;
+};
+
+}
+
 template <typename LabelT>
 struct runtime{
     using label_type        = LabelT;
@@ -536,15 +541,20 @@ struct runtime{
     using configs_type      = typename composition_type::configs_type;
     using flow_type         = flow<label_type>;
     using flow_ptr_type     = std::shared_ptr<flow_type>;
-    using flow_wptr_type    = std::weak_ptr<flow_type>;
-    using collection_type   = std::vector<flow_wptr_type>;
+    // using flow_wptr_type    = std::weak_ptr<flow_type>;
+    using collection_type   = std::vector<flow_ptr_type>;
 
-    static constexpr std::size_t Count = sketch_type::Count;
+    // static constexpr std::size_t Count = sketch_type::Count;
+
+    static constexpr std::size_t Count = detail::composition_max_stage<composition_type>::value +1;
 
     template <int Stage>
     using pipeline_at          = pipeline<composition_type, order_type, Count, Stage>;
     using start_pipeline_type  = pipeline_at<-1>;
     using finish_pipeline_type = pipeline_at<Count>;
+
+    template <typename... Args>
+    static composition_type compose(Args&&... args) { return composition_type::compose(std::forward<Args>(args)...); }
 
     runtime(runtime&&) = delete;
 
@@ -572,13 +582,19 @@ struct runtime{
         return _flows.size();
     }
 
-    void cleanup() {
-        // will be invoked through a timer externally
+    // void cleanup() {
+    //     std::scoped_lock<std::mutex> lock(_mutex);
+    //     _flows.erase(std::remove_if(_flows.begin(), _flows.end(), [](flow_wptr_type& w){ return w.expired(); }), _flows.end());
+    // }
+
+    void remove(const flow_ptr_type& flow, bool success) {
         std::scoped_lock<std::mutex> lock(_mutex);
-        _flows.erase(std::remove_if(_flows.begin(), _flows.end(), [](flow_wptr_type& w){ return w.expired(); }), _flows.end());
+        _flows.erase(std::find(_flows.begin(), _flows.end(), flow));
     }
 
-    // TODO load _baseline methods
+    void load(const nlohmann::json& json){
+        _baseline.load(json);
+    }
 
 private:
     composition_type _composition;
@@ -592,15 +608,11 @@ template <typename LabelT, std::size_t Stage>
 struct patch_config{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using order_type        = typename sketch_type::order_type;
+    using runtime_type      = runtime<label_type>;
+    using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
+    using configs_type      = typename runtime_type::configs_type;
 
-    static constexpr std::size_t Count = sketch_type::Count;
-
-    using pipeline_type     = pipeline<composition_type, order_type, Count, Stage>;
-    using next_config_type  = typename pipeline<composition_type, order_type, Count, Stage+1>::configs_type;
-
-    void apply(const pipeline_type& p, next_config_type& config) { /* nothing unless specialized */ }
+    void apply(const pipeline_type& p, configs_type& config) { /* nothing unless specialized */ }
 };
 
 namespace detail {
@@ -609,12 +621,11 @@ template <typename LabelT, std::size_t Count, std::size_t Stage>
 struct patcher: public detail::patcher<LabelT, Count, Stage+1>, private patch_config<LabelT, Stage>{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using order_type        = typename sketch_type::order_type;
-    using pipeline_type     = pipeline<composition_type, order_type, Count, Stage>;
-    using next_config_type  = typename pipeline<composition_type, order_type, Count, Stage+1>::configs_type;
+    using runtime_type      = runtime<label_type>;
+    using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
+    using configs_type      = typename runtime_type::configs_type;
 
-    void apply(const pipeline_type& p, next_config_type& configs){
+    void apply(const pipeline_type& p, configs_type& configs){
         patch_config<LabelT, Stage>::apply(p, configs);
     }
 };
@@ -625,7 +636,7 @@ struct patcher<LabelT, Count, Count>{};
 }
 
 template <typename LabelT>
-struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<LabelT, sketch<LabelT>::Count, 0>{
+struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<LabelT, runtime<LabelT>::Count, 0>{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -634,7 +645,8 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     using configs_type      = typename composition_type::configs_type;
     using ptr               = std::shared_ptr<flow<LabelT>>;
 
-    static constexpr std::size_t Count = sketch_type::Count;
+    // static constexpr std::size_t Count = sketch_type::Count;
+    static constexpr std::size_t Count = runtime_type::Count;
 
     template <int Stage>
     using pipeline_at          = typename runtime_type::template pipeline_at<Stage>;
@@ -651,8 +663,8 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     ptr self() { return std::enable_shared_from_this<flow<LabelT>>::shared_from_this(); }
 
     template <int Stage>
-    void apply(const pipeline_at<Stage>& p, typename pipeline_at<Stage+1>::configs_type& config){
-        detail::patcher<LabelT, sketch<LabelT>::Count, Stage>::apply(p, config);
+    void apply(const pipeline_at<Stage>& p, configs_type& config){
+        detail::patcher<LabelT, runtime<LabelT>::Count, Stage>::apply(p, config);
     }
 
     template <typename... Args>
@@ -661,12 +673,17 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     template <typename... Args>
     void start(boost::asio::io_context& io, Args&&... args) { _pipeline(self(), io, std::forward<Args>(args)...); }
 
-private:
-    flow(composition_type& composition, configs_type& baseline): _pipeline(composition, baseline) {}
+    void terminate(bool success) {
+        _runtime.remove(self(), success);
+    }
 
-    static ptr create(runtime_type& runtime) { return ptr(new flow(runtime.composition(), runtime.baseline())); }
+private:
+    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline): _runtime(runtime), _pipeline(composition, baseline) {}
+
+    static ptr create(runtime_type& runtime) { return ptr(new flow(runtime, runtime.composition(), runtime.baseline())); }
 
 private:
+    runtime_type&       _runtime;
     start_pipeline_type _pipeline;
 
 };

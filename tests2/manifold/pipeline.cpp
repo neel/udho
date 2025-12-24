@@ -18,7 +18,6 @@
 #include <udho/manifold/params.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
-#include <iostream>
 #include <sstream>
 
 namespace testing {
@@ -36,110 +35,105 @@ struct State {
     std::size_t _counter;
 };
 
-template <std::size_t Index>
+// Features with explicit stage numbers
+template <std::size_t Stage, std::size_t Idx>
 struct Feature{
-    static constexpr const std::size_t idx = Index;
-    static constexpr const std::size_t stage = Index % 3; // Features distributed across stages 0,1,2
+    static constexpr const std::size_t stage = Stage;
+    static constexpr const std::size_t idx = Idx;
     using result    = State;
 };
 
-template <std::size_t Index>
+// X-Features (no result) with explicit stage numbers
+template <std::size_t Stage, std::size_t Idx>
 struct XFeature{
-    static constexpr const std::size_t idx = Index;
-    static constexpr const std::size_t stage = (Index + 1) % 3; // Different stage pattern
+    static constexpr const std::size_t stage = Stage;
+    static constexpr const std::size_t idx = Idx;
 };
 
-// Stage 0 components
-template <std::size_t Index>
-struct Stage0Component {
-    using features  = udho::manifold::features<Feature<Index>>;
+template <typename ComponentT>
+struct component_name_helper;
+
+template <std::size_t Idx, typename... Fs>
+struct Component;
+
+template <std::size_t Idx, typename... Fs>
+struct component_name_helper<Component<Idx, Fs...>>{
+    static constexpr const std::string_view name = "Comp";
+};
+
+// Component template - provides whatever features are specified
+template <std::size_t Idx, typename... Fs>
+struct Component {
+    using features = udho::manifold::features<Fs...>;
 
     UDHO_CONFIG_PARAM(enabled,  bool,           false   );
     UDHO_CONFIG_PARAM(param,    std::string,    "default");
 
-    static constexpr const std::string_view name = "S0C";
+    static constexpr const std::string_view name = component_name_helper<Component<Idx, Fs...>>::name;
     using params = udho::manifold::params<enabled, param>;
 
-    Stage0Component(): is_default_constructed(true) {}
-    Stage0Component(const std::string& msg): is_default_constructed(false), message(msg) {}
-    Stage0Component(const Stage0Component&) = delete;
-    Stage0Component(Stage0Component&& other) noexcept: is_default_constructed(false), message(std::move(other.message)) {}
+    Component(): is_default_constructed(true) {}
+    Component(const std::string& msg): is_default_constructed(false), message(msg) {}
+    Component(const Component&) = delete;
+    Component(Component&& other) noexcept: is_default_constructed(false), message(std::move(other.message)) {}
 
     bool is_default_constructed;
     std::string message;
 };
 
-// Stage 1 components
-template <std::size_t Index>
-struct Stage1Component {
-    using features  = udho::manifold::features<Feature<Index + 10>, XFeature<Index>>;
+} // namespace testing
 
-    UDHO_CONFIG_PARAM(enabled,  bool,           true    );
-    UDHO_CONFIG_PARAM(threshold,int,            5       );
-    UDHO_CONFIG_PARAM(mode,     std::string,    "auto"  );
+// Alias features for readability
+namespace testing {
+    // Stage 0 Features
+    using F00 = Feature<0, 0>;  // Stage 0, Feature 0
+    using F01 = Feature<0, 1>;  // Stage 0, Feature 1
 
-    static constexpr const std::string_view name = "S1C";
-    using params = udho::manifold::params<enabled, threshold, mode>;
+    // Stage 1 Features
+    using F10 = Feature<1, 0>;  // Stage 1, Feature 0
+    using F11 = Feature<1, 1>;  // Stage 1, Feature 1
+    using X10 = XFeature<1, 0>; // Stage 1, XFeature 0
+    using X11 = XFeature<1, 1>; // Stage 1, XFeature 1
 
-    Stage1Component(): is_default_constructed(true) {}
-    Stage1Component(const std::string& msg): is_default_constructed(false), message(msg) {}
-    Stage1Component(const Stage1Component&) = delete;
-    Stage1Component(Stage1Component&& other) noexcept: is_default_constructed(false), message(std::move(other.message)) {}
+    // Stage 2 Features
+    using F20 = Feature<2, 0>;  // Stage 2, Feature 0
+    using F21 = Feature<2, 1>;  // Stage 2, Feature 1
+    using F22 = Feature<2, 2>;  // Stage 2, Feature 2
+    using F23 = Feature<2, 3>;  // Stage 2, Feature 3
+    using F24 = Feature<2, 4>;  // Stage 2, Feature 4
 
-    bool is_default_constructed;
-    std::string message;
-};
+    // Define components with their features
+    // Stage 0 components
+    using C00 = Component<0, F00>;  // Provides F00 (Stage 0)
+    using C01 = Component<1, F01>;  // Provides F01 (Stage 0)
 
-// Stage 2 components
-template <std::size_t Index>
-struct Stage2Component {
-    using features  = udho::manifold::features<Feature<Index + 20>, Feature<Index + 30>>;
+    // Stage 1 components
+    using C10 = Component<2, F10, X10>;  // Provides F10 and X10 (both Stage 1)
+    using C11 = Component<3, F11, X11>;  // Provides F11 and X11 (both Stage 1)
 
-    UDHO_CONFIG_PARAM(enabled,  bool,           true    );
-    UDHO_CONFIG_PARAM(timeout,  int,            1000    );
-    UDHO_CONFIG_PARAM(retries,  int,            3       );
+    // Stage 2 components
+    using C20 = Component<4, F20, F23>;  // Provides F20 and F23 (both Stage 2)
+    using C21 = Component<5, F21, F24>;  // Provides F21 and F24 (both Stage 2)
 
-    static constexpr const std::string_view name = "S2C";
-    using params = udho::manifold::params<enabled, timeout, retries>;
+    // Multi-stage component (provides features in multiple stages)
+    using MSC = Component<6, F00, F11, F22>;  // Provides F00 (Stage 0), F11 (Stage 1), F22 (Stage 2)
 
-    Stage2Component(): is_default_constructed(true) {}
-    Stage2Component(const std::string& msg): is_default_constructed(false), message(msg) {}
-    Stage2Component(const Stage2Component&) = delete;
-    Stage2Component(Stage2Component&& other) noexcept: is_default_constructed(false), message(std::move(other.message)) {}
+    template <>
+    struct component_name_helper<MSC> {
+        static constexpr const std::string_view name = "MSC";
+    };
 
-    bool is_default_constructed;
-    std::string message;
-};
+} // namespace testing
 
-// Special component that appears in multiple stages
-struct MultiStageComponent {
-    using features  = udho::manifold::features<Feature<0>, Feature<11>, Feature<22>>;
-
-    UDHO_CONFIG_PARAM(enabled,  bool,           true    );
-    UDHO_CONFIG_PARAM(global,   std::string,    "global");
-
-    static constexpr const std::string_view name = "MSC";
-    using params = udho::manifold::params<enabled, global>;
-
-    MultiStageComponent(): is_default_constructed(true) {}
-    MultiStageComponent(const std::string& msg): is_default_constructed(false), message(msg) {}
-    MultiStageComponent(const MultiStageComponent&) = delete;
-    MultiStageComponent(MultiStageComponent&& other) noexcept: is_default_constructed(false), message(std::move(other.message)) {}
-
-    bool is_default_constructed;
-    std::string message;
-};
-
-}
-
-
+// Facet specializations - now much clearer with explicit stage numbers
 namespace udho {
 namespace manifold {
 
-template <std::size_t Index>
-struct facet<testing::Stage0Component<Index>, testing::Feature<Index>> {
-    using component_type = testing::Stage0Component<Index>;
-    using feature        = testing::Feature<Index>;
+// Stage 0 facets
+template <>
+struct facet<testing::C00, testing::F00> {
+    using component_type = testing::C00;
+    using feature        = testing::F00;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -147,7 +141,7 @@ struct facet<testing::Stage0Component<Index>, testing::Feature<Index>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "S0C" << Index << "F" << feature::idx << "(" << _config[component_type::param::val] << ")";
+        stream << "C00_F00(param=" << _config[component_type::param::val].value() << ")";
         result res{_component.message == "accept"};
         stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
@@ -163,10 +157,10 @@ private:
     const config& _config;
 };
 
-template <std::size_t Index>
-struct facet<testing::Stage1Component<Index>, testing::Feature<Index + 10>> {
-    using component_type = testing::Stage1Component<Index>;
-    using feature        = testing::Feature<Index + 10>;
+template <>
+struct facet<testing::C01, testing::F01> {
+    using component_type = testing::C01;
+    using feature        = testing::F01;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -174,11 +168,35 @@ struct facet<testing::Stage1Component<Index>, testing::Feature<Index + 10>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "S1C" << Index << "F" << feature::idx << "(thresh="<< _config[component_type::threshold::val] << ")";
+        stream << "C01_F01(param=" << _config[component_type::param::val].value() << ")";
+        result res{_component.message == "accept"};
+        stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
-        // Check if previous stage results exist
-        bool prev_stage_passed = true;
+        if(res.accepted()) {
+            next.pass(std::move(res));
+        } else {
+            next.fail(std::move(res));
+        }
+    }
 
+private:
+    component_type& _component;
+    const config& _config;
+};
+
+// Stage 1 facets
+template <>
+struct facet<testing::C10, testing::F10> {
+    using component_type = testing::C10;
+    using feature        = testing::F10;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+
+    template <typename... Components, typename NextT>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
+        stream << "C10_F10(param=" << _config[component_type::param::val].value() << ")";
         result res{_component.message == "accept" && _config[component_type::enabled::val].value()};
         stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
@@ -194,17 +212,17 @@ private:
     const config& _config;
 };
 
-template <std::size_t Index>
-struct facet<testing::Stage1Component<Index>, testing::XFeature<Index>> {
-    using component_type = testing::Stage1Component<Index>;
-    using feature        = testing::XFeature<Index>;
+template <>
+struct facet<testing::C10, testing::X10> {
+    using component_type = testing::C10;
+    using feature        = testing::X10;
     using config         = udho::manifold::config<component_type>;
 
     facet(component_type& component, const config& conf): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "S1C" << Index << "XF" << feature::idx << "(mode=" << _config[component_type::mode::val] << ")[PASS]\n";
+        stream << "C10_X10(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
         next.pass();
     }
 
@@ -213,10 +231,10 @@ private:
     const config& _config;
 };
 
-template <std::size_t Index>
-struct facet<testing::Stage2Component<Index>, testing::Feature<Index + 20>> {
-    using component_type = testing::Stage2Component<Index>;
-    using feature        = testing::Feature<Index + 20>;
+template <>
+struct facet<testing::C11, testing::F11> {
+    using component_type = testing::C11;
+    using feature        = testing::F11;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -224,8 +242,7 @@ struct facet<testing::Stage2Component<Index>, testing::Feature<Index + 20>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "S2C" << Index << "F" << feature::idx << "(timeout=" << _config[component_type::timeout::val] << ")";
-
+        stream << "C11_F11(param=" << _config[component_type::param::val].value() << ")";
         result res{_component.message == "accept" && _config[component_type::enabled::val].value()};
         stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
@@ -241,10 +258,30 @@ private:
     const config& _config;
 };
 
-template <std::size_t Index>
-struct facet<testing::Stage2Component<Index>, testing::Feature<Index + 30>> {
-    using component_type = testing::Stage2Component<Index>;
-    using feature        = testing::Feature<Index + 30>;
+template <>
+struct facet<testing::C11, testing::X11> {
+    using component_type = testing::C11;
+    using feature        = testing::X11;
+    using config         = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+
+    template <typename... Components, typename NextT>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
+        stream << "C11_X11(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
+        next.pass();
+    }
+
+private:
+    component_type& _component;
+    const config& _config;
+};
+
+// Stage 2 facets
+template <>
+struct facet<testing::C20, testing::F20> {
+    using component_type = testing::C20;
+    using feature        = testing::F20;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -252,11 +289,35 @@ struct facet<testing::Stage2Component<Index>, testing::Feature<Index + 30>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "S2C" << Index << "F" << feature::idx << "(retries=" << _config[component_type::retries::val] << ")";
+        stream << "C20_F20(param=" << _config[component_type::param::val].value() << ")";
+        result res{_component.message == "accept" && _config[component_type::enabled::val].value()};
+        stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
-        result res{true}; // Always pass this feature
-        stream << "[PASS]\n";
+        if(res.accepted()) {
+            next.pass(std::move(res));
+        } else {
+            next.fail(std::move(res));
+        }
+    }
 
+private:
+    component_type& _component;
+    const config& _config;
+};
+
+template <>
+struct facet<testing::C20, testing::F23> {
+    using component_type = testing::C20;
+    using feature        = testing::F23;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+
+    template <typename... Components, typename NextT>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
+        stream << "C20_F23(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
+        result res{true}; // Always pass
         next.pass(std::move(res));
     }
 
@@ -266,9 +327,9 @@ private:
 };
 
 template <>
-struct facet<testing::MultiStageComponent, testing::Feature<0>> {
-    using component_type = testing::MultiStageComponent;
-    using feature        = testing::Feature<0>;
+struct facet<testing::C21, testing::F21> {
+    using component_type = testing::C21;
+    using feature        = testing::F21;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -276,7 +337,56 @@ struct facet<testing::MultiStageComponent, testing::Feature<0>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "MSC_F0(global=" << _config[component_type::global::val] << ")";
+        stream << "C21_F21(param=" << _config[component_type::param::val].value() << ")";
+        result res{_component.message == "accept" && _config[component_type::enabled::val].value()};
+        stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
+
+        if(res.accepted()) {
+            next.pass(std::move(res));
+        } else {
+            next.fail(std::move(res));
+        }
+    }
+
+private:
+    component_type& _component;
+    const config& _config;
+};
+
+template <>
+struct facet<testing::C21, testing::F24> {
+    using component_type = testing::C21;
+    using feature        = testing::F24;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+
+    template <typename... Components, typename NextT>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
+        stream << "C21_F24(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
+        result res{true}; // Always pass
+        next.pass(std::move(res));
+    }
+
+private:
+    component_type& _component;
+    const config& _config;
+};
+
+// Multi-stage component facets
+template <>
+struct facet<testing::MSC, testing::F00> {
+    using component_type = testing::MSC;
+    using feature        = testing::F00;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+
+    template <typename... Components, typename NextT>
+    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
+        stream << "MSC_F00(param=" << _config[component_type::param::val].value() << ")";
         result res{_component.message == "accept"};
         stream << (res.accepted() ? "[PASS]" : "[FAIL]") << "\n";
 
@@ -293,9 +403,9 @@ private:
 };
 
 template <>
-struct facet<testing::MultiStageComponent, testing::Feature<11>> {
-    using component_type = testing::MultiStageComponent;
-    using feature        = testing::Feature<11>;
+struct facet<testing::MSC, testing::F11> {
+    using component_type = testing::MSC;
+    using feature        = testing::F11;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -303,7 +413,7 @@ struct facet<testing::MultiStageComponent, testing::Feature<11>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "MSC_F11[PASS]\n";
+        stream << "MSC_F11(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
         result res{true};
         next.pass(std::move(res));
     }
@@ -314,9 +424,9 @@ private:
 };
 
 template <>
-struct facet<testing::MultiStageComponent, testing::Feature<22>> {
-    using component_type = testing::MultiStageComponent;
-    using feature        = testing::Feature<22>;
+struct facet<testing::MSC, testing::F22> {
+    using component_type = testing::MSC;
+    using feature        = testing::F22;
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
@@ -324,7 +434,7 @@ struct facet<testing::MultiStageComponent, testing::Feature<22>> {
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
-        stream << "MSC_F22[PASS]\n";
+        stream << "MSC_F22(param=" << _config[component_type::param::val].value() << ")[PASS]\n";
         result res{true};
         next.pass(std::move(res));
     }
@@ -334,586 +444,380 @@ private:
     const config& _config;
 };
 
-}
-}
-
-namespace testing {
+} // namespace manifold
+} // namespace udho
 
 // Define test labels
-struct Label1 {};
-struct Label2 {};
-struct Label3 {};
-
-// Alias for convenience
-using S0C0 = Stage0Component<0>;
-using S0C1 = Stage0Component<1>;
-using S1C0 = Stage1Component<0>;
-using S1C1 = Stage1Component<1>;
-using S2C0 = Stage2Component<0>;
-using S2C1 = Stage2Component<1>;
-using MSC  = MultiStageComponent;
-
+namespace testing {
+    struct Label1 {};
+    struct Label2 {};
+    struct Label3 {};
 } // namespace testing
 
-// Sketch specializations for different test scenarios
+// Sketch specializations
 namespace udho {
 namespace manifold {
 
-// Simple 3-stage pipeline
+// Full 3-stage pipeline
 template <>
 struct sketch<testing::Label1> {
     using composition_type = composition<
-        testing::S0C0,
-        testing::S0C1,
-        testing::S1C0,
-        testing::S1C1,
-        testing::S2C0,
-        testing::S2C1,
-        testing::MSC
+        testing::C00,  // Stage 0: F00
+        testing::C01,  // Stage 0: F01
+        testing::C10,  // Stage 1: F10, X10
+        testing::C11,  // Stage 1: F11, X11
+        testing::C20,  // Stage 2: F20, F23
+        testing::C21,  // Stage 2: F21, F24
+        testing::MSC   // Multi-stage: F00(0), F11(1), F22(2)
     >;
     using order_type = order<
-        testing::Feature<0>,     // Stage 0
-        testing::Feature<1>,     // Stage 0
-        testing::Feature<10>,    // Stage 1
-        testing::Feature<11>,    // Stage 1
-        testing::XFeature<0>,    // Stage 1
-        testing::XFeature<1>,    // Stage 1
-        testing::Feature<20>,    // Stage 2
-        testing::Feature<21>,    // Stage 2
-        testing::Feature<30>,    // Stage 2
-        testing::Feature<31>,    // Stage 2
-        testing::Feature<22>     // Stage 2 (from MSC)
+        // Stage 0 features
+        testing::F00,  // From C00 and MSC
+        testing::F01,  // From C01
+
+        // Stage 1 features
+        testing::F10,  // From C10
+        testing::F11,  // From C11 and MSC
+        testing::X10,  // From C10
+        testing::X11,  // From C11
+
+        // Stage 2 features
+        testing::F20,  // From C20
+        testing::F21,  // From C21
+        testing::F23,  // From C20
+        testing::F24,  // From C21
+        testing::F22   // From MSC
     >;
-    static constexpr std::size_t Count = 3; // 3 stages (0,1,2)
+    // static constexpr std::size_t Count = 3;
 };
 
 // Single stage pipeline
 template <>
 struct sketch<testing::Label2> {
     using composition_type = composition<
-        testing::S0C0,
-        testing::S0C1
+        testing::C00,  // Stage 0: F00
+        testing::C01   // Stage 0: F01
     >;
     using order_type = order<
-        testing::Feature<0>,
-        testing::Feature<1>
+        testing::F00,
+        testing::F01
     >;
-    static constexpr std::size_t Count = 1; // Only stage 0
+    // static constexpr std::size_t Count = 1;
 };
 
 // Complex multi-feature pipeline
 template <>
 struct sketch<testing::Label3> {
     using composition_type = composition<
-        testing::MSC,
-        testing::S1C0,
-        testing::S2C0
+        testing::MSC,  // F00(0), F11(1), F22(2)
+        testing::C10,  // F10(1), X10(1)
+        testing::C20   // F20(2), F23(2)
     >;
     using order_type = order<
-        testing::Feature<0>,     // Stage 0 (from MSC)
-        testing::Feature<10>,    // Stage 1
-        testing::XFeature<0>,    // Stage 1
-        testing::Feature<11>,    // Stage 1 (from MSC)
-        testing::Feature<20>,    // Stage 2
-        testing::Feature<30>,    // Stage 2
-        testing::Feature<22>     // Stage 2 (from MSC)
+        testing::F00,  // Stage 0 from MSC
+        testing::F10,  // Stage 1 from C10
+        testing::X10,  // Stage 1 from C10
+        testing::F11,  // Stage 1 from MSC
+        testing::F20,  // Stage 2 from C20
+        testing::F23,  // Stage 2 from C20
+        testing::F22   // Stage 2 from MSC
     >;
-    static constexpr std::size_t Count = 3;
+    // static constexpr std::size_t Count = 3;
 };
 
-// Patch config specializations for dynamic configuration between stages
+// Patch config specializations
 template <>
 struct patch_config<testing::Label1, 0> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
+    using runtime_type      = runtime<label_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
-
-    static constexpr std::size_t Count = sketch_type::Count;
+    static constexpr std::size_t Count = runtime_type::Count;
 
     using pipeline_type     = pipeline<composition_type, order_type, Count, 0>;
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 1>::configs_type;
 
     void apply(const pipeline_type& p, next_config_type& config) {
-        std::cout << "PatchConfig[Stage0->Stage1]: Applying stage transition logic\n";
-        config[testing::S1C0::mode::val] = "adaptive";
+        // Example patch: modify C10's param for stage 1
+        config[testing::C10::param::val] = "patched-by-stage0";
     }
 };
 
 template <>
 struct patch_config<testing::Label1, 1> {
-    using label_type = testing::Label1;
-    using sketch_type = sketch<label_type>;
-    using composition_type = typename sketch_type::composition_type;
-    using order_type = typename sketch_type::order_type;
-    static constexpr std::size_t Count = sketch_type::Count;
+    using label_type        = testing::Label1;
+    using sketch_type       = sketch<label_type>;
+    using runtime_type      = runtime<label_type>;
+    using composition_type  = typename sketch_type::composition_type;
+    using order_type        = typename sketch_type::order_type;
+    static constexpr std::size_t Count = runtime_type::Count;
 
-    using pipeline_type = pipeline<composition_type, order_type, Count, 1>;
-    using next_config_type = typename pipeline<composition_type, order_type, Count, 2>::configs_type;
+    using pipeline_type     = pipeline<composition_type, order_type, Count, 1>;
+    using next_config_type  = typename pipeline<composition_type, order_type, Count, 2>::configs_type;
 
     void apply(const pipeline_type& p, next_config_type& config) {
-        std::cout << "PatchConfig[Stage1->Stage2]: Applying stage transition logic\n";
-        config[testing::S2C0::timeout::val] = 2000;
+        // Example patch: modify C20's param for stage 2
+        config[testing::C20::param::val] = "patched-by-stage1";
     }
 };
 
 } // namespace manifold
 } // namespace udho
 
-TEST_CASE("Pipeline System - Type Safety and Compile-time Checks", "[manifold][pipeline][typesafety]") {
-    using label_type    = testing::Label1;
-    using sketch_type   = udho::manifold::sketch<testing::Label1>;
-    using runtime_type  = udho::manifold::runtime<testing::Label1>;
-    using flow_type     = udho::manifold::flow<testing::Label1>;
+TEST_CASE("Pipeline System - Fabric Verification", "[manifold][pipeline][fabric]") {
+    using label_type = testing::Label1;
+    using sketch_type = udho::manifold::sketch<label_type>;
+    using composition_type = typename sketch_type::composition_type;
 
-    using start_pipeline_type = udho::manifold::pipeline<typename sketch_type::composition_type, typename sketch_type::order_type, sketch_type::Count, -1>;
+    SECTION("Verify fabric stage membership") {
+        // Print fabric for each stage to verify
+        using fabric_0_type = composition_type::fabric_type<0>;
+        using fabric_1_type = composition_type::fabric_type<1>;
+        using fabric_2_type = composition_type::fabric_type<2>;
 
-    static_assert(!std::is_void_v<typename sketch_type::composition_type>);
-    static_assert(!std::is_void_v<typename sketch_type::order_type>);
+        // Verify counts
+        CHECK(fabric_0_type::count<testing::F00>() == 2); // C00 and MSC provide F00
+        CHECK(fabric_0_type::count<testing::F01>() == 1); // Only C01 provides F01
 
-    static_assert(std::is_same_v<typename runtime_type::composition_type, typename sketch_type::composition_type>);
-    static_assert(std::is_same_v<typename flow_type::composition_type,    typename runtime_type::composition_type>);
+        CHECK(fabric_1_type::count<testing::F10>() == 1); // Only C10 provides F10
+        CHECK(fabric_1_type::count<testing::F11>() == 2); // C11 and MSC provide F11
+        CHECK(fabric_1_type::count<testing::X10>() == 1); // Only C10 provides X10
+        CHECK(fabric_1_type::count<testing::X11>() == 1); // Only C11 provides X11
 
-    static_assert(std::is_same_v<typename flow_type::start_pipeline_type, start_pipeline_type>);
-
-    static_assert(sketch_type::Count == 3);
-
-    CHECK(true);
-}
-
-TEST_CASE("Pipeline System - Basic Flow", "[manifold][pipeline][flow]") {
-    using label_type        = testing::Label1;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-    using flow_type         = udho::manifold::flow<label_type>;
-
-    SECTION("Runtime creation and baseline configuration") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        CHECK(runtime.composition().template get<testing::S0C0>().component().message == "accept");
-        CHECK(runtime.composition().template get<testing::MSC>().borrowed());
-        CHECK(runtime.count() == 0);
-    }
-
-    SECTION("Flow spawning and execution") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        // Spawn multiple flows
-        auto flow1 = runtime.spawn();
-        auto flow2 = runtime.spawn();
-
-        CHECK(runtime.count() == 2);
-
-        std::stringstream stream;
-
-        // Execute flows synchronously
-        flow1->start(stream);
-        flow2->start(stream);
-
-        // Cleanup expired flows
-        runtime.cleanup();
-        CHECK(runtime.count() == 2); // Both still alive
-
-        // Reset flows (simulate completion)
-        flow1.reset();
-        flow2.reset();
-
-        runtime.cleanup();
-        // Count may still be 2 because weak pointers aren't cleaned until cleanup
-    }
-
-    SECTION("Async flow execution") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        boost::asio::io_context io;
-        bool callback_called = false;
-
-        std::stringstream stream;
-        auto flow = runtime.spawn();
-        flow->start(io, stream);
-
-        // Run IO context to process async operations
-        io.run();
-
-        // Callback should have been called
-        // Note: Actual callback happens inside pipeline completion
-        CHECK(true); // Placeholder
+        CHECK(fabric_2_type::count<testing::F20>() == 1); // Only C20 provides F20
+        CHECK(fabric_2_type::count<testing::F21>() == 1); // Only C21 provides F21
+        CHECK(fabric_2_type::count<testing::F22>() == 1); // Only MSC provides F22
+        CHECK(fabric_2_type::count<testing::F23>() == 1); // Only C20 provides F23
+        CHECK(fabric_2_type::count<testing::F24>() == 1); // Only C21 provides F24
     }
 }
 
-TEST_CASE("Pipeline System - Multi-stage Execution", "[manifold][pipeline][multistage]") {
-    using label_type        = testing::Label1;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-    using flow_type         = udho::manifold::flow<label_type>;
+TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]") {
+    using label_type = testing::Label1;
+    using runtime_type = udho::manifold::runtime<label_type>;
 
-    SECTION("Successful multi-stage pipeline") {
+    SECTION("Complete pipeline execution with all accepts") {
         testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
+        auto composition = runtime_type::compose(
+            testing::C00{"accept"},
+            testing::C01{"accept"},
+            testing::C10{"accept"},
+            testing::C11{"accept"},
+            testing::C20{"accept"},
+            testing::C21{"accept"},
             msc
         );
 
         runtime_type runtime{std::move(composition)};
 
-        std::stringstream execution_log;
-        auto flow = runtime.spawn();
-
-        // We need to intercept the pipeline execution to capture output
-        // This is a simplified test - in practice you'd need to inject a tracer
-        std::stringstream stream;
-        flow->start(stream);
-
-        // Verify that all stages executed
-        // The actual verification would require examining the journal
-        CHECK(true);
-    }
-
-    SECTION("Pipeline with stage 0 failure") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"reject"}, // This will fail
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        auto flow = runtime.spawn();
-        std::stringstream stream;
-        flow->start(stream);
-
-        // Stage 1 and 2 should not execute due to stage 0 failure
-        // Verification would require checking that later stages weren't called
-        CHECK(true);
-    }
-
-    SECTION("Pipeline with stage 1 failure") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"reject"}, // This will fail
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        auto flow = runtime.spawn();
-        std::stringstream stream;
-        flow->start(stream);
-
-        // Stage 0 should execute, stage 1 should fail, stage 2 should not execute
-        CHECK(true);
-    }
-}
-
-TEST_CASE("Pipeline System - Configuration Propagation", "[manifold][pipeline][config]") {
-    using label_type        = testing::Label1;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-
-    SECTION("Baseline configuration loading") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        // Load baseline configuration from JSON
-        nlohmann::json baseline_config = nlohmann::json::parse(R"({
-            "S0C": {
-                "enabled": true,
-                "param": "configured"
-            },
-            "S1C": {
-                "enabled": false,
-                "threshold": 10,
-                "mode": "manual"
-            },
-            "S2C": {
-                "enabled": true,
-                "timeout": 500,
-                "retries": 5
-            },
-            "MSC": {
-                "enabled": true,
-                "global": "runtime-config"
-            }
+        // Load configuration
+        nlohmann::json config_json = nlohmann::json::parse(R"({
+            "Comp": {"enabled": true, "param": "test-value"},
+            "MSC": {"param": "runtime-param"}
         })");
 
-        // Note: In actual implementation, runtime would have load() method
-        // runtime.baseline().load(baseline_config);
+        runtime.load(config_json);
 
-        CHECK(true); // Configuration loading would be tested here
-    }
-
-    SECTION("Per-stage configuration isolation") {
-        // Test that each stage gets its own copy of configuration
-        // and modifications don't affect other stages
-        CHECK(true);
-    }
-}
-
-TEST_CASE("Pipeline System - Single Stage Pipeline", "[manifold][pipeline][singlestage]") {
-    using label_type        = testing::Label2;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-
-    SECTION("Single stage execution") {
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"}
-        );
-
-        runtime_type runtime{std::move(composition)};
+        // Spawn and execute flow
         auto flow = runtime.spawn();
-
         std::stringstream stream;
-        flow->start(stream);
 
-        // Only stage 0 should execute
         CHECK(runtime.count() == 1);
-    }
-
-    SECTION("Single stage with mixed results") {
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"reject"} // Second component fails
-        );
-
-        runtime_type runtime{std::move(composition)};
-        auto flow = runtime.spawn();
-
-        std::stringstream stream;
         flow->start(stream);
-
-        // Pipeline should fail
-        CHECK(true);
-    }
-}
-
-TEST_CASE("Pipeline System - Complex Feature Ordering", "[manifold][pipeline][ordering]") {
-    using label_type        = testing::Label3;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-
-    SECTION("Multi-feature component across stages") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            msc,
-            testing::S1C0{"accept"},
-            testing::S2C0{"accept"}
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        // MSC has features in stages 0, 1, and 2
-        // Verify all are accessible
-        CHECK(runtime.composition().template count<testing::Feature<0>>() >= 1);
-        CHECK(runtime.composition().template count<testing::Feature<11>>() >= 1);
-        CHECK(runtime.composition().template count<testing::Feature<22>>() >= 1);
-
-        auto flow = runtime.spawn();
-        std::stringstream stream;
-        flow->start(stream);
-
-        // All features across all stages should execute
-        CHECK(true);
-    }
-
-    SECTION("Feature execution order verification") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            msc,
-            testing::S1C0{"accept"},
-            testing::S2C0{"accept"}
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        std::stringstream exec_order;
-        auto flow = runtime.spawn();
-
-        // Need to intercept facet execution to verify order
-        // This would require modifying facets to accept execution tracer
-        std::stringstream stream;
-        flow->start(stream);
-
-        // Verify features execute in sketch::order_type sequence
-        // Stage 0 features first, then stage 1, then stage 2
-        CHECK(true);
-    }
-}
-
-TEST_CASE("Pipeline System - Flow Management", "[manifold][pipeline][flowmgmt]") {
-    using label_type        = testing::Label1;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-    using runtime_type      = udho::manifold::runtime<label_type>;
-
-    SECTION("Multiple concurrent flows") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-
-        // Spawn multiple flows
-        std::vector<std::shared_ptr<udho::manifold::flow<label_type>>> flows;
-        for (int i = 0; i < 5; ++i) {
-            flows.push_back(runtime.spawn());
-        }
-
-        CHECK(runtime.count() == 5);
-
-        // Start all flows
-        std::stringstream stream;
-        for (auto& flow : flows) {
-            flow->start(stream);
-        }
-
-        // Cleanup after some flows complete
-        flows[0].reset();
-        flows[1].reset();
-
-        runtime.cleanup();
-        // Should still have 3 active flows
-        CHECK(runtime.count() >= 3);
-    }
-
-    SECTION("Flow weak pointer tracking") {
-        testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            msc
-        );
-
-        runtime_type runtime{std::move(composition)};
-        std::stringstream stream;
-        {
-            auto flow = runtime.spawn();
-            CHECK(runtime.count() == 1);
-
-            flow->start(stream);
-            // flow goes out of scope, should be cleaned up
-        }
-
-        runtime.cleanup();
-        // Weak pointer should be removed from collection
         CHECK(runtime.count() == 0);
+
+        // Verify execution order and content
+        std::string output = stream.str();
+        INFO(output);
+
+        // Stage 0 should execute
+        CHECK(output.find("C00_F00(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("C01_F01(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("MSC_F00(param=runtime-param)[PASS]") != std::string::npos);
+
+        // Stage 1 should execute
+        CHECK(output.find("C10_F10(param=test-value)[PASS]") == std::string::npos);
+        CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
+        CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
+        INFO("C10 configs patched after stage 0 ends before stage 1 starts");
+        CHECK(output.find("C11_F11(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("C11_X11(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("MSC_F11(param=runtime-param)[PASS]") != std::string::npos);
+
+        // Stage 2 should execute
+        CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
+        CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
+        INFO("C20 configs patched after stage 1 ends before stage 2 starts");
+        CHECK(output.find("C21_F21(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("C21_F24(param=test-value)[PASS]") != std::string::npos);
+        CHECK(output.find("MSC_F22(param=runtime-param)[PASS]") != std::string::npos);
     }
-}
 
-TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patchconfig]") {
-    using label_type        = testing::Label1;
-    using sketch_type       = udho::manifold::sketch<label_type>;
-    using composition_type  = typename sketch_type::composition_type;
-
-    SECTION("Patch config application between stages") {
-        // This tests the patch_config specialization we defined above
+    SECTION("Pipeline with early failure in stage 0") {
         testing::MSC msc{"accept"};
-
-        auto composition = composition_type::compose(
-            testing::S0C0{"accept"},
-            testing::S0C1{"accept"},
-            testing::S1C0{"accept"},
-            testing::S1C1{"accept"},
-            testing::S2C0{"accept"},
-            testing::S2C1{"accept"},
+        auto composition = runtime_type::compose(
+            testing::C00{"reject"},  // This will fail
+            testing::C01{"accept"},
+            testing::C10{"accept"},
+            testing::C11{"accept"},
+            testing::C20{"accept"},
+            testing::C21{"accept"},
             msc
         );
 
-        // Create a pipeline to test patch config
-        using pipeline_type = udho::manifold::pipeline<composition_type, typename sketch_type::order_type, sketch_type::Count, -1>;
+        runtime_type runtime{std::move(composition)};
 
-        using configs_type = typename composition_type::configs_type;
+        // Load config
+        nlohmann::json config_json = nlohmann::json::parse(R"({
+            "Comp": {"enabled": true, "param": "test"},
+            "MSC": {"param": "test"}
+        })");
 
-        configs_type baseline;
-        pipeline_type test_pipeline{composition, baseline};
+        runtime.load(config_json);
 
-        // Access stage 0 pipeline
-        auto& stage0 = test_pipeline.template at<0>();
+        auto flow = runtime.spawn();
+        std::stringstream stream;
+        flow->start(stream);
 
-        // The patch_config specializations should apply when flow moves between stages
-        // This is tested through the flow's apply() method
+        std::string output = stream.str();
 
-        CHECK(true);
+        // Should have C00 failure and stop there
+        CHECK(output.find("C00_F00(param=test)[FAIL]") != std::string::npos);
+        CHECK(output.find("C01_F01") == std::string::npos); // Should not execute
+        CHECK(output.find("C10_F10") == std::string::npos); // Should not execute
+        CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+    }
+
+    SECTION("Pipeline with failure in stage 1") {
+        testing::MSC msc{"accept"};
+        auto composition = runtime_type::compose(
+            testing::C00{"accept"},
+            testing::C01{"accept"},
+            testing::C10{"reject"},  // This will fail in stage 1
+            testing::C11{"accept"},
+            testing::C20{"accept"},
+            testing::C21{"accept"},
+            msc
+        );
+
+        runtime_type runtime{std::move(composition)};
+
+        // Load config
+        nlohmann::json config_json = nlohmann::json::parse(R"({
+            "Comp": {"enabled": true, "param": "test"},
+            "MSC": {"param": "test"}
+        })");
+
+        runtime.load(config_json);
+
+        auto flow = runtime.spawn();
+        std::stringstream stream;
+        flow->start(stream);
+
+        std::string output = stream.str();
+        INFO(output);
+
+        // Stage 0 should execute
+        CHECK(output.find("C00_F00(param=test)[PASS]") != std::string::npos);
+        CHECK(output.find("C01_F01(param=test)[PASS]") != std::string::npos);
+        CHECK(output.find("MSC_F00(param=test)[PASS]") != std::string::npos);
+
+        // Stage 1 should fail at C10_F10
+        CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
+        INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
+        CHECK(output.find("C11_F11") == std::string::npos); // Should not execute
+        CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+    }
+}
+
+TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]") {
+    using label_type = testing::Label1;
+    using runtime_type = udho::manifold::runtime<label_type>;
+
+    SECTION("Patch config modifies configuration between stages") {
+        testing::MSC msc{"accept"};
+        auto composition = runtime_type::compose(
+            testing::C00{"accept"},
+            testing::C01{"accept"},
+            testing::C10{"accept"},
+            testing::C11{"accept"},
+            testing::C20{"accept"},
+            testing::C21{"accept"},
+            msc
+        );
+
+        runtime_type runtime{std::move(composition)};
+
+        // Load baseline config
+        nlohmann::json config_json = nlohmann::json::parse(R"({
+            "Comp": {"enabled": true, "param": "initial"},
+            "MSC": {"param": "initial-param"}
+        })");
+
+        runtime.load(config_json);
+
+        auto flow = runtime.spawn();
+        std::stringstream stream;
+        flow->start(stream);
+
+        std::string output = stream.str();
+
+        // Verify patch config was applied:
+        // 1. C10 should have param="patched-by-stage0" (changed by patch_config<Label1, 0>)
+        CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
+        CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
+
+        // 2. C20 should have param="patched-by-stage1" (changed by patch_config<Label1, 1>)
+        CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
+        CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
+
+        // 3. Other components should still have original value
+        CHECK(output.find("C00_F00(param=initial)[PASS]") != std::string::npos);
+        CHECK(output.find("C01_F01(param=initial)[PASS]") != std::string::npos);
+        CHECK(output.find("C11_F11(param=initial)[PASS]") != std::string::npos);
+        CHECK(output.find("C21_F21(param=initial)[PASS]") != std::string::npos);
+    }
+}
+
+TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pipeline][config]") {
+    using label_type = testing::Label1;
+    using runtime_type = udho::manifold::runtime<label_type>;
+
+    SECTION("Components disabled by configuration should fail") {
+        testing::MSC msc{"accept"};
+        auto composition = runtime_type::compose(
+            testing::C00{"accept"},
+            testing::C01{"accept"},
+            testing::C10{"accept"},
+            testing::C11{"accept"},
+            testing::C20{"accept"},
+            testing::C21{"accept"},
+            msc
+        );
+
+        runtime_type runtime{std::move(composition)};
+
+        // Load config with C10 disabled
+        nlohmann::json config_json = nlohmann::json::parse(R"({
+            "Comp": {"enabled": false, "param": "test"},
+            "MSC": {"param": "test"}
+        })");
+
+        runtime.load(config_json);
+
+        auto flow = runtime.spawn();
+        std::stringstream stream;
+        flow->start(stream);
+
+        std::string output = stream.str();
+        INFO(output);
+
+        // C10 should fail because enabled=false
+        CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
+        INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
+        // Pipeline should stop at C10 failure
+        CHECK(output.find("C11_F11") == std::string::npos);
+        CHECK(output.find("C20_F20") == std::string::npos);
     }
 }

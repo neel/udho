@@ -111,26 +111,36 @@ class configs<ComponentT>{
     config_type _config;
 
 public:
+
     configs() = default;
 
     template <typename... XComponents>
     configs(const configs<XComponents...>& other): _config(other.template get<ComponentT>()) { }
 
 public:
+
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
     const config_type& get() const { return _config; }
 
 public:
+
     template <typename ParamT, std::enable_if_t<config_type::template contains<ParamT>::value, bool> = true>
     auto& operator[](const udho::hazo::element_t<ParamT>& key){ return _config[key]; }
 
     template <typename ParamT, std::enable_if_t<config_type::template contains<ParamT>::value, bool> = true>
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return _config[key]; }
 
-    template <typename... Params>
-    void patch(const changeset<Params...>&) {
+public:
 
+    // @{
+    void load(const nlohmann::json& json){
+        _config.load(json);
     }
+
+    void save(nlohmann::json& json) const {
+        _config.save(json);
+    }
+    // @}
 };
 
 template <typename ComponentT, typename... Components>
@@ -141,12 +151,14 @@ class configs<ComponentT, Components...>: configs<Components...> {
     config_type _config;
 
 public:
+
     configs() = default;
 
     template <typename... XComponents>
     configs(const configs<XComponents...>& other): configs<Components...>(other), _config(other.template get<ComponentT>()) { }
 
 public:
+
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
     const config_type& get() const { return _config; }
 
@@ -160,6 +172,7 @@ public:
     auto& get() { return rest_type::template get<XComponentT>(); }
 
 public:
+
     template <typename ParamT, std::enable_if_t<config_type::template contains<ParamT>::value, bool> = true>
     auto& operator[](const udho::hazo::element_t<ParamT>& key){ return _config[key]; }
 
@@ -171,6 +184,21 @@ public:
 
     template <typename ParamT, std::enable_if_t<!config_type::template contains<ParamT>::value, bool> = true>
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return rest_type::template operator[]<ParamT>(key); }
+
+public:
+
+    // @{
+    void load(const nlohmann::json& json){
+        _config.load(json);
+        configs<Components...>::load(json);
+    }
+
+    void save(nlohmann::json& json) const {
+        _config.save(json);
+        configs<Components...>::save(json);
+    }
+    // @}
+
 };
 
 #else
