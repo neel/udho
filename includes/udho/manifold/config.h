@@ -150,8 +150,14 @@ public:
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
     const config_type& get() const { return _config; }
 
+    template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
+    config_type& get() { return _config; }
+
     template <typename XComponentT, std::enable_if_t<!std::is_same_v<XComponentT, ComponentT>, bool> = true>
     const auto& get() const { return rest_type::template get<XComponentT>(); }
+
+    template <typename XComponentT, std::enable_if_t<!std::is_same_v<XComponentT, ComponentT>, bool> = true>
+    auto& get() { return rest_type::template get<XComponentT>(); }
 
 public:
     template <typename ParamT, std::enable_if_t<config_type::template contains<ParamT>::value, bool> = true>

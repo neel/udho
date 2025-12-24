@@ -122,7 +122,7 @@ struct wrapper: detail::hybrid_storage<ComponentT>{
     using storage_type   = detail::hybrid_storage<ComponentT>;
     using config_type    = udho::manifold::config<ComponentT>;
 
-    static constexpr const bool has_result = udho::manifold::has_result<ComponentT>::vlue;
+    static constexpr const bool has_result = udho::manifold::has_result<ComponentT>::value;
 
     using storage_type::storage_type;
 };

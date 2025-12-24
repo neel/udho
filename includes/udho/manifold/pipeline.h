@@ -81,6 +81,78 @@ struct order{};
 template <std::size_t Stage, typename OrderT, typename CompositionT>
 class common_pipepine;
 
+/**
+ * @class common_pipepine
+ * @brief A complete pipeline stage that evaluates features in a specified order with callback support
+ *
+ * The `common_pipepine` class represents a single stage in a multi-stage pipeline processing system.
+ * It orchestrates the evaluation of a sequence of features against a composition of components,
+ * managing the flow of control through success/failure callbacks and providing integration
+ * with asynchronous operations via Boost.Asio.
+ *
+ * @tparam Stage The pipeline stage index (0, 1, 2, ...) this instance represents
+ * @tparam Features... The ordered sequence of features to evaluate in this stage
+ * @tparam Components... The components in the composition that provide the features
+ *
+ * # Design Philosophy
+ *
+ * This class follows the principle of **"eval once, re-eval requires re-then"**:
+ * - Each evaluation cycle requires setting a new callback via `then()`
+ * - Callbacks are automatically cleared after execution
+ * - This prevents stale state and memory leaks from retained callbacks
+ *
+ * # Stage Evaluation Model
+ *
+ * When `eval()` is called:
+ * 1. Features are evaluated in the order specified by `order<Features...>`
+ * 2. Each feature triggers evaluation of all components that provide it
+ * 3. Results are stored in the provided journal
+ * 4. On completion (success or failure), the user callback is invoked once
+ * 5. The callback is cleared, requiring a new `then()` call for subsequent evaluation
+ *
+ * # Asynchronous Support
+ *
+ * Two callback models are supported:
+ * - **Synchronous**: Callback executes immediately in the evaluating thread
+ * - **Asynchronous**: Callback is posted to a Boost.Asio io_context for deferred execution
+ *
+ * # Example Usage
+ *
+ * @code
+ * using composition_type = composition<ComponentA, ComponentB, ComponentC>;
+ * using order_type = order<FeatureX, FeatureY, FeatureZ>;
+ *
+ * composition_type comp = ...;
+ * configs_type configs = ...;
+ * journal_type journal;
+ *
+ * // Create stage 1 pipeline with FeatureX, FeatureY, FeatureZ
+ * common_pipepine<1, order_type, composition_type> pipeline(comp, configs, journal);
+ *
+ * // Set completion callback and execute
+ * pipeline.then([](auto&& result) {
+ *     if (std::holds_alternative<bool>(result)) {
+ *         if (std::get<bool>(result)) {
+ *             std::cout << "Stage 1 passed\n";
+ *         } else {
+ *             std::cout << "Stage 1 failed\n";
+ *         }
+ *     } else {
+ *         std::cout << "Stage 1 threw exception\n";
+ *     }
+ * }).eval(request, context);
+ * @endcode
+ *
+ * # Thread Safety
+ *
+ * This class is not thread-safe by itself. Concurrent calls to `eval()` or `then()`
+ * on the same instance without external synchronization may result in data races.
+ *
+ * @see basic_pipeline
+ * @see evaluator_helper
+ * @see pipeline
+ * @see flow
+ */
 template <std::size_t Stage, typename... Features, typename... Components>
 class common_pipepine<Stage, order<Features...>, udho::manifold::composition<Components...>>: private basic_pipeline<Stage, Components...> {
     using composition_type    = udho::manifold::composition<Components...>;
@@ -90,30 +162,168 @@ class common_pipepine<Stage, order<Features...>, udho::manifold::composition<Com
     using async_callback_type = typename evaluator_type::async_callback_type;
 
 public:
+
+    /**
+     * @brief Configuration container for all components in the composition
+     *
+     * Provides type-safe access to configuration parameters for each component.
+     * Each component's configuration is accessible via `get<ComponentT>()`.
+     */
     using configs_type        = udho::manifold::configs<Components...>;
+
     // using journal_type        = typename basic_pipeline_type::journal_type;
+
+    /**
+     * @brief Journal type capable of storing results from all facets in the full fabric
+     *
+     * Contains storage for results from all facets across all stages, not just
+     * the current stage. This allows later stages to access results from earlier stages.
+     */
     using full_journal_type   = typename basic_pipeline_type::full_journal_type;
 
 public:
+
+    /**
+     * @brief Constructs a pipeline stage
+     *
+     * Initializes the pipeline with a composition, its configurations, and a journal
+     * for result storage. The journal is shared across all pipeline stages to allow
+     * data flow between stages.
+     *
+     * @param composition Reference to the composition of components to evaluate
+     * @param configs Configuration parameters for all components in the composition
+     * @param journal Journal for storing facet evaluation results (shared across stages)
+     *
+     * @note The journal must outlive this pipeline instance, as it stores results
+     *       that may be accessed by subsequent pipeline stages or user code.
+     */
     common_pipepine(composition_type& composition, const configs_type& configs, full_journal_type& journal):
         basic_pipeline_type(composition, configs),
         _evaluator(basic_pipeline_type::fabric(), journal, _callback),
         _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1))
     {}
-
+    /**
+     * @name Fabric Access
+     * Access to the underlying fabric for direct facet manipulation
+     * @{
+     */
     using basic_pipeline_type::fabric;
+    /// @}
+
     // using basic_pipeline_type::journal;
 
+    /**
+     * @brief Evaluates the pipeline stage with provided arguments
+     *
+     * Initiates evaluation of all features in the stage's order. Each feature
+     * triggers evaluation of components that provide it, with results stored
+     * in the journal.
+     *
+     * @tparam Args Types of arguments to forward to facet evaluation
+     * @param args Arguments to pass to each facet's evaluation function
+     *
+     * # Execution Flow
+     *
+     * 1. Features are evaluated in `order<Features...>` sequence
+     * 2. For each feature, components are evaluated in composition order
+     * 3. Each facet may call `pass()` (continue), `fail()` (stop), or `skip()` (bypass)
+     * 4. On completion, registered callback is invoked once and cleared
+     *
+     * @pre A callback must be registered via `then()` before calling `eval()`
+     * @post The registered callback is invoked and cleared (nullptr)
+     *
+     * @warning If no callback is registered via `then()`, completion results are discarded
+     * @warning Multiple calls to `eval()` without intervening `then()` will not invoke callbacks
+     *
+     * @see then()
+     */
     template <typename... Args>
     void eval(Args&&... args){
         _evaluator.eval(std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Registers a synchronous completion callback
+     *
+     * Sets a callback to be invoked when pipeline evaluation completes (successfully
+     * or with failure). The callback executes in the same thread that called `eval()`.
+     *
+     * @param callback Function to call on completion
+     * @return *this for method chaining
+     *
+     * # Callback Signature
+     *
+     * The callback must accept a `safe_success_type` parameter, which is a
+     * `std::variant<bool, std::exception_ptr>`:
+     * - `bool` (index 0): `true` if all facets passed, `false` if any facet failed
+     * - `std::exception_ptr` (index 1): Exception thrown during evaluation
+     *
+     * # Callback Lifecycle
+     *
+     * The callback is:
+     * - Moved into internal storage (not copied)
+     * - Invoked exactly once when `eval()` completes
+     * - Cleared (set to nullptr) after invocation
+     * - Must be re-registered for subsequent `eval()` calls
+     *
+     * @code
+     * pipeline.then([](auto&& result) {
+     *     if (result.index() == 0) {
+     *         if (std::get<bool>(result)) {
+     *             std::cout << "Success\n";
+     *         } else {
+     *             std::cout << "Failure\n";
+     *         }
+     *     } else {
+     *         std::cout << "Exception\n";
+     *         std::rethrow_exception(std::get<std::exception_ptr>(result));
+     *     }
+     * }).eval(...);
+     * @endcode
+     *
+     * @note The callback is cleared after execution (following "eval once" principle)
+     */
     common_pipepine& then(async_callback_type&& callback){
         _user_callback = std::move(callback);
         return *this;
     }
 
+    /**
+     * @brief Registers an asynchronous completion callback
+     *
+     * Sets a callback to be invoked asynchronously via Boost.Asio when pipeline
+     * evaluation completes. The callback is posted to the specified `io_context`
+     * for deferred execution.
+     *
+     * @param io Boost Asio io_context to post completion to
+     * @param callback Function to call on completion (executed in io_context thread)
+     * @return *this for method chaining
+     *
+     * # Asynchronous Execution
+     *
+     * The callback is wrapped and posted via `boost::asio::post(io, ...)`, ensuring:
+     * - Execution occurs in an io_context handler thread
+     * - Thread-safe dispatch if io_context runs multiple threads
+     * - Proper ordering with other asynchronous operations
+     *
+     * # Usage Pattern
+     *
+     * @code
+     * boost::asio::io_context io;
+     *
+     * pipeline.then(io, [&](auto&& result) {
+     *     // Executes in io_context thread
+     *     if (std::holds_alternative<bool>(result)) {
+     *         handle_result(std::get<bool>(result));
+     *     }
+     * }).eval(request);
+     *
+     * io.run();  // Process completion callback
+     * @endcode
+     *
+     * @note The io_context reference must remain valid until callback execution
+     * @note Callback is cleared after execution (following "eval once" principle)
+     */
     common_pipepine& then(boost::asio::io_context& io, async_callback_type&& callback){
         _user_callback = [&io, &callback](safe_success_type&& success){
             boost::asio::post(io, std::bind(std::forward<async_callback_type>(callback), std::move(success)));
@@ -125,6 +335,7 @@ private:
         if(_user_callback) {
             // Will be called in case of failure
             _user_callback(std::forward<safe_success_type>(success));
+            _user_callback = nullptr;
         }
     }
 
@@ -138,89 +349,10 @@ template <typename LabelT>
 struct flow;
 
 template <typename CompositionT, typename OrderT, std::size_t Count, int Stage = 0>
-struct pipeline{
-    using composition_type   = CompositionT;
-    using order_type         = OrderT;
-    using pipeline_type      = udho::manifold::common_pipepine<Stage, order_type, composition_type>;
-    using configs_type       = typename pipeline_type::configs_type;
-    using journal_type       = typename pipeline_type::journal_type;
-    using prev_pipeline_type = pipeline<composition_type, order_type, Count, Stage-1>;
-    using next_pipeline_type = pipeline<composition_type, order_type, Count, Stage+1>;
-
-    friend class pipeline<composition_type, order_type, Count, Stage-1>;
-    // pipeline<..., Count, -1> would be maolformed, so making friend with pipeline<..., Count, Count> instead which is harmless
-
-    template <typename JournalT>
-    pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous)
-        : _composition(composition), _configs(baseline), _pipeline(composition, _configs), _next(composition, baseline, journal, *this), _previous(previous)
-    {
-        // _configs copy constructor picks the relevant configs from the baseline
-    }
-
-    const configs_type& configs() const { return _configs; }
-
-    const journal_type& journal() const { return _pipeline.journal(); }
-
-    template <typename FlowT>
-    void operator()(std::shared_ptr<FlowT> flow){
-        next_pipeline_type& next    = _next;
-        const journal_type& journal = _pipeline.journal();
-
-        _pipeline.then([flow, &next, this](std::variant<bool, std::exception_ptr> success){
-            if(success.index() == 0 && std::get<0>(success)) {
-                typename next_pipeline_type::configs_type& next_configs = next.configs();
-                flow->apply(_pipeline, next_configs);
-                next(flow);
-            } else {
-                // terminate
-            }
-        }).eval();
-    }
-
-    template <typename FlowT>
-    void operator()(boost::asio::io_context& io, std::shared_ptr<FlowT> flow){
-        next_pipeline_type& next    = _next;
-        const journal_type& journal = _pipeline.journal();
-
-        _pipeline.then(io, [flow, &io, &next, this](std::variant<bool, std::exception_ptr> success){
-            if(success.index() == 0 && std::get<0>(success)) {
-                typename next_pipeline_type::configs_type& next_configs = next.configs();
-                flow->apply(_pipeline, next_configs);
-                next(io, flow);
-            } else {
-                // terminate
-            }
-        }).eval();
-    }
-
-    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
-    pipeline<composition_type, order_type, Count, N>& at() { return *this; }
-
-    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
-    const pipeline<composition_type, order_type, Count, N>& at() const { return *this; }
-
-    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
-    pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
-
-    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
-    const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
-
-    template <std::size_t N, std::enable_if_t<(N < Stage), bool> = true>
-    const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
-
-private:
-    configs_type& configs() { return _configs; }
-
-private:
-    composition_type&   _composition;
-    const prev_pipeline_type& _previous;
-    configs_type        _configs;   // per stage copy of configs
-    pipeline_type       _pipeline;
-    next_pipeline_type  _next;
-};
+struct pipeline;
 
 template <typename CompositionT, typename OrderT, std::size_t Count>
-struct pipeline<CompositionT, OrderT, Count, Count>{
+struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
     using prev_pipeline_type = pipeline<CompositionT, OrderT, Count, Count-1>;
     using configs_type = udho::manifold::configs<>;
 
@@ -252,7 +384,7 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
 
     template <typename... Args>
     void operator()(Args&&... args){
-        next(std::forward<Args>(args)...);
+        _next(std::forward<Args>(args)...);
     }
 
     template <std::size_t N>
@@ -268,6 +400,120 @@ private:
     full_journal_type   _journal;
     next_pipeline_type  _next;
 };
+
+template <typename CompositionT, typename OrderT, std::size_t Count, int Stage>
+struct pipeline{
+    static_assert (Stage < Count);
+    using composition_type   = CompositionT;
+    using order_type         = OrderT;
+    using pipeline_type      = udho::manifold::common_pipepine<Stage, order_type, composition_type>;
+    using configs_type       = typename pipeline_type::configs_type;
+    using prev_pipeline_type = pipeline<composition_type, order_type, Count, Stage-1>;
+    using next_pipeline_type = pipeline<composition_type, order_type, Count, Stage+1>;
+
+    friend class pipeline<composition_type, order_type, Count, Stage-1>;
+    // pipeline<..., Count, -1> would be maolformed, so making friend with pipeline<..., Count, Count> instead which is harmless
+
+    template <typename JournalT>
+    pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous)
+        : _composition(composition), _configs(baseline), _pipeline(composition, _configs, journal), _next(composition, baseline, journal, *this), _previous(previous)
+    {
+        // _configs copy constructor picks the relevant configs from the baseline
+    }
+
+    const configs_type& configs() const { return _configs; }
+
+    template <typename FlowT, typename... Args>
+    void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
+        static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
+
+        using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
+        args_tuple_t args_tuple(std::forward<Args>(args)...);
+
+        next_pipeline_type& next    = _next;
+
+        auto lambda = [flow, &next, this, args_tuple](std::variant<bool, std::exception_ptr> success){
+            if(success.index() == 0 && std::get<0>(success)) {
+                typename next_pipeline_type::configs_type& next_configs = next.configs();
+                flow->apply(*this, next_configs);
+                std::apply(
+                    [&](auto&... args) {
+                        next(flow, args...);
+                    },
+                    args_tuple
+                );
+            } else {
+                // terminate
+            }
+        };
+
+        std::apply(
+            [&](auto&... args) {
+                _pipeline.then(std::move(lambda)).eval(args...);
+            },
+            args_tuple
+        );
+    }
+
+    template <typename FlowT, typename... Args>
+    void operator()(std::shared_ptr<FlowT> flow, boost::asio::io_context& io, Args&&... args){
+        static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
+
+        using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
+        args_tuple_t args_tuple(std::forward<Args>(args)...);
+
+        next_pipeline_type& next    = _next;
+
+        auto lambda = [flow, &io, &next, this, args_tuple](std::variant<bool, std::exception_ptr> success){
+            if(success.index() == 0 && std::get<0>(success)) {
+                typename next_pipeline_type::configs_type& next_configs = next.configs();
+                flow->apply(*this, next_configs);
+                std::apply(
+                    [&](auto&... args) {
+                        next(flow, io, args...);
+                    },
+                    args_tuple
+                );
+            } else {
+                // terminate
+            }
+        };
+
+        std::apply(
+            [&](auto&... args) {
+                _pipeline.then(std::move(lambda)).eval(args...);
+            },
+            args_tuple
+        );
+    }
+
+    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return *this; }
+
+    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return *this; }
+
+    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
+
+    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
+
+    template <std::size_t N, std::enable_if_t<(N < Stage), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
+
+private:
+    configs_type& configs() { return _configs; }
+
+private:
+    composition_type&   _composition;
+    const prev_pipeline_type& _previous;
+    configs_type        _configs;   // per stage copy of configs
+    pipeline_type       _pipeline;
+    next_pipeline_type  _next;
+};
+
+
 
 /**
  * @brief provides the sketch of executaion plan for the label
@@ -293,6 +539,13 @@ struct runtime{
     using flow_wptr_type    = std::weak_ptr<flow_type>;
     using collection_type   = std::vector<flow_wptr_type>;
 
+    static constexpr std::size_t Count = sketch_type::Count;
+
+    template <int Stage>
+    using pipeline_at          = pipeline<composition_type, order_type, Count, Stage>;
+    using start_pipeline_type  = pipeline_at<-1>;
+    using finish_pipeline_type = pipeline_at<Count>;
+
     runtime(runtime&&) = delete;
 
     runtime& operator=(runtime&&) = delete;
@@ -305,6 +558,8 @@ struct runtime{
 
     const configs_type& baseline() const {return _baseline; }
 
+    configs_type& baseline() {return _baseline; }
+
     flow_ptr_type spawn() {
         std::scoped_lock lock(_mutex);
         flow_ptr_type flow_ptr = flow_type::create(*this);
@@ -314,7 +569,7 @@ struct runtime{
 
     std::size_t count() const {
         std::scoped_lock<std::mutex> lock(_mutex);
-        return _flows.size();;
+        return _flows.size();
     }
 
     void cleanup() {
@@ -373,15 +628,18 @@ template <typename LabelT>
 struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<LabelT, sketch<LabelT>::Count, 0>{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
-    using engine_type       = runtime<label_type>;
+    using runtime_type      = runtime<label_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
+    using configs_type      = typename composition_type::configs_type;
+    using ptr               = std::shared_ptr<flow<LabelT>>;
 
     static constexpr std::size_t Count = sketch_type::Count;
 
-    using pipeline_type     = pipeline<composition_type, order_type, Count, -1>;
-    using configs_type      = typename composition_type::configs_type;
-    using ptr               = std::shared_ptr<flow<LabelT>>;
+    template <int Stage>
+    using pipeline_at          = typename runtime_type::template pipeline_at<Stage>;
+    using start_pipeline_type  = typename runtime_type::start_pipeline_type;
+    using finish_pipeline_type = typename runtime_type::finish_pipeline_type;
 
     template <typename>
     friend struct runtime;
@@ -392,24 +650,24 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
 
     ptr self() { return std::enable_shared_from_this<flow<LabelT>>::shared_from_this(); }
 
-    template <std::size_t Stage>
-    void apply(const pipeline<composition_type, order_type, Count, Stage>& p, typename pipeline<composition_type, order_type, Count, Stage+1>::configs_type& config){
-        detail::patcher<LabelT, sketch<LabelT>::Count, 0>::apply(p, config);
+    template <int Stage>
+    void apply(const pipeline_at<Stage>& p, typename pipeline_at<Stage+1>::configs_type& config){
+        detail::patcher<LabelT, sketch<LabelT>::Count, Stage>::apply(p, config);
     }
 
-    void start() { _pipeline(self()); }
+    template <typename... Args>
+    void start(Args&&... args) { _pipeline(self(), std::forward<Args>(args)...); }
 
-    void start(boost::asio::io_context& io) { _pipeline(io, self()); }
-
-private:
-    flow(composition_type& composition, const configs_type& baseline): _pipeline(composition, baseline) {}
-
-    static ptr create(engine_type& engine) {
-        return ptr(new flow(engine.composition(), engine.baseline()));
-    }
+    template <typename... Args>
+    void start(boost::asio::io_context& io, Args&&... args) { _pipeline(self(), io, std::forward<Args>(args)...); }
 
 private:
-    pipeline_type _pipeline;
+    flow(composition_type& composition, configs_type& baseline): _pipeline(composition, baseline) {}
+
+    static ptr create(runtime_type& runtime) { return ptr(new flow(runtime.composition(), runtime.baseline())); }
+
+private:
+    start_pipeline_type _pipeline;
 
 };
 
