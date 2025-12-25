@@ -37,6 +37,130 @@ class next_evaluator_helper_internal;
 
 }
 
+
+/**
+ * @class facet
+ * @brief Implements the evaluation logic for a component-feature pair
+ *
+ * Facets are the units of pipeline evaluation, each representing one
+ * component providing one feature, and defines how that feature is
+ * provided for that component.
+ *
+ * @tparam ComponentT The component providing the feature
+ * @tparam FeatureT The feature being provided
+ *
+ * # Specialization Required
+ *
+ * Usercode must specialize facet for each component-feature pair:
+ *
+ * @code
+ * template <>
+ * struct facet<AuthComponent, feature::filter> {
+ *     using component_type = AuthComponent;
+ *     using config_type    = udho::manifold::config<component_type>;
+ *
+ *     facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+ *
+ *     template <typename JournalT, typename NextT, typename... Args>
+ *     void operator()(const JournalT& journal, NextT&& next, Args&&... args) const {
+ *         ...
+ *         feature::filter::result res; // construct result of evaluation
+ *         next.pass(std::move(res));
+ *         ...
+ *         next.pass(); // if the feture doesn't have any result
+ *         ...
+ *         next.fail(); // if the evaluation fails
+ *     }
+ *     private:
+ *         component_type&    _component;
+ *         const config_type& _config;
+ *
+ * };
+ * @endcode
+ *
+ * # Evaluation Signature
+ *
+ * The operator() receives:
+ * - **journal**: Read-only access to results from previous facets
+ * - **next**: Continuation object for control flow (pass/fail/skip)
+ * - **args**: Arguments forwarded from pipeline::eval()
+ *
+ * # Control Flow
+ *
+ * Facets signal completion via the next object:
+ *
+ * @code
+ * void operator()(const JournalT& journal, NextT&& next, Args&&... args) const {
+ *     // use journal to get the results from prebious facets evaluation in the pipeline
+ *     if (success) {
+ *         result r{true};
+ *         next.pass(std::move(r));  // Continue pipeline
+ *     } else {
+ *         result r{false};
+ *         next.fail();  // Stop pipeline
+ *     }
+ * }
+ * @endcode
+ *
+ * # Result Handling
+ *
+ * - **Facets with results** (feature defines `result` type):
+ *   - Must call `next.pass(result)` or `next.fail(result)`
+ *   - Results are stored in journal before continuation
+ *
+ * - **Facets without results** (no `result` type):
+ *   - Call `next.pass()` or `next.fail()`
+ *   - No journal entry created
+ *
+ * # Journal Access
+ *
+ * Facets can access results from earlier facets:
+ *
+ * @code
+ * void operator()(const JournalT& journal, NextT&& next, ...) {
+ *     // Access result by facet type
+ *     auto& auth_result = journal.get<facet<AuthComp, FeatureX>>();
+ *     if (auth_result.ready() && auth_result->success()) {
+ *         // ...
+ *     }
+ *
+ *     // Access result by feature and index
+ *     auto& first_filter = journal.at<feature::filter, 0>();
+ * }
+ * @endcode
+ *
+ * # Exception Handling
+ *
+ * Exceptions thrown during facet evaluation are caught by the pipeline:
+ * - Exception is captured as std::exception_ptr
+ * - Completion callback receives exception
+ * - Pipeline terminates
+ *
+ * @warning However, any exception thrown asynchronously may not be caught.
+ *          Such exceptions should be caught and handled by the fabric itself
+ *          and moved to the fail() function
+ *
+ * @code
+ * void operator()(...) {
+ *     if (error_condition) {
+ *         throw std::runtime_error("Something went wrong");
+ *         // Pipeline catches, stores exception, terminates
+ *     }
+ * }
+ * @endcode
+ *
+ * # Best Practices
+ *
+ * 1. **Keep facets focused**: One concern per facet
+ * 2. **Prefer composition**: Use journal to share data between facets
+ * 3. **Handle errors gracefully**: Use fail() rather than exceptions when possible
+ * 4. **Document requirements**: Specify which journal entries are required
+ * 5. **Test independently**: Facets are unit-testable
+ *
+ * @see fabric
+ * @see journal
+ * @see evaluator_helper
+ */
 template <typename ComponentT, typename FeatureT>
 struct facet;
 

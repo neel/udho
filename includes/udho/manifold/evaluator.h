@@ -1,5 +1,5 @@
-#ifndef UDHO_MANIFOLD_EVALUATOR_helper_H
-#define UDHO_MANIFOLD_EVALUATOR_helper_H
+#ifndef UDHO_MANIFOLD_EVALUATOR_HELPER_H
+#define UDHO_MANIFOLD_EVALUATOR_HELPER_H
 
 #include <boost/asio/ip/address.hpp>
 #include <udho/net/common.h>
@@ -10,21 +10,40 @@
 namespace udho {
 namespace manifold {
 
-
+/**
+ * @class exclusive_result
+ * @brief A wrapper for storing either a successful result or an exception
+ *
+ * This class encapsulates the result of an asynchronous operation that can
+ * either succeed (returning true) or fail (storing an exception). It provides
+ * a unified interface for checking success and rethrowing exceptions.
+ *
+ * @note Designed to be used in pipeline evaluation where exceptions need to
+ *       be propagated across asynchronous boundaries.
+ */
 class exclusive_result{
     std::exception_ptr _exception;
 public:
-    exclusive_result() = default;
-    exclusive_result(const exclusive_result&) = default;
-    exclusive_result(exclusive_result&&) = default;
+    exclusive_result() = default;                               ///< Default Constructor
+    exclusive_result(const exclusive_result&) = default;        ///< Compy constructor
+    exclusive_result(exclusive_result&&) = default;             ///< Move constructor
+
+    /// @brief Construct with an exception
+    /// @param exptr Exception pointer to store
     exclusive_result(std::exception_ptr&& exptr): _exception(std::move(exptr)) {}
-    exclusive_result& operator=(const exclusive_result&) = default;
+    exclusive_result& operator=(const exclusive_result&) = default;    ///< Copy assignment operator
 public:
+    /// @brief Assign an exception
+    /// @param exptr Exception pointer to store
+    /// @return Reference to this object
     exclusive_result& operator=(std::exception_ptr&& exptr) {
         _exception = std::move(exptr);
         return *this;
     }
 public:
+    /// @brief Check and propagate exception
+    /// @return Always returns true if no exception stored
+    /// @throws The stored exception if one exists
     bool operator()() const {
         if(_exception) {
             std::rethrow_exception(_exception);
@@ -32,21 +51,50 @@ public:
         return true;
     }
 public:
+    /// @brief Check if operation was successful
+    /// @return true if no exception stored
     bool success() const { return !_exception; }
+    /// @brief Check if operation failed
+    /// @return true if an exception is stored
     bool error() const { return !success(); }
 public:
+    /// @brief Dereference operator for checking success
+    /// @return true if no exception stored
     bool operator*() const { return success(); }
+    /// @brief Rethrow the stored exception
+    /// @pre error() must be true
     void rethrow() const {
         assert(error());
         std::rethrow_exception(_exception);
     }
 public:
+    /// @brief Boolean conversion for checking success
+    /// @return true if no exception stored
     operator bool() const { return success(); }
+    /// @brief Negation operator for checking failure
+    /// @return true if an exception is stored
     bool operator!() const { return error(); }
 };
 
 namespace detail {
 
+/**
+ * @class next_evaluator_helper_internal
+ * @brief Internal helper for facet evaluation with result propagation
+ *
+ * This class manages the continuation of facet evaluation in a pipeline.
+ *
+ * @tparam Idx Index of the current facet in its feature group
+ * @tparam ArgsTupleT Type of tuple storing arguments to forward
+ * @tparam FacetT Type of the facet being evaluated
+ * @tparam HandlerT Type of the handler managing evaluation state
+ * @tparam YieldsResult Whether the facet produces a result (deduced from FacetT)
+ *
+ * @note This is an implementation detail and not intended for direct use.
+ *
+ * @see next_evaluator_helper
+ * @see evaluator_helper
+ */
 template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT, bool YieldsResult=udho::manifold::has_result<FacetT>::value>
 class next_evaluator_helper_internal{
     using facet_type      = FacetT;
@@ -58,44 +106,112 @@ class next_evaluator_helper_internal{
     handler_type _handler;
     args_tuple_type _args;
 public:
+
+    /**
+     * @brief Construct with handler and arguments
+     * @param handler Handler managing the evaluation state
+     * @param args Arguments to forward to next evaluator
+     */
     inline explicit next_evaluator_helper_internal(handler_type&& handler, args_tuple_type&& args): _handler(std::move(handler)), _args(std::move(args)) {}
+
     next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
+
+    /// @brief Move constructor
     next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)) {}
 
+    /**
+     * @brief Pass proceed to the next evaluator with a successful result
+     * @param result The result to store in the journal
+     *
+     * Stores the result in the journal and proceeds to evaluate the next
+     * facet in the pipeline.
+     */
     void pass(result_type&& result) {
         _handler.journal().template get<facet_type>() = std::move(result);
         proceed();
     }
 
+    /**
+     * @brief proceed to the next evaluator without result
+     *
+     * Used when a facet doesn't need to be evaluated but the pipeline
+     * should continue.
+     */
     void skip(){
         proceed();
     }
 
+    /**
+     * @brief Fail with a result
+     * @param result The failure result to store
+     *
+     * Stores the failure result in the journal and calls the completion
+     * handler with false, which may terminate the pipeline
+     */
     void fail(result_type&& result){
         _handler.journal().template get<facet_type>() = std::move(result);
         _handler.completion()(false);
     }
 
+    /**
+     * @brief Fail with an exception
+     * @param exptr Exception pointer to propagate
+     *
+     * Terminates the pipeline by calling the completion handler with
+     * the exception.
+     */
     void fail(std::exception_ptr&& ex){
         _handler.completion()(std::move(ex));
     }
 
+    /**
+     * @brief Fail with an exception object
+     * @param ex Exception to propagate
+     *
+     * Converts the exception to a std::exception_ptr and terminates
+     * the pipeline.
+     */
     void fail(std::exception&& ex){
         _handler.completion()(std::make_exception_ptr(std::move(ex)));
     }
 
+    /**
+     * @brief Proceed to the next facet
+     *
+     * Invokes the next evaluator in the pipeline with the stored arguments.
+     */
     void proceed(){
         std::apply([&](auto&&... args){
             _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
         }, _args);
     }
 
+    /**
+     * @brief Handle facet evaluation result
+     * @param result The result from facet evaluation
+     * @param success Whether the evaluation was successful
+     *
+     * Routes the result to either pass() or fail() based on success flag.
+     */
     void operator()(result_type&& result, bool success = true){
         if(success) pass(std::forward<result_type>(result));
         else        fail(std::forward<result_type>(result));
     }
 };
 
+
+/**
+ * @class next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT, false>
+ * @brief Specialization for facets that don't produce results
+ *
+ * This specialization handles facets that perform side effects but don't
+ * return results to be stored in the journal.
+ *
+ * @tparam Idx Index of the current facet in its feature group
+ * @tparam ArgsTupleT Type of tuple storing arguments to forward
+ * @tparam FacetT Type of the facet being evaluated
+ * @tparam HandlerT Type of the handler managing evaluation state
+ */
 template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT>
 class next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT, false>{
     using facet_type      = FacetT;
@@ -107,28 +223,63 @@ class next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT, false>{
     handler_type _handler;
     args_tuple_type _args;
 public:
+
+    /**
+     * @brief Construct with handler and arguments
+     * @param handler Handler managing the evaluation state
+     * @param args Arguments to forward to next evaluator
+     */
     inline explicit next_evaluator_helper_internal(handler_type&& handler, args_tuple_type&& args): _handler(std::move(handler)), _args(std::move(args)) {}
     next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
     next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)) {}
 
+    /**
+     * @brief Pass to the next facet
+     *
+     * Proceeds to evaluate the next facet in the pipeline without
+     * storing any result.
+     */
     void pass() {
         std::apply([&](auto&&... args){
             _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
         }, _args);
     }
 
+    /**
+     * @brief Skip evaluation of this facet
+     *
+     * Equivalent to pass() for facets without results.
+     */
     void skip(){
         pass();
     }
 
+    /**
+     * @brief Fail without a result
+     *
+     * Terminates the pipeline by calling the completion handler with false.
+     */
     void fail(){
         _handler.completion()(false);
     }
 
+    /**
+     * @brief Fail with an exception object
+     * @param ex Exception to propagate
+     *
+     * Converts the exception to a std::exception_ptr and terminates
+     * the pipeline.
+     */
     void fail(std::exception&& ex){
         _handler.completion()(std::make_exception_ptr(std::move(ex)));
     }
 
+    /**
+     * @brief Handle facet evaluation completion
+     * @param success Whether the evaluation was successful
+     *
+     * Routes to either pass() or fail() based on success flag.
+     */
     void operator()(bool success = true){
         if(success) pass();
         else        fail();
@@ -143,22 +294,47 @@ struct next_evaluator_helper: next_evaluator_helper_internal<Idx, ArgsTupleT, Fa
 };
 
 
-
+/**
+ * @class evaluator_helper
+ * @brief Encapsulates the stage and order of features for facet evaluation
+ *
+ * This template class provides the infrastructure for evaluating facets in a
+ * specific order based on their features. It handles the recursive evaluation
+ * of facets within and across features.
+ *
+ * @tparam Stage Filter facets by the stage
+ * @tparam Features... The ordered set of features by which the facets will be evaluated
+ *
+ * @note The evaluation order is determined by the Features... template parameter
+ *       list. Facets are evaluated feature-by-feature, and within each feature,
+ *       they are evaluated in the order they appear in the composition.
+ */
 template <std::size_t, typename...>
 struct evaluator_helper;
 
 /**
- * @brief The evaluator_helper class provides encapsulates the stage and an order of features and provides a handler as the inner class for facet evaluation.
- * @tparam Stage filter facets by the stage
- * @tparam Features... The ordered set of features by which the facets will be evaluated
+ * @class evaluator_helper<Stage, FeatureX, Features...>
+ * @brief Primary template for feature-based evaluator with at least one feature
+ *
+ * This specialization handles the recursive evaluation of multiple features.
+ * It contains an inner handler class that manages the evaluation state.
+ *
+ * @tparam Stage Filter facets by the stage
+ * @tparam FeatureX The current feature being evaluated
+ * @tparam Features... The remaining features to evaluate
  */
 template <std::size_t Stage, typename FeatureX, typename... Features>
 struct evaluator_helper<Stage, FeatureX, Features...>{
 
     /**
-     * @brief The handler is used by detail::next_evaluator_helper_internal.
-     * @tparam Facets... The facets
-     * Contains a reference to the fabric and the journal for all the facets
+     * @class handler
+     * @brief Manages facet evaluation state for a specific feature sequence
+     *
+     * This inner class maintains references to the fabric, journal, and
+     * callback, and provides methods to evaluate facets in the correct order.
+     *
+     * @tparam JournalT Type of the journal storing facet results
+     * @tparam Facets... The facets available in the fabric
      */
     template <typename JournalT, typename... Facets>
     struct handler{
@@ -169,20 +345,27 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         using async_callback_type = std::function<void (safe_success_type)>;
 
         /**
-         * @brief handler constructor
-         * @param fabric
-         * @param journal
-         * @param callback
+        /**
+         * @brief Construct a handler
+         * @param fabric Reference to the fabric containing facets
+         * @param journal Reference to the journal for storing results
+         * @param callback Callback to invoke on pipeline completion
          *
-         * @note The callback will be called with an instance of safe_success_type containing std::current_exception in case an exception
-         *       is thrown by a facet in the fabric
+         * @note The callback will be called with an instance of safe_success_type
+         *       containing std::current_exception in case an exception is thrown
+         *       by a facet in the fabric
          */
         handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
+        /// @brief Move constructor
         handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _callback(other._callback) {}
         handler(const handler&) = delete;
 
+        /// @brief Access the journal
+        /// @return Reference to the journal
         journal_type& journal() { return _journal; }
 
+        /// @brief Access the completion callback
+        /// @return Reference to the callback
         async_callback_type& completion() { return _callback; }
 
         /**
@@ -313,4 +496,4 @@ struct evaluator_helper<Stage>{
 }
 }
 
-#endif // UDHO_MANIFOLD_EVALUATOR_helper_H
+#endif // UDHO_MANIFOLD_EVALUATOR_HELPER_H

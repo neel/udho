@@ -54,7 +54,22 @@ struct has_features<T, std::void_t<typename T::features>> : std::true_type {
  */
 template <typename ComponentT>
 struct component_traits{
+
+    /**
+     * @brief Whether component uses reference storage semantics
+     *
+     * True if component should be borrowed (stored as reference).
+     * False if component should be owned (stored by value).
+     *
+     * Default: true if component is non-movable or non-default-constructible
+     */
     static constexpr const bool shared = !std::is_move_constructible_v<ComponentT> || !std::is_default_constructible_v<ComponentT>;
+
+    /**
+     * @brief Parameters type for this component
+     *
+     * Defines the configuration parameters. Empty params<> if none.
+     */
     using params = typename detail::has_params<ComponentT>::type;
 };
 
@@ -81,15 +96,74 @@ struct has_name: udho::utils::conditional_t<has_static_name<T>::value, has_stati
 
 }
 
+/**
+ * @struct has_name
+ * @brief Type trait indicating if a component has a name
+ *
+ * Checks for either ComponentT::name or component_traits<ComponentT>::name.
+ *
+ * @tparam ComponentT Component type to check
+ */
 template <typename ComponentT>
 struct has_name: detail::has_name<ComponentT> {};
 
+/**
+ * @brief Get the name of a component
+ *
+ * Returns the component's name as a string_view. Name is determined by:
+ * 1. ComponentT::name (if present)
+ * 2. component_traits<ComponentT>::name (if present)
+ * 3. Compile error if neither exists
+ *
+ * @tparam ComponentT Component type
+ * @return constexpr string_view Component name
+ *
+ * @code
+ * struct MyComponent {
+ *     static constexpr std::string_view name = "MyComp";
+ * };
+ *
+ * auto name = component_name<MyComponent>();  // "MyComp"
+ * @endcode
+ */
 template <typename ComponentT>
 static constexpr udho::utils::string_view component_name() {
     static_assert(has_name<ComponentT>::value, "ComponentT doesn't have a name. Either set ComponentT::name as a static constexpr member or set component_traits<ComponentT>:");
     return has_name<ComponentT>::get();
 }
 
+/**
+ * @class facet_traits
+ * @brief Metadata about a facet (component-feature pair)
+ *
+ * Provides compile-time information about facets, including:
+ * - Component and feature types
+ * - Result type (if feature yields results)
+ * - Pipeline stage
+ *
+ * @tparam FacetT The facet type (udho::manifold::facet<Component, Feature>)
+ *
+ * # Trait Members
+ *
+ * @code
+ * using FacetT = facet<MyComponent, MyFeature>;
+ *
+ * using component = facet_traits<FacetT>::component_type;  // MyComponent
+ * using feature = facet_traits<FacetT>::feature_type;      // MyFeature
+ * using result = facet_traits<FacetT>::result_type;        // MyFeature::result
+ * constexpr size_t stage = facet_traits<FacetT>::stage;    // MyFeature::stage
+ * @endcode
+ *
+ * # Usage
+ *
+ * Traits are used internally by the pipeline system to:
+ * - Build stage-specific fabrics
+ * - Construct journals for result storage
+ * - Generate evaluation handlers
+ *
+ * @see facet
+ * @see has_result
+ */
 template <typename FacetT>
 struct facet_traits;
 
@@ -103,15 +177,66 @@ struct facet_traits<udho::manifold::facet<ComponentT, FeatureT>> {
     static constexpr const std::size_t stage = FeatureT::stage;
 };
 
+/**
+ * @struct has_result
+ * @brief Type trait indicating if a facet yields results
+ *
+ * Evaluates to true if the feature defines a result type, false otherwise.
+ *
+ * @tparam FacetT Facet type to check
+ *
+ * # Usage
+ *
+ * @code
+ * static_assert(has_result<facet<CompA, FeatureX>>::value);
+ * static_assert(!has_result<facet<CompB, FeatureY>>::value);
+ * @endcode
+ *
+ * Used internally to determine journal storage requirements.
+ */
 template <typename FacetT>
 struct has_result: std::bool_constant<!std::is_void<typename facet_traits<FacetT>::result_type>::value> {};
 
+/**
+ * @struct has_params
+ * @brief Type trait indicating if a component has parameters
+ *
+ * @tparam ComponentT Component type to check
+ *
+ * Evaluates to true if component defines a params typedef.
+ */
 template <typename ComponentT>
 struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::params>::value> {};
 
+/**
+ * @struct has_features
+ * @brief Type trait indicating if a component provides features
+ *
+ * @tparam ComponentT Component type to check
+ *
+ * Evaluates to true if component defines a features typedef.
+ */
 template <typename ComponentT>
 struct has_features: std::bool_constant<!std::is_void<detail::has_features<ComponentT>>::value> {};
 
+/**
+ * @struct default_constructed
+ * @brief Tag type for default construction in composition
+ *
+ * Used internally by compositor to indicate that a component should be
+ * default-constructed rather than moved or referenced.
+ *
+ * # Usage (Internal)
+ *
+ * @code
+ * composition<CompA, CompB> comp{
+ *     CompA{args},             // Move-constructed
+ *     default_constructed{}    // Default-constructed
+ * };
+ * @endcode
+ *
+ * User code should prefer `compositor::compose()` which handles this automatically.
+ */
 struct default_constructed{};
 
 
