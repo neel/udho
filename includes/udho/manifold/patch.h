@@ -6,8 +6,15 @@
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/params.h>
 
+
+
 namespace udho{
 namespace manifold{
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 template <typename... Params>
 struct changeset: udho::hazo::map_d<Params...>{
@@ -91,7 +98,13 @@ udho::hazo::map_d<detail::field<Fields>...> make_diff(const udho::manifold::para
     return udho::hazo::map_d<detail::field<Fields>...>{changeset_type::template contains<Fields>::value...};
 }
 
+/**
+ * @}
+ */
+
+
 }
 }
+
 
 #endif // UDHO_MANIFOLD_CONFIG_PATCH_H

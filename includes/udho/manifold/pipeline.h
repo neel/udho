@@ -7,8 +7,15 @@
 #include <udho/manifold/journal.h>
 #include <udho/manifold/evaluator.h>
 
+
 namespace udho {
 namespace manifold {
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
+
 
 namespace detail{
 
@@ -36,15 +43,38 @@ struct get_handler_type<JournalT, udho::manifold::fabric<Stage, Facets...>>{
 
 };
 
+/**
+ * @brief Basic pipeline implementation for a single stage
+ *
+ * Provides the core evaluation infrastructure for a specific pipeline stage,
+ * managing the fabric of components and their evaluation order.
+ *
+ * @tparam Stage The pipeline stage index
+ * @tparam Components... The component types available in this composition
+ */
 template <std::size_t Stage, typename... Components>
 struct basic_pipeline{
     using fabric_type       = typename udho::manifold::detail::flatten_all<Stage, Components...>::type;
-    // using journal_type     = typename udho::manifold::detail::journal_for_fabric<fabric_type>::type;
     using full_journal_type = typename detail::get_journal_for_all_components<Components...>::type;
 
+    /**
+     * @brief Constructs a basic pipeline for a composition
+     *
+     * @tparam XComponents... Component types in the provided composition
+     * @param composition The component composition to evaluate
+     * @param configs Configuration for all components
+     */
     template <typename... XComponents>
     basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs): _fabric(composition, configs) {}
 
+    /**
+     * @brief Evaluator for executing features in a specific order
+     *
+     * Provides type-safe evaluation of features in the specified order,
+     * managing the flow control between facets and handling completion callbacks.
+     *
+     * @tparam Features... The feature types to evaluate in order
+     */
     template <typename... Features>
     struct evaluator{
         using helper_type         = detail::evaluator_helper<Stage, Features...>;
@@ -52,8 +82,24 @@ struct basic_pipeline{
         using safe_success_type   = typename handler_type::safe_success_type;
         using async_callback_type = typename handler_type::async_callback_type;
 
+        /**
+         * @brief Constructs an evaluator for the pipeline stage
+         *
+         * @param fabric The fabric containing all facets for this stage
+         * @param journal Journal for storing facet results
+         * @param callback Completion callback for pipeline stage
+         */
         evaluator(fabric_type& fabric, full_journal_type& journal, async_callback_type& callback): _handler(fabric, journal, callback) {}
 
+        /**
+         * @brief Evaluates the pipeline stage with the given arguments
+         *
+         * Initiates evaluation of all features in the specified order,
+         * forwarding arguments to each facet.
+         *
+         * @tparam Args... Argument types to forward to facets
+         * @param args Arguments to forward to facets
+         */
         template <typename... Args>
         void eval(Args&&... args){
             _handler.template operator()<0>(std::forward<Args>(args)...);
@@ -63,21 +109,50 @@ struct basic_pipeline{
         handler_type _handler;
     };
 
-    fabric_type& fabric() { return _fabric; }
-    const fabric_type& fabric() const { return _fabric; }
+    /// @name Fabric Access
+    /// @{
 
-    // journal_type& journal() { return _journal; }
-    // const journal_type& journal() const { return _journal; }
+    /**
+     * @brief Gets the fabric for this pipeline stage
+     * @return Reference to the stage's fabric
+     */
+    fabric_type& fabric() { return _fabric; }
+
+    /**
+     * @brief Gets the fabric for this pipeline stage (const)
+     * @return Const reference to the stage's fabric
+     */
+    const fabric_type& fabric() const { return _fabric; }
+    /// @}
 
     private:
     fabric_type  _fabric;
-    // journal_type _journal;
 
 };
 
+/**
+ * @brief Defines the evaluation order of features within a stage
+ *
+ * The order template specifies the sequence in which features should be
+ * evaluated within a pipeline stage. Features are evaluated in the order
+ * they appear in the template parameter list.
+ *
+ * @tparam Features... The feature types in evaluation order
+ */
 template <typename... Features>
 struct order{};
 
+/**
+ * @brief Common pipeline implementation with feature ordering
+ *
+ * Extends basic_pipeline to provide ordered feature evaluation within a stage.
+ * Manages evaluation callbacks and provides a fluent interface for chaining
+ * completion handlers.
+ *
+ * @tparam Stage The pipeline stage index
+ * @tparam OrderT The order<Features...> specifying feature evaluation order
+ * @tparam CompositionT The composition type being evaluated
+ */
 template <std::size_t Stage, typename OrderT, typename CompositionT>
 class common_pipepine;
 
@@ -209,8 +284,6 @@ public:
      */
     using basic_pipeline_type::fabric;
     /// @}
-
-    // using basic_pipeline_type::journal;
 
     /**
      * @brief Evaluates the pipeline stage with provided arguments
@@ -350,9 +423,30 @@ private:
     evaluator_type      _evaluator;
 };
 
+/**
+ * @brief Flow label for pipeline type identification
+ *
+ * Empty struct used as a tag to identify and specialize pipeline
+ * configurations. Each unique flow type should have its own label.
+ *
+ * @tparam LabelT The label type (typically an empty struct)
+ */
 template <typename LabelT>
 struct flow;
 
+/**
+ * @brief Complete multi-stage pipeline implementation
+ *
+ * Manages the complete execution flow across multiple pipeline stages,
+ * handling stage transitions, configuration propagation, and flow termination.
+ * Provides type-safe access to pipelines at individual stages and manages the
+ * shared configuration state across all stages.
+ *
+ * @tparam CompositionT The component composition type
+ * @tparam OrderT The feature order type (order<Features...>)
+ * @tparam Count The total number of pipeline stages
+ * @tparam Stage The current stage index (-1 for start, Count for finish)
+ */
 template <typename CompositionT, typename OrderT, std::size_t Count, int Stage = 0>
 struct pipeline{
     static_assert (Stage < Count);
@@ -365,6 +459,15 @@ struct pipeline{
 
     friend class pipeline<composition_type, order_type, Count, Stage-1>;
 
+    /**
+     * @brief Constructs a pipeline stage
+     *
+     * @tparam JournalT Journal type for storing facet results
+     * @param composition The component composition
+     * @param baseline Baseline configuration shared across all stages
+     * @param journal Journal for storing facet results
+     * @param previous Reference to the previous pipeline stage
+     */
     template <typename JournalT>
     pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous)
         : _composition(composition), _configs(baseline), _pipeline(composition, _configs, journal), _next(composition, baseline, journal, *this), _previous(previous)
@@ -372,9 +475,37 @@ struct pipeline{
         // _configs copy constructor picks the relevant configs from the baseline
     }
 
-    configs_type& configs() { return _configs; }
-    const configs_type& configs() const { return _configs; }
+    /// @name Configuration Access
+    /// @{
 
+    /**
+     * @brief Gets the shared configuration for this pipeline
+     * @return Reference to the shared configuration
+     */
+    configs_type& configs() { return _configs; }
+
+    /**
+     * @brief Gets the shared configuration for this pipeline (const)
+     * @return Const reference to the shared configuration
+     */
+    const configs_type& configs() const { return _configs; }
+    /// @}
+
+    /**
+     * @brief Executes the pipeline stage synchronously
+     *
+     * Evaluates the current pipeline stage with the provided arguments.
+     * Sets up completion callbacks to transition to the next stage or
+     * terminate the flow on failure.
+     *
+     * @tparam FlowT The flow type managing this execution
+     * @tparam Args... Argument types to forward to facets
+     * @param flow Shared pointer to the flow managing this execution
+     * @param args Arguments to forward to facets
+     *
+     * @note Non-lvalue arguments must be CopyConstructible to ensure
+     *       safe forwarding between pipeline stages.
+     */
     template <typename FlowT, typename... Args>
     void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
@@ -386,8 +517,20 @@ struct pipeline{
         _pipeline.eval(std::forward<Args>(args)...);
     }
 
+    /**
+     * @brief Executes the pipeline stage asynchronously
+     *
+     * Similar to the synchronous version but integrates with Boost.Asio
+     * for asynchronous completion handling.
+     *
+     * @tparam FlowT The flow type managing this execution
+     * @tparam Args... Argument types to forward to facets
+     * @param flow Shared pointer to the flow managing this execution
+     * @param io Boost.Asio io_context for async operations
+     * @param args Arguments to forward to facets
+     */
     template <typename FlowT, typename... Args>
-    void operator()(std::shared_ptr<FlowT> flow, boost::asio::io_context& io, Args&&... args){
+    void operator()(boost::asio::io_context& io, std::shared_ptr<FlowT> flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
         using args_tuple_t = std::tuple<boost::asio::io_context&, std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
@@ -397,6 +540,17 @@ struct pipeline{
         _pipeline.eval(std::forward<Args>(args)...);
     }
 
+    /// @name Stage Access
+    /// @{
+
+    /**
+     * @brief Gets a reference to a specific pipeline stage
+     *
+     * Provides type-safe access to any pipeline stage by index.
+     *
+     * @tparam N The stage index to access
+     * @return Reference to the requested pipeline stage
+     */
     template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
     pipeline<composition_type, order_type, Count, N>& at() { return *this; }
 
@@ -411,8 +565,21 @@ struct pipeline{
 
     template <std::size_t N, std::enable_if_t<(N < Stage), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
+    /// @}
 
 private:
+
+    /**
+     * @brief Internal method to set up stage transition logic
+     *
+     * Configures the completion callback for the current stage to either
+     * transition to the next stage or terminate the flow on failure.
+     *
+     * @tparam FlowT The flow type
+     * @tparam ArgsTupleT Tuple type capturing forwarded arguments
+     * @param flow Shared pointer to the flow
+     * @param args_tuple Tuple containing arguments to forward
+     */
     template <typename FlowT, typename ArgsTupleT>
     void _then(std::shared_ptr<FlowT> flow, ArgsTupleT& args_tuple){
         auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
@@ -439,6 +606,16 @@ private:
     next_pipeline_type  _next;
 };
 
+/**
+ * @brief Start pipeline stage (stage index -1)
+ *
+ * Specialization that serves as the entry point for pipeline execution.
+ * Manages the initial journal and provides access to pipeline at each stage.
+ *
+ * @tparam CompositionT The component composition type
+ * @tparam OrderT The feature order type
+ * @tparam Count The total number of pipeline stages
+ */
 template <typename CompositionT, typename OrderT, std::size_t Count>
 struct pipeline<CompositionT, OrderT, Count, -1> {
     using composition_type   = CompositionT;
@@ -449,24 +626,50 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
     using self_type          = pipeline<CompositionT, OrderT, Count, -1>;
     using ptr                = std::shared_ptr<self_type>;
 
+    /**
+     * @brief Constructs the start pipeline stage
+     *
+     * @param composition The component composition
+     * @param baseline Baseline configuration shared across all stages
+     */
     pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline): _composition(composition), _next(composition, baseline, _journal, *this) {}
 
+    /// @name Configuration Access
+    /// @{
     configs_type& configs() { return _configs; }
     const configs_type& configs() const { return _configs; }
+    /// @}
 
+    /**
+     * @brief Starts pipeline execution
+     *
+     * Forwards execution to the first actual pipeline stage (stage 0).
+     *
+     * @tparam Args... Argument types to forward
+     * @param args Arguments to forward to the first stage
+     */
     template <typename... Args>
     void operator()(Args&&... args){
         _next(std::forward<Args>(args)...);
     }
 
+    /// @name Stage Access
+    /// @{
     template <std::size_t N>
     pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
 
     template <std::size_t N>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
+    /// @}
 
+    /// @name Journal Access
+    /// @{
+    /**
+     * @brief Gets the journal containing results from all stages
+     * @return Const reference to the complete journal
+     */
     const full_journal_type& journal() const { return _journal; }
-
+    /// @}
 private:
     composition_type&   _composition;
     configs_type        _configs;
@@ -474,17 +677,50 @@ private:
     next_pipeline_type  _next;
 };
 
+/**
+ * @brief Finish pipeline stage (stage index Count)
+ *
+ * Specialization that serves as the terminal point for pipeline execution.
+ * Terminates the flow when reached, indicating successful completion of
+ * all pipeline stages.
+ *
+ * @tparam CompositionT The component composition type
+ * @tparam OrderT The feature order type
+ * @tparam Count The total number of pipeline stages
+ */
 template <typename CompositionT, typename OrderT, std::size_t Count>
 struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
     using prev_pipeline_type = pipeline<CompositionT, OrderT, Count, Count-1>;
     using configs_type       = typename prev_pipeline_type::configs_type;
 
+    /**
+     * @brief Constructs the finish pipeline stage
+     *
+     * @param composition The component composition (unused)
+     * @param configs Configuration reference
+     * @param journal Journal (unused)
+     * @param previous Reference to the previous pipeline stage
+     */
     template <typename JournalT>
     pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, const prev_pipeline_type& previous): _configs(configs), _previous(previous) {}
 
+    /// @name Configuration Access
+    /// @{
     configs_type& configs() { return _configs; }
     const configs_type& configs() const { return _configs; }
+    /// @}
 
+    /**
+     * @brief Terminates the flow with success
+     *
+     * Called when all pipeline stages have completed successfully.
+     * Notifies the flow of successful termination.
+     *
+     * @tparam FlowT The flow type
+     * @tparam Args... Argument types (unused)
+     * @param flow Shared pointer to the flow
+     * @param args Arguments (ignored)
+     */
     template <typename FlowT, typename... Args>
     void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
         flow->terminate(true);
@@ -496,13 +732,37 @@ private:
 };
 
 /**
- * @brief provides the sketch of executaion plan for the label
- * The label can be any emoty struct
- * The sketch specialization must contain the following typedefs
- * - composition_type
- * - order_type
- * - Count
+ * @brief Pipeline execution plan blueprint
  *
+ * Provides the static configuration for a pipeline type, defining:
+ * - The component composition
+ * - Feature evaluation order
+ *
+ * Must be specialized for each pipeline label with the appropriate
+ * type definitions.
+ *
+ * @code
+ * namespace testing{
+ *     struct Label;
+ * }
+ * template <>
+ * struct sketch<testing::Label> {
+ *     using composition_type = composition<
+ *         testing::C00,
+ *         testing::C01,
+ *         testing::C10,
+ *         ...
+ *     >;
+ *     using order_type = order<
+ *         testing::F00,
+ *         testing::F01,
+ *         testing::F10,
+ *         ...
+ *     >;
+ * };
+ * @endcode
+ *
+ * @tparam LabelT The label type identifying this pipeline configuration
  */
 template <typename LabelT>
 struct sketch;
@@ -537,6 +797,17 @@ struct composition_max_stage<udho::manifold::composition<Components...>>{
 
 }
 
+/**
+ * @brief Runtime manager for pipeline executions
+ *
+ * Manages the lifecycle of flows providing:
+ * - Composition and configuration management
+ * - Flow spawning and tracking
+ * - Baseline configuration loading/saving
+ * - Thread-safe flow management
+ *
+ * @tparam LabelT The label type identifying the pipeline configuration
+ */
 template <typename LabelT>
 struct runtime{
     using label_type        = LabelT;
@@ -546,18 +817,23 @@ struct runtime{
     using configs_type      = typename composition_type::configs_type;
     using flow_type         = flow<label_type>;
     using flow_ptr_type     = std::shared_ptr<flow_type>;
-    // using flow_wptr_type    = std::weak_ptr<flow_type>;
     using collection_type   = std::vector<flow_ptr_type>;
-
-    // static constexpr std::size_t Count = sketch_type::Count;
 
     static constexpr std::size_t Count = detail::composition_max_stage<composition_type>::value +1;
 
+    /// @name Pipeline Type Aliases
+    /// @{
     template <int Stage>
     using pipeline_at          = pipeline<composition_type, order_type, Count, Stage>;
     using start_pipeline_type  = pipeline_at<-1>;
     using finish_pipeline_type = pipeline_at<Count>;
+    /// @}
 
+    /**
+     * @brief Constructs a runtime
+     *
+     * @param composition Component composition for this runtime
+     */
     template <typename... Args>
     static composition_type compose(Args&&... args) { return composition_type::compose(std::forward<Args>(args)...); }
 
@@ -567,14 +843,38 @@ struct runtime{
 
     runtime(composition_type&& composition): _composition(std::move(composition)) {}
 
+    /// @name Composition Access
+    /// @{
     composition_type& composition() { return _composition; }
-
     const composition_type& composition() const { return _composition; }
+    /// @}
 
+    /// @name Configuration
+    /// @{
     const configs_type& baseline() const {return _baseline; }
-
     configs_type& baseline() {return _baseline; }
 
+    /**
+     * @brief Loads baseline configuration from JSON
+     *
+     * @param json JSON object containing configuration for all components
+     */
+    void load(const nlohmann::json& json){
+        _baseline.load(json);
+    }
+    /// @}
+
+    /// @name Flow Management
+    /// @{
+
+    /**
+     * @brief Spawns a new flow for pipeline execution
+     *
+     * Creates a new flow instance associated with this runtime.
+     * The flow is tracked internally until it completes.
+     *
+     * @return Shared pointer to the new flow
+     */
     flow_ptr_type spawn() {
         std::scoped_lock lock(_mutex);
         flow_ptr_type flow_ptr = flow_type::create(*this);
@@ -582,24 +882,29 @@ struct runtime{
         return flow_ptr;
     }
 
+    /**
+     * @brief Gets the current number of active flows
+     *
+     * @return Number of flows currently being tracked
+     */
     std::size_t count() const {
         std::scoped_lock<std::mutex> lock(_mutex);
         return _flows.size();
     }
 
-    // void cleanup() {
-    //     std::scoped_lock<std::mutex> lock(_mutex);
-    //     _flows.erase(std::remove_if(_flows.begin(), _flows.end(), [](flow_wptr_type& w){ return w.expired(); }), _flows.end());
-    // }
-
+    /**
+     * @brief Removes a completed flow from tracking
+     *
+     * Called by flows when they terminate to clean up resources.
+     *
+     * @param flow The flow to remove
+     * @param success Whether the flow terminated successfully
+     */
     void remove(const flow_ptr_type& flow, bool success) {
         std::scoped_lock<std::mutex> lock(_mutex);
         _flows.erase(std::find(_flows.begin(), _flows.end(), flow));
     }
-
-    void load(const nlohmann::json& json){
-        _baseline.load(json);
-    }
+    /// @}
 
 private:
     composition_type _composition;
@@ -609,6 +914,16 @@ private:
     mutable std::mutex _mutex;
 };
 
+/**
+ * @brief Configuration patching between pipeline stages
+ *
+ * Specialize this template to implement custom configuration modifications
+ * when transitioning between pipeline stages. The apply() method is called
+ * after a stage completes successfully, before the next stage begins.
+ *
+ * @tparam LabelT The pipeline label type
+ * @tparam Stage The stage index from which the transition occurs
+ */
 template <typename LabelT, std::size_t Stage>
 struct patch_config{
     using label_type        = LabelT;
@@ -617,11 +932,30 @@ struct patch_config{
     using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
     using configs_type      = typename runtime_type::configs_type;
 
+    /**
+     * @brief Applies configuration patches between stages
+     *
+     * Called after stage completion to modify configuration before
+     * the next stage begins. The default implementation does nothing.
+     *
+     * @param p The completed pipeline stage
+     * @param config The configuration to modify for the next stage
+     */
     void apply(const pipeline_type& p, configs_type& config) { /* nothing unless specialized */ }
 };
 
 namespace detail {
 
+/**
+ * @brief Compile-time patcher for all pipeline stages
+ *
+ * Recursively applies patch_config specializations for each stage
+ * transition in the pipeline.
+ *
+ * @tparam LabelT The pipeline label type
+ * @tparam Count Total number of pipeline stages
+ * @tparam Stage Current stage index
+ */
 template <typename LabelT, std::size_t Count, std::size_t Stage>
 struct patcher: public detail::patcher<LabelT, Count, Stage+1>, private patch_config<LabelT, Stage>{
     using label_type        = LabelT;
@@ -630,6 +964,11 @@ struct patcher: public detail::patcher<LabelT, Count, Stage+1>, private patch_co
     using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
     using configs_type      = typename runtime_type::configs_type;
 
+    /**
+     * @brief apply patch_config on the configs with the current pipeline
+     * @param p
+     * @param configs
+     */
     void apply(const pipeline_type& p, configs_type& configs){
         patch_config<LabelT, Stage>::apply(p, configs);
     }
@@ -640,6 +979,15 @@ struct patcher<LabelT, Count, Count>{};
 
 }
 
+/**
+ * @brief Individual pipeline execution instance
+ *
+ * Represents a single execution flow through the pipeline stages.
+ * Manages the pipeline execution, stage transitions, and termination.
+ * Inherits from patcher to apply stage-specific configuration patches.
+ *
+ * @tparam LabelT The pipeline label type
+ */
 template <typename LabelT>
 struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<LabelT, runtime<LabelT>::Count, 0>{
     using label_type        = LabelT;
@@ -650,13 +998,15 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     using configs_type      = typename composition_type::configs_type;
     using ptr               = std::shared_ptr<flow<LabelT>>;
 
-    // static constexpr std::size_t Count = sketch_type::Count;
     static constexpr std::size_t Count = runtime_type::Count;
 
+    /// @name Pipeline Type Aliases
+    /// @{
     template <int Stage>
     using pipeline_at          = typename runtime_type::template pipeline_at<Stage>;
     using start_pipeline_type  = typename runtime_type::start_pipeline_type;
     using finish_pipeline_type = typename runtime_type::finish_pipeline_type;
+    /// @}
 
     template <typename>
     friend struct runtime;
@@ -665,26 +1015,81 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     flow(const flow<LabelT>&) = delete;
     flow(flow<LabelT>&&) = delete;
 
+    /**
+     * @brief Gets a shared pointer to this flow
+     * @return Shared pointer to this flow instance
+     */
     ptr self() { return std::enable_shared_from_this<flow<LabelT>>::shared_from_this(); }
 
+    /**
+     * @brief Applies configuration patches for a specific stage
+     *
+     * Called internally during stage transitions to apply any
+     * patch_config specializations for the completed stage.
+     *
+     * @tparam Stage The completed stage index
+     * @param p The completed pipeline stage
+     * @param config Configuration to modify for next stage
+     */
     template <int Stage>
     void apply(const pipeline_at<Stage>& p, configs_type& config){
         detail::patcher<LabelT, runtime<LabelT>::Count, Stage>::apply(p, config);
     }
 
+    /**
+     * @brief Starts synchronous pipeline execution
+     *
+     * Begins execution of the pipeline with the provided arguments.
+     * Execution proceeds synchronously through all stages.
+     *
+     * @tparam Args... Argument types to forward to pipeline stages
+     * @param args Arguments to forward to pipeline stages
+     */
     template <typename... Args>
     void start(Args&&... args) { _pipeline(self(), std::forward<Args>(args)...); }
 
+    /**
+     * @brief Starts asynchronous pipeline execution
+     *
+     * Begins execution of the pipeline with asynchronous completion
+     * handling via Boost.Asio.
+     *
+     * @tparam Args... Argument types to forward to pipeline stages
+     * @param io Boost.Asio io_context for async operations
+     * @param args Arguments to forward to pipeline stages
+     */
     template <typename... Args>
-    void start(boost::asio::io_context& io, Args&&... args) { _pipeline(self(), io, std::forward<Args>(args)...); }
+    void start(boost::asio::io_context& io, Args&&... args) { io, _pipeline(self(), std::forward<Args>(args)...); }
 
+    /**
+     * @brief Terminates the flow
+     *
+     * Called when the flow completes (either successfully or with failure).
+     * Notifies the runtime to clean up flow tracking.
+     *
+     * @param success Whether the flow terminated successfully
+     */
     void terminate(bool success) {
         _runtime.remove(self(), success);
     }
 
 private:
+
+    /**
+     * @brief Private constructor for flow creation
+     *
+     * @param runtime Reference to the managing runtime
+     * @param composition Reference to the component composition
+     * @param baseline Reference to baseline configuration
+     */
     flow(runtime_type& runtime, composition_type& composition, configs_type& baseline): _runtime(runtime), _pipeline(composition, baseline) {}
 
+    /**
+     * @brief Factory method for flow creation
+     *
+     * @param runtime Reference to the managing runtime
+     * @return New flow instance
+     */
     static ptr create(runtime_type& runtime) { return ptr(new flow(runtime, runtime.composition(), runtime.baseline())); }
 
 private:
@@ -693,7 +1098,12 @@ private:
 
 };
 
+/**
+ * @}
+ */
+
 }
 }
+
 
 #endif // UDHO_MANIFOLD_PIPELINE_H

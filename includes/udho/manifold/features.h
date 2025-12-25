@@ -7,8 +7,15 @@
 #include <udho/net/common.h>
 #include <udho/url/router.h>
 
+
+
 namespace udho {
 namespace manifold {
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 /**
  * @enum features
@@ -165,7 +172,13 @@ struct features{
     static constexpr std::size_t max_stage = detail::feature_max_stage<Features...>::value;
 };
 
+/**
+ * @}
+ */
+
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_FEATURES_H

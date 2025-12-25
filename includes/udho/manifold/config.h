@@ -15,6 +15,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @addtogroup manifold
+ * @{
+ */
+
+/**
  * @class basic_config
  * @brief Type-safe configuration container for a component
  *
@@ -53,7 +58,7 @@ namespace manifold{
  * @see config
  * @see configs
  */
-template <typename ComponentT = void>
+template <typename ComponentT>
 struct basic_config{
     using components_type = ComponentT;
     using params_type = typename udho::manifold::component_traits<ComponentT>::params;
@@ -136,16 +141,6 @@ private:
     params_type _params;
 };
 
-// template <>
-// struct basic_config<void>{
-//     using components_type = void;
-//     using params_type = params<>;
-
-//     template <typename>
-//     using contains = std::false_type;
-// };
-
-
 /**
  * @brief The config specialization provides facilities to con mantain configuration of a component.
  *
@@ -158,7 +153,7 @@ private:
  * @see basic_config
  * @see configs
  */
-template <typename ComponentT = void>
+template <typename ComponentT>
 struct config: basic_config<ComponentT>{
     using base = basic_config<ComponentT>;
 
@@ -282,7 +277,6 @@ public:
 #else
 
 /**
- * @class configs
  * @brief Heterogeneous collection of component configurations
  *
  * Stores configuration for multiple components, providing type-safe access
@@ -374,7 +368,13 @@ public:
 
 #endif // __DOXYGEN__
 
+/**
+ * @}
+ */
+
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_CONFIG_H

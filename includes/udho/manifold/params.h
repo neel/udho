@@ -7,6 +7,11 @@
 #include <nlohmann/json.hpp>
 
 /**
+ * @addtogroup manifold
+ * @{
+ */
+
+/**
  * @def UDHO_CONFIG_PARAM(Name, Type, DefaultValue)
  * @brief Macro for declaring configuration parameters
  *
@@ -237,5 +242,9 @@ struct field: udho::hazo::element<field<FieldT>, bool>{
 
 }
 }
+
+/**
+ * @}
+ */
 
 #endif // UDHO_MANIFOLD_CONFIG_PARAMS_H

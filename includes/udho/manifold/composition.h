@@ -12,6 +12,11 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @addtogroup manifold
+ * @{
+ */
+
 template <typename... Components>
 struct compositor;
 
@@ -685,7 +690,12 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
 
 };
 
+/**
+ * @}
+ */
+
 }
 }
+
 
 #endif // UDHO_MANIFOLD_COMPOSITION_H

@@ -10,8 +10,15 @@
 #include <udho/manifold/detail.h>
 // #include <udho/manifold/config.h>
 
+
+
 namespace udho {
 namespace manifold {
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 #ifndef __DOXYGEN__
 
@@ -201,7 +208,12 @@ struct wrapper: detail::hybrid_storage<ComponentT>{
 };
 #endif // __DOXYGEN__
 
+/**
+ * @}
+ */
+
 }
 }
+
 
 #endif // UDHO_MANIFOLD_WRAPPER_H

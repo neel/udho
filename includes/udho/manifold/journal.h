@@ -14,6 +14,11 @@ namespace udho {
 namespace manifold {
 
 /**
+ * @addtogroup manifold
+ * @{
+ */
+
+/**
  * @class result_wrapper
  * @brief Optional-style wrapper for facet evaluation results
  *
@@ -686,9 +691,13 @@ public:
 
 #endif // __DOXYGEN__
 
+/**
+ * @}
+ */
 
 }
 }
+
 
 
 #endif // UDHO_MANIFOLD_JOURNAL_H

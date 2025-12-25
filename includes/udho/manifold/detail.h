@@ -9,6 +9,11 @@
 namespace udho{
 namespace manifold {
 
+/**
+ * @addtogroup manifold
+ * @{
+ */
+
 namespace detail {
 
 /**
@@ -217,7 +222,13 @@ using flatten_all_of = flatten_all_<stage_comp_op::all, 0, Components...>;
 
 }
 
+/**
+ * @}
+ */
+
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_DETAIL_H

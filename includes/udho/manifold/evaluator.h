@@ -11,6 +11,12 @@ namespace udho {
 namespace manifold {
 
 /**
+ * @addtogroup manifold
+ * @{
+ */
+
+
+/**
  * @class exclusive_result
  * @brief A wrapper for storing either a successful result or an exception
  *
@@ -512,7 +518,13 @@ struct evaluator_helper<Stage>{
 
 }
 
+/**
+ * @}
+ */
+
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_EVALUATOR_HELPER_H

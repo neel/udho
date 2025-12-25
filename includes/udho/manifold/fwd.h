@@ -3,8 +3,15 @@
 
 #include <cstdint>
 
+
+
 namespace udho {
 namespace manifold {
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 template <typename...>
 struct composition;
@@ -18,8 +25,8 @@ struct fabric;
 template <typename...>
 struct journal;
 
-template <std::size_t, typename...>
-struct evaluator;
+// template <std::size_t, typename...>
+// struct evaluator;
 
 // template <std::size_t, typename...>
 // struct pipeline;
@@ -167,8 +174,13 @@ struct facet;
 template <typename ComponentT>
 struct config;
 
+/**
+ * @}
+ */
+
 
 }
 }
+
 
 #endif // UDHO_MANIFOLD_FWD_H

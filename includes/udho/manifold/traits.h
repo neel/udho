@@ -7,8 +7,15 @@
 #include <udho/utils/string_view.h>
 #include <udho/utils/polyfill.h>
 
+
+
 namespace udho{
 namespace manifold{
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 namespace detail{
 
@@ -239,8 +246,13 @@ struct has_features: std::bool_constant<!std::is_void<detail::has_features<Compo
  */
 struct default_constructed{};
 
+/**
+ * @}
+ */
 
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_TRAITS_H

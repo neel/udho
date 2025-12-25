@@ -7,6 +7,12 @@
 
 namespace udho{
 namespace manifold {
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
+
 namespace utils {
 
 namespace detail {
@@ -70,7 +76,14 @@ std::size_t visit(const FacadeT& facade, Function&& function) {
 }
 
 }
+
+/**
+ * @}
+ */
+
 }
 }
+
+
 
 #endif // UDHO_MANIFOLD_UTILS_H
