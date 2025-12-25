@@ -599,7 +599,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             bool evaluated = true;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
@@ -645,8 +645,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.value().accepted());
                 CHECK(state_66->_counter == journal.at<testing::Feature<6>, 1>()->_counter);
 
-                CHECK(success.index() == 0);
-                CHECK(std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -672,7 +671,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\n");
@@ -705,8 +704,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -731,7 +729,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             pipeline_type pipeline{composition, configs, journal};
             std::stringstream stream;
             bool evaluated = false;
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
@@ -766,8 +764,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -793,7 +790,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
@@ -831,8 +828,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -889,7 +885,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             bool evaluated = true;
 
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
@@ -927,8 +923,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.ready());
                 CHECK(state_66.value().accepted());
 
-                CHECK(success.index() == 0);
-                CHECK(std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
 
             io.run();
@@ -955,7 +950,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\n");
@@ -988,8 +983,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);
@@ -1015,7 +1009,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
@@ -1050,8 +1044,8 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
+                CHECK(success.success());
             }).eval(stream);
             io.run();
 
@@ -1078,7 +1072,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](std::variant<bool, std::exception_ptr> success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
@@ -1116,8 +1110,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
 
-                CHECK(success.index() == 0);
-                CHECK(!std::get<0>(success));
+                CHECK(success);
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);

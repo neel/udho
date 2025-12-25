@@ -253,10 +253,8 @@ public:
      *
      * # Callback Signature
      *
-     * The callback must accept a `safe_success_type` parameter, which is a
-     * `std::variant<bool, std::exception_ptr>`:
-     * - `bool` (index 0): `true` if all facets passed, `false` if any facet failed
-     * - `std::exception_ptr` (index 1): Exception thrown during evaluation
+     * The callback must accept a `safe_success_type` parameter, which is a typedef of
+     * `udho::manifold::exclusive_result`:
      *
      * # Callback Lifecycle
      *
@@ -268,15 +266,15 @@ public:
      *
      * @code
      * pipeline.then([](auto&& result) {
-     *     if (result.index() == 0) {
-     *         if (std::get<bool>(result)) {
-     *             std::cout << "Success\n";
+     *     if (result) {
+     *          std::cout << "Success\n";
+     *     } else {
+     *         if(result.has_exception()) {
+     *             std::cout << "Exception\n";
+     *             std::rethrow_exception(std::get<std::exception_ptr>(result));
      *         } else {
      *             std::cout << "Failure\n";
      *         }
-     *     } else {
-     *         std::cout << "Exception\n";
-     *         std::rethrow_exception(std::get<std::exception_ptr>(result));
      *     }
      * }).eval(...);
      * @endcode
@@ -313,8 +311,15 @@ public:
      *
      * pipeline.then(io, [&](auto&& result) {
      *     // Executes in io_context thread
-     *     if (std::holds_alternative<bool>(result)) {
-     *         handle_result(std::get<bool>(result));
+     *     if (result) {
+     *          std::cout << "Success\n";
+     *     } else {
+     *         if(result.has_exception()) {
+     *             std::cout << "Exception\n";
+     *             std::rethrow_exception(std::get<std::exception_ptr>(result));
+     *         } else {
+     *             std::cout << "Failure\n";
+     *         }
      *     }
      * }).eval(request);
      *
@@ -410,8 +415,8 @@ struct pipeline{
 private:
     template <typename FlowT, typename ArgsTupleT>
     void _then(std::shared_ptr<FlowT> flow, ArgsTupleT& args_tuple){
-        auto lambda = [flow, this, args_tuple](std::variant<bool, std::exception_ptr> success){
-            if(success.index() == 0 && std::get<0>(success)) {
+        auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
+            if(success) {
                 flow->apply(*this, configs());
                 std::apply(
                     [&](auto&... args) {

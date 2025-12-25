@@ -23,21 +23,37 @@ namespace manifold {
  */
 class exclusive_result{
     std::exception_ptr _exception;
+    bool _success;
 public:
-    exclusive_result() = default;                               ///< Default Constructor
-    exclusive_result(const exclusive_result&) = default;        ///< Compy constructor
+    exclusive_result(): _success(false) {}                      ///< Default Constructor
+    exclusive_result(const exclusive_result&) = default;        ///< Copy constructor
     exclusive_result(exclusive_result&&) = default;             ///< Move constructor
+    exclusive_result& operator=(const exclusive_result&) = default;    ///< Copy assignment operator
 
     /// @brief Construct with an exception
     /// @param exptr Exception pointer to store
-    exclusive_result(std::exception_ptr&& exptr): _exception(std::move(exptr)) {}
-    exclusive_result& operator=(const exclusive_result&) = default;    ///< Copy assignment operator
+    exclusive_result(std::exception_ptr&& exptr): _exception(std::move(exptr)), _success(false) {}
+
+    exclusive_result(bool success): _exception(nullptr), _success(success) {}
+
 public:
     /// @brief Assign an exception
     /// @param exptr Exception pointer to store
     /// @return Reference to this object
     exclusive_result& operator=(std::exception_ptr&& exptr) {
         _exception = std::move(exptr);
+        _success   = false;
+        return *this;
+    }
+
+    /// @brief Assign an exception
+    /// @param exptr Exception pointer to store
+    /// @return Reference to this object
+    exclusive_result& operator=(bool success) {
+        _success = success;
+        if(_success) {
+            _exception = nullptr;
+        }
         return *this;
     }
 public:
@@ -51,9 +67,12 @@ public:
         return true;
     }
 public:
+    bool value() const { return _success; }
+    bool has_exception() const { return !!_exception; }
+public:
     /// @brief Check if operation was successful
     /// @return true if no exception stored
-    bool success() const { return !_exception; }
+    bool success() const { return !_exception && _success; }
     /// @brief Check if operation failed
     /// @return true if an exception is stored
     bool error() const { return !success(); }
@@ -64,7 +83,7 @@ public:
     /// @brief Rethrow the stored exception
     /// @pre error() must be true
     void rethrow() const {
-        assert(error());
+        assert(has_exception());
         std::rethrow_exception(_exception);
     }
 public:
@@ -341,7 +360,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type = std::variant<bool, std::exception_ptr>;
+        using safe_success_type = exclusive_result;
         using async_callback_type = std::function<void (safe_success_type)>;
 
         /**
@@ -464,7 +483,7 @@ struct evaluator_helper<Stage>{
         using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type = std::variant<bool, std::exception_ptr>;
+        using safe_success_type = exclusive_result;
         using async_callback_type = std::function<void (safe_success_type)>;
 
         handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
