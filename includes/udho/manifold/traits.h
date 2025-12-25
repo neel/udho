@@ -104,7 +104,6 @@ struct has_name: udho::utils::conditional_t<has_static_name<T>::value, has_stati
 }
 
 /**
- * @struct has_name
  * @brief Type trait indicating if a component has a name
  *
  * Checks for either ComponentT::name or component_traits<ComponentT>::name.
@@ -140,7 +139,6 @@ static constexpr udho::utils::string_view component_name() {
 }
 
 /**
- * @class facet_traits
  * @brief Metadata about a facet (component-feature pair)
  *
  * Provides compile-time information about facets, including:
@@ -185,7 +183,6 @@ struct facet_traits<udho::manifold::facet<ComponentT, FeatureT>> {
 };
 
 /**
- * @struct has_result
  * @brief Type trait indicating if a facet yields results
  *
  * Evaluates to true if the feature defines a result type, false otherwise.
@@ -205,7 +202,6 @@ template <typename FacetT>
 struct has_result: std::bool_constant<!std::is_void<typename facet_traits<FacetT>::result_type>::value> {};
 
 /**
- * @struct has_params
  * @brief Type trait indicating if a component has parameters
  *
  * @tparam ComponentT Component type to check
@@ -216,7 +212,6 @@ template <typename ComponentT>
 struct has_params: std::bool_constant<!std::is_void<typename component_traits<ComponentT>::params>::value> {};
 
 /**
- * @struct has_features
  * @brief Type trait indicating if a component provides features
  *
  * @tparam ComponentT Component type to check

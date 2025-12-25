@@ -57,7 +57,6 @@ struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
 }
 
 /**
- * @class compositor
  * @brief Factory for creating composition instances with flexible argument handling
  *
  * The compositor provides static factory methods to create composition instances
@@ -257,7 +256,6 @@ struct compositor {
 };
 
 /**
- * @class composition
  * @brief A type-safe container of component instances with feature-based access
  *
  * The composition class holds instances of multiple components and provides

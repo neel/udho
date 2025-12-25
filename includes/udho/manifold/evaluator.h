@@ -17,7 +17,6 @@ namespace manifold {
 
 
 /**
- * @class exclusive_result
  * @brief A wrapper for storing either a successful result or an exception
  *
  * This class encapsulates the result of an asynchronous operation that can
@@ -104,7 +103,6 @@ public:
 namespace detail {
 
 /**
- * @class next_evaluator_helper_internal
  * @brief Internal helper for facet evaluation with result propagation
  *
  * This class manages the continuation of facet evaluation in a pipeline.
@@ -226,7 +224,6 @@ public:
 
 
 /**
- * @class next_evaluator_helper_internal<Idx, ArgsTupleT, FacetT, HandlerT, false>
  * @brief Specialization for facets that don't produce results
  *
  * This specialization handles facets that perform side effects but don't
@@ -320,7 +317,6 @@ struct next_evaluator_helper: next_evaluator_helper_internal<Idx, ArgsTupleT, Fa
 
 
 /**
- * @class evaluator_helper
  * @brief Encapsulates the stage and order of features for facet evaluation
  *
  * This template class provides the infrastructure for evaluating facets in a
@@ -338,7 +334,6 @@ template <std::size_t, typename...>
 struct evaluator_helper;
 
 /**
- * @class evaluator_helper<Stage, FeatureX, Features...>
  * @brief Primary template for feature-based evaluator with at least one feature
  *
  * This specialization handles the recursive evaluation of multiple features.
@@ -352,7 +347,6 @@ template <std::size_t Stage, typename FeatureX, typename... Features>
 struct evaluator_helper<Stage, FeatureX, Features...>{
 
     /**
-     * @class handler
      * @brief Manages facet evaluation state for a specific feature sequence
      *
      * This inner class maintains references to the fabric, journal, and

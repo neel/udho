@@ -46,7 +46,6 @@ class next_evaluator_helper_internal;
 
 
 /**
- * @class facet
  * @brief Implements the evaluation logic for a component-feature pair
  *
  * Facets are the units of pipeline evaluation, each representing one

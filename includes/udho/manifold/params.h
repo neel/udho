@@ -98,7 +98,6 @@ struct json_deserializer{
 }
 
 /**
- * @class params
  * @brief Type-safe parameter storage with JSON serialization
  *
  * Provides a compile-time map from parameter types to their values. Parameters

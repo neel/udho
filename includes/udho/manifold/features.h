@@ -18,8 +18,7 @@ namespace manifold {
  */
 
 /**
- * @enum features
- * @brief Enumerates available manifold features
+ * @brief manifold features
  *
  * Defines the types of functionality a manifold component can provide
  */

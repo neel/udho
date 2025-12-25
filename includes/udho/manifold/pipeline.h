@@ -157,7 +157,6 @@ template <std::size_t Stage, typename OrderT, typename CompositionT>
 class common_pipepine;
 
 /**
- * @class common_pipepine
  * @brief A complete pipeline stage that evaluates features in a specified order with callback support
  *
  * The `common_pipepine` class represents a single stage in a multi-stage pipeline processing system.

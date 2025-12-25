@@ -20,7 +20,6 @@ namespace manifold{
  */
 
 /**
- * @class basic_config
  * @brief Type-safe configuration container for a component
  *
  * Wraps a component's params with JSON serialization and type-safe access.

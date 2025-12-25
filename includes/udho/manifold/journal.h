@@ -19,7 +19,6 @@ namespace manifold {
  */
 
 /**
- * @class result_wrapper
  * @brief Optional-style wrapper for facet evaluation results
  *
  * Stores the result of a facet evaluation, tracking whether the result is ready
@@ -328,7 +327,6 @@ struct get_journal_type_helper<temporary_storage<Facets...>>{
 };
 
 /**
- * @struct journal_for_fabric
  * @brief Type-level computation that builds journal type for a fabric
  *
  * Given a fabric (set of facets), produces the journal type containing
