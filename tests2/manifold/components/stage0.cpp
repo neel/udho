@@ -82,8 +82,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto routing = udho::manifold::components::routing(router);
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocol<udho::net::protocols::http2<stream_type>, stream_type>;
-        using navigator_component_type   = udho::manifold::components::navigator<udho::manifold::components::pretty_url_policy>;
+        using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+        using navigator_component_type   = udho::manifold::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
             protocol_component_type,
@@ -209,8 +209,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto routing = udho::manifold::components::routing(router);
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocol<udho::net::protocols::http2<stream_type>, stream_type>;
-        using navigator_component_type   = udho::manifold::components::navigator<udho::manifold::components::pretty_url_policy>;
+        using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+        using navigator_component_type   = udho::manifold::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
             protocol_component_type,

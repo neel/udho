@@ -101,6 +101,10 @@ private:
     Policy _policy;
 };
 
+namespace navigators{
+using pretty = udho::manifold::components::navigator<udho::manifold::components::pretty_url_policy>;
+}
+
 }
 
 template <typename Policy>

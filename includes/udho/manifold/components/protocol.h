@@ -40,6 +40,11 @@ struct protocol{
     static constexpr const udho::utils::string_view name = "protocol";
 };
 
+namespace protocols {
+    template <typename StreamT>
+    using http2 = udho::manifold::components::protocol<udho::net::protocols::http2<StreamT>, StreamT>;
+}
+
 }
 
 template <typename ProtocolT, typename StreamT>
