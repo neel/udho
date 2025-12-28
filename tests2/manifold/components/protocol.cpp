@@ -79,7 +79,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "\r\n";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -112,7 +112,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "{\"name\":\"test\",\"email\":\"test@example.com\"}";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -144,7 +144,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "\r\n";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -174,7 +174,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "\r\n";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -198,7 +198,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "\r\n";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -225,7 +225,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
                 "\r\n";
 
             stream_type stream(io_context, request_data);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             // Run with a timeout to prevent hanging
@@ -350,7 +350,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string scgi_request = http_to_scgi(http_request);
             stream_type stream(io_context, scgi_request);
 
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run_for(std::chrono::milliseconds(100));
@@ -384,7 +384,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string scgi_request = http_to_scgi(http_request);
             stream_type stream(io_context, scgi_request);
 
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run_for(std::chrono::milliseconds(100));
@@ -418,7 +418,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string scgi_request = http_to_scgi(http_request);
             stream_type stream(io_context, scgi_request);
 
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run_for(std::chrono::milliseconds(100));
@@ -450,7 +450,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string scgi_request = http_to_scgi(http_request);
             stream_type stream(io_context, scgi_request);
 
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run_for(std::chrono::milliseconds(100));
@@ -474,7 +474,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string malformed_scgi = "CONTENT_LENGTH\000\0SCGI\001\0REQUEST_METHOD\0GET\0,";
 
             stream_type stream(io_context, malformed_scgi);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run();
@@ -501,7 +501,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
             std::string malformed_scgi = "658490876:CONTENT_LENGTH\000\0SCGI\001\0REQUEST_METHOD\0GET\0,";
 
             stream_type stream(io_context, malformed_scgi);
-            fabric_type fabric{component, config};
+            fabric_type fabric{component, config, 0};
             fabric.eval(journal, next_type{result, ex}, stream);
 
             io_context.run();

@@ -9,7 +9,6 @@
 #include <nlohmann/json.hpp>
 #include <udho/manifold/traits.h>
 #include <udho/manifold/params.h>
-#include <udho/manifold/patch.h>
 
 namespace udho{
 namespace manifold{

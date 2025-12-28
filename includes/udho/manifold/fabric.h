@@ -31,7 +31,7 @@ struct facet_interface_internal {
 
     // static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    facet_interface_internal(component_type& component, const config_type& config): _facet(component, config) {}
+    facet_interface_internal(component_type& component, const config_type& config, std::size_t id): _facet(component, config, id) {}
 
     facet_type& facet() { return _facet; }
     const facet_type& facet() const { return _facet; }
@@ -49,7 +49,7 @@ struct facet_interface_internal<FacetT, false> {
 
     // static_assert(std::is_constructible_v<facet_type, std::add_lvalue_reference_t<component_type>>, "udho::manifold::facet<FacetT> must be constructible with lvalue reference of ComponentT");
 
-    facet_interface_internal(component_type& component, const config_type& config): _facet(component, config) {}
+    facet_interface_internal(component_type& component, const config_type& config, std::size_t id): _facet(component, config, id) {}
 
     facet_type& facet() { return _facet; }
     const facet_type& facet() const { return _facet; }
@@ -132,8 +132,8 @@ struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interfa
      * @param conf Configuration for all components
      */
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf)
-        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>()), rest_type(composition, conf) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf, std::size_t id)
+        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>(), id), rest_type(composition, conf, id), _id(id) {}
 
     /// @name Facet Access by Type
     /// @{
@@ -245,7 +245,12 @@ struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interfa
     std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
 
+    std::size_t id() const { return _id; }
+private:
+    std::size_t _id;
 };
+
+#ifndef __DOXYGEN__
 
 /**
  * @brief Specialization for disabled facets with remaining facets to process
@@ -269,7 +274,7 @@ struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...
     using facet_type = typename rest_type::template facet_type<FeatureT, Idx>;
 
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf): rest_type(composition, conf) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf, std::size_t id): rest_type(composition, conf), _id(id) {}
 
     /// @name Delegated Access Methods
     /// All methods delegate to the rest of the fabric since this facet is excluded
@@ -295,6 +300,10 @@ struct basic_fabric<Stage, FacetT, false, Rest...>: public fabric<Stage, Rest...
     template <typename FeatureT, typename Function>
     std::size_t apply(Function&& f) const { return utils::visit<self_type, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
+
+    std::size_t id() const { return _id; }
+private:
+    std::size_t _id;
 };
 
 /**
@@ -319,8 +328,8 @@ struct basic_fabric<Stage, FacetT, true>: private detail::facet_interface<FacetT
     >;
 
     template <typename... Components>
-    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf)
-        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>()) {}
+    basic_fabric(composition<Components...>& composition, const configs<Components...>& conf, std::size_t id)
+        : wrapper_type(composition.template get<component_type>().component(), conf.template get<component_type>(), id), _id(id) {}
 
     /// @{
     template <typename FacetQ, std::enable_if_t<std::is_same_v<FacetQ, FacetT>, bool> = true>
@@ -350,7 +359,14 @@ struct basic_fabric<Stage, FacetT, true>: private detail::facet_interface<FacetT
     template <typename FeatureT, typename Function>
     std::size_t apply(Function&& f) const { return utils::visit<fabric<Stage, FacetT>, FeatureT, Function>(*this, std::forward<Function>(f)); }
     /// @}
+
+    std::size_t id() const { return _id; }
+private:
+    std::size_t _id;
+
 };
+
+#endif // __DOXYGEN__
 
 /**
  * @brief Public interface for stage-specific fabric of facets
@@ -388,6 +404,8 @@ struct fabric<Stage, FacetT, Rest...>: basic_fabric<Stage, FacetT, facet_traits<
     using basic_fabric_type::basic_fabric_type;
 };
 
+#ifndef __DOXYGEN__
+
 /**
  * @brief Specialization for empty fabric
  *
@@ -414,7 +432,7 @@ struct fabric<Stage>{
      * since there are no facets to initialize.
      */
     template <typename... Components>
-    fabric(composition<Components...>&, const configs<Components...>&) {}
+    fabric(composition<Components...>&, const configs<Components...>&, std::size_t) {}
 
     /**
      * @brief Count facets providing a feature (always 0 for empty fabric)
@@ -426,6 +444,7 @@ struct fabric<Stage>{
     static constexpr int count() { return 0; }
 };
 
+#endif // __DOXYGEN__
 
 /**
  * @}

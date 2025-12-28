@@ -65,7 +65,7 @@ struct basic_pipeline{
      * @param configs Configuration for all components
      */
     template <typename... XComponents>
-    basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs): _fabric(composition, configs) {}
+    basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs, std::size_t id): _fabric(composition, configs, id) {}
 
     /**
      * @brief Evaluator for executing features in a specific order
@@ -271,8 +271,8 @@ public:
      * @note The journal must outlive this pipeline instance, as it stores results
      *       that may be accessed by subsequent pipeline stages or user code.
      */
-    common_pipepine(composition_type& composition, const configs_type& configs, full_journal_type& journal):
-        basic_pipeline_type(composition, configs),
+    common_pipepine(composition_type& composition, const configs_type& configs, full_journal_type& journal, std::size_t id):
+        basic_pipeline_type(composition, configs, id),
         _evaluator(basic_pipeline_type::fabric(), journal, _callback),
         _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1))
     {}
@@ -433,6 +433,9 @@ private:
 template <typename LabelT>
 struct flow;
 
+template <typename LabelT>
+struct terminal;
+
 /**
  * @brief Complete multi-stage pipeline implementation
  *
@@ -468,8 +471,8 @@ struct pipeline{
      * @param previous Reference to the previous pipeline stage
      */
     template <typename JournalT>
-    pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous)
-        : _composition(composition), _configs(baseline), _pipeline(composition, _configs, journal), _next(composition, baseline, journal, *this), _previous(previous)
+    pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous, std::size_t id)
+        : _composition(composition), _configs(baseline), _pipeline(composition, _configs, journal, id), _next(composition, baseline, journal, *this, 0), _previous(previous)
     {
         // _configs copy constructor picks the relevant configs from the baseline
     }
@@ -550,19 +553,19 @@ struct pipeline{
      * @tparam N The stage index to access
      * @return Reference to the requested pipeline stage
      */
-    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
+    template <int N, std::enable_if_t<(N == Stage), bool> = true>
     pipeline<composition_type, order_type, Count, N>& at() { return *this; }
 
-    template <std::size_t N, std::enable_if_t<(N == Stage), bool> = true>
+    template <int N, std::enable_if_t<(N == Stage), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return *this; }
 
-    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
+    template <int N, std::enable_if_t<(N > Stage), bool> = true>
     pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
 
-    template <std::size_t N, std::enable_if_t<(N > Stage), bool> = true>
+    template <int N, std::enable_if_t<(N > Stage), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
 
-    template <std::size_t N, std::enable_if_t<(N < Stage), bool> = true>
+    template <int N, std::enable_if_t<(N < Stage), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
     /// @}
 
@@ -631,7 +634,7 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
      * @param composition The component composition
      * @param baseline Baseline configuration shared across all stages
      */
-    pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline): _composition(composition), _next(composition, baseline, _journal, *this) {}
+    pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline, std::size_t id): _composition(composition), _next(composition, baseline, _journal, *this, id) {}
 
     /// @name Configuration Access
     /// @{
@@ -654,10 +657,10 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
 
     /// @name Stage Access
     /// @{
-    template <std::size_t N>
+    template <int N>
     pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
 
-    template <std::size_t N>
+    template <int N>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
     /// @}
 
@@ -701,7 +704,7 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
      * @param previous Reference to the previous pipeline stage
      */
     template <typename JournalT>
-    pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, const prev_pipeline_type& previous): _configs(configs), _previous(previous) {}
+    pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, const prev_pipeline_type& previous, std::size_t id): _configs(configs), _previous(previous), _id(id) {}
 
     /// @name Configuration Access
     /// @{
@@ -722,12 +725,21 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
      */
     template <typename FlowT, typename... Args>
     void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
-        flow->terminate(true);
+        using label_type    = typename FlowT::label_type;
+        using terminal_type = udho::manifold::terminal<label_type>;
+
+        const configs_type& configs = _configs;
+        terminal_type terminal(flow->root().journal(), configs);
+
+        if(terminal(std::forward<Args>(args)...)){
+            flow->terminate(true);
+        }
     }
 
 private:
     configs_type& _configs;
     const prev_pipeline_type& _previous;
+    std::size_t _id;
 };
 
 /**
@@ -916,9 +928,12 @@ private:
 /**
  * @brief Configuration patching between pipeline stages
  *
- * Specialize this template to implement custom configuration modifications
- * when transitioning between pipeline stages. The apply() method is called
- * after a stage completes successfully, before the next stage begins.
+ * The default configuration patching during stage transition. The apply() method
+ * is called after a stage completes successfully, before the next stage begins, to
+ * implement custom configuration.
+ *
+ * @warning Usercode should not specialize this template. Instead specialize patch
+ * and call patch_config::apply in order to apply the default patching for the stage.
  *
  * @tparam LabelT The pipeline label type
  * @tparam Stage The stage index from which the transition occurs
@@ -940,7 +955,70 @@ struct patch_config{
      * @param p The completed pipeline stage
      * @param config The configuration to modify for the next stage
      */
-    void apply(const pipeline_type& p, configs_type& config) { /* nothing unless specialized */ }
+    static void apply(const pipeline_type& p, configs_type& config) { /* nothing unless specialized */ }
+};
+
+/**
+ * @brief Configuration patching between pipeline stages
+ *
+ * Usercode should specialize this template to implement custom configuration
+ * modifications when transitioning between pipeline stages. The apply() method
+ * is called after a stage completes successfully, before the next stage begins.
+ *
+ * @tparam LabelT The pipeline label type
+ * @tparam Stage The stage index from which the transition occurs
+ */
+template <typename LabelT, std::size_t Stage>
+struct patch{
+    using label_type        = LabelT;
+    using sketch_type       = sketch<label_type>;
+    using runtime_type      = runtime<label_type>;
+    using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
+    using configs_type      = typename runtime_type::configs_type;
+
+    /**
+     * @brief Applies configuration patches between stages
+     *
+     * Called after stage completion to modify configuration before
+     * the next stage begins. The default implementation does nothing.
+     *
+     * @param p The completed pipeline stage
+     * @param config The configuration to modify for the next stage
+     */
+    static void apply(const pipeline_type& p, configs_type& config) {
+        udho::manifold::patch_config<LabelT, Stage>::apply(p, config);
+    }
+};
+
+/**
+ * @brief The terminal class determines whether the flow will be deleted or not.
+ *
+ * By default the operator() return true which implies that the flow will be deleted.
+ * A specialization for a different Label may return false in order to stop the flow being
+ * deleted.
+ */
+template <typename LabelT>
+struct terminal{
+    using label_type        = LabelT;
+    using sketch_type       = sketch<label_type>;
+    using runtime_type      = runtime<label_type>;
+    using configs_type      = typename runtime_type::configs_type;
+    using composition_type  = typename runtime_type::composition_type;
+    using full_journal_type = typename detail::get_journal_for_full_fabric<composition_type>::type;
+
+    terminal() = delete;
+    terminal(const terminal&) = delete;
+
+    terminal(const full_journal_type& journal, const configs_type& configs): _journal(journal), _configs(configs) {}
+
+    template <typename... Args>
+    bool operator()(Args&&... args) {
+        return true;
+    }
+
+private:
+    const full_journal_type& _journal;
+    const configs_type& _configs;
 };
 
 namespace detail {
@@ -956,7 +1034,7 @@ namespace detail {
  * @tparam Stage Current stage index
  */
 template <typename LabelT, std::size_t Count, std::size_t Stage>
-struct patcher: public detail::patcher<LabelT, Count, Stage+1>, private patch_config<LabelT, Stage>{
+struct patcher: public detail::patcher<LabelT, Count, Stage+1>/*, private udho::manifold::patch<LabelT, Stage>*/{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -969,7 +1047,7 @@ struct patcher: public detail::patcher<LabelT, Count, Stage+1>, private patch_co
      * @param configs
      */
     void apply(const pipeline_type& p, configs_type& configs){
-        patch_config<LabelT, Stage>::apply(p, configs);
+        udho::manifold::patch<LabelT, Stage>::apply(p, configs);
     }
 };
 
@@ -1072,6 +1150,8 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
         _runtime.remove(self(), success);
     }
 
+    const start_pipeline_type& root() const { return _pipeline; }
+
 private:
 
     /**
@@ -1081,7 +1161,7 @@ private:
      * @param composition Reference to the component composition
      * @param baseline Reference to baseline configuration
      */
-    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline): _runtime(runtime), _pipeline(composition, baseline) {}
+    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline): _runtime(runtime), _id(_counter++), _pipeline(composition, baseline, _id) {}
 
     /**
      * @brief Factory method for flow creation
@@ -1093,9 +1173,13 @@ private:
 
 private:
     runtime_type&       _runtime;
+    std::size_t         _id;
     start_pipeline_type _pipeline;
-
+    static std::size_t  _counter;
 };
+
+template <typename LabelT>
+std::size_t flow<LabelT>::_counter = 0;
 
 /**
  * @}

@@ -112,7 +112,7 @@ struct facet<components::navigator<Policy>, udho::manifold::feature::identifier>
     using component_type  = components::navigator<Policy>;
     using config_type     = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config_type& config): _component(component), _config(config) {}
+    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream&) const {

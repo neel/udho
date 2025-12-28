@@ -111,7 +111,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         SECTION("Invalid route identifier") {
             journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -122,10 +122,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
-                // const auto& journal = pipeline.journal();
-
-                CHECK(success.index() == 1);
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+                CHECK(!success);
 
                 CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
                 CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
@@ -139,9 +137,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
                 // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
 
-                std::exception_ptr exptr = std::get<std::exception_ptr>(success);
+                CHECK(success.has_exception());
                 try {
-                    std::rethrow_exception(exptr);
+                    success.rethrow();
                 } catch(const std::exception& e) {
                     std::cout << "Caught exception: '" << e.what() << "'\n";
                 }
@@ -152,7 +150,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         SECTION("Valid route identifier") {
             journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -163,21 +161,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
-                // const auto& journal = pipeline.journal();
-
-                CHECK(success.index() == 0);
-
-                if(success.index() == 1) {
-                    std::exception_ptr exptr = std::get<std::exception_ptr>(success);
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+                if(!success) {
+                    CHECK(success.has_exception());
                     try {
-                        std::rethrow_exception(exptr);
+                        success.rethrow();
                     } catch(const std::exception& e) {
                         std::cout << "Caught (expected) exception: '" << e.what() << "'\n";
                     }
                     return;
                 } else {
-                    CHECK(std::get<0>(success) == true);
+                    CHECK(success);
                 }
 
                 CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
@@ -238,7 +232,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         SECTION("Invalid route identifier") {
             journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -249,10 +243,10 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
                 // const auto& journal = pipeline.journal();
 
-                CHECK(success.index() == 1);
+                CHECK(!success);
 
                 CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
                 CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
@@ -266,9 +260,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
                 // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
 
-                std::exception_ptr exptr = std::get<std::exception_ptr>(success);
+                CHECK(success.has_exception());
                 try {
-                    std::rethrow_exception(exptr);
+                    success.rethrow();
                 } catch(const std::exception& e) {
                     std::cout << "Caught exception: '" << e.what() << "'\n";
                 }
@@ -279,7 +273,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         SECTION("Valid route identifier") {
             journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -290,21 +284,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
-                // const auto& journal = pipeline.journal();
-
-                CHECK(success.index() == 0);
-
-                if(success.index() == 1) {
-                    std::exception_ptr exptr = std::get<std::exception_ptr>(success);
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+                if(!success) {
+                    CHECK(success.has_exception());
                     try {
-                        std::rethrow_exception(exptr);
+                        success.rethrow();
                     } catch(const std::exception& e) {
                         std::cout << "Caught (expected) exception: '" << e.what() << "'\n";
                     }
                     return;
                 } else {
-                    CHECK(std::get<0>(success) == true);
+                    CHECK(success);
                 }
 
                 CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
@@ -331,7 +321,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         SECTION("Valid route identifier") {
             journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             boost::asio::io_context io_context;
             std::string request_data =
                 "GET /m2/f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -342,21 +332,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](std::variant<bool, std::exception_ptr> success){
-                // const auto& journal = pipeline.journal();
-
-                CHECK(success.index() == 0);
-
-                if(success.index() == 1) {
-                    std::exception_ptr exptr = std::get<std::exception_ptr>(success);
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+                if(!success) {
+                    CHECK(success.has_exception());
                     try {
-                        std::rethrow_exception(exptr);
+                        success.rethrow();
                     } catch(const std::exception& e) {
                         std::cout << "Caught exception: '" << e.what() << "'\n";
                     }
                     return;
                 } else {
-                    CHECK(std::get<0>(success) == true);
+                    CHECK(success);
                 }
 
                 CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);

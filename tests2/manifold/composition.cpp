@@ -113,7 +113,7 @@ struct facet<testing::Component<Index, FeatureIndex>, F> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -137,7 +137,7 @@ struct facet<testing::XComponent<Index, FeatureIndex>, F> {
     using feature        = F;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -303,7 +303,7 @@ TEST_CASE("manifold facet Construction & Composition", "[manifold][fabric]") {
     static_assert(std::is_same_v<expected_fabric_type, fabric_type>);
 
     configs_type conf;
-    fabric_type fabric{composition, conf};
+    fabric_type fabric{composition, conf, 0};
 
     using journal_type = udho::manifold::detail::journal_for_fabric<fabric_type>::type;
     using expected_journal_type = udho::manifold::journal<
@@ -545,7 +545,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
         udho::net::types::headers::request request;
 
         conffigs_type configs;
-        fabric_type fabric{composition, configs};
+        fabric_type fabric{composition, configs, 0};
 
         auto& facet11= fabric.get<udho::manifold::facet<testing::Component<1>, testing::Feature<1>>>();
     }
@@ -594,7 +594,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
 
             bool evaluated = true;
@@ -667,7 +667,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
 
@@ -704,7 +704,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success);
+                CHECK(!success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -726,7 +726,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
             pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
@@ -764,7 +764,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success);
+                CHECK(!success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -786,7 +786,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
 
@@ -828,7 +828,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
 
-                CHECK(success);
+                CHECK(!success);
             }).eval(stream);
 
             REQUIRE(evaluated);
@@ -878,7 +878,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
 
             boost::asio::io_context io;
@@ -946,7 +946,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
@@ -983,7 +983,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success);
+                CHECK(!success);
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);
@@ -1005,7 +1005,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
@@ -1044,8 +1044,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 const auto& state_66 = journal.get<udho::manifold::facet<testing::Component<6>, testing::Feature<6>>>();
                 CHECK(!state_66.ready());
 
-                CHECK(success);
-                CHECK(success.success());
+                CHECK(!success);
             }).eval(stream);
             io.run();
 
@@ -1068,7 +1067,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             full_journal_type journal;
             configs_type configs;
-            pipeline_type pipeline{composition, configs, journal};
+            pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
@@ -1110,7 +1109,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
                 CHECK(state_66.ready());
                 CHECK(!state_66.value().accepted());
 
-                CHECK(success);
+                CHECK(!success);
             }).eval(stream);
             io.run();
             REQUIRE(evaluated);

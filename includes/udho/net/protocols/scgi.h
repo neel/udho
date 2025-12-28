@@ -478,7 +478,7 @@ struct scgi_reader2: public std::enable_shared_from_this<scgi_reader2<StreamT>>{
     inline explicit scgi_reader2(stream_type& stream, std::size_t wait_til = 2): _stream(stream), _timer(stream.get_executor()), _wait_til(wait_til) { }
 
     template <typename Handler>
-    void start(Handler&& handler) {
+    void start(Handler&& handler, std::size_t seconds) {
         auto self = this->shared_from_this();
         boost::asio::async_read_until(
             _stream, _buffer, ":",

@@ -48,7 +48,7 @@ struct facet<components::routing<RoutingTableT>, udho::manifold::feature::locato
     using component_type = components::routing<RoutingTableT>;
     using config_type    = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config_type& config): _component(component), _config(config) {}
+    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
@@ -75,7 +75,7 @@ struct facet<components::routing<MountpointsT>, udho::manifold::feature::respond
     using facet_type     = facet<component_type, udho::manifold::feature::locator>;
     using config_type    = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config_type& config): _component(component), _config(config) {}
+    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
     template <typename... Components, typename NextT>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, const boost::asio::ip::address& address, const udho::net::types::headers::request& request) const {

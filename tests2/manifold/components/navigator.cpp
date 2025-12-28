@@ -172,7 +172,7 @@ TEST_CASE("udho manifold component navigator", "[manifold][components][navigator
         request.method(boost::beast::http::verb::get);
         request.target("/hello/world/23.html?name=test&id=42&filter=active");
 
-        fabric_type fabric{component, config};
+        fabric_type fabric{component, config, 0};
         result_type result;
         std::exception_ptr ex;
         journal_type journal;

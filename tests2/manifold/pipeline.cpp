@@ -137,7 +137,7 @@ struct facet<testing::C00, testing::F00> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -164,7 +164,7 @@ struct facet<testing::C01, testing::F01> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -192,7 +192,7 @@ struct facet<testing::C10, testing::F10> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -218,7 +218,7 @@ struct facet<testing::C10, testing::X10> {
     using feature        = testing::X10;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -238,7 +238,7 @@ struct facet<testing::C11, testing::F11> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -264,7 +264,7 @@ struct facet<testing::C11, testing::X11> {
     using feature        = testing::X11;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -285,7 +285,7 @@ struct facet<testing::C20, testing::F20> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -312,7 +312,7 @@ struct facet<testing::C20, testing::F23> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -333,7 +333,7 @@ struct facet<testing::C21, testing::F21> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -360,7 +360,7 @@ struct facet<testing::C21, testing::F24> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -382,7 +382,7 @@ struct facet<testing::MSC, testing::F00> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -409,7 +409,7 @@ struct facet<testing::MSC, testing::F11> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -430,7 +430,7 @@ struct facet<testing::MSC, testing::F22> {
     using result         = typename feature::result;
     using config         = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config& conf): _component(component), _config(conf) {}
+    facet(component_type& component, const config& conf, std::size_t id): _component(component), _config(conf) {}
 
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, std::stringstream& stream) const {
@@ -538,7 +538,7 @@ struct patch_config<testing::Label1, 0> {
     using pipeline_type     = pipeline<composition_type, order_type, Count, 0>;
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 1>::configs_type;
 
-    void apply(const pipeline_type& p, next_config_type& config) {
+    static void apply(const pipeline_type& p, next_config_type& config) {
         // Example patch: modify C10's param for stage 1
         config[testing::C10::param::val] = "patched-by-stage0";
     }
@@ -556,7 +556,7 @@ struct patch_config<testing::Label1, 1> {
     using pipeline_type     = pipeline<composition_type, order_type, Count, 1>;
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 2>::configs_type;
 
-    void apply(const pipeline_type& p, next_config_type& config) {
+    static void apply(const pipeline_type& p, next_config_type& config) {
         // Example patch: modify C20's param for stage 2
         config[testing::C20::param::val] = "patched-by-stage1";
     }

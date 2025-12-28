@@ -36,6 +36,7 @@ private:
     variant_type _variant;
 protected:
     basic_hybrid_storage(variant_type&& variant): _variant(std::move(variant)) {}
+    basic_hybrid_storage(std::in_place_index_t<1>): _variant(std::in_place_index<1>) {}
 public:
     reference_type component() {
         if (_variant.index() == 0) return std::get<0>(_variant).get();
@@ -89,10 +90,10 @@ struct hybrid_storage<T, false, true>: basic_hybrid_storage<T>{
     using variant_type   = typename basic_hybrid_storage_type::variant_type;
 
     explicit hybrid_storage(T& value): basic_hybrid_storage_type(variant_type{std::ref(value)}) {}
-    explicit hybrid_storage(): basic_hybrid_storage_type(variant_type{T{}}) {}
-    explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(variant_type{T{}}) {}
+    explicit hybrid_storage(): basic_hybrid_storage_type(std::in_place_index<1>) {}
+    explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(std::in_place_index<1>) {}
 
-    explicit hybrid_storage(T&&): basic_hybrid_storage_type(variant_type{T{}}) {
+    explicit hybrid_storage(T&&): basic_hybrid_storage_type(std::in_place_index<1>) {
         static_assert(false, "Move construction not available for CompopnentT, expected to be default constructed or use lvalue reference");
     }
 };

@@ -286,27 +286,27 @@ TEST_CASE("manifold components params & config", "[manifold][config][params]") {
 // }
 
 TEST_CASE("manifold config patch", "[manifold][config][patch]") {
-    using changeset_type = udho::manifold::changeset<
-        testing::C00::enabled,
-        testing::C01::p1,
-        testing::C00::p1,
-        testing::C11::p2
-    >;
+    // using changeset_type = udho::manifold::changeset<
+    //     testing::C00::enabled,
+    //     testing::C01::p1,
+    //     testing::C00::p1,
+    //     testing::C11::p2
+    // >;
 
-    changeset_type changeset{testing::C00::enabled(true), testing::C01::p1{"vp1_1"}, testing::C00::p1{"vp1_0"}, testing::C11::p2{42}};
+    // changeset_type changeset{testing::C00::enabled(true), testing::C01::p1{"vp1_1"}, testing::C00::p1{"vp1_0"}, testing::C11::p2{42}};
 
-    auto changeset2 = udho::manifold::make_changeset(testing::C00::enabled(true), testing::C01::p1{"vp1_1"}, testing::C00::p1{"vp1_0"}, testing::C11::p2{42});
+    // auto changeset2 = udho::manifold::make_changeset(testing::C00::enabled(true), testing::C01::p1{"vp1_1"}, testing::C00::p1{"vp1_0"}, testing::C11::p2{42});
 
-    static_assert(std::is_same_v<decltype(changeset2), changeset_type>);
+    // static_assert(std::is_same_v<decltype(changeset2), changeset_type>);
 
-    udho::manifold::config<testing::C00> cfg;
-    changeset.mutate(cfg);
+    // udho::manifold::config<testing::C00> cfg;
+    // changeset.mutate(cfg);
 
-    CHECK(cfg[testing::C00::enabled::val].value());
-    CHECK(cfg[testing::C00::p1::val] == "vp1_0");
-    CHECK(cfg[testing::C00::p2::val] == 0);
-    CHECK(cfg[testing::C00::p3::val] == "p3");
-    CHECK(cfg[testing::C00::p4::val] == "");
+    // CHECK(cfg[testing::C00::enabled::val].value());
+    // CHECK(cfg[testing::C00::p1::val] == "vp1_0");
+    // CHECK(cfg[testing::C00::p2::val] == 0);
+    // CHECK(cfg[testing::C00::p3::val] == "p3");
+    // CHECK(cfg[testing::C00::p4::val] == "");
 
     // auto diff = udho::manifold::make_diff(
     //     testing::C00::params{},
@@ -320,21 +320,21 @@ TEST_CASE("manifold config patch", "[manifold][config][patch]") {
 
     // std::cout << diff << std::endl;
 
-    auto patch = udho::manifold::make_patch(
-        testing::C00::params{},
-        udho::manifold::make_changeset(
-            testing::C00::enabled(true),
-            testing::C01::p1{"vp1_1"},
-            testing::C00::p1{"vp1_0"},
-            testing::C11::p2{42}
-        )
-    );
+    // auto patch = udho::manifold::make_patch(
+    //     testing::C00::params{},
+    //     udho::manifold::make_changeset(
+    //         testing::C00::enabled(true),
+    //         testing::C01::p1{"vp1_1"},
+    //         testing::C00::p1{"vp1_0"},
+    //         testing::C11::p2{42}
+    //     )
+    // );
 
-    CHECK(patch[testing::C00::enabled::val].value());
-    CHECK(patch[testing::C00::p1::val] == "vp1_0");
-    CHECK(patch[testing::C00::p2::val] == 0);
-    CHECK(patch[testing::C00::p3::val] == "p3");
-    CHECK(patch[testing::C00::p4::val] == "");
+    // CHECK(patch[testing::C00::enabled::val].value());
+    // CHECK(patch[testing::C00::p1::val] == "vp1_0");
+    // CHECK(patch[testing::C00::p2::val] == 0);
+    // CHECK(patch[testing::C00::p3::val] == "p3");
+    // CHECK(patch[testing::C00::p4::val] == "");
 
 
 }

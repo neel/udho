@@ -637,6 +637,8 @@ private:
     const composition<Rest...>& tail() const { return *this; }
 };
 
+#ifndef __DOXYGEN__
+
 template <typename ComponentT>
 struct composition<ComponentT>: private wrapper<ComponentT> {
     using component_type = ComponentT;
@@ -687,6 +689,8 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     /// @}
 
 };
+
+#endif // __DOXYGEN__
 
 /**
  * @}

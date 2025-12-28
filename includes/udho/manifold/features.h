@@ -6,7 +6,7 @@
 #include <udho/manifold/fwd.h>
 #include <udho/net/common.h>
 #include <udho/url/router.h>
-
+#include <boost/beast/core/flat_buffer.hpp>
 
 
 namespace udho {
@@ -93,7 +93,24 @@ namespace feature{
 
     struct body_reader{
         static constexpr const std::size_t stage = 1;
+
+        struct result{
+            using buffer_type           = boost::beast::flat_buffer;
+
+            result(const std::string& mime, buffer_type&& buffer, std::error_code error, std::size_t bytes_transferred): _mime(mime), _buffer(std::move(buffer)), _error(error), _bytes(bytes_transferred) {}
+
+            const std::string& mime() const { return _mime; }
+            const buffer_type& buffer() const { return _buffer; }
+            std::size_t bytes() const { return _bytes; }
+            std::error_code error() const { return  _error; }
+        private:
+            buffer_type _buffer;
+            std::string _mime;
+            std::error_code _error;
+            std::size_t _bytes;
+        };
     };
+
     struct header_writer{
         static constexpr const std::size_t stage = 1;
     };

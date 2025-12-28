@@ -64,6 +64,10 @@ struct Name: udho::hazo::element<Name , Type>{                          \
     }                                                                   \
 }
 
+/**
+ * @}
+ */
+
 namespace udho{
 namespace manifold{
 namespace detail {
@@ -96,6 +100,11 @@ struct json_deserializer{
 };
 
 }
+
+/**
+ * @addtogroup manifold
+ * @{
+ */
 
 /**
  * @brief Type-safe parameter storage with JSON serialization
@@ -209,6 +218,8 @@ struct params: udho::hazo::map_d<Fields...>{
     }
 };
 
+#ifndef __DOXYGEN__
+
 template <>
 struct params<>{
     void save(nlohmann::json& json) const {
@@ -226,6 +237,8 @@ struct params<>{
     };
 };
 
+#endif // __DOXYGEN__
+
 namespace detail {
 
 template <typename FieldT>
@@ -239,11 +252,13 @@ struct field: udho::hazo::element<field<FieldT>, bool>{
 
 }
 
-}
-}
-
 /**
  * @}
  */
+
+
+}
+}
+
 
 #endif // UDHO_MANIFOLD_CONFIG_PARAMS_H
