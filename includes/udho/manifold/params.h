@@ -53,10 +53,8 @@
 #define UDHO_CONFIG_PARAM(Name, Type, DefaultValue)                     \
 struct Name: udho::hazo::element<Name , Type>{                          \
         using base_element = udho::hazo::element<Name , Type>;          \
+        using base_element::base_element;                               \
         inline Name(): base_element(DefaultValue) {}                    \
-        inline explicit Name(const Type& value): base_element(value) {} \
-        Name(const Name&) = default;                                    \
-        Name(Name&&) = default;                                         \
         using base_element::operator=;                                  \
         inline static constexpr auto key() {                            \
             using namespace udho::hazo::string::literals;               \

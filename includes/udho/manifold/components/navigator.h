@@ -131,6 +131,7 @@ struct facet<components::navigator<Policy>, udho::manifold::feature::identifier>
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+        std::cout << "-> facet<components::navigator<Policy>, udho::manifold::feature::identifier>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 private:

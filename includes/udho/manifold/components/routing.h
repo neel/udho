@@ -21,10 +21,13 @@ class routing {
 
 public:
     using features = udho::manifold::features<
-        udho::manifold::feature::locator,
-        udho::manifold::feature::responder
+        udho::manifold::feature::locator/*,
+        udho::manifold::feature::responder*/
     >;
-    using params   = udho::manifold::params<>;
+
+    UDHO_CONFIG_PARAM(use_trie, bool, false);
+
+    using params   = udho::manifold::params<use_trie>;
 
     static constexpr const udho::utils::string_view name = "router";
 
@@ -61,6 +64,7 @@ struct facet<components::routing<RoutingTableT>, udho::manifold::feature::locato
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+        std::cout << "-> facet<components::routing<RoutingTableT>, udho::manifold::feature::locator>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 

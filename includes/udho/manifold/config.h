@@ -69,8 +69,12 @@ struct basic_config{
     using contains = typename params_type::template contains<ParamT>;
 
     basic_config() = default;
-
     basic_config(const basic_config<ComponentT>& other): _params(other._params) {}
+
+    basic_config& operator=(const basic_config& other) {
+        _params = other._params;
+        return *this;
+    }
 
     /**
      * @brief Save configuration to JSON
@@ -113,7 +117,9 @@ struct basic_config{
      */
     void load(const nlohmann::json& json) {
         assert(json.is_object());
-        assert(json.contains(ComponentT::name));
+        if(!json.contains(udho::manifold::component_name<ComponentT>())) {
+            throw std::out_of_range{udho::utils::format("Failed to find key {} in the configuration", udho::manifold::component_name<ComponentT>())};
+        }
         _params.load(json[udho::manifold::component_name<ComponentT>()]);
     }
 
@@ -188,6 +194,12 @@ public:
     template <typename... XComponents>
     configs(const configs<XComponents...>& other): _config(other.template get<ComponentT>()) { }
 
+    template <typename... XComponents>
+    configs& operator=(const configs<XComponents...>& other) {
+        _config = other.template get<ComponentT>();
+        return *this;
+    }
+
 public:
 
     template <typename XComponentT, std::enable_if_t<std::is_same_v<XComponentT, ComponentT>, bool> = true>
@@ -227,6 +239,13 @@ public:
 
     template <typename... XComponents>
     configs(const configs<XComponents...>& other): configs<Components...>(other), _config(other.template get<ComponentT>()) { }
+
+    template <typename... XComponents>
+    configs& operator=(const configs<XComponents...>& other) {
+        _config = other.template get<ComponentT>();
+        configs<Components...>::operator=(other);
+        return *this;
+    }
 
 public:
 

@@ -17,6 +17,107 @@
 
 namespace testing {
 
+namespace detail{
+constexpr std::size_t digits10(std::size_t n) {
+    std::size_t d = 1;
+    while (n >= 10) { n /= 10; ++d; }
+    return d;
+}
+
+template <std::size_t N>
+constexpr std::size_t lit_len(const char (&)[N]) { return N - 1; } // exclude '\0'
+
+constexpr std::size_t cstrlen(const char* s) {
+    std::size_t n = 0;
+    while (s[n] != '\0') ++n;
+    return n;
+}
+
+// ---- writer that appends into a char buffer at compile time ----
+struct writer {
+    char* out;
+    std::size_t pos = 0;
+
+    constexpr explicit writer(char* p) : out(p) {}
+
+    constexpr void ch(char c) { out[pos++] = c; }
+
+    template <std::size_t N>
+    constexpr void lit(const char (&s)[N]) {
+        for (std::size_t i = 0; i < N - 1; ++i) out[pos++] = s[i];
+    }
+
+    constexpr void bytes(const char* s, std::size_t n) {
+        for (std::size_t i = 0; i < n; ++i) out[pos++] = s[i];
+    }
+
+    constexpr void sv(udho::utils::string_view s) {
+        for (std::size_t i = 0; i < s.size(); ++i) out[pos++] = s[i];
+    }
+
+    // writes decimal digits of n (no '\0')
+    constexpr void udec(std::size_t n) {
+        char tmp[20] = {};            // enough for 64-bit size_t (max 20 digits)
+        std::size_t len = 0;
+        do {
+            tmp[len++] = static_cast<char>('0' + (n % 10));
+            n /= 10;
+        } while (n != 0);
+
+        for (std::size_t i = 0; i < len; ++i)
+            out[pos++] = tmp[len - 1 - i];
+    }
+};
+
+// Build a null-terminated buffer of exactly Len chars (Len includes '\0')
+template <std::size_t Len, typename F>
+constexpr std::array<char, Len> build_cstr(F f) {
+    std::array<char, Len> a{};
+    writer w{a.data()};
+    f(w);
+    w.ch('\0');
+    return a;
+}
+
+// Prefix storage used as NTTP pointers (const char*) in C++17.
+// Must have external linkage -> "inline constexpr" at namespace scope is OK in C++17.
+inline constexpr char feature_prefix[]  = "Feature<";
+inline constexpr char xfeature_prefix[] = "XFeature<";
+
+// Unified tagged feature name factory.
+template <const char* Prefix, std::size_t Idx>
+constexpr auto make_tagged_feature_name() {
+    constexpr std::size_t prefix_len = cstrlen(Prefix);
+
+    constexpr std::size_t len_no_null = prefix_len + digits10(Idx) + 1 /*>*/;
+
+    return build_cstr<len_no_null + 1>([](writer& w) constexpr {
+        w.bytes(Prefix, cstrlen(Prefix));
+        w.udec(Idx);
+        w.ch('>');
+    });
+}
+
+// Component name uses Fs::name (string_view) so it works for Feature.
+inline constexpr char component_prefix[]  = "Component<";
+inline constexpr char xcomponent_prefix[] = "XComponent<";
+template <const char* Prefix, std::size_t Idx, std::size_t Fi>
+constexpr auto make_component_name() {
+    constexpr std::size_t len_no_null = cstrlen(Prefix) + digits10(Idx) + 1 /*,*/ + lit_len("Feature<") + digits10(Fi) + 1 /*>*/ + 1/*>*/;
+
+    return build_cstr<len_no_null + 1>([&](writer& w) constexpr {
+        w.bytes(Prefix, cstrlen(Prefix));
+        w.udec(Idx);
+        w.ch(',');
+        w.lit("Feature<");
+        w.udec(Fi);
+        w.ch('>');
+        w.ch('>');
+    });
+}
+
+}
+
 struct State {
     State() = delete;
     State(const State&) = default;
@@ -34,17 +135,26 @@ struct State {
 template <std::size_t Index>
 struct Feature{
     static constexpr const std::size_t idx = Index;
-
     static constexpr const std::size_t stage = 1;
-
     using result    = State;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_tagged_feature_name<detail::feature_prefix, Index>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1 };
 };
 
 template <std::size_t Index>
 struct XFeature{
     static constexpr const std::size_t idx = Index;
-
     static constexpr const std::size_t stage = 1;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_tagged_feature_name<detail::feature_prefix, Index>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1 };
 };
 
 
@@ -62,6 +172,12 @@ struct Component {
 
     bool is_default_constructed;
     std::string message;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_component_name<detail::component_prefix, Index, FeatureIndex>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1};
 };
 
 template <>
@@ -78,6 +194,8 @@ struct Component<5, 5> {
 
     bool is_default_constructed;
     std::string message;
+
+    inline static constexpr udho::utils::string_view name = "Component<Feature<1>, Feature<5>, Feature<6>>";
 };
 
 template <std::size_t Index, int FeatureIndex = Index>
@@ -94,11 +212,23 @@ struct XComponent {
 
     bool is_default_constructed;
     std::string message;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_component_name<detail::xcomponent_prefix, Index, FeatureIndex>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1};
 };
 
 template <>
 struct Feature<3> {
     static constexpr const std::size_t stage = 0;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_tagged_feature_name<detail::feature_prefix, 3>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1 };
 };
 
 }

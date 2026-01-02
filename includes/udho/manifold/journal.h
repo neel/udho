@@ -168,6 +168,8 @@ struct result_wrapper{
      */
     operator bool() const { return ready(); }
 
+    void clear() { _result.reset(); }
+
 private:
     opt_type _result;
 };
@@ -265,6 +267,7 @@ struct result_container{
     static constexpr int count() { return std::is_same_v<feature_type, FeatureT>; }
     /// @}
 
+    void clear() { _result.clear(); }
 private:
     wrapper_type _result;
 };
@@ -471,6 +474,14 @@ struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, priva
     }
     /// @}
 
+    /**
+     * @brief clear the journal
+     */
+    void clear() {
+        container_type::clear();
+        journal<Rest...>::clear();
+    }
+
 private:
     journal<Rest...>& tail() { return *this; }
     const journal<Rest...>& tail() const { return *this; }
@@ -486,6 +497,7 @@ struct journal<FacetT> : private detail::result_container<FacetT>{
     using container_type::get;
     using container_type::at;
     using container_type::count;
+    using container_type::clear;
 };
 
 #else
@@ -685,6 +697,11 @@ public:
     auto& first_of();
 
     /// @}
+
+    /**
+     * @brief clear the journal
+     */
+    void clear();
 };
 
 #endif // __DOXYGEN__

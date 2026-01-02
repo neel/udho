@@ -16,11 +16,130 @@
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <udho/manifold/params.h>
+#include <udho/utils/string_view.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
 
 namespace testing {
+
+namespace detail{
+constexpr std::size_t digits10(std::size_t n) {
+    std::size_t d = 1;
+    while (n >= 10) { n /= 10; ++d; }
+    return d;
+}
+
+template <std::size_t N>
+constexpr std::size_t lit_len(const char (&)[N]) { return N - 1; } // exclude '\0'
+
+constexpr std::size_t cstrlen(const char* s) {
+    std::size_t n = 0;
+    while (s[n] != '\0') ++n;
+    return n;
+}
+
+// ---- writer that appends into a char buffer at compile time ----
+struct writer {
+    char* out;
+    std::size_t pos = 0;
+
+    constexpr explicit writer(char* p) : out(p) {}
+
+    constexpr void ch(char c) { out[pos++] = c; }
+
+    template <std::size_t N>
+    constexpr void lit(const char (&s)[N]) {
+        for (std::size_t i = 0; i < N - 1; ++i) out[pos++] = s[i];
+    }
+
+    constexpr void bytes(const char* s, std::size_t n) {
+        for (std::size_t i = 0; i < n; ++i) out[pos++] = s[i];
+    }
+
+    constexpr void sv(udho::utils::string_view s) {
+        for (std::size_t i = 0; i < s.size(); ++i) out[pos++] = s[i];
+    }
+
+    // writes decimal digits of n (no '\0')
+    constexpr void udec(std::size_t n) {
+        char tmp[20] = {};            // enough for 64-bit size_t (max 20 digits)
+        std::size_t len = 0;
+        do {
+            tmp[len++] = static_cast<char>('0' + (n % 10));
+            n /= 10;
+        } while (n != 0);
+
+        for (std::size_t i = 0; i < len; ++i)
+            out[pos++] = tmp[len - 1 - i];
+    }
+};
+
+// Build a null-terminated buffer of exactly Len chars (Len includes '\0')
+template <std::size_t Len, typename F>
+constexpr std::array<char, Len> build_cstr(F f) {
+    std::array<char, Len> a{};
+    writer w{a.data()};
+    f(w);
+    w.ch('\0');
+    return a;
+}
+
+// Prefix storage used as NTTP pointers (const char*) in C++17.
+// Must have external linkage -> "inline constexpr" at namespace scope is OK in C++17.
+inline constexpr char feature_prefix[]  = "Feature<";
+inline constexpr char xfeature_prefix[] = "XFeature<";
+
+// Unified tagged feature name factory.
+template <const char* Prefix, std::size_t Stage, std::size_t Idx>
+constexpr auto make_tagged_feature_name() {
+    constexpr std::size_t prefix_len = cstrlen(Prefix);
+
+    constexpr std::size_t len_no_null =
+        prefix_len + digits10(Stage) + 1 /*,*/ + digits10(Idx) + 1 /*>*/;
+
+    return build_cstr<len_no_null + 1>([](writer& w) constexpr {
+        w.bytes(Prefix, cstrlen(Prefix));
+        w.udec(Stage);
+        w.ch(',');
+        w.udec(Idx);
+        w.ch('>');
+    });
+}
+
+// Component name uses Fs::name (string_view) so it works for Feature and XFeature.
+template <std::size_t Idx, typename... Fs>
+constexpr auto make_component_name() {
+    constexpr std::size_t nfs = sizeof...(Fs);
+    constexpr bool has_fs = (nfs != 0);
+
+    constexpr std::size_t fs_sum = (std::size_t{0} + ... + Fs::name.size());
+    constexpr std::size_t commas = has_fs ? (nfs - 1) : 0;
+    constexpr std::size_t fs_block = has_fs ? (1 /*,*/ + fs_sum + commas) : 0;
+
+    constexpr std::size_t len_no_null =
+        lit_len("Component<") + digits10(Idx) + fs_block + 1 /*>*/;
+
+    return build_cstr<len_no_null + 1>([](writer& w) constexpr {
+        w.lit("Component<");
+        w.udec(Idx);
+
+        if constexpr (has_fs) {
+            w.ch(',');
+            bool first = true;
+            auto add = [&](udho::utils::string_view sv) constexpr {
+                if (!first) w.ch(',');
+                first = false;
+                w.sv(sv);
+            };
+            (add(Fs::name), ...);
+        }
+
+        w.ch('>');
+    });
+}
+
+}
 
 struct State {
     State() = delete;
@@ -41,6 +160,12 @@ struct Feature{
     static constexpr const std::size_t stage = Stage;
     static constexpr const std::size_t idx = Idx;
     using result    = State;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_tagged_feature_name<detail::feature_prefix, Stage, Idx>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1 };
 };
 
 // X-Features (no result) with explicit stage numbers
@@ -48,18 +173,15 @@ template <std::size_t Stage, std::size_t Idx>
 struct XFeature{
     static constexpr const std::size_t stage = Stage;
     static constexpr const std::size_t idx = Idx;
-};
+private:
+    inline static constexpr auto _name_storage = detail::make_tagged_feature_name<detail::xfeature_prefix, Stage, Idx>();
 
-template <typename ComponentT>
-struct component_name_helper;
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1 };
+};
 
 template <std::size_t Idx, typename... Fs>
 struct Component;
-
-template <std::size_t Idx, typename... Fs>
-struct component_name_helper<Component<Idx, Fs...>>{
-    static constexpr const std::string_view name = "Comp";
-};
 
 // Component template - provides whatever features are specified
 template <std::size_t Idx, typename... Fs>
@@ -69,7 +191,6 @@ struct Component {
     UDHO_CONFIG_PARAM(enabled,  bool,           false   );
     UDHO_CONFIG_PARAM(param,    std::string,    "default");
 
-    static constexpr const std::string_view name = component_name_helper<Component<Idx, Fs...>>::name;
     using params = udho::manifold::params<enabled, param>;
 
     Component(): is_default_constructed(true) {}
@@ -79,6 +200,12 @@ struct Component {
 
     bool is_default_constructed;
     std::string message;
+
+private:
+    inline static constexpr auto _name_storage = detail::make_component_name<Idx, Fs...>();
+
+public:
+    inline static constexpr udho::utils::string_view name{_name_storage.data(), _name_storage.size() - 1};
 };
 
 } // namespace testing
@@ -117,11 +244,6 @@ namespace testing {
 
     // Multi-stage component (provides features in multiple stages)
     using MSC = Component<6, F00, F11, F22>;  // Provides F00 (Stage 0), F11 (Stage 1), F22 (Stage 2)
-
-    template <>
-    struct component_name_helper<MSC> {
-        static constexpr const std::string_view name = "MSC";
-    };
 
 } // namespace testing
 
@@ -609,12 +731,19 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
             msc
         );
 
+        std::cout << "composition: " << udho::manifold::composition_name<runtime_type::composition_type>::get() << std::endl;
+
         runtime_type runtime{std::move(composition)};
 
         // Load configuration
         nlohmann::json config_json = nlohmann::json::parse(R"({
-            "Comp": {"enabled": true, "param": "test-value"},
-            "MSC": {"param": "runtime-param"}
+            "Component<0,Feature<0,0>>": {"enabled": true, "param": "test-value"},
+            "Component<1,Feature<0,1>>": {"enabled": true, "param": "test-value"},
+            "Component<2,Feature<1,0>,XFeature<1,0>>": {"enabled": true, "param": "test-value"},
+            "Component<3,Feature<1,1>,XFeature<1,1>>": {"enabled": true, "param": "test-value"},
+            "Component<4,Feature<2,0>,Feature<2,3>>": {"enabled": true, "param": "test-value"},
+            "Component<5,Feature<2,1>,Feature<2,4>>": {"enabled": true, "param": "test-value"},
+            "Component<6,Feature<0,0>,Feature<1,1>,Feature<2,2>>": {"param": "runtime-param"}
         })");
 
         runtime.load(config_json);
@@ -670,8 +799,13 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
         // Load config
         nlohmann::json config_json = nlohmann::json::parse(R"({
-            "Comp": {"enabled": true, "param": "test"},
-            "MSC": {"param": "test"}
+            "Component<0,Feature<0,0>>": {"enabled": true, "param": "test"},
+            "Component<1,Feature<0,1>>": {"enabled": true, "param": "test"},
+            "Component<2,Feature<1,0>,XFeature<1,0>>": {"enabled": true, "param": "test"},
+            "Component<3,Feature<1,1>,XFeature<1,1>>": {"enabled": true, "param": "test"},
+            "Component<4,Feature<2,0>,Feature<2,3>>": {"enabled": true, "param": "test"},
+            "Component<5,Feature<2,1>,Feature<2,4>>": {"enabled": true, "param": "test"},
+            "Component<6,Feature<0,0>,Feature<1,1>,Feature<2,2>>": {"param": "test"}
         })");
 
         runtime.load(config_json);
@@ -705,8 +839,13 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
         // Load config
         nlohmann::json config_json = nlohmann::json::parse(R"({
-            "Comp": {"enabled": true, "param": "test"},
-            "MSC": {"param": "test"}
+            "Component<0,Feature<0,0>>": {"enabled": true, "param": "test"},
+            "Component<1,Feature<0,1>>": {"enabled": true, "param": "test"},
+            "Component<2,Feature<1,0>,XFeature<1,0>>": {"enabled": true, "param": "test"},
+            "Component<3,Feature<1,1>,XFeature<1,1>>": {"enabled": true, "param": "test"},
+            "Component<4,Feature<2,0>,Feature<2,3>>": {"enabled": true, "param": "test"},
+            "Component<5,Feature<2,1>,Feature<2,4>>": {"enabled": true, "param": "test"},
+            "Component<6,Feature<0,0>,Feature<1,1>,Feature<2,2>>": {"param": "test"}
         })");
 
         runtime.load(config_json);
@@ -751,8 +890,13 @@ TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]"
 
         // Load baseline config
         nlohmann::json config_json = nlohmann::json::parse(R"({
-            "Comp": {"enabled": true, "param": "initial"},
-            "MSC": {"param": "initial-param"}
+            "Component<0,Feature<0,0>>": {"enabled": true, "param": "initial"},
+            "Component<1,Feature<0,1>>": {"enabled": true, "param": "initial"},
+            "Component<2,Feature<1,0>,XFeature<1,0>>": {"enabled": true, "param": "initial"},
+            "Component<3,Feature<1,1>,XFeature<1,1>>": {"enabled": true, "param": "initial"},
+            "Component<4,Feature<2,0>,Feature<2,3>>": {"enabled": true, "param": "initial"},
+            "Component<5,Feature<2,1>,Feature<2,4>>": {"enabled": true, "param": "initial"},
+            "Component<6,Feature<0,0>,Feature<1,1>,Feature<2,2>>": {"param": "initial-param"}
         })");
 
         runtime.load(config_json);
@@ -800,8 +944,13 @@ TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pip
 
         // Load config with C10 disabled
         nlohmann::json config_json = nlohmann::json::parse(R"({
-            "Comp": {"enabled": false, "param": "test"},
-            "MSC": {"param": "test"}
+            "Component<0,Feature<0,0>>": {"enabled": true, "param": "test"},
+            "Component<1,Feature<0,1>>": {"enabled": true, "param": "test"},
+            "Component<2,Feature<1,0>,XFeature<1,0>>": {"enabled": false, "param": "test"},
+            "Component<3,Feature<1,1>,XFeature<1,1>>": {"enabled": true, "param": "test"},
+            "Component<4,Feature<2,0>,Feature<2,3>>": {"enabled": true, "param": "test"},
+            "Component<5,Feature<2,1>,Feature<2,4>>": {"enabled": true, "param": "test"},
+            "Component<6,Feature<0,0>,Feature<1,1>,Feature<2,2>>": {"param": "test"}
         })");
 
         runtime.load(config_json);

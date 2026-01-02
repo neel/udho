@@ -241,6 +241,56 @@ struct has_features: std::bool_constant<!std::is_void<detail::has_features<Compo
  */
 struct default_constructed{};
 
+template <typename FacetT>
+struct facet_name;
+
+template <typename ComponentT, typename FeatureT>
+struct facet_name<facet<ComponentT, FeatureT>>{
+    static std::string get(){
+        std::string component_name(udho::manifold::component_name<ComponentT>());
+        std::string feature_name(FeatureT::name);
+        return udho::utils::format("facet<{}, {}>", component_name, feature_name, FeatureT::stage);
+    }
+};
+
+template <typename... Components>
+struct components_name{
+    static std::string get(){
+        std::string components_str = (std::string(udho::manifold::component_name<Components>()) + "," + ... );
+        components_str.pop_back();
+        return components_str;
+    }
+};
+
+template <typename... Facets>
+struct facets_name{
+    static std::string get(){
+        std::string facets_str = ((facet_name<Facets>::get() + ",") + ... );
+        facets_str.pop_back();
+        return facets_str;
+    }
+};
+
+template <typename Composition>
+struct composition_name;
+
+template <typename Fabric>
+struct fabric_name;
+
+template <typename... Components>
+struct composition_name<composition<Components...>>{
+    static std::string get(){
+        return "components<"+components_name<Components...>::get()+">";
+    }
+};
+
+template <std::size_t Stage, typename... Facets>
+struct fabric_name<fabric<Stage, Facets...>>{
+    static std::string get(){
+        return "fabric<" + std::to_string(Stage) + "," + facets_name<Facets...>::get() +">";
+    }
+};
+
 /**
  * @}
  */

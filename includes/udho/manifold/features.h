@@ -54,6 +54,7 @@ namespace feature{
 
     struct header_reader{
         static constexpr const std::size_t stage = 0;
+        static constexpr const std::string_view name = "header_reader";
 
         using request_type    = udho::net::types::headers::request;
         using result          = request_type;
@@ -64,6 +65,7 @@ namespace feature{
      */
     struct identifier{
         static constexpr const std::size_t stage = 0;
+        static constexpr const std::string_view name = "identifier";
 
         class result{
         public:
@@ -93,21 +95,45 @@ namespace feature{
 
     struct body_reader{
         static constexpr const std::size_t stage = 1;
+        static constexpr const std::string_view name = "body_reader";
+
+        enum errors{
+            none = 0,
+            timeout,
+            size_limit_exceeded,
+            invalid_content_length,
+            malformed_request,
+            unknown
+        };
 
         struct result{
-            using buffer_type           = boost::beast::flat_buffer;
-
-            result(const std::string& mime, buffer_type&& buffer, std::error_code error, std::size_t bytes_transferred): _mime(mime), _buffer(std::move(buffer)), _error(error), _bytes(bytes_transferred) {}
+            result(const std::string& mime, bool contiguous)
+                : _mime(mime), _contiguous(contiguous) {}
+            result(const std::string& mime, bool contiguous, boost::beast::flat_buffer&& flat_buffer, boost::beast::multi_buffer&& multi_buffer)
+                : _mime(mime), _contiguous(contiguous), _flat_buffer(std::move(flat_buffer)), _multi_buffer(std::move(multi_buffer)) {}
 
             const std::string& mime() const { return _mime; }
-            const buffer_type& buffer() const { return _buffer; }
-            std::size_t bytes() const { return _bytes; }
+            bool contiguous() const { return _contiguous; }
+
+            const boost::beast::flat_buffer& flat_buffer() const { return _flat_buffer; }
+            const boost::beast::multi_buffer& multi_buffer() const { return _multi_buffer; }
+
+            boost::beast::flat_buffer& flat_buffer() { return _flat_buffer; }
+            boost::beast::multi_buffer& multi_buffer() { return _multi_buffer; }
+
+            std::size_t bytes_transferred() const { return _bytes_transferred; }
             std::error_code error() const { return  _error; }
+
+            result& bytes_transferred(std::size_t bytes) { _bytes_transferred = bytes; return *this; }
+            result& error(std::error_code ec) { _error = ec; return *this; }
         private:
-            buffer_type _buffer;
-            std::string _mime;
-            std::error_code _error;
-            std::size_t _bytes;
+            std::string                 _mime;
+            bool                        _contiguous;
+            std::error_code             _error;
+            std::size_t                 _bytes_transferred;
+            boost::beast::flat_buffer   _flat_buffer;
+            boost::beast::multi_buffer  _multi_buffer;
+
         };
     };
 
@@ -120,6 +146,7 @@ namespace feature{
 
     struct locator{
         static constexpr const std::size_t stage = 0;
+        static constexpr const std::string_view name = "locator";
 
         using result = udho::url::detail::route_index;
     };

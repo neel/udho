@@ -245,8 +245,6 @@ public:
      */
     using configs_type        = udho::manifold::configs<Components...>;
 
-    // using journal_type        = typename basic_pipeline_type::journal_type;
-
     /**
      * @brief Journal type capable of storing results from all facets in the full fabric
      *
@@ -402,24 +400,25 @@ public:
      * @note Callback is cleared after execution (following "eval once" principle)
      */
     common_pipepine& then(boost::asio::io_context& io, async_callback_type&& callback){
-        _user_callback = [&io, &callback](safe_success_type&& success){
-            boost::asio::post(io, std::bind(std::forward<async_callback_type>(callback), std::move(success)));
+        _user_callback = [&io, callback = std::move(callback)](safe_success_type&& success){
+            boost::asio::post(io, std::bind(std::move(callback), std::move(success)));
         };
         return *this;
     }
 private:
     void on_completion(safe_success_type&& success){
+        std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << "," << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
         if(_user_callback) {
             // Will be called in case of failure
             _user_callback(std::forward<safe_success_type>(success));
-            _user_callback = nullptr;
+            // _user_callback = nullptr;
         }
     }
 
 private:
-    async_callback_type _callback;
-    async_callback_type _user_callback;
-    evaluator_type      _evaluator;
+    async_callback_type      _callback;
+    async_callback_type      _user_callback;
+    evaluator_type           _evaluator;
 };
 
 /**
@@ -444,20 +443,51 @@ struct terminal;
  * Provides type-safe access to pipelines at individual stages and manages the
  * shared configuration state across all stages.
  *
+ * @note Generally constructed by the pipeline<CompositionT, OrderT, Count, -1> pipeline.
+ *       However, it can can be constructed directly for testing.
+ *
+ * ## Configuration (borrowed)
+ *
+ * Expects reference of the configuration owned by the root pipeline (Stage -1) to be
+ * passed during construction which is not copied but stored as reference only, so that
+ * each @ref udho::manifold::flow "flow" can have its own copy of configs, while allowing
+ * it to be reconfigured by usercode specialization during stage transition.
+ *
+ * ## Composition (borrowed)
+ *
+ * Holds a non-const reference to the composition passed by the previous pipeline starting from
+ * the Stage -1 pipeline.
+ *
+ * ## Journal (borrowed)
+ *
+ * Not directly borrowed, but passed to the common_pipeline and the subsequent pipelines which borrows
+ * the journal indirectly through a non-const reference.
+ *
+ * ## Next pipelines (owned)
+ *
+ * Owns the subsequent pipelines starting from Stage+1 to Count.
+ *
+ * ## Previous pipeline
+ *
+ * Keeps a non-const reference to the previous pipeline
+ *
  * @tparam CompositionT The component composition type
  * @tparam OrderT The feature order type (order<Features...>)
  * @tparam Count The total number of pipeline stages
  * @tparam Stage The current stage index (-1 for start, Count for finish)
  */
-template <typename CompositionT, typename OrderT, std::size_t Count, int Stage = 0>
+template <typename CompositionT, typename OrderT, std::size_t Count, int Stage>
 struct pipeline{
     static_assert (Stage < Count);
-    using composition_type   = CompositionT;
-    using order_type         = OrderT;
-    using pipeline_type      = udho::manifold::common_pipepine<Stage, order_type, composition_type>;
-    using configs_type       = typename pipeline_type::configs_type;
-    using prev_pipeline_type = pipeline<composition_type, order_type, Count, Stage-1>;
-    using next_pipeline_type = pipeline<composition_type, order_type, Count, Stage+1>;
+    using composition_type     = CompositionT;
+    using order_type           = OrderT;
+    using common_pipeline_type = udho::manifold::common_pipepine<Stage, order_type, composition_type>;
+    using configs_type         = typename common_pipeline_type::configs_type;
+    using prev_pipeline_type   = pipeline<composition_type, order_type, Count, Stage-1>;
+    using next_pipeline_type   = pipeline<composition_type, order_type, Count, Stage+1>;
+
+    const int stage = Stage;
+    const int count = Count;
 
     friend class pipeline<composition_type, order_type, Count, Stage-1>;
 
@@ -466,16 +496,14 @@ struct pipeline{
      *
      * @tparam JournalT Journal type for storing facet results
      * @param composition The component composition
-     * @param baseline Baseline configuration shared across all stages
+     * @param configs Configuration shared across all stages
      * @param journal Journal for storing facet results
      * @param previous Reference to the previous pipeline stage
      */
     template <typename JournalT>
-    pipeline(composition_type& composition, typename composition_type::configs_type& baseline, JournalT& journal, const prev_pipeline_type& previous, std::size_t id)
-        : _composition(composition), _configs(baseline), _pipeline(composition, _configs, journal, id), _next(composition, baseline, journal, *this, 0), _previous(previous)
-    {
-        // _configs copy constructor picks the relevant configs from the baseline
-    }
+    pipeline(composition_type& composition, typename composition_type::configs_type& configs, JournalT& journal, prev_pipeline_type& previous, std::size_t id)
+        : _composition(composition), _configs(configs), _common_pipeline(composition, _configs, journal, id), _next(composition, configs, journal, *this, id), _previous(previous)
+    {}
 
     /// @name Configuration Access
     /// @{
@@ -512,11 +540,14 @@ struct pipeline{
     void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
+        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
+        std::cout << "::operator()(flow, ...)" << std::endl;
+
         using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
         args_tuple_t args_tuple(std::forward<Args>(args)...);
 
         _then(flow, args_tuple);
-        _pipeline.eval(std::forward<Args>(args)...);
+        _common_pipeline.eval(std::forward<Args>(args)...);
     }
 
     /**
@@ -535,11 +566,14 @@ struct pipeline{
     void operator()(boost::asio::io_context& io, std::shared_ptr<FlowT> flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
+        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
+        std::cout << "::operator()(io, flow, ...)" << std::endl;
+
         using args_tuple_t = std::tuple<boost::asio::io_context&, std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
         args_tuple_t args_tuple(io, std::forward<Args>(args)...);
 
         _then(flow, args_tuple);
-        _pipeline.eval(std::forward<Args>(args)...);
+        _common_pipeline.eval(std::forward<Args>(args)...);
     }
 
     /// @name Stage Access
@@ -566,6 +600,9 @@ struct pipeline{
     const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
 
     template <int N, std::enable_if_t<(N < Stage), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return _previous.template at<N>(); }
+
+    template <int N, std::enable_if_t<(N < Stage), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
     /// @}
 
@@ -584,28 +621,36 @@ private:
      */
     template <typename FlowT, typename ArgsTupleT>
     void _then(std::shared_ptr<FlowT> flow, ArgsTupleT& args_tuple){
+        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
         auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
             if(success) {
-                flow->apply(*this, configs());
+                flow->apply(*this, configs());                  // Stage transition -> patch configs
+                std::cout << "_next(flow, ...)" << std::endl;
                 std::apply(
                     [&](auto&... args) {
                         _next(flow, args...);
                     },
                     args_tuple
                 );
-            } else {
-                flow->terminate(false);
+            } else {                                            // error occured
+                std::cout << "FAIL!!" << __LINE__ << std::endl;
+                bool reenter = std::apply(
+                    [&](auto&... args) -> bool {
+                        return flow->error(success, args...);          // inform flow before termination
+                    },
+                    args_tuple
+                );
             }
         };
-        _pipeline.then(std::move(lambda));
+        _common_pipeline.then(std::move(lambda));
     }
 
 private:
-    composition_type&   _composition;
-    const prev_pipeline_type& _previous;
+    composition_type&    _composition;
+    prev_pipeline_type&  _previous;
     configs_type&        _configs;
-    pipeline_type       _pipeline;
-    next_pipeline_type  _next;
+    common_pipeline_type _common_pipeline;
+    next_pipeline_type   _next;
 };
 
 /**
@@ -614,19 +659,48 @@ private:
  * Specialization that serves as the entry point for pipeline execution.
  * Manages the initial journal and provides access to pipeline at each stage.
  *
+ * @note generally constructed by the flow, can be constructed directly for testing.
+ *
+ * ## Composition (borrowed)
+ *
+ * Composition is not owned by the Stage -1 pipeline. Rather it is expected that the
+ * caller ensures that the composition outlives the Stage -1 pipeline. The Stage -1
+ * pipeline and subsequent pipelines only hold a non-const reference to the composition.
+ *
+ * ## Journal (owned)
+ *
+ * The Stage -1 pipeline owns journal for the full fabric spanning from Stage 0 pipeline
+ * till Stage Count pipeline. This journal is passed by reference to the subsequent pipelines.
+ *
+ * ## Configurattions (owned)
+ *
+ * @ref udho::manifold::flow "Flow" passes a reference to the baseline configs
+ * obtained from the runtime which is copied into a member variable. A reference
+ * to that configs is passed to the next pipeline. Subsequent configs hold reference
+ * of the configs only.
+ *
+ * Each @ref udho::manifold::flow "flow" has its own copy of configs, owned by stage
+ * -1 pipeline shared accross all other stage > -1 pipelines through mutable references
+ * which could be patched by the usercode during stage transition. Patching of that
+ * reference would impact pipelines of all stages.
+ *
+ * ## Next pipelines (owned)
+ *
+ * The Stage -1 pipeline owns the subsequent pipelines starting from Stage 0 to Stage Count.
+ *
  * @tparam CompositionT The component composition type
  * @tparam OrderT The feature order type
  * @tparam Count The total number of pipeline stages
  */
 template <typename CompositionT, typename OrderT, std::size_t Count>
 struct pipeline<CompositionT, OrderT, Count, -1> {
-    using composition_type   = CompositionT;
-    using configs_type       = typename composition_type::configs_type;
-    using order_type         = OrderT;
-    using full_journal_type  = typename detail::get_journal_for_full_fabric<CompositionT>::type;
-    using next_pipeline_type = pipeline<composition_type, order_type, Count, 0>;
-    using self_type          = pipeline<CompositionT, OrderT, Count, -1>;
-    using ptr                = std::shared_ptr<self_type>;
+    using composition_type     = CompositionT;
+    using configs_type         = typename composition_type::configs_type;
+    using order_type           = OrderT;
+    using full_journal_type    = typename detail::get_journal_for_full_fabric<CompositionT>::type;
+    using next_pipeline_type   = pipeline<composition_type, order_type, Count, 0>;
+    using self_type            = pipeline<CompositionT, OrderT, Count, -1>;
+    using ptr                  = std::shared_ptr<self_type>;
 
     /**
      * @brief Constructs the start pipeline stage
@@ -634,12 +708,28 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
      * @param composition The component composition
      * @param baseline Baseline configuration shared across all stages
      */
-    pipeline(CompositionT& composition, typename CompositionT::configs_type& baseline, std::size_t id): _composition(composition), _next(composition, baseline, _journal, *this, id) {}
+    pipeline(CompositionT& composition, configs_type& baseline, std::size_t id): _composition(composition), _configs(baseline), _next(composition, _configs, _journal, *this, id) {}
 
     /// @name Configuration Access
     /// @{
     configs_type& configs() { return _configs; }
     const configs_type& configs() const { return _configs; }
+    /// @}
+
+
+    /// @name Composition access
+    /// @{
+    composition_type& composition() { return _composition; }
+    const composition_type& composition() const { return _composition; }
+    /// @}
+
+    /// @name Journal Access
+    /// @{
+    /**
+     * @brief Gets the journal containing results from all stages
+     * @return Const reference to the complete journal
+     */
+    const full_journal_type& journal() const { return _journal; }
     /// @}
 
     /**
@@ -655,22 +745,24 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
         _next(std::forward<Args>(args)...);
     }
 
+    void prepare_reentry(const configs_type& baseline, std::size_t last_id) {
+        _configs = baseline;
+        _journal.clear();
+    }
+
     /// @name Stage Access
     /// @{
-    template <int N>
+    template <int N, std::enable_if_t<(N > -1), bool> = true>
     pipeline<composition_type, order_type, Count, N>& at() { return _next.template at<N>(); }
 
-    template <int N>
+    template <int N, std::enable_if_t<(N > -1), bool> = true>
     const pipeline<composition_type, order_type, Count, N>& at() const { return _next.template at<N>(); }
-    /// @}
 
-    /// @name Journal Access
-    /// @{
-    /**
-     * @brief Gets the journal containing results from all stages
-     * @return Const reference to the complete journal
-     */
-    const full_journal_type& journal() const { return _journal; }
+    template <int N, std::enable_if_t<(N == -1), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return *this; }
+
+    template <int N, std::enable_if_t<(N == -1), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return *this; }
     /// @}
 private:
     composition_type&   _composition;
@@ -692,6 +784,8 @@ private:
  */
 template <typename CompositionT, typename OrderT, std::size_t Count>
 struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
+    using composition_type   = CompositionT;
+    using order_type         = OrderT;
     using prev_pipeline_type = pipeline<CompositionT, OrderT, Count, Count-1>;
     using configs_type       = typename prev_pipeline_type::configs_type;
 
@@ -704,7 +798,7 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
      * @param previous Reference to the previous pipeline stage
      */
     template <typename JournalT>
-    pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, const prev_pipeline_type& previous, std::size_t id): _configs(configs), _previous(previous), _id(id) {}
+    pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, prev_pipeline_type& previous, std::size_t id): _configs(configs), _previous(previous), _id(id) {}
 
     /// @name Configuration Access
     /// @{
@@ -726,19 +820,57 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
     template <typename FlowT, typename... Args>
     void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
         using label_type    = typename FlowT::label_type;
-        using terminal_type = udho::manifold::terminal<label_type>;
 
-        const configs_type& configs = _configs;
-        terminal_type terminal(flow->root().journal(), configs);
+        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
+        std::cout << "::operator()(io, flow, ...)" << std::endl;
 
-        if(terminal(std::forward<Args>(args)...)){
-            flow->terminate(true);
+        if(flow->reenter(std::forward<Args>(args)...)){
+            restart(flow, std::forward<Args>(args)...);
         }
     }
 
+    /**
+     * @brief restart the flow
+     * @param flow
+     * @param args
+     */
+    template <typename FlowT, typename... Args>
+    void restart(std::shared_ptr<FlowT> flow, Args&&... args) {
+        using start_pipeline_type = pipeline<CompositionT, OrderT, Count, -1>;
+
+        start_pipeline_type& start = _previous.template at<-1>();
+        start.prepare_reentry(flow->baseline(), flow->id());
+        flow->prepare(std::forward<Args>(args)...);
+        start(flow, std::forward<Args>(args)...);
+    }
+
+    /// @name Stage Access
+    /// @{
+
+    /**
+     * @brief Gets a reference to a specific pipeline stage
+     *
+     * Provides type-safe access to any pipeline stage by index.
+     *
+     * @tparam N The stage index to access
+     * @return Reference to the requested pipeline stage
+     */
+    template <int N, std::enable_if_t<(N == Count), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return *this; }
+
+    template <int N, std::enable_if_t<(N == Count), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return *this; }
+
+    template <int N, std::enable_if_t<(N < Count), bool> = true>
+    pipeline<composition_type, order_type, Count, N>& at() { return _previous.template at<N>(); }
+
+    template <int N, std::enable_if_t<(N < Count), bool> = true>
+    const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
+    /// @}
+
 private:
     configs_type& _configs;
-    const prev_pipeline_type& _previous;
+    prev_pipeline_type& _previous;
     std::size_t _id;
 };
 
@@ -808,14 +940,25 @@ struct composition_max_stage<udho::manifold::composition<Components...>>{
 
 }
 
+template <typename CompositionT, typename OrderT>
+using start_pipeline = pipeline<CompositionT, OrderT, detail::composition_max_stage<CompositionT>::value +1, -1>;
+
+template <typename CompositionT, typename OrderT>
+using finish_pipeline = pipeline<CompositionT, OrderT, detail::composition_max_stage<CompositionT>::value +1, detail::composition_max_stage<CompositionT>::value +1>;
+
 /**
  * @brief Runtime manager for pipeline executions
  *
  * Manages the lifecycle of flows providing:
- * - Composition and configuration management
- * - Flow spawning and tracking
+ * - Composition management
+ *   - constructs the composition through the constructor
+ * - Thread-safe Flow spawning and tracking
+ *   - creates a flow with a reference to this runtime, composition and baseline configurations
+ *   - manages a collection of active flows
+ *   - terminated flows are removed from the collection
  * - Baseline configuration loading/saving
- * - Thread-safe flow management
+ *   - default constructs the default configuration
+ *   - possible to load from json after instantiation with default values
  *
  * @tparam LabelT The label type identifying the pipeline configuration
  */
@@ -849,10 +992,12 @@ struct runtime{
     static composition_type compose(Args&&... args) { return composition_type::compose(std::forward<Args>(args)...); }
 
     runtime(runtime&&) = delete;
-
     runtime& operator=(runtime&&) = delete;
 
     runtime(composition_type&& composition): _composition(std::move(composition)) {}
+
+    template <typename... Components>
+    runtime(Components&&... components): _composition(composition_type::compose(std::forward<Components>(components)...)) {}
 
     /// @name Composition Access
     /// @{
@@ -909,11 +1054,20 @@ struct runtime{
      * Called by flows when they terminate to clean up resources.
      *
      * @param flow The flow to remove
-     * @param success Whether the flow terminated successfully
      */
-    void remove(const flow_ptr_type& flow, bool success) {
+    bool remove(const flow_ptr_type& flow) {
         std::scoped_lock<std::mutex> lock(_mutex);
-        _flows.erase(std::find(_flows.begin(), _flows.end(), flow));
+        auto it = std::find_if(_flows.begin(), _flows.end(), [id = flow->id()](const auto& f){
+            return f->id() == id;
+        });
+        if(it != _flows.end()) {
+            std::cerr << "remove() found flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            _flows.erase(it);
+            return true;
+        } else {
+            std::cerr << "remove() missing flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            return false;
+        }
     }
     /// @}
 
@@ -1000,25 +1154,31 @@ struct patch{
 template <typename LabelT>
 struct terminal{
     using label_type        = LabelT;
-    using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
-    using configs_type      = typename runtime_type::configs_type;
+    using flow_type         = flow<label_type>;
     using composition_type  = typename runtime_type::composition_type;
-    using full_journal_type = typename detail::get_journal_for_full_fabric<composition_type>::type;
+    using journal_type      = typename flow_type::journal_type;
+    using configs_type      = typename runtime_type::configs_type;
 
     terminal() = delete;
     terminal(const terminal&) = delete;
 
-    terminal(const full_journal_type& journal, const configs_type& configs): _journal(journal), _configs(configs) {}
+    terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+        : _composition(composition), _configs(configs), _journal(journal) {}
 
     template <typename... Args>
-    bool operator()(Args&&... args) {
-        return true;
-    }
+    bool reenter(Args&&... args) { return false; }
+
+    template <typename... Args>
+    bool error(udho::manifold::exclusive_result, Args&&...){ return false; }
+
+    template <typename... Args>
+    void prepare(Args&&... args) { }
 
 private:
-    const full_journal_type& _journal;
+    composition_type&   _composition;
     const configs_type& _configs;
+    const journal_type& _journal;
 };
 
 namespace detail {
@@ -1085,12 +1245,21 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     using finish_pipeline_type = typename runtime_type::finish_pipeline_type;
     /// @}
 
+    /// @name Pipeline sompletion callback
+    /// @{
+    using callback_type        = std::function<void (const flow<LabelT>&, bool)>;
+    /// @}
+
+    using journal_type         = typename start_pipeline_type::full_journal_type;
+
     template <typename>
     friend struct runtime;
 
     flow() = delete;
     flow(const flow<LabelT>&) = delete;
     flow(flow<LabelT>&&) = delete;
+
+    std::size_t id() const { return _id; }
 
     /**
      * @brief Gets a shared pointer to this flow
@@ -1110,7 +1279,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
      */
     template <int Stage>
     void apply(const pipeline_at<Stage>& p, configs_type& config){
-        detail::patcher<LabelT, runtime<LabelT>::Count, Stage>::apply(p, config);
+        detail::patcher<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(p, config);
     }
 
     /**
@@ -1123,7 +1292,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(Args&&... args) { _pipeline(self(), std::forward<Args>(args)...); }
+    void start(Args&&... args) { _root_pipeline(self(), std::forward<Args>(args)...); }
 
     /**
      * @brief Starts asynchronous pipeline execution
@@ -1136,21 +1305,93 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(boost::asio::io_context& io, Args&&... args) { io, _pipeline(self(), std::forward<Args>(args)...); }
+    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), std::forward<Args>(args)...); }
 
-    /**
-     * @brief Terminates the flow
-     *
-     * Called when the flow completes (either successfully or with failure).
-     * Notifies the runtime to clean up flow tracking.
-     *
-     * @param success Whether the flow terminated successfully
-     */
-    void terminate(bool success) {
-        _runtime.remove(self(), success);
+    template <typename... Args>
+    bool reenter(Args&&... args) {
+        using terminal_type = udho::manifold::terminal<label_type>;
+
+        terminal_type terminal(composition(), configs(), journal());
+        bool should_reenter = terminal.reenter(std::forward<Args>(args)...);
+        if(!should_reenter){
+            terminate();
+        }
+        return should_reenter;
     }
 
-    const start_pipeline_type& root() const { return _pipeline; }
+    template <typename... Args>
+    void prepare(Args&&... args) {
+        using terminal_type = udho::manifold::terminal<label_type>;
+
+        terminal_type terminal(composition(), configs(), journal());
+        terminal.prepare(std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Conditionally terminates the flow after encountering failure in a facet during evaluation of the pipeline.
+     *
+     * Call's the terminal's error function. If it returns true then reenters. Otherwise terminates.
+     *
+     * @note call originates from next_evaluator_helper_internal::fail triggered by calling
+     *       next.fail(...) from some facet while evaluating the pipeline. The callback is set
+     *       from pipeline::_then
+     *
+     * @param success
+     */
+    template <typename... Args>
+    bool error(udho::manifold::exclusive_result success, Args&&... args) {
+        assert(!success);
+
+        using terminal_type = udho::manifold::terminal<label_type>;
+        terminal_type terminal(composition(), configs(), journal());
+        bool should_reenter = terminal.error(success, std::forward<Args>(args)...);
+
+        if(!should_reenter){
+            terminate();
+        } else {
+            _finish_pipeline.restart(self(), std::forward<Args>(args)...);
+        }
+        return should_reenter;
+    }
+
+    const start_pipeline_type& root() const { return _root_pipeline; }
+
+    void then(callback_type&& callback){
+        _callback = std::move(callback);
+    }
+
+    composition_type& composition() { return _root_pipeline.composition(); }
+    const composition_type& composition() const { return _root_pipeline.composition(); }
+
+    const configs_type& configs() const { return _root_pipeline.configs(); }
+    const configs_type& baseline() const { return _runtime.baseline(); }
+    const journal_type& journal() const { return _root_pipeline.journal(); }
+
+private:
+    /**
+     * @brief Terminates the flow after pipeline completes evaluating all stages
+     *
+     * Called when the flow completes and terminal<label_type>::operator() suggest
+     * termination by returning true.
+     *
+     * Notifies the runtime to clean up flow tracking.
+     *
+     * @note this call originates from the finish_pipeline. The finish_pipeline::
+     *       for this label_type calls terminal<label_type>::operator() once
+     *       pipeline evaluation proceeds till the last stage. Only if the
+     *       **terminal<label_type>::operator() returns true** then the terminate
+     *       method is called from the finish_pipeline::operator().
+     */
+    void terminate() {
+        if(_callback){
+            _callback(*this, false);
+        }
+        bool removed = _runtime.remove(self());
+
+        if(!removed) {
+            std::cout << "Flow doesn't exist in collection" << std::endl;
+        }
+    }
 
 private:
 
@@ -1161,7 +1402,8 @@ private:
      * @param composition Reference to the component composition
      * @param baseline Reference to baseline configuration
      */
-    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline): _runtime(runtime), _id(_counter++), _pipeline(composition, baseline, _id) {}
+    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline)
+        : _runtime(runtime), _id(_counter++), _root_pipeline(composition, baseline, _id), _finish_pipeline(_root_pipeline.template at<Count>()) {}
 
     /**
      * @brief Factory method for flow creation
@@ -1169,13 +1411,17 @@ private:
      * @param runtime Reference to the managing runtime
      * @return New flow instance
      */
-    static ptr create(runtime_type& runtime) { return ptr(new flow(runtime, runtime.composition(), runtime.baseline())); }
+    static ptr create(runtime_type& runtime) {
+        return ptr(new flow(runtime, runtime.composition(), runtime.baseline()));
+    }
 
 private:
-    runtime_type&       _runtime;
-    std::size_t         _id;
-    start_pipeline_type _pipeline;
-    static std::size_t  _counter;
+    runtime_type&           _runtime;
+    std::size_t             _id;
+    start_pipeline_type     _root_pipeline;
+    finish_pipeline_type&   _finish_pipeline;
+    callback_type           _callback;
+    static std::size_t      _counter;
 };
 
 template <typename LabelT>

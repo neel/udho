@@ -16,7 +16,10 @@
 #include <udho/net/common.h>
 #include <boost/beast/core/static_buffer.hpp>
 #include <boost/beast/http/string_body.hpp>
+#include <boost/beast/http/buffer_body.hpp>
+#include <boost/beast/http/dynamic_body.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 namespace udho{
 namespace net{
@@ -59,6 +62,7 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
 template <typename StreamT>
 struct http_header_reader{
     using http_request_parser_type  = boost::beast::http::parser<true, boost::beast::http::empty_body>;
+    using opt_http_req_parser_type  = std::optional<http_request_parser_type>;
     using stream_type               = StreamT;
     using timer_type                = boost::asio::steady_timer;
 
@@ -72,28 +76,36 @@ struct http_header_reader{
      */
     template <typename Handler>
     void start(Handler&& handler, std::size_t seconds){
+        _parser.emplace();
+        assert(_parser.has_value());
+        start_timer(seconds);
+        boost::beast::http::async_read_header(
+            _stream, _buffer, parser(),
+            [this, handler = std::move(handler)] (boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                assert(_parser.has_value());
+                finished(std::move(handler), ec, bytes_transferred);
+            }
+        );
+    }
+
+    bool is_finished() const { return _finished; }
+
+    http_request_parser_type& parser() { return *_parser; }
+
+private:
+    void start_timer(std::size_t seconds) {
+        _timer.expires_after(std::chrono::seconds(seconds));
         _timer.async_wait([this](boost::system::error_code ec) {
             if (!ec) {
                 _timeout();
             }
         });
-        boost::beast::http::async_read_header(
-            _stream, _buffer, _parser,
-            [this, handler = std::move(handler)] (boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-                finished(std::move(handler), ec, bytes_transferred);
-            }
-        );
-        _timer.expires_after(std::chrono::seconds(seconds));
     }
 
-    bool is_finished() const { return _finished; }
-
-private:
     void _timeout(){
-        // _stream.cancel(boost::system::error_code{});
-        // works with boost::beast::test::basic_stream
         _stream.close();
         _stream.close_remote();
+        // _stream.cancel(boost::system::error_code{});
     }
 
 private:
@@ -101,94 +113,166 @@ private:
     void finished(Handler&& handler, boost::system::error_code ec, std::size_t bytes_transferred){
         _timer.cancel();
         if(!ec){
-            _request = _parser.release();
+            assert(_parser.has_value());
+            _request = std::move(_parser->release());
         }
         // _request is empty in case of error but it exists and it is legal to move it
+        std::cout << "h finished: " << ec.message() << std::endl;
         handler(std::move(_request), ec, bytes_transferred);
         _finished = true;
     }
+
 private:
     udho::net::types::headers::request  _request; // gets moved in finished
     stream_type&                        _stream;
     boost::beast::flat_buffer&          _buffer;
-    http_request_parser_type            _parser;
+    opt_http_req_parser_type            _parser;
     bool                                _finished;
     timer_type                          _timer;
 };
 
-template <typename StreamT>
-struct http_body_reader{
-    using stream_type               = StreamT;
-    using body_request_type         = boost::beast::http::request<boost::beast::http::string_body>;
-    using body_parser_type          = boost::beast::http::parser<true, boost::beast::http::string_body>;
-    using timer_type                = boost::asio::steady_timer;
+namespace detail{
 
-    http_body_reader(const udho::net::types::headers::request& request, stream_type& stream, boost::beast::flat_buffer& buffer)
-        : _request(request), _stream(stream), _buffer(buffer), _parser(request), _finished(false), _timer(_stream.get_executor()) {}
+template <typename Buffer>
+struct transfer_leftover{
+    using target_buffer_type = Buffer;
+
+    transfer_leftover(target_buffer_type& target): _target(target) {}
+
+    target_buffer_type& operator()(boost::beast::flat_buffer& source, std::size_t content_length) {
+        auto src   = source.data();
+        auto limit = std::min(content_length, source.size());
+        _target.commit(boost::asio::buffer_copy(_target.prepare(limit), src));
+        source.consume(limit);
+        _bytes_transferred = limit;
+        return _target;
+    }
+
+    std::size_t bytes_transferred() const { return _bytes_transferred; }
+private:
+    target_buffer_type& _target;
+    std::size_t         _bytes_transferred;
+};
+
+};
+
+template <typename Buffer, typename StreamT>
+struct http_body_reader_asio: std::enable_shared_from_this<http_body_reader_asio<Buffer, StreamT>> {
+    using stream_type  = StreamT;
+    using buffer_type  = Buffer;
+    using timer_type   = boost::asio::steady_timer;
+    using request_type = udho::net::types::headers::request;
+
+    http_body_reader_asio(const udho::net::types::headers::request& request, stream_type& stream, std::size_t buffer_capacity = std::allocator_traits<typename Buffer::allocator_type>::max_size(typename Buffer::allocator_type{}))
+        : _request(request), _stream(stream), _buffer(buffer_capacity), _finished(false), _timer(_stream.get_executor()) {}
 
     template <typename Handler>
-    void start(Handler&& handler, std::size_t seconds, std::size_t limit = 0){
-        if(limit > 0) _parser.body_limit(limit);
-        _timer.async_wait([this](boost::system::error_code ec) {
-            if (!ec) {
-                _timeout();
+    void start(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t seconds, std::size_t limit = 0){
+        std::size_t content_length = 0;
+        if(_request.count(boost::beast::http::field::content_length)) {
+            try{
+                content_length = std::stoul(_request.at(boost::beast::http::field::content_length));
+            } catch(const std::exception& ex) {
+                // TODO log the exception after loggin module is written
+                finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::invalid_argument), 0);
+                return;
             }
-        });
-        boost::beast::http::async_read(
-            _stream, _buffer, _parser,
-            [this, handler = std::forward<Handler>(handler)](boost::system::error_code ec, std::size_t bytes_transferred){
-                finished(std::move(handler), ec, bytes_transferred);
-            }
-        );
-        _timer.expires_after(std::chrono::seconds(seconds));
+        }
+
+        // { sanity
+        // 0 < content_length < limit will be checked before the body reader is instantiated
+        // If content_length = 0 or Chunked body or content_length > limit then this body reader won't be used
+        if(content_length == 0) {
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), 0);
+            return;
+        }
+
+        if(content_length > limit) {
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), 0);
+            return;
+        }
+        // }
+
+        std::size_t transferred = transfer_leftovers(hbuff, content_length);
+        assert(content_length >= transferred);
+        std::size_t pending_size  = content_length - transferred;
+
+        if(pending_size == 0) {
+            finished(std::move(handler), boost::system::error_code{}, content_length);
+        } else {
+            start_timer(seconds);
+            read_into(std::move(handler), pending_size);
+        }
     }
 
     bool is_finished() const { return _finished; }
 
+    std::shared_ptr<http_body_reader_asio> self() { return std::enable_shared_from_this<http_body_reader_asio<Buffer, StreamT>>::shared_from_this(); }
 private:
+
+    std::size_t transfer_leftovers(boost::beast::flat_buffer& hbuff, std::size_t content_length) {
+        detail::transfer_leftover transfer(_buffer);
+        transfer(hbuff, content_length);
+        return transfer.bytes_transferred();
+    }
+private:
+
+    template <typename Handler>
+    void read_into(Handler&& handler, std::size_t pending_size) {
+        boost::asio::async_read(
+            _stream, _buffer, boost::asio::transfer_exactly(pending_size),
+            [self = self(), handler = std::move(handler)](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                self->finished(std::move(handler), ec, bytes_transferred);
+            }
+        );
+    }
+private:
+    void start_timer(std::size_t seconds) {
+        _timer.expires_after(std::chrono::seconds(seconds));
+        _timer.async_wait([self = self()](boost::system::error_code ec) {
+            if (!ec) {
+                self->_timeout();
+            }
+        });
+    }
+
     void _timeout(){
-        _stream.cancel(boost::system::error_code{});
+        _stream.close();
+        _stream.close_remote();
+        // _stream.cancel(boost::system::error_code{});
     }
 
 private:
     template <typename Handler>
     void finished(Handler&& handler, boost::system::error_code ec, std::size_t bytes_transferred){
         _timer.cancel();
-        if(!ec){
-            // ignore request because it has been moved to journal already
-            // body contents are already in the buffer and that memory is persistent
-            // ignore the return of release
-            _parser.release();
-        }
-        handler(ec, bytes_transferred);
+        std::cout << "b ec.message(): " << ec.message() << std::endl;
+        handler(std::move(_buffer), ec, bytes_transferred);
         _finished = true;
     }
 private:
-    const udho::net::types::headers::request& _request;
-    stream_type&                        _stream;
-    boost::beast::flat_buffer&          _buffer;
-    body_parser_type                    _parser;
-    bool                                _finished;
-    timer_type                          _timer;
+    const request_type& _request;
+    stream_type&        _stream;
+    buffer_type         _buffer;
+    bool                _finished;
+    timer_type          _timer;
 };
 
 template <typename StreamT>
 struct http_reader2: public std::enable_shared_from_this<http_reader2<StreamT>>{
     using header_reader_type    = http_header_reader<StreamT>;
-    using body_reader_type      = http_body_reader<StreamT>;
-    using body_reader_ptr_type  = std::shared_ptr<body_reader_type>;
     using stream_type           = StreamT;
-    using buffer_type           = boost::beast::flat_buffer;
 
-    explicit http_reader2(stream_type& stream): _stream(stream), _header(_stream, _buffer) {}
+    explicit http_reader2(stream_type& stream): _stream(stream), _header(_stream, _header_buffer) {}
 
 public:
-    const boost::beast::flat_buffer& buffer() const { return _buffer; }
+    const boost::beast::flat_buffer& buffer() const { return _header_buffer; }
 public:
     template <typename Handler>
     void start(Handler&& handler, std::size_t seconds){
-        _body.reset();
-        _header.start(std::forward<Handler>(handler), seconds);
+        _header.start([h = std::move(handler), this](udho::net::types::headers::request&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+            h(std::move(request), ec, bytes_transferred);
+        }, seconds);
     }
 
     /**
@@ -199,23 +283,35 @@ public:
      * @param seconds
      * @param limit
      */
-    template <typename Handler>
-    void upload(const udho::net::types::headers::request& request, Handler&& handler, std::size_t seconds, std::size_t limit = 0){
-        _body = std::make_shared<body_reader_type>(request, _stream, _buffer);
-        _body.start([h = std::move(handler), this](boost::system::error_code ec, std::size_t bytes_transferred){
-            // moving _buffer is always legal irrespective of ec
-            h(std::move(_buffer), ec, bytes_transferred);
-            _body.reset();
-        }, seconds, limit);
+    template <typename Handler, typename Buffer>
+    void upload(const udho::net::types::headers::request& request, Handler&& handler, std::size_t seconds, std::size_t limit){
+        using body_reader_type = http_body_reader_asio<Buffer, StreamT>;
+
+        auto body = std::make_shared<body_reader_type>(request, _stream);
+        body->start([h = std::move(handler)](Buffer&& buffer, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+            // moving buffer is always legal irrespective of ec
+            std::cout << "ec.message(): " << ec.message() << std::endl;
+            h(std::move(buffer), ec, bytes_transferred);
+        }, _header_buffer, seconds, limit);
     }
+
+    template <typename Handler>
+    void upload_to_flat_buffer(const udho::net::types::headers::request& request, Handler&& handler, std::size_t seconds, std::size_t limit){
+        upload<Handler, boost::beast::flat_buffer>(request, std::forward<Handler>(handler), seconds, limit);
+    }
+
+    template <typename Handler>
+    void upload_to_multi_buffer(const udho::net::types::headers::request& request, Handler&& handler, std::size_t seconds, std::size_t limit){
+        upload<Handler, boost::beast::multi_buffer>(request, std::forward<Handler>(handler), seconds, limit);
+    }
+
 public:
     header_reader_type& header() { return _header; }
     const header_reader_type& header() const { return _header; }
 private:
-    stream_type&          _stream;
-    buffer_type           _buffer;
-    header_reader_type    _header;
-    body_reader_ptr_type  _body;
+    stream_type&                  _stream;
+    boost::beast::flat_buffer     _header_buffer;
+    header_reader_type            _header;
 };
 
 template <typename Handler, typename StreamT>
