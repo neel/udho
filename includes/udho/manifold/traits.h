@@ -271,6 +271,14 @@ struct facets_name{
     }
 };
 
+template<>
+struct facets_name<>{
+    static std::string get(){
+        std::string facets_str = "";
+        return facets_str;
+    }
+};
+
 template <typename Composition>
 struct composition_name;
 

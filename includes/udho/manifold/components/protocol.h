@@ -177,6 +177,7 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
                 // reader_raii gaurd(_component, _id);
                 std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
                 udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, std::move(buffer), boost::beast::multi_buffer{});
+                result.bytes_transferred(bytes_transferred);
                 next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
             }, timeout_secs, memort_limit);
         } else {
@@ -184,6 +185,7 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
                 // reader_raii gaurd(_component, _id);
                 std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
                 udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, boost::beast::flat_buffer{}, std::move(buffer));
+                result.bytes_transferred(bytes_transferred);
                 next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
             }, timeout_secs, memort_limit);
         }

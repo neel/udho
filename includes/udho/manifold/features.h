@@ -7,7 +7,8 @@
 #include <udho/net/common.h>
 #include <udho/url/router.h>
 #include <boost/beast/core/flat_buffer.hpp>
-
+#include <boost/beast/core/buffers_to_string.hpp>
+#include <udho/session/note.h>
 
 namespace udho {
 namespace manifold {
@@ -93,8 +94,22 @@ namespace feature{
         };
     };
 
-    struct body_reader{
+    struct cookie_load{
         static constexpr const std::size_t stage = 1;
+        static constexpr const std::string_view name = "cookie_load";
+
+        using result = udho::cookies::jar;
+    };
+
+    struct session_load{
+        static constexpr const std::size_t stage = 1;
+        static constexpr const std::string_view name = "session_load";
+
+        using result = udho::session::note;
+    };
+
+    struct body_reader{
+        static constexpr const std::size_t stage = 2;
         static constexpr const std::string_view name = "body_reader";
 
         enum errors{
@@ -126,6 +141,14 @@ namespace feature{
 
             result& bytes_transferred(std::size_t bytes) { _bytes_transferred = bytes; return *this; }
             result& error(std::error_code ec) { _error = ec; return *this; }
+
+            std::string str() const {
+                if(contiguous()) {
+                    return boost::beast::buffers_to_string(flat_buffer().data());
+                } else {
+                    return boost::beast::buffers_to_string(multi_buffer().data());
+                }
+            }
         private:
             std::string                 _mime;
             bool                        _contiguous;

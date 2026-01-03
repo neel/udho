@@ -57,7 +57,7 @@ namespace manifold {
 template <typename ResultT, typename Feature>
 struct result_wrapper{
     static_assert(std::is_move_constructible_v<ResultT>);
-    static_assert(std::is_move_assignable_v<ResultT>);
+    // static_assert(std::is_move_assignable_v<ResultT>);
     // static_assert(std::is_copy_constructible_v<ResultT>);
 
     using type      = ResultT;                  ///< The underlying result type
@@ -88,8 +88,13 @@ struct result_wrapper{
      * @return Reference to this wrapper
      */
     result_wrapper& operator=(type&& result) {
-        _result  = std::move(result);
+        _result.emplace(std::move(result));   // destroy+construct
         return *this;
+    }
+
+    template <typename... Args>
+    type& emplace(Args&&... args) {
+        return _result.emplace(std::forward<Args>(args)...);
     }
 
     /**
@@ -127,7 +132,7 @@ struct result_wrapper{
      * @return Copy of the stored result
      * @throws std::runtime_error if the facet is unevaluated
      */
-    operator type() const { return value(); }
+    operator const type&() const { return value(); }
 
     /**
      * @brief Dereference operator

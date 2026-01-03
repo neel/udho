@@ -28,7 +28,6 @@
 #ifndef UDHO_COOKIES_JAR_H
 #define UDHO_COOKIES_JAR_H
 
-#include <mutex>
 #include <boost/tokenizer.hpp>
 #include <udho/cookies/cookie.h>
 #include <boost/beast/http/message.hpp>
@@ -46,10 +45,10 @@ namespace cookies{
 /**
  * @brief Thread-safe cookie container for HTTP request/response handling
  *
- * The jar class provides a thread-safe container for managing HTTP cookies.
+ * The jar class provides a not thread-safe container for managing HTTP cookies.
  * It can parse cookies from incoming HTTP requests and apply cookies to
- * outgoing HTTP responses. The class uses internal locking to ensure
- * thread safety across all operations.
+ * outgoing HTTP responses. The class does not use internal locking to ensure
+ * thread safety.
  *
  * @note This class is non-copyable to prevent accidental copying of the
  *       mutex and internal state.
@@ -152,7 +151,7 @@ struct jar{
      * @param request The HTTP request containing cookies to parse
      * @return The number of valid cookies successfully parsed and stored
      *
-     * @note This method is thread-safe and will clear existing cookies
+     * @note This method is not thread-safe and will clear existing cookies
      * @note Invalid cookies are silently ignored
      */
     template <typename Fields>
@@ -168,6 +167,8 @@ struct jar{
      */
     jar(const jar&) = delete;
 
+    jar(jar&&) = default;
+
     /**
      * @brief Copy assignment operator (deleted)
      *
@@ -176,6 +177,7 @@ struct jar{
      */
     jar& operator=(const jar&) = delete;
 
+    jar& operator=(jar&&) = default;
 
     /**
      * @brief Parse and store cookies from an HTTP request
@@ -188,13 +190,12 @@ struct jar{
      * @param request The HTTP request containing cookies to parse
      * @return The number of valid cookies successfully parsed and stored
      *
-     * @note This method is thread-safe and will clear existing cookies
+     * @note This method is not thread-safe and will clear existing cookies
      * @note Invalid cookies are silently ignored
      */
     template <typename Fields>
     std::size_t apply(const boost::beast::http::header<true, Fields>& request){
         clear();
-        const std::lock_guard<std::mutex> lock(_mutex);
         std::size_t count = 0;
         if(request.count(boost::beast::http::field::cookie)){
             std::string_view cookie_header = request[boost::beast::http::field::cookie];
@@ -222,12 +223,11 @@ struct jar{
      * @param response The HTTP response to add Set-Cookie headers to
      * @return The number of valid cookies added to the response
      *
-     * @note This method is thread-safe
+     * @note This method is not thread-safe
      * @note Only valid cookies are added to the response
      */
     template <typename Fields>
     std::size_t apply(boost::beast::http::header<false, Fields>& response) const{
-        const std::lock_guard<std::mutex> lock(_mutex);
         std::size_t count = 0;
         for (const cookie_str_type& cookie : _cookies) {
             if(cookie.valid()){
@@ -247,12 +247,11 @@ struct jar{
      * @param c The cookie to add to the jar
      * @param replace if set to true then replace existing cookie with same name (if exists)
      * @return returns true if and only if the insertion took place.
-     * @note This method is thread-safe
+     * @note This method is not thread-safe
      * @note The cookie is converted to string storage internally
      */
     template <typename V>
     bool add(const udho::cookies::cookie<V>& c, bool replace = true){
-        const std::lock_guard<std::mutex> lock(_mutex);
         cookie_str_type converted = c.template as<std::string>();
         return _add(std::move(converted), replace);
     }
@@ -266,12 +265,11 @@ struct jar{
      * @param c The cookie to move into the jar
      * @param replace if set to true then replace existing cookie with same name (if exists)
      * @return returns true if and only if the insertion took place.
-     * @note This method is thread-safe
+     * @note This method is not thread-safe
      * @note The cookie is converted to string storage internally
      */
     template <typename V>
     bool add(udho::cookies::cookie<V>&& c, bool replace = true){
-        const std::lock_guard<std::mutex> lock(_mutex);
         cookie_str_type converted = c.template as<std::string>();
         return _add(std::move(converted), replace);
     }
@@ -281,10 +279,9 @@ struct jar{
      *
      * Removes all stored cookies from the jar.
      *
-     * @note This method is thread-safe
+     * @note This method is not thread-safe
      */
     inline void clear() {
-        const std::lock_guard<std::mutex> lock(_mutex);
         _cookies.clear();
     }
 
@@ -294,7 +291,6 @@ struct jar{
      * @note The *id* is the canonical “`name[:domain][:path]`” string returned by `cookie.id()`
      */
     const cookie_str_type& by_id(const std::string& id) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         const auto& idx = boost::multi_index::get<tags::by_id>(_cookies);
         auto it = idx.find(id);
         if (it == idx.end()) throw std::out_of_range("No cookie with id: " + id);
@@ -304,10 +300,9 @@ struct jar{
     /**
      * @brief Locked range query on any index.
      *
-     * A thin, thread-safe wrapper that acquires the jar’s mutex and then
-     * delegates to the private `_by<TagT>()` helper.  The function returns the
-     * *half-open* iterator range `<lo, hi)` that matches **arg** in the
-     * requested index.
+     * A thin, not thread-safe wrapper that delegates to the private `_by<TagT>()` helper.
+     * The function returns the *half-open* iterator range `<lo, hi)` that matches **arg**
+     * in the requested index.
      *
      * @tparam TagT  **Index tag** that decides *how* the lookup is performed.
      *               Choose one of the tags in the table below.
@@ -335,7 +330,6 @@ struct jar{
      */
     template <typename TagT, typename Arg>
     std::pair<typename container_type::index<TagT>::type::const_iterator, typename container_type::index<TagT>::type::const_iterator> by(const Arg& arg) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         return _by<TagT>(arg);
     }
 
@@ -348,8 +342,6 @@ struct jar{
      * @throws std::out_of_range if name is empty.
      */
     container_type::size_type count(const std::string& name, const std::string& domain, const std::string& path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(name.empty()) throw std::out_of_range{"empty name"};
         auto [lo,hi] = _by<tags::by_full_key>(std::make_tuple(name, std::make_optional(domain), std::make_optional(path)));
         return std::distance(lo, hi);
@@ -364,8 +356,6 @@ struct jar{
      * @throws std::out_of_range if name is empty.
      */
     container_type::size_type count(const std::string& name, const std::string& domain_or_path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(name.empty()) throw std::out_of_range{"empty name"};
         if(domain_or_path.front() == '/') {
             auto [lo,hi] = _by<tags::by_name_path>(std::make_tuple(name, std::make_optional(domain_or_path)));
@@ -383,8 +373,6 @@ struct jar{
      * @throws std::out_of_range if name is empty.
      */
     container_type::size_type count(const std::string& name) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(name.empty()) throw std::out_of_range{"empty name"};
         auto [lo,hi] = _by<tags::by_name>(name);
         return std::distance(lo, hi);
@@ -411,8 +399,6 @@ struct jar{
      * @throws std::out_of_range if no match exists.
      */
     const cookie_str_type& get(const std::string& name, const std::string& domain, const std::string& path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(name.empty()) throw std::out_of_range{"empty name"};
 
         auto [lo,hi] = _by<tags::by_full_key>(std::make_tuple(name, std::make_optional(domain), std::make_optional(path)));
@@ -429,8 +415,6 @@ struct jar{
      * @throws std::out_of_range if no match exists.
      */
     const cookie_str_type& get(const std::string& name, const std::string& domain_or_path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(name.empty()) throw std::out_of_range{"empty name"};
 
         if(domain_or_path.front() == '/') {
@@ -451,8 +435,6 @@ struct jar{
      * @throws std::out_of_range if no match exists.
      */
     const cookie_str_type& get(const std::string& key) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
-
         if(key.empty()) throw std::out_of_range{"empty name"};
 
         auto [lo,hi] = _by<tags::by_id>(key);
@@ -472,7 +454,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_name(const std::string& name) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo, hi] = _by<tags::by_name>(name);
         return {lo, hi};
     }
@@ -484,7 +465,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_domain(const std::string& domain) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo, hi] = _by<tags::by_domain>(std::make_optional(domain));
         return {lo, hi};
     }
@@ -496,7 +476,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_domain(const std::string& domain, const std::string& name) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo, hi] = _by<tags::by_name_domain>(std::make_tuple(name, std::make_optional(domain)));
         return {lo, hi};
     }
@@ -507,7 +486,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_path(const std::string& path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo, hi] = _by<tags::by_path>(std::make_optional(path));
         return {lo, hi};
     }
@@ -519,7 +497,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_path(const std::string& path, const std::string& name) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo, hi] = _by<tags::by_name_path>(std::make_tuple(name, std::make_optional(path)));
         return {lo, hi};
     }
@@ -531,7 +508,6 @@ struct jar{
      * @return vector of cookies
      */
     std::vector<cookie_str_type> by_scope(const std::string& domain, const std::string& path) const {
-        const std::lock_guard<std::mutex> lock(_mutex);
         auto [lo,hi] = _by<tags::by_scope>(std::make_tuple(std::make_optional(domain), std::make_optional(path)));
         return {lo, hi};
     }
@@ -545,7 +521,7 @@ struct jar{
      * @return A const reference to the requested cookie
      * @throws std::out_of_range if no cookie with the given name exists
      *
-     * @note This method is thread-safe
+     * @note This method is not thread-safe
      */
     inline const cookie_str_type& operator[](const std::string& key) const{ return get(key); }
 
@@ -598,7 +574,6 @@ struct jar{
 
     private:
         container_type      _cookies;
-        mutable std::mutex  _mutex;
 
     /**
      * @brief Friend declaration for stream insertion operator
@@ -619,7 +594,7 @@ struct jar{
  * @param cookie The cookie to add to the jar
  * @return A reference to the cookie jar for method chaining
  *
- * @note This operator is thread-safe
+ * @note This operator is not thread-safe
  *
  * @par Example:
  * @code

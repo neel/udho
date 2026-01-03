@@ -170,19 +170,21 @@ class common_pipepine;
  *
  * # Design Philosophy
  *
- * This class follows the principle of **"eval once, re-eval requires re-then"**:
- * - Each evaluation cycle requires setting a new callback via `then()`
- * - Callbacks are automatically cleared after execution
- * - This prevents stale state and memory leaks from retained callbacks
  *
  * # Stage Evaluation Model
  *
  * When `eval()` is called:
- * 1. Features are evaluated in the order specified by `order<Features...>`
- * 2. Each feature triggers evaluation of all components that provide it
- * 3. Results are stored in the provided journal
- * 4. On completion (success or failure), the user callback is invoked once
- * 5. The callback is cleared, requiring a new `then()` call for subsequent evaluation
+ * 1. Features are evaluated in the order specified by `order<Features...>`.
+ * 2. Each feature triggers evaluation of all facets that provide it.
+ * 3. Results are written into the provided journal.
+ * 4. On completion, the currently registered completion callback (if any) is invoked.
+ *
+ * @note This class does **not** automatically clear the user callback after completion.
+ *       The callback remains installed until it is overwritten by another call to `then(...)`.
+ *
+ * @note When used by @ref udho::manifold::pipeline, the pipeline installs its own stage
+ *       transition callback via `then(...)` for each stage invocation, which overwrites
+ *       any previously registered user callback for that stage instance.
  *
  * # Asynchronous Support
  *
@@ -271,8 +273,8 @@ public:
      */
     common_pipepine(composition_type& composition, const configs_type& configs, full_journal_type& journal, std::size_t id):
         basic_pipeline_type(composition, configs, id),
-        _evaluator(basic_pipeline_type::fabric(), journal, _callback),
-        _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1))
+        _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1)),
+        _evaluator(basic_pipeline_type::fabric(), journal, _callback)
     {}
     /**
      * @name Fabric Access
@@ -300,10 +302,14 @@ public:
      * 4. On completion, registered callback is invoked once and cleared
      *
      * @pre A callback must be registered via `then()` before calling `eval()`
-     * @post The registered callback is invoked and cleared (nullptr)
+     * @note If no callback is registered, completion results are discarded.
      *
-     * @warning If no callback is registered via `then()`, completion results are discarded
-     * @warning Multiple calls to `eval()` without intervening `then()` will not invoke callbacks
+     * @note The callback is not cleared automatically after completion. Repeated calls to `eval()`
+     *       will reuse the last callback registered via `then(...)`, unless overwritten.
+     *
+     * @note When invoked through @ref udho::manifold::pipeline, the stage callback is always set
+     *       by the pipeline before calling `eval()`, and therefore user-installed callbacks on
+     *       the same instance will be overwritten for that invocation.
      *
      * @see then()
      */
@@ -328,11 +334,8 @@ public:
      *
      * # Callback Lifecycle
      *
-     * The callback is:
-     * - Moved into internal storage (not copied)
-     * - Invoked exactly once when `eval()` completes
-     * - Cleared (set to nullptr) after invocation
-     * - Must be re-registered for subsequent `eval()` calls
+     * The callback is moved into internal storage and invoked when stage evaluation completes.
+     * It remains installed until overwritten by another call to `then(...)`.
      *
      * @code
      * pipeline.then([](auto&& result) {
@@ -348,8 +351,6 @@ public:
      *     }
      * }).eval(...);
      * @endcode
-     *
-     * @note The callback is cleared after execution (following "eval once" principle)
      */
     common_pipepine& then(async_callback_type&& callback){
         _user_callback = std::move(callback);
@@ -369,10 +370,8 @@ public:
      *
      * # Asynchronous Execution
      *
-     * The callback is wrapped and posted via `boost::asio::post(io, ...)`, ensuring:
-     * - Execution occurs in an io_context handler thread
-     * - Thread-safe dispatch if io_context runs multiple threads
-     * - Proper ordering with other asynchronous operations
+     * The callback is wrapped and posted via `boost::asio::post(io, ...)`, ensuring
+     * execution occurs in an io_context handler thread.
      *
      * # Usage Pattern
      *
@@ -397,7 +396,6 @@ public:
      * @endcode
      *
      * @note The io_context reference must remain valid until callback execution
-     * @note Callback is cleared after execution (following "eval once" principle)
      */
     common_pipepine& then(boost::asio::io_context& io, async_callback_type&& callback){
         _user_callback = [&io, callback = std::move(callback)](safe_success_type&& success){
@@ -636,10 +634,11 @@ private:
                 std::cout << "FAIL!!" << __LINE__ << std::endl;
                 bool reenter = std::apply(
                     [&](auto&... args) -> bool {
-                        return flow->error(success, args...);          // inform flow before termination
+                        return flow->error(success, args...);    // inform flow before termination
                     },
                     args_tuple
                 );
+                (void)reenter;                                   // flow->error takes care of it.
             }
         };
         _common_pipeline.then(std::move(lambda));
@@ -1147,9 +1146,11 @@ struct patch{
 /**
  * @brief The terminal class determines whether the flow will be deleted or not.
  *
- * By default the operator() return true which implies that the flow will be deleted.
- * A specialization for a different Label may return false in order to stop the flow being
- * deleted.
+ * By default the reenter() and error() return false which implies the following.
+ *  1. **reender() -> false** the flow will be terminated (no reentered) after
+ *      successful completion from 0...Count stages
+ *  2. **error() -> false** the flow will be terminated (no reentered) after
+ *      encountering failure in any facet during evaluation in 0...Count stages
  */
 template <typename LabelT>
 struct terminal{
@@ -1313,9 +1314,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
 
         terminal_type terminal(composition(), configs(), journal());
         bool should_reenter = terminal.reenter(std::forward<Args>(args)...);
-        if(!should_reenter){
-            terminate();
-        }
+        terminate(should_reenter);
         return should_reenter;
     }
 
@@ -1346,9 +1345,9 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
         terminal_type terminal(composition(), configs(), journal());
         bool should_reenter = terminal.error(success, std::forward<Args>(args)...);
 
-        if(!should_reenter){
-            terminate();
-        } else {
+        terminate(should_reenter);
+
+        if(should_reenter){
             _finish_pipeline.restart(self(), std::forward<Args>(args)...);
         }
         return should_reenter;
@@ -1368,28 +1367,28 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
     const journal_type& journal() const { return _root_pipeline.journal(); }
 
 private:
-    /**
-     * @brief Terminates the flow after pipeline completes evaluating all stages
-     *
-     * Called when the flow completes and terminal<label_type>::operator() suggest
-     * termination by returning true.
-     *
-     * Notifies the runtime to clean up flow tracking.
-     *
-     * @note this call originates from the finish_pipeline. The finish_pipeline::
-     *       for this label_type calls terminal<label_type>::operator() once
-     *       pipeline evaluation proceeds till the last stage. Only if the
-     *       **terminal<label_type>::operator() returns true** then the terminate
-     *       method is called from the finish_pipeline::operator().
-     */
-    void terminate() {
-        if(_callback){
-            _callback(*this, false);
-        }
-        bool removed = _runtime.remove(self());
 
-        if(!removed) {
-            std::cout << "Flow doesn't exist in collection" << std::endl;
+    /**
+     * @brief Finalizes the current request and optionally keeps the flow alive for reentry
+     *
+     * Invokes the optional user callback (installed via flow::then) and, if `reenter == false`,
+     * removes the flow from the runtime tracking collection.
+     *
+     * @param reenter If true, the flow remains tracked and is expected to be restarted
+     *                via the finish pipeline restart path. If false, the flow is removed.
+     *
+     * @note This function does not itself restart the pipeline. Restart is performed by
+     *       the finish pipeline (stage Count) or by flow::error() on failure.
+     */
+    void terminate(bool reenter) {
+        if(_callback){
+            _callback(*this, reenter);
+        }
+        if(!reenter) {
+            bool removed = _runtime.remove(self());
+            if(!removed) {
+                std::cout << "Flow doesn't exist in collection" << std::endl;
+            }
         }
     }
 
