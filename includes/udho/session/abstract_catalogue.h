@@ -14,7 +14,7 @@ struct abstract_catalogue {
 
     inline explicit abstract_catalogue(udho::session::modes mode): _mode(mode) {}
 
-    virtual note_type borrow(const key_type& sessid) = 0;
+    virtual note_type borrow(const key_type& sessid, bool expect_existing) = 0;
     virtual void remove(const key_type& sessid) = 0;
     virtual bool exists(const key_type& sessid) = 0;
 

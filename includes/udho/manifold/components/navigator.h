@@ -3,6 +3,7 @@
 
 #include <udho/manifold/features.h>
 #include <udho/manifold/config.h>
+#include <udho/manifold/portal.h>
 #include <udho/utils/encoding.h>
 
 namespace udho{
@@ -137,6 +138,20 @@ struct facet<components::navigator<Policy>, udho::manifold::feature::identifier>
 private:
     component_type& _component;
     const config_type& _config;
+};
+
+template <typename Policy, typename JournalT>
+struct accessor<components::navigator<Policy>, JournalT>: basic_accessor<components::navigator<Policy>, JournalT>{
+    using basic_accessor_type   = basic_accessor<components::navigator<Policy>, JournalT>;
+    using component_type        = components::navigator<Policy>;
+    using config_type           = udho::manifold::config<component_type>;
+    using journal_type          = JournalT;
+
+    using basic_accessor_type::basic_accessor_type;
+
+    const std::string& resource() const {
+        return basic_accessor_type::journal().template at<udho::manifold::feature::identifier>()->resource();
+    }
 };
 
 }

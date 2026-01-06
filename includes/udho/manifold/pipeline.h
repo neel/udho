@@ -1207,7 +1207,7 @@ struct patcher: public detail::patcher<LabelT, Count, Stage+1>/*, private udho::
      * @param p
      * @param configs
      */
-    void apply(const pipeline_type& p, configs_type& configs){
+    void apply(pipeline_type& p, configs_type& configs){
         udho::manifold::patch<LabelT, Stage>::apply(p, configs);
     }
 };
@@ -1279,7 +1279,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
      * @param config Configuration to modify for next stage
      */
     template <int Stage>
-    void apply(const pipeline_at<Stage>& p, configs_type& config){
+    void apply(pipeline_at<Stage>& p, configs_type& config){
         detail::patcher<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(p, config);
     }
 

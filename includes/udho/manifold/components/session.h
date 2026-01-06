@@ -4,6 +4,7 @@
 #include <udho/session/catalogue.h>
 #include <udho/manifold/features.h>
 #include <udho/manifold/config.h>
+#include <udho/manifold/portal.h>
 #include <udho/utils/string_view.h>
 #include <boost/uuid/uuid.hpp>
 
@@ -19,20 +20,19 @@ struct session{
     using note_type      = typename catalogue_type::note_type;
 
     UDHO_CONFIG_PARAM(enabled, bool,        false);             // skip if not enabled
-    UDHO_CONFIG_PARAM(follow,  bool,        true);              // Don't auto create session id but follow existing sessionid if it already exists
     UDHO_CONFIG_PARAM(sesskey, std::string, "sessid");
     UDHO_CONFIG_PARAM(domain,  std::string, "localhost");
     UDHO_CONFIG_PARAM(path,    std::string, "/");
 
     using features = udho::manifold::features<udho::manifold::feature::session_load>;
-    using params   = udho::manifold::params<enabled, follow, sesskey, domain, path>;
+    using params   = udho::manifold::params<enabled, sesskey, domain, path>;
 
     static constexpr const udho::utils::string_view name = "session";
 
 public:
     session(catalogue_type& cat): _catalogue(cat) {}
 public:
-    note_type borrow(const key_type& sessid) { return _catalogue.borrow(sessid); }
+    note_type borrow(const key_type& sessid, bool expect_existing = false) { return _catalogue.borrow(sessid, expect_existing); }
 
     void remove(const key_type& sessid) { _catalogue.remove(sessid); }
 
@@ -61,27 +61,31 @@ struct facet<components::session<StorageT, Mode>, udho::manifold::feature::sessi
         const std::string& domain = _config[component_type::domain::val].value();
         const std::string& path   = _config[component_type::path::val].value();
         bool enabled              = _config[component_type::enabled::val].value();
-        bool follow               = _config[component_type::follow::val].value();
 
         if(!enabled) {
             next.skip();
             return;
         }
 
-        bool sessid_exists = jar.count(name, domain, path) > 0;
-        udho::session::id sessid;
-        if(sessid_exists) {
+        // if there is no sessid cookie
+        //      then don't create one
+        //  else
+        //      if sessid exists -> load session
+        //      else             -> ignore sessid
+        //          but usercode can spot the discrepency by checking existance
+        //          of sessid cookie in cookie jar but no session note
+        if(jar.count(name, domain, path) > 0) {
             const udho::cookies::jar::cookie_str_type& cookie = jar.get(name, domain, path);
-            sessid = udho::session::from_string(cookie.value());
-        } else if(follow) {
-            sessid = _component.generate();
-        }
-
-        if(sessid.is_nil()) {
+            udho::session::id sessid = udho::session::from_string(cookie.value());
+            try{
+                udho::session::note note = _component.borrow(sessid, true); // throws if sessid doesn't exist
+                next.pass(std::move(note));
+            } catch(const std::exception& ex) {
+                next.skip();
+            }
+        } else{
             next.skip();
             return;
-        } else {
-            next.pass(_component.borrow(sessid));
         }
     }
 
@@ -93,6 +97,16 @@ struct facet<components::session<StorageT, Mode>, udho::manifold::feature::sessi
 private:
     component_type&     _component;
     const config_type&  _config;
+};
+
+template <typename StorageT, udho::session::modes Mode, typename JournalT>
+struct accessor<components::session<StorageT, Mode>, JournalT>: basic_accessor<components::session<StorageT, Mode>, JournalT>{
+    using basic_accessor_type   = basic_accessor<components::session<StorageT, Mode>, JournalT>;
+    using component_type        = components::session<StorageT, Mode>;
+    using config_type           = udho::manifold::config<component_type>;
+    using journal_type          = JournalT;
+
+    using basic_accessor_type::basic_accessor_type;
 };
 
 }

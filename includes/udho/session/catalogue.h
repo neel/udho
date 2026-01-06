@@ -16,6 +16,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <udho/session/storage/features.h>
+#include <udho/utils/format.h>
 
 namespace udho{
 namespace session{
@@ -81,6 +82,7 @@ struct catalogue: abstract_catalogue{
     /**
      * @brief Acquire session access handle
      * @param sessid Session identifier
+     * @param expect_existing if true expects the session to exist already, otherwise throws exception
      * @return note_type Session access handle
      *
      * @par Workflow:
@@ -93,7 +95,7 @@ struct catalogue: abstract_catalogue{
      * @throws std::runtime_error on storage failures
      * @note Thread-safe through internal locking
      */
-    virtual note_type borrow(const key_type& sessid) override {
+    virtual note_type borrow(const key_type& sessid, bool expect_existing = false) override {
         std::lock_guard<std::mutex> lock(_mutex);
         auto it = _records.find(sessid);
         if(it != _records.end()){                       // record already loaded
@@ -105,8 +107,12 @@ struct catalogue: abstract_catalogue{
             return note;
         } else {                                        // record not loaded
             if(!_storage_exists(sessid)){               // record does not exists in storage
-                if(!_storage_create_load(sessid)){      // create record in storage
-                    throw std::runtime_error{"Failed to create session object in the storage"};
+                if(expect_existing) {
+                    throw std::runtime_error{udho::utils::format("session {} doesn't exist", udho::session::to_string(sessid))};
+                } else {
+                    if(!_storage_create_load(sessid)){  // create record in storage
+                        throw std::runtime_error{"Failed to create session object in the storage"};
+                    }
                 }
             } else {                                    // record exists in storage
                 if(!_storage_load(sessid)){             // load record from the storage

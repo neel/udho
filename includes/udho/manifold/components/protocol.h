@@ -6,6 +6,7 @@
 #include <udho/net/common.h>
 #include <udho/net/protocols/protocols.h>
 #include <udho/manifold/config.h>
+#include <udho/manifold/portal.h>
 #include <boost/beast/core/buffers_to_string.hpp>
 
 namespace udho{
@@ -130,6 +131,21 @@ private:
     std::size_t         _id;
 private:
     struct http_reader{};
+};
+
+template <typename ProtocolT, typename StreamT, typename JournalT>
+struct accessor<components::protocol<ProtocolT, StreamT>, JournalT>: basic_accessor<components::protocol<ProtocolT, StreamT>, JournalT>{
+    using basic_accessor_type   = basic_accessor<components::protocol<ProtocolT, StreamT>, JournalT>;
+    using component_type        = components::protocol<ProtocolT, StreamT>;
+    using config_type           = udho::manifold::config<component_type>;
+    using journal_type          = JournalT;
+    using request_type          = udho::net::types::headers::request;
+
+    using basic_accessor_type::basic_accessor_type;
+
+    const request_type& request() const {
+        return basic_accessor_type::journal().template at<udho::manifold::feature::header_reader>();
+    }
 };
 
 template <typename ProtocolT, typename StreamT>

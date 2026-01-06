@@ -15,8 +15,9 @@ namespace components{
 
 template <typename RoutingTableT>
 class routing {
+public:
     using routing_table_type = RoutingTableT;
-
+private:
     const routing_table_type& _table;
 
 public:
@@ -32,6 +33,10 @@ public:
     static constexpr const udho::utils::string_view name = "router";
 
     routing(const routing_table_type& table): _table(table) {}
+
+    routing_table_type& table() { return _table; }
+
+    const routing_table_type& table() const { return _table; }
 
     udho::url::detail::route_index locate(const std::string& subject) {
         udho::url::detail::route_index route = _table.index_of(subject);

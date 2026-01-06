@@ -4,7 +4,6 @@
 #include <regex>
 #include <udho/cookies/jar.h>
 #include <udho/session/defs.h>
-#include <udho/session/collect.h>
 #include <udho/session/abstract_catalogue.h>
 #include <udho/session/note.h>
 
@@ -277,12 +276,13 @@ struct collector{
     /**
      * @brief Borrow a session note
      * @param sessid Session ID to access
+     * @param expect_existing expects the session to exist already, otherwise throws runtime_error
      * @return Session note providing data access
      *
      * Creates or loads session data from storage. The note uses RAII for automatic
      * reference counting and session persistence.
      */
-    udho::session::note borrow(const udho::session::id& id) { return _catalogue.borrow(id); }
+    udho::session::note borrow(const udho::session::id& id, bool expect_existing = false) { return _catalogue.borrow(id, expect_existing); }
 
     /**
      * @brief checks whether a session exists for the given id or not (either loaded in memory or in the storage)
