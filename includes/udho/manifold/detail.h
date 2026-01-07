@@ -226,6 +226,135 @@ using flatten_all_of = flatten_all_<stage_comp_op::all, 0, Components...>;
  * @}
  */
 
+namespace detail{
+
+template <typename... Facets>
+struct temporary_storage{};
+
+template <typename X, typename StorageT>
+struct prepend_helper;
+
+template <typename X, typename... Facets>
+struct prepend_helper<X, temporary_storage<Facets...>>{
+    using type = temporary_storage<X, Facets...>;
+};
+
+template <typename... Facets>
+struct composition_journal_helper;
+
+template <typename FacetT, typename... Rest>
+struct composition_journal_helper<FacetT, Rest...> {
+    using type = std::conditional_t<
+        !udho::manifold::has_result<FacetT>::value,
+        typename composition_journal_helper<Rest...>::type,
+        typename prepend_helper<FacetT, typename composition_journal_helper<Rest...>::type>::type
+        >;
+};
+
+template <typename FacetT>
+struct composition_journal_helper<FacetT> {
+    using type = std::conditional_t<
+        !udho::manifold::has_result<FacetT>::value,
+        temporary_storage<>,
+        temporary_storage<FacetT>
+        >;
+};
+
+template <typename...>
+struct get_journal_type_helper;
+
+template <typename... Facets>
+struct get_journal_type_helper<temporary_storage<Facets...>>{
+    using type = journal<Facets...>;
+};
+
+template <typename...>
+struct get_journal_const_view_type_helper;
+
+template <typename... Facets>
+struct get_journal_const_view_type_helper<temporary_storage<Facets...>>{
+    using type = journal_const_view<Facets...>;
+};
+
+/**
+ * @brief Type-level computation that builds journal type for a fabric
+ *
+ * Given a fabric (set of facets), produces the journal type containing
+ * storage only for facets that yield results. Non-result facets are omitted.
+ *
+ * @tparam FabricT The fabric type (e.g., `fabric<Stage, Facets...>`)
+ *
+ * # Type Computation
+ *
+ * @code
+ * using fabric_type = fabric<1,
+ *     facet<ComponentA, FeatureX>,  // yields result
+ *     facet<ComponentB, FeatureY>,  // no result
+ *     facet<ComponentC, FeatureZ>   // yields result
+ * >;
+ *
+ * using journal_type = journal_for_fabric<fabric_type>::type;
+ * // Result: journal<
+ * //     facet<ComponentA, FeatureX>,
+ * //     facet<ComponentC, FeatureZ>
+ * // >
+ * @endcode
+ *
+ * @see journal
+ * @see fabric
+ */
+template <typename FacetsT>
+struct journal_for_fabric;
+
+template <std::size_t Stage, typename... Facets>
+struct journal_for_fabric<fabric<Stage, Facets...>>{
+    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
+};
+
+template <typename FacetsT>
+struct journal_const_view_for_fabric;
+
+template <std::size_t Stage, typename... Facets>
+struct journal_const_view_for_fabric<fabric<Stage, Facets...>>{
+    using type = typename get_journal_const_view_type_helper<typename composition_journal_helper<Facets...>::type>::type;
+};
+
+
+template <typename... Facets>
+struct journal_for_facets{
+    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
+};
+
+template <typename... Components>
+struct get_journal_for_all_components{
+    using full_fabric_type = typename udho::manifold::detail::flatten_all_of<Components...>::type;
+    using type = typename udho::manifold::detail::journal_for_fabric<full_fabric_type>::type;
+};
+
+template <typename... Components>
+struct get_journal_const_view_for_all_components{
+    using full_fabric_type = typename udho::manifold::detail::flatten_all_of<Components...>::type;
+    using type = typename udho::manifold::detail::journal_const_view_for_fabric<full_fabric_type>::type;
+};
+
+template <typename CompositionT>
+struct get_journal_for_full_fabric;
+
+template <typename... Components>
+struct get_journal_for_full_fabric<udho::manifold::composition<Components...>>: get_journal_for_all_components<Components...>{};
+
+
+template <typename JournalT, typename FabricT>
+struct get_handler_type;
+
+template <typename JournalT, std::size_t Stage, typename... Facets>
+struct get_handler_type<JournalT, udho::manifold::fabric<Stage, Facets...>>{
+    template <typename... Features>
+    using for_features = typename detail::evaluator_helper<Stage, Features...>::template handler<JournalT, Facets...>;
+};
+
+}
+
 }
 }
 

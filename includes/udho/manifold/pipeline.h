@@ -17,32 +17,6 @@ namespace manifold {
  */
 
 
-namespace detail{
-
-template <typename... Components>
-struct get_journal_for_all_components{
-    using full_fabric_type = typename udho::manifold::detail::flatten_all_of<Components...>::type;
-    using type = typename udho::manifold::detail::journal_for_fabric<full_fabric_type>::type;
-};
-
-template <typename CompositionT>
-struct get_journal_for_full_fabric;
-
-template <typename... Components>
-struct get_journal_for_full_fabric<udho::manifold::composition<Components...>>: get_journal_for_all_components<Components...>{};
-
-
-template <typename JournalT, typename FabricT>
-struct get_handler_type;
-
-template <typename JournalT, std::size_t Stage, typename... Facets>
-struct get_handler_type<JournalT, udho::manifold::fabric<Stage, Facets...>>{
-    template <typename... Features>
-    using for_features = typename detail::evaluator_helper<Stage, Features...>::template handler<JournalT, Facets...>;
-};
-
-};
-
 /**
  * @brief Basic pipeline implementation for a single stage
  *
@@ -622,7 +596,18 @@ private:
         std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
         auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
             if(success) {
-                flow->apply(*this, configs());                  // Stage transition -> patch configs
+                try{
+                    flow->apply(*this, configs());                  // Stage transition -> patch configs
+                } catch(...) {
+                    udho::manifold::exclusive_result result(std::current_exception());
+                    bool reenter = std::apply(
+                        [&](auto&... args) -> bool {
+                            return flow->error(std::move(result), args...);    // inform flow before termination
+                        },
+                        args_tuple
+                    );
+                    (void)reenter;
+                }
                 std::cout << "_next(flow, ...)" << std::endl;
                 std::apply(
                     [&](auto&... args) {

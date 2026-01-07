@@ -348,29 +348,11 @@ struct next_evaluator_helper: next_evaluator_helper_internal<Idx, ArgsTupleT, Fa
     using base_type::base_type;
 };
 
-
-/**
- * @brief Encapsulates the stage and order of features for facet evaluation
- *
- * This template class provides the infrastructure for evaluating facets in a
- * specific order based on their features. It handles the recursive evaluation
- * of facets within and across features.
- *
- * @tparam Stage Filter facets by the stage
- * @tparam Features... The ordered set of features by which the facets will be evaluated
- *
- * @note The evaluation order is determined by the Features... template parameter
- *       list. Facets are evaluated feature-by-feature, and within each feature,
- *       they are evaluated in the order they appear in the composition.
- */
-template <std::size_t, typename...>
-struct evaluator_helper;
-
 /**
  * @brief Primary template for feature-based evaluator with at least one feature
  *
- * This specialization handles the recursive evaluation of multiple features.
- * It contains an inner handler class that manages the evaluation state.
+ * Provides the infrastructure for evaluating facets in a predefined order based on
+ * on their features. It contains an inner handler class that manages the evaluation state.
  *
  * @tparam Stage Filter facets by the stage
  * @tparam FeatureX The current feature being evaluated

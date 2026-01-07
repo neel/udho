@@ -3,8 +3,6 @@
 
 #include <cstdint>
 
-
-
 namespace udho {
 namespace manifold {
 
@@ -41,6 +39,23 @@ struct facet_wrapper;
 
 template <std::size_t Idx, typename ArgsTupleT, typename FacetT, typename HandlerT, bool YieldsResult>
 class next_evaluator_helper_internal;
+
+/**
+ * @brief Encapsulates the stage and order of features for facet evaluation
+ *
+ * This template class provides the infrastructure for evaluating facets in a
+ * specific order based on their features. It handles the recursive evaluation
+ * of facets within and across features.
+ *
+ * @tparam Stage Filter facets by the stage
+ * @tparam Features... The ordered set of features by which the facets will be evaluated
+ *
+ * @note The evaluation order is determined by the Features... template parameter
+ *       list. Facets are evaluated feature-by-feature, and within each feature,
+ *       they are evaluated in the order they appear in the composition.
+ */
+template <std::size_t, typename...>
+struct evaluator_helper;
 
 }
 
@@ -172,6 +187,17 @@ struct facet;
 
 template <typename ComponentT>
 struct config;
+
+template <typename... Components>
+struct composition_view;
+
+template <typename... Components>
+struct configs_view;
+
+template <typename...Facets>
+struct journal_const_view;
+
+
 
 /**
  * @}

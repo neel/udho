@@ -19,7 +19,6 @@
 #include <udho/net/server.h>
 #include <curl/curl.h>
 #include <udho/net/artifacts.h>
-#include <udho/session/storage/fs.h>
 
 using socket_type       = udho::net::types::socket;
 using http_protocol     = udho::net::protocols::http<socket_type>;
@@ -28,9 +27,8 @@ using http_connection   = udho::net::connection<http_protocol>;
 using scgi_connection   = udho::net::connection<scgi_protocol>;
 using http_listener     = udho::net::listener<http_connection>;
 using scgi_listener     = udho::net::listener<scgi_connection>;
-using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
-using http_server       = udho::net::server<http_listener, session_catalogue>;
-using scgi_server       = udho::net::server<scgi_listener, session_catalogue>;
+using http_server       = udho::net::server<http_listener>;
+using scgi_server       = udho::net::server<scgi_listener>;
 
 static size_t curl_writef(void *contents, size_t size, size_t nmemb, void *userp){
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -151,9 +149,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
 
     boost::asio::io_context service;
-    session_catalogue sessions{udho::session::storage::fs{}};
 
-    auto server = http_server(service,sessions,  9000);
+    auto server = http_server(service, 9000);
     auto artifacts = udho::net::artifacts{router, resources};
 
     server.run(artifacts);

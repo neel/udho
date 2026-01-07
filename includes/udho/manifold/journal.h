@@ -293,87 +293,6 @@ struct result_container<FacetT, true>{
     static constexpr const bool skipped = true;
 };
 
-
-template <typename... Facets>
-struct temporary_storage{};
-
-template <typename X, typename StorageT>
-struct prepend_helper;
-
-template <typename X, typename... Facets>
-struct prepend_helper<X, temporary_storage<Facets...>>{
-    using type = temporary_storage<X, Facets...>;
-};
-
-template <typename... Facets>
-struct composition_journal_helper;
-
-template <typename FacetT, typename... Rest>
-struct composition_journal_helper<FacetT, Rest...> {
-    using type = std::conditional_t<
-        !udho::manifold::has_result<FacetT>::value,
-        typename composition_journal_helper<Rest...>::type,
-        typename prepend_helper<FacetT, typename composition_journal_helper<Rest...>::type>::type
-    >;
-};
-
-template <typename FacetT>
-struct composition_journal_helper<FacetT> {
-    using type = std::conditional_t<
-        !udho::manifold::has_result<FacetT>::value,
-        temporary_storage<>,
-        temporary_storage<FacetT>
-    >;
-};
-
-template <typename>
-struct get_journal_type_helper;
-
-template <typename... Facets>
-struct get_journal_type_helper<temporary_storage<Facets...>>{
-    using type = journal<Facets...>;
-};
-
-/**
- * @brief Type-level computation that builds journal type for a fabric
- *
- * Given a fabric (set of facets), produces the journal type containing
- * storage only for facets that yield results. Non-result facets are omitted.
- *
- * @tparam FabricT The fabric type (e.g., `fabric<Stage, Facets...>`)
- *
- * # Type Computation
- *
- * @code
- * using fabric_type = fabric<1,
- *     facet<ComponentA, FeatureX>,  // yields result
- *     facet<ComponentB, FeatureY>,  // no result
- *     facet<ComponentC, FeatureZ>   // yields result
- * >;
- *
- * using journal_type = journal_for_fabric<fabric_type>::type;
- * // Result: journal<
- * //     facet<ComponentA, FeatureX>,
- * //     facet<ComponentC, FeatureZ>
- * // >
- * @endcode
- *
- * @see journal
- * @see fabric
- */
-template <typename FacetsT>
-struct journal_for_fabric;
-
-template <std::size_t Stage, typename... Facets>
-struct journal_for_fabric<fabric<Stage, Facets...>>{
-    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
-};
-
-template <typename... Facets>
-struct journal_for_facets{
-    using type = typename get_journal_type_helper<typename composition_journal_helper<Facets...>::type>::type;
-};
-
 }
 
 
@@ -394,13 +313,25 @@ struct journal<FacetT, Rest...>: private detail::result_container<FacetT>, priva
     template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
     const auto& get() const { return container_type::template get<FacetQ>(); }
 
-    // using container_type::get;
-
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
     auto& get() { return journal<Rest...>::template get<FacetQ>(); }
 
     template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
     const auto& get() const { return journal<Rest...>::template get<FacetQ>(); }
+    /// @}
+
+    /// @{
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get_wrapper() { return static_cast<container_type&>(*this); }
+
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get_wrapper() const { return static_cast<const container_type&>(*this); }
+
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get_wrapper() { return journal<Rest...>::template get_wrapper<FacetQ>(); }
+
+    template <typename FacetQ, std::enable_if_t<!std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get_wrapper() const { return journal<Rest...>::template get_wrapper<FacetQ>(); }
     /// @}
 
     /// @{
@@ -503,6 +434,13 @@ struct journal<FacetT> : private detail::result_container<FacetT>{
     using container_type::at;
     using container_type::count;
     using container_type::clear;
+
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    auto& get_wrapper() { return static_cast<container_type&>(*this); }
+
+    template <typename FacetQ, std::enable_if_t<!container_type::skipped && std::is_same_v<FacetQ, FacetT>, bool> = true>
+    const auto& get_wrapper() const { return static_cast<const container_type&>(*this); }
+
 };
 
 #else

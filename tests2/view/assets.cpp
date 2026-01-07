@@ -13,9 +13,6 @@
 #include <boost/variant.hpp>
 #include <udho/net/context.h>
 #include <udho/url/router.h>
-#include <udho/session/abstract_catalogue.h>
-#include <udho/session/storage/fs.h>
-#include <udho/session/catalogue.h>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
@@ -191,8 +188,6 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
         REQUIRE(cstore.find("/assets/a/") == cstore.cend());
     }
 
-    auto sessions = session_catalogue::create(udho::session::storage::fs{});
-
     SECTION("Retrieve assets through HTTP requests") {
         boost::asio::io_context io;
         udho::net::types::headers::request request;
@@ -205,7 +200,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 CAPTURE(url);
                 udho::net::fake::context<> fake_context_generator{request};
 
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge, *sessions);
+                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
                 cstore.serve(stream, url);
                 const udho::net::types::headers::response& response = stream.response();
@@ -227,7 +222,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 std::string url = asset.url();
                 CAPTURE(url);
                 udho::net::fake::context<> fake_context_generator{request};
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge, *sessions);
+                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
                 cstore.serve(stream, url);
                 const udho::net::types::headers::response& response = stream.response();
@@ -243,7 +238,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 std::string url = asset.url();
                 CAPTURE(url);
                 udho::net::fake::context<> fake_context_generator{request};
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge, *sessions);
+                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
                 cstore.serve(stream, url);
                 const udho::net::types::headers::response& response = stream.response();

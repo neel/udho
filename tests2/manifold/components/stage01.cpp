@@ -25,6 +25,10 @@
 #include <udho/session/storage/redis.h>
 #include <udho/manifold/portal.h>
 
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/journal_view.h>
+#include <udho/manifold/configs_view.h>
+
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
 struct nodef{
@@ -32,27 +36,28 @@ struct nodef{
     nodef(int) {}
 };
 
-BOOST_SYMBOL_EXPORT void f0(udho::net::stream context){
-    context << "f0";
-    context.finish();
+BOOST_SYMBOL_EXPORT void f0(udho::manifold::portal<udho::manifold::components::cookies> context){
+    // context << "f0";
+    // context.finish();
     return;
 }
 
-BOOST_SYMBOL_EXPORT int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
-    context << std::to_string(a+b.size()+c+d);
-    context.finish();
+BOOST_SYMBOL_EXPORT int f1(udho::manifold::portal<udho::manifold::components::navigators::pretty, udho::manifold::components::cookies> context, std::string a, const std::string& b, const double& c, int d){
+    // context << std::to_string(a+b.size()+c+d);
+    // context.finish();
+    std::cout << "context.resource(): " << context.resource()  << std::endl;
     return 42;
 }
 
-BOOST_SYMBOL_EXPORT std::string f2(udho::net::stream context, int a, const std::string& b){
-    context << std::to_string(a+b.size());
-    context.finish();
+BOOST_SYMBOL_EXPORT std::string f2(udho::manifold::portal<udho::manifold::components::cookies> context, int a, const std::string& b){
+    // context << std::to_string(a+b.size());
+    // context.finish();
     return "hello";
 }
 
-BOOST_SYMBOL_EXPORT std::string f_nodef(udho::net::stream context, nodef, int a){
-    context << std::to_string(a);
-    context.finish();
+BOOST_SYMBOL_EXPORT std::string f_nodef(udho::manifold::portal<> context, nodef, int a){
+    // context << std::to_string(a);
+    // context.finish();
     return "hello";
 }
 
@@ -82,7 +87,7 @@ auto url() {
     udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
     udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
 
-    auto table      = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
+    auto table      = std::move(mount_point1)/* | std::move(mount_point2) | std::move(mount_point3)*/;
 
     return table;
 }
@@ -173,7 +178,7 @@ struct udho::manifold::terminal<testing::www<StreamT>> {
         if(success.has_exception()) {
             try{
                 success.rethrow();
-            } catch(std::system_error ex) {
+            } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
             }
         }
@@ -196,7 +201,7 @@ struct udho::manifold::patch<testing::www<StreamT>, 1>{
     using journal_type           = typename flow_type::journal_type;
     using pipeline_type          = typename runtime_type::template pipeline_at<1>;
     using configs_type           = typename runtime_type::configs_type;
-    using portal_type            = udho::manifold::portal<composition_type, journal_type>;
+    using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
     using routing_table_type     = typename routing_component_type::routing_table_type;
@@ -224,14 +229,11 @@ struct udho::manifold::patch<testing::www<StreamT>, 1>{
 
         // { create portal
         portal_type portal(composition, configs, journal);
-        std::cout << "portal.request():  " << std::endl << portal.request() << std::endl;
-        std::cout << "portal.resource(): " << portal.resource() << std::endl;
         // }
 
-        // { find action
-        // routing_table.invoke_at(route_index, portal);
+        // { invoke action
+        routing_table.invoke_at(route_index, portal.resource(), portal);
         // }
-
     }
 };
 

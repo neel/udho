@@ -9,11 +9,6 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/net/context.h>
 #include <udho/url/router.h>
-#include <udho/session/abstract_catalogue.h>
-#include <udho/session/storage/fs.h>
-#include <udho/session/catalogue.h>
-
-using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 namespace activities = udho::activities;
 
@@ -59,11 +54,9 @@ TEST_CASE( "activity data", "[activity]" ) {
 
     auto router = udho::url::router();
 
-    auto sessions = session_catalogue::create(udho::session::storage::fs{});
-
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     GIVEN( "a collector<A, B, C, D>" ) {
         WHEN( "some data has been inserted into it in the ABCD order" ) {
