@@ -188,6 +188,9 @@ struct facet;
 template <typename ComponentT>
 struct config;
 
+template <typename...>
+struct configs;
+
 template <typename... Components>
 struct composition_view;
 
@@ -197,7 +200,69 @@ struct configs_view;
 template <typename...Facets>
 struct journal_const_view;
 
+/**
+ * @brief Common pipeline implementation with feature ordering
+ *
+ * Extends basic_pipeline to provide ordered feature evaluation within a stage.
+ * Manages evaluation callbacks and provides a fluent interface for chaining
+ * completion handlers.
+ *
+ * @tparam Stage The pipeline stage index
+ * @tparam OrderT The order<Features...> specifying feature evaluation order
+ * @tparam CompositionT The composition type being evaluated
+ */
+template <std::size_t Stage, typename OrderT, typename CompositionT>
+class common_pipepine;
 
+/**
+ * @brief Flow label for pipeline type identification
+ *
+ * Empty struct used as a tag to identify and specialize pipeline
+ * configurations. Each unique flow type should have its own label.
+ *
+ * @tparam LabelT The label type (typically an empty struct)
+ */
+template <typename LabelT>
+struct flow;
+
+template <typename LabelT>
+struct terminal;
+
+/**
+ * @brief Pipeline execution plan blueprint
+ *
+ * Provides the static configuration for a pipeline type, defining:
+ * - The component composition
+ * - Feature evaluation order
+ *
+ * Must be specialized for each pipeline label with the appropriate
+ * type definitions.
+ *
+ * @code
+ * namespace testing{
+ *     struct Label;
+ * }
+ * template <>
+ * struct sketch<testing::Label> {
+ *     using composition_type = composition<
+ *         testing::C00,
+ *         testing::C01,
+ *         testing::C10,
+ *         ...
+ *     >;
+ *     using order_type = order<
+ *         testing::F00,
+ *         testing::F01,
+ *         testing::F10,
+ *         ...
+ *     >;
+ * };
+ * @endcode
+ *
+ * @tparam LabelT The label type identifying this pipeline configuration
+ */
+template <typename LabelT>
+struct sketch;
 
 /**
  * @}

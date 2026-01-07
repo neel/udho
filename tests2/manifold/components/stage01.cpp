@@ -24,10 +24,13 @@
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
 #include <udho/manifold/portal.h>
-
+#include <udho/manifold/runtime.h>
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
+#include <udho/manifold/transition.h>
+#include <udho/manifold/journal.h>
+#include <udho/manifold/flow.h>
 
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 

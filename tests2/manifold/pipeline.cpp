@@ -16,6 +16,11 @@
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <udho/manifold/params.h>
+#include <udho/manifold/order.h>
+#include <udho/manifold/transition.h>
+#include <udho/manifold/runtime.h>
+#include <udho/manifold/flow.h>
+#include <udho/manifold/terminal.h>
 #include <udho/utils/string_view.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
