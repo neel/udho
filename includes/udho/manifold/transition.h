@@ -22,7 +22,7 @@ namespace manifold{
  * @tparam Stage The stage index from which the transition occurs
  */
 template <typename LabelT, std::size_t Stage>
-struct patch_config{
+struct default_transition{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -52,7 +52,7 @@ struct patch_config{
  * @tparam Stage The stage index from which the transition occurs
  */
 template <typename LabelT, std::size_t Stage>
-struct patch{
+struct transition{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -69,7 +69,7 @@ struct patch{
      * @param config The configuration to modify for the next stage
      */
     static void apply(const pipeline_type& p, configs_type& config) {
-        udho::manifold::patch_config<LabelT, Stage>::apply(p, config);
+        udho::manifold::default_transition<LabelT, Stage>::apply(p, config);
     }
 };
 
@@ -86,7 +86,7 @@ namespace detail {
  * @tparam Stage Current stage index
  */
 template <typename LabelT, std::size_t Count, std::size_t Stage>
-struct patcher: public detail::patcher<LabelT, Count, Stage+1>/*, private udho::manifold::patch<LabelT, Stage>*/{
+struct transitioner: public detail::transitioner<LabelT, Count, Stage+1>/*, private udho::manifold::patch<LabelT, Stage>*/{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -99,12 +99,12 @@ struct patcher: public detail::patcher<LabelT, Count, Stage+1>/*, private udho::
      * @param configs
      */
     void apply(pipeline_type& p, configs_type& configs){
-        udho::manifold::patch<LabelT, Stage>::apply(p, configs);
+        udho::manifold::transition<LabelT, Stage>::apply(p, configs);
     }
 };
 
 template <typename LabelT, std::size_t Count>
-struct patcher<LabelT, Count, Count>{};
+struct transitioner<LabelT, Count, Count>{};
 
 }
 

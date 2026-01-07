@@ -19,7 +19,7 @@ namespace manifold{
  * @tparam LabelT The pipeline label type
  */
 template <typename LabelT>
-struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<LabelT, runtime<LabelT>::Count, 0>{
+struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transitioner<LabelT, runtime<LabelT>::Count, 0>{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -72,7 +72,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::patcher<
      */
     template <int Stage>
     void apply(pipeline_at<Stage>& p, configs_type& config){
-        detail::patcher<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(p, config);
+        detail::transitioner<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(p, config);
     }
 
     /**

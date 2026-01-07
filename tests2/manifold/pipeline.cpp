@@ -654,7 +654,7 @@ struct sketch<testing::Label3> {
 
 // Patch config specializations
 template <>
-struct patch_config<testing::Label1, 0> {
+struct default_transition<testing::Label1, 0> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
@@ -672,7 +672,7 @@ struct patch_config<testing::Label1, 0> {
 };
 
 template <>
-struct patch_config<testing::Label1, 1> {
+struct default_transition<testing::Label1, 1> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;

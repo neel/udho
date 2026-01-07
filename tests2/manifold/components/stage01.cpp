@@ -195,7 +195,7 @@ private:
 };
 
 template <typename StreamT>
-struct udho::manifold::patch<testing::www<StreamT>, 1>{
+struct udho::manifold::transition<testing::www<StreamT>, 1>{
     using label_type             = testing::www<StreamT>;
     using sketch_type            = sketch<label_type>;
     using runtime_type           = runtime<label_type>;
@@ -210,7 +210,7 @@ struct udho::manifold::patch<testing::www<StreamT>, 1>{
     using routing_table_type     = typename routing_component_type::routing_table_type;
 
     static void apply(pipeline_type& p, configs_type& config) {
-        udho::manifold::patch_config<label_type, 1>::apply(p, config);
+        udho::manifold::default_transition<label_type, 1>::apply(p, config);
 
         start_pipeline_type& start_pipeline = p.template at<-1>();
 
