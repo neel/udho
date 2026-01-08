@@ -103,6 +103,11 @@ struct pipeline{
     const configs_type& configs() const { return _configs; }
     /// @}
 
+    composition_type& composition() { return _composition; }
+    const composition_type& composition() const { return _composition; }
+
+    const auto& journal() const { return _previous.journal(); }
+
     /**
      * @brief Executes the pipeline stage synchronously
      *

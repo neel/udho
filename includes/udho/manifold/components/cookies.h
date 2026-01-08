@@ -15,7 +15,7 @@ struct cookies{
     using features = udho::manifold::features<udho::manifold::feature::cookie_load>;
     using params   = udho::manifold::params<>;
 
-    static constexpr const udho::utils::string_view name = "navigator";
+    static constexpr const udho::utils::string_view name = "cookies";
 };
 
 }

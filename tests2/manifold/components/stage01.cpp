@@ -31,6 +31,7 @@
 #include <udho/manifold/transition.h>
 #include <udho/manifold/journal.h>
 #include <udho/manifold/flow.h>
+#include <udho/manifold/visualize.h>
 
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
@@ -212,12 +213,10 @@ struct udho::manifold::transition<testing::www<StreamT>, 1>{
     static void apply(pipeline_type& p, configs_type& config) {
         udho::manifold::default_transition<label_type, 1>::apply(p, config);
 
-        start_pipeline_type& start_pipeline = p.template at<-1>();
-
         // { essentials
-        composition_type& composition = start_pipeline.composition();
-        const journal_type& journal   = start_pipeline.journal();
-        configs_type& configs         = start_pipeline.configs();
+        composition_type& composition = p.composition();
+        const journal_type& journal   = p.journal();
+        configs_type& configs         = p.configs();
         // }
 
         // { patch the configs as per the route
@@ -228,6 +227,42 @@ struct udho::manifold::transition<testing::www<StreamT>, 1>{
         const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
         const routing_table_type& routing_table = routing_component.table();
         routing_table.reconfigure_for(route_index, configs);
+        // }
+    }
+};
+
+static constexpr const std::size_t action_transition = 2;
+template <typename StreamT>
+struct udho::manifold::transition<testing::www<StreamT>, action_transition>{
+    using label_type             = testing::www<StreamT>;
+    using sketch_type            = sketch<label_type>;
+    using runtime_type           = runtime<label_type>;
+    using flow_type              = flow<label_type>;
+    using composition_type       = typename runtime_type::composition_type;
+    using journal_type           = typename flow_type::journal_type;
+    using pipeline_type          = typename runtime_type::template pipeline_at<action_transition>;
+    using configs_type           = typename runtime_type::configs_type;
+    using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
+    using start_pipeline_type    = typename runtime_type::start_pipeline_type;
+    using routing_component_type = typename label_type::routing_component_type;
+    using routing_table_type     = typename routing_component_type::routing_table_type;
+
+    static void apply(pipeline_type& p, configs_type& config) {
+        udho::manifold::default_transition<label_type, action_transition>::apply(p, config);
+
+        // { essentials
+        composition_type& composition = p.composition();
+        const journal_type& journal   = p.journal();
+        configs_type& configs         = p.configs();
+        // }
+
+        // { patch the configs as per the route
+        const auto& route = journal.template at<udho::manifold::feature::locator>();
+        assert(route.ready());
+        const udho::url::detail::route_index& route_index = *route;
+        assert(route_index.valid());
+        const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
+        const routing_table_type& routing_table = routing_component.table();
         // }
 
         // { create portal
@@ -245,11 +280,15 @@ static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feat
 TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
-
     auto session    = udho::manifold::components::session(catalogue);
 
     auto framework  = testing::framework(testing::url(), session);
     auto flow       = framework.runtime().spawn();
+
+    {
+        std::ofstream dotfile("composition.dot");
+        udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
+    }
 
     using framework_type = std::decay_t<decltype(framework)>;
     using runtime_type   = framework_type::runtime_type;
