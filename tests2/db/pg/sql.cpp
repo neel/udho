@@ -209,37 +209,29 @@ TEST_CASE("postgresql test single select statement", "[pg]"){
 
     auto router = udho::url::router();
 
-    auto sessions = session_catalogue::create(udho::session::storage::fs{});
 
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
+    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     ozo::connection_pool_config dbconfig;
     ozo::connection_info<> conn_info("dbname=postgres user=postgres");
     auto pool = ozo::connection_pool(conn_info, dbconfig);
 
-    CHECK((pg::perform<students::all>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students"_s));
-    CHECK((pg::perform<students::ordered_by_marks>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students order by students.marks asc"_s));
-    CHECK((pg::perform<students::top5>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students order by students.marks desc limit $1 offset $2"_s));
-    CHECK((pg::perform<students::top5_names>(ctx, pool)->sql().text() == "select students.name from students order by students.marks desc limit $1 offset $2"_s));
-    CHECK((pg::perform<students::top5_short>(ctx, pool)->sql().text() == "select students.id, students.name from students order by students.marks desc limit $1 offset $2"_s));
-    CHECK((pg::perform<students::top5_marks_str>(ctx, pool)->sql().text() == "select students.id, students.name, CAST(students.marks as text) from students order by students.marks desc limit $1 offset $2"_s));
+    CHECK((pg::perform<students::all>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students"_s));
+    CHECK((pg::perform<students::ordered_by_marks>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students order by students.marks asc"_s));
+    CHECK((pg::perform<students::top5>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students order by students.marks desc limit $1 offset $2"_s));
+    CHECK((pg::perform<students::top5_names>(io, pool, ctx)->sql().text() == "select students.name from students order by students.marks desc limit $1 offset $2"_s));
+    CHECK((pg::perform<students::top5_short>(io, pool, ctx)->sql().text() == "select students.id, students.name from students order by students.marks desc limit $1 offset $2"_s));
+    CHECK((pg::perform<students::top5_marks_str>(io, pool, ctx)->sql().text() == "select students.id, students.name, CAST(students.marks as text) from students order by students.marks desc limit $1 offset $2"_s));
     
-    CHECK((pg::perform<students::by::id>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.id = $1"_s));
-    CHECK((pg::perform<students::by::project>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.project = $1"_s));
-    CHECK((pg::perform<students::qualified>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.marks >= $1 order by students.marks desc"_s));
-    CHECK((pg::perform<students::disqualified>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.marks < $1 order by students.marks asc"_s));
-    CHECK((pg::perform<students::by::name>(ctx, pool)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.project = $1 and students.name like $2"_s));
+    CHECK((pg::perform<students::by::id>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.id = $1"_s));
+    CHECK((pg::perform<students::by::project>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.project = $1"_s));
+    CHECK((pg::perform<students::qualified>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.marks >= $1 order by students.marks desc"_s));
+    CHECK((pg::perform<students::disqualified>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.marks < $1 order by students.marks asc"_s));
+    CHECK((pg::perform<students::by::name>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.project, students.marks from students where students.project = $1 and students.name like $2"_s));
     
-    CHECK((pg::perform<students::top5_above_cutoff>(ctx, pool)->sql().text() == "select students.id, students.name, students.marks from students where students.marks >= $1 order by students.marks desc limit $2 offset $3"_s));
+    CHECK((pg::perform<students::top5_above_cutoff>(io, pool, ctx)->sql().text() == "select students.id, students.name, students.marks from students where students.marks >= $1 order by students.marks desc limit $2 offset $3"_s));
 
-    CHECK((pg::perform<students::detailed>(ctx, pool)->sql().text() == "select students.id, students.name, COUNT(memberships.project) as projects_associated, COUNT(articles.id) as articles_published from students inner join articles on students.id = articles.author  inner join memberships on students.id = memberships.student"_s));
+    CHECK((pg::perform<students::detailed>(io, pool, ctx)->sql().text() == "select students.id, students.name, COUNT(memberships.project) as projects_associated, COUNT(articles.id) as articles_published from students inner join articles on students.id = articles.author  inner join memberships on students.id = memberships.student"_s));
 }
-
-// BOOST_AUTO_TEST_CASE("postgresql test single insert statement", "[pg]"){
-//     std::cout << pg::perform<students::create>(ctx, pool)->sql().text().c_str() << std::endl;
-// }
-
-
-// BOOST_AUTO_TEST_SUITE_END()

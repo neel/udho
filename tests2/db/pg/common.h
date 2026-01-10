@@ -29,6 +29,7 @@
 #define UDHO_DB_PG_TESTS_COMMON_H
 
 #include <regex>
+#include <boost/algorithm/string/trim.hpp>
 
 namespace udho{
 namespace db{

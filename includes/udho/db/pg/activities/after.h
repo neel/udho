@@ -49,8 +49,8 @@ pg::activities::after<HeadT, TailT...> after(HeadT& head, TailT&... tail){
 }
 
 struct after_none{
-    template <typename ActivityT, typename ContextT, typename... T, typename... Args>
-    pg::activities::subtask<ActivityT> perform(pg::controller<ContextT, T...>& controller, Args&&... args){
+    template <typename ActivityT, typename... T, typename... Args>
+    pg::activities::subtask<ActivityT> perform(pg::controller<T...>& controller, Args&&... args){
         pg::activities::subtask<ActivityT> sub = pg::activities::subtask<ActivityT>::with(controller, args...);
         return sub;
     }
@@ -60,9 +60,9 @@ inline after_none after(){
     return after_none();
 }
 
-template <typename ActivityT, typename ContextT, typename... Args>
-pg::activities::subtask<ActivityT> perform(ContextT ctx, pg::connection::pool& pool, Args&&... args){
-    pg::controller<ContextT, ActivityT> controller(ctx, pool);
+template <typename ActivityT, typename... Args>
+pg::activities::subtask<ActivityT> perform(boost::asio::io_context& io, pg::connection::pool& pool, Args&&... args){
+    pg::controller<ActivityT> controller(io, pool);
     pg::activities::subtask<ActivityT> sub = after().perform<ActivityT>(controller, std::forward<Args>(args)...);
     return sub;
 }

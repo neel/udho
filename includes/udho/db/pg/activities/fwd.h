@@ -34,7 +34,7 @@ namespace pg{
 
 namespace activities{
 
-template <typename ContextT, typename... T>
+template <typename... T>
 struct controller;
     
 }

@@ -47,16 +47,16 @@ namespace detail{
      * @tparam ActivityT 
      * @tparam DependenciesT 
      */
-    template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
-    struct after<SubtaskT<ActivityT, DependenciesT...>>{
-        after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}
+    template <template <typename, typename...> class SubtaskT, typename... T>
+    struct after<SubtaskT<T...>>{
+        after(SubtaskT<T...>& before): _before(before){}
         
-        template <typename OtherActivityT, typename... OtherDependenciesT>
-        void attach(SubtaskT<OtherActivityT, OtherDependenciesT...>& sub){
+        template <typename... X>
+        void attach(SubtaskT<X...>& sub){
             sub.after(_before);
         }
         private:
-            SubtaskT<ActivityT, DependenciesT...>& _before;
+            SubtaskT<T...>& _before;
     };
     
 }

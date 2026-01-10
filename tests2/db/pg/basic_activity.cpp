@@ -207,13 +207,13 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
     SECTION("Using db::pg::activities"){
         bool fetched = false;
 
-        auto start     = pg::start<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>::with(ctx, pool);
-        auto create    = pg::after(start).perform<OZOStrQCreateNoRes>(start);
-        auto truncate  = pg::after(create).perform<OZOStrQTruncateNoRes>(start);
-        auto insert    = pg::after(truncate).perform<OZOStrQInsert1Res>(start);
-        auto fetch     = pg::after(insert).perform<OZOStrQSelectTupleRes>(start);
-        auto fetch2    = pg::after(insert).perform<OZOStrQSelectStructRes>(start);
-        auto fetch3    = pg::after(insert).perform<OZOStrQSelectStructRes2>(start);
+        auto start     = pg::start<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>::with(io, pool);
+        auto create    = pg::after(start).perform<OZOStrQCreateNoRes>(start, ctx);
+        auto truncate  = pg::after(create).perform<OZOStrQTruncateNoRes>(start, ctx);
+        auto insert    = pg::after(truncate).perform<OZOStrQInsert1Res>(start, ctx);
+        auto fetch     = pg::after(insert).perform<OZOStrQSelectTupleRes>(start, ctx);
+        auto fetch2    = pg::after(insert).perform<OZOStrQSelectStructRes>(start, ctx);
+        auto fetch3    = pg::after(insert).perform<OZOStrQSelectStructRes2>(start, ctx);
         pg::after(fetch, fetch2, fetch3).finish(start, [ctx, &fetched](const pg::data<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
             auto student_id  = d.success<OZOStrQInsert1Res>();
             auto students    = d.success<OZOStrQSelectTupleRes>();
