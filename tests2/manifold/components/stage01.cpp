@@ -16,6 +16,7 @@
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <boost/beast/_experimental/test/stream.hpp>
+#include <udho/manifold/components/handler.h>
 #include <udho/manifold/components/protocol.h>
 #include <udho/manifold/components/routing.h>
 #include <udho/manifold/components/cookies.h>
@@ -24,6 +25,7 @@
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
 #include <udho/manifold/portal.h>
+#include <udho/manifold/context.h>
 #include <udho/manifold/runtime.h>
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
@@ -35,34 +37,40 @@
 
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
-struct nodef{
-    nodef() = delete;
-    nodef(int) {}
-};
+namespace callbacks{
+    using namespace udho::manifold::components;
+    using namespace udho::manifold;
 
-BOOST_SYMBOL_EXPORT void f0(udho::manifold::portal<udho::manifold::components::cookies> context){
-    // context << "f0";
-    // context.finish();
-    return;
-}
+    struct nodef{
+        nodef() = delete;
+        nodef(int) {}
+    };
 
-BOOST_SYMBOL_EXPORT int f1(udho::manifold::portal<udho::manifold::components::navigators::pretty, udho::manifold::components::cookies> context, std::string a, const std::string& b, const double& c, int d){
-    // context << std::to_string(a+b.size()+c+d);
-    // context.finish();
-    std::cout << "context.resource(): " << context.resource()  << std::endl;
-    return 42;
-}
+    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+        // context << "f0";
+        context.finish();
+        return;
+    }
 
-BOOST_SYMBOL_EXPORT std::string f2(udho::manifold::portal<udho::manifold::components::cookies> context, int a, const std::string& b){
-    // context << std::to_string(a+b.size());
-    // context.finish();
-    return "hello";
-}
+    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+        // context << std::to_string(a+b.size()+c+d);
+        std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
+        context.finish();
+        return 42;
+    }
 
-BOOST_SYMBOL_EXPORT std::string f_nodef(udho::manifold::portal<> context, nodef, int a){
-    // context << std::to_string(a);
-    // context.finish();
-    return "hello";
+    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+        // context << std::to_string(a+b.size());
+        context.finish();
+        return "hello";
+    }
+
+    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+        // context << std::to_string(a);
+        context.finish();
+        return "hello";
+    }
+
 }
 
 namespace testing{
@@ -70,21 +78,21 @@ namespace testing{
 auto url() {
     using namespace udho::hazo::string::literals;
     auto actions1 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions2 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions3 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
@@ -102,6 +110,7 @@ using routing_table_type = std::decay_t<decltype(url())>;
 template <typename StreamT>
 struct www{
     using router_type                = udho::url::basic_router<routing_table_type>;
+    using handler_component_type     = udho::manifold::components::handler;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
     using stream_type                = StreamT;
     using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
@@ -117,6 +126,7 @@ struct udho::manifold::sketch<testing::www<StreamT>>{
     using www_type = testing::www<StreamT>;
 
     using composition_type = udho::manifold::composition<
+        typename www_type::handler_component_type,
         typename www_type::protocol_component_type,
         typename www_type::navigator_component_type,
         typename www_type::routing_component_type,
@@ -195,24 +205,25 @@ private:
     const journal_type& _journal;
 };
 
+
+static constexpr const std::size_t route_locator_stage = udho::manifold::feature::locator::stage;
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, 1>{
+struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
     using label_type             = testing::www<StreamT>;
     using sketch_type            = sketch<label_type>;
     using runtime_type           = runtime<label_type>;
     using flow_type              = flow<label_type>;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
-    using pipeline_type          = typename runtime_type::template pipeline_at<1>;
+    using pipeline_type          = typename runtime_type::template pipeline_at<route_locator_stage>;
     using configs_type           = typename runtime_type::configs_type;
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
     using routing_table_type     = typename routing_component_type::routing_table_type;
 
-    static void apply(pipeline_type& p, configs_type& config) {
-        udho::manifold::default_transition<label_type, 1>::apply(p, config);
-
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -228,28 +239,29 @@ struct udho::manifold::transition<testing::www<StreamT>, 1>{
         const routing_table_type& routing_table = routing_component.table();
         routing_table.reconfigure_for(route_index, configs);
         // }
+        p.next(flow, std::forward<Args>(args)...);
     }
 };
 
-static constexpr const std::size_t action_transition = 2;
+static constexpr const std::size_t action_transition_stage = 2;
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, action_transition>{
+struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage>{
     using label_type             = testing::www<StreamT>;
     using sketch_type            = sketch<label_type>;
     using runtime_type           = runtime<label_type>;
     using flow_type              = flow<label_type>;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
-    using pipeline_type          = typename runtime_type::template pipeline_at<action_transition>;
+    using pipeline_type          = typename runtime_type::template pipeline_at<action_transition_stage>;
     using configs_type           = typename runtime_type::configs_type;
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
+    using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
     using routing_table_type     = typename routing_component_type::routing_table_type;
 
-    static void apply(pipeline_type& p, configs_type& config) {
-        udho::manifold::default_transition<label_type, action_transition>::apply(p, config);
-
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -265,12 +277,28 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition>{
         const routing_table_type& routing_table = routing_component.table();
         // }
 
-        // { create portal
+        // { add finish lambda to handler component
+        auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
+        auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](){
+            std::apply(
+                [&](auto&&... args) {
+                    p.next(flow, stream, std::forward<Args>(args)...);
+                },
+                args_tuple
+                );
+        };
+        udho::manifold::components::handler& handler = composition.template get<udho::manifold::components::handler>().component();
+        handler.add(flow->id(), std::move(lambda));
+        // }
+
+        // { create context
         portal_type portal(composition, configs, journal);
+        std::string resource = portal.resource();
+        context_type context(stream, portal, flow->id());
         // }
 
         // { invoke action
-        routing_table.invoke_at(route_index, portal.resource(), portal);
+        routing_table.invoke_at(route_index, resource, context);
         // }
     }
 };
@@ -395,11 +423,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         } else if(counter == 1) {
             CHECK(reenter);
 
-            REQUIRE(w_request.ready());
-            REQUIRE(w_route_desc.ready());
-            REQUIRE(w_uri.ready());
-            REQUIRE(w_jar.ready());
-            REQUIRE(w_body.ready());
+            CHECK(w_request.ready());
+            CHECK(w_route_desc.ready());
+            CHECK(w_uri.ready());
+            CHECK(w_jar.ready());
+            CHECK(w_body.ready());
 
             const udho::manifold::feature::header_reader::result& request    = w_request;
             const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;

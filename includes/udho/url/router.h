@@ -22,15 +22,27 @@ namespace url{
 namespace detail{
 
 class route_index{
-    int _mountpoint;
-    int _action;
+public:
+    enum class type{
+        none, action, registry
+    };
+private:
+    type        _type;
+    int         _mountpoint;
+    int         _action;
     std::string _target;
 
 public:
-    inline route_index(const std::string& target, int mountpoint, int action): _target(target), _mountpoint(mountpoint), _action(action) {}
-    route_index(const route_index&) = default;
+    inline route_index(const std::string& target, int mountpoint, int action): _type(type::action), _target(target), _mountpoint(mountpoint), _action(action) {}
+    inline route_index(const std::string& target, route_index::type type = route_index::type::none): _type(type), _target(target), _mountpoint(-1), _action(-1) {}
 
-    inline bool valid() const { return _mountpoint >= 0 && _action >= 0; }
+    route_index(const route_index&) = default;
+    inline route_index(route_index::type type, const route_index& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(other._target) {}
+    inline route_index(route_index::type type, route_index&& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(std::move(other._target)) {}
+
+    inline route_index::type type() const { return _type; }
+
+    inline bool valid() const { return _type != type::none && _mountpoint >= 0 && _action >= 0; }
 
     inline int mountpoint() const { return _mountpoint; }
     inline int action() const { return _action; }
@@ -155,7 +167,7 @@ struct routing_table{
             }
         });
         if(mountpoint_index < 0) {
-            return route_index{subject, mountpoint_index, action_index};
+            return route_index{subject};
         } else {
             std::size_t total_depth = _mountpoints.length();
             return route_index{subject, static_cast<int>(total_depth) - mountpoint_index, action_index};
@@ -441,6 +453,20 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
         return found;
     }
 
+    template <typename Ch>
+    route_index index_of(const std::basic_string<Ch>& subject) const {
+        route_index index = routing_table::index_of(subject);
+        if(!index.valid()) {
+            bool is_file = _registry.exists(subject);
+            bool is_dir  = _registry.is_subset(subject);
+
+            if(is_file || is_dir) {
+                return route_index(route_index::type::registry, index);
+            }
+        }
+        return index;
+    }
+
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
         bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
@@ -451,6 +477,18 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
             }
         }
         return invoked;
+    }
+
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        assert(index.valid());
+
+        if(index.type() == route_index::type::action) {
+            return routing_table::invoke_at(index, std::forward<Args>(args)...);
+        } else if(index.type() == route_index::type::registry) {
+            // udho::url::explorers::registry::status status = _registry.serve(index.target(), std::forward<Args>(args)...);
+            // return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
+        }
     }
 
     template <typename... Args>

@@ -658,6 +658,7 @@ struct default_transition<testing::Label1, 0> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
+    using flow_type         = flow<label_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     static constexpr std::size_t Count = runtime_type::Count;
@@ -665,9 +666,11 @@ struct default_transition<testing::Label1, 0> {
     using pipeline_type     = pipeline<composition_type, order_type, Count, 0>;
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 1>::configs_type;
 
-    static void apply(const pipeline_type& p, next_config_type& config) {
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, next_config_type& config, Args&&... args) {
         // Example patch: modify C10's param for stage 1
         config[testing::C10::param::val] = "patched-by-stage0";
+        p.next(flow, std::forward<Args>(args)...);
     }
 };
 
@@ -676,6 +679,7 @@ struct default_transition<testing::Label1, 1> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
+    using flow_type         = flow<label_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     static constexpr std::size_t Count = runtime_type::Count;
@@ -683,9 +687,11 @@ struct default_transition<testing::Label1, 1> {
     using pipeline_type     = pipeline<composition_type, order_type, Count, 1>;
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 2>::configs_type;
 
-    static void apply(const pipeline_type& p, next_config_type& config) {
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, next_config_type& config, Args&&... args) {
         // Example patch: modify C20's param for stage 2
         config[testing::C20::param::val] = "patched-by-stage1";
+        p.next(flow, std::forward<Args>(args)...);
     }
 };
 

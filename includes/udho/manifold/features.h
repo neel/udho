@@ -228,6 +228,13 @@ public:
     static constexpr std::size_t value = F::stage;
 };
 
+template <>
+struct feature_max_stage<>{
+private:
+public:
+    static constexpr std::size_t value = 0;
+};
+
 }
 
 template <typename... Features>

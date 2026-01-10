@@ -26,6 +26,7 @@ struct default_transition{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
+    using flow_type         = udho::manifold::flow<LabelT>;
     using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
     using configs_type      = typename runtime_type::configs_type;
 
@@ -38,7 +39,10 @@ struct default_transition{
      * @param p The completed pipeline stage
      * @param config The configuration to modify for the next stage
      */
-    static void apply(const pipeline_type& p, configs_type& config) { /* nothing unless specialized */ }
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+        p.next(flow, std::forward<Args>(args)...);
+    }
 };
 
 /**
@@ -56,6 +60,7 @@ struct transition{
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
+    using flow_type         = udho::manifold::flow<LabelT>;
     using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
     using configs_type      = typename runtime_type::configs_type;
 
@@ -68,8 +73,9 @@ struct transition{
      * @param p The completed pipeline stage
      * @param config The configuration to modify for the next stage
      */
-    static void apply(const pipeline_type& p, configs_type& config) {
-        udho::manifold::default_transition<LabelT, Stage>::apply(p, config);
+    template <typename... Args>
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+        udho::manifold::default_transition<LabelT, Stage>::apply(flow, p, config, std::forward<Args>(args)...);
     }
 };
 
@@ -90,6 +96,7 @@ struct transitioner: public detail::transitioner<LabelT, Count, Stage+1>/*, priv
     using label_type        = LabelT;
     using sketch_type       = sketch<label_type>;
     using runtime_type      = runtime<label_type>;
+    using flow_type         = udho::manifold::flow<LabelT>;
     using pipeline_type     = typename runtime_type::template pipeline_at<Stage>;
     using configs_type      = typename runtime_type::configs_type;
 
@@ -98,8 +105,9 @@ struct transitioner: public detail::transitioner<LabelT, Count, Stage+1>/*, priv
      * @param p
      * @param configs
      */
-    void apply(pipeline_type& p, configs_type& configs){
-        udho::manifold::transition<LabelT, Stage>::apply(p, configs);
+    template <typename... Args>
+    void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& configs, Args&&... args){
+        udho::manifold::transition<LabelT, Stage>::apply(flow, p, configs, std::forward<Args>(args)...);
     }
 };
 

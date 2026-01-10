@@ -264,6 +264,12 @@ struct terminal;
 template <typename LabelT>
 struct sketch;
 
+template <typename... Components>
+struct portal;
+
+template <typename StreamT, typename... Components>
+struct basic_context;
+
 /**
  * @}
  */

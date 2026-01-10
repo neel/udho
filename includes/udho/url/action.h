@@ -237,8 +237,8 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
         auto rest = detail::rest<decayed_arguments_type, sizeof...(args)>();
         bool found = _match.find(subject, rest);
         if(found){
-            auto head = std::forward_as_tuple(std::forward<Args>(args)...);
-            decayed_arguments_type tuple = std::tuple_cat(head, rest);
+            auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
+            decayed_arguments_type tuple = std::move(std::tuple_cat(std::move(head), rest));
             slot_type::operator()(std::move(tuple));
         }
         return found;

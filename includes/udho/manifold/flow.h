@@ -70,9 +70,9 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
      * @param p The completed pipeline stage
      * @param config Configuration to modify for next stage
      */
-    template <int Stage>
-    void apply(pipeline_at<Stage>& p, configs_type& config){
-        detail::transitioner<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(p, config);
+    template <int Stage, typename... Args>
+    void apply(pipeline_at<Stage>& p, configs_type& config, Args&&... args){
+        detail::transitioner<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(self(), p, config, std::forward<Args>(args)...);
     }
 
     /**
@@ -174,7 +174,11 @@ private:
      */
     void terminate(bool reenter) {
         if(_callback){
-            _callback(*this, reenter);
+            try{
+                _callback(*this, reenter);
+            } catch(std::exception ex) {
+                std::cout << "Exception thrown from terminate callback: " << ex.what() << std::endl;
+            }
         }
         if(!reenter) {
             bool removed = _runtime.remove(self());

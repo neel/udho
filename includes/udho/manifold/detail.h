@@ -144,6 +144,7 @@ struct enabled_facets_set<Op, Stage, EnabledFacet, Rest...>{
 template <stage_comp_op Op, std::size_t Stage>
 struct enabled_facets_set<Op, Stage>{
     using container_type = facet_container<>;
+    using fabric_type = typename container_type::template fabric_type<Stage>;
 };
 
 template <stage_comp_op Op, std::size_t Stage, typename... Features>
@@ -260,12 +261,22 @@ struct composition_journal_helper<FacetT> {
         >;
 };
 
+template <>
+struct composition_journal_helper<> {
+    using type = temporary_storage<>;
+};
+
 template <typename...>
 struct get_journal_type_helper;
 
 template <typename... Facets>
 struct get_journal_type_helper<temporary_storage<Facets...>>{
     using type = journal<Facets...>;
+};
+
+template <>
+struct get_journal_type_helper<temporary_storage<>>{
+    using type = journal<>;
 };
 
 template <typename...>

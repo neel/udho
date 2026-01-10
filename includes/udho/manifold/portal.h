@@ -78,6 +78,9 @@ struct portal: detail::portal<typename udho::manifold::detail::get_journal_const
     template <typename... XComponents>
     friend struct portal;
 
+    template <typename StreamT, typename... XComponents>
+    friend struct basic_context;
+
     portal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : detail_portal_type(composition, configs, journal)
         , _composition_view(composition), _configs_view(configs), _journal_view(journal)

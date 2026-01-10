@@ -20,6 +20,11 @@ std::string visualize_features_dot(udho::manifold::features<Features...>){
     return concated;
 }
 
+template <>
+std::string visualize_features_dot(udho::manifold::features<>){
+    return "";
+}
+
 template <typename Component>
 std::string visualize_component_dot(const udho::manifold::wrapper<Component>&){
     using features = typename Component::features;

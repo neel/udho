@@ -193,6 +193,10 @@ struct pipeline{
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
     /// @}
 
+    template <typename FlowT, typename... Args>
+    void next(FlowT flow, Args&&... args){
+        _next(flow, std::forward<Args>(args)...);
+    }
 private:
 
     /**
@@ -206,35 +210,33 @@ private:
      * @param flow Shared pointer to the flow
      * @param args_tuple Tuple containing arguments to forward
      */
-    template <typename FlowT, typename ArgsTupleT>
-    void _then(std::shared_ptr<FlowT> flow, ArgsTupleT& args_tuple){
+    template <typename FlowT, typename... Args>
+    void _then(std::shared_ptr<FlowT> flow, std::tuple<Args...>& args_tuple){
         std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
         auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
             if(success) {
                 try{
-                    flow->apply(*this, configs());                  // Stage transition -> patch configs
+                    std::apply(
+                        [&](auto&&... args) {
+                            flow->apply(*this, configs(), std::forward<Args>(args)...);
+                        },
+                        args_tuple
+                    );
                 } catch(...) {
                     udho::manifold::exclusive_result result(std::current_exception());
                     bool reenter = std::apply(
-                        [&](auto&... args) -> bool {
-                            return flow->error(std::move(result), args...);    // inform flow before termination
+                        [&](auto&&... args) -> bool {
+                            return flow->error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
                         },
                         args_tuple
                     );
                     (void)reenter;
                 }
-                std::cout << "_next(flow, ...)" << std::endl;
-                std::apply(
-                    [&](auto&... args) {
-                        _next(flow, args...);
-                    },
-                    args_tuple
-                );
             } else {                                            // error occured
                 std::cout << "FAIL!!" << __LINE__ << std::endl;
                 bool reenter = std::apply(
-                    [&](auto&... args) -> bool {
-                        return flow->error(success, args...);    // inform flow before termination
+                    [&](auto&&... args) -> bool {
+                        return flow->error(success, std::forward<Args>(args)...);    // inform flow before termination
                     },
                     args_tuple
                 );
