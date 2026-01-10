@@ -195,6 +195,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     using arguments_type         = typename function_type::arguments_type;
     using decayed_arguments_type = typename function_type::decayed_arguments_type;
     using match_type             = MatchT;
+    using options_type           = typename match_type::options_type;
     using pattern_type           = typename match_type::pattern_type;
 
     /**
@@ -236,7 +237,8 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
         auto rest = detail::rest<decayed_arguments_type, sizeof...(args)>();
         bool found = _match.find(subject, rest);
         if(found){
-            decayed_arguments_type tuple = std::tuple_cat(std::make_tuple(std::move(args)...), rest);
+            auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
+            decayed_arguments_type tuple = std::move(std::tuple_cat(std::move(head), rest));
             slot_type::operator()(std::move(tuple));
         }
         return found;
@@ -267,6 +269,9 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      * @return A constant reference to the match object.
      */
     const match_type& match() const { return _match; }
+
+    const options_type& options() const { return _match.options(); }
+
     private:
         match_type    _match;
 };
@@ -385,6 +390,17 @@ action(FunctionT&& function, typename detail::function_signature_<FunctionT>::ob
     return action_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that), match);
 }
 
+namespace detail {
+
+template <typename T>
+struct is_basic_action : std::false_type {};
+
+template <typename FunctionT, typename StrT, typename MatchT>
+struct is_basic_action<basic_action<FunctionT, StrT, MatchT>> : std::true_type {
+    using type = basic_action<FunctionT, StrT, MatchT>;
+};
+
+}
 
 }
 }

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 
 project(udho-tests2 LANGUAGES CXX VERSION 0.0.1)
 
-find_package(Boost COMPONENTS regex system REQUIRED)
+find_package(Boost COMPONENTS regex REQUIRED)
 find_package(Catch2 REQUIRED)
 
 include(CTest)
@@ -40,3 +40,4 @@ add_subdirectory(view)
 add_subdirectory(utils)
 add_subdirectory(cookies)
 add_subdirectory(session)
+add_subdirectory(manifold)

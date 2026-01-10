@@ -514,6 +514,23 @@ struct basic_node: private TailT /*basic_node<typename TailT::data_type, typenam
         tail_type::visit(std::forward<FunctionT>(f));
     }
     /// @}
+
+    /**
+     * @name visit
+     * Apply a function over all elements in the chain of nodes
+     * @{
+     */
+    template <typename FunctionT>
+    void visit_at(FunctionT&& f) const{
+        _capsule.call(f, depth);
+        tail_type::visit_at(std::forward<FunctionT>(f));
+    }
+    template <typename FunctionT>
+    void visit_at(FunctionT&& f){
+        _capsule.call(f, depth);
+        tail_type::visit_at(std::forward<FunctionT>(f));
+    }
+    /// @}
        
     /**
      * @name accumulate
@@ -775,7 +792,7 @@ struct basic_node<HeadT, void>{
     template <typename KeyT, std::enable_if_t<!std::is_void<key_type>::value && std::is_same<KeyT, key_type>::value, bool> = true>
     data_type& data(const KeyT&){ return data(); }
     /// @}
-    
+
     /**
      * @name value
      * Get the value of the N'th node of type T (index_type)
@@ -852,6 +869,20 @@ struct basic_node<HeadT, void>{
     }
     /// @}
     
+    /**
+     * Apply a function over all elements in the chain of nodes
+     * @{
+     */
+    template <typename FunctionT>
+    void visit_at(FunctionT&& f) const{
+        _capsule.call(std::forward<FunctionT>(f), depth);
+    }
+    template <typename FunctionT>
+    void visit_at(FunctionT&& f){
+        _capsule.call(std::forward<FunctionT>(f), depth);
+    }
+    /// @}
+
     template <typename FunctionT>
     void operator()(FunctionT&& f){
         std::forward<FunctionT>(f)(data());

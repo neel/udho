@@ -15,6 +15,11 @@
 
 #include "data.h"
 
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/storage/fs.h>
+#include <udho/session/catalogue.h>
+
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 struct subinfo{
     std::string desc = "DESC";
@@ -266,9 +271,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
         resource_store_proxy.assets()
     );
 
+    auto sessions = session_catalogue::create(udho::session::storage::fs{});
     udho::net::types::headers::request  request;
     udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy);
+    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
 
     std::string output = ctx_explorer(p, context).str();
     nlohmann::json output_json = nlohmann::json::parse(output);

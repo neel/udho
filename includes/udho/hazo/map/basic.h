@@ -67,8 +67,10 @@ struct basic_map: basic_node<H, basic_map<Policy, X...>>{
     
     using node_type::node_type;
     basic_map(const H& h, const X&... xs): basic_node<H, basic_map<Policy, X...>>(h, xs...){}
+
     template <typename... Y, std::enable_if_t<!std::is_same_v<basic_map<Policy, H, X...>, basic_map<Policy, Y...>>, bool> = true>
     basic_map(const basic_map<Policy, Y...>& other): node_type(static_cast<const typename basic_map<Policy, Y...>::node_type&>(other)) {}
+
     template <typename FunctionT>
     decltype(auto) unpack(FunctionT&& f) const{
         call_helper<Policy, node_type, typename build_indices<1+sizeof...(X)>::indices_type> helper(*this);

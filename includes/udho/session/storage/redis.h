@@ -235,6 +235,9 @@ struct redis: public udho::session::storage::features<udho::session::modes::lazy
         }
     }
 
+    redis(const redis&) = delete;
+    inline redis(redis&& other): _redis(nullptr), _commander(std::move(other._commander)) { std::swap(_redis, other._redis); }
+
     ~redis() { if (_redis) redisFree(_redis); }
 
     inline bool exists(const udho::session::id& sid) const {

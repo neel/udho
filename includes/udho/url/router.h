@@ -14,11 +14,41 @@
 #include <udho/view/resources/asset/io.h>
 #include <udho/url/explorers.h>
 #include <udho/pages/system.h>
+#include <udho/url/io_fwd.h>
 
 namespace udho{
 namespace url{
 
 namespace detail{
+
+class route_index{
+public:
+    enum class type{
+        none, action, registry
+    };
+private:
+    type        _type;
+    int         _mountpoint;
+    int         _action;
+    std::string _target;
+
+public:
+    inline route_index(const std::string& target, int mountpoint, int action): _type(type::action), _target(target), _mountpoint(mountpoint), _action(action) {}
+    inline route_index(const std::string& target, route_index::type type = route_index::type::none): _type(type), _target(target), _mountpoint(-1), _action(-1) {}
+
+    route_index(const route_index&) = default;
+    inline route_index(route_index::type type, const route_index& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(other._target) {}
+    inline route_index(route_index::type type, route_index&& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(std::move(other._target)) {}
+
+    inline route_index::type type() const { return _type; }
+
+    inline bool valid() const { return _type != type::none && _mountpoint >= 0 && _action >= 0; }
+
+    inline int mountpoint() const { return _mountpoint; }
+    inline int action() const { return _action; }
+    inline const std::string target() const { return _target; }
+};
+
 /**
  * @class routing_table
  * @brief Template class for managing URL routing with mount points and file serving capabilities
@@ -35,10 +65,7 @@ struct routing_table{
      * @return Reference to the output stream
      */
     template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-        stream << router._mountpoints;
-        return stream;
-    }
+    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
 
     /// Type alias for the mount points collection
     using mountpoints_type = MountPointsT;
@@ -117,6 +144,79 @@ struct routing_table{
     }
 
     /**
+     * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
+     */
+    template <typename Ch>
+    route_index index_of(const std::basic_string<Ch>& subject) const {
+        int mountpoint_index = -1;
+        int action_index = -1;
+
+        _mountpoints.visit_at([&subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
+            if(mountpoint_index >= 0) return;
+            auto path = mountpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            int action_idx = mountpoint.index_of(rest);
+            if(action_idx >= 0){
+                mountpoint_index = depth;
+                action_index = action_idx;
+            }
+        });
+        if(mountpoint_index < 0) {
+            return route_index{subject};
+        } else {
+            std::size_t total_depth = _mountpoints.length();
+            return route_index{subject, static_cast<int>(total_depth) - mountpoint_index, action_index};
+        }
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        assert(index.valid());
+
+        bool found = false;
+        std::size_t total_depth = _mountpoints.length();
+        _mountpoints.visit_at([total_depth, &index, &found, &args...](const auto& mountpoint, std::size_t depth){
+            if(found)  return;
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index.mountpoint());
+            if(found){
+                mountpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
+            }
+        });
+        return found;
+    }
+
+    template <typename ConfigSupersetT>
+    std::size_t reconfigure_for(const route_index& index, ConfigSupersetT& config) const {
+        assert(index.valid());
+
+        bool found = false;
+        std::size_t total_depth = _mountpoints.length();
+        _mountpoints.visit_at([total_depth, &index, &found, &config](const auto& mountpoint, std::size_t depth) mutable {
+            if(found)  return;
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index.mountpoint());
+            if(found){
+                mountpoint.reconfigure_for(index.action(), config);
+            }
+        });
+        return found;
+    }
+
+    /**
      * @brief Function call operator that delegates to invoke()
      * @param url URL path to process
      * @param args Arguments to forward to the action
@@ -130,6 +230,11 @@ struct routing_table{
      * @return Const reference to the summary object
      */
     const udho::url::summary::router& summary() const { return _summary; }
+
+    std::ostream& print(std::ostream& stream) const {
+        stream << _mountpoints;
+        return stream;
+    }
 
     private:
 
@@ -151,17 +256,14 @@ struct routing_table{
 template <typename StrT, typename ActionsT>
 struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
 
-    // /**
-    //  * @brief operator overload for streaming the routing table's mount points
-    //  * @param stream Output stream
-    //  * @param router Routing table
-    //  * @return Reference to the output stream
-    //  */
-    // template <typename Mountpoints>
-    // friend std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
-    //     stream << router._mountpoints;
-    //     return stream;
-    // }
+    /**
+     * @brief operator overload for streaming the routing table's mount points
+     * @param stream Output stream
+     * @param router Routing table
+     * @return Reference to the output stream
+     */
+    template <typename Mountpoints>
+    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
 
     /// Type alias for the mount points collection
     using mountpoint_type = udho::url::mount_point<StrT, ActionsT>;
@@ -201,8 +303,7 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @param subject URL path to search for
      * @return true if path is found in mount points or filesystem, false otherwise
      */
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
+    bool find(const std::string& subject) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
             return false;
@@ -218,13 +319,73 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @param args Arguments to forward to the action
      * @return true if action was invoked or file was served, false otherwise
      */
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+    template <typename... Args>
+    bool invoke(const std::string& subject, Args&&... args) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
             return false;
         auto rest = path == "/" ? subject : subject.substr(path.size());
         return _mountpoint.invoke(rest, std::forward<Args>(args)...);
+    }
+
+
+    /**
+     * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
+     */
+    route_index index_of(const std::string& subject) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return route_index(subject, -1, -1);
+
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        int action_idx = _mountpoint.index_of(rest);
+        if(action_idx >= 0){
+            return route_index(subject, 0, action_idx);
+        }
+
+        return route_index(subject, -1, -1);
+    }
+
+    /**
+     * @brief Invokes the action associated with an index
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        int mountpoint_index = index.mountpoint();
+        int action_index     = index.action();
+
+        assert(mountpoint_index > -1);
+        assert(action_index > -1);
+
+        bool found = (0 == mountpoint_index);
+        if(found){
+            _mountpoint.invoke_at(action_index, std::forward<Args>(args)...);
+        }
+
+        return found;
+    }
+
+    template <typename ConfigSupersetT>
+    std::size_t reconfigure_for(const route_index& index, ConfigSupersetT& config) const {
+        int mountpoint_index = index.mountpoint();
+        int action_index     = index.action();
+
+        assert(mountpoint_index > -1);
+        assert(action_index > -1);
+
+        bool found = (0 == mountpoint_index);
+        if(found){
+            _mountpoint.reconfigure_for(index.action(), config);
+        }
+
+        return found;
     }
 
     /**
@@ -241,6 +402,12 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @return Const reference to the summary object
      */
     const udho::url::summary::router& summary() const { return _summary; }
+
+    std::ostream& print(std::ostream& stream) const {
+        stream << _mountpoint;
+        return stream;
+    }
+
 
 private:
 
@@ -267,6 +434,9 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
 
     using routing_table::operator[];
     using routing_table::summary;
+    using routing_table::index_of;
+    using routing_table::invoke_at;
+    using routing_table::reconfigure_for;
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
@@ -283,6 +453,20 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
         return found;
     }
 
+    template <typename Ch>
+    route_index index_of(const std::basic_string<Ch>& subject) const {
+        route_index index = routing_table::index_of(subject);
+        if(!index.valid()) {
+            bool is_file = _registry.exists(subject);
+            bool is_dir  = _registry.is_subset(subject);
+
+            if(is_file || is_dir) {
+                return route_index(route_index::type::registry, index);
+            }
+        }
+        return index;
+    }
+
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
         bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
@@ -293,6 +477,18 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
             }
         }
         return invoked;
+    }
+
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        assert(index.valid());
+
+        if(index.type() == route_index::type::action) {
+            return routing_table::invoke_at(index, std::forward<Args>(args)...);
+        } else if(index.type() == route_index::type::registry) {
+            // udho::url::explorers::registry::status status = _registry.serve(index.target(), std::forward<Args>(args)...);
+            // return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
+        }
     }
 
     template <typename... Args>
@@ -315,8 +511,15 @@ struct basic_router<void>{
 
     basic_router(udho::url::explorers::registry&& registry): _registry(std::move(registry)) {}
 
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const { return _registry.exists(subject); }
+    bool find(const std::string& subject) const { return _registry.exists(subject); }
+
+    template <typename... Args>
+    bool invoke_at(const route_index& index, Args&&... args) const { return false; }
+
+    template <typename SupersetT>
+    bool reconfigure_for(const route_index& index, SupersetT& superset) { return false; }
+
+    route_index index_of(const std::string& subject) const { return route_index(subject, -1, -1); }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
@@ -375,8 +578,13 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::operator[];
     using detail_basic_router::summary;
     using detail_basic_router::find;
+    using detail_basic_router::index_of;
+    using detail_basic_router::invoke_at;
+    using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
+    using detail_basic_router::table;
     using detail_basic_router::operator();
+
 
     basic_router() = delete;
     basic_router(const basic_router<MountPointsT>&) = delete;
@@ -385,12 +593,7 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): detail_basic_router(std::forward<mountpoints_type>(mountpoints), std::forward<udho::url::explorers::registry>(registry)) {}
 
     template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router){
-        const detail::routing_table<Mountpoints>& table = router.table();
-        stream << table;
-        return stream;
-    }
-
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router);
 };
 
 /**
@@ -406,6 +609,9 @@ struct basic_router<void>: private detail::basic_router<void>{
 
     using detail_basic_router::summary;
     using detail_basic_router::find;
+    using detail_basic_router::index_of;
+    using detail_basic_router::invoke_at;
+    using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
 
@@ -414,9 +620,7 @@ struct basic_router<void>: private detail::basic_router<void>{
     basic_router(basic_router<void>&&) = delete;
     basic_router(udho::url::explorers::registry&& registry): detail_basic_router(std::forward<udho::url::explorers::registry>(registry)) {}
 
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
-        return stream;
-    }
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router);
 
 };
 

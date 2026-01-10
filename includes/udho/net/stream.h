@@ -11,6 +11,8 @@
 #include <udho/net/fwd.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/hazo/detail/is_streamable.h>
+#include <udho/session/abstract_catalogue.h>
+#include <udho/session/collect.h>
 
 namespace udho{
 namespace net{
@@ -38,7 +40,7 @@ class stream{
     stream() = delete;
 
     protected:
-        inline stream(boost::asio::io_context& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
+    inline stream(boost::asio::io_context& io, udho::net::bridge::ptr bridge) : _service(io), _bridge(bridge) { }
 
         struct noop{
             void operator()(boost::system::error_code, std::size_t){}

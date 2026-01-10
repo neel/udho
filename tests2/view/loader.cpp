@@ -18,7 +18,6 @@
 #include <udho/view/tmpl/layout/document.h>
 #include <udho/view/tmpl/layout/presenter.h>
 
-
 TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     static char buffer_js[]       = "console.log(\"Hello, world!\");";
     static char buffer_js_async[] = "console.log(\"Async script\");";
@@ -120,6 +119,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
 
     SECTION("Importmap includes all registered javascripts except the embedded one regardless of selection") {
         udho::net::fake::bridge fake_bridge{request};
+
         udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
         loader_js.importmap(stream);
         const std::stringstream& actual_stream = fake_bridge.stream();

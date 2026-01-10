@@ -84,7 +84,7 @@ enum class formats{
  * - `pattern::formats::fixed`: Compares URLs against fixed string patterns for exact matching.
  * - `pattern::formats::home`: Matches the root or home URL (`"/"`), treating empty paths as the homepage.
  */
-template <pattern::formats format, typename CharT = char>
+template <pattern::formats format, typename OptionsT, typename CharT = char>
 struct match;
 }
 
@@ -94,8 +94,14 @@ struct basic_slot;
 template <typename FunctionT, typename StrT, typename MatchT>
 struct basic_action;
 
+template <typename... Actions>
+class action_table;
+
 template <typename StrT, typename ActionsT>
 struct mount_point;
+
+template <typename... Mountpoints>
+class mountpoints_table;
 
 template <typename MountPointsT>
 struct basic_router;
@@ -106,6 +112,13 @@ namespace summary{
     struct action;
     struct mount_point;
     struct router;
+}
+
+namespace detail {
+
+template <typename MountPointsT>
+struct routing_table;
+
 }
 
 }

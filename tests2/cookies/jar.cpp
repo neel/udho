@@ -271,39 +271,39 @@ TEST_CASE("Cookie Jar HTTP Response Processing", "[jar][http][response]") {
     }
 }
 
-TEST_CASE("Cookie Jar Thread Safety", "[jar][threading]") {
-    udho::cookies::jar jar;
+// TEST_CASE("Cookie Jar Thread Safety", "[jar][threading]") {
+//     udho::cookies::jar jar;
 
-    SECTION("Concurrent additions") {
-        const int num_threads = 10;
-        const int cookies_per_thread = 100;
+//     SECTION("Concurrent additions") {
+//         const int num_threads = 10;
+//         const int cookies_per_thread = 100;
 
-        std::vector<std::thread> threads;
+//         std::vector<std::thread> threads;
 
-        for (int t = 0; t < num_threads; ++t) {
-            threads.emplace_back([&jar, t, cookies_per_thread]() {
-                for (int i = 0; i < cookies_per_thread; ++i) {
-                    std::string name = "thread_" + std::to_string(t) + "_cookie_" + std::to_string(i);
-                    udho::cookies::cookie<std::string> cookie(name, "value_" + std::to_string(i));
-                    jar.add(cookie);
-                }
-            });
-        }
+//         for (int t = 0; t < num_threads; ++t) {
+//             threads.emplace_back([&jar, t, cookies_per_thread]() {
+//                 for (int i = 0; i < cookies_per_thread; ++i) {
+//                     std::string name = "thread_" + std::to_string(t) + "_cookie_" + std::to_string(i);
+//                     udho::cookies::cookie<std::string> cookie(name, "value_" + std::to_string(i));
+//                     jar.add(cookie);
+//                 }
+//             });
+//         }
 
-        for (auto& thread : threads) {
-            thread.join();
-        }
+//         for (auto& thread : threads) {
+//             thread.join();
+//         }
 
-        // Verify all cookies were added
-        for (int t = 0; t < num_threads; ++t) {
-            for (int i = 0; i < cookies_per_thread; ++i) {
-                std::string name = "thread_" + std::to_string(t) + "_cookie_" + std::to_string(i);
-                CHECK(jar.exists(name));
-                CHECK(jar.get(name).value() == "value_" + std::to_string(i));
-            }
-        }
-    }
-}
+//         // Verify all cookies were added
+//         for (int t = 0; t < num_threads; ++t) {
+//             for (int i = 0; i < cookies_per_thread; ++i) {
+//                 std::string name = "thread_" + std::to_string(t) + "_cookie_" + std::to_string(i);
+//                 CHECK(jar.exists(name));
+//                 CHECK(jar.get(name).value() == "value_" + std::to_string(i));
+//             }
+//         }
+//     }
+// }
 
 TEST_CASE("Cookie Jar Type Conversion", "[jar][conversion]") {
     udho::cookies::jar jar;

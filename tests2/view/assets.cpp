@@ -14,6 +14,7 @@
 #include <udho/net/context.h>
 #include <udho/url/router.h>
 
+using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 static char buffer_js[]  = "console.log('Hello, world!');";
 static char buffer_js1[] = "console.log('Hello, Mars!');";
@@ -198,6 +199,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 std::string url = asset.url();
                 CAPTURE(url);
                 udho::net::fake::context<> fake_context_generator{request};
+
                 udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
                 cstore.serve(stream, url);

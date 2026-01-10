@@ -4,6 +4,7 @@
 #include <regex>
 #include <udho/cookies/jar.h>
 #include <udho/session/defs.h>
+#include <udho/session/abstract_catalogue.h>
 #include <udho/session/note.h>
 
 namespace udho {
@@ -216,19 +217,18 @@ struct collector{
     using optional_id    = std::optional<udho::session::id>;
     using request_type   = boost::beast::http::header<true, Fields>;
     using response_type  = boost::beast::http::header<false, Fields>;
-    using borrow_f       = std::function<udho::session::note (const udho::session::id&)>;
-    using remove_f       = std::function<void (const udho::session::id&)>;
-    using exists_f       = std::function<bool (const udho::session::id&)>;
+
+    collector(strategy_type&& strategy, const request_type& request, response_type& response, udho::session::abstract_catalogue& catalogue):
+        _strategy(std::move(strategy)), _request(request), _response(response), _catalogue(catalogue)
+    {}
 
     template <typename CatalogueT>
-    collector(strategy_type&& strategy, CatalogueT& catalogue, const request_type& request, response_type& response):
-        _strategy(std::move(strategy)), _request(request), _response(response),
-        _borrow(std::bind(&CatalogueT::borrow, catalogue, std::placeholders::_1)), _remove(std::bind(&CatalogueT::remove, catalogue, std::placeholders::_1)), _exists(std::bind(&CatalogueT::exists, catalogue, std::placeholders::_1))
+    collector(strategy_type&& strategy, const request_type& request, response_type& response, CatalogueT& catalogue):
+        _strategy(std::move(strategy)), _request(request), _response(response),_catalogue(catalogue)
     {}
 
     collector(collector&& other):
-        _strategy(std::move(other._strategy)), _request(other._request), _response(other._response),
-        _borrow(std::move(other._borrow)), _remove(std::move(other._remove)), _exists(std::move(other._exists))
+        _strategy(std::move(other._strategy)), _request(other._request), _response(other._response), _catalogue(other._catalogue)
     {}
 
     /**
@@ -276,19 +276,20 @@ struct collector{
     /**
      * @brief Borrow a session note
      * @param sessid Session ID to access
+     * @param expect_existing expects the session to exist already, otherwise throws runtime_error
      * @return Session note providing data access
      *
      * Creates or loads session data from storage. The note uses RAII for automatic
      * reference counting and session persistence.
      */
-    udho::session::note borrow(const udho::session::id& id) { return _borrow(id); }
+    udho::session::note borrow(const udho::session::id& id, bool expect_existing = false) { return _catalogue.borrow(id, expect_existing); }
 
     /**
      * @brief checks whether a session exists for the given id or not (either loaded in memory or in the storage)
      * @param id
      * @return boolean
      */
-    bool exists(const udho::session::id& id) { return _exists(id); }
+    bool exists(const udho::session::id& id) { return _catalogue.exists(id); }
 
     /**
      * @brief clear session
@@ -304,16 +305,14 @@ struct collector{
      * 1. Last note is destroyed (RAII)
      * 2. Catalogue synchronizes with storage
      */
-    void remove(const udho::session::id& id) { _remove(id); }
+    void remove(const udho::session::id& id) { _catalogue.remove(id); }
 
 
     private:
         strategy_type       _strategy;
         const request_type& _request;
         response_type&      _response;
-        borrow_f            _borrow;
-        remove_f            _remove;
-        exists_f            _exists;
+        udho::session::abstract_catalogue& _catalogue;
 };
 
 }

@@ -316,7 +316,7 @@ namespace detail{
         }
         template <typename T, typename std::enable_if<std::is_same<valid_args<T>, T>::value>::type* = nullptr>
         return_type operator()(T&& args) const{
-            return std::apply(_f, args);
+            return std::apply(_f, std::move(args));
         }
         template <typename IteratorT>
         decayed_arguments_type prepare(IteratorT begin, IteratorT end){
