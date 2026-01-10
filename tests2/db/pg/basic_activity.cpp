@@ -159,7 +159,7 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
     SECTION("Using udho::activities"){
         bool fetched = false;
 
-        auto collector = udho::activities::collect<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>(ctx);
+        auto collector = udho::activities::collect<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>();
         auto create    = udho::activities::after().perform<OZOStrQCreateNoRes>(collector, pool, io);
         auto truncate  = udho::activities::after(create).perform<OZOStrQTruncateNoRes>(collector, pool, io);
         auto insert    = udho::activities::after(truncate).perform<OZOStrQInsert1Res>(collector, pool, io);

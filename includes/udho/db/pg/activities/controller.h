@@ -50,8 +50,8 @@ namespace activities{
  * @ingroup pg
  */
 template <typename ContextT, typename... Activities>
-struct controller: udho::db::pg::activities::subtask<udho::activities::init<ContextT, Activities...>>{
-    typedef udho::activities::init<ContextT, Activities...> activity_type;
+struct controller: udho::db::pg::activities::subtask<udho::activities::init<Activities...>>{
+    typedef udho::activities::init<Activities...> activity_type;
     typedef udho::db::pg::activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
@@ -62,7 +62,7 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
      * @param ctx udho::context 
      * @param pool udho::db::pg::connection::pool
      */
-    controller(ContextT ctx, pg::connection::pool& pool): base(ctx), _pool(pool), _io(ctx.io()), _ctx(ctx){}
+    controller(ContextT ctx, pg::connection::pool& pool): _pool(pool), _io(ctx.io()), _ctx(ctx){}
     
     /**
      * @brief get the collector object
@@ -143,7 +143,7 @@ namespace activities{
 
     template <typename ContextT, typename... Activities>
     struct collector_of<udho::db::pg::activities::controller<ContextT, Activities...>>{
-        using type = collector<ContextT, Activities...>;
+        using type = udho::activities::collector<Activities...>;
         static std::shared_ptr<type> apply(udho::db::pg::activities::controller<ContextT, Activities...>& controller){ return controller->collector(); }
     };
 

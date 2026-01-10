@@ -41,6 +41,7 @@
 #include <boost/bind/bind.hpp>
 #include <boost/beast/http/message.hpp>
 #include <udho/db/pg/ozo/fwd.h>
+#include <boost/iterator/transform_iterator.hpp>
 
 namespace udho{
 namespace db{

@@ -233,7 +233,7 @@ struct A3i: udho::activity<A3i, A3SData, A3FData>{
 void unprepared(udho::net::stream ctx){
     auto& io = ctx.io();
     
-    auto data = udho::collect<A1, A2, A3>(ctx);
+    auto data = udho::collect<A1, A2, A3>();
     
     auto t1 = udho::perform<A1>::with(data, io);
     auto t2 = udho::perform<A2>::require<A1>::with(data, io).after(t1);
@@ -270,7 +270,7 @@ void unprepared(udho::net::stream ctx){
 void prepared(udho::net::stream ctx){
     auto& io = ctx.io();
     
-    auto data = udho::collect<A1, A2i, A3i>(ctx);
+    auto data = udho::collect<A1, A2i, A3i>();
     
     auto t1 = udho::perform<A1>::with(data, io);
     auto t2 = udho::perform<A2i>::require<A1>::with(data, io).after(t1).prepare([data](A2i& a2i){
@@ -315,7 +315,7 @@ void prepared(udho::net::stream ctx){
 void unprepared_a1_fail(udho::net::stream ctx){
     auto& io = ctx.io();
     
-    auto data = udho::collect<A1, A2, A3>(ctx);
+    auto data = udho::collect<A1, A2, A3>();
     
     auto t1 = udho::perform<A1>::with(data, io, false);
     auto t2 = udho::perform<A2>::require<A1>::with(data, io).after(t1);

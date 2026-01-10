@@ -43,21 +43,20 @@ namespace udho{
 namespace activities{
     /**
      * @brief An empty initial activity that starts the chain of activities
-     * Constructs a collector to collect the result of the activities provided in Activities... using the provided context.
+     * Constructs a collector to collect the result of the activities provided in Activities...
      * This is a special activity that always succeeds and cannot be canceled. The activity is invoked via its operator() 
      * which succeeds and invokes all other activities that depend on this activity,
-     * @tparam ContextT 
      * @tparam Activities... List of activities
      * @ingroup activities
      */
-    template <typename ContextT, typename... Activities>
+    template <typename... Activities>
     struct init{
-        typedef activities::collector<ContextT, Activities...> collector_type;
+        typedef activities::collector<Activities...> collector_type;
         typedef activities::accessor<Activities...> accessor_type;
         typedef std::shared_ptr<collector_type> collector_ptr;
         typedef boost::signals2::signal<void ()> signal_type;
         
-        init(ContextT& ctx): _collector(std::make_shared<collector_type>(ctx)), _accessor(_collector){}
+        init(): _collector(std::make_shared<collector_type>()), _accessor(_collector){}
         
         /**
          * @brief get the collector used for the activity graph
@@ -100,10 +99,10 @@ namespace activities{
             accessor_type _accessor;
     };
 
-    template <typename ContextT, typename... Activities>
-    struct collector_of<init<ContextT, Activities...>>{
-        using type = collector<ContextT, Activities...>;
-        static std::shared_ptr<type> apply(std::shared_ptr<init<ContextT, Activities...>> init){ return init->collector(); }
+    template <typename... Activities>
+    struct collector_of<init<Activities...>>{
+        using type = collector<Activities...>;
+        static std::shared_ptr<type> apply(std::shared_ptr<init<Activities...>> init){ return init->collector(); }
     };
     
 #ifndef __DOXYGEN__
@@ -111,12 +110,11 @@ namespace activities{
     /**
      * @brief combinator specialized for init activity
      * This combinator cannot be prepared, because no other subtask is completed before it.
-     * @tparam NextT 
-     * @tparam ContextT 
+     * @tparam NextT
      * @tparam T 
      */
-    template <typename NextT, typename ContextT, typename... T>
-    struct combinator<NextT, init<ContextT, T...>>{
+    template <typename NextT, typename... T>
+    struct combinator<NextT, init<T...>>{
         typedef std::shared_ptr<NextT> next_type;
         next_type  _next;
 
@@ -140,13 +138,12 @@ namespace activities{
     /**
      * @brief subtask specialized for init activity
      * This subtask does not depend on any other subtasks. So it does not have a combinator
-     * @tparam ContextT 
      * @tparam T 
      */
-    template <typename ContextT, typename... T>
-    struct subtask<init<ContextT, T...>>{
-        typedef init<ContextT, T...> activity_type;
-        typedef subtask<init<ContextT, T...>> self_type;
+    template <typename... T>
+    struct subtask<init<T...>>{
+        typedef init<T...> activity_type;
+        typedef subtask<init<T...>> self_type;
         
         template <typename U, typename... DependenciesU>
         friend struct subtask;
@@ -171,8 +168,8 @@ namespace activities{
         /**
          * @brief Arguments for the constructor of the Activity
          */
-        static self_type with(ContextT ctx){
-            return self_type(ctx);
+        static self_type with(){
+            return self_type();
         }
         
         /**
@@ -183,8 +180,9 @@ namespace activities{
         }
         
         protected:
-            subtask(ContextT ctx){
-                _activity = std::shared_ptr<activity_type>(new activity_type(ctx));
+            subtask(){
+                _activity = std::make_shared<activity_type>();
+                assert(_activity.use_count() == 1);
             }
             
             std::shared_ptr<activity_type> _activity;
@@ -194,24 +192,22 @@ namespace activities{
 /**
  * @brief A wrapper around the subtask for init activity.
  * @see start
- * @tparam ContextT 
  * @tparam T 
  * @ingroup activities
  */
-template <typename ContextT, typename... T>
-struct starter: activities::subtask<activities::init<ContextT, T...>>{
-    typedef activities::init<ContextT, T...> activity_type;
+template <typename... T>
+struct starter: activities::subtask<activities::init<T...>>{
+    typedef activities::init<T...> activity_type;
     typedef activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::collector_ptr collector_ptr;
     typedef typename activity_type::accessor_type accessor_type;
     
     /**
-     * @brief Construct a new starter object using the context
+     * @brief Construct a new starter object
      * 
-     * @param ctx 
      */
-    explicit starter(ContextT ctx): base(ctx){}
+    explicit starter(): base(){}
     
     /**
      * @brief get the collector for the activity graph
@@ -271,15 +267,13 @@ struct starter: activities::subtask<activities::init<ContextT, T...>>{
 template <typename... Activities>
 struct start{
     /**
-     * @brief construct a starter using the context provided.
+     * @brief construct a starter
      * 
-     * @tparam ContextT 
      * @param ctx 
-     * @return starter<ContextT, Activities...> 
+     * @return starter<Activities...>
      */
-    template <typename ContextT>
-    static starter<ContextT, Activities...> with(ContextT ctx){
-        return starter<ContextT, Activities...>(ctx);
+    static starter<Activities...> with(){
+        return starter<Activities...>();
     }
     
     start() = delete;
@@ -290,11 +284,11 @@ struct start{
 
 namespace detail{
     
-    template <typename ContextT, typename... T>
-    struct after<udho::activities::starter<ContextT, T...>>{
-        udho::activities::starter<ContextT, T...>& _before;
+    template <typename... T>
+    struct after<udho::activities::starter<T...>>{
+        udho::activities::starter<T...>& _before;
         
-        after(udho::activities::starter<ContextT, T...>& before): _before(before){}
+        after(udho::activities::starter<T...>& before): _before(before){}
         
         template <typename OtherActivityT, typename... OtherDependenciesT>
         void attach(subtask<OtherActivityT, OtherDependenciesT...>& sub){

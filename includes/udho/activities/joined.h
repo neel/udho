@@ -49,9 +49,9 @@ namespace activities{
      * @see basic_after::finish
      * @ingroup activities
      */
-    template <typename CallbackT, typename... T, typename ContextT>
-    struct joined<CallbackT, activities::collector<ContextT, T...>>{
-        typedef activities::collector<ContextT, T...> collector_type;
+    template <typename CallbackT, typename... T>
+    struct joined<CallbackT, activities::collector<T...>>{
+        typedef activities::collector<T...> collector_type;
         typedef typename accessor_of<collector_type>::type accessor_type;
         typedef CallbackT callback_type;
         
@@ -119,8 +119,8 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename ContextT, typename... T, typename... U>
-        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+        template <typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u){
             return self_type(collector_ptr, u...);
         }
         
@@ -145,9 +145,9 @@ namespace activities{
          */
         self_type& force(bool flag = true) { _activity->force(flag); return *this; }
         protected:
-            template <typename ContextT, typename... T, typename... U>
-            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u)/*: _interaction(collector_ptr->context().interaction())*/{
-                _activity = std::make_shared<activity_type>(collector_ptr, u...);
+            template <typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u) {
+                _activity   = std::make_shared<activity_type>(collector_ptr, u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
             

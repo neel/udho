@@ -30,7 +30,6 @@
 
 #include <memory>
 #include <udho/activities/combinator.h>
-#include <udho/net/context.h>
 #include <udho/activities/fwd.h>
 #include <udho/activities/collector.h>
 
@@ -91,8 +90,8 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename ContextT, typename... T, typename... U>
-        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+        template <typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u){
             return self_type(collector_ptr, u...);
         }
         
@@ -155,8 +154,8 @@ namespace activities{
         }
         
         protected:
-            template <typename ContextT, typename... T, typename... U>
-            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u)/*: _interaction(collector_ptr->context().interaction())*/{
+            template <typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u) {
                 _activity = std::make_shared<activity_type>(collector_ptr, u...);
                 _combinator = std::make_shared<combinator_type>(_activity);
             }
@@ -204,8 +203,8 @@ namespace activities{
         /**
          * Arguments for the constructor of the Activity
          */
-        template <typename ContextT, typename... T, typename... U>
-        static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+        template <typename... T, typename... U>
+        static self_type with(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u){
             return self_type(collector_ptr, std::forward<U>(u)...);
         }
         
@@ -262,8 +261,8 @@ namespace activities{
         }
         
         protected:
-            template <typename ContextT, typename... T, typename... U>
-            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u)/*: _interaction(collector_ptr->context().interaction())*/{
+            template <typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u) {
                 _activity = std::make_shared<activity_type>(collector_ptr, std::forward<U>(u)...);
             }
             
@@ -279,7 +278,7 @@ namespace activities{
      * the activity and another one to the combinator. The subtask cannot be instantiated directly by 
      * calling the subtask constructor. Instead call the static `with` method to instantiate. 
      * @code 
-     * auto data = udho::activities::collect<A1, A2, A3>(context);
+     * auto data = udho::activities::collect<A1, A2, A3>();
      * auto t1   = udho::activities::subtask<A1>::with(data);               // NO dependencies (root subtask)
      * auto t2   = udho::activities::subtask<A2, A1>::with(data).after(t1); // Performs A2, while A1 is the only dependency
      * @endcode 
@@ -319,8 +318,8 @@ namespace activities{
         /**
          * @brief Arguments for the constructor of the Activity
          */
-        template <typename ContextT, typename... T, typename... U>
-        static subtask<ActivityT, DependenciesT...> with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+        template <typename... T, typename... U>
+        static subtask<ActivityT, DependenciesT...> with(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u){
             return subtask<ActivityT, DependenciesT...>(collector_ptr, u...);
         }
 
@@ -459,8 +458,8 @@ namespace activities{
             _activity->operator()(u...);
         }
         protected:
-            template <typename ContextT, typename... T, typename... U>
-            subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u);
+            template <typename... T, typename... U>
+            subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u);
     };
 
 #endif // __DOXYGEN__

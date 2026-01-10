@@ -121,10 +121,10 @@ struct accessor_of<boost::shared_ptr<AccessibleT>>{
     static type apply(boost::shared_ptr<AccessibleT>& ptr){ return accessor_of<AccessibleT>::apply(*ptr); }
 };
 
-template <typename ContextT, typename... T>
-struct accessor_of<collector<ContextT, T...>>{
+template <typename... T>
+struct accessor_of<collector<T...>>{
     using type = accessor<T...>;
-    static type apply(collector<ContextT, T...>& collector){ return type(collector); }
+    static type apply(collector<T...>& collector){ return type(collector); }
 };
 
 template <typename... T>
@@ -141,7 +141,7 @@ struct accessor_of<accessor<T...>>{
  *
  * Given a collector collecting result data of different activities, multiple accessors can be created to access
  * the full or a subset of the data collected by the collector. For example, given a collector of type 
- * @ref udho::activities::collector `collector<ContextT, A1, A2, A3>` there can be an @ref udho::activities::accessor `accessor<A1, A2>`
+ * @ref udho::activities::collector `collector<A1, A2, A3>` there can be an @ref udho::activities::accessor `accessor<A1, A2>`
  * that provides a read write access to the success and failre results of A1 and A2 activities only. While 
  * instantiating an activity `A1` the collector is passed, because the @ref udho::activities::activity "activity<A1, ...>"
  * base class constructs an `accessor<A1>` to store the success or failure result of the acitivity. When `A1` 
@@ -193,21 +193,19 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 
     /**
      * @brief Construct an accessor using a shared pointer to a compatiable collector
-     * @tparam ContextT 
      * @tparam U... 
      * @param collector 
      */
-    template <typename ContextT, typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
-    accessor(std::shared_ptr<collector<ContextT, U...>> collector): accessor(*collector){}
+    template <typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
+    accessor(std::shared_ptr<collector<U...>> collector): accessor(*collector){}
 
     /**
      * @brief Construct an accessor using a shared pointer to a compatiable collector
-     * @tparam ContextT 
      * @tparam U... 
      * @param collector 
      */
-    template <typename ContextT, typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
-    accessor(collector<ContextT, U...>& collector): base_type(collector.node()){}
+    template <typename... U, std::enable_if_t<types::template compatiable_with<accessor<U...>>::value, bool> = true >
+    accessor(collector<U...>& collector): base_type(collector.node()){}
     /**
      * @brief Construct an accessor using another compatiable accessor
      * @tparam U...

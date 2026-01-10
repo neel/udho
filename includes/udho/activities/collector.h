@@ -28,7 +28,6 @@
 #ifndef UDHO_ACTIVITIES_COLLECTOR_H
 #define UDHO_ACTIVITIES_COLLECTOR_H
 
-#include <string>
 #include <memory>
 #include <udho/hazo/node.h>
 #include <udho/activities/detail.h>
@@ -48,10 +47,10 @@ struct collector_of{
     static void apply(){}
 };
 
-template <typename ContextT, typename... T>
-struct collector_of<std::shared_ptr<collector<ContextT, T...>>>{
-    using type = collector<ContextT, T...>;
-    static std::shared_ptr<type> apply(std::shared_ptr<collector<ContextT, T...>>& collector){ return collector; }
+template <typename... T>
+struct collector_of<std::shared_ptr<collector<T...>>>{
+    using type = collector<T...>;
+    static std::shared_ptr<type> apply(std::shared_ptr<collector<T...>>& collector){ return collector; }
 };
 
 /**
@@ -80,7 +79,6 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
 
 /**
  * @brief Collects data associated with all activities involved in the subtask graph.
- * @tparam ContextT 
  * @tparam Activities ... Activities in the chains
  *
  * Multiple activities may have different semantics to denote their success and failure. An 
@@ -115,56 +113,30 @@ typename std::shared_ptr<typename collector_of<X>::type> collector_from(X& x){
  * @code 
  * auto collector = udho::activities::collect<A1, A2, A3>(ctx);
  * @endcode 
- * The collect method instantiates a shared pointer to `udho::activities::collector<ContextT, A1, A2, A3>` 
- * where `ContextT` is the type of ctx. While creating subtasks each of these activities create a partial 
+ * The collect method instantiates a shared pointer to `udho::activities::collector<A1, A2, A3>`
+ * while creating subtasks each of these activities create a partial
  * accessor to access the slice of data required for that activity. 
- *
- * @note Collector extends the lifetime of HTTP context by copying the context object. 
- * @ingroup activities
  */
-template <typename ContextT, typename... Activities>
-struct collector: std::enable_shared_from_this<collector<ContextT, Activities...>>, private udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...>{
+template <typename... Activities>
+struct collector: std::enable_shared_from_this<collector<Activities...>>, private udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...>{
 #ifndef __DOXYGEN__
     typedef udho::hazo::node<detail::labeled<Activities, typename Activities::result_type>...> base_type;
-    typedef ContextT context_type;
-
-    context_type _context;
 #endif 
     template <typename... X>
     friend struct accessor;
     
-    friend struct accessor_of<collector<ContextT, Activities...>>;
+    friend struct accessor_of<collector<Activities...>>;
 
     template <typename U>
-    friend collector<ContextT, Activities...>& operator<<(collector<ContextT, Activities...>& h, const U& data){
+    friend collector<Activities...>& operator<<(collector<Activities...>& h, const U& data){
         h.node().template data<U>() = data;
         return h;
     }
     template <typename U>
-    friend const collector<ContextT, Activities...>& operator>>(const collector<ContextT, Activities...>& h, U& data){
+    friend const collector<Activities...>& operator>>(const collector<Activities...>& h, U& data){
         data = h.node().template data<U>();
         return h;
     }
-    
-    /**
-     * @brief Construct a new collector object
-     * 
-     * @param ctx 
-     * @param name 
-     */
-    collector(context_type ctx): _context(ctx) {}
-    /**
-     * @brief Get the context
-     * 
-     * @return context_type& 
-     */
-    context_type& context() { return _context; }
-    /**
-     * @brief Get the context
-     * 
-     * @return const context_type& 
-     */
-    const context_type& context() const { return _context; }
 
 #ifndef __DOXYGEN__
     private:
@@ -181,10 +153,10 @@ struct collector: std::enable_shared_from_this<collector<ContextT, Activities...
  * @endcode
  * @ingroup activities
  */
-template <typename... T, typename ContextT>
-std::shared_ptr<collector<ContextT, T...>> collect(ContextT& ctx){
-    typedef collector<ContextT, T...> collector_type;
-    return std::make_shared<collector_type>(ctx);
+template <typename... T>
+std::shared_ptr<collector<T...>> collect(){
+    typedef collector<T...> collector_type;
+    return std::make_shared<collector_type>();
 }
     
 }

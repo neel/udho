@@ -28,7 +28,6 @@
 #ifndef UDHO_ACTIVITIES_FWD_H
 #define UDHO_ACTIVITIES_FWD_H
 
-#include <memory>
 
 namespace udho{
 /**
@@ -36,7 +35,7 @@ namespace udho{
  */
 namespace activities{
 
-    template <typename ContextT, typename... T>
+    template <typename... T>
     struct collector;
 
     template <typename CollectorLikeT>

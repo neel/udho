@@ -21,6 +21,7 @@
 #include <udho/manifold/components/routing.h>
 #include <udho/manifold/components/cookies.h>
 #include <udho/manifold/components/session.h>
+#include <udho/manifold/components/pg.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
@@ -111,6 +112,7 @@ template <typename StreamT>
 struct www{
     using router_type                = udho::url::basic_router<routing_table_type>;
     using handler_component_type     = udho::manifold::components::handler;
+    using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
     using stream_type                = StreamT;
     using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
@@ -127,6 +129,7 @@ struct udho::manifold::sketch<testing::www<StreamT>>{
 
     using composition_type = udho::manifold::composition<
         typename www_type::handler_component_type,
+        typename www_type::db_component_type,
         typename www_type::protocol_component_type,
         typename www_type::navigator_component_type,
         typename www_type::routing_component_type,

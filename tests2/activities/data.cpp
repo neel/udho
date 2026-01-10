@@ -6,9 +6,6 @@
 #endif
 #include <udho/activities.h>
 #include <string>
-#include <udho/view/bridges/lua.h>
-#include <udho/net/context.h>
-#include <udho/url/router.h>
 
 namespace activities = udho::activities;
 
@@ -41,26 +38,9 @@ struct E{
 };
 
 TEST_CASE( "activity data", "[activity]" ) {
-    boost::asio::io_context io;
-    udho::view::data::bridges::lua lua;
-    lua.init();
-    lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-
-    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-    resource_store.assets().base("assets");
-    resource_store.lock();
-    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
-
-    auto router = udho::url::router();
-
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
-
     GIVEN( "a collector<A, B, C, D>" ) {
         WHEN( "some data has been inserted into it in the ABCD order" ) {
-            auto collector = activities::collect<A, B, C, D>(ctx);
+            auto collector = activities::collect<A, B, C, D>();
             *collector  << activities::detail::labeled<A, A::result_type>(A::result_type{"Hello World"}) 
                         << activities::detail::labeled<B, B::result_type>(B::result_type{42})
                         << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})
@@ -96,7 +76,7 @@ TEST_CASE( "activity data", "[activity]" ) {
         }
 
         WHEN( "some data has been inserted into it in the CBA order" ) {
-            auto collector = activities::collect<A, B, C, D>(ctx);
+            auto collector = activities::collect<A, B, C, D>();
             *collector  << activities::detail::labeled<D, D::result_type>(D::result_type{2.718}) 
                         << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})
                         << activities::detail::labeled<B, B::result_type>(B::result_type{42})
@@ -134,7 +114,7 @@ TEST_CASE( "activity data", "[activity]" ) {
     }
 
     GIVEN( "a collector<A, B, C, D, E> where no value for E is set" ) {
-        auto collector = activities::collect<A, B, C, D, E>(ctx);
+        auto collector = activities::collect<A, B, C, D, E>();
         *collector  << activities::detail::labeled<A, A::result_type>(A::result_type{"Hello World"}) 
                     << activities::detail::labeled<B, B::result_type>(B::result_type{42})
                     << activities::detail::labeled<C, C::result_type>(C::result_type{3.14})
