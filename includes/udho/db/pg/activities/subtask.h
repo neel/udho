@@ -134,7 +134,6 @@ struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<T
     /**
      * @brief Construct a pg::subtask with a controller and additional optional arguments passed to the activity's constructor
      * 
-     * @tparam ContextT 
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param controller 
@@ -149,7 +148,6 @@ struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<T
     /**
      * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
      * 
-     * @tparam ContextT 
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param collector_ptr 

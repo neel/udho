@@ -45,7 +45,6 @@ namespace activities{
  * the collector, io service, connector seperately. The controller serves the collector
  * through the underlying init activity.
  * @see udho::activities::init
- * @tparam ContextT 
  * @tparam T... Activity types that are to be performed. 
  * @ingroup pg
  */
@@ -83,12 +82,6 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Acti
      */
     auto data() { return base::_activity->collector(); }
     
-    /**
-     * @brief Gets the context with which it is associated to
-     * 
-     * @return ContextT 
-     */
-    // ContextT context() { return _ctx; }
     /**
      * @brief Get a reference to the postgresql connection pool
      * 

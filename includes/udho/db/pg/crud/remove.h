@@ -31,6 +31,7 @@
 #include <udho/db/pg/activities/activity.h>
 #include <udho/db/common/none.h>
 #include <udho/db/pg/crud/fwd.h>
+#include <udho/db/pg/schema/schema.h>
 
 namespace udho{
 namespace db{
@@ -70,8 +71,8 @@ struct basic_remove{
             activity_type(collector, pool, io), 
             with_type(std::forward<Args>(args)...)
             {}
-        template <typename ContextT, typename... T, typename... Args>
-        activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
+        template <typename... T, typename... Args>
+        activity(pg::controller<T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
         
         with_type& with() { return static_cast<with_type&>(*this); }
         

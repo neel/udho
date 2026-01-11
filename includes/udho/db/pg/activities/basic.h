@@ -126,8 +126,7 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
     
     /**
      * @brief Construct a new basic activity object with a controller
-     * 
-     * @tparam ContextT 
+     *
      * @tparam T 
      * @param ctrl 
      */

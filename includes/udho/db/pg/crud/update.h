@@ -76,8 +76,8 @@ struct basic_update{
             activity_type(collector, pool, io), 
             schema_type(std::forward<Args>(rest)...)
             {}
-        template <typename ContextT, typename... Activities, typename... Args>
-        activity(pg::controller<ContextT, Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
+        template <typename... Activities, typename... Args>
+        activity(pg::controller<Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
         
         schema_type& schema() { return static_cast<schema_type&>(*this); }
         
@@ -120,8 +120,8 @@ struct basic_update{
                 activity_type(collector, pool, io), 
                 schema_type(std::forward<Args>(rest)...)
                 {}
-            template <typename ContextT, typename... Activities, typename... Args>
-            activity(pg::controller<ContextT, Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
+            template <typename... Activities, typename... Args>
+            activity(pg::controller<Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
             
             schema_type& schema() { return static_cast<schema_type&>(*this); }
             with_type& with() { return where; }
@@ -211,8 +211,8 @@ struct basic_update{
                     activity_type(collector, pool, io), 
                     schema_type(std::forward<Args>(rest)...)
                     {}
-                template <typename ContextT, typename... Activities, typename... Args>
-                activity(pg::controller<ContextT, Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
+                template <typename... Activities, typename... Args>
+                activity(pg::controller<Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
                 
                 schema_type& schema() { return static_cast<schema_type&>(*this); }
                 with_type& with() { return where; }
@@ -293,8 +293,8 @@ struct basic_update{
                     activity_type(collector, pool, io), 
                     schema_type(std::forward<Args>(rest)...)
                     {}
-                template <typename ContextT, typename... Activities, typename... Args>
-                activity(pg::controller<ContextT, Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
+                template <typename... Activities, typename... Args>
+                activity(pg::controller<Activities...>& ctrl, Args&&... rest): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(rest)...){}
                 
                 schema_type& schema() { return static_cast<schema_type&>(*this); }
                 

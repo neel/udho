@@ -81,8 +81,8 @@ struct basic_insert{
             activity_type(collector, pool, io), 
             schema_type(std::forward<Args>(args)...)
             {}
-        template <typename ContextT, typename... T, typename... Args>
-        activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
+        template <typename... T, typename... Args>
+        activity(pg::controller<T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
         
         schema_type& schema() { return static_cast<schema_type&>(*this); }
         
@@ -128,8 +128,8 @@ struct basic_insert{
                 activity_type(collector, pool, io), 
                 schema_type(std::forward<Args>(args)...)
                 {}
-            template <typename ContextT, typename... T, typename... Args>
-            activity(pg::controller<ContextT, T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
+            template <typename... T, typename... Args>
+            activity(pg::controller<T...>& ctrl, Args&&... args): activity(ctrl.data(), ctrl.pool(), ctrl.io(), std::forward<Args>(args)...){}
             
             schema_type& schema() { return static_cast<schema_type&>(*this); }
             
