@@ -67,9 +67,37 @@ TEST_CASE("DL_info", "[url][dlinfo]"){
     dladdr(reinterpret_cast<void *>(&f1), &f1_info);
     dladdr(reinterpret_cast<void *>(ptr), &xf0_info);
 
-    std::string f0_name{abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, NULL)};
-    std::string f1_name{abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, NULL)};
-    std::string xf0_name{abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, NULL)};
+    std::string f0_name, f1_name, xf0_name;
+
+    if(f0_info.dli_sname) {
+        char* buffer = 0x0;
+        int status   = -4;
+        buffer = abi::__cxa_demangle(f0_info.dli_sname, NULL, NULL, &status);
+        if(status == 0 && buffer != 0x0) {
+            f0_name = buffer;
+            free(buffer);
+        }
+    }
+
+    if(f1_info.dli_sname) {
+        char* buffer = 0x0;
+        int status   = -4;
+        buffer = abi::__cxa_demangle(f1_info.dli_sname, NULL, NULL, &status);
+        if(status == 0 && buffer != 0x0) {
+            f1_name = buffer;
+            free(buffer);
+        }
+    }
+
+    if(xf0_info.dli_sname) {
+        char* buffer = 0x0;
+        int status   = -4;
+        buffer = abi::__cxa_demangle(xf0_info.dli_sname, NULL, NULL, &status);
+        if(status == 0 && buffer != 0x0) {
+            xf0_name = buffer;
+            free(buffer);
+        }
+    }
 
     CHECK(f0_name == "f0()");
     CHECK(f1_name == "f1(int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, double const&, bool)");

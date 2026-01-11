@@ -274,7 +274,14 @@ namespace detail{
         std::string symbol_name() const{
             if(!_info.dli_sname)
                 return std::string();
-            std::string symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+            std::string symbol;
+            char* buffer = 0x0;
+            int status   = -4;
+            buffer = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, &status);
+            if(status == 0 && buffer != 0x0) {
+                symbol = buffer;
+                free(buffer);
+            }
             static std::string cxx_string_expanded_type = "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >";
             boost::replace_all(symbol, cxx_string_expanded_type, "std::string");
             return symbol;
@@ -335,7 +342,13 @@ namespace detail{
         std::string symbol_name() const{
             std::string symbol;
             if(_info.dli_saddr){
-                symbol = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, NULL);
+                char* buffer = 0x0;
+                int status   = -4;
+                buffer = abi::__cxa_demangle(_info.dli_sname, NULL, NULL, &status);
+                if(status == 0 && buffer != 0x0) {
+                    symbol = buffer;
+                    free(buffer);
+                }
             } else {
                 symbol = "dli_saddr::dli_saddr null";
             }

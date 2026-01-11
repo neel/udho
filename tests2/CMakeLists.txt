@@ -35,6 +35,8 @@ function(add_catch_test TARGET_NAME SOURCE_FILE)
         udho_enable_coverage(${TARGET_NAME})
     endif()
 
+    udho_enable_sanitizers(${TARGET_NAME})
+
     target_link_libraries(${TARGET_NAME} PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
     get_filename_component(FULL_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE}" ABSOLUTE)
