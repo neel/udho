@@ -12,8 +12,6 @@ if(Catch2_VERSION_MAJOR LESS 3)
     add_definitions(-DWITH_CATCH_VERSION_2)
 endif()
 
-option(UDHO_ENABLE_COVERAGE "Enable coverage instrumentation and coverage target" OFF)
-
 # Coverage flags helper (CMake 3.9 compatible)
 function(udho_enable_coverage TARGET)
     if(MSVC)
@@ -32,6 +30,11 @@ endfunction()
 # Function to create a test executable and register it
 function(add_catch_test TARGET_NAME SOURCE_FILE)
     add_executable(${TARGET_NAME} ${SOURCE_FILE})
+
+    if(UDHO_ENABLE_COVERAGE)
+        udho_enable_coverage(${TARGET_NAME})
+    endif()
+
     target_link_libraries(${TARGET_NAME} PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
     get_filename_component(FULL_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE}" ABSOLUTE)
