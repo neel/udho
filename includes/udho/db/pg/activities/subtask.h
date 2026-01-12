@@ -70,8 +70,7 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     
     /**
      * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
-     * 
-     * @tparam ContextT 
+     *
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param collector_ptr 
@@ -109,16 +108,12 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     
     protected:
         using subtask_base::subtask_base;
-        template <typename ContextT, typename... T, typename... U>
-        subtask(pg::activities::controller<T...> controller, ContextT ctx, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){
-            subtask_base::if_failed(pg::on::failure<ActivityT, ContextT>(ctx));
-            subtask_base::if_errored(pg::on::error<ActivityT, ContextT>(ctx));
+        template <typename... T, typename... U>
+        subtask(pg::activities::controller<T...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){
             subtask_base::cancel_if(pg::on::invalidate<ActivityT>());
         }
-        template <typename ContextT, typename... T, typename... U>
-        subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, ContextT ctx, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){
-            subtask_base::if_failed(pg::on::failure<ActivityT, ContextT>(ctx));
-            subtask_base::if_errored(pg::on::error<ActivityT, ContextT>(ctx));
+        template <typename... T, typename... U>
+        subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){
             subtask_base::cancel_if(pg::on::invalidate<ActivityT>());
         }
 };

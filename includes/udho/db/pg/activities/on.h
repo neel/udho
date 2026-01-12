@@ -187,7 +187,7 @@ namespace on{
      * Specialize this template to customize error message on SQL failure
      * @ingroup pg
      */
-    template <typename ActivityT, typename ContextT>
+    template <typename ContextT>
     struct failure{
         /**
         * Initialized by any context, which is stored as a stateless context.
@@ -247,7 +247,7 @@ namespace on{
     template <typename ActivityT>
     struct invalidate{
         /**
-        * By default cancels none, however if the activity s[pecifies that it does not allow empty result
+        * By default cancels none, however if the activity specifies that it does not allow empty result
         * returns true (suggests cancellation) if the result is empty.
         */
         bool operator()(const typename ActivityT::success_type& res){
