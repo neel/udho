@@ -41,6 +41,7 @@
 #include <boost/bind/bind.hpp>
 #include <boost/beast/http/message.hpp>
 #include <udho/db/pg/ozo/fwd.h>
+#include <boost/iterator/transform_iterator.hpp>
 
 namespace udho{
 namespace db{
@@ -125,13 +126,12 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
     
     /**
      * @brief Construct a new basic activity object with a controller
-     * 
-     * @tparam ContextT 
+     *
      * @tparam T 
      * @param ctrl 
      */
-    template <typename ContextT, typename... T>
-    basic_activity(pg::controller<ContextT, T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+    template <typename... T>
+    basic_activity(pg::controller<T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
     
     /**
      * @brief performs the SQL query asynchronously.
@@ -248,12 +248,11 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
     /**
      * @brief Construct a new basic activity object with a controller
      * 
-     * @tparam ContextT 
      * @tparam T 
      * @param ctrl 
      */
-    template <typename ContextT, typename... T>
-    basic_activity(pg::controller<ContextT, T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+    template <typename... T>
+    basic_activity(pg::controller<T...>& ctrl): basic_activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
 
     /**
      * @brief performs the SQL query asynchronously.

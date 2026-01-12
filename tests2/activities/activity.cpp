@@ -50,21 +50,6 @@ struct MinimalA3: activities::activity<MinimalA3, success_t, failure_t>{
 
 TEST_CASE( "activity basic", "[activities]" ) {
     boost::asio::io_context io;
-    udho::view::data::bridges::lua lua;
-    lua.init();
-    lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-
-    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-    resource_store.assets().base("assets");
-    resource_store.lock();
-    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
-
-    auto router = udho::url::router();
-
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     SECTION( "construction" ) {
         CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::net::context<udho::view::data::bridges::lua>, MinimalA1, MinimalA2>>&, bool>::value);
@@ -72,7 +57,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){
-        auto collector_a1_a2_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+        auto collector_a1_a2_ptr = activities::collect<MinimalA1, MinimalA2>();
         MinimalA1 a1_test1(collector_a1_a2_ptr, true);
         activities::accessor<MinimalA1> accessor_a1_test1(collector_a1_a2_ptr);
 
@@ -94,7 +79,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
         }
     }
     WHEN("a minimal activity MinimalA1 is constructed using collector<MinimalA1>") {
-        auto collector_a1_ptr = activities::collect<MinimalA1>(ctx);
+        auto collector_a1_ptr = activities::collect<MinimalA1>();
         MinimalA1 a1_test2(collector_a1_ptr, false);
         activities::accessor<MinimalA1> accessor_a1_test2(collector_a1_ptr);
 
@@ -109,7 +94,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>();
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
@@ -131,7 +116,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>();
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, true);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto combinator = std::make_shared<activities::combinator<MinimalA2, MinimalA1>>(a2_ptr);
@@ -153,7 +138,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     GIVEN( "two activities are chained through a combinator and collecting data through the same collector" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2>();
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         a1_ptr->required(false);
@@ -176,7 +161,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     GIVEN( "one activity that depends on two parent activities" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx);
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>();
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto a3_ptr = std::make_shared<MinimalA3>(collector_ptr);
@@ -221,7 +206,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
     }
 
     GIVEN( "one activity that depends on two parent activities" ){
-        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>(ctx);
+        auto collector_ptr = activities::collect<MinimalA1, MinimalA2, MinimalA3>();
         auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, true);
         auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
         auto a3_ptr = std::make_shared<MinimalA3>(collector_ptr);
@@ -267,7 +252,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
 
     GIVEN( "an activity fails" ) {
         THEN( "the if_failed callback is called" ) {
-            auto collector_ptr = activities::collect<MinimalA1>(ctx);
+            auto collector_ptr = activities::collect<MinimalA1>();
             MinimalA1 a1(collector_ptr, false);
             activities::accessor<MinimalA1> accessor(collector_ptr);
             int failure_value = 0;
@@ -285,7 +270,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             CHECK(accessor.failure<MinimalA1>()._value == 24);
         }
         THEN( "then child activities are cancelled if the if_failed callback returns true" ) {
-            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>();
             auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
             auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
 
@@ -319,7 +304,7 @@ TEST_CASE( "activity basic", "[activities]" ) {
             CHECK(accessor.canceled<MinimalA2>());
         }
         THEN( "then child activities are not cancelled if the if_failed callback returns false" ) {
-            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>(ctx);
+            auto collector_ptr = activities::collect<MinimalA1, MinimalA2>();
             auto a1_ptr = std::make_shared<MinimalA1>(collector_ptr, false);
             auto a2_ptr = std::make_shared<MinimalA2>(collector_ptr);
 

@@ -39,9 +39,8 @@ namespace activities{
     
 template <typename... T>
 struct start{
-    template <typename ContextT>
-    static controller<ContextT, T...> with(ContextT ctx, pg::connection::pool& pool){
-        return controller<ContextT, T...>(ctx, pool);
+    static controller<T...> with(boost::asio::io_context& io, pg::connection::pool& pool){
+        return controller<T...>(io, pool);
     }
     
     start() = delete;

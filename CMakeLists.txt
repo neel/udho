@@ -24,6 +24,7 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 -fdiagnostics-color=always -fd
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 option(UDHO_BUILD_TESTS "Build the unit tests" ON)
+option(UDHO_ENABLE_COVERAGE "Enable coverage reporting" OFF)
 option(UDHO_BUILD_EXAMPLES "Build the unit tests" ON)
 option(UDHO_USE_ICU "Build with ICU" OFF)
 option(UDHO_USE_PUGIXML "Build with PugiXML" ON)
@@ -31,6 +32,33 @@ option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
 option(UDHO_USE_FCGI "Build with FCGI" ON)
 option(UDHO_HEADER_ONLY "Use Udho as Header Only Library" ON)
 option(UDHO_USE_LUAJIT "Use LuaJIT is available" OFF)
+option(UDHO_ENABLE_ASAN  "Enable AddressSanitizer" OFF)
+option(UDHO_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+
+function(udho_enable_sanitizers target)
+  if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"))
+    message(WARNING "Sanitizers requested, but unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+    return()
+  endif()
+
+  set(san_flags "")
+  if(UDHO_ENABLE_ASAN)
+    list(APPEND san_flags -fsanitize=address)
+  endif()
+  if(UDHO_ENABLE_UBSAN)
+    list(APPEND san_flags -fsanitize=undefined)
+  endif()
+
+  if(san_flags)
+    # Compile flags
+    target_compile_options(${target} PRIVATE ${san_flags} -fno-omit-frame-pointer -g)
+    # Link flags (CMake 3.9: LINK_FLAGS)
+    foreach(f IN LISTS san_flags)
+      set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${f}")
+    endforeach()
+    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " -fno-omit-frame-pointer")
+  endif()
+endfunction()
 
 IF(UNIX AND APPLE)
     SET(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl@3/3.0.1")
@@ -156,6 +184,64 @@ IF(HIREDIS_FOUND)
 ELSE()
     message(STATUS "Hiredis not found")
 ENDIF()
+
+udho_enable_sanitizers(udho)
+
+if(UDHO_ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(udho PRIVATE -O0 -g --coverage)
+        set_property(TARGET udho APPEND_STRING PROPERTY LINK_FLAGS " --coverage")
+    else()
+        message(WARNING "UDHO_ENABLE_COVERAGE=ON but compiler is not GNU/Clang; skipping coverage flags.")
+    endif()
+endif()
+
+if(UDHO_ENABLE_COVERAGE)
+  find_program(LCOV_EXECUTABLE lcov)
+  find_program(GENHTML_EXECUTABLE genhtml)
+
+  if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+    set(COVERAGE_DIR "${CMAKE_BINARY_DIR}/coverage")
+    set(LCOV_INFO    "${COVERAGE_DIR}/coverage.info")
+    message(STATUS "Coverage: LCOV_INFO='${LCOV_INFO}'")
+
+    set(LCOV_COMMON
+        --branch-coverage
+        --ignore-errors negative,inconsistent,mismatch,unused
+        --rc branch_coverage=1
+        --rc geninfo_unexecuted_blocks=1
+        --rc check_data_consistency=0
+    )
+
+    add_custom_target(coverage
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${COVERAGE_DIR}"
+      COMMAND ${LCOV_EXECUTABLE} --directory "${CMAKE_BINARY_DIR}" --zerocounters
+      COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+
+      COMMAND ${LCOV_EXECUTABLE} ${LCOV_COMMON}
+              --capture
+              --directory "${CMAKE_BINARY_DIR}"
+              --base-directory "${CMAKE_SOURCE_DIR}"
+              --output-file "${LCOV_INFO}"
+
+      COMMAND ${LCOV_EXECUTABLE} ${LCOV_COMMON}
+              --remove "${LCOV_INFO}"
+              "*/vendor/*" "*/tests/*" "*/tests2/*" "*/build/*"
+              "/usr/*" "*/usr/include/*" "*/include/c++/*"
+              --output-file "${LCOV_INFO}"
+
+      COMMAND ${GENHTML_EXECUTABLE} "${LCOV_INFO}"
+              --ignore-errors inconsistent,corrupt
+              --branch-coverage
+              --output-directory "${COVERAGE_DIR}"
+              --title "udho coverage"
+              --show-details
+
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+  endif()
+endif()
+
 
 if(UDHO_BUILD_TESTS)
    enable_testing()

@@ -46,12 +46,12 @@ struct A: activities::activity<A<N>, success_t, failure_t>, private accessor_sto
     using storage_type = std::vector<int>;
 
     template <typename CollectorT>
-    A(CollectorT& collector, int value, bool succeed = true): 
+    A(CollectorT& collector, boost::asio::io_context& io, int value, bool succeed = true):
         activity_type(collector), 
         accessor_storage_type(collector), 
         _value(value), 
         _succeed(succeed), 
-        _timer(collector->context().io()), 
+        _timer(io),
         _time(boost::get_system_time()) 
     {}
 
@@ -124,36 +124,20 @@ using A7 = A<7>;
 
 TEST_CASE("subtask flow", "[activities]") {
     boost::asio::io_context io;
-    udho::view::data::bridges::lua lua;
-    lua.init();
-    lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-
-    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-    resource_store.assets().base("assets");
-    resource_store.lock();
-    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
-
-    auto router = udho::url::router();
-
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
-
 
     WHEN("All subtasks succeed") {
         std::cout << "---------------------------0" << std::endl;
-        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
-        auto a0 = activities::after()       .perform<A0>(collector, 100);
-        auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
-        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
-        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
-        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+        auto collector = activities::collect<A0,A1,A2,A3,A4>();
+        auto a0 = activities::after()       .perform<A0>(collector, io, 100);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, io, 102);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, io, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, io, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, io, 108);
 
         bool test_run = false;
         bool test_run2 = false;
 
-        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+        auto a_finished = activities::after(a4).finish(collector, [&test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
             CHECK(data.completed<A0>());
             CHECK(data.completed<A1>());
             CHECK(data.completed<A2>());
@@ -163,7 +147,7 @@ TEST_CASE("subtask flow", "[activities]") {
             test_run = true;
         }).force();
 
-        auto a_finished2 = activities::after(a4).finish(collector, [ctx, &test_run, &test_run2](const activities::accessor<A2, A3, A4>& data){
+        auto a_finished2 = activities::after(a4).finish(collector, [&test_run, &test_run2](const activities::accessor<A2, A3, A4>& data){
             CHECK(data.completed<A2>());
             CHECK(data.completed<A3>());
             CHECK(data.completed<A4>());
@@ -222,16 +206,16 @@ TEST_CASE("subtask flow", "[activities]") {
 
     WHEN("The first subtask fails") {
         std::cout << "---------------------------1" << std::endl;
-        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
-        auto a0 = activities::after()       .perform<A0>(collector, 100, false);
-        auto a1 = activities::after(a0)     .perform<A1>(collector, 102);
-        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
-        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
-        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+        auto collector = activities::collect<A0,A1,A2,A3,A4>();
+        auto a0 = activities::after()       .perform<A0>(collector, io, 100, false);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, io, 102);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, io, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, io, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, io, 108);
 
         bool test_run = false;
 
-        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+        auto a_finished = activities::after(a4).finish(collector, [&test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
             CHECK(data.completed<A0>());
             CHECK(!data.completed<A1>());
             CHECK(!data.completed<A2>());
@@ -262,16 +246,16 @@ TEST_CASE("subtask flow", "[activities]") {
 
     WHEN("The second subtask fails") {
         std::cout << "---------------------------2" << std::endl;
-        auto collector = activities::collect<A0,A1,A2,A3,A4>(ctx);
-        auto a0 = activities::after()       .perform<A0>(collector, 100);
-        auto a1 = activities::after(a0)     .perform<A1>(collector, 102, false);
-        auto a2 = activities::after(a0)     .perform<A2>(collector, 104);
-        auto a3 = activities::after(a1, a2) .perform<A3>(collector, 106);
-        auto a4 = activities::after(a3)     .perform<A4>(collector, 108);
+        auto collector = activities::collect<A0,A1,A2,A3,A4>();
+        auto a0 = activities::after()       .perform<A0>(collector, io, 100);
+        auto a1 = activities::after(a0)     .perform<A1>(collector, io, 102, false);
+        auto a2 = activities::after(a0)     .perform<A2>(collector, io, 104);
+        auto a3 = activities::after(a1, a2) .perform<A3>(collector, io, 106);
+        auto a4 = activities::after(a3)     .perform<A4>(collector, io, 108);
 
         bool test_run = false;
 
-        auto a_finished = activities::after(a4).finish(collector, [ctx, &test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
+        auto a_finished = activities::after(a4).finish(collector, [&test_run](const activities::accessor<A0, A1, A2, A3, A4>& data){
             CHECK(data.completed<A0>());
             CHECK(data.completed<A1>());
             CHECK(data.completed<A2>());

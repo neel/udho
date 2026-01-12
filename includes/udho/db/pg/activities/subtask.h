@@ -56,31 +56,29 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     
     /**
      * @brief Construct a pg::subtask with a controller and additional optional arguments passed to the activity's constructor
-     * 
-     * @tparam ContextT 
+     *
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param controller 
      * @param u... Additional parameters for the activity constructor
      * @return self_type 
      */
-    template <typename ContextT, typename... T, typename... U>
-    static self_type with(pg::activities::controller<ContextT, T...> controller, U&&... u){
+    template <typename... T, typename... U>
+    static self_type with(pg::activities::controller<T...> controller, U&&... u){
         return self_type(controller, std::forward<U>(u)...);
     }
     
     /**
      * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
-     * 
-     * @tparam ContextT 
+     *
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param collector_ptr 
      * @param u... Additional parameters for the activity constructor
      * @return self_type 
      */
-    template <typename ContextT, typename... T, typename... U>
-    static self_type with(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u){
+    template <typename... T, typename... U>
+    static self_type with(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u){
         return self_type(collector_ptr, std::forward<U>(u)...);
     }
     
@@ -110,24 +108,20 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
     
     protected:
         using subtask_base::subtask_base;
-        template <typename ContextT, typename... T, typename... U>
-        subtask(pg::activities::controller<ContextT, T...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){
-            subtask_base::if_failed(pg::on::failure<ActivityT, ContextT>(controller.context()));
-            subtask_base::if_errored(pg::on::error<ActivityT, ContextT>(controller.context()));
+        template <typename... T, typename... U>
+        subtask(pg::activities::controller<T...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){
             subtask_base::cancel_if(pg::on::invalidate<ActivityT>());
         }
-        template <typename ContextT, typename... T, typename... U>
-        subtask(std::shared_ptr<udho::activities::collector<ContextT, T...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){
-            subtask_base::if_failed(pg::on::failure<ActivityT, ContextT>(collector_ptr->context()));
-            subtask_base::if_errored(pg::on::error<ActivityT, ContextT>(collector_ptr->context()));
+        template <typename... T, typename... U>
+        subtask(std::shared_ptr<udho::activities::collector<T...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){
             subtask_base::cancel_if(pg::on::invalidate<ActivityT>());
         }
 };
 
-template <typename CallbackT, typename... T, typename CtxT, typename... DependenciesT>
-struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...>: udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...>{
-    typedef udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...> subtask_base;
-    typedef subtask<udho::activities::joined<CallbackT, udho::activities::collector<CtxT, T...>>, DependenciesT...> self_type;
+template <typename CallbackT, typename... T, typename... DependenciesT>
+struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<T...>>, DependenciesT...>: udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<T...>>, DependenciesT...>{
+    typedef udho::activities::subtask<udho::activities::joined<CallbackT, udho::activities::collector<T...>>, DependenciesT...> subtask_base;
+    typedef subtask<udho::activities::joined<CallbackT, udho::activities::collector<T...>>, DependenciesT...> self_type;
     
     subtask() = default;
     subtask(const self_type& other) = default;
@@ -135,39 +129,37 @@ struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<C
     /**
      * @brief Construct a pg::subtask with a controller and additional optional arguments passed to the activity's constructor
      * 
-     * @tparam ContextT 
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param controller 
      * @param u... Additional parameters for the activity constructor
      * @return self_type 
      */
-    template <typename ContextT, typename... X, typename... U>
-    static self_type with(pg::activities::controller<ContextT, X...> controller, U&&... u){
+    template <typename... X, typename... U>
+    static self_type with(pg::activities::controller<X...> controller, U&&... u){
         return self_type(controller, std::forward<U>(u)...);
     }
     
     /**
      * @brief Construct a pg::subtask with a shared pointer to the collector and additional optional arguments passed to the activity's constructor
      * 
-     * @tparam ContextT 
      * @tparam T... Activities
      * @tparam U... Types of additional arguments
      * @param collector_ptr 
      * @param u... Additional parameters for the activity constructor
      * @return self_type 
      */
-    template <typename ContextT, typename... X, typename... U>
-    static self_type with(std::shared_ptr<udho::activities::collector<ContextT, X...>> collector_ptr, U&&... u){
+    template <typename... X, typename... U>
+    static self_type with(std::shared_ptr<udho::activities::collector<X...>> collector_ptr, U&&... u){
         return self_type(collector_ptr, std::forward<U>(u)...);
     }
     
     protected:
         using subtask_base::subtask_base;
-        template <typename ContextT, typename... X, typename... U>
-        subtask(pg::activities::controller<ContextT, X...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){}
-        template <typename ContextT, typename... X, typename... U>
-        subtask(std::shared_ptr<udho::activities::collector<ContextT, X...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){}
+        template <typename... X, typename... U>
+        subtask(pg::activities::controller<X...> controller, U&&... u): subtask_base(controller.collector(), controller.pool(), controller.io(), std::forward<U>(u)...){}
+        template <typename... X, typename... U>
+        subtask(std::shared_ptr<udho::activities::collector<X...>> collector_ptr, U&&... u): subtask_base(collector_ptr, std::forward<U>(u)...){}
 };
     
 }

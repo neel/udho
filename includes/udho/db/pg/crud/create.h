@@ -88,8 +88,8 @@ struct ddl{
                     activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                         activity_type(collector, pool, io)
                         {}
-                    template <typename ContextT, typename... T, typename... Args>
-                    activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+                    template <typename... T, typename... Args>
+                    activity(pg::controller<T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
 
                     using activity_type::operator();
                 };
@@ -117,8 +117,8 @@ struct ddl{
                     activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                         activity_type(collector, pool, io)
                         {}
-                    template <typename ContextT, typename... T, typename... Args>
-                    activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+                    template <typename... T, typename... Args>
+                    activity(pg::controller<T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
 
                     using activity_type::operator();
                 };
@@ -161,8 +161,8 @@ struct ddl{
             activity(CollectorT collector, pg::connection::pool& pool, boost::asio::io_context& io):
                 activity_type(collector, pool, io)
                 {}
-            template <typename ContextT, typename... T, typename... Args>
-            activity(pg::controller<ContextT, T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
+            template <typename... T, typename... Args>
+            activity(pg::controller<T...>& ctrl): activity(ctrl.data(), ctrl.pool(), ctrl.io()){}
 
             using activity_type::operator();
         };

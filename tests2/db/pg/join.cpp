@@ -55,7 +55,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
                             ::fetch
                             ::all
                             ::apply;
-    auto autojoin_test_collector = udho::activities::collect<autojoin_test>(ctx);
+    auto autojoin_test_collector = udho::activities::collect<autojoin_test>();
     std::cout << autojoin_test(autojoin_test_collector, pool, io).sql().text().c_str() << std::endl;
 
     CHECK(std::is_same<
@@ -77,7 +77,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
                 ::all
                 ::apply;
 
-    auto autojoin_test2_collector = udho::activities::collect<autojoin_test2>(ctx);
+    auto autojoin_test2_collector = udho::activities::collect<autojoin_test2>();
     std::cout << autojoin_test2(autojoin_test2_collector, pool, io).sql().text().c_str() << std::endl;
 
 
@@ -95,7 +95,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(std::is_same<basic_simple_join_1_t::relation_of<students::first_name>,  students::table>::value);
     CHECK(std::is_same<basic_simple_join_1_t::source, articles::table>::value);
     using simple_join_1_t = basic_simple_join_1_t::fetch::all::apply;
-    auto simple_join_1_t_collector = udho::activities::collect<simple_join_1_t>(ctx);
+    auto simple_join_1_t_collector = udho::activities::collect<simple_join_1_t>();
     SQL_EXPECT_SAME(
         simple_join_1_t(simple_join_1_t_collector, pool, io).sql(), 
         "select                                 \
@@ -158,7 +158,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(std::is_same<basic_simple_join_2_t::relation_of<projects::title>, projects::table>::value);
     CHECK(std::is_same<basic_simple_join_2_t::source, articles::table>::value);
     using simple_join_2_t = basic_simple_join_2_t::fetch::all::apply;
-    auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>(ctx);
+    auto simple_join_2_t_collector = udho::activities::collect<simple_join_2_t>();
     SQL_EXPECT_SAME(
         simple_join_2_t(simple_join_2_t_collector, pool, io).sql(), 
         "select                                   \
@@ -252,7 +252,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(std::is_same<basic_simple_join_2a_t::relation_of<projects::title>, projects::table>::value);
     CHECK(std::is_same<basic_simple_join_2a_t::source, articles::table>::value);
     using simple_join_2a_t = basic_simple_join_2a_t::fetch::all::apply;
-    auto simple_join_2a_t_collector = udho::activities::collect<simple_join_2a_t>(ctx);
+    auto simple_join_2a_t_collector = udho::activities::collect<simple_join_2a_t>();
     SQL_EXPECT_SAME(
         simple_join_2a_t(simple_join_2a_t_collector, pool, io).sql(), 
         "select                                   \
@@ -332,7 +332,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
             void
         >::type
     >::fetch::all::apply;
-    auto simple_join_2b_t_collector = udho::activities::collect<simple_join_2b_t>(ctx);
+    auto simple_join_2b_t_collector = udho::activities::collect<simple_join_2b_t>();
     SQL_EXPECT_SAME(
         simple_join_2b_t(simple_join_2b_t_collector, pool, io).sql(), 
         "select                                   \
@@ -390,7 +390,7 @@ TEST_CASE("postgresql crud join", "[pg]"){
     CHECK(std::is_same<basic_simple_join_3_t::relation_of<memberships::id>, memberships::table>::value);
     CHECK(std::is_same<basic_simple_join_3_t::source, articles::table>::value);
     using simple_join_3_t = basic_simple_join_3_t::fetch::all::apply;
-    auto simple_join_3_t_collector = udho::activities::collect<simple_join_3_t>(ctx);
+    auto simple_join_3_t_collector = udho::activities::collect<simple_join_3_t>();
     SQL_EXPECT_SAME(
         simple_join_3_t(simple_join_3_t_collector, pool, io).sql(), 
         "select                                        \

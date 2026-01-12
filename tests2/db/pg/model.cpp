@@ -69,7 +69,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                              ::skip
                                              ::apply;
 
-        auto create_articles_after_skip_collector = udho::activities::collect<create_articles_after_skip>(ctx);
+        auto create_articles_after_skip_collector = udho::activities::collect<create_articles_after_skip>();
         SQL_EXPECT_SAME(
             create_articles_after_skip(create_articles_after_skip_collector, pool, io).sql(),
             "create table if not exists articles(                               \
@@ -89,7 +89,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                                     ::skip
                                                     ::apply;
 
-        auto create_articles_except_after_skip_collector = udho::activities::collect<create_articles_except_after_skip>(ctx);
+        auto create_articles_except_after_skip_collector = udho::activities::collect<create_articles_except_after_skip>();
         SQL_EXPECT_SAME(
             create_articles_except_after_skip(create_articles_except_after_skip_collector, pool, io).sql(),
             "create table if not exists articles(                               \
@@ -108,7 +108,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                                   ::skip
                                                   ::apply;
 
-        auto create_articles_only_after_skip_collector = udho::activities::collect<create_articles_only_after_skip>(ctx);
+        auto create_articles_only_after_skip_collector = udho::activities::collect<create_articles_only_after_skip>();
         SQL_EXPECT_SAME(
             create_articles_only_after_skip(create_articles_only_after_skip_collector, pool, io).sql(),
             "create table if not exists articles(                               \
@@ -126,7 +126,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                 ::drop
                                 ::apply;
 
-        auto drop_students_collector = udho::activities::collect<drop_students>(ctx);
+        auto drop_students_collector = udho::activities::collect<drop_students>();
         SQL_EXPECT_SAME(
             drop_students(drop_students_collector, pool, io).sql(),
             "drop table if exists students"
@@ -144,7 +144,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                ::fetch
                                ::all
                                ::apply;
-        auto all_students_collector = udho::activities::collect<all_students>(ctx);
+        auto all_students_collector = udho::activities::collect<all_students>();
         SQL_EXPECT_SAME(
             all_students(all_students_collector, pool, io).sql(),
             "select                  \
@@ -163,7 +163,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                ::exclude<students::first_name, students::last_name>
                                ::include<pg::concat<students::first_name, pg::constants::quoted::space, students::last_name>::as<students::name>>
                                ::apply;
-        auto all_students_name_collector = udho::activities::collect<all_students_name>(ctx);
+        auto all_students_name_collector = udho::activities::collect<all_students_name>();
         SQL_EXPECT_SAME(
             all_students_name(all_students_name_collector, pool, io).sql(),
             "select                  \
@@ -180,7 +180,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                ::all
                                ::by<students::first_name::not_like>
                                ::apply;
-        auto search_students_collector = udho::activities::collect<search_students>(ctx);
+        auto search_students_collector = udho::activities::collect<search_students>();
         search_students act_search_students(search_students_collector, pool, io);
         act_search_students[students::first_name::not_like::val] = pg::oz::varchar("Neel");
         SQL_EXPECT(
@@ -203,7 +203,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                        ::all
                                        ::limit<5>
                                        ::apply;
-        auto all_students_limited_collector = udho::activities::collect<all_students_limited>(ctx);
+        auto all_students_limited_collector = udho::activities::collect<all_students_limited>();
         SQL_EXPECT(
             all_students_limited(all_students_limited_collector, pool, io).sql(),
             "select                  \
@@ -224,7 +224,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                     ::descending<students::marks>
                                     ::limit<5>
                                     ::apply;
-        auto all_students_top5_collector = udho::activities::collect<all_students_top5>(ctx);
+        auto all_students_top5_collector = udho::activities::collect<all_students_top5>();
         SQL_EXPECT(
             all_students_top5(all_students_top5_collector, pool, io).sql(),
             "select                  \
@@ -247,7 +247,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::by<students::id>
                               ::apply;
 
-        auto one_student_collector = udho::activities::collect<one_student>(ctx);
+        auto one_student_collector = udho::activities::collect<one_student>();
         one_student act_one_student(one_student_collector, pool, io);
         act_one_student[students::id::val] = 42;
         SQL_EXPECT(
@@ -271,7 +271,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::by<students::age::is_null>
                               ::apply;
 
-        auto noage_students_collector = udho::activities::collect<noage_students>(ctx);
+        auto noage_students_collector = udho::activities::collect<noage_students>();
         noage_students act_noage_students(noage_students_collector, pool, io);
         SQL_EXPECT_SAME(
             act_noage_students.sql(),
@@ -293,7 +293,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::by<students::age::eq_<students::table::column<students::marks>>>
                               ::apply;
 
-        auto special_students_collector = udho::activities::collect<special_students>(ctx);
+        auto special_students_collector = udho::activities::collect<special_students>();
         special_students act_special_students(special_students_collector, pool, io);
         SQL_EXPECT_SAME(
             act_special_students.sql(),
@@ -315,7 +315,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                              ::by<articles::published::lte>
                                              ::apply;
 
-        auto articles_published_already_collector = udho::activities::collect<articles_published_already>(ctx);
+        auto articles_published_already_collector = udho::activities::collect<articles_published_already>();
         articles_published_already act_articles_published_already(articles_published_already_collector, pool, io);
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         act_articles_published_already[articles::published::lte::val] = now;
@@ -341,7 +341,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                                 ::by<articles::published::lte, articles::author>
                                                 ::apply;
 
-        auto articles_published_already_by_collector = udho::activities::collect<articles_published_already_by>(ctx);
+        auto articles_published_already_by_collector = udho::activities::collect<articles_published_already_by>();
         articles_published_already_by act_articles_published_already_by(articles_published_already_by_collector, pool, io);
         act_articles_published_already_by[articles::published::lte::val] = now;
         act_articles_published_already_by[articles::author::val] = 42;
@@ -371,7 +371,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                               ::limit<5>
                                               ::apply;
 
-        auto last5_articles_published_by_collector = udho::activities::collect<last5_articles_published_by>(ctx);
+        auto last5_articles_published_by_collector = udho::activities::collect<last5_articles_published_by>();
         last5_articles_published_by act_last5_articles_published_by(last5_articles_published_by_collector, pool, io);
         act_last5_articles_published_by[articles::published::lte::val] = now;
         act_last5_articles_published_by[articles::author::val] = 42;
@@ -401,7 +401,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                        ::only<students::first_name, pg::avg<students::marks>>
                                        ::group<students::first_name>
                                        ::apply;
-        auto students_project_avg_collector = udho::activities::collect<students_project_avg>(ctx);
+        auto students_project_avg_collector = udho::activities::collect<students_project_avg>();
         SQL_EXPECT_SAME(
             students_project_avg(students_project_avg_collector, pool, io).sql(),
             "select                       \
@@ -418,7 +418,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                                           ::by<students::marks::gte>
                                           ::group<students::first_name>
                                           ::apply;
-        auto students_project_avg_by_collector = udho::activities::collect<students_project_avg_by>(ctx);
+        auto students_project_avg_by_collector = udho::activities::collect<students_project_avg_by>();
         students_project_avg_by act_students_project_avg_by(students_project_avg_by_collector, pool, io);
         act_students_project_avg_by[students::marks::gte::val] = 2;
         SQL_EXPECT(
@@ -440,7 +440,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::insert
                               ::writables
                               ::apply;
-        auto student_add_collector = udho::activities::collect<student_add>(ctx);
+        auto student_add_collector = udho::activities::collect<student_add>();
         student_add act_student_add(student_add_collector, pool, io);
         act_student_add[students::first_name::val] = pg::oz::varchar("Neel");
         act_student_add[students::last_name::val] = pg::oz::varchar("Basu");
@@ -461,7 +461,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::writables
                               ::returning<students::id>
                               ::apply;
-        auto student_add_returning_collector = udho::activities::collect<student_add_returning>(ctx);
+        auto student_add_returning_collector = udho::activities::collect<student_add_returning>();
         student_add_returning act_student_returning_add(student_add_returning_collector, pool, io);
         act_student_returning_add[students::first_name::val] = pg::oz::varchar("Neel");
         act_student_returning_add[students::last_name::val]  = pg::oz::varchar("Basu");
@@ -483,7 +483,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::all
                               ::returning<students::id, students::marks>
                               ::apply;
-        auto student_add_all_returning_collector = udho::activities::collect<student_add_all_returning>(ctx);
+        auto student_add_all_returning_collector = udho::activities::collect<student_add_all_returning>();
         student_add_all_returning act_student_returning_add_all(student_add_all_returning_collector, pool, io);
         act_student_returning_add_all[students::id::val] = 1;
         act_student_returning_add_all[students::first_name::val] = pg::oz::varchar("Neel");
@@ -506,7 +506,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::only<students::first_name, students::last_name, students::marks>
                               ::returning<students::id, students::age>
                               ::apply;
-        auto student_add_some_returning_collector = udho::activities::collect<student_add_some_returning>(ctx);
+        auto student_add_some_returning_collector = udho::activities::collect<student_add_some_returning>();
         student_add_some_returning act_student_returning_add_some(student_add_some_returning_collector, pool, io);
         act_student_returning_add_some[students::first_name::val] = pg::oz::varchar("Neel");
         act_student_returning_add_some[students::last_name::val]  = pg::oz::varchar("Basu");
@@ -529,7 +529,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::writables
                               ::by<students::id>
                               ::apply;
-        auto student_update_collector = udho::activities::collect<student_update>(ctx);
+        auto student_update_collector = udho::activities::collect<student_update>();
         student_update act_student_update(student_update_collector, pool, io);
         act_student_update[students::id::val]          = 1;
         act_student_update[students::first_name::val]  = pg::oz::varchar("Sunanda");
@@ -552,7 +552,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::update
                               ::all
                               ::apply;
-        auto student_update_all_collector = udho::activities::collect<student_update_all>(ctx);
+        auto student_update_all_collector = udho::activities::collect<student_update_all>();
         student_update_all act_student_update_all(student_update_all_collector, pool, io);
         act_student_update_all[students::id::val]          = 1;
         act_student_update_all[students::first_name::val]  = pg::oz::varchar("Sunanda");
@@ -577,7 +577,7 @@ TEST_CASE("postgresql query generation", "[pg]") {
                               ::remove
                               ::by<students::id>
                               ::apply;
-        auto student_remove_collector = udho::activities::collect<student_remove>(ctx);
+        auto student_remove_collector = udho::activities::collect<student_remove>();
         student_remove act_student_remove(student_remove_collector, pool, io);
         act_student_remove[students::id::val] = 1;
         SQL_EXPECT(

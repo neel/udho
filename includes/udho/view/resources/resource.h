@@ -561,7 +561,7 @@ namespace asset{
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
-        common_resource(const std::string& name, const std::string mime, Args&&... args): basic_resource<AssetType>(name, Source::source, Owned), _storage(std::forward<Args>(args)...) {
+        common_resource(const std::string& name, const std::string& mime, Args&&... args): basic_resource<AssetType>(name, Source::source, Owned), _storage(std::forward<Args>(args)...) {
             if(mime.empty()){
                 if (AssetType == asset::type::js) {
                     basic_type::mime("application/javascript");

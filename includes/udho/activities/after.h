@@ -29,7 +29,6 @@
 #define UDHO_ACTIVITIES_AFTER_H
 
 #include "udho/activities/collector.h"
-#include <memory>
 #include <udho/activities/subtask.h>
 #include <udho/activities/joined.h>
 #include <udho/activities/fwd.h>
@@ -48,16 +47,16 @@ namespace detail{
      * @tparam ActivityT 
      * @tparam DependenciesT 
      */
-    template <template <typename, typename...> class SubtaskT, typename ActivityT, typename... DependenciesT>
-    struct after<SubtaskT<ActivityT, DependenciesT...>>{
-        after(SubtaskT<ActivityT, DependenciesT...>& before): _before(before){}
+    template <template <typename, typename...> class SubtaskT, typename... T>
+    struct after<SubtaskT<T...>>{
+        after(SubtaskT<T...>& before): _before(before){}
         
-        template <typename OtherActivityT, typename... OtherDependenciesT>
-        void attach(SubtaskT<OtherActivityT, OtherDependenciesT...>& sub){
+        template <typename... X>
+        void attach(SubtaskT<X...>& sub){
             sub.after(_before);
         }
         private:
-            SubtaskT<ActivityT, DependenciesT...>& _before;
+            SubtaskT<T...>& _before;
     };
     
 }
@@ -99,7 +98,7 @@ struct basic_after<SubtaskT, HeadT>{
     
     template <typename ActivityT, typename... Args>
     SubtaskT<ActivityT, typename HeadT::activity_type> perform(Args&&... args){
-        SubtaskT<ActivityT, typename HeadT::activity_type> sub = SubtaskT<ActivityT, typename HeadT::activity_type>::with(args...);
+        SubtaskT<ActivityT, typename HeadT::activity_type> sub = SubtaskT<ActivityT, typename HeadT::activity_type>::with(std::forward<Args>(args)...);
         attach(sub);
         return sub;
     }
@@ -129,7 +128,7 @@ struct basic_after<SubtaskT, HeadT>{
 struct after_none{
     template <typename ActivityT, typename... Args>
     subtask<ActivityT> perform(Args&&... args){
-        return subtask<ActivityT>::with(args...);
+        return subtask<ActivityT>::with(std::forward<Args>(args)...);
     }
 };
 
@@ -200,11 +199,10 @@ struct basic_after{
      * Returns a Joined subtask that depends on the dependencies specified. 
      * @not The returned joined subtask cannot be used as a dependency for some other subtasks
      * @tparam CallbackT 
-     * @tparam ContextT 
      * @tparam T 
      * @param collector_like shared pointer to the collector or any other object that has a collector
      * @param callback The callback (lambda function) which is to be executed.
-     * @return SubtaskT<joined<CallbackT, collector<ContextT, T...>>, typename Dependencies::activity_type...> 
+     * @return SubtaskT<joined<CallbackT, collector<T...>>, typename Dependencies::activity_type...>
      * @see joined
      */
     template <typename CallbackT, typename CollectorContainingT, std::enable_if_t<has_collector<CollectorContainingT>::value, bool> = true>

@@ -40,9 +40,9 @@ namespace udho{
  * shorthand for udho::activities::collect
  * \ingroup data
  */
-template <typename... T, typename ContextT>
-auto collect(ContextT& ctx){
-    return udho::activities::collect<T...>(ctx);
+template <typename... T>
+auto collect(){
+    return udho::activities::collect<T...>();
 }
 
 /**

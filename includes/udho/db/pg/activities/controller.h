@@ -40,18 +40,17 @@ namespace activities{
     
 /**
  * @brief Controls one or more pg activities
- * Contains a reference to connection pool, and boost io service and copies the context.
+ * Contains a reference to connection pool, and boost io service .
  * Generally a controller is passed to the constructor of an activity insted of passing
  * the collector, io service, connector seperately. The controller serves the collector
  * through the underlying init activity.
  * @see udho::activities::init
- * @tparam ContextT 
  * @tparam T... Activity types that are to be performed. 
  * @ingroup pg
  */
-template <typename ContextT, typename... Activities>
-struct controller: udho::db::pg::activities::subtask<udho::activities::init<ContextT, Activities...>>{
-    typedef udho::activities::init<ContextT, Activities...> activity_type;
+template <typename... Activities>
+struct controller: udho::db::pg::activities::subtask<udho::activities::init<Activities...>>{
+    typedef udho::activities::init<Activities...> activity_type;
     typedef udho::db::pg::activities::subtask<activity_type> base;
     typedef typename activity_type::collector_type collector_type;
     typedef typename activity_type::accessor_type accessor_type;
@@ -59,10 +58,10 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
     /**
      * @brief Construct a new controller object
      * 
-     * @param ctx udho::context 
+     * @param io boost::asio::io_context
      * @param pool udho::db::pg::connection::pool
      */
-    controller(ContextT ctx, pg::connection::pool& pool): base(ctx), _pool(pool), _io(ctx.io()), _ctx(ctx){}
+    controller(boost::asio::io_context& io, pg::connection::pool& pool): _pool(pool), _io(io) {}
     
     /**
      * @brief get the collector object
@@ -83,12 +82,6 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
      */
     auto data() { return base::_activity->collector(); }
     
-    /**
-     * @brief Gets the context with which it is associated to
-     * 
-     * @return ContextT 
-     */
-    ContextT context() { return _ctx; }
     /**
      * @brief Get a reference to the postgresql connection pool
      * 
@@ -126,13 +119,12 @@ struct controller: udho::db::pg::activities::subtask<udho::activities::init<Cont
     private:
         pg::connection::pool& _pool;
         boost::asio::io_context& _io;
-        ContextT _ctx;
 };
 
 }
 
-template <typename ContextT, typename... T>
-using controller = pg::activities::controller<ContextT, T...>;
+template <typename... T>
+using controller = pg::activities::controller<T...>;
 
 }
 }
@@ -141,24 +133,25 @@ using controller = pg::activities::controller<ContextT, T...>;
 namespace udho{
 namespace activities{
 
-    template <typename ContextT, typename... Activities>
-    struct collector_of<udho::db::pg::activities::controller<ContextT, Activities...>>{
-        using type = collector<ContextT, Activities...>;
-        static std::shared_ptr<type> apply(udho::db::pg::activities::controller<ContextT, Activities...>& controller){ return controller->collector(); }
+    template <typename... Activities>
+    struct collector_of<udho::db::pg::activities::controller<Activities...>>{
+        using type = udho::activities::collector<Activities...>;
+        static std::shared_ptr<type> apply(udho::db::pg::activities::controller<Activities...>& controller){ return controller->collector(); }
     };
 
     namespace detail{
         
-        template <typename ContextT, typename... T>
-        struct after<udho::db::pg::activities::controller<ContextT, T...>>{
-            udho::db::pg::activities::controller<ContextT, T...>& _before;
+        template <typename... T>
+        struct after<udho::db::pg::activities::controller<T...>>{
+            after(udho::db::pg::activities::controller<T...>& before): _before(before){}
             
-            after(udho::db::pg::activities::controller<ContextT, T...>& before): _before(before){}
-            
-            template <typename OtherActivityT, typename... OtherDependenciesT>
-            void attach(udho::db::pg::activities::subtask<OtherActivityT, OtherDependenciesT...>& sub){
+            template <typename... X>
+            void attach(udho::db::pg::activities::subtask<X...>& sub){
                 sub.after(_before);
             }
+
+            private:
+            udho::db::pg::activities::controller<T...>& _before;
         };
         
     }

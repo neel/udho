@@ -12,9 +12,31 @@ if(Catch2_VERSION_MAJOR LESS 3)
     add_definitions(-DWITH_CATCH_VERSION_2)
 endif()
 
+# Coverage flags helper (CMake 3.9 compatible)
+function(udho_enable_coverage TARGET)
+    if(MSVC)
+        message(WARNING "Coverage is not configured for MSVC in this setup.")
+        return()
+    endif()
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(${TARGET} PRIVATE -O0 -g --coverage)
+        set_property(TARGET ${TARGET} APPEND_STRING PROPERTY LINK_FLAGS " --coverage")
+    else()
+        message(WARNING "Unknown compiler '${CMAKE_CXX_COMPILER_ID}': coverage flags not applied.")
+    endif()
+endfunction()
+
 # Function to create a test executable and register it
 function(add_catch_test TARGET_NAME SOURCE_FILE)
     add_executable(${TARGET_NAME} ${SOURCE_FILE})
+
+    if(UDHO_ENABLE_COVERAGE)
+        udho_enable_coverage(${TARGET_NAME})
+    endif()
+
+    udho_enable_sanitizers(${TARGET_NAME})
+
     target_link_libraries(${TARGET_NAME} PRIVATE ${Boost_LIBRARIES} Catch2::Catch2WithMain udho)
 
     get_filename_component(FULL_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE}" ABSOLUTE)
