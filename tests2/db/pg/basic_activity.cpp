@@ -213,23 +213,24 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
 
         auto start     = pg::start<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>::with(io, pool);
         auto create    = pg::after(start).perform<OZOStrQCreateNoRes>(start)
-                          .if_failed(pg::on::failure<ctx_type>(ctx))
-                          .if_errored(pg::on::error<OZOStrQCreateNoRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure<ctx_type>(ctx))
+                            .if_errored(pg::on::error<OZOStrQCreateNoRes, ctx_type>(ctx));
         auto truncate  = pg::after(create).perform<OZOStrQTruncateNoRes>(start)
                             .if_failed(pg::on::failure<ctx_type>(ctx))
                             .if_errored(pg::on::error<OZOStrQTruncateNoRes, ctx_type>(ctx));
         auto insert    = pg::after(truncate).perform<OZOStrQInsert1Res>(start)
-                          .if_failed(pg::on::failure<ctx_type>(ctx))
-                          .if_errored(pg::on::error<OZOStrQInsert1Res, ctx_type>(ctx));
+                            .if_failed(pg::on::failure<ctx_type>(ctx))
+                            .if_errored(pg::on::error<OZOStrQInsert1Res, ctx_type>(ctx));
         auto fetch     = pg::after(insert).perform<OZOStrQSelectTupleRes>(start)
-                         .if_failed(pg::on::failure<ctx_type>(ctx))
-                         .if_errored(pg::on::error<OZOStrQSelectTupleRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure<ctx_type>(ctx))
+                            .if_errored(pg::on::error<OZOStrQSelectTupleRes, ctx_type>(ctx));
         auto fetch2    = pg::after(insert).perform<OZOStrQSelectStructRes>(start)
-                          .if_failed(pg::on::failure<ctx_type>(ctx))
-                          .if_errored(pg::on::error<OZOStrQSelectStructRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure<ctx_type>(ctx))
+                            .if_errored(pg::on::error<OZOStrQSelectStructRes, ctx_type>(ctx));
         auto fetch3    = pg::after(insert).perform<OZOStrQSelectStructRes2>(start)
-                          .if_failed(pg::on::failure<ctx_type>(ctx))
-                          .if_errored(pg::on::error<OZOStrQSelectStructRes2, ctx_type>(ctx));
+                            .if_failed(pg::on::failure<ctx_type>(ctx))
+                            .if_errored(pg::on::error<OZOStrQSelectStructRes2, ctx_type>(ctx));
+
         pg::after(fetch, fetch2, fetch3).finish(start, [ctx, &fetched](const pg::data<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
             auto student_id  = d.success<OZOStrQInsert1Res>();
             auto students    = d.success<OZOStrQSelectTupleRes>();
