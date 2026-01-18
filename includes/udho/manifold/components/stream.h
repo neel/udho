@@ -12,6 +12,11 @@
 #include <udho/utils/traits.h>
 #include <boost/beast/core/ostream.hpp>
 #include <iostream>
+#include <boost/beast/http/write.hpp>
+#include <boost/beast/http/serializer.hpp>
+#include <boost/beast/http/message.hpp>
+#include <boost/beast/http/fields.hpp>
+#include <boost/beast/http/empty_body.hpp>
 
 namespace udho{
 namespace manifold{
@@ -53,7 +58,7 @@ struct basic_buffered_ostream: private chunking_helper{
     using encoding_type     = udho::net::types::transfer_encoding;
     using completion_callback_type = std::function<void (boost::system::error_code, std::size_t)>;
 
-    basic_buffered_ostream(stream_type& stream, const encoding_type& encoding, completion_callback_type&& callback): _stream(stream), _completion(std::move(callback)), _encoding(encoding), _strand(_stream.get_executor()), _bytes_written(0), _write_ongoing(false) {}
+    basic_buffered_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& callback): _stream(stream), _completion(std::move(callback)), _encoding(encoding), _strand(strand), _bytes_written(0), _write_ongoing(false) {}
 
     template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T>, bool> = true>
     void write(T&& value) {
@@ -94,7 +99,7 @@ struct basic_buffered_ostream: private chunking_helper{
      * @brief write
      * @param data
      * @param size
-     * @pre data outlives the async write operation, garunteed by the caller
+     * @pre data must outlive until io_context starts processing, garunteed by the caller
      * @warning if lifetime of data cannot be garunteed then use other overloads of write
      */
     void write(const char* data, std::size_t size) {
@@ -133,6 +138,10 @@ struct basic_buffered_ostream: private chunking_helper{
 
 private:
     void async_write() {
+        if (_multibuff.size() == 0) {
+            on_finish_cb({}, _bytes_written);
+            return;
+        }
         if(_encoding.encoding() == udho::net::types::transfer::encoding::plain) {
             async_write_payload();
         } else if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked) {
@@ -211,7 +220,7 @@ private:
     completion_callback_type   _completion;
     const encoding_type&       _encoding;
     boost::beast::multi_buffer _multibuff;
-    strand_type                _strand;
+    strand_type&               _strand;
     boost::beast::flat_buffer  _ongoing_header_buffer;
     std::size_t                _bytes_written;
     bool                       _write_ongoing;
@@ -305,7 +314,7 @@ public:
      * @return
      */
     std::size_t enqueue_data() {
-        std::cout << "enqueue_data: " << _dat_queue.size() << " " << _ptr_queue.size() << std::endl;
+        std::cout << "enqueue_data: |datQ|: " << _dat_queue.size() << " |ptrQ|: " << _ptr_queue.size() << std::endl;
         if(_dat_queue.size() == 0) {
             return 0;
         }
@@ -314,7 +323,7 @@ public:
         if(!par_front.enqueued) {
             par_front.enqueued = true;
             _ptr_queue.push_back(payload_in_flight{front.data(), true, false});
-            std::cout << "> enqueue_data: " << front.size() << " " << _ptr_queue.size() << std::endl;
+            std::cout << "> enqueue_data: |datQ.front()|: " << front.size() << " |ptrQ|: " << _ptr_queue.size() << std::endl;
             return 1;
         } else {
             return 0;
@@ -364,7 +373,7 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
     using payload_type      = detail::buffer_queue::payload_in_flight;
     using completion_callback_type = std::function<void (boost::system::error_code, std::size_t)>;
 
-    basic_queued_ostream(stream_type& stream, const encoding_type& encoding, completion_callback_type&& callback): _stream(stream), _completion(std::move(callback)), _encoding(encoding), _strand(_stream.get_executor()), _write_ongoing(false), _bytes_written(0), _finished(false) {}
+    basic_queued_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& callback): _stream(stream), _completion(std::move(callback)), _encoding(encoding), _strand(strand), _write_ongoing(false), _bytes_written(0), _finished(false) {}
 
     template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T>, bool> = true>
     void write(T&& value) {
@@ -457,6 +466,10 @@ private:
         }
     }
 
+    /**
+     * @brief if chunked encoding is used then sends the \r\n0\r\n byte sequence, otherwise calls on_finish_cb
+     * Called from pump once it reaches the terminal payload
+     */
     void on_finish() {
         _write_ongoing = true;
         if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked) {
@@ -474,69 +487,58 @@ private:
         }
     }
 
-
-    void async_write_crlf() {
-        boost::asio::async_write(
-            _stream, boost::asio::buffer(_crlf, 2),
-            boost::asio::bind_executor(_strand,
-               [this](boost::system::error_code ec, std::size_t bytes_written) {
-                   _bytes_written += bytes_written;
-                   _write_ongoing = false;
-                   if (ec) {
-                       on_finish_cb(ec, _bytes_written);
-                   } else {
-                       pump();
-                   }
-               }
-            )
-        );
-    }
-
-
-    void async_write_payload(payload_type p, bool is_chunked) {
+    /**
+     * @brief sends payload
+     * @param p
+     */
+    void async_write_payload(payload_type p) {
+        _write_ongoing = true;
         boost::asio::async_write(
             _stream, boost::asio::buffer(p.buf, p.buf.size()),
             boost::asio::bind_executor(_strand,
-               [this, is_chunked, p](boost::system::error_code ec, std::size_t bytes_written) {
+               [this, p](boost::system::error_code error, std::size_t bytes_written) {
                    _bytes_written += bytes_written;
                     if (p.owned) {
                         pop_data();
                     }
-                    if (!ec) {
-                        if(is_chunked) {
-                           async_write_crlf();
-                        } else {
-                           _write_ongoing = false;
-                           pump();
-                        }
+                    if (!error) {
+                       _write_ongoing = false;
+                       pump();
+                    } else {
+                        on_finish_cb(error, _bytes_written);
                     }
                }
             )
         );
     }
 
-    void async_write_payload_start(payload_type p, bool is_chunked) {
-        _write_ongoing = true;
-        if(!is_chunked) {
-            async_write_payload(p, false);
-            return;
-        }
-
+    /**
+     * @brief sends chunked payload
+     * @param p
+     */
+    void async_write_chunked_payload(payload_type p) {
         prepare(_ongoing_header_buffer, p.buf.size());
 
+        std::array<boost::asio::const_buffer, 3> bufs = {
+            _ongoing_header_buffer.data(),            // _ongoing_header_buffer is member variable
+            p.buf,                                    // p.buff is kept alive in the data queue or the caller ensures lifetime
+            boost::asio::buffer(_crlf)                // _crlf is member variable
+        };
+        _write_ongoing = true;
         boost::asio::async_write(
-            _stream, _ongoing_header_buffer.data(),
+            _stream, std::move(bufs), // bufs is moved
             boost::asio::bind_executor( _strand,
-                [this, p = std::move(p)](boost::system::error_code ec, std::size_t bytes_written) {
+                [this, p = std::move(p)](boost::system::error_code error, std::size_t bytes_written) {
                     _bytes_written += bytes_written;
                     _ongoing_header_buffer.clear();
-                    if (!ec) {
-                        async_write_payload(p, true);
+                    if (p.owned) {
+                        pop_data();
+                    }
+                    if (!error) {
+                        _write_ongoing = false;
+                        pump();
                     } else {
-                        if (p.owned) {
-                            pop_data();
-                        }
-                        on_finish_cb(ec, _bytes_written);
+                        on_finish_cb(error, _bytes_written);
                     }
                 }
             )
@@ -547,13 +549,14 @@ private:
      * @brief Alaways dequeues the _queue from the front and writes that to the wire, loops asynchronously until _queue becomes empty.
      * @param owning
      *
-     * write_to_wire -> write_to_wire_payload_init -> write_to_wire_payload -> write_to_wire_crlf -> write_to_wire
-     *               -> return                                              -> write_to_wire
+     * pump -> async_write_chunked_payload -> [if p.owned] pop_data -> pump
+     *                                                              -> [error] on_finish_cb
+     *      -> async_write_payload         -> [if p.owned] pop_data -> pump
+     *                                                              -> [error] on_finish_cb
      */
     void pump() {
         if(_write_ongoing) return;              // once the ongoing write finishes it will comeback to process_queue again
 
-        _write_ongoing = false;
         if(!has_ptr()) {
             if(has_data()) {
                 _write_ongoing = true;
@@ -569,27 +572,217 @@ private:
             // all chunks have been written and only this
             // chunk is left. Therefore the stream is in
             // finished state
-
-
             on_finish();
             return;
         }
 
-        async_write_payload_start(p, _encoding.encoding() == udho::net::types::transfer::encoding::chunked);
+        if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked)
+            async_write_chunked_payload(p);
+        else
+            async_write_payload(p);
     }
 private:
     stream_type&               _stream;
-    strand_type                _strand;
+    strand_type&               _strand;
     boost::beast::flat_buffer  _ongoing_header_buffer;
-    bool                       _write_ongoing;
+    std::atomic_bool           _write_ongoing;
     bool                       _finished;
     const encoding_type&       _encoding;
     std::size_t                _bytes_written;
     completion_callback_type   _completion;
 };
 
+template <typename StreamT>
+struct basic_header_writer{
+    using stream_type               = StreamT;
+    using executor_type             = typename stream_type::executor_type;
+    using strand_type               = boost::asio::strand<executor_type>;
+    using encoding_type             = udho::net::types::transfer_encoding;
+    using completion_callback_type  = std::function<void (boost::system::error_code, std::size_t)>;
+    using response_headers_type     = udho::net::types::headers::response;
+    using response_type             = boost::beast::http::response<boost::beast::http::empty_body>;
+    using serializer_type           = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
+
+    basic_header_writer(stream_type& stream, strand_type& strand, const response_headers_type& headers, completion_callback_type&& callback)
+        : _stream(stream), _strand(strand), _headers(headers), _response(_headers), _serializer(_response), _completion(std::move(callback)), _bytes_written(0), _started(false), _finished(false) {}
+
+    void flush() {
+        boost::asio::post(_strand, [this]() {
+            if (_started) {
+                return;
+            }
+            _started = true;
+            boost::beast::http::async_write_header(
+                _stream, _serializer,
+                boost::asio::bind_executor(_strand,
+                    [this](boost::system::error_code ec, std::size_t bytes) {
+                        _bytes_written = bytes;
+                        _finished      = true;
+                        if (_completion)
+                            _completion(ec, bytes);
+                    }
+                )
+            );
+        });
+    }
+
+    std::size_t bytes_written() const { return _bytes_written; }
+    bool started() const { return _started; }
+    bool finished() const { return _finished; }
+
+private:
+    stream_type&                    _stream;
+    strand_type&                    _strand;
+    const response_headers_type&    _headers;
+    response_type                   _response;
+    serializer_type                 _serializer;
+    completion_callback_type        _completion;
+    std::size_t                     _bytes_written;
+    bool                            _started;
+    bool                            _finished;
+};
+
 }
 
+
+template <typename StreamT>
+struct basic_ostream{
+    using stream_type               = StreamT;
+    using executor_type             = typename stream_type::executor_type;
+    using strand_type               = boost::asio::strand<executor_type>;
+    using encoding_type             = udho::net::types::transfer_encoding;
+    using header_writer_type        = detail::basic_header_writer<StreamT>;
+    using buffered_stream_type      = detail::basic_buffered_ostream<StreamT>;
+    using queued_stream_type        = detail::basic_queued_ostream<StreamT>;
+    using completion_callback_type  = std::function<void (boost::system::error_code, std::size_t)>;
+    using response_headers_type     = udho::net::types::headers::response;
+    using ostream_type              = basic_ostream<StreamT>;
+
+    basic_ostream(stream_type& stream, const response_headers_type& headers, const encoding_type& encoding, completion_callback_type&& callback)
+        : _stream(stream), _strand(stream.get_executor()), _headers(headers), _buffering(true)
+        , _header_stream(stream, _strand, headers, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
+        , _queued_stream(stream, _strand, encoding, std::bind(&ostream_type::on_queued_completion, this, std::placeholders::_1, std::placeholders::_2))
+        , _buffered_stream(stream, _strand, encoding, std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2))
+        , _headers_sent(false), _bytes_written(0), _completion(std::move(callback))
+    {}
+
+    bool buffering() const { return _buffering; }
+    void buffering(bool flag) {
+        if(_buffering == flag) return;
+        if(!_buffering && flag) {
+            // buffering was turned off previously which is being turned on now
+            throw std::runtime_error{"Once buffering is turned off it cannot be turned on again"};
+        }
+        if(_buffering && !flag) {
+            switch_stream();
+        }
+    }
+
+    bool headers_sent() const { return _headers_sent; }
+
+    std::size_t bytes_written() const { return _bytes_written; }
+public:
+    template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T>, bool> = true>
+    void write(T&& value) {
+        if(_buffering) {
+            _buffered_stream.write(std::forward<T>(value));
+        } else {
+            _queued_stream.write(std::forward<T>(value));
+        }
+    }
+
+    void write(std::string&& str) {
+        if(_buffering) {
+            _buffered_stream.write(std::forward<std::string>(str));
+        } else {
+            _queued_stream.write(std::forward<std::string>(str));
+        }
+    }
+
+    void write(udho::utils::string_view str) {
+        if(_buffering) {
+            _buffered_stream.write(str);
+        } else {
+            _queued_stream.write(str);
+        }
+    }
+
+    void write(const char* data, std::size_t size, bool owning = true) {
+        if(_buffering) {
+            if(!owning) {
+                throw std::runtime_error{"buffered stream doesn't allow zero copy transfers through non-owning data, turn off buffering in order to use that feature"};
+            }
+            _buffered_stream.write(data, size);
+        } else {
+            _queued_stream.write(data, size, owning);
+        }
+    }
+
+    void finish() {
+        if(!_headers_sent) {
+            _header_stream.flush();
+        }
+
+        if(_buffering) {
+            _buffered_stream.async_flush();
+            _buffered_stream.finish();
+        } else {
+            _queued_stream.finish();
+        }
+    }
+
+private:
+
+    /**
+     * @brief will be called exactly once, buffering(bool) will throw exception otherwise
+     */
+    void switch_stream() {
+        assert(_buffering);
+        // call flush on all streams, no need to wait for them to finish.
+        // we are good as soon as these calls are queued to the strand
+        _header_stream.flush();
+        _buffered_stream.async_flush();
+        _headers_sent = true;
+        _buffering = false;
+    }
+
+    void on_header_completion(boost::system::error_code ec, std::size_t bytes_written) {
+        _bytes_written += bytes_written;
+        if(ec) on_error(ec);
+        else if(_completion) _completion(ec, bytes_written);
+    }
+
+    void on_buffered_completion(boost::system::error_code ec, std::size_t bytes_written) {
+        _bytes_written += bytes_written;
+        if(ec) on_error(ec);
+        else if(_completion) _completion(ec, bytes_written);
+    }
+
+    void on_queued_completion(boost::system::error_code ec, std::size_t bytes_written) {
+        _bytes_written += bytes_written;
+        if(ec) on_error(ec);
+        else if(_completion) _completion(ec, bytes_written);
+    }
+
+    void on_error(boost::system::error_code ec) {
+        _completion(ec, _bytes_written);
+    }
+
+private:
+    stream_type&                 _stream;
+    strand_type                  _strand;
+    const response_headers_type& _headers;
+private:
+    header_writer_type           _header_stream;
+    queued_stream_type           _queued_stream;
+    buffered_stream_type         _buffered_stream;
+private:
+    std::atomic_bool             _buffering;
+    bool                         _headers_sent;
+    std::size_t                  _bytes_written;
+private:
+    completion_callback_type    _completion;
+};
 
 }
 }
