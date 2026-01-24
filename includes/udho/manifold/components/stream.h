@@ -7,7 +7,7 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/asio/strand.hpp>
 #include <udho/net/common.h>
-#include <deque>
+#include <queue>
 #include <charconv>
 #include <udho/utils/traits.h>
 #include <boost/beast/core/ostream.hpp>
@@ -58,8 +58,8 @@ struct basic_buffered_ostream: private chunking_helper{
     using encoding_type     = udho::net::types::transfer_encoding;
     using completion_callback_type = std::function<void (boost::system::error_code, std::size_t)>;
 
-    basic_buffered_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& callback)
-        : _stream(stream), _completion(std::move(callback)), _encoding(encoding), _strand(strand), _bytes_written(0), _write_ongoing(false) {}
+    basic_buffered_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& flush_callback, completion_callback_type&& completion_callback)
+        : _stream(stream), _flush(std::move(flush_callback)), _completion(std::move(completion_callback)), _encoding(encoding), _strand(strand), _bytes_written(0), _write_ongoing(false) {}
 
     template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T>, bool> = true>
     void write(T&& value) {
@@ -154,15 +154,13 @@ struct basic_buffered_ostream: private chunking_helper{
 private:
     void async_write() {
         if (_multibuff.size() == 0) {
-            on_finish_cb({}, _bytes_written);
+            on_flush_cb({}, _bytes_written);
             return;
         }
         if(_encoding.encoding() == udho::net::types::transfer::encoding::plain) {
             async_write_payload();
         } else if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked) {
             prepare(_ongoing_header_buffer, _multibuff.size());
-
-            const boost::beast::multi_buffer& cmbuff = _multibuff;
 
             auto out = boost::beast::buffers_cat(
                 _ongoing_header_buffer.data(),    // _ongoing_header_buffer is member variable
@@ -175,8 +173,10 @@ private:
                 boost::asio::bind_executor( _strand,
                     [this](boost::system::error_code ec, std::size_t bytes_written) {
                         _ongoing_header_buffer.clear();
+                        _multibuff.clear(); // _multibuff.consume(bytes_written);
                         _bytes_written += bytes_written;
-                        on_finish_cb(ec, _bytes_written);
+                        if(!ec) on_flush_cb(ec, _bytes_written);
+                        else    on_finish_cb(ec, _bytes_written);
                     }
                 )
             );
@@ -190,7 +190,8 @@ private:
                 [this](boost::system::error_code ec, std::size_t bytes_written) {
                     _bytes_written += bytes_written;
                     _multibuff.consume(bytes_written);
-                    on_finish_cb(ec, _bytes_written);
+                    if(!ec) on_flush_cb(ec, _bytes_written);
+                    else    on_finish_cb(ec, _bytes_written);
                 }
             )
         );
@@ -208,6 +209,12 @@ private:
         );
     }
 
+    void on_flush_cb(boost::system::error_code ec, std::size_t bytes_written) {
+        if(_flush) {
+            _flush(ec, bytes_written);
+        }
+    }
+
     void on_finish_cb(boost::system::error_code ec, std::size_t bytes_written) {
         _write_ongoing = false;
         if(_completion) {
@@ -217,6 +224,7 @@ private:
 
 private:
     stream_type&               _stream;
+    completion_callback_type   _flush;
     completion_callback_type   _completion;
     const encoding_type&       _encoding;
     boost::beast::multi_buffer _multibuff;
@@ -251,19 +259,38 @@ private:
  *               so pop_data pops that buffer from the data queue
  */
 struct buffer_queue{
-    struct payload_in_flight{
-        boost::asio::const_buffer buf;
-        bool owned      = false;
-        bool terminal   = false;
+    class payload_borrowed{
+        boost::asio::const_buffer _buf;
+        bool _terminal   = false;
+        bool _enqueued   = false;
+        std::size_t _id;
+    public:
+        payload_borrowed(std::size_t id, bool terminal): _terminal(terminal), _id(id) {}
+        payload_borrowed(boost::asio::const_buffer&& buff, std::size_t id, bool terminal): _buf(std::move(buff)), _terminal(terminal), _id(id) {}
+        boost::asio::const_buffer& buffer() { return _buf;}
+        bool terminal() const { return _terminal; }
+        bool enqueued() const { return _enqueued; }
+        void enqueued(bool flag) { _enqueued = flag; }
+        std::size_t id() const { return _id; }
     };
 
-    struct payload_at_rest{
-        boost::beast::flat_buffer buf;
-        bool enqueued = false;
+    class payload_owned{
+        boost::beast::flat_buffer _buf;
+        bool _enqueued = false;
+        std::size_t _id;
+    public:
+        payload_owned(std::size_t id): _id(id) {}
+        payload_owned(boost::beast::flat_buffer&& buff, std::size_t id): _buf(std::move(buff)), _id(id) {}
+        boost::beast::flat_buffer& buffer() { return _buf;}
+        bool enqueued() const { return _enqueued; }
+        void enqueued(bool flag) { _enqueued = flag; }
+        std::size_t id() const { return _id; }
+        payload_borrowed borrowed() { return payload_borrowed(_buf.data(), _id, false); }
     };
 
-    using queue_type        = std::deque<payload_in_flight>;
-    using buffer_queue_type = std::deque<payload_at_rest>;
+    using borrowed_queue_type = std::queue<payload_borrowed>;
+    using owned_queue_type    = std::queue<payload_owned>;
+    using delivery_queue_type = std::queue<payload_borrowed>;
 
 public:
 
@@ -279,89 +306,149 @@ public:
      * @return size of the data queue
      */
     std::size_t push_data(const char* data, std::size_t size) {
-        _dat_queue.emplace_back();
-        payload_at_rest& par_back = _dat_queue.back();
-        boost::beast::flat_buffer& buffer = par_back.buf;
+        _dat_queue.emplace(last_id());
+        payload_owned& par_back = _dat_queue.back();
+        boost::beast::flat_buffer& buffer = par_back.buffer();
         auto mutable_buffer = buffer.prepare(size);
         boost::asio::buffer_copy(mutable_buffer, boost::asio::buffer(data, size));
         buffer.commit(size);
-        std::cout << "push_data: " << size << std::endl;
+        // std::cout << "push_data: " << size << std::endl;
         return _dat_queue.size();
     }
 
     std::size_t push_data(boost::beast::flat_buffer&& buffer) {
-        std::cout << "push_data(buffer) : " << buffer.size() << std::endl;
-        _dat_queue.emplace_back(payload_at_rest{std::move(buffer), false});
+        // std::cout << "push_data(buffer) : " << buffer.size() << std::endl;
+        _dat_queue.emplace(payload_owned(std::move(buffer), last_id()));
         return _dat_queue.size();
     }
 
-    /**
-     * @brief pops one buffer from the front of the data queue
-     * @return
-     */
-    std::size_t pop_data() {
-        std::cout << "pop_data: " << _dat_queue.size() << std::endl;
-        if(_dat_queue.size() > 0) {
-            _dat_queue.pop_front();
-            return _dat_queue.size();
-        }
-        return 0;
-    }
-
-    /**
-     * @brief copies one buffer from the front of the data queue and pushesh it back
-     *        to the ptr queue
-     * @return
-     */
-    std::size_t enqueue_data() {
-        std::cout << "enqueue_data: |datQ|: " << _dat_queue.size() << " |ptrQ|: " << _ptr_queue.size() << std::endl;
-        if(_dat_queue.size() == 0) {
-            return 0;
-        }
-        payload_at_rest& par_front = _dat_queue.front();
-        const boost::beast::flat_buffer& front = par_front.buf;
-        if(!par_front.enqueued) {
-            par_front.enqueued = true;
-            _ptr_queue.push_back(payload_in_flight{front.data(), true, false});
-            std::cout << "> enqueue_data: |datQ.front()|: " << front.size() << " |ptrQ|: " << _ptr_queue.size() << std::endl;
-            return 1;
-        } else {
-            return 0;
-        }
-    }
-
-    bool has_data() const { return !_dat_queue.empty(); }
-
-public:
-    bool has_ptr() const { return !_ptr_queue.empty(); }
-
     std::size_t push_ptr(const char* data, std::size_t size) {
-        std::cout << "push_ptr: " << data << std::endl;
-        _ptr_queue.emplace_back(payload_in_flight{boost::asio::const_buffer(data, size), false, false});
+        // std::cout << "push_ptr: " << data << std::endl;
+        _ptr_queue.emplace(payload_borrowed(boost::asio::const_buffer(data, size), last_id(), false));
         return _ptr_queue.size();
     }
 
     std::size_t push_ptr() {
-        std::cout << "push_ptr: " << std::endl;
-        _ptr_queue.emplace_back(payload_in_flight{boost::asio::const_buffer(), false, true});
+        // std::cout << "push_ptr: " << std::endl;
+        _ptr_queue.emplace(payload_borrowed(boost::asio::const_buffer(), last_id(), true));
         return _ptr_queue.size();
     }
 
     /**
-     * @brief pops the front of the ptr_queue
+     * @brief enqueues either data or ptr to the delivery queue
      * @return
      */
-    payload_in_flight pop_ptr() {
-        std::cout << "pop_ptr: " << _ptr_queue.size() << std::endl;
-        assert(!_ptr_queue.empty());
-        payload_in_flight p = _ptr_queue.front();
-        _ptr_queue.pop_front();
+    std::size_t enqueue() {
+        // std::cout << "enqueue_data: |datQ|: " << _dat_queue.size() << " |ptrQ|: " << _ptr_queue.size() << std::endl;
+
+        if(_dat_queue.empty() && _ptr_queue.empty()) return 0;
+        if(_dat_queue.size() > 0 && _ptr_queue.empty()) {
+            payload_owned&    dat_front = _dat_queue.front();
+            dat_front.enqueued(true);
+            _del_queue.emplace(dat_front.borrowed());
+            // std::cout << "> enqueue_data: |datQ.front()|: " << dat_front.buffer().size() << " |dQ|: " << _del_queue.size() << std::endl;
+            assert(_del_queue.front().id() == dat_front.id());
+            return 1;
+        }
+        if(_ptr_queue.size() > 0 && _dat_queue.empty()) {
+            payload_borrowed& ptr_front = _ptr_queue.front();
+            ptr_front.enqueued(true);
+            _del_queue.push(ptr_front);
+            // std::cout << "> enqueue_data: |ptrQ.front()|: " << ptr_front.buffer().size() << " |dQ|: " << _del_queue.size() << std::endl;
+            assert(_del_queue.front().id() == ptr_front.id());
+            return 1;
+        }
+
+        payload_owned&    dat_front = _dat_queue.front();
+        payload_borrowed& ptr_front = _ptr_queue.front();
+
+        assert(dat_front.id() != ptr_front.id());
+
+        if(dat_front.id() < ptr_front.id()) {
+            if(dat_front.enqueued()) {
+                return 0;
+            } else {
+                dat_front.enqueued(true);
+                _del_queue.emplace(dat_front.borrowed());
+                // std::cout << "> enqueue_data: |datQ.front()|: " << dat_front.buffer().size() << " |dQ|: " << _del_queue.size() << std::endl;
+                assert(_del_queue.front().id() == dat_front.id());
+                return 1;
+            }
+        } else {
+            if(ptr_front.enqueued()) {
+                return 0;
+            } else {
+                ptr_front.enqueued(true);
+                _del_queue.push(ptr_front);
+                // std::cout << "> enqueue_data: |ptrQ.front()|: " << ptr_front.buffer().size() << " |dQ|: " << _del_queue.size() << std::endl;
+                assert(_del_queue.front().id() == ptr_front.id());
+                return 1;
+            }
+        }
+    }
+
+    bool pending() const { return !_del_queue.empty(); }
+
+    bool available() const { return has_data() || has_ptr(); }
+
+    /**
+     * @brief pops the front of the delivery queue
+     * @return
+     */
+    payload_borrowed take_payload() {
+        // std::cout << "pop_ptr: " << _del_queue.size() << std::endl;
+        assert(!_del_queue.empty());
+        payload_borrowed p = _del_queue.front();
+        _del_queue.pop();
+
         return p;
     }
 
+    std::size_t pop_payload(std::size_t id) {
+        assert(!_dat_queue.empty() || !_ptr_queue.empty());
+
+        if(_dat_queue.empty() && !_ptr_queue.empty()) {
+            assert(_ptr_queue.front().id() == id);
+            _ptr_queue.pop();
+            return 1;
+        }
+
+        if(_ptr_queue.empty() && !_dat_queue.empty()) {
+            assert(_dat_queue.front().id() == id);
+            _dat_queue.pop();
+            return 1;
+        }
+
+        payload_owned&    dat_front = _dat_queue.front();
+        payload_borrowed& ptr_front = _ptr_queue.front();
+
+        std::size_t found_dat_item = dat_front.id() == id;
+        std::size_t found_ptr_item = ptr_front.id() == id;
+
+        assert(found_dat_item || found_ptr_item);
+        assert(!(found_dat_item && found_ptr_item));
+
+        if(found_dat_item) {
+            _dat_queue.pop();
+            return 1;
+        } else {
+            _ptr_queue.pop();
+            return 1;
+        }
+        return 0;
+    }
+
 private:
-    queue_type                 _ptr_queue;
-    buffer_queue_type          _dat_queue;
+    std::size_t last_id() { return _count++; }
+
+    bool has_data() const { return !_dat_queue.empty(); }
+    bool has_ptr() const { return !_ptr_queue.empty(); }
+
+private:
+    borrowed_queue_type     _ptr_queue;
+    owned_queue_type        _dat_queue;
+    delivery_queue_type     _del_queue;
+    std::size_t             _count = 0;
 };
 
 template <typename StreamT>
@@ -370,7 +457,7 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
     using executor_type     = typename stream_type::executor_type;
     using strand_type       = boost::asio::strand<executor_type>;
     using encoding_type     = udho::net::types::transfer_encoding;
-    using payload_type      = detail::buffer_queue::payload_in_flight;
+    using payload_type      = detail::buffer_queue::payload_borrowed;
     using completion_callback_type = std::function<void (boost::system::error_code, std::size_t)>;
 
     basic_queued_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& callback)
@@ -383,12 +470,6 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
             boost::beast::flat_buffer buffer;
             boost::beast::ostream(buffer) << val;
             push_data(std::move(buffer));
-            // _write_ongoing implies that the front of the _data_queue has not yet been popped (if last one was owned)
-            // enqueue_data() will takes the front the of _data_queue to the back or the ptr_queue
-            // However, that front might be under process because _write_ongoing is true.
-            // Therefore, unconditional enqueue_data() might cause sending of same data twice
-            // update: now enqueue_data tracks whether the data has been queued in ptr_queue or not
-            enqueue_data();
             pump();
         });
     }
@@ -401,7 +482,6 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
         boost::asio::dispatch(_strand, [this, str = std::move(str)]() {
             if(_eoq) return;
             push_data(str.data(), str.size());
-            enqueue_data();
             pump();
         });
     }
@@ -433,7 +513,6 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
         boost::asio::dispatch(_strand, [this, buff = std::move(buffer)]() mutable {
             if(_eoq) return;
             push_data(std::move(buff));
-            enqueue_data();
             pump();
         });
     }
@@ -446,7 +525,6 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
         boost::asio::dispatch(_strand, [this]() {
             if(!_eoq) {
                 _eoq = true;
-                // push_ptr();
                 pump();
             }
         });
@@ -462,8 +540,8 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
                 _paused = state;
             }
         });
-
     }
+
     void resume(bool state = true) { pause(!state); }
 
 private:
@@ -507,23 +585,21 @@ private:
      * @brief sends payload
      * @param p
      */
-    void async_write_payload(payload_type p) {
+    void async_write_payload(payload_type&& p) {
         _write_ongoing = true;
         boost::asio::async_write(
-            _stream, boost::asio::buffer(p.buf, p.buf.size()),
+            _stream, boost::asio::buffer(p.buffer(), p.buffer().size()),
             boost::asio::bind_executor(_strand,
-               [this, p](boost::system::error_code error, std::size_t bytes_written) {
-                   _bytes_written += bytes_written;
-                    if (p.owned) {
-                        pop_data();
-                    }
+                [this, p](boost::system::error_code error, std::size_t bytes_written) {
+                    _bytes_written += bytes_written;
+                    pop_payload(p.id());
                     if (!error) {
                        _write_ongoing = false;
                        pump();
                     } else {
                         on_finish_cb(error, _bytes_written);
                     }
-               }
+                }
             )
         );
     }
@@ -532,12 +608,12 @@ private:
      * @brief sends chunked payload
      * @param p
      */
-    void async_write_chunked_payload(payload_type p) {
-        prepare(_ongoing_header_buffer, p.buf.size());
+    void async_write_chunked_payload(payload_type&& p) {
+        prepare(_ongoing_header_buffer, p.buffer().size());
 
         std::array<boost::asio::const_buffer, 3> bufs = {
             _ongoing_header_buffer.data(),            // _ongoing_header_buffer is member variable
-            p.buf,                                    // p.buff is kept alive in the data queue or the caller ensures lifetime
+            p.buffer(),                               // p.buff is kept alive in the data queue or the caller ensures lifetime
             boost::asio::buffer(_crlf)                // _crlf is member variable
         };
         _write_ongoing = true;
@@ -547,9 +623,7 @@ private:
                 [this, p = std::move(p)](boost::system::error_code error, std::size_t bytes_written) {
                     _bytes_written += bytes_written;
                     _ongoing_header_buffer.clear();
-                    if (p.owned) {
-                        pop_data();
-                    }
+                    pop_payload(p.id());
                     if (!error) {
                         _write_ongoing = false;
                         pump();
@@ -573,33 +647,36 @@ private:
     void pump() {
         if(_write_ongoing) return;              // once the ongoing write finishes it will comeback to process_queue again
         if(_paused) return;
-        if(!has_ptr()) {
-            if(has_data()) {
-                _write_ongoing = true;
-                enqueue_data();
-            } else {
+
+        if(!pending()) {
+            std::size_t enqueued = 0;
+            if(available()) {
+                enqueued = enqueue();
+            }
+            if(!enqueued) {
                 if(_eoq) {
                     push_ptr();
+                    enqueued = enqueue();
+                    assert(enqueued == 1);
                 } else {
                     return;
                 }
             }
         }
 
-        payload_type p = pop_ptr();
-        if(p.terminal) {
-            // finish chunk has been pushed a while ago
-            // all chunks have been written and only this
-            // chunk is left. Therefore the stream is in
-            // finished state
+        assert(pending());
+
+        payload_type p = take_payload();
+        if(p.terminal()) {
+            pop_payload(p.id());
             on_finish();
             return;
         }
 
         if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked)
-            async_write_chunked_payload(p);
+            async_write_chunked_payload(std::move(p));
         else
-            async_write_payload(p);
+            async_write_payload(std::move(p));
     }
 private:
     stream_type&               _stream;
@@ -683,7 +760,7 @@ struct basic_ostream{
         : _stream(stream), _strand(stream.get_executor()), _headers(headers), _encoding(encoding), _buffering(true), _finishing(false)
         , _header_stream(stream, _strand, headers, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
         , _queued_stream(stream, _strand, encoding, std::bind(&ostream_type::on_queued_completion, this, std::placeholders::_1, std::placeholders::_2))
-        , _buffered_stream(stream, _strand, encoding, std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2))
+        , _buffered_stream(stream, _strand, encoding, std::bind(&ostream_type::on_buffered_flush, this, std::placeholders::_1, std::placeholders::_2), std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2))
         , _headers_sent(false), _bytes_written(0), _completion(std::move(callback))
     {
         _queued_stream.pause();
@@ -762,9 +839,6 @@ public:
 
             if(_buffering) {
                 _buffered_stream.async_flush();
-                if(_encoding.encoding() == net::types::transfer::encoding::chunked){
-                    _buffered_stream.finish();
-                }
             } else {
                 _queued_stream.finish();
             }
@@ -802,6 +876,22 @@ private:
         if(ec) on_error(ec);
     }
 
+    void on_buffered_flush(boost::system::error_code ec, std::size_t bytes_written) {
+        _bytes_written += bytes_written;
+        if(ec) on_error(ec);
+        else {
+            if(_buffering) {
+                if(_finishing) {
+                    _buffered_stream.finish();
+                }
+            } else {
+                _queued_stream.resume();
+                // Any intermediate writes routed to the _queued_stream now gets
+                // pumped out to the socket
+            }
+        }
+    }
+
     void on_buffered_completion(boost::system::error_code ec, std::size_t bytes_written) {
         _bytes_written += bytes_written;
         if(ec) on_error(ec);
@@ -810,10 +900,6 @@ private:
                 if(_completion) {
                     _completion(ec, _bytes_written);
                 }
-            } else {
-                _queued_stream.resume();
-                // Any intermediate writes routed to the _queued_stream now gets
-                // pumped out to the socket
             }
         }
     }
