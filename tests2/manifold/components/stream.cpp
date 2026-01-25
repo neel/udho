@@ -231,6 +231,7 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
             }
         );
 
+
         const static std::string static_str = "0123456"; // static embedded assets such as js or images etc..
 
         queued_stream.write(static_str);                 // pumping started
@@ -402,16 +403,15 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         int callback_count = 0;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.write(std::string("ABC"));
         ostream.finish();
@@ -428,16 +428,15 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         int callback_count = 0;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.write(std::string("ABC"));
         ostream.finish();
@@ -453,16 +452,15 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::chunked};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         ostream.write(std::string("All buffered"));
         ostream.finish(); // Finish without disabling buffering
@@ -490,10 +488,8 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         }
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
         bool is_completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
            [&](boost::system::error_code ec, std::size_t bytes_written) {
                is_completed = true;
                // std::cout << "bytes_written " << bytes_written << std::endl;
@@ -501,6 +497,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                CHECK_FALSE(ec);
            }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         const static std::string static_str = "0123456"; // static embedded assets such as js or images etc..
         ostream.write(std::string("ABC"));         // goes to buffered stream
@@ -530,17 +527,16 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
            [&](boost::system::error_code ec, std::size_t bytes) {
                 completed = true;
                 CHECK_FALSE(ec);
                 CHECK(bytes > 0);
            }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Empty string write
         ostream.write(std::string(""));
@@ -560,20 +556,19 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         const std::size_t large_size = 1024 * 1024; // 1MB
         std::string large_data(large_size, 'X');
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t bytes) {
                 completed = true;
                 CHECK_FALSE(ec);
                 CHECK(bytes > large_size);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
         ostream.write(large_data);
@@ -589,19 +584,18 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         std::atomic<int> write_count{0};
         std::atomic<int> callback_count{0};
         const int total_writes = 100;
 
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
 
@@ -629,16 +623,16 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
             }
         );
+
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Call disable_buffering multiple times (should be idempotent after first)
         ostream.disable_buffering();
@@ -657,11 +651,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::chunked};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
         [&](boost::system::error_code ec, std::size_t bytes) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -669,6 +661,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 CHECK(bytes > 0);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         // Write in buffered mode
         ostream.write(std::string("Buffered"));
@@ -692,16 +685,15 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
             }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Test all write overloads
         ostream.write(std::string("String"));                    // std::string&&
@@ -731,19 +723,18 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
 
         const int num_writes = 1000;
         std::atomic<int> writes_done{0};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
            [&](boost::system::error_code ec, std::size_t) {
                completed = true;
                CHECK_FALSE(ec);
            }
         );
+        ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
 
@@ -767,18 +758,18 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         multithreaded_io<4> mio(io);
 
         server.connect(client);
-        udho::net::types::headers::response headers;
-        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::chunked};
 
         std::atomic<int> operations_completed{0};
         const int total_operations = 50;
 
-        udho::manifold::basic_ostream<stream_type> ostream(server, headers, enc,
+        udho::manifold::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 operations_completed++;
                 CHECK_FALSE(ec);
             }
         );
+
+        ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         // Mix of operations
         for (int i = 0; i < total_operations; ++i) {

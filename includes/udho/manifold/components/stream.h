@@ -10,6 +10,7 @@
 #include <queue>
 #include <charconv>
 #include <udho/utils/traits.h>
+#include <udho/utils/format.h>
 #include <boost/beast/core/ostream.hpp>
 #include <iostream>
 #include <boost/beast/http/write.hpp>
@@ -312,7 +313,8 @@ private:
             _completion(ec, bytes_written);
         }
     }
-protected:
+
+public:
 
     /**
      * @brief reset the internal state before reusing the stream for another request
@@ -829,7 +831,8 @@ private:
         else
             async_write_payload(std::move(p));
     }
-protected:
+
+public:
 
     /**
      * @brief reset the internal state before reusing the stream for another request
@@ -886,6 +889,7 @@ struct basic_header_writer{
     using response_headers_type     = udho::net::types::headers::response;
     using response_type             = boost::beast::http::response<boost::beast::http::empty_body>;
     using serializer_type           = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
+    using opt_serializer_type       = std::optional<serializer_type>;
 
     basic_header_writer(stream_type& stream, strand_type& strand, const response_headers_type& headers, completion_callback_type&& callback)
         : _stream(stream), _strand(strand), _headers(headers), _response(_headers), _serializer(_response), _completion(std::move(callback)), _bytes_written(0), _started(false), _finished(false) {}
@@ -902,7 +906,7 @@ struct basic_header_writer{
             }
             _started = true;
             boost::beast::http::async_write_header(
-                _stream, _serializer,
+                _stream, *_serializer,
                 boost::asio::bind_executor(_strand,
                     [this](boost::system::error_code ec, std::size_t bytes) {
                         _bytes_written = bytes;
@@ -921,7 +925,7 @@ struct basic_header_writer{
     /// @brief True once header write completion handler has run.
     bool finished() const { return _finished; }
 
-protected:
+public:
 
     /**
      * @brief reset the internal state before reusing the stream for another request
@@ -932,11 +936,14 @@ protected:
     void reset() {
         assert(_started);
         assert(_finished);
+        assert(_serializer->is_header_done());
 
         _response.clear();
-        _bytes_written = 0;
-        _started = false;
-        _finished = false;
+        _serializer.emplace(_response);
+
+        _bytes_written  = 0;
+        _started        = false;
+        _finished       = false;
     }
 
 private:
@@ -944,7 +951,7 @@ private:
     strand_type&                    _strand;
     const response_headers_type&    _headers;
     response_type                   _response;
-    serializer_type                 _serializer;
+    opt_serializer_type             _serializer;
     completion_callback_type        _completion;
     std::size_t                     _bytes_written;
     bool                            _started;
@@ -993,20 +1000,44 @@ struct basic_ostream{
     /**
      * @brief Construct composite ostream.
      * @param stream Underlying async write stream.
-     * @param headers Response headers.
-     * @param encoding Transfer encoding (plain or chunked).
      * @param callback Completion callback (final completion).
      *
      * @note The queued stream starts paused, it is resumed only after switching away from buffering; if never resumed then uses buffered stream only
      */
-    basic_ostream(stream_type& stream, const response_headers_type& headers, const encoding_type& encoding, completion_callback_type&& callback)
-        : _stream(stream), _strand(stream.get_executor()), _headers(headers), _encoding(encoding), _buffering(true), _finishing(false)
-        , _header_stream(stream, _strand, headers, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
-        , _queued_stream(stream, _strand, encoding, std::bind(&ostream_type::on_queued_completion, this, std::placeholders::_1, std::placeholders::_2))
-        , _buffered_stream(stream, _strand, encoding, std::bind(&ostream_type::on_buffered_flush, this, std::placeholders::_1, std::placeholders::_2), std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2))
+    basic_ostream(stream_type& stream, completion_callback_type&& callback)
+        : _stream(stream), _strand(stream.get_executor()), _header_sealed(false), _buffering(true), _finishing(false)
+        , _header_stream(stream, _strand, _headers, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
+        , _queued_stream(stream, _strand, _encoding,
+            std::bind(&ostream_type::on_queued_completion,   this, std::placeholders::_1, std::placeholders::_2)
+        )
+        , _buffered_stream(stream, _strand, _encoding,
+            std::bind(&ostream_type::on_buffered_flush,      this, std::placeholders::_1, std::placeholders::_2),
+            std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2)
+        )
         , _headers_sent(false), _bytes_written(0), _completion(std::move(callback))
     {
         _queued_stream.pause();
+    }
+
+    basic_ostream(const basic_ostream&) = delete;
+    basic_ostream(basic_ostream&&) = delete;
+
+    udho::net::types::transfer::encoding encoding() const { return _encoding.encoding(); }
+
+    udho::net::types::transfer::compression compression() const { return _encoding.compression(); }
+
+    void encoding(udho::net::types::transfer::encoding enc) {
+        if(_header_sealed) {
+            throw std::runtime_error(udho::utils::format("encoding must be set before the headers are sent to the socket"));
+        }
+        _encoding.encoding(enc);
+    }
+
+    void compression(udho::net::types::transfer::compression cmp) {
+        if(_header_sealed) {
+            throw std::runtime_error(udho::utils::format("compression must be set before the headers are sent to the socket"));
+        }
+        _encoding.compression(cmp);
     }
 
 
@@ -1017,6 +1048,7 @@ struct basic_ostream{
      * Subsequent calls are ignored.
      */
     void disable_buffering() {
+        _header_sealed = true;
         boost::asio::post(_strand, [this](){
             if(!_buffering) return;
             else switch_stream();
@@ -1091,6 +1123,7 @@ public:
      * - If queued: queued.finish() which eventually completes (and chunked terminal if needed)
      */
     void finish() {
+        _header_sealed = true;
         boost::asio::post(_strand, [this](){
             if(_finishing) return;
             _finishing = true;
@@ -1207,26 +1240,36 @@ public:
      *          completion callback has been called
      */
     void reset() {
+        assert(_header_sealed);
+
         _header_stream.reset();
         _buffered_stream.reset();
-        _queued_stream.reset();
+        if(!_buffering) {
+            _queued_stream.reset();
+        }
+
+        _headers.clear();
 
         _buffering      = true;
         _headers_sent   = false;
         _bytes_written  = 0;
         _finishing      = false;
+        _header_sealed  = false;
+
+        _encoding.encoding(udho::net::types::transfer::encoding::plain);
     }
 
 private:
     stream_type&                 _stream;
     strand_type                  _strand;
-    const response_headers_type& _headers;
-    const encoding_type&         _encoding;
+    response_headers_type        _headers;
+    encoding_type                _encoding;
 private:
     header_writer_type           _header_stream;
     queued_stream_type           _queued_stream;
     buffered_stream_type         _buffered_stream;
 private:
+    std::atomic_bool             _header_sealed;
     bool                         _buffering;
     bool                         _headers_sent;
     std::size_t                  _bytes_written;

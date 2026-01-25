@@ -258,7 +258,7 @@ public:
     }
 private:
     void on_completion(safe_success_type&& success){
-        std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << "," << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
+        std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
         if(_user_callback) {
             // Will be called in case of failure
             _user_callback(std::forward<safe_success_type>(success));

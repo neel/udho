@@ -5,37 +5,65 @@
 #include <functional>
 #include <udho/utils/format.h>
 #include <udho/manifold/features.h>
+#include <udho/manifold/components/stream.h>
 
 namespace udho{
 namespace manifold{
 
 namespace components{
 
-struct handler{
+template <typename StreamT>
+struct basic_handler{
     using features = udho::manifold::features<>;
     static constexpr const char* name = "handler";
 
-    using callback_type = std::function<void ()>;
-    using collection_type = std::map<std::size_t, callback_type>;
+    using stream_type   = StreamT;
+    using ostream_type  = udho::manifold::basic_ostream<stream_type>;
+
+    struct responder{
+        using callback_type = std::function<void (boost::system::error_code, std::size_t)>;
+
+        template <typename F>
+        responder(stream_type& stream, F&& callback)
+            : _ostream(stream, std::bind(&responder::on_finish, this, std::placeholders::_1, std::placeholders::_2))
+            , _callback(callback_type{std::move(callback)})
+        {}
+        responder(const responder&) = delete;
+        responder(responder&&) = delete;
+
+        ostream_type& ostream() { return _ostream; }
+    private:
+        void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
+            _ostream.reset();
+            _callback(ec, bytes_written);
+        }
+    private:
+        ostream_type  _ostream;
+        callback_type _callback;
+    };
+
+    using collection_type = std::map<std::size_t, responder>;
 
     template <typename F>
-    void add(std::size_t id, F&& callback){
-        _handlers.emplace(id, callback_type{std::move(callback)});
-    }
-
-    void invoke(std::size_t id){
-        auto it = _handlers.find(id);
-        if(it != _handlers.end()) {
-            callback_type callback = std::move(it->second);
-            _handlers.erase(id);
-            callback();
-        } else {
-            throw std::runtime_error(udho::utils::format("trying to invoke non-existent handler for flow {}", id));
+    ostream_type& add(std::size_t id, stream_type& stream, F&& callback){
+        auto responder_it = _responders.find(id);
+        if(responder_it != _responders.end()) {
+            assert(responder_it->first == id);
+            return responder_it->second.ostream();
         }
+
+        bool success = false;
+        std::tie(responder_it, success) = _responders.emplace(std::piecewise_construct,
+            std::forward_as_tuple(id),
+            std::forward_as_tuple(stream, std::forward<F>(callback))
+        );
+        assert(success);
+        assert(responder_it->first == id);
+        return responder_it->second.ostream();
     }
 
 private:
-    collection_type _handlers;
+    collection_type _responders;
 };
 
 }

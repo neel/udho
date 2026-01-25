@@ -42,32 +42,34 @@ namespace callbacks{
     using namespace udho::manifold::components;
     using namespace udho::manifold;
 
+    using handler = basic_handler<stream_type>;
+
     struct nodef{
         nodef() = delete;
         nodef(int) {}
     };
 
     BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
-        // context << "f0";
+        context << "f0";
         context.finish();
         return;
     }
 
     BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
-        // context << std::to_string(a+b.size()+c+d);
+        context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
     BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
-        // context << std::to_string(a+b.size());
+        context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
     BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
-        // context << std::to_string(a);
+        context << std::to_string(a);
         context.finish();
         return "hello";
     }
@@ -111,7 +113,7 @@ using routing_table_type = std::decay_t<decltype(url())>;
 template <typename StreamT>
 struct www{
     using router_type                = udho::url::basic_router<routing_table_type>;
-    using handler_component_type     = udho::manifold::components::handler;
+    using handler_component_type     = udho::manifold::components::basic_handler<StreamT>;
     using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
     using stream_type                = StreamT;
@@ -282,22 +284,31 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
 
         // { add finish lambda to handler component
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](){
+        auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+            if(error) {
+                // TODO Error while writing to socket
+                return;
+            }
+
             std::apply(
                 [&](auto&&... args) {
                     p.next(flow, stream, std::forward<Args>(args)...);
                 },
                 args_tuple
-                );
+            );
         };
-        udho::manifold::components::handler& handler = composition.template get<udho::manifold::components::handler>().component();
-        handler.add(flow->id(), std::move(lambda));
+        using handler_type = udho::manifold::components::basic_handler<StreamT>;
+        using ostream_type = udho::manifold::basic_ostream<StreamT>;
+
+        handler_type& handler = composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
         // }
 
         // { create context
         portal_type portal(composition, configs, journal);
         std::string resource = portal.resource();
-        context_type context(stream, portal, flow->id());
+        std::cout << "resource: " << resource << std::endl;
+        context_type context(ostream, portal, flow->id());
         // }
 
         // { invoke action
@@ -310,9 +321,11 @@ static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feat
 
 TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+
+    boost::asio::io_context io_context;
+
     catalogue_type catalogue{udho::session::storage::fs{}};
     auto session    = udho::manifold::components::session(catalogue);
-
     auto framework  = testing::framework(testing::url(), session);
     auto flow       = framework.runtime().spawn();
 
@@ -326,7 +339,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using flow_type      = framework_type::flow_type;
     using journal_type   = flow_type::journal_type;
 
-    boost::asio::io_context io_context;
+
     std::string request_data =
         "POST /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
         "Host: example.com\r\n"
@@ -343,8 +356,10 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         "\r\n"
         "Hello, Earth!"
     ;
-    stream_type stream(io_context, request_data);
-    flow->start(stream);
+    stream_type stream_in(io_context, request_data);
+    stream_type stream_out(io_context);
+    stream_in.connect(stream_out);
+    flow->start(stream_in);
 
     std::size_t counter = 0;
 
@@ -491,4 +506,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
     CHECK(counter == 3);
     CHECK(framework.runtime().count() == 0);
+
+    std::string output = stream_out.str();
+    std::cout << "stream_out: " << std::endl << output << std::endl;
 }
