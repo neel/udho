@@ -39,6 +39,12 @@ struct accumulate : std::integral_constant<std::size_t, 0> {};
 template <typename T, typename... Ts>
 struct accumulate<T, Ts...> : std::integral_constant<std::size_t,  T::value + accumulate<Ts...>::value> {};
 
+template <typename T>
+struct is_string : std::false_type {};
+
+template <typename CharT, typename TraitsT, typename AllocT>
+struct is_string<std::basic_string<CharT, TraitsT, AllocT>>: std::true_type {};
+
 }
 }
 }
