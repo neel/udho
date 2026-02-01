@@ -309,37 +309,38 @@ struct prefixed_store{
     inline prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
 
     template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>* res){
-        _store.add(_prefix, res);
-    }
-    template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>& res){
-        _store.add(_prefix, &res);
+    void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        _store.add(_prefix, std::move(res));
     }
 
+    // template <asset::type AssetType>
+    // void add(asset::basic_resource<AssetType>&& res){
+    //     _store.add(_prefix, std::unique_ptr<asset::basic_resource<AssetType>>(std::move(res)));
+    // }
+
     template <asset::type AssetType>
-    friend prefixed_store& operator<<(prefixed_store& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store& operator<<(prefixed_store& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return pstore;
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store& operator<<(prefixed_store& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return pstore;
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store& operator<<(prefixed_store& pstore, asset::basic_resource<AssetType>& res){
+    //     pstore.add(res);
+    //     return pstore;
+    // }
 
     template <asset::type AssetType>
-    friend prefixed_store&& operator<<(prefixed_store&& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store&& operator<<(prefixed_store&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return std::forward<prefixed_store>(pstore);
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store&& operator<<(prefixed_store&& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return std::forward<prefixed_store>(pstore);
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store&& operator<<(prefixed_store&& pstore, asset::basic_resource<AssetType>&& res){
+    //     pstore.add(std::move(res));
+    //     return std::forward<prefixed_store>(pstore);
+    // }
 
     private:
         store_type& _store;

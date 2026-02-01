@@ -15,8 +15,6 @@
 #include <udho/url/router.h>
 #include <boost/asio/buffer.hpp>
 
-using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
-
 static char buffer_js[]  = "console.log('Hello, world!');";
 static char buffer_js1[] = "console.log('Hello, Mars!');";
 static char buffer_css[] = ".classname{color: blue}";
@@ -150,7 +148,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
 
         std::vector<std::string> prefixes_names;
         std::vector<std::size_t> prefixes_sizes;
-        for(auto p: prefixes){
+        for(const auto& p: prefixes){
             prefixes_names.push_back(p.prefix());
             prefixes_sizes.push_back(p.size());
 
@@ -198,7 +196,6 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 CAPTURE(url);
 
                 boost::asio::io_context io;
-                udho::net::types::headers::request request;
                 boost::beast::test::stream stream_in(io);
                 boost::beast::test::stream stream_out(io);
                 stream_in.connect(stream_out);
@@ -245,7 +242,6 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 CAPTURE(url);
 
                 boost::asio::io_context io;
-                udho::net::types::headers::request request;
                 boost::beast::test::stream stream_in(io);
                 boost::beast::test::stream stream_out(io);
                 stream_in.connect(stream_out);
@@ -287,7 +283,6 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 CAPTURE(url);
 
                 boost::asio::io_context io;
-                udho::net::types::headers::request request;
                 boost::beast::test::stream stream_in(io);
                 boost::beast::test::stream stream_out(io);
                 stream_in.connect(stream_out);

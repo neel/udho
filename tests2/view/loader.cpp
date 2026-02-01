@@ -51,7 +51,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                         js->is_async(true);
                     if(key.find("module") != std::string::npos)
                         js->is_module(true);
-                    store[prefix] << js;
+                    store[prefix] << std::move(js);
                 }
                 break;
             case udho::view::resources::asset::type::css:
@@ -59,7 +59,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                     auto css = udho::view::resources::asset::css(key, content.begin(), content.end());
                     if(key.find("print") != std::string::npos)
                         css->media("print");
-                    store[prefix] << css;
+                    store[prefix] << std::move(css);
                 }
                 break;
             case udho::view::resources::asset::type::img:
@@ -74,7 +74,10 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     for(const auto& asset : assets) {
         add_asset(asset);
     }
-    store["secondary"] << udho::view::resources::asset::js("embedded_only.js", std::begin(buffer_js_module), std::end(buffer_js_module))->embedded(true);
+
+    auto embedded_only_res = udho::view::resources::asset::js("embedded_only.js", std::begin(buffer_js_module), std::end(buffer_js_module));
+    embedded_only_res->embedded(true);
+    store["secondary"] << std::move(embedded_only_res);
 
     store.base("assets");
     store.lock();
