@@ -210,7 +210,7 @@ private:
     inline std::uint64_t _revision(const char* src, std::size_t len) const {
         detail::record_preamble preamble;
         _preamble(src, len, preamble);
-        return preamble.revision;
+        return preamble.get_revision();
     }
 
     bool _fetch(const char* src, std::size_t len, udho::session::record_data& record) const {
@@ -218,7 +218,7 @@ private:
         const char* cursor = _preamble(src, len, preamble);
         record.created(preamble.created_at());
         record.updated(preamble.updated_at());
-        record.revision(preamble.revision);
+        record.revision(preamble.get_revision());
         udho::session::id sid{};
         std::memcpy(&sid, cursor, sizeof(sid));
 
@@ -227,7 +227,10 @@ private:
         }
         cursor += sizeof(sid);
 
-        const std::uint32_t entry_count = *reinterpret_cast<const std::uint32_t*>(src + len - sizeof(std::uint32_t));
+        // const std::uint32_t entry_count = *reinterpret_cast<const std::uint32_t*>(src + len - sizeof(std::uint32_t));
+        std::uint32_t entry_count = 0;
+        std::memcpy(&entry_count, src + len - sizeof(std::uint32_t), sizeof(std::uint32_t));
+
         const char* metadata_base = src + len - sizeof(std::uint32_t) - entry_count * sizeof(detail::attr_meta);
 
         for (std::uint32_t i = 0; i < entry_count; ++i) {
@@ -257,7 +260,7 @@ private:
         detail::record_preamble preamble{};
         preamble.created_at(record.created());
         preamble.update(current_time);
-        preamble.revision = record.revision() +1;
+        preamble.set_revision(record.revision() +1);
         std::memcpy(cursor, &preamble, sizeof(preamble));
         cursor += sizeof(preamble);
 
@@ -288,7 +291,7 @@ private:
         }
 
         auto& mutable_record = const_cast<udho::session::record_data&>(record);
-        mutable_record.sync(preamble.revision, current_time);
+        mutable_record.sync(preamble.get_revision(), current_time);
 
         return true;
     }

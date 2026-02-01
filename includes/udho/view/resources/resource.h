@@ -656,14 +656,12 @@ namespace asset{
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
     template <asset::type AssetType, typename Iterator>
-    inline basic_resource<AssetType>* resource(const std::string& name, Iterator begin, Iterator end, const std::string& mime, bool owned = false) {
-        basic_resource<AssetType>* res = 0x0;
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const std::string& name, Iterator begin, Iterator end, const std::string& mime, bool owned = false) {
         if (owned) {
-            res = new common_resource<AssetType, asset::source::memory<Iterator>, true>(name, mime, begin, end);
+            return std::make_unique<common_resource<AssetType, asset::source::memory<Iterator>, true>>(name, mime, begin, end);
         } else {
-            res = new common_resource<AssetType, asset::source::memory<Iterator>, false>(name, mime, begin, end);
+            return std::make_unique<common_resource<AssetType, asset::source::memory<Iterator>, false>>(name, mime, begin, end);
         }
-        return res;
     }
 
     /**
@@ -680,14 +678,12 @@ namespace asset{
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
     template <asset::type AssetType, typename Iterator>
-    inline basic_resource<AssetType>* resource(const std::string& name, Iterator begin, Iterator end, bool owned = false) {
-        basic_resource<AssetType>* res = 0x0;
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const std::string& name, Iterator begin, Iterator end, bool owned = false) {
         if (owned) {
-            res = new common_resource<AssetType, asset::source::memory<Iterator>, true>(name, "", begin, end);
+            return std::make_unique<common_resource<AssetType, asset::source::memory<Iterator>, true>>(name, "", begin, end);
         } else {
-            res = new common_resource<AssetType, asset::source::memory<Iterator>, false>(name, "", begin, end);
+            return std::make_unique<common_resource<AssetType, asset::source::memory<Iterator>, false>>(name, "", begin, end);
         }
-        return res;
     }
 
     /**
@@ -700,9 +696,8 @@ namespace asset{
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
     template <asset::type AssetType>
-    inline basic_resource<AssetType>* resource(const std::string& name, const boost::filesystem::path& path, const std::string& mime) {
-        basic_resource<AssetType>* res = new common_resource<AssetType, asset::source::disk<boost::filesystem::path>, true>(name, mime, path);
-        return res;
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const std::string& name, const boost::filesystem::path& path, const std::string& mime) {
+        return std::make_unique<common_resource<AssetType, asset::source::disk<boost::filesystem::path>, true>>(name, mime, path);
     }
 
     /**
@@ -714,9 +709,8 @@ namespace asset{
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
     template <asset::type AssetType>
-    inline basic_resource<AssetType>* resource(const std::string& name, const boost::filesystem::path& path) {
-        basic_resource<AssetType>* res = new common_resource<AssetType, asset::source::disk<boost::filesystem::path>, true>(name, "", path);
-        return res;
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const std::string& name, const boost::filesystem::path& path) {
+        return std::make_unique<common_resource<AssetType, asset::source::disk<boost::filesystem::path>, true>>(name, "", path);
     }
 
     /**
@@ -728,9 +722,8 @@ namespace asset{
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
     template <asset::type AssetType>
-    inline basic_resource<AssetType>* resource(const std::string& name, const std::string& url) {
-        basic_resource<AssetType>* res = new common_resource<AssetType, asset::source::remote, false>(name, url);
-        return res;
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const std::string& name, const std::string& url) {
+        return std::make_unique<common_resource<AssetType, asset::source::remote, false>>(name, url);
     }
 
     /**

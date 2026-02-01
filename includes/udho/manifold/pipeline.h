@@ -213,7 +213,9 @@ private:
     template <typename FlowT, typename... Args>
     void _then(std::shared_ptr<FlowT> flow, std::tuple<Args...>& args_tuple){
         std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
-        auto lambda = [flow, this, args_tuple](udho::manifold::exclusive_result success){
+        auto lambda = [wflow = std::weak_ptr<FlowT>(flow), this, args_tuple](udho::manifold::exclusive_result success){
+            auto flow = wflow.lock();
+            assert(!!flow);
             if(success) {
                 try{
                     std::apply(

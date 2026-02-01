@@ -288,6 +288,8 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
 
     student p;
 
+    boost::asio::io_context io;
+
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<tabulate::Table>{});
@@ -318,8 +320,6 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
     udho::view::resources::tmpl::const_substore<udho::view::data::bridges::lua> tmpl_lua = resource_store_proxy.tmpl<udho::view::data::bridges::lua>();
     // udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> ctx_explorer = tmpl_lua.view("primary", "ctx_explorer");
-
-    boost::asio::io_context io;
 
     using namespace udho::hazo::string::literals;
 
@@ -382,9 +382,9 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         layout[placeholders::central] = "Hello";
 
         // layout();
+        io.run();
     }
 
-    io.run();
 
     std::string output = stream_out.str();
     std::cout << output << std::endl;

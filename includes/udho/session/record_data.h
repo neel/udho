@@ -147,7 +147,7 @@ struct record_data{
     record_data& updated(const time_point& time) { _updated = time; return *this; }     ///< Set update time
 
     std::uint64_t revision() const { return _revision; }                                ///< Get revision number
-    record_data& revision(const std::uint64_t& rev) { _revision = rev; return *this; }  ///< Set revision number
+    record_data& revision(std::uint64_t rev) { _revision = rev; return *this; }  ///< Set revision number
     /// @}
 
     /// @name Change Tracking
@@ -162,7 +162,7 @@ struct record_data{
      * @param rev New revision number
      * @param time New update time
      */
-    void sync(const std::uint64_t& rev, const time_point& time) {
+    void sync(std::uint64_t rev, const time_point& time) {
         revision(rev);
         updated(time);
         _removed_fields.clear();

@@ -87,7 +87,16 @@ Hello World
 
     store.lock();
     // TEST Adding resources to a locked store should also throw exception
-    REQUIRE_THROWS_AS(store["primary"] << udho::view::resources::asset::js("profile1.js", buffer_js, buffer_js+std::strlen(buffer_js)), std::exception);
+    {
+        bool exception_fired = false;
+        auto js_resource = udho::view::resources::asset::js("profile1.js", buffer_js, buffer_js+std::strlen(buffer_js));
+        try{
+            store["primary"] << std::move(js_resource);
+        } catch(const std::exception& ex) {
+            exception_fired = true;
+        }
+        CHECK(exception_fired);
+    }
 
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
 

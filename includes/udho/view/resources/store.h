@@ -251,8 +251,8 @@ struct prefixed_store{
         _store.template add<Bridge>(_prefix, std::move(res.resource()));
     }
     template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>* res){
-        _store.assets().add(_prefix, res);
+    void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        _store.assets().add(_prefix, std::move(res));
     }
     template <asset::type AssetType>
     void add(asset::basic_resource<AssetType>& res){
@@ -264,6 +264,7 @@ struct prefixed_store{
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return pstore;
     }
+
     template <typename Bridge>
     friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
@@ -271,8 +272,8 @@ struct prefixed_store{
     }
 
     template <asset::type AssetType>
-    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return pstore;
     }
 
@@ -283,8 +284,8 @@ struct prefixed_store{
     }
 
     template <asset::type AssetType>
-    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return std::forward<prefixed_store<Bridges...>>(pstore);
     }
 

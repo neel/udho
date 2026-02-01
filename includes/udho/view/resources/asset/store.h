@@ -241,14 +241,14 @@ struct store{
      * @param res The resource to add.
      */
    template <udho::view::resources::asset::type AssetType>
-   const asset_registration_info& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>* res) {
+   const asset_registration_info& add(const std::string& prefix, std::unique_ptr<udho::view::resources::asset::basic_resource<AssetType>>&& res) {
         if(!locked()){
            if(prefix.front() == '/' || prefix.back() == '/') {
                throw std::runtime_error{udho::url::format("Restriction: Prefix must not contain a leading or trailing slash, violated by prefix `{}`", prefix)};
            }
 
             std::string name = res->name();
-            auto it = _resources.insert(asset_registration_info{prefix, std::unique_ptr<udho::view::resources::asset::basic_resource<AssetType>>(res)});
+            auto it = _resources.insert(asset_registration_info{prefix, std::move(res)});
             if(!it.second){
                 throw std::runtime_error{udho::url::format("Filed to add asset {}/{}. As another resouorce with the same name already exists.", prefix, name)};
             }
