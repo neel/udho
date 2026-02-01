@@ -108,14 +108,15 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
     /**
      * @brief write global importmap (includes all javascripts from all prefixes irrespective of whether they are requested or not)
      */
-    udho::net::stream& importmap(udho::net::stream& stream) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream) const {
         return _store.importmap(stream);
     }
 
     /**
      * @brief generate script tags only for the requested javascripts
      */
-    udho::net::stream& write(udho::net::stream& stream, bool embedded = false) const {
+    template <typename StreamT>
+    StreamT& write(StreamT& stream, bool embedded = false) const {
         for(auto it: common_asset_loader_type::_selection){
             if(it.second == embedded) {
                 const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
@@ -156,7 +157,8 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
     /**
      * @brief generate script tags only for the requested javascripts
      */
-    udho::net::stream& write_embedded(udho::net::stream& stream) const {
+    template <typename StreamT>
+    StreamT& write_embedded(StreamT& stream) const {
         return write(stream, true);
     }
 };
@@ -184,7 +186,7 @@ struct asset_loader<udho::view::resources::asset::type::css>: common_asset_loade
     /**
      * @brief generate link or style tags only for the requested stylesheets
      */
-    udho::net::stream& write(udho::net::stream& stream, bool embedded = false) const {
+    udho::net::ostream_view& write(udho::net::ostream_view& stream, bool embedded = false) const {
         for(auto it: common_asset_loader_type::_selection){
             if(it.second == embedded) {
                 const udho::view::resources::asset::proxy& asset_proxy = *(it.first);
@@ -203,7 +205,7 @@ struct asset_loader<udho::view::resources::asset::type::css>: common_asset_loade
         return stream;
     }
 
-    udho::net::stream& write_embedded(udho::net::stream& stream) const {
+    udho::net::ostream_view& write_embedded(udho::net::ostream_view& stream) const {
         return write(stream, true);
     }
 };

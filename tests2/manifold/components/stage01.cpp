@@ -22,6 +22,7 @@
 #include <udho/manifold/components/cookies.h>
 #include <udho/manifold/components/session.h>
 #include <udho/manifold/components/pg.h>
+#include <udho/manifold/components/resources.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
@@ -35,6 +36,7 @@
 #include <udho/manifold/journal.h>
 #include <udho/manifold/flow.h>
 #include <udho/manifold/visualize.h>
+#include <udho/view/bridges/lua.h>
 
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
@@ -121,6 +123,7 @@ struct www{
     using navigator_component_type   = udho::manifold::components::navigators::pretty;
     using cookies_component_type     = udho::manifold::components::cookies;
     using session_component_type     = udho::manifold::components::session<udho::session::storage::fs, udho::session::modes::lazy>;
+    using resources_component_type   = udho::manifold::components::resources<udho::view::data::bridges::lua>;
 };
 
 }
@@ -136,7 +139,8 @@ struct udho::manifold::sketch<testing::www<StreamT>>{
         typename www_type::navigator_component_type,
         typename www_type::routing_component_type,
         typename www_type::cookies_component_type,
-        typename www_type::session_component_type
+        typename www_type::session_component_type,
+        typename www_type::resources_component_type
     >;
 
     using order_type = udho::manifold::order<
@@ -298,7 +302,7 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
             );
         };
         using handler_type = udho::manifold::components::basic_handler<StreamT>;
-        using ostream_type = udho::manifold::basic_ostream<StreamT>;
+        using ostream_type = udho::net::basic_ostream<StreamT>;
 
         handler_type& handler = composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
@@ -320,13 +324,23 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
 static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feature::identifier::stage);
 
 TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
-    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
-
     boost::asio::io_context io_context;
-
+    // { session component
+    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
     auto session    = udho::manifold::components::session(catalogue);
-    auto framework  = testing::framework(testing::url(), session);
+    // }
+    // { resources: views, assets
+    udho::view::data::bridges::lua lua;
+    lua.init();
+
+    udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+    store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+    auto resources  = udho::manifold::components::resources(cstore);
+    // }
+
+    auto framework  = testing::framework(testing::url(), session, resources);
     auto flow       = framework.runtime().spawn();
 
     {
@@ -339,6 +353,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using flow_type      = framework_type::flow_type;
     using journal_type   = flow_type::journal_type;
 
+
+    using portal_type            = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+    using context_type           = typename udho::manifold::detail::get_context_for_portal<stream_type, portal_type>::type;
+
+    lua.bind(udho::view::data::type<context_type>{});
 
     std::string request_data =
         "POST /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"

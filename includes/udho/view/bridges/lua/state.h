@@ -38,6 +38,7 @@
 #include <udho/url/detail/format.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/buffer.h>
+#include <udho/manifold/context.h>
 
 namespace udho{
 namespace view{
@@ -211,7 +212,7 @@ struct state{
      * Searches for the script in the internal map and executes it if found. If the script execution is successful, captures the output using the provided buffer. Handles and reports errors if the script execution fails.
      */
     template <typename T, typename Aux>
-    std::size_t exec(const std::string& name, const T& data, const Aux& aux, std::string& output){
+    std::size_t exec(const std::string& name, const T& data, Aux& aux, std::string& output){
         std::string view_index = name;
         if(!_views.count(view_index)){
             std::cout << "View not found " << view_index << std::endl;

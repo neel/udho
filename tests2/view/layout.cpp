@@ -24,7 +24,14 @@
 #include <udho/session/storage/fs.h>
 #include <udho/session/catalogue.h>
 
-using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+#include <udho/manifold/composition.h>
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/journal_view.h>
+#include <udho/manifold/configs_view.h>
+#include <udho/manifold/components/routing.h>
+#include <udho/manifold/context.h>
+
+// using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 static char buffer_router[] = R"TEMPLATE(
 <?! vars(\"d\", \"ctx\") ?>
@@ -203,28 +210,36 @@ struct info{
     }
 };
 
-void chunk3(udho::net::stream context){
+namespace callbacks{
+
+using namespace udho::manifold::components;
+using namespace udho::manifold;
+
+using stream_type      = boost::beast::test::stream;
+using handler = basic_handler<stream_type>;
+
+void chunk3(basic_context<stream_type, handler> context){
     context << "Chunk 3 (Final)";
     context.finish();
 }
 
-void chunk2(udho::net::stream context){
+void chunk2(basic_context<stream_type, handler> context){
     context << "chunk 2";
-    context.flush(std::bind(&chunk3, context));
+    chunk3(context);
 }
 
-void chunk(udho::net::stream context){
+void chunk(basic_context<stream_type, handler> context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
-    context.flush(std::bind(&chunk2, context));
+    chunk2(context);
 }
 
-void f0(udho::net::stream context){
+void f0(basic_context<stream_type, handler> context){
     context << "Hello f0";
     context.finish();
 }
 
-int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
         context << "Hello f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -261,6 +276,7 @@ struct X{
     }
 };
 
+}
 
 TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     CHECK(0 == 0);
@@ -275,7 +291,7 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+    // lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
 
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
 
@@ -307,26 +323,55 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
 
     using namespace udho::hazo::string::literals;
 
-    X x;
+    callbacks::X x;
     auto router = udho::url::router(
           udho::url::root(
-                udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)
-              | udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
-              | udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+                udho::url::slot("f0"_h,  &callbacks::f0)         << udho::url::home  (udho::url::verb::get)
+              | udho::url::slot("xf0"_h, &callbacks::X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
+              | udho::url::slot("chunked"_h,  &callbacks::chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
           )
         | udho::url::mount("b"_h, "/b",
-              udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
-            | udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+              udho::url::slot("f1"_h,  &callbacks::f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
+            | udho::url::slot("xf1"_h, &callbacks::X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
         ),
         resource_store_proxy.assets()
     );
 
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    auto sessions = session_catalogue::create(udho::session::storage::fs{});
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
+    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>();
+    auto routing_component  = udho::manifold::components::routing(std::move(router));
+    auto resource_component = udho::manifold::components::resources(resource_store_proxy);
 
-    using context_type = udho::net::context<udho::view::data::bridges::lua>;
+    using composition_type  = udho::manifold::composition<
+        std::decay_t<decltype(handler_component)>,
+        std::decay_t<decltype(routing_component)>,
+        std::decay_t<decltype(resource_component)>
+    >;
+    using configs_type      = typename composition_type::configs_type;
+    using journal_type      = typename udho::manifold::detail::get_journal_for_full_fabric<composition_type>::type;
+
+    auto composition = composition_type::compose(handler_component, routing_component, resource_component);
+
+    configs_type configs;
+    journal_type journal;
+
+    auto portal = udho::manifold::portal(composition, configs, journal);
+
+    // udho::net::types::headers::request request;
+
+    boost::beast::test::stream stream_in(io);
+    boost::beast::test::stream stream_out(io);
+    stream_in.connect(stream_out);
+
+    udho::net::test_ostream stream(stream_in,
+       [&](boost::system::error_code ec, std::size_t) {
+           CHECK_FALSE(ec);
+       }
+    );
+
+    auto context = udho::manifold::basic_context(stream, portal, 0);
+
+    // udho::net::ostream_view stream_view = stream.view();
+
 
     {
         // udho::view::tmpl::layout::standard_layout<context_type> layout{context};
@@ -339,5 +384,8 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         // layout();
     }
 
-    std::cout << fake_context_generator._stream.str() << std::endl;
+    io.run();
+
+    std::string output = stream_out.str();
+    std::cout << output << std::endl;
 }

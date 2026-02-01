@@ -36,7 +36,7 @@
 #include <udho/url/detail/format.h>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/view/resources/fwd.h>
-#include <udho/net/stream.h>
+#include <udho/net/ostream.h>
 
 namespace udho{
 namespace view{
@@ -180,10 +180,11 @@ namespace asset{
 
 
         private:
-            std::size_t write(udho::net::stream& stream) const {
+            template <typename OstreamT>
+            std::size_t write(OstreamT& stream) const {
                 if (!_buffer.empty()) {
                     assert(_buffer.back() != '\0' && "Null in owned storage!");
-                    stream.write(_buffer.data(), _buffer.size());
+                    stream.write((const char*)_buffer.data(), _buffer.size());
                 }
                 return _buffer.size();
             }
@@ -234,10 +235,10 @@ namespace asset{
         size_type     size()  const { return _size;  }
 
         private:
-            std::size_t write(udho::net::stream& stream) const {
+            std::size_t write(udho::net::ostream_view& stream) const {
                 if (_size > 0) {
                     assert(*(_end - 1) != '\0' && "Null in non-owned storage!");
-                    stream.write(_begin, _end);
+                    stream.write(reinterpret_cast<const char*>(&(*_begin)), _size);
                 }
                 return _size;
             }
@@ -307,7 +308,8 @@ namespace asset{
         size_type     size()  const { return _buffer.size();  }
 
         private:
-            std::size_t write(udho::net::stream& stream) const {
+            template <typename OstreamT>
+            std::size_t write(OstreamT& stream) const {
                 if (!_buffer.empty()) {
                     stream.write(_buffer.data(), _buffer.size());
                 }
@@ -369,8 +371,9 @@ namespace asset{
         const std::string& location() const  { return _location; }
 
         private:
-            std::size_t write(udho::net::stream& stream) const {
-                stream.response().result(boost::beast::http::status::moved_permanently);
+            template <typename OstreamT>
+            std::size_t write(OstreamT& stream) const {
+                stream.status(boost::beast::http::status::moved_permanently);
                 stream.set(boost::beast::http::field::location, _location);
                 std::string message = "The resource has been moved permanently to " + _location;
                 stream.write(message.c_str(), message.size());
@@ -424,8 +427,8 @@ namespace asset{
          * @param stream The stream to write to.
          * @return std::size_t The number of bytes written to the stream.
          */
-        inline virtual std::size_t write(udho::net::stream& stream) const = 0;
-        inline virtual std::size_t write_contents(udho::net::stream& stream) const = 0;
+        inline virtual std::size_t write(udho::net::ostream_view& stream) const = 0;
+        inline virtual std::size_t write_contents(udho::net::ostream_view& stream) const = 0;
         inline virtual std::string mime() const { return ""; }
 
         /**
@@ -586,13 +589,13 @@ namespace asset{
          * @param stream The stream to write to.
          * @return std::size_t The number of bytes written.
          */
-        std::size_t write(udho::net::stream& stream) const {
+        std::size_t write(udho::net::ostream_view& stream) const {
             stream.set(boost::beast::http::field::content_type, basic_type::mime());
             stream.set(boost::beast::http::field::content_length, std::to_string(_storage.size()));
             return write_contents(stream);
         }
 
-        std::size_t write_contents(udho::net::stream& stream) const {
+        std::size_t write_contents(udho::net::ostream_view& stream) const {
             return _storage.write(stream);
         }
 
@@ -626,11 +629,11 @@ namespace asset{
          * @param stream The stream to write to.
          * @return std::size_t The number of bytes written.
          */
-        std::size_t write(udho::net::stream& stream) const {
+        std::size_t write(udho::net::ostream_view& stream) const {
             return _storage.write(stream);
         }
 
-        std::size_t write_contents(udho::net::stream& stream) const {
+        std::size_t write_contents(udho::net::ostream_view& stream) const {
             return 0;
         }
 

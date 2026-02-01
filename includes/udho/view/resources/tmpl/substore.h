@@ -115,6 +115,11 @@ struct proxy{
             fvar("prefix", &self_type::prefix);
     }
 
+    // template <typename StateT>
+    // static void bind(StateT& state) {
+
+    // }
+
     private:
         std::string  _name;
         std::string  _prefix;
@@ -327,6 +332,11 @@ struct substore{
 
     static constexpr auto name() { return bridge_type::name(); }
     const std::pair<int, int>& version() const { return _bridge.version(); }
+
+    template <typename StateT>
+    void bind(StateT& state) {
+        proxy_type::bind(state);
+    }
 
     private:
         resource_set _resources;

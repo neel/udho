@@ -11,8 +11,9 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/asset/store.h>
 #include <boost/variant.hpp>
-#include <udho/net/context.h>
+#include <udho/net/ostream.h>
 #include <udho/url/router.h>
+#include <boost/asio/buffer.hpp>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
@@ -189,29 +190,50 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
     }
 
     SECTION("Retrieve assets through HTTP requests") {
-        boost::asio::io_context io;
-        udho::net::types::headers::request request;
-
         {
             udho::view::resources::asset::const_substore<udho::view::resources::asset::type::js> substore{cstore};
             std::size_t counter = 0;
             for(const auto& asset: substore){
                 std::string url = asset.url();
                 CAPTURE(url);
-                udho::net::fake::context<> fake_context_generator{request};
 
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
+                boost::asio::io_context io;
+                udho::net::types::headers::request request;
+                boost::beast::test::stream stream_in(io);
+                boost::beast::test::stream stream_out(io);
+                stream_in.connect(stream_out);
+                udho::net::test_ostream stream(stream_in,
+                    [&](boost::system::error_code ec, std::size_t) {
+                        CHECK_FALSE(ec);
+                    }
+                );
+                udho::net::ostream_view stream_view = stream.view();
+                cstore.serve(stream_view, url);
 
-                cstore.serve(stream, url);
-                const udho::net::types::headers::response& response = stream.response();
-                std::string output = fake_context_generator._stream.str();
+                stream.finish();
+                io.run();
+
+                std::string output = stream_out.str();
+                CAPTURE(output);
+                std::size_t crlf_pos = output.find("\r\n");
+                CAPTURE(crlf_pos);
+                boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+                parser.eager(true);
+                boost::beast::error_code error;
+                parser.put(boost::asio::buffer(output), error);
+
+                CHECK(!error);
+                CHECK(parser.is_done());
+
+                boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+                std::string body = response.body();
 
                 CAPTURE(response[boost::beast::http::field::content_type]);
                 REQUIRE(response[boost::beast::http::field::content_type] == "application/javascript");
                 if(counter % 2 == 0) {
-                    REQUIRE(std::equal(output.begin(), output.end(), std::begin(buffer_js)));
+                    REQUIRE(std::equal(body.begin(), body.end(), std::begin(buffer_js)));
                 } else {
-                    REQUIRE(std::equal(output.begin(), output.end(), std::begin(buffer_js1)));
+                    REQUIRE(std::equal(body.begin(), body.end(), std::begin(buffer_js1)));
                 }
 
                 counter++;
@@ -221,32 +243,83 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
             for(const auto& asset: substore){
                 std::string url = asset.url();
                 CAPTURE(url);
-                udho::net::fake::context<> fake_context_generator{request};
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
-                cstore.serve(stream, url);
-                const udho::net::types::headers::response& response = stream.response();
-                std::string output = fake_context_generator._stream.str();
+                boost::asio::io_context io;
+                udho::net::types::headers::request request;
+                boost::beast::test::stream stream_in(io);
+                boost::beast::test::stream stream_out(io);
+                stream_in.connect(stream_out);
+                udho::net::test_ostream stream(stream_in,
+                   [&](boost::system::error_code ec, std::size_t) {
+                       CHECK_FALSE(ec);
+                   }
+                );
+                udho::net::ostream_view stream_view = stream.view();
+                cstore.serve(stream_view, url);
+
+                stream.finish();
+                io.run();
+
+                std::string output = stream_out.str();
+                CAPTURE(output);
+                std::size_t crlf_pos = output.find("\r\n");
+                CAPTURE(crlf_pos);
+                boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+                parser.eager(true);
+                boost::beast::error_code error;
+                parser.put(boost::asio::buffer(output), error);
+
+                CHECK(!error);
+                CHECK(parser.is_done());
+
+                boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+                std::string body = response.body();
+
 
                 CAPTURE(response[boost::beast::http::field::content_type]);
                 REQUIRE(response[boost::beast::http::field::content_type] == "text/css");
-                REQUIRE(std::equal(output.begin(), output.end(), std::begin(buffer_css)));
+                REQUIRE(std::equal(body.begin(), body.end(), std::begin(buffer_css)));
             }
         }{
             udho::view::resources::asset::const_substore<udho::view::resources::asset::type::img> substore{cstore};
             for(const auto& asset: substore){
                 std::string url = asset.url();
                 CAPTURE(url);
-                udho::net::fake::context<> fake_context_generator{request};
-                udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
 
-                cstore.serve(stream, url);
-                const udho::net::types::headers::response& response = stream.response();
-                std::string output = fake_context_generator._stream.str();
+                boost::asio::io_context io;
+                udho::net::types::headers::request request;
+                boost::beast::test::stream stream_in(io);
+                boost::beast::test::stream stream_out(io);
+                stream_in.connect(stream_out);
+                udho::net::test_ostream stream(stream_in,
+                    [&](boost::system::error_code ec, std::size_t) {
+                        CHECK_FALSE(ec);
+                    }
+                );
+                udho::net::ostream_view stream_view = stream.view();
+                cstore.serve(stream_view, url);
+
+                stream.finish();
+                io.run();
+
+                std::string output = stream_out.str();
+                CAPTURE(output);
+                std::size_t crlf_pos = output.find("\r\n");
+                CAPTURE(crlf_pos);
+                boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+                parser.eager(true);
+                boost::beast::error_code error;
+                parser.put(boost::asio::buffer(output), error);
+
+                CHECK(!error);
+                CHECK(parser.is_done());
+
+                boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+                std::string body = response.body();
 
                 CAPTURE(response[boost::beast::http::field::content_type]);
                 REQUIRE(response[boost::beast::http::field::content_type] == "image/gif");
-                REQUIRE(std::equal(output.begin(), output.end(), std::begin(buffer_img), [](const char& l, const unsigned char& r){ return static_cast<unsigned char>(l) == r; }));
+                REQUIRE(std::equal(body.begin(), body.end(), std::begin(buffer_img), [](const char& l, const unsigned char& r){ return static_cast<unsigned char>(l) == r; }));
             }
         }
 

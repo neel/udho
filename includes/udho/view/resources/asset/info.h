@@ -55,8 +55,10 @@ class asset_registration_info{
     inline basic_resource<asset::type::img>& img() { return cast<asset::type::img>(); }
 
     inline std::string mime() const { return _res->mime(); }
-    inline std::size_t write(udho::net::stream& stream) const{ return _res->write(stream); }
-    inline std::size_t write_contents(udho::net::stream& stream) const{ return _res->write_contents(stream); }
+    template <typename OstreamT>
+    inline std::size_t write(OstreamT& ostream) const{ return _res->write(ostream); }
+    template <typename OstreamT>
+    inline std::size_t write_contents(OstreamT& ostream) const{ return _res->write_contents(ostream); }
     /**
      * @brief type of the asset
      */

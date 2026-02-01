@@ -352,7 +352,7 @@ struct bridge{
      * @return True if compilation was successful, false otherwise.
      */
     template <typename T, typename Aux>
-    udho::view::data::bridges::results exec(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+    udho::view::data::bridges::results exec(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output){
         if(_policy == bridges::policy::non_concurrent) {
             return exec_nolock(name, prefix, data, aux, output);
         } else if(_policy == bridges::policy::thread_safe){
@@ -381,7 +381,7 @@ struct bridge{
         }
 
         template <typename T, typename Aux>
-        udho::view::data::bridges::results exec_nolock(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+        udho::view::data::bridges::results exec_nolock(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output){
             udho::view::data::bridges::results results;
             {
                 if(!udho::view::data::bindings<StateT, T>::exists(_states.size())){
@@ -421,7 +421,7 @@ struct bridge{
         }
 
         template <typename T, typename Aux>
-        udho::view::data::bridges::results exec_mutex(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+        udho::view::data::bridges::results exec_mutex(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output){
             udho::view::data::bridges::results results;
             {
                 std::unique_lock<std::recursive_mutex> lock(_mutex_bind, std::defer_lock);
@@ -493,7 +493,7 @@ struct bridge{
         }
 
         template <typename T, typename Aux>
-        udho::view::data::bridges::results exec_pool(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output){
+        udho::view::data::bridges::results exec_pool(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output){
             udho::view::data::bridges::results results;
             {
                 std::unique_lock<std::recursive_mutex> lock(_mutex_bind, std::defer_lock);
@@ -553,10 +553,10 @@ struct bridge{
             }
         }
         template <typename T, typename Aux>
-        void exec_cs(const std::string& name, const std::string& prefix, const T& data, const Aux& aux, std::string& output, std::unique_ptr<state_type>& state, udho::view::data::bridges::results& results){
+        void exec_cs(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output, std::unique_ptr<state_type>& state, udho::view::data::bridges::results& results){
             std::size_t size = 0;
             try {
-                size = state->exec(view_key(name, prefix), std::ref(data), std::ref(aux), output);
+                size = state->exec(view_key(name, prefix), std::ref(data), aux, output);
             } catch(const sol::error& e){
                 std::string execption_str = udho::url::format("Lua Exeption while executing view {}/{}: ", prefix, name);
                 std::string ex_str;

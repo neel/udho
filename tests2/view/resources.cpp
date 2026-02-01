@@ -108,8 +108,6 @@ Hello World
 
     // TEST The number of assets, name, type, prefix, url, mime type of each view should be same as it was added in the store.
 
-    boost::asio::io_context io;
-
     const udho::view::resources::asset::const_store& asset_substore = cstore.assets();
     {
         auto i = assets.begin();
@@ -130,12 +128,40 @@ Hello World
 
             // TEST asset types are enum class type{ js, css, txt, img };
 
-            udho::net::types::headers::request request;
-            udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
-            asset.write(stream);
+            boost::asio::io_context io;
+            boost::beast::test::stream stream_in(io);
+            boost::beast::test::stream stream_out(io);
+            stream_in.connect(stream_out);
 
-            const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
+            udho::net::test_ostream stream(stream_in,
+               [&](boost::system::error_code ec, std::size_t) {
+                   CHECK_FALSE(ec);
+               }
+            );
+
+            udho::net::ostream_view stream_view = stream.view();
+            asset.write(stream_view);
+
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CAPTURE(response[boost::beast::http::field::content_length]);
+
             // TEST check mime type in response
             // TEST check content size
             CHECK(response[boost::beast::http::field::content_length] == std::to_string(std::get<2>((*i).second).size()));
@@ -143,10 +169,9 @@ Hello World
                 CHECK(response[boost::beast::http::field::content_type] == "application/javascript");
             }
 
-            std::string output = fake_context_generator._stream.str();
             // TEST check output
 
-            CHECK(output == std::get<2>((*i).second));
+            CHECK(body == std::get<2>((*i).second));
 
             ++i;
         }
@@ -265,8 +290,6 @@ Hello World
 
     // TEST The number of assets, name, type, prefix, url, mime type of each view should be same as it was added in the store.
 
-    boost::asio::io_context io;
-
     const udho::view::resources::asset::const_store& asset_substore = cstore.assets();
     std::cout << asset_substore << std::endl;
     {
@@ -287,12 +310,41 @@ Hello World
 
             // TEST asset types are enum class type{ js, css, txt, img };
 
-            udho::net::types::headers::request request;
-            udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-            udho::net::stream stream = udho::net::fake::stream::create(io, fake_context_generator._bridge);
-            asset.write(stream);
 
-            const udho::net::types::headers::response& response = fake_context_generator._bridge->response(); // response type is boost::beast::http::header<false, boost::beast::http::fields>
+            boost::asio::io_context io;
+            boost::beast::test::stream stream_in(io);
+            boost::beast::test::stream stream_out(io);
+            stream_in.connect(stream_out);
+
+            udho::net::test_ostream stream(stream_in,
+                [&](boost::system::error_code ec, std::size_t) {
+                    CHECK_FALSE(ec);
+                }
+            );
+
+            udho::net::ostream_view stream_view = stream.view();
+            asset.write(stream_view);
+
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CAPTURE(response[boost::beast::http::field::content_length]);
+
             // TEST check mime type in response
             // TEST check content size
             CHECK(response[boost::beast::http::field::content_length] == std::to_string(std::get<2>((*i).second).size()));
@@ -300,10 +352,10 @@ Hello World
                 CHECK(response[boost::beast::http::field::content_type] == "application/javascript");
             }
 
-            std::string output = fake_context_generator._stream.str();
+
             // TEST check output
 
-            CHECK(output == std::get<2>((*i).second));
+            CHECK(body == std::get<2>((*i).second));
 
             ++i;
         }

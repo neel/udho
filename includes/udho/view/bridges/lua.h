@@ -38,6 +38,7 @@
 #include <fmt/args.h>
 #include <tabulate/table.hpp>
 #include <udho/view/bridges/lua/binder.h>
+#include <udho/manifold/context.h>
 
 namespace udho{
 namespace view{
@@ -157,34 +158,40 @@ namespace udho::view::data{
         }
     };
 
-    template <typename... Bridges>
-    struct bind<bridges::lua, udho::net::basic_context<udho::view::resources::const_store<Bridges...>>>{
-        using state_type  = typename bridges::lua::state_type;
-        using class_type  = udho::net::basic_context<udho::view::resources::const_store<Bridges...>>;
-        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+    // template <typename StreamT, typename... Components>
+    // struct bind<bridges::lua, udho::manifold::basic_context<StreamT, Components...>>{
+    //     using state_type                = typename bridges::lua::state_type;
+    //     using class_type                = udho::manifold::basic_context<StreamT, Components...>;
+    //     using binder_type               = typename bridges::lua::template default_binder_type<class_type>;
+    //     using context_type              = class_type;
+    //     using portal_type               = typename context_type::portal_type;
+    //     using composition_type          = typename portal_type::composition_view_type;
+    //     using resource_component_type   = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    //     using store_type                = typename resource_component_type::store_type;
 
-        static void apply(state_type& state){
-            using user_type = sol::usertype<class_type>;
+    //     static void apply(state_type& state){
+    //         using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, udho::net::basic_context<...>>: binding" << std::endl;
+    //         std::cout << "udho::view::data::bind<lua, udho::manifold::basic_context<...>>: binding" << std::endl;
 
-            // first bind according to the metatype
-            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+    //         // first bind according to the metatype
+    //         typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+    //         // store_type::bind(state);
 
-            {
-                udho::view::data::bridges::bind<bridges::lua> binder{state};
-                binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
-                binder(udho::view::data::type<udho::net::proxy_wrapper<bridges::lua, Bridges...>>{});
-            }
+    //         {
+    //             // udho::view::data::bridges::bind<bridges::lua> binder{state};
+    //             // binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
+    //             // binder(udho::view::data::type<udho::net::proxy_wrapper<bridges::lua, Bridges...>>{});
+    //         }
 
-            // then add lua specific functionalities
-            user_type& type = binder.type();
+    //         // then add lua specific functionalities
+    //         // user_type& type = binder.type();
 
-            type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name) -> udho::net::proxy_wrapper<bridges::lua, Bridges...> {
-                return self.template view<bridges::lua>(prefix, name);
-            });
-        }
-    };
+    //         // type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name) -> udho::net::proxy_wrapper<bridges::lua, Bridges...> {
+    //         //     return self.template view<bridges::lua>(prefix, name);
+    //         // });
+    //     }
+    // };
 
     template <typename... Bridges>
     struct bind<bridges::lua, udho::net::proxy_wrapper<bridges::lua, Bridges...>>{

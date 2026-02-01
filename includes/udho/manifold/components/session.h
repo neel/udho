@@ -7,6 +7,7 @@
 #include <udho/manifold/portal.h>
 #include <udho/utils/string_view.h>
 #include <boost/uuid/uuid.hpp>
+#include <iostream>
 
 namespace udho{
 namespace manifold{

@@ -248,6 +248,12 @@ class const_store{
             return boost::algorithm::join(bridge_labels, ", ");
         }
 
+        // template <typename StateT>
+        // void bind(StateT& state) {
+        //     _head.bind(state);
+        //     _tail.bind(state);
+        // }
+
     private:
         void _names(std::vector<std::string>& v) const {
             v.emplace_back(_head.name().str());

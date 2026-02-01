@@ -233,9 +233,10 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
      */
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const{
-        // decayed_arguments_type tuple = detail::fill<decayed_arguments_type>(std::forward<Args>(args)...);
-        auto rest = detail::rest<decayed_arguments_type, sizeof...(args)>();
-        bool found = _match.find(subject, rest);
+        auto rest = detail::rest<decayed_arguments_type, sizeof...(Args)>();    // rest is an empty tuple filled with default values
+                                                                                // Given decayed_arguments_type = {T1...Tn} rest only includes types Tk...Tn
+                                                                                // where k = sizeof...(Args)
+        bool found = _match.find(subject, rest);                                // find fills in the rest tuple if subject matches
         if(found){
             auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
             decayed_arguments_type tuple = std::move(std::tuple_cat(std::move(head), rest));

@@ -139,9 +139,12 @@ Number of courses: <?= #d.courses ?>
         "\nNumber of courses: 3\n"
     };
 
+
     SECTION("Default bridge") {
         udho::view::data::bridges::lua lua;
         lua.init();
+
+        std::size_t anything_as_aux;
 
         for (std::size_t i = 0; i < views.size(); ++i) {
             bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
@@ -152,7 +155,7 @@ Number of courses: <?= #d.courses ?>
         for (std::size_t i = 0; i < views.size(); ++i) {
             INFO("Testing expected output for view " << views[i].first);
             std::string output;
-            lua.exec(views[i].first, "prefix", p, nullptr, output);
+            lua.exec(views[i].first, "prefix", p, anything_as_aux, output);
             CHECK(output == expected_outputs[i]);
         }
     }
@@ -174,10 +177,12 @@ Number of courses: <?= #d.courses ?>
 
         std::fill(data.begin(), data.end(), p);
 
+        std::size_t anything_as_aux;
+
         for (std::size_t i = 0; i < views.size(); ++i) {
-            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex] {
+            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex, &anything_as_aux] {
                 std::string output;
-                lua.exec(views[i].first, "prefix", data[i], nullptr, output);
+                lua.exec(views[i].first, "prefix", data[i], anything_as_aux, output);
                 std::lock_guard<std::mutex> lock(mutex);
                 // std::cout << output << std::endl;
                 outputs[i] = output;
@@ -211,10 +216,12 @@ Number of courses: <?= #d.courses ?>
 
         std::fill(data.begin(), data.end(), p);
 
+        std::size_t anything_as_aux;
+
         for (std::size_t i = 0; i < views.size(); ++i) {
-            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex] {
+            threads.emplace_back([&lua, &views, i,  &data, &outputs, &mutex, &anything_as_aux] {
                 std::string output;
-                lua.exec(views[i].first, "prefix", data[i], nullptr, output);
+                lua.exec(views[i].first, "prefix", data[i], anything_as_aux, output);
                 std::lock_guard<std::mutex> lock(mutex);
                 // std::cout << output << std::endl;
                 outputs[i] = output;
@@ -245,10 +252,12 @@ Number of courses: <?= #d.courses ?>
         std::vector<std::string> outputs{views.size()};
         std::mutex               mutex;
 
+        std::size_t anything_as_aux;
+
         for (std::size_t i = 0; i < views.size(); ++i) {
-            threads.emplace_back([&lua, &views, i,  &p, &outputs, &mutex] {
+            threads.emplace_back([&lua, &views, i,  &p, &outputs, &mutex, &anything_as_aux] {
                 std::string output;
-                lua.exec(views[i].first, "prefix", p, nullptr, output);
+                lua.exec(views[i].first, "prefix", p, anything_as_aux, output);
                 std::lock_guard<std::mutex> lock(mutex);
                 // std::cout << output << std::endl;
                 outputs[i] = output;

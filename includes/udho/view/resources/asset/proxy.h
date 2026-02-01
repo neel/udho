@@ -66,11 +66,14 @@ struct proxy{
     /**
      * @brief write the asset contents to stream
      */
-    std::size_t write(udho::net::stream& stream) const{
-        return _desc.write(stream);
+    template <typename OstreamT>
+    std::size_t write(OstreamT& ostream) const{
+        return _desc.write(ostream);
     }
-    std::size_t write_contents(udho::net::stream& stream) const{
-        return _desc.write_contents(stream);
+
+    template <typename OstreamT>
+    std::size_t write_contents(OstreamT& ostream) const{
+        return _desc.write_contents(ostream);
     }
 
     template <asset::type AssetType>

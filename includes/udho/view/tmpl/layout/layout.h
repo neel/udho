@@ -10,7 +10,7 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
-
+#include <udho/manifold/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
 
 namespace udho{
@@ -75,7 +75,10 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     using layout_type  = LayoutT;
     using key_type     = KeyT;
     using context_type = typename LayoutT::context_type;
-    using store_type   = typename context_type::resource_store;
+    using portal_type  = typename context_type::portal_type;
+    using composition_type = typename portal_type::composition_type;
+    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
 
     context_type&       _ctx;
@@ -83,7 +86,7 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     key_type            _key;
     const store_type&   _store;
 
-    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.resources()) {}
+    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().store()) {}
 
     template <typename Data>
     renderer& render(Data&& d){
@@ -129,7 +132,10 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     using layout_type  = LayoutT;
     using key_type     = KeyT;
     using context_type = typename LayoutT::context_type;
-    using store_type   = typename context_type::resource_store;
+    using portal_type  = typename context_type::portal_type;
+    using composition_type = typename portal_type::composition_type;
+    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
     using placeholders_type = typename layout_type::placeholders_type;
     using proxy_type = typename placeholders_type::template proxy_type<key_type>;
@@ -140,7 +146,7 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     key_type            _key;
     const store_type&   _store;
 
-    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.resources()) {}
+    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().resources()) {}
 
     template <typename Data>
     renderer& render(Data&& d){
@@ -282,7 +288,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     template <typename KeyT, typename LayoutT, bool>
     friend struct renderer;
 
-    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.resources(), std::bind(&basic_layout_::on_delete, this))), _finished(false) { }
+    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.portal().resources(), std::bind(&basic_layout_::on_delete, this))), _finished(false) { }
     basic_layout(const basic_layout_& other): _context(other._context), _pimpl(other._pimpl), _finished(other._finished) {}
 
     template <typename Key>
@@ -323,7 +329,8 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
          */
         void finish() {
             if(!_finished){
-                _pimpl->presenter()(_context);
+                udho::net::ostream_view ostream_view = _context.ostream().view();
+                _pimpl->presenter()(ostream_view);
                 _finished = true;
                 _context.finish();
             }

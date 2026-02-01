@@ -5,7 +5,7 @@
 #include <functional>
 #include <udho/utils/format.h>
 #include <udho/manifold/features.h>
-#include <udho/manifold/components/stream.h>
+#include <udho/net/ostream.h>
 
 namespace udho{
 namespace manifold{
@@ -18,7 +18,7 @@ struct basic_handler{
     static constexpr const char* name = "handler";
 
     using stream_type   = StreamT;
-    using ostream_type  = udho::manifold::basic_ostream<stream_type>;
+    using ostream_type  = udho::net::basic_ostream<stream_type>;
 
     struct responder{
         using callback_type = std::function<void (boost::system::error_code, std::size_t)>;

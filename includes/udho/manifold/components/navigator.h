@@ -5,6 +5,7 @@
 #include <udho/manifold/config.h>
 #include <udho/manifold/portal.h>
 #include <udho/utils/encoding.h>
+#include <iostream>
 
 namespace udho{
 namespace manifold{

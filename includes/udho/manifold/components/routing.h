@@ -101,6 +101,20 @@ private:
     const config_type& _config;
 };
 
+template <typename MountpointsT, typename JournalT>
+struct accessor<components::routing<MountpointsT>, JournalT>: basic_accessor<components::routing<MountpointsT>, JournalT>{
+    using basic_accessor_type   = basic_accessor<components::routing<MountpointsT>, JournalT>;
+    using component_type        = components::routing<MountpointsT>;
+    using config_type           = udho::manifold::config<component_type>;
+    using journal_type          = JournalT;
+
+    using basic_accessor_type::basic_accessor_type;
+
+    const udho::url::summary::router& routes() const {
+        return basic_accessor_type::component().table().summary();
+    }
+};
+
 }
 }
 

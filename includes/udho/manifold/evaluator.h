@@ -6,6 +6,7 @@
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/features.h>
 #include <udho/manifold/journal.h>
+#include <iostream>
 
 namespace udho {
 namespace manifold {

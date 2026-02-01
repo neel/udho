@@ -351,6 +351,24 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     using wrapper_type   = wrapper<component_type>;
     using configs_type   = udho::manifold::configs<ComponentT, Rest...>;
 
+    template <typename ComponentQ>
+    using has_component  = std::conditional_t<
+        std::is_same_v<ComponentQ, ComponentT>,
+        std::true_type,
+        typename composition<Rest...>::template has_component<ComponentQ>
+    >;
+
+    template <typename FeatureT, std::size_t Idx>
+    using component_at   = std::conditional_t<
+        features_type::template has<FeatureT>::value && Idx == 0,
+        component_type,
+        std::conditional_t<
+            features_type::template has<FeatureT>::value && Idx != 0,
+            typename composition<Rest...>::template component_at<FeatureT, Idx - 1>,
+            typename composition<Rest...>::template component_at<FeatureT, Idx>
+        >
+    >;
+
     /**
      * @brief The fabric type for a given stage
      *
@@ -645,6 +663,16 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
     using configs_type   = udho::manifold::configs<ComponentT>;
+
+    template <typename ComponentQ>
+    using has_component  = std::is_same<ComponentQ, ComponentT>;
+
+    template <typename FeatureT, std::size_t Idx>
+    using component_at   = std::conditional_t<
+        features_type::template has<FeatureT>::value && Idx == 0,
+        component_type,
+        void
+    >;
 
     template <std::size_t Stage>
     using fabric_type    = typename udho::manifold::detail::flatten_all<Stage, ComponentT>::type;

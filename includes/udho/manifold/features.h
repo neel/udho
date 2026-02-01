@@ -5,10 +5,12 @@
 #include <type_traits>
 #include <udho/manifold/fwd.h>
 #include <udho/net/common.h>
-#include <udho/url/router.h>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
+#include <udho/cookies/jar.h>
 #include <udho/session/note.h>
+#include <udho/url/route_index.h>
 
 namespace udho {
 namespace manifold {
@@ -172,6 +174,11 @@ namespace feature{
         static constexpr const std::string_view name = "locator";
 
         using result = udho::url::detail::route_index;
+    };
+
+    struct resources_storage{
+        static constexpr const std::size_t stage = 0;
+        static constexpr const std::string_view name = "resources_storage";
     };
 
     struct responder{
