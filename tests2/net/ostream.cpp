@@ -142,7 +142,9 @@ struct multithreaded_io{
 
     void run() {
         for(std::size_t i = 0; i < N; ++i) {
-            _threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(_io)));
+            _threads.create_thread([this]{
+                _io.run();
+            });
         }
     }
 
@@ -196,7 +198,9 @@ TEST_CASE("udho manifold basic_buffered_ostream", "[manifold][stream][buffered]"
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -241,7 +245,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -278,7 +284,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -330,7 +338,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
 
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -380,7 +390,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
 
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -484,7 +496,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         auto guard = boost::asio::make_work_guard(io);
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
 
         stream_in.connect(stream_out);
@@ -515,7 +529,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         io.restart();
         ostream.finish();
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
