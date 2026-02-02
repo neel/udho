@@ -3,8 +3,8 @@
 
 #include <udho/net/fwd.h>
 #include <udho/net/common.h>
-#include <udho/net/bridge.h>
-#include <udho/net/stream.h>
+#include <udho/net/_bridge.h>
+#include <udho/net/_stream.h>
 #include <udho/url/summary.h>
 #include <udho/view/data/data.h>
 #include <udho/view/resources/store.h>

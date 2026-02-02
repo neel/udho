@@ -9,7 +9,6 @@
 #endif
 #include <udho/activities.h>
 #include <udho/view/bridges/lua.h>
-#include <udho/net/context.h>
 #include <udho/url/router.h>
 
 namespace activities = udho::activities;
@@ -52,8 +51,8 @@ TEST_CASE( "activity basic", "[activities]" ) {
     boost::asio::io_context io;
 
     SECTION( "construction" ) {
-        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::net::context<udho::view::data::bridges::lua>, MinimalA1, MinimalA2>>&, bool>::value);
-        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<udho::net::context<udho::view::data::bridges::lua>, MinimalA1>>&, bool>::value);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<MinimalA1, MinimalA2>>&, bool>::value);
+        CHECK(std::is_constructible<MinimalA1, std::shared_ptr<activities::collector<MinimalA1>>&, bool>::value);
     }
 
     WHEN("a minimal activity MinimalA1 is constructed using larger collector<MinimalA1, MinimalA2>"){

@@ -164,16 +164,18 @@ struct framework{
     using composition_type       = typename runtime_type::composition_type;
     using routing_component_type = typename label_type::routing_component_type;
     using router_type            = typename label_type::router_type;
+    using handler_component_type = typename label_type::handler_component_type;
 
     static_assert(runtime_type::Count >= 2);
 
     template <typename... Components>
-    framework(routing_table_type&& table, Components&&... components): _router(std::move(table)), _routing(_router), _runtime(_routing, std::forward<Components>(components)...) {}
+    framework(routing_table_type&& table, Components&&... components): _router(std::move(table)), _handler(_router.table().summary()), _routing(_router), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
 
     runtime_type& runtime() { return _runtime; }
 
 private:
     router_type             _router;
+    handler_component_type  _handler;
     routing_component_type  _routing;
     runtime_type            _runtime;
 };

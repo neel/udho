@@ -13,9 +13,9 @@
 #include <udho/activities.h>
 #include <boost/thread.hpp>
 #include <udho/view/bridges/lua.h>
-#include <udho/net/context.h>
 #include <udho/url/router.h>
 #include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/placeholders.hpp>
 
 namespace activities = udho::activities;
 

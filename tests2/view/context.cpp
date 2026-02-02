@@ -9,7 +9,6 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/view/data/data.h>
 #include <udho/url/url.h>
-#include <udho/net/context.h>
 #include <tabulate/table.hpp>
 #include <nlohmann/json.hpp>
 
@@ -25,6 +24,11 @@
 #include <udho/manifold/configs_view.h>
 #include <udho/manifold/components/routing.h>
 #include <udho/manifold/context.h>
+#include <udho/view/bridges/lua.h>
+#include <udho/view/resources/resource.h>
+#include <udho/view/resources/lua.h>
+#include <udho/view/resources/store.h>
+#include <udho/manifold/components/resources.h>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
@@ -83,10 +87,10 @@ struct info{
     }
 };
 
-namespace callbacks{
-
 using namespace udho::manifold::components;
 using namespace udho::manifold;
+
+namespace callbacks{
 
 using stream_type      = boost::beast::test::stream;
 using handler = basic_handler<stream_type>;
@@ -120,11 +124,8 @@ int f1(basic_context<stream_type, handler> context, int a, const std::string& b,
 }
 
 struct X{
-    void f0(udho::net::context<udho::view::data::bridges::lua> context){
-        using context_type = udho::net::context<udho::view::data::bridges::lua>;
-        using store_type   = typename context_type::resource_store;
-
-        const store_type& store = context.resources();
+    void f0(basic_context<stream_type, handler, resources<udho::view::data::bridges::lua>> context){
+        const auto& store = context.portal().resources();
 
         udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.view<udho::view::data::bridges::lua>("primary", "temp");
 
@@ -136,12 +137,12 @@ struct X{
         proxy(inf, context);
 
         context << "Hello X::f0";
-        context << context.route("f0").name();
+        context << context.portal().route("f0").name();
         context.finish();
-        std::cout << context.route("f0").name() << std::endl;
+        std::cout << context.portal().route("f0").name() << std::endl;
     }
 
-    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+    int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
         context << "Hello X::f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -289,7 +290,7 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
 
     using stream_type = udho::net::test_ostream;;
 
-    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>();
+    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>(router.table().summary());
     auto routing_component  = udho::manifold::components::routing(std::move(router));
     auto resource_component = udho::manifold::components::resources(resource_store_proxy);
 

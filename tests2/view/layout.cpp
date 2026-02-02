@@ -210,13 +210,13 @@ struct info{
     }
 };
 
-namespace callbacks{
-
 using namespace udho::manifold::components;
 using namespace udho::manifold;
 
 using stream_type      = boost::beast::test::stream;
 using handler = basic_handler<stream_type>;
+
+namespace callbacks{
 
 void chunk3(basic_context<stream_type, handler> context){
     context << "Chunk 3 (Final)";
@@ -247,13 +247,10 @@ int f1(basic_context<stream_type, handler> context, int a, const std::string& b,
 }
 
 struct X{
-    void f0(udho::net::context<udho::view::data::bridges::lua> context){
-        using context_type = udho::net::context<udho::view::data::bridges::lua>;
-        using store_type   = typename context_type::resource_store;
+    void f0(basic_context<stream_type, handler, resources<udho::view::data::bridges::lua>> context){
+        const auto& store = context.portal().resources();
 
-        const store_type& store = context.resources();
-
-        udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.view<udho::view::data::bridges::lua>("primary", "temp");
+        udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.template view<udho::view::data::bridges::lua>("primary", "temp");
 
         info inf;
         inf.name = "NAME";
@@ -263,12 +260,12 @@ struct X{
         proxy(inf, context);
 
         context << "Hello X::f0";
-        context << context.route("f0").name();
+        context << context.portal().route("f0").name();
         context.finish();
-        std::cout << context.route("f0").name() << std::endl;
+        std::cout << context.portal().route("f0").name() << std::endl;
     }
 
-    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+    int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
         context << "Hello X::f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -337,7 +334,7 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         resource_store_proxy.assets()
     );
 
-    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>();
+    auto handler_component  = udho::manifold::components::basic_handler<stream_type>(router.table().summary());
     auto routing_component  = udho::manifold::components::routing(std::move(router));
     auto resource_component = udho::manifold::components::resources(resource_store_proxy);
 

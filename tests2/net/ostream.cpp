@@ -166,18 +166,18 @@ private:
 
 TEST_CASE("udho manifold basic_buffered_ostream", "[manifold][stream][buffered]") {
     boost::asio::io_context io;
-    stream_type server(io);
-    stream_type client(io);
+    stream_type stream_in(io);
+    stream_type stream_out(io);
 
-    strand_type strand(server.get_executor());
+    strand_type strand(stream_in.get_executor());
 
-    server.connect(client);
+    stream_in.connect(stream_out);
 
     SECTION("buffered stream") {
         bool is_completed = false;
         udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
         std::size_t finish_callback_called = 0;
-        buffered_stream buffered_stream(server, strand, enc,
+        buffered_stream buffered_stream(stream_in, strand, enc,
             [&](boost::system::error_code ec, std::size_t bytes_written){
                 INFO("error: " << ec.message());
                 CHECK_FALSE(ec);

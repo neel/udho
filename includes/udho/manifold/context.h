@@ -31,6 +31,109 @@ struct get_context_for_composition<StreamT, udho::manifold::composition<Componen
     using type = basic_context<StreamT, Components...>;
 };
 
+// { generic feature set to component set
+
+// {{ storage
+template <typename... Components>
+struct internal_component_storage_container{
+    template <typename... XComponents>
+    using append = internal_component_storage_container<Components..., XComponents...>;
+    template <typename... XComponents>
+    using prepend = internal_component_storage_container<XComponents..., Components...>;
+
+    template <typename XComponent>
+    using has = std::disjunction<std::is_same<XComponent, Components>...>;
+};
+// }}
+
+// {{ merge
+
+template <typename OutStorageT, typename ComponentStorage>
+struct _internal_component_storage_unique;
+
+template <typename OutStorageT>
+struct _internal_component_storage_unique<OutStorageT, internal_component_storage_container<>>{
+    using type = OutStorageT;
+};
+
+template <typename OutStorageT, typename Component, typename... Components>
+struct _internal_component_storage_unique<OutStorageT, internal_component_storage_container<Component, Components...>> {
+    using current_result_type = std::conditional_t<
+        OutStorageT::template has<Component>::value,
+        OutStorageT,
+        typename OutStorageT::template append<Component>
+    >;
+    using rest_type = _internal_component_storage_unique<current_result_type, internal_component_storage_container<Components...>>;
+    using type = typename rest_type::type;
+};
+
+template <typename ComponentStorage>
+using internal_component_storage_unique = _internal_component_storage_unique<internal_component_storage_container<>, ComponentStorage>;
+
+// {{ concat
+template <typename... Storages>
+struct internal_component_storage_concat;
+
+template <>
+struct internal_component_storage_concat<> {
+    using type = internal_component_storage_container<>;
+};
+
+template <typename... C>
+struct internal_component_storage_concat<internal_component_storage_container<C...>> {
+    using type = internal_component_storage_container<C...>;
+};
+
+template <typename... L, typename... R, typename... Rest>
+struct internal_component_storage_concat<internal_component_storage_container<L...>, internal_component_storage_container<R...>, Rest... > {
+    using type = typename internal_component_storage_concat<internal_component_storage_container<L..., R...>, Rest...>::type;
+};
+
+template <typename... ComponentStorage>
+struct internal_component_storage_merge{
+    using type        = typename internal_component_storage_unique<typename internal_component_storage_concat<ComponentStorage...>::type>::type;
+};
+// }}
+
+// {{ extract all components providing a single feature
+//    use internal_get_all_components_storage_for_feature
+
+template <typename Feature, std::size_t Idx, typename CompositionT, typename Current = typename CompositionT::template component_at<Feature, Idx>>
+struct _internal_get_all_components_storage_for_feature;
+
+// terminal: component_at returns void => stop, produce empty container
+template <typename Feature, std::size_t Idx, typename CompositionT>
+struct _internal_get_all_components_storage_for_feature<Feature, Idx, CompositionT, void> {
+    using type = internal_component_storage_container<>;
+};
+
+// recursive: Current is a real component => prepend it and continue
+template <typename Feature, std::size_t Idx, typename CompositionT, typename Current>
+struct _internal_get_all_components_storage_for_feature {
+    using tail_type = typename _internal_get_all_components_storage_for_feature<Feature, Idx + 1, CompositionT>::type;
+
+    using type = typename tail_type::template prepend<Current>;
+};
+
+template <typename Feature, typename CompositionT>
+using internal_get_all_components_storage_for_feature = _internal_get_all_components_storage_for_feature<Feature, 0, CompositionT>;
+// }}
+
+template <typename CompositionT>
+struct internal_get_components_storage_for_features;
+
+template <typename... Components>
+struct internal_get_components_storage_for_features<udho::manifold::composition<Components...>> {
+    using composition_type = udho::manifold::composition<Components...>;
+
+    template <typename... Features>
+    struct for_features{
+        using type = typename internal_component_storage_merge<typename internal_get_all_components_storage_for_feature<Features, composition_type>::type...>::type;
+    };
+};
+
+// }
+
 }
 
 template <typename StreamT, typename... Components>
@@ -101,19 +204,19 @@ public:
 
         return assoc("context"),
                cvar("flow_id",     &self_type::_flow_id),
-               fvar("routes",      &self_type::routes),
-               fvar("resources",   &self_type::resources)
+               fvar("routes",      &self_type::_url_routes),
+               fvar("resources",   &self_type::_resources_store)
         ;
     }
 
     std::size_t flow_id() const { return _flow_id; }
 
 private:
-    const auto& routes() const {
+    const auto& _url_routes() const {
         return _portal.routes();
     }
 
-    const auto& resources() const {
+    const auto& _resources_store() const {
         return _portal.resources();
     }
 
@@ -124,6 +227,7 @@ private:
     udho::net::types::headers::response _response;
     boost::beast::multi_buffer          _buffer;
 };
+
 
 }
 }

@@ -7,7 +7,6 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <udho/net/common.h>
-#include <udho/net/bridge.h>
 #include <udho/net/fwd.h>
 #include <udho/hazo/string/basic.h>
 #include <udho/hazo/detail/is_streamable.h>

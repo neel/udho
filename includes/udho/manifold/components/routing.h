@@ -110,9 +110,6 @@ struct accessor<components::routing<MountpointsT>, JournalT>: basic_accessor<com
 
     using basic_accessor_type::basic_accessor_type;
 
-    const udho::url::summary::router& routes() const {
-        return basic_accessor_type::component().table().summary();
-    }
 };
 
 }

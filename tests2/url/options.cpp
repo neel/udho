@@ -10,6 +10,18 @@
 #include <udho/hazo/map.h>
 #include <boost/lexical_cast.hpp>
 #include <udho/url/url.h>
+#include <boost/beast/_experimental/test/stream.hpp>
+#include <udho/manifold/components/handler.h>
+#include <udho/manifold/components/protocol.h>
+#include <udho/manifold/components/routing.h>
+#include <udho/manifold/components/cookies.h>
+#include <udho/manifold/components/session.h>
+#include <udho/manifold/components/pg.h>
+#include <udho/manifold/components/resources.h>
+#include <udho/manifold/components/navigator.h>
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/journal_view.h>
+#include <udho/manifold/configs_view.h>
 
 namespace opt {
     HAZO_ELEMENT(a, std::string);
@@ -39,33 +51,44 @@ using options_type = udho::url::basic_options<
     opt::c
 >;
 
+using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
+
+namespace callbacks{
+using namespace udho::manifold::components;
+using namespace udho::manifold;
+
+using handler = basic_handler<stream_type>;
+
 struct nodef{
     nodef() = delete;
     nodef(int) {}
 };
 
-BOOST_SYMBOL_EXPORT void f0(udho::net::stream context){
+BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
     context << "f0";
     context.finish();
     return;
 }
 
-BOOST_SYMBOL_EXPORT int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
-    context << std::to_string(a+b.size()+c+d);
+BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    context << std::to_string(a.size()+b.size()+c+d);
+    std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
     context.finish();
     return 42;
 }
 
-BOOST_SYMBOL_EXPORT std::string f2(udho::net::stream context, int a, const std::string& b){
+BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
     context << std::to_string(a+b.size());
     context.finish();
     return "hello";
 }
 
-BOOST_SYMBOL_EXPORT std::string f_nodef(udho::net::stream context, nodef, int a){
+BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
     context << std::to_string(a);
     context.finish();
     return "hello";
+}
+
 }
 
 TEST_CASE("url options", "[url][options]") {
@@ -269,15 +292,15 @@ TEST_CASE("url router can apply configurations", "[url][router][options]") {
     using namespace udho::hazo::string::literals;
 
     auto routes1 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)
-    |   udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}").options(opt::a("a1"), opt::b(42), opt::c(4.2))
-    |   udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}").options(opt::a("a2"))
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)
+    |   udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}").options(opt::a("a1"), opt::b(42), opt::c(4.2))
+    |   udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}").options(opt::a("a2"))
     ;
 
     auto routes2 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get).options(opt::a("x0"), opt::b(84), opt::c(8.4))
-    |   udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")
-    |   udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}").options(opt::a("x2"))
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get).options(opt::a("x0"), opt::b(84), opt::c(8.4))
+    |   udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")
+    |   udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}").options(opt::a("x2"))
     ;
 
     auto table  = udho::url::mount_point{"root"_h, "/", std::move(routes1)} | udho::url::mount_point{"m2"_h, "/m2", std::move(routes2)};

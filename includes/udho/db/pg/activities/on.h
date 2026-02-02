@@ -193,18 +193,20 @@ namespace on{
         * Initialized by any context, which is stored as a stateless context.
         * Default status is initialized as internel server error.
         */
-        failure(ContextT ctx): _ctx(ctx){}
+        failure(ContextT& ctx): _ctx(ctx){}
 
         /**
         * The parenthesis operator is called to throw HTTP errors
         */
         bool operator()(const pg::failure& f){
             std::string message = f.error.message() + f.reason;
-            _ctx << pg::exception(f, message);
+            // _ctx << pg::exception(f, message);
+            _ctx.status(boost::beast::http::status::internal_server_error);
+            _ctx << std::move(message);
             return true;
         }
         private:
-            ContextT _ctx;
+            ContextT& _ctx;
     };
 
     /**
@@ -218,18 +220,19 @@ namespace on{
         * Initialized by any context, which is stored as a stateless context.
         * Default status is initialized as internel server error.
         */
-        error(ContextT ctx): _ctx(ctx){}
+        error(ContextT& ctx): _ctx(ctx){}
 
         /**
         * The parenthesis operator is called to throw HTTP errors
         */
         bool operator()(const typename ActivityT::success_type& d){
             boost::beast::http::status status = traits::detail::adl_trait(traits::error_code<ActivityT>{});
-            _ctx << udho::exceptions::http_error(status);
+            _ctx.status(status);
+            // _ctx << udho::exceptions::http_error(status);
             return true;
         }
         private:
-            ContextT _ctx;
+            ContextT& _ctx;
     };
 
     /**
