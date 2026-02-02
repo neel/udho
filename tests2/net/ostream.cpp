@@ -258,7 +258,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         queued_stream.finish();
         boost::thread_group threads2;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads2.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads2.create_thread([&io]{
+                io.run();
+            });
         }
         threads2.join_all();
 
@@ -297,7 +299,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         queued_stream.finish();
         boost::thread_group threads2;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads2.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads2.create_thread([&io]{
+                io.run();
+            });
         }
         threads2.join_all();
 
