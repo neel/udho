@@ -125,6 +125,14 @@ TEST_CASE("udho manifold www pipeline", "[manifold][pipeline][www]") {
     auto resources  = udho::manifold::components::resources(cstore);
     // }
 
+    // { resources: assets, docroot
+    // udho::view::resources::store<> store;
+    // // populate(store)
+    // store.lock();
+    // udho::view::resources::const_store<> cstore{store};
+    // auto resources  = udho::manifold::components::resources(cstore);
+    // }
+
     using framework_type = udho::manifold::framework<udho::manifold::www::stateful::lua::lazy_fs>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
@@ -136,3 +144,4 @@ TEST_CASE("udho manifold www pipeline", "[manifold][pipeline][www]") {
 
     io.run_for(std::chrono::seconds(10));
 }
+

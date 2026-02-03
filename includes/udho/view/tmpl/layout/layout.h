@@ -12,6 +12,7 @@
 #include <udho/view/bridges/header.h>
 #include <udho/manifold/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
+#include <cassert>
 
 namespace udho{
 namespace view{
@@ -97,11 +98,15 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
 
         std::string view_addr = _layout.properties(_key).view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-            proxy += results.str();
+            if constexpr (_store.bridges_count > 0 ) {
+                udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+                proxy += results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+                const udho::view::data::bridges::view_header& header = _store.header(view_addr);
+                header_renderer_type::apply(header);
+            } else {
+                assert(0 == 1 && "trying to render a view from non-view resource store");
+            }
         } else {
             std::stringstream str_stream;
             if constexpr (helper::is_streamable_v<Data>) {
@@ -158,11 +163,15 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
         const proxy::placeholder_properties& p = _layout.properties(_key);
         std::string view_addr = p.view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-            proxy = results.str();
+            if constexpr (_store.bridges_count > 0 ) {
+                udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+                proxy = results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+                const udho::view::data::bridges::view_header& header = _store.header(view_addr);
+                header_renderer_type::apply(header);
+            } else {
+                assert(0 == 1 && "trying to render a view from non-view resource store");
+            }
         } else {
             std::stringstream str_stream;
             if constexpr (helper::is_streamable_v<Data>) {

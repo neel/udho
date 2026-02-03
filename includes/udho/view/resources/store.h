@@ -396,6 +396,8 @@ struct const_store{
     using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_store<XBridges...>;
     using view_autoresolver_type         = detail::view_bridge_auto_resolver<0, std::tuple<XBridges...>>;
 
+    static constexpr const std::size_t bridges_count = sizeof...(XBridges);
+
     /**
      * @brief construct a const_store from a resource store
      * @tparam Bridges A suuperset of Bridges
@@ -549,6 +551,8 @@ struct const_store<>{
     using asset_substore_readonly_css    = udho::view::resources::asset::const_substore<asset::type::css>;
     using asset_substore_readonly_img    = udho::view::resources::asset::const_substore<asset::type::img>;
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
+
+    static constexpr const std::size_t bridges_count = 0;
 
     /**
      * @brief construct a const_store from a resource store
