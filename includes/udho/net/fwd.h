@@ -9,19 +9,22 @@
 namespace udho{
 namespace net{
 
-template <typename ProtocolT>
-struct connection;
+// template <typename ProtocolT>
+// struct connection;
 
-template <typename ListenerT>
-struct server;
+// template <typename ListenerT>
+// struct server;
 
-class stream;
+// class stream;
 
 // template <typename RouterT>
 // struct handle;
 
-template <typename ResourceSubsetT>
-struct basic_context;
+// template <typename ResourceSubsetT>
+// struct basic_context;
+
+template <typename WireT, typename RuntimeT>
+struct basic_listener;
 
 }
 }

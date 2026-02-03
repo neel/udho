@@ -240,7 +240,7 @@ struct assets: public abstract_explorer {
      */
     inline bool is_subset(const std::string& subject) const override {
         std::string sub = utils::slash_quote(subject);          // _base starts and ends with / -> sub starts with /
-        for(auto p: _assets.prefixes()){
+        for(const auto& p: _assets.prefixes()){
             const std::string& prefix = p.prefix();                     // prefix does not contain any leading or trailing /
             std::string prefix_q = utils::slash_quote(utils::slash_concat(_assets.base(), prefix));          // prefix_q starts and ends with /
             bool prefix_matched = boost::starts_with(sub, _assets.base()) && boost::starts_with(prefix_q, sub);    // prefix_q starts with the sub

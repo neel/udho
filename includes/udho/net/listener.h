@@ -177,6 +177,14 @@ private:
     bool                     _running;
 };
 
+template <typename RuntimeT>
+struct basic_listener<std::stringstream, RuntimeT>{};
+
+template <typename RuntimeT>
+basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT> listener(boost::asio::io_context& io, RuntimeT& runtime, typename detail::wire_traits<typename RuntimeT::stream_type::protocol_type>::endpoint_type endpoint) {
+    return basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT>(io, runtime, endpoint);
+}
+
 }
 }
 
