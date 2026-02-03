@@ -261,6 +261,45 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
 
 // } transitions
 
+// { terminal
+
+template <typename StreamT, typename Tag, typename... ExtraComponents>
+struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {
+    using label_type        = www::basic_label<StreamT, Tag, ExtraComponents...>;
+    using stream_type       = StreamT;
+    using runtime_type      = basic_runtime<label_type, StreamT>;
+    using flow_type         = typename runtime_type::flow_type;
+    using composition_type  = typename runtime_type::composition_type;
+    using journal_type      = typename flow_type::journal_type;
+    using configs_type      = typename runtime_type::configs_type;
+
+    basic_terminal() = delete;
+    basic_terminal(const basic_terminal&) = delete;
+
+    basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+        : _composition(composition), _configs(configs), _journal(journal) {}
+
+    bool reenter(stream_type& stream) { return true; }
+    void prepare(stream_type& stream) { }
+    bool error(udho::manifold::exclusive_result success, stream_type& stream){
+        if(success.has_exception()) {
+            try{
+                success.rethrow();
+            } catch(const std::exception& ex) {
+                std::cout << "exception: " << ex.what() << std::endl;
+            }
+        }
+        return false;
+    }
+
+private:
+    composition_type&   _composition;
+    const configs_type& _configs;
+    const journal_type& _journal;
+};
+
+// } terminal
+
 namespace detail{
 
 template <typename Label, typename StreamT, typename RoutingTableT>
