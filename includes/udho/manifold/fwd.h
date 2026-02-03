@@ -214,6 +214,9 @@ struct journal_const_view;
 template <std::size_t Stage, typename OrderT, typename CompositionT>
 class common_pipepine;
 
+template <typename LabelT, typename StreamT>
+struct basic_runtime;
+
 /**
  * @brief Flow label for pipeline type identification
  *
@@ -222,11 +225,11 @@ class common_pipepine;
  *
  * @tparam LabelT The label type (typically an empty struct)
  */
-template <typename LabelT>
-struct flow;
+template <typename LabelT, typename StreamT>
+struct basic_flow;
 
-template <typename LabelT>
-struct terminal;
+template <typename LabelT, typename StreamT>
+struct basic_terminal;
 
 /**
  * @brief Pipeline execution plan blueprint

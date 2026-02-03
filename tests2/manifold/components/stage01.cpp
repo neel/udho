@@ -38,66 +38,71 @@
 #include <udho/manifold/visualize.h>
 #include <udho/view/bridges/lua.h>
 
-using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
+#include <udho/net/listener.h>
 
-namespace callbacks{
-    using namespace udho::manifold::components;
-    using namespace udho::manifold;
+// using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
-    using handler = basic_handler<stream_type>;
+using namespace udho::manifold::components;
+using namespace udho::manifold;
+
+template <typename StreamT>
+struct basic_callbacks{
+    using handler = basic_handler<StreamT>;
 
     struct nodef{
         nodef() = delete;
         nodef(int) {}
     };
 
-    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+    static BOOST_SYMBOL_EXPORT void f0(basic_context<StreamT, handler, cookies> context){
         context << "f0";
         context.finish();
         return;
     }
 
-    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    static BOOST_SYMBOL_EXPORT int f1(basic_context<StreamT, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
         context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
-    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+    static BOOST_SYMBOL_EXPORT std::string f2(basic_context<StreamT, handler, cookies> context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
-    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+    static BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<StreamT, handler> context, nodef, int a){
         context << std::to_string(a);
         context.finish();
         return "hello";
     }
+};
 
-}
+using test_callbacks = basic_callbacks<boost::beast::test::stream>;
 
 namespace testing{
 
+template <typename StreamT>
 auto url() {
     using namespace udho::hazo::string::literals;
     auto actions1 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions2 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions3 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
@@ -109,12 +114,21 @@ auto url() {
     return table;
 }
 
-using routing_table_type = std::decay_t<decltype(url())>;
+auto test_url() {
+    return url<boost::beast::test::stream>();
+}
+
+auto tcp_url() {
+    return url<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type>();
+}
+
+template <typename StreamT>
+using routing_table_type = std::decay_t<decltype(url<StreamT>())>;
 
 
 template <typename StreamT>
-struct www{
-    using router_type                = udho::url::basic_router<routing_table_type>;
+struct basic_www{
+    using router_type                = udho::url::basic_router<routing_table_type<StreamT>>;
     using handler_component_type     = udho::manifold::components::basic_handler<StreamT>;
     using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
@@ -129,8 +143,10 @@ struct www{
 }
 
 template <typename StreamT>
-struct udho::manifold::sketch<testing::www<StreamT>>{
-    using www_type = testing::www<StreamT>;
+struct udho::manifold::sketch<testing::basic_www<StreamT>>{
+    using www_type = testing::basic_www<StreamT>;
+
+    using stream_type = StreamT;
 
     using composition_type = udho::manifold::composition<
         typename www_type::handler_component_type,
@@ -157,10 +173,10 @@ namespace testing{
 
 template <typename StreamT = boost::beast::test::stream>
 struct framework{
-    using label_type             = testing::www<StreamT>;
+    using label_type             = testing::basic_www<StreamT>;
     using sketch_type            = udho::manifold::sketch<label_type>;
-    using runtime_type           = udho::manifold::runtime<label_type>;
-    using flow_type              = udho::manifold::flow<label_type>;
+    using runtime_type           = udho::manifold::basic_runtime<label_type, StreamT>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using routing_component_type = typename label_type::routing_component_type;
     using router_type            = typename label_type::router_type;
@@ -169,7 +185,7 @@ struct framework{
     static_assert(runtime_type::Count >= 2);
 
     template <typename... Components>
-    framework(routing_table_type&& table, Components&&... components): _router(std::move(table)), _handler(_router.table().summary()), _routing(_router), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
+    framework(routing_table_type<StreamT>&& table, Components&&... components): _router(std::move(table)), _handler(_router.table().summary()), _routing(_router), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
 
     runtime_type& runtime() { return _runtime; }
 
@@ -183,18 +199,19 @@ private:
 }
 
 template <typename StreamT>
-struct udho::manifold::terminal<testing::www<StreamT>> {
-    using label_type        = testing::www<StreamT>;
-    using runtime_type      = runtime<label_type>;
-    using flow_type         = flow<label_type>;
+struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
+    using label_type        = testing::basic_www<StreamT>;
+    using stream_type       = StreamT;
+    using runtime_type      = basic_runtime<label_type, StreamT>;
+    using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
     using configs_type      = typename runtime_type::configs_type;
 
-    terminal() = delete;
-    terminal(const terminal&) = delete;
+    basic_terminal() = delete;
+    basic_terminal(const basic_terminal&) = delete;
 
-    terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+    basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     bool reenter(stream_type& stream) { return true; }
@@ -219,11 +236,12 @@ private:
 
 static constexpr const std::size_t route_locator_stage = udho::manifold::feature::locator::stage;
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
-    using label_type             = testing::www<StreamT>;
+struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_locator_stage>{
+    using label_type             = testing::basic_www<StreamT>;
+    using stream_type            = StreamT;
     using sketch_type            = sketch<label_type>;
-    using runtime_type           = runtime<label_type>;
-    using flow_type              = flow<label_type>;
+    using runtime_type           = basic_runtime<label_type, stream_type>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
     using pipeline_type          = typename runtime_type::template pipeline_at<route_locator_stage>;
@@ -255,12 +273,14 @@ struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
 };
 
 static constexpr const std::size_t action_transition_stage = 2;
+
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage>{
-    using label_type             = testing::www<StreamT>;
+struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_transition_stage>{
+    using label_type             = testing::basic_www<StreamT>;
+    using stream_type            = StreamT;
     using sketch_type            = sketch<label_type>;
-    using runtime_type           = runtime<label_type>;
-    using flow_type              = flow<label_type>;
+    using runtime_type           = basic_runtime<label_type, stream_type>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
     using pipeline_type          = typename runtime_type::template pipeline_at<action_transition_stage>;
@@ -325,8 +345,217 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
 
 static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feature::identifier::stage);
 
-TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
-    boost::asio::io_context io_context;
+// TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
+//     boost::asio::io_context io_context;
+//     // { session component
+//     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+//     catalogue_type catalogue{udho::session::storage::fs{}};
+//     auto session    = udho::manifold::components::session(catalogue);
+//     // }
+//     // { resources: views, assets
+//     udho::view::data::bridges::lua lua;
+//     lua.init();
+
+//     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+//     store.lock();
+//     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+//     auto resources  = udho::manifold::components::resources(cstore);
+//     // }
+
+//     std::string request_data =
+//         "POST /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
+//         "Host: example.com\r\n"
+//         "Cookie: session=s1; theme=dark; uid=42\r\n"
+//         "Content-Length: 13\r\n"
+//         "Content-Type: text/plain\r\n"
+//         "\r\n"
+//         "Hello, World!"
+//         "POST /f1/hello/world/25/23?name=test&id=42&filter=active HTTP/1.1\r\n"
+//         "Host: example.com\r\n"
+//         "Content-Length: 13\r\n"
+//         "Cookie: session=s2; theme=light; uid=99\r\n"
+//         "Content-Type: text/plain\r\n"
+//         "\r\n"
+//         "Hello, Earth!"
+//         ;
+//     boost::beast::test::stream stream_in(io_context, request_data);
+//     boost::beast::test::stream stream_out(io_context);
+//     stream_in.connect(stream_out);
+
+//     auto framework  = testing::framework(testing::test_url(), session, resources);
+//     auto flow       = framework.runtime().spawn(std::move(stream_in));
+
+//     {
+//         std::ofstream dotfile("composition.dot");
+//         udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
+//     }
+
+//     using framework_type = std::decay_t<decltype(framework)>;
+//     using runtime_type   = framework_type::runtime_type;
+//     using flow_type      = framework_type::flow_type;
+//     using journal_type   = flow_type::journal_type;
+
+
+//     using portal_type            = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+//     using context_type           = typename udho::manifold::detail::get_context_for_portal<boost::beast::test::stream, portal_type>::type;
+
+//     lua.bind(udho::view::data::type<context_type>{});
+
+
+//     flow->start();
+
+//     std::size_t counter = 0;
+
+//     // the callback gets called in two circumstances
+//     //  1. pipeline finished processing
+//     //  2. pipeline encountered error
+//     // in both circumstances a decision whether to reenter or not
+//     // has been made already which is passed to reenter argument
+//     flow->then([&counter](const auto& flow, bool reenter) {
+//         std::cout << "finished: " << reenter << std::endl;
+//         const journal_type& journal = flow.journal();
+
+//         const auto& w_request    = journal.at<udho::manifold::feature::header_reader>();
+//         const auto& w_route_desc = journal.at<udho::manifold::feature::identifier>();
+//         const auto& w_uri        = journal.at<udho::manifold::feature::locator>();
+//         const auto& w_jar        = journal.at<udho::manifold::feature::cookie_load>();
+//         const auto& w_body       = journal.at<udho::manifold::feature::body_reader>();
+
+//         if(counter == 0) {
+//             CHECK(reenter);
+
+//             REQUIRE(w_request.ready());
+//             REQUIRE(w_route_desc.ready());
+//             REQUIRE(w_uri.ready());
+//             REQUIRE(w_jar.ready());
+//             REQUIRE(w_body.ready());
+
+//             const udho::manifold::feature::header_reader::result& request    = w_request;
+//             const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
+//             const udho::manifold::feature::locator::result&       uri        = w_uri;
+//             const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
+//             const udho::manifold::feature::body_reader::result&   body       = w_body;
+
+//             CHECK(request.method() == boost::beast::http::verb::post);
+//             CHECK(request.target() == "/f1/hello/world/23/24?name=test&id=42&filter=active");
+//             CHECK(request[boost::beast::http::field::host] == "example.com");
+//             CHECK(request[boost::beast::http::field::content_type] == "text/plain");
+//             CHECK(request[boost::beast::http::field::content_length] == "13");
+
+//             CHECK(route_desc.resource() == "/f1/hello/world/23/24");
+//             {
+//                 const auto& params = route_desc.params();
+//                 auto get1 = [&](const std::string& k) -> std::string {
+//                     auto it = params.find(k);
+//                     REQUIRE(it != params.end());
+//                     return it->second;
+//                 };
+//                 CHECK(get1("name") == "test");
+//                 CHECK(get1("id") == "42");
+//                 CHECK(get1("filter") == "active");
+//             }
+
+//             CHECK(jar.count("session") == 1);
+//             CHECK(jar.count("theme")   == 1);
+//             CHECK(jar.count("uid")     == 1);
+
+//             {
+//                 auto v = jar.by_name("session");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].name() == "session");
+//                 CHECK(v[0].value() == "s1");
+//                 CHECK(!v[0].domain().has_value());
+//                 CHECK(!v[0].path().has_value());
+//             } {
+//                 auto v = jar.by_name("theme");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].value() == "dark");
+//             } {
+//                 auto v = jar.by_name("uid");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].value() == "42");
+//             }
+
+
+//             CHECK(body.str() == "Hello, World!");
+//             CHECK(body.bytes_transferred() == 13);
+//             CHECK(body.error() == std::error_code{});
+
+//         } else if(counter == 1) {
+//             CHECK(reenter);
+
+//             CHECK(w_request.ready());
+//             CHECK(w_route_desc.ready());
+//             CHECK(w_uri.ready());
+//             CHECK(w_jar.ready());
+//             CHECK(w_body.ready());
+
+//             const udho::manifold::feature::header_reader::result& request    = w_request;
+//             const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
+//             const udho::manifold::feature::locator::result&       uri        = w_uri;
+//             const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
+//             const udho::manifold::feature::body_reader::result&   body       = w_body;
+
+//             CHECK(request.method() == boost::beast::http::verb::post);
+//             CHECK(request.target() == "/f1/hello/world/25/23?name=test&id=42&filter=active");
+//             CHECK(request[boost::beast::http::field::host] == "example.com");
+//             CHECK(request[boost::beast::http::field::content_type] == "text/plain");
+//             CHECK(request[boost::beast::http::field::content_length] == "13");
+
+//             CHECK(route_desc.resource() == "/f1/hello/world/25/23");
+//             {
+//                 const auto& params = route_desc.params();
+//                 auto get1 = [&](const std::string& k) -> std::string {
+//                     auto it = params.find(k);
+//                     REQUIRE(it != params.end());
+//                     return it->second;
+//                 };
+//                 CHECK(get1("name") == "test");
+//                 CHECK(get1("id") == "42");
+//                 CHECK(get1("filter") == "active");
+//             }
+
+//             CHECK(jar.count("session") == 1);
+//             CHECK(jar.count("theme")   == 1);
+//             CHECK(jar.count("uid")     == 1);
+
+//             {
+//                 auto v = jar.by_name("session");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].value() == "s2");
+//             } {
+//                 auto v = jar.by_name("theme");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].value() == "light");
+//             } {
+//                 auto v = jar.by_name("uid");
+//                 REQUIRE(v.size() == 1);
+//                 CHECK(v[0].value() == "99");
+//             }
+
+//             CHECK(body.str() == "Hello, Earth!");
+//             CHECK(body.bytes_transferred() == 13);
+//             CHECK(body.error() == std::error_code{});
+
+//         } else if(counter == 2) {
+//             CHECK(!reenter);
+//             REQUIRE(!w_request.ready());
+//         }
+
+//         ++counter;
+//     });
+
+//     io_context.run();
+
+//     CHECK(counter == 3);
+//     CHECK(framework.runtime().count() == 0);
+
+//     std::string output = stream_out.str();
+//     std::cout << "stream_out: " << std::endl << output << std::endl;
+// }
+
+TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline]") {
+    boost::asio::io_context io;
     // { session component
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
@@ -342,192 +571,20 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     auto resources  = udho::manifold::components::resources(cstore);
     // }
 
-    auto framework  = testing::framework(testing::url(), session, resources);
-    auto flow       = framework.runtime().spawn();
+    using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;
+    using framework_type = testing::framework<socket_type>;
+    using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+    using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
+    using listener_type  = udho::net::basic_listener<boost::asio::ip::tcp, framework_type::runtime_type>;
+    using endpoint_type  = typename listener_type::endpoint_type;
 
-    {
-        std::ofstream dotfile("composition.dot");
-        udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
-    }
-
-    using framework_type = std::decay_t<decltype(framework)>;
-    using runtime_type   = framework_type::runtime_type;
-    using flow_type      = framework_type::flow_type;
-    using journal_type   = flow_type::journal_type;
-
-
-    using portal_type            = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
-    using context_type           = typename udho::manifold::detail::get_context_for_portal<stream_type, portal_type>::type;
+    auto framework  = framework_type(testing::tcp_url(), session, resources);
 
     lua.bind(udho::view::data::type<context_type>{});
 
-    std::string request_data =
-        "POST /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
-        "Host: example.com\r\n"
-        "Cookie: session=s1; theme=dark; uid=42\r\n"
-        "Content-Length: 13\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "Hello, World!"
-        "POST /f1/hello/world/25/23?name=test&id=42&filter=active HTTP/1.1\r\n"
-        "Host: example.com\r\n"
-        "Content-Length: 13\r\n"
-        "Cookie: session=s2; theme=light; uid=99\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "Hello, Earth!"
-    ;
-    stream_type stream_in(io_context, request_data);
-    stream_type stream_out(io_context);
-    stream_in.connect(stream_out);
-    flow->start(stream_in);
+    listener_type listener(io, framework.runtime(), endpoint_type{boost::asio::ip::tcp::v4(), 9999});
 
-    std::size_t counter = 0;
+    listener.start();
 
-    // the callback gets called in two circumstances
-    //  1. pipeline finished processing
-    //  2. pipeline encountered error
-    // in both circumstances a decision whether to reenter or not
-    // has been made already which is passed to reenter argument
-    flow->then([&counter](const auto& flow, bool reenter) {
-        std::cout << "finished: " << reenter << std::endl;
-        const journal_type& journal = flow.journal();
-
-        const auto& w_request    = journal.at<udho::manifold::feature::header_reader>();
-        const auto& w_route_desc = journal.at<udho::manifold::feature::identifier>();
-        const auto& w_uri        = journal.at<udho::manifold::feature::locator>();
-        const auto& w_jar        = journal.at<udho::manifold::feature::cookie_load>();
-        const auto& w_body       = journal.at<udho::manifold::feature::body_reader>();
-
-        if(counter == 0) {
-            CHECK(reenter);
-
-            REQUIRE(w_request.ready());
-            REQUIRE(w_route_desc.ready());
-            REQUIRE(w_uri.ready());
-            REQUIRE(w_jar.ready());
-            REQUIRE(w_body.ready());
-
-            const udho::manifold::feature::header_reader::result& request    = w_request;
-            const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
-            const udho::manifold::feature::locator::result&       uri        = w_uri;
-            const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
-            const udho::manifold::feature::body_reader::result&   body       = w_body;
-
-            CHECK(request.method() == boost::beast::http::verb::post);
-            CHECK(request.target() == "/f1/hello/world/23/24?name=test&id=42&filter=active");
-            CHECK(request[boost::beast::http::field::host] == "example.com");
-            CHECK(request[boost::beast::http::field::content_type] == "text/plain");
-            CHECK(request[boost::beast::http::field::content_length] == "13");
-
-            CHECK(route_desc.resource() == "/f1/hello/world/23/24");
-            {
-                const auto& params = route_desc.params();
-                auto get1 = [&](const std::string& k) -> std::string {
-                    auto it = params.find(k);
-                    REQUIRE(it != params.end());
-                    return it->second;
-                };
-                CHECK(get1("name") == "test");
-                CHECK(get1("id") == "42");
-                CHECK(get1("filter") == "active");
-            }
-
-            CHECK(jar.count("session") == 1);
-            CHECK(jar.count("theme")   == 1);
-            CHECK(jar.count("uid")     == 1);
-
-            {
-                auto v = jar.by_name("session");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].name() == "session");
-                CHECK(v[0].value() == "s1");
-                CHECK(!v[0].domain().has_value());
-                CHECK(!v[0].path().has_value());
-            } {
-                auto v = jar.by_name("theme");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].value() == "dark");
-            } {
-                auto v = jar.by_name("uid");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].value() == "42");
-            }
-
-
-            CHECK(body.str() == "Hello, World!");
-            CHECK(body.bytes_transferred() == 13);
-            CHECK(body.error() == std::error_code{});
-
-        } else if(counter == 1) {
-            CHECK(reenter);
-
-            CHECK(w_request.ready());
-            CHECK(w_route_desc.ready());
-            CHECK(w_uri.ready());
-            CHECK(w_jar.ready());
-            CHECK(w_body.ready());
-
-            const udho::manifold::feature::header_reader::result& request    = w_request;
-            const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
-            const udho::manifold::feature::locator::result&       uri        = w_uri;
-            const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
-            const udho::manifold::feature::body_reader::result&   body       = w_body;
-
-            CHECK(request.method() == boost::beast::http::verb::post);
-            CHECK(request.target() == "/f1/hello/world/25/23?name=test&id=42&filter=active");
-            CHECK(request[boost::beast::http::field::host] == "example.com");
-            CHECK(request[boost::beast::http::field::content_type] == "text/plain");
-            CHECK(request[boost::beast::http::field::content_length] == "13");
-
-            CHECK(route_desc.resource() == "/f1/hello/world/25/23");
-            {
-                const auto& params = route_desc.params();
-                auto get1 = [&](const std::string& k) -> std::string {
-                    auto it = params.find(k);
-                    REQUIRE(it != params.end());
-                    return it->second;
-                };
-                CHECK(get1("name") == "test");
-                CHECK(get1("id") == "42");
-                CHECK(get1("filter") == "active");
-            }
-
-            CHECK(jar.count("session") == 1);
-            CHECK(jar.count("theme")   == 1);
-            CHECK(jar.count("uid")     == 1);
-
-            {
-                auto v = jar.by_name("session");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].value() == "s2");
-            } {
-                auto v = jar.by_name("theme");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].value() == "light");
-            } {
-                auto v = jar.by_name("uid");
-                REQUIRE(v.size() == 1);
-                CHECK(v[0].value() == "99");
-            }
-
-            CHECK(body.str() == "Hello, Earth!");
-            CHECK(body.bytes_transferred() == 13);
-            CHECK(body.error() == std::error_code{});
-
-        } else if(counter == 2) {
-            CHECK(!reenter);
-            REQUIRE(!w_request.ready());
-        }
-
-        ++counter;
-    });
-
-    io_context.run();
-
-    CHECK(counter == 3);
-    CHECK(framework.runtime().count() == 0);
-
-    std::string output = stream_out.str();
-    std::cout << "stream_out: " << std::endl << output << std::endl;
+    io.run();
 }

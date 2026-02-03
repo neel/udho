@@ -18,15 +18,16 @@ namespace manifold{
  *
  * @tparam LabelT The pipeline label type
  */
-template <typename LabelT>
-struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transitioner<LabelT, runtime<LabelT>::Count, 0>{
+template <typename LabelT, typename StreamT>
+struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, StreamT>>, detail::transitioner<LabelT, StreamT, basic_runtime<LabelT, StreamT>::Count, 0>{
     using label_type        = LabelT;
+    using stream_type       = StreamT;
     using sketch_type       = sketch<label_type>;
-    using runtime_type      = runtime<label_type>;
+    using runtime_type      = basic_runtime<label_type, stream_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
-    using ptr               = std::shared_ptr<flow<LabelT>>;
+    using ptr               = std::shared_ptr<basic_flow<LabelT, StreamT>>;
 
     static constexpr std::size_t Count = runtime_type::Count;
 
@@ -40,17 +41,17 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
 
     /// @name Pipeline sompletion callback
     /// @{
-    using callback_type        = std::function<void (const flow<LabelT>&, bool)>;
+    using callback_type        = std::function<void (const basic_flow<LabelT, StreamT>&, bool)>;
     /// @}
 
     using journal_type         = typename start_pipeline_type::full_journal_type;
 
-    template <typename>
-    friend struct runtime;
+    template <typename, typename>
+    friend struct basic_runtime;
 
-    flow() = delete;
-    flow(const flow<LabelT>&) = delete;
-    flow(flow<LabelT>&&) = delete;
+    basic_flow() = delete;
+    basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
+    basic_flow(basic_flow<LabelT, StreamT>&&) = delete;
 
     std::size_t id() const { return _id; }
 
@@ -58,7 +59,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
      * @brief Gets a shared pointer to this flow
      * @return Shared pointer to this flow instance
      */
-    ptr self() { return std::enable_shared_from_this<flow<LabelT>>::shared_from_this(); }
+    ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
 
     /**
      * @brief Applies configuration patches for a specific stage
@@ -72,7 +73,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
      */
     template <int Stage, typename... Args>
     void apply(pipeline_at<Stage>& p, configs_type& config, Args&&... args){
-        detail::transitioner<LabelT, udho::manifold::runtime<LabelT>::Count, Stage>::apply(self(), p, config, std::forward<Args>(args)...);
+        detail::transitioner<LabelT, StreamT, udho::manifold::basic_runtime<LabelT, StreamT>::Count, Stage>::apply(self(), p, config, std::forward<Args>(args)...);
     }
 
     /**
@@ -85,7 +86,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(Args&&... args) { _root_pipeline(self(), std::forward<Args>(args)...); }
+    void start(Args&&... args) { _root_pipeline(self(), _stream, std::forward<Args>(args)...); }
 
     /**
      * @brief Starts asynchronous pipeline execution
@@ -98,11 +99,11 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), std::forward<Args>(args)...); }
+    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), _stream, std::forward<Args>(args)...); }
 
     template <typename... Args>
     bool reenter(Args&&... args) {
-        using terminal_type = udho::manifold::terminal<label_type>;
+        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
 
         terminal_type terminal(composition(), configs(), journal());
         bool should_reenter = terminal.reenter(std::forward<Args>(args)...);
@@ -112,7 +113,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
 
     template <typename... Args>
     void prepare(Args&&... args) {
-        using terminal_type = udho::manifold::terminal<label_type>;
+        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
 
         terminal_type terminal(composition(), configs(), journal());
         terminal.prepare(std::forward<Args>(args)...);
@@ -133,7 +134,7 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
     bool error(udho::manifold::exclusive_result success, Args&&... args) {
         assert(!success);
 
-        using terminal_type = udho::manifold::terminal<label_type>;
+        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
         terminal_type terminal(composition(), configs(), journal());
         bool should_reenter = terminal.error(success, std::forward<Args>(args)...);
 
@@ -157,6 +158,9 @@ struct flow: public std::enable_shared_from_this<flow<LabelT>>, detail::transiti
     const configs_type& configs() const { return _root_pipeline.configs(); }
     const configs_type& baseline() const { return _runtime.baseline(); }
     const journal_type& journal() const { return _root_pipeline.journal(); }
+
+    stream_type& stream() { return _stream; }
+    const stream_type& stream() const { return _stream; }
 
 private:
 
@@ -197,8 +201,8 @@ private:
      * @param composition Reference to the component composition
      * @param baseline Reference to baseline configuration
      */
-    flow(runtime_type& runtime, composition_type& composition, configs_type& baseline)
-        : _runtime(runtime), _id(_counter++), _root_pipeline(composition, baseline, _id), _finish_pipeline(_root_pipeline.template at<Count>()) {}
+    basic_flow(runtime_type& runtime, composition_type& composition, configs_type& baseline, stream_type&& stream)
+        : _runtime(runtime), _stream(std::move(stream)), _id(_counter++), _root_pipeline(composition, baseline, _id), _finish_pipeline(_root_pipeline.template at<Count>()) {}
 
     /**
      * @brief Factory method for flow creation
@@ -206,12 +210,13 @@ private:
      * @param runtime Reference to the managing runtime
      * @return New flow instance
      */
-    static ptr create(runtime_type& runtime) {
-        return ptr(new flow(runtime, runtime.composition(), runtime.baseline()));
+    static ptr create(runtime_type& runtime, stream_type&& stream) {
+        return ptr(new basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)));
     }
 
 private:
     runtime_type&           _runtime;
+    stream_type             _stream;
     std::size_t             _id;
     start_pipeline_type     _root_pipeline;
     finish_pipeline_type&   _finish_pipeline;
@@ -219,8 +224,8 @@ private:
     static std::size_t      _counter;
 };
 
-template <typename LabelT>
-std::size_t flow<LabelT>::_counter = 0;
+template <typename LabelT, typename StreamT>
+std::size_t basic_flow<LabelT, StreamT>::_counter = 0;
 
 }
 }

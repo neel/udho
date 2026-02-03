@@ -20,6 +20,7 @@
 #include <boost/beast/http/dynamic_body.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/_experimental/test/stream.hpp>
 
 namespace udho{
 namespace net{
@@ -58,6 +59,28 @@ struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
         handler_type                        _handler;
         stream_type&                        _stream;
 };
+
+namespace detail{
+
+template <typename StreamT>
+struct stream_termination{
+    static boost::system::error_code apply(StreamT& stream) {
+        boost::system::error_code error;
+        stream.cancel(error);
+        return error;
+    }
+};
+
+template <>
+struct stream_termination<boost::beast::test::stream>{
+    static boost::system::error_code apply(boost::beast::test::stream& stream) {
+        stream.close();
+        stream.close_remote();
+        return boost::system::error_code{};
+    }
+};
+
+}
 
 template <typename StreamT>
 struct http_header_reader{
@@ -103,9 +126,7 @@ private:
     }
 
     void _timeout(){
-        _stream.close();
-        _stream.close_remote();
-        // _stream.cancel(boost::system::error_code{});
+        detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:
@@ -237,9 +258,7 @@ private:
     }
 
     void _timeout(){
-        _stream.close();
-        _stream.close_remote();
-        // _stream.cancel(boost::system::error_code{});
+        detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:
