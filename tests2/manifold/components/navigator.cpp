@@ -159,7 +159,7 @@ TEST_CASE("udho manifold component navigator", "[manifold][components][navigator
 
     SECTION("reading http header with various request types") {
         using stream_type               = boost::beast::test::stream; // udho::net::types::socket;
-        using protocol_type             = udho::net::protocols::http2<stream_type>;
+        using protocol_type             = udho::net::protocols::http<stream_type>;
         using protocol_component_type   = udho::manifold::components::protocol<protocol_type, stream_type>;
         using protocol_facet_type       = udho::manifold::facet<protocol_component_type, udho::manifold::feature::header_reader>;
         using fabric_type               = udho::manifold::facet<navigator_component_type, udho::manifold::feature::identifier>;

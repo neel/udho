@@ -29,7 +29,7 @@
 #define UDHO_ACTIVITIES_RESULT_H
 
 #include <cstdint>
-#include <ostream>
+#include <iostream>
 #include <boost/signals2.hpp>
 #include <udho/activities/accessor.h>
 #include <udho/activities/result_data.h>

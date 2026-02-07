@@ -24,9 +24,7 @@ struct protocol{
 
     using features    = udho::manifold::features<
         udho::manifold::feature::header_reader,
-        udho::manifold::feature::body_reader// ,
-        // udho::manifold::feature::header_writer,
-        // udho::manifold::feature::body_writer
+        udho::manifold::feature::body_reader
     >;
 
     UDHO_CONFIG_PARAM(header_time_limit,      std::size_t,  1);      // maximum time spent (in seconds) for parsing only the header part of an HTTP request
@@ -86,7 +84,7 @@ private:
 
 namespace protocols {
     template <typename StreamT>
-    using http2 = udho::manifold::components::protocol<udho::net::protocols::http2<StreamT>, StreamT>;
+    using http = udho::manifold::components::protocol<udho::net::protocols::http<StreamT>, StreamT>;
 }
 
 }

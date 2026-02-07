@@ -131,7 +131,7 @@ struct basic_www{
     using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
     using stream_type                = StreamT;
-    using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+    using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
     using navigator_component_type   = udho::manifold::components::navigators::pretty;
     using cookies_component_type     = udho::manifold::components::cookies;
     using session_component_type     = udho::manifold::components::session<udho::session::storage::fs, udho::session::modes::lazy>;

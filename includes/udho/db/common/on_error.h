@@ -28,7 +28,6 @@
 #ifndef WEE_ACTIVITY_DB_COMMON_ON_ERROR_H
 #define WEE_ACTIVITY_DB_COMMON_ON_ERROR_H
 
-#include <udho/page.h>
 #include <boost/beast/http/message.hpp>
 
 namespace udho{
@@ -44,7 +43,8 @@ struct on_error{
     boost::beast::http::status status() const { return _status; }
     
     void operator()(const SuccessT& /*result*/){
-        _ctx << udho::exceptions::http_error(_status);
+        // _ctx << udho::exceptions::http_error(_status);
+        _ctx.status(_status);
     }
 };
 

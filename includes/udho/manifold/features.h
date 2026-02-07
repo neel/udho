@@ -27,34 +27,6 @@ namespace manifold {
  */
 namespace feature{
 
-    /**
-     * @brief generates an unique signature for the request
-     */
-    struct hash{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief tracks events associated with the request (e.g. mini logging)
-     */
-    struct track{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief decides whether to accept or reject this request
-     */
-    struct filter{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief rate control, reject requests when exceeds server capacity
-     */
-    struct throttle{
-        static constexpr const std::size_t stage = 0;
-    };
-
     struct header_reader{
         static constexpr const std::size_t stage = 0;
         static constexpr const std::string_view name = "header_reader";
@@ -170,13 +142,6 @@ namespace feature{
         };
     };
 
-    struct header_writer{
-        static constexpr const std::size_t stage = 1;
-    };
-    struct body_writer{
-        static constexpr const std::size_t stage = 1;
-    };
-
     struct locator{
         static constexpr const std::size_t stage = 0;
         static constexpr const std::string_view name = "locator";
@@ -192,34 +157,6 @@ namespace feature{
     struct responder{
         static constexpr const std::size_t stage = 2;
         static constexpr const std::string_view name = "responder";
-    };
-
-    /**
-     * @brief provides global and local cache facility
-     */
-    struct cache{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief provides facilities for generating, and verification of scalar tokens with TTL
-     */
-    struct token{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief provide policy based session extraction policy connected with session storage and management system
-     */
-    struct session{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief checks uploaded file satisfies constraints and if it does then copies
-     */
-    struct upload{
-        static constexpr const std::size_t stage = 1;
     };
 
 }

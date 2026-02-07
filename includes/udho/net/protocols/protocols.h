@@ -10,12 +10,6 @@ namespace protocols{
 
 template <typename StreamT>
 struct http{
-    using reader = http_reader<StreamT>;
-    using writer = http_writer<StreamT>;
-};
-
-template <typename StreamT>
-struct http2{
     using reader = http_reader2<StreamT>;
     using writer = http_writer<StreamT>;
 };

@@ -109,7 +109,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
     using composition_type = udho::manifold::composition<
         udho::manifold::components::basic_handler<StreamT>,
         udho::manifold::components::db::pg<>,
-        udho::manifold::components::protocols::http2<stream_type>,
+        udho::manifold::components::protocols::http<stream_type>,
         udho::manifold::components::navigators::pretty,
         udho::manifold::components::cookies,
         udho::manifold::components::resources<Bridges...>,
@@ -135,7 +135,7 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
     using composition_type = udho::manifold::composition<
         udho::manifold::components::basic_handler<StreamT>,
         udho::manifold::components::db::pg<>,
-        udho::manifold::components::protocols::http2<stream_type>,
+        udho::manifold::components::protocols::http<stream_type>,
         udho::manifold::components::navigators::pretty,
         udho::manifold::components::cookies,
         udho::manifold::components::session<SessionStorageT, Mode>,

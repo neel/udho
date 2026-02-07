@@ -28,7 +28,8 @@
 #ifndef UDHO_DB_PG_SCHEMA_READONLY_H
 #define UDHO_DB_PG_SCHEMA_READONLY_H
 
-#include <udho/hazo.h>
+#include <udho/hazo/hazo.h>
+#include <udho/hazo/hana.h>
 #include <udho/db/pg/schema/detail.h>
 
 namespace udho{

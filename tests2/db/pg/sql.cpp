@@ -5,7 +5,7 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/activities.h>
+#include <udho/activities/activities.h>
 #include <udho/db/pg/schema/relation.h>
 #include <udho/db/pg/crud/join.h>
 #include <udho/db/pg/crud/from.h>

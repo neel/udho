@@ -28,7 +28,7 @@
 #ifndef UDHO_ACTIVITIES_RESULT_DATA_H
 #define UDHO_ACTIVITIES_RESULT_DATA_H
 
-#include <udho/util.h>
+#include <type_traits>
 
 namespace udho{
 namespace activities{
@@ -45,7 +45,7 @@ namespace detail{
         void operator()(FunctorT&, const TargetsT&...){}
     };
     template <typename FunctorT, typename... TargetsT>
-    using apply_helper_ = apply_helper_internal<udho::util::is_invocable<FunctorT, TargetsT...>::value, FunctorT, TargetsT... >;
+    using apply_helper_ = apply_helper_internal<std::is_invocable<FunctorT, TargetsT...>::value, FunctorT, TargetsT... >;
 
     template <typename FunctorT, typename SuccessT, typename FailureT>
     struct apply_helper: detail::apply_helper_<FunctorT>, detail::apply_helper_<FunctorT, SuccessT>, detail::apply_helper_<FunctorT, FailureT>, detail::apply_helper_<FunctorT, SuccessT, FailureT>{

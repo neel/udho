@@ -1,0 +1,128 @@
+@startuml
+title Composite pipeline execution with reentry (from pipeline.h)
+
+actor App
+
+participant "flow<label>" as Flow
+participant "pipeline<-1> (start_pipeline)" as Pm1
+participant "pipeline<i>" as Pi
+participant "common_pipepine<i>" as CPi
+participant "evaluator<i>" as Evi
+participant "fabric<i>" as Fabi
+participant "facet wrapper" as Wrap
+participant "facet(Component,Feature)" as Facet
+participant "next_evaluator_helper" as Next
+participant "async op" as Async
+participant "pipeline<Count> (finish_pipeline)" as Pfin
+participant "terminal<label>" as Term
+participant "runtime<label>" as Rt
+
+== flow.start ==
+App -> Flow: start(args...)
+Flow -> Pm1: operator()(flow,args...)\n(root start pipeline)
+Pm1 -> Pi: _next(flow,args...)\n(enters stage i=0)
+
+== stages: i -> i+1 (Count is fixed) ==
+loop i = 0 .. Count-1
+  note right of Pi
+    Stage algebra:
+      i -> i+1
+    Fixed stages:
+      -1 (start), Count (finish)
+  end note
+
+  Pi -> CPi: _then(flow,args_tuple)\n(register completion lambda)
+  Pi -> CPi: eval(args...)
+  CPi -> Evi: eval(args...)
+
+  group Stage i evaluation (features -> facets -> next.*)
+    loop for each Feature in stage-i order
+      loop for each Facet that provides Feature
+        Evi -> Fabi: at<Feature,idx>()
+        Fabi --> Wrap: wrapper ref
+        Evi -> Wrap: facet()
+        Wrap --> Facet: callable
+        Evi -> Facet: operator()(journal, Next, args...)
+
+        alt synchronous facet path
+          alt facet returns result
+            Facet -> Next: pass(result)
+            Next -> Evi: proceed()
+          else facet skips
+            Facet -> Next: skip()
+            Next -> Evi: proceed()
+          else facet fails/throws
+            Facet -> Next: fail(error/exception)
+            Next -> CPi: completion(failure)
+            break
+          end
+
+        else asynchronous facet path
+          Facet -> Async: start async work
+          Facet --> Evi: return now (pipeline paused)
+          ... later ...
+          Async --> Facet: callback
+          alt ok
+            Facet -> Next: pass(result)
+            Next -> Evi: proceed()  // resumes chain
+          else error
+            Facet -> Next: fail(error/exception)
+            Next -> CPi: completion(failure)
+          end
+        end
+
+      end
+    end
+  end group
+
+  Evi --> CPi: completion(success/failure)
+
+  alt stage i succeeded
+    CPi --> Pi: success
+    Pi -> Flow: apply(*Pi, configs)\n(patch configs for stage transition)
+    alt i < Count-1
+      Pi -> Pi: _next(flow,args...)\n(call pipeline<i+1>)
+    else i == Count-1
+      Pi -> Pfin: _next(flow,args...)\n(call finish_pipeline<Count>)
+    end
+
+  else stage i failed
+    CPi --> Pi: failure
+    Pi -> Flow: error(failure,args...)\n(terminal.error + runtime.remove)
+    Flow -> Term: error(...)
+    Flow -> Rt: remove(flow)
+    Flow --> App: done(failure)
+    break
+  end
+end
+
+== finish stage (Count) + reentry loop ==
+Pfin -> Flow: reenter(args...)   // finish stage calls flow->reenter
+
+Flow -> Term: reenter(args...)
+Term --> Flow: should_reenter (bool)
+
+alt should_reenter == false
+  Flow -> Flow: terminate()  // called inside flow::reenter
+  Flow -> Rt: remove(flow)
+  Flow --> App: done(success) // no restart
+else should_reenter == true
+  note right of Pfin
+    pipeline.h restart sequence:
+      start.prepare_reentry(baseline,id)
+      flow.prepare(args...)
+      start(flow,args...)
+  end note
+
+  Pfin -> Pm1: at<-1>()\n(get start pipeline)
+  Pfin -> Pm1: prepare_reentry(flow.baseline(), flow.id())\n(configs=baseline; journal.clear)
+  Pfin -> Flow: prepare(args...)\n(calls terminal.prepare)
+  Flow -> Term: prepare(args...)
+
+  Pfin -> Pm1: start(flow,args...)\n(restart from -1)
+  Pm1 -> Pi: _next(flow,args...)\n(enters stage i=0 again)
+  Flow --> App: (execution continues; persistent flow)
+end
+
+@enduml
+

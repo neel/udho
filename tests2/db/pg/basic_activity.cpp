@@ -4,7 +4,7 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
-#include <udho/activities.h>
+#include <udho/activities/activities.h>
 #include <string>
 #include <tuple>
 #include <udho/db/pg/activities/basic.h>
