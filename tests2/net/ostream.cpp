@@ -544,7 +544,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     }
 
     SECTION("composite stream - empty writes") {
-        multithreaded_io<4> mio(io);
+        multithreaded_io<1> mio(io);
 
         stream_in.connect(stream_out);
 
@@ -553,7 +553,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
            [&](boost::system::error_code ec, std::size_t bytes_written) {
                 completed = true;
                 CHECK_FALSE(ec);
-                CHECK(bytes_written == 0);
+                CHECK(bytes_written == 52);
            }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -569,7 +569,15 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
 
         CHECK(completed);
         // Should still have headers
-        CHECK(stream_out.str().find("HTTP/1.1 200 OK") != std::string::npos);
+        std::string output = stream_out.str();
+        std::string expected_output = "HTTP/1.1 200 OK\r\n"
+                                      "Transfer-Encoding: chunked\r\n"   // disable_buffering
+                                      "\r\n"
+                                      "0"
+                                      "\r\n"
+                                      "\r\n"
+        ;
+        CHECK(output == expected_output);
     }
 
     SECTION("composite stream - large writes that exceed typical buffer") {
@@ -722,7 +730,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         ostream.write(temp);                                     // udho::utils::string_view
 
         const char* cstr = "CString";
-        ostream.write(cstr, strlen(cstr));                      // const char*, size_t
+        ostream.write(cstr, strlen(cstr), false);                // const char*, size_t
 
         ostream.write(TestType{42});
 

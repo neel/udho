@@ -4,6 +4,7 @@
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/detail.h>
+#include <udho/view/data/data.h>
 
 namespace udho{
 namespace manifold{
@@ -58,12 +59,24 @@ struct portal<JournalViewT, ComponentT, Components...>: accessor<ComponentT, Jou
         : accessor<ComponentT, JournalViewT>(composition.template get<ComponentT>().component(), configs.template get<ComponentT>(), journal)
         , portal<JournalViewT, Components...>(composition, configs, journal)
     {}
+
+    template <typename F>
+    void visit(F&& visitor){
+        accessor<ComponentT, JournalViewT>& accessor = *this;
+        visitor(accessor);
+
+        portal<JournalViewT, Components...>::visit(std::forward<F>(visitor));
+    }
+
 };
 
 template <typename JournalViewT>
 struct portal<JournalViewT> {
     template <typename CompositionT, typename ConfigsT>
     portal(CompositionT&, ConfigsT&, const JournalViewT&) {}
+
+    template <typename F>
+    void visit(F&& visitor){}
 };
 
 }
@@ -77,6 +90,8 @@ struct portal: detail::portal<typename udho::manifold::detail::get_journal_const
     using configs_view_type     = udho::manifold::configs_view<Components...>;
     using journal_view_type     = typename udho::manifold::detail::get_journal_const_view_for_all_components<Components...>::type;
     using detail_portal_type    = detail::portal<typename udho::manifold::detail::get_journal_const_view_for_all_components<Components...>::type, Components...>;
+
+    operator boost::asio::executor() const = delete;
 
     template <typename... XComponents>
     friend struct portal;
@@ -98,6 +113,17 @@ struct portal: detail::portal<typename udho::manifold::detail::get_journal_const
         , _composition_view(other._composition_view), _configs_view(other._configs_view), _journal_view(other._journal_view)
     {}
 
+    template <typename F>
+    void visit(F&& visitor){
+        detail_portal_type::visit(std::forward<F>(visitor));
+    }
+
+    // friend auto metatype(udho::view::data::type<portal<Components...>>){
+    //     using namespace udho::view::data;
+
+    //     return assoc("portal");
+    // }
+
 private:
     composition_view_type _composition_view;
     configs_view_type     _configs_view;
@@ -108,6 +134,8 @@ template <>
 struct portal<>{
     template <typename ComponentQ>
     using has = std::false_type;
+
+    operator boost::asio::executor() const = delete;
 
     template <typename CompositionT, typename ConfigsT, typename JournalT>
     portal(CompositionT&, ConfigsT&, const JournalT&){}

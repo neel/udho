@@ -197,6 +197,11 @@ struct pipeline{
     void next(FlowT flow, Args&&... args){
         _next(flow, std::forward<Args>(args)...);
     }
+
+    template <typename FlowT, typename... Args>
+    void abort(FlowT flow, Args&&... args){
+        _next.abort(flow, std::forward<Args>(args)...);
+    }
 private:
 
     /**
@@ -226,23 +231,21 @@ private:
                     );
                 } catch(...) {
                     udho::manifold::exclusive_result result(std::current_exception());
-                    bool reenter = std::apply(
-                        [&](auto&&... args) -> bool {
-                            return flow->error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
+                    std::apply(
+                        [&](auto&&... args) {
+                            flow->error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
                         },
                         args_tuple
                     );
-                    (void)reenter;
                 }
             } else {                                            // error occured
                 std::cout << "FAIL!!" << __LINE__ << std::endl;
-                bool reenter = std::apply(
-                    [&](auto&&... args) -> bool {
-                        return flow->error(success, std::forward<Args>(args)...);    // inform flow before termination
+                std::apply(
+                    [&](auto&&... args) {
+                        flow->error(success, std::forward<Args>(args)...);    // inform flow before termination
                     },
                     args_tuple
-                );
-                (void)reenter;                                   // flow->error takes care of it.
+                );                                  // flow->error takes care of it.
             }
         };
         _common_pipeline.then(std::move(lambda));
@@ -432,10 +435,22 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
         }
     }
 
+    template <typename FlowT, typename... Args>
+    void abort(FlowT flow, Args&&... args){
+        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
+        std::cout << "::abort()(io, flow, ...)" << std::endl;
+
+        // if(flow->reenter(std::forward<Args>(args)...)){
+        //     restart(flow, std::forward<Args>(args)...);
+        // }
+    }
+
     /**
      * @brief restart the flow
      * @param flow
      * @param args
+     *
+     * @note call originates either from basic_flow<LabelT, StreamT>::restart or operator()
      */
     template <typename FlowT, typename... Args>
     void restart(std::shared_ptr<FlowT> flow, Args&&... args) {

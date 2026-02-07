@@ -203,6 +203,7 @@ public:
         using namespace udho::view::data;
 
         return assoc("context"),
+               metatype(udho::view::data::type<portal_type>()),
                cvar("flow_id",     &self_type::_flow_id),
                fvar("routes",      &self_type::_url_routes),
                fvar("resources",   &self_type::_resources_store)

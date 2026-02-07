@@ -408,6 +408,8 @@ struct registry{
             layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::ok};
             layout[places::listing] = listings;
             layout[placeholders::footer] = udho::pages::system::data::status_info{};
+
+            // layout();
         }
 
         return result;

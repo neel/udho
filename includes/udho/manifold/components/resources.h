@@ -48,6 +48,7 @@ private:
     const config_type&  _config;
 };
 
+
 template <typename... Bridges, typename JournalT>
 struct accessor<components::resources<Bridges...>, JournalT>: basic_accessor<components::resources<Bridges...>, JournalT>{
     using basic_accessor_type   = basic_accessor<components::resources<Bridges...>, JournalT>;
@@ -60,6 +61,11 @@ struct accessor<components::resources<Bridges...>, JournalT>: basic_accessor<com
 
     const store_type& resources() const {
         return basic_accessor_type::component().store();
+    }
+
+    template <typename Bridge>
+    udho::view::resources::tmpl::proxy<Bridge> view(const std::string& prefix, const std::string& name) const {
+        return resources().template view<Bridge>(prefix, name);
     }
 };
 

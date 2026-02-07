@@ -22,6 +22,7 @@
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
 #include <udho/manifold/terminal.h>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho {
 namespace manifold {
@@ -30,7 +31,10 @@ namespace www {
 
 namespace tags{
 
-    struct minimal{};
+    template <typename... Bridges>
+    struct minimal{
+        using resources_component_type = udho::manifold::components::resources<Bridges...>;
+    };
 
     template <typename SessionStorageT, udho::session::modes Mode, typename... Bridges>
     struct statefulx {
@@ -66,15 +70,18 @@ using context = basic_context<udho::net::detail::wire_types<boost::asio::ip::tcp
 
 // { convenience labels
 
-using stateless             = www::label<www::tags::minimal>;
-namespace stateful{
-    using lazy_fs           = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::lazy>>;
-    using optimistic_fs     = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::optimistic>>;
-    using lazy_memfs        = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::lazy>>;
-    using optimistic_memfs  = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::optimistic>>;
-    using lazy_redis        = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::lazy>>;
-    using optimistic_redis  = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::optimistic>>;
-    using immediate_redis   = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::immediate>>;
+namespace stateless {
+    using rest                  = www::label<www::tags::minimal<>>;
+    using lua                   = www::label<www::tags::minimal<udho::view::data::bridges::lua>>;
+}
+namespace stateful {
+    using lazy_fs               = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::lazy>>;
+    using optimistic_fs         = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::optimistic>>;
+    using lazy_memfs            = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::lazy>>;
+    using optimistic_memfs      = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::optimistic>>;
+    using lazy_redis            = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::lazy>>;
+    using optimistic_redis      = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::optimistic>>;
+    using immediate_redis       = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::immediate>>;
 
     namespace lua {
         using lazy_fs           = www::label<www::tags::statefulx<udho::session::storage::fs, udho::session::modes::lazy, udho::view::data::bridges::lua>>;
@@ -93,9 +100,9 @@ namespace stateful{
 
 // { sketches
 
-template <typename StreamT, typename... ExtraComponents>
-struct sketch<www::basic_label<StreamT, www::tags::minimal, ExtraComponents...>>{
-    using www_type = www::basic_label<StreamT, www::tags::minimal, ExtraComponents...>;
+template <typename StreamT, typename... Bridges, typename... ExtraComponents>
+struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>>{
+    using www_type = www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>;
 
     using stream_type = StreamT;
 
@@ -105,7 +112,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal, ExtraComponents...>>
         udho::manifold::components::protocols::http2<stream_type>,
         udho::manifold::components::navigators::pretty,
         udho::manifold::components::cookies,
-        udho::manifold::components::resources<>,
+        udho::manifold::components::resources<Bridges...>,
         ExtraComponents...
     >;
 
@@ -132,7 +139,7 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
         udho::manifold::components::navigators::pretty,
         udho::manifold::components::cookies,
         udho::manifold::components::session<SessionStorageT, Mode>,
-        typename www::tags::statefulx<SessionStorageT, Mode, Bridges...>::resources_component_type,
+        udho::manifold::components::resources<Bridges...>,
         ExtraComponents...
     >;
 
@@ -165,11 +172,9 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using configs_type           = typename runtime_type::configs_type;
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
-    // using routing_component_type = typename label_type::routing_component_type;
-    // using routing_table_type     = typename routing_component_type::routing_table_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -180,12 +185,40 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         const auto& route = journal.template at<udho::manifold::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
-        assert(route_index.valid());
-        const auto& routing_component = composition.template at<udho::manifold::feature::locator, 0>().component();
-        const auto& routing_table     = routing_component.table();
-        routing_table.reconfigure_for(route_index, configs);
+        // if(route_index.type() == udho::url::detail::route_index::type::none){
+        //     // {{ add finish lambda to handler component
+        //     auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
+        //     auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        //         if(error) {
+        //             // TODO Error while writing to socket
+        //             return;
+        //         }
+
+        //         std::apply(
+        //             [&](auto&&... args) {
+        //                 p.abort(flow, stream, std::forward<Args>(args)...);
+        //             },
+        //             args_tuple
+        //         );
+        //     };
+        //     using handler_type = udho::manifold::components::basic_handler<StreamT>;
+        //     using ostream_type = udho::net::basic_ostream<StreamT>;
+
+        //     handler_type& handler = composition.template get<handler_type>().component();
+        //     ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
+        //     // }}
+
+        //     ostream.status(boost::beast::http::status::not_found);
+        //     ostream.finish();
+        //     return;
         // }
-        p.next(flow, std::forward<Args>(args)...);
+        if(route_index.type() != udho::url::detail::route_index::type::none) {
+            const auto& routing_component = composition.template at<udho::manifold::feature::locator, 0>().component();
+            const auto& router     = routing_component.router();
+            router.reconfigure_for(route_index, configs);
+        }
+        // }
+        p.next(flow, stream, std::forward<Args>(args)...);
     }
 };
 
@@ -204,11 +237,10 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
-    // using routing_component_type = typename label_type::routing_component_type;
-    // using routing_table_type     = typename routing_component_type::routing_table_type;
+
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
+    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -219,9 +251,8 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         const auto& route = journal.template at<udho::manifold::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
-        assert(route_index.valid());
         const auto& routing_component = composition.template at<udho::manifold::feature::locator, 0>().component();
-        const auto& routing_table = routing_component.table();
+        const auto& router = routing_component.router();
         // }
 
         // { add finish lambda to handler component
@@ -254,7 +285,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         // }
 
         // { invoke action
-        routing_table.invoke_at(route_index, resource, context);
+        router.invoke_at(route_index, context);
         // }
     }
 };
@@ -267,7 +298,9 @@ template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {
     using label_type        = www::basic_label<StreamT, Tag, ExtraComponents...>;
     using stream_type       = StreamT;
+    using ostream_type      = udho::net::basic_ostream<StreamT>;
     using runtime_type      = basic_runtime<label_type, StreamT>;
+    using handler_type      = udho::manifold::components::basic_handler<StreamT>;
     using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
@@ -279,17 +312,107 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
+    /**
+     * @brief reenter is synchronously called after successful evaluation of all facet pipelines in all stages
+     *        to determine whether to process next request or abort.
+     * @param stream
+     * @return bool
+     * @note Call originates from basic_flow<LabelT, StreamT>::reenter()
+     */
     bool reenter(stream_type& stream) { return true; }
-    void prepare(stream_type& stream) { }
-    bool error(udho::manifold::exclusive_result success, stream_type& stream){
+
+    /**
+     * @brief prepare's the flow for reentry in both success and failure circumstances
+     * @param stream
+     * @param args
+     */
+    template <typename... Args>
+    void prepare(stream_type& stream, Args&&... args) { }
+
+    /**
+     * @brief error function is called to handle the error situation occurred during evaluation of some facet.
+     *
+     * This function asynchronously determines the either of the following two pathways
+     *
+     * 1. flow.restart() respond, reset and process the next request in the same socket
+     * 2. flow.abort()   remove the flow, terminate the socket
+     *
+     * @param success
+     * @param flow
+     * @param stream
+     * @param args
+     * @pre flow is owned by runtime and outlives the invocation of this callback
+     * @post flow either restarts or aborts
+     * @note Call originate from basic_flow<LabelT, StreamT>::error which originates from failure handler
+     *       passed to facet triggered by calling next.fail(...)
+     */
+    template <typename... Args>
+    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();
-            } catch(const std::exception& ex) {
+            } catch(const udho::http::error& error) {
+                std::cout << "exception: " << error.what() << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            } catch(boost::system::error_code error) {
+                std::cout << "system error: " << error << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            }catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
+                handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
         }
-        return false;
+    }
+
+private:
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+        ostream.status(error.status());
+        ostream.finish();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, boost::system::error_code error, stream_type& stream, Args&&... args) {
+        if(error == boost::asio::error::eof) {
+            flow.abort();
+        }
+
+        flow.abort();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::exception& error, stream_type& stream, Args&&... args) {
+        flow.abort();
+    }
+
+private:
+
+    template <typename... Args>
+    ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
+        auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
+        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+            if(error) {
+                // TODO Error while writing to socket
+                return;
+            }
+
+            if(restart) {
+                std::apply(
+                    [&](auto&&... args) {
+                        flow.restart(stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                );
+            } else {
+                flow.abort();
+            }
+        };
+
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        return ostream;
     }
 
 private:
@@ -302,9 +425,9 @@ private:
 
 namespace detail{
 
-template <typename Label, typename StreamT, typename RoutingTableT>
+template <typename Label, typename StreamT, typename RouterT>
 struct runtime_proxy{
-    using router_type   = udho::url::basic_router<RoutingTableT>;
+    using router_type   = RouterT;
     using handler_type  = udho::manifold::components::basic_handler<StreamT>;
     using routing_type  = udho::manifold::components::routing<router_type>;
     using rlabel_type   = typename Label::template append<routing_type>;
@@ -313,15 +436,16 @@ struct runtime_proxy{
     runtime_proxy() = delete;
     runtime_proxy(const runtime_proxy&) = delete;
 
-    runtime_proxy(RoutingTableT&& table): _router(std::move(table)), _handler(_router.table().summary()), _routing(_router) {}
+    runtime_proxy(RouterT&& router): _handler(router.summary()), _routing(std::move(router)) {}
 
     template <typename... Components>
     runtime_type runtime(Components&&... components) {
         return runtime_type(_routing, _handler, std::forward<Components>(components)...);
     }
 
+    const router_type& router() const { return _routing.router(); }
+
 private:
-    router_type  _router;
     handler_type _handler;
     routing_type _routing;
 };
@@ -336,8 +460,8 @@ struct framework<www::basic_label<StreamT, Tag, ExtraComponents...>>  {
     using endpoint_type = typename StreamT::endpoint_type;
 
     template <typename RoutingTableT>
-    static detail::runtime_proxy<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, RoutingTableT> apply(RoutingTableT&& table) {
-        return detail::runtime_proxy<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, RoutingTableT>(std::forward<RoutingTableT>(table));
+    static detail::runtime_proxy<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, udho::url::basic_router<RoutingTableT>> apply(udho::url::basic_router<RoutingTableT>&& router) {
+        return detail::runtime_proxy<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, udho::url::basic_router<RoutingTableT>>(std::forward<udho::url::basic_router<RoutingTableT>>(router));
     }
 
 };

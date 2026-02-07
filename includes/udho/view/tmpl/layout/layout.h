@@ -341,7 +341,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
                 udho::net::ostream_view ostream_view = _context.ostream().view();
                 _pimpl->presenter()(ostream_view);
                 _finished = true;
-                _context.finish();
+                ostream_view.finish();
             }
         }
 

@@ -36,8 +36,8 @@ struct basic_handler{
         ostream_type& ostream() { return _ostream; }
     private:
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
-            _ostream.reset();
             _callback(ec, bytes_written);
+            _ostream.reset();
         }
     private:
         ostream_type  _ostream;

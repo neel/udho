@@ -37,7 +37,7 @@ struct basic_terminal{
     bool reenter(Args&&... args) { return false; }
 
     template <typename... Args>
-    bool error(udho::manifold::exclusive_result, Args&&...){ return false; }
+    void error(udho::manifold::exclusive_result, flow_type& flow, Args&&...){ return; }
 
     template <typename... Args>
     void prepare(Args&&... args) { }

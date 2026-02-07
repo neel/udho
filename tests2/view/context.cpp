@@ -157,10 +157,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
 <?! vars('d', 'ctx') ?>
 {
     "router": {
-        "size": <?= ctx.routes.size ?>,
+        "size": <?= ctx.portal.routes.size ?>,
         "mountpoints": [
             <? local is_first = true ?>
-            <? for label, mountpoint in ctx.routes:pairs() do ?>
+            <? for label, mountpoint in ctx.portal.routes:pairs() do ?>
             <? if not is_first then ?>,<? end ?>
             {
                 "label": "<?= label ?>",
@@ -184,10 +184,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     },
     "resources": {
         "js": {
-            "size": <?= ctx.resources.js.size ?>,
+            "size": <?= ctx.portal.resources.js.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, js in ctx.resources.js:ipairs() do ?>
+                <? for i, js in ctx.portal.resources.js:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= js.prefix ?>",
@@ -199,10 +199,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
             ]
         },
         "css": {
-            "size": <?= ctx.resources.css.size ?>,
+            "size": <?= ctx.portal.resources.css.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, css in ctx.resources.css:ipairs() do ?>
+                <? for i, css in ctx.portal.resources.css:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= css.prefix ?>",
@@ -214,10 +214,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
             ]
         },
         "img": {
-            "size": <?= ctx.resources.img.size ?>,
+            "size": <?= ctx.portal.resources.img.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, img in ctx.resources.img:ipairs() do ?>
+                <? for i, img in ctx.portal.resources.img:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= img.prefix ?>",
@@ -242,6 +242,7 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<tabulate::Table>{});
+    lua.bind(udho::view::data::type<udho::url::summary::router>{});
 
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("ctx_explorer",  buffer, buffer+sizeof(buffer)));

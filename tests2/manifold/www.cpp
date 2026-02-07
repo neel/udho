@@ -100,13 +100,37 @@ auto url() {
     udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
     udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
 
-    auto table      = std::move(mount_point1)/* | std::move(mount_point2) | std::move(mount_point3)*/;
+    auto table      = std::move(mount_point1) /*| std::move(mount_point2) | std::move(mount_point3)*/;
 
     return table;
 }
 
 
-TEST_CASE("udho manifold www pipeline", "[manifold][pipeline][www]") {
+TEST_CASE("udho manifold www pipeline stateless", "[manifold][pipeline][www]") {
+    boost::asio::io_context io;
+
+    // { resources: assets, docroot
+    udho::view::resources::store<> store;
+    // populate(store)
+    store.lock();
+    udho::view::resources::const_store<> cstore{store};
+    auto resources  = udho::manifold::components::resources(cstore);
+    // }
+
+    using framework_type = udho::manifold::framework<udho::manifold::www::stateless::rest>;
+    using endpoint_type  = typename framework_type::endpoint_type;
+
+    auto framework = framework_type::apply(udho::url::router(url()));
+    auto runtime   = framework.runtime(resources);
+    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+
+    listener.start();
+
+    io.run_for(std::chrono::seconds(5));
+}
+
+
+TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     boost::asio::io_context io;
 
     // { session component
@@ -125,23 +149,14 @@ TEST_CASE("udho manifold www pipeline", "[manifold][pipeline][www]") {
     auto resources  = udho::manifold::components::resources(cstore);
     // }
 
-    // { resources: assets, docroot
-    // udho::view::resources::store<> store;
-    // // populate(store)
-    // store.lock();
-    // udho::view::resources::const_store<> cstore{store};
-    // auto resources  = udho::manifold::components::resources(cstore);
-    // }
-
     using framework_type = udho::manifold::framework<udho::manifold::www::stateful::lua::lazy_fs>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
-    auto framework = framework_type::apply(url());
+    auto framework = framework_type::apply(udho::url::router(url()));
     auto runtime   = framework.runtime(session, resources);
     auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
     listener.start();
 
-    io.run_for(std::chrono::seconds(10));
+    io.run_for(std::chrono::seconds(5));
 }
-

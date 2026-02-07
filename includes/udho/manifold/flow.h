@@ -5,6 +5,7 @@
 #include <iostream>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/transition.h>
+#include <udho/net/detail.h>
 
 namespace udho{
 namespace manifold{
@@ -48,6 +49,9 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     template <typename, typename>
     friend struct basic_runtime;
+
+    template <typename, typename>
+    friend struct basic_terminal;
 
     basic_flow() = delete;
     basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
@@ -101,6 +105,14 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     template <typename... Args>
     void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), _stream, std::forward<Args>(args)...); }
 
+    /**
+     * @brief reenter determines whether to restart the flow or not after successful evaluation
+     *        of all facet pipelines in all stages synchronously.
+     * @param args
+     * @return bool
+     * @note Consults with terminal specialization to make decision through terminal.reenter() method;
+     * @note Call originates from finish_pipeline::operator()
+     */
     template <typename... Args>
     bool reenter(Args&&... args) {
         using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
@@ -111,6 +123,11 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
         return should_reenter;
     }
 
+    /**
+     * @brief prepare the flow for reentry
+     * @param args
+     * @note call originates from finish_pipeline's restart method
+     */
     template <typename... Args>
     void prepare(Args&&... args) {
         using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
@@ -131,19 +148,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param success
      */
     template <typename... Args>
-    bool error(udho::manifold::exclusive_result success, Args&&... args) {
+    void error(udho::manifold::exclusive_result success, Args&&... args) {
         assert(!success);
 
         using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
         terminal_type terminal(composition(), configs(), journal());
-        bool should_reenter = terminal.error(success, std::forward<Args>(args)...);
-
-        terminate(should_reenter);
-
-        if(should_reenter){
-            _finish_pipeline.restart(self(), std::forward<Args>(args)...);
-        }
-        return should_reenter;
+        terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
 
     const start_pipeline_type& root() const { return _root_pipeline; }
@@ -161,6 +171,18 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     stream_type& stream() { return _stream; }
     const stream_type& stream() const { return _stream; }
+
+private:
+
+    template <typename... Args>
+    void restart(Args&&... args) {
+        terminate(true);
+        _finish_pipeline.restart(self(), std::forward<Args>(args)...);
+    }
+
+    void abort() {
+        terminate(false);
+    }
 
 private:
 

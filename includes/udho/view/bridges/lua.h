@@ -38,6 +38,7 @@
 #include <tabulate/table.hpp>
 #include <udho/view/bridges/lua/binder.h>
 #include <udho/manifold/context.h>
+#include <udho/manifold/components/fwd.h>
 
 namespace udho{
 namespace view{
@@ -134,6 +135,153 @@ namespace udho::view::data{
             }
     };
 
+    namespace detail{
+
+    // template <typename... Bridges>
+    // struct bind_helper_bridges;
+
+    // template <typename Bridge>
+    // struct bind_helper_bridge;
+
+    // template <typename Component, typename... Components>
+    // struct bind_helper_bridges<Component, Components...>: private bind_helper_bridges<Components...>{
+    //     template <typename ClassT>
+    //     static void apply(sol::usertype<ClassT>& utype) {
+    //         bind_helper_bridge<Component>::apply(utype);
+    //         bind_helper_bridges<Components...>::apply(utype);
+    //     }
+    // };
+
+    // template <>
+    // struct bind_helper_bridges<>{
+    //     template <typename ClassT>
+    //     static void apply(sol::usertype<ClassT>& utype) {}
+    // };
+
+    // template <>
+    // struct bind_helper_bridge<udho::view::data::bridges::lua>{
+    //     template <typename ClassT>
+    //     static void apply(sol::usertype<ClassT>& utype) {
+    //         utype.set_function("view", [](ClassT& self, const std::string& prefix, const std::string& name) -> detail::proxy_wrapper<udho::view::data::bridges::lua, ClassT> {
+    //             return detail::proxy_wrapper<udho::view::data::bridges::lua, ClassT>{self, self.template view<udho::view::data::bridges::lua>(prefix, name)};
+    //         });
+    //     }
+    // };
+
+    template <typename... Components>
+    struct bind_helper;
+
+    template <typename Component>
+    struct bind_helper_component{
+        template <typename ClassT>
+        static void apply(sol::usertype<ClassT>& utype) {}
+    };
+
+    template <typename Component, typename... Components>
+    struct bind_helper<Component, Components...>: private bind_helper<Components...>{
+        template <typename ClassT>
+        static void apply(sol::usertype<ClassT>& utype) {
+            bind_helper_component<Component>::apply(utype);
+            bind_helper<Components...>::apply(utype);
+        }
+    };
+
+    template <>
+    struct bind_helper<>{
+        template <typename ClassT>
+        static void apply(sol::usertype<ClassT>& utype) {}
+    };
+
+    template <typename... Bridges>
+    struct bind_helper_component<udho::manifold::components::resources<Bridges...>>{
+        template <typename ClassT>
+        static void apply(sol::usertype<ClassT>& utype) {
+            utype.set("resources", sol::property([](ClassT& portal) {
+                return portal.resources();
+            }));
+            // bind_helper_bridges<Bridges...>::apply(utype);
+        }
+    };
+
+    template <typename Router>
+    struct bind_helper_component<udho::manifold::components::routing<Router>>{
+        template <typename ClassT>
+        static void apply(sol::usertype<ClassT>& utype) {
+            utype.set("routes", sol::property([](ClassT& portal) {
+                return portal.routes();
+            }));
+        }
+    };
+
+    /**
+ * @brief A proxy around the context used internally to make a view accessible conveniently
+ * @tparam XBridgeT the bridge on which the intended view is registered
+ * @tparam Bridges...  The bridges supported by the context
+ */
+    template <typename XBridgeT, typename ContextT>
+    struct proxy_wrapper{
+        using context_type = ContextT;
+        using proxy_type   = udho::view::resources::tmpl::proxy<XBridgeT>;
+        using self_type    = proxy_wrapper<XBridgeT, ContextT>;
+
+        proxy_wrapper() = delete;
+        proxy_wrapper(const proxy_wrapper&) = delete;
+        proxy_wrapper(const context_type& ctx, proxy_type&& proxy): _ctx(ctx), _proxy(std::move(proxy)) {}
+        proxy_wrapper(proxy_wrapper&& other): _ctx(other._ctx), _proxy(std::move(other._proxy)) {}
+
+
+        /**
+     * @brief Returns the name of the resource associated with this proxy.
+     * @return The name of the resource.
+     */
+        inline std::string name() const { return _proxy.name(); }
+
+        /**
+     * @brief Returns the prefix of the resource associated with this proxy.
+     * @return The prefix of the resource.
+     */
+        inline std::string prefix() const { return _proxy.prefix(); }
+
+        /**
+     * @brief Returns const reference to the context
+     * @return context
+     */
+        const context_type& context() const { return _ctx; }
+
+        friend auto metatype(udho::view::data::type<self_type>){
+            using namespace udho::view::data;
+
+            return assoc("view_proxy_wrapper"),
+                   fvar("name",   &self_type::name),
+                   fvar("prefix", &self_type::prefix);
+        }
+
+    private:
+        const context_type& _ctx;
+        proxy_type    _proxy;
+    };
+
+    }
+
+    template <typename... Components>
+    struct bind<bridges::lua, udho::manifold::portal<Components...>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = udho::manifold::portal<Components...>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
+
+            std::cout << "udho::manifold::portal<Components...>: binding" << std::endl;
+
+            sol::automagic_enrollments enrollments{false, false, false, false, false, false, false, false, false};
+            user_type type = state.udho().new_usertype<class_type>("portal", enrollments);
+
+            detail::bind_helper<Components...>::apply(type);
+        }
+
+    };
+
     template <typename... Bridges>
     struct bind<bridges::lua, udho::view::resources::const_store<Bridges...>>{
         using state_type  = typename bridges::lua::state_type;
@@ -148,99 +296,108 @@ namespace udho::view::data{
             // first bind according to the metatype
             typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
 
-            // then add lua specific functionalities
-            user_type& type = binder.type();
+            // // then add lua specific functionalities
+            // user_type& type = binder.type();
 
-            type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name){
-                return self.template view<bridges::lua>(prefix, name);
-            });
+            // type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name){
+            //     return self.template view<bridges::lua>(prefix, name);
+            // });
         }
     };
 
-    // template <typename StreamT, typename... Components>
-    // struct bind<bridges::lua, udho::manifold::basic_context<StreamT, Components...>>{
-    //     using state_type                = typename bridges::lua::state_type;
-    //     using class_type                = udho::manifold::basic_context<StreamT, Components...>;
-    //     using binder_type               = typename bridges::lua::template default_binder_type<class_type>;
-    //     using context_type              = class_type;
-    //     using portal_type               = typename context_type::portal_type;
-    //     using composition_type          = typename portal_type::composition_view_type;
-    //     using resource_component_type   = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
-    //     using store_type                = typename resource_component_type::store_type;
+    template <typename StreamT, typename... Components>
+    struct bind<bridges::lua, udho::manifold::basic_context<StreamT, Components...>>{
+        using state_type                = typename bridges::lua::state_type;
+        using class_type                = udho::manifold::basic_context<StreamT, Components...>;
+        using binder_type               = typename bridges::lua::template default_binder_type<class_type>;
+        using context_type              = class_type;
+        using portal_type               = typename context_type::portal_type;
+        using composition_type          = typename portal_type::composition_view_type;
+        using resource_component_type   = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+        using store_type                = typename resource_component_type::store_type;
 
-    //     static void apply(state_type& state){
-    //         using user_type = sol::usertype<class_type>;
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
 
-    //         std::cout << "udho::view::data::bind<lua, udho::manifold::basic_context<...>>: binding" << std::endl;
+            std::cout << "udho::view::data::bind<lua, udho::manifold::basic_context<...>>: binding" << std::endl;
 
-    //         // first bind according to the metatype
-    //         typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
-    //         // store_type::bind(state);
+            {
+                udho::view::data::bridges::bind<bridges::lua> binder{state};
+                binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
+                binder(udho::view::data::type<udho::view::resources::const_store<bridges::lua>>{});
+                binder(udho::view::data::type<detail::proxy_wrapper<bridges::lua, class_type>>{});
+                binder(udho::view::data::type<portal_type>{});
+            }
 
-    //         {
-    //             // udho::view::data::bridges::bind<bridges::lua> binder{state};
-    //             // binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
-    //             // binder(udho::view::data::type<udho::net::proxy_wrapper<bridges::lua, Bridges...>>{});
-    //         }
+            sol::automagic_enrollments enrollments{false, false, false, false, false, false, false, false, false};
+            user_type type = state.udho().new_usertype<class_type>("context", enrollments);
 
-    //         // then add lua specific functionalities
-    //         // user_type& type = binder.type();
+            type.set("portal", sol::property([](class_type& context) {
+                return context.portal();
+            }));
 
-    //         // type.set_function("view", [](const class_type& self, const std::string& prefix, const std::string& name) -> udho::net::proxy_wrapper<bridges::lua, Bridges...> {
-    //         //     return self.template view<bridges::lua>(prefix, name);
-    //         // });
-    //     }
-    // };
+            type.set_function("view", [](class_type& self, const std::string& prefix, const std::string& name) -> detail::proxy_wrapper<bridges::lua, class_type> {
+                return detail::proxy_wrapper<udho::view::data::bridges::lua, class_type>{self, self.portal().template view<udho::view::data::bridges::lua>(prefix, name)};
+            });
 
-    // template <typename... Bridges>
-    // struct bind<bridges::lua, udho::net::proxy_wrapper<bridges::lua, Bridges...>>{
-    //     using state_type  = typename bridges::lua::state_type;
-    //     using class_type  = udho::net::proxy_wrapper<bridges::lua, Bridges...>;
-    //     using binder_type = typename bridges::lua::template default_binder_type<class_type>;
+            // first bind according to the metatype
+            // typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+            // store_type::bind(state);
 
-    //     static void apply(state_type& state){
-    //         using user_type = sol::usertype<class_type>;
+            // then add lua specific functionalities
+            // user_type& type = binder.type();
+        }
+    };
 
-    //         std::cout << "udho::view::data::bind<lua, udho::net::proxy_wrapper<bridges::lua, ...>>: binding" << std::endl;
+    template <typename ContextT>
+    struct bind<bridges::lua, detail::proxy_wrapper<bridges::lua, ContextT>>{
+        using state_type  = typename bridges::lua::state_type;
+        using class_type  = detail::proxy_wrapper<bridges::lua, ContextT>;
+        using binder_type = typename bridges::lua::template default_binder_type<class_type>;
 
-    //         // first bind according to the metatype
-    //         typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+        static void apply(state_type& state){
+            using user_type = sol::usertype<class_type>;
 
-    //         // then add lua specific functionalities
-    //         user_type& type = binder.type();
+            std::cout << "udho::view::data::bind<lua, detail::proxy_wrapper<bridges::lua, ContextT>>: binding" << std::endl;
 
-    //         type.set_function("render", sol::overload(
-    //             [&state](const class_type& self) mutable -> std::string {
-    //                 try {
-    //                     std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-    //                     return state.exec_lua(view_key, sol::nil, self.context());
-    //                 } catch (const std::exception& e) {
-    //                     // If there is an error, throw Lua exception with the error message
-    //                     throw sol::error(e.what());
-    //                 }
-    //             },
-    //             [&state](const class_type& self, sol::object d) mutable -> std::string {
-    //                 try {
-    //                     std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-    //                     return state.exec_lua(view_key, d, self.context());
-    //                 } catch (const std::exception& e) {
-    //                     // If there is an error, throw Lua exception with the error message
-    //                     throw sol::error(e.what());
-    //                 }
-    //             },
-    //             [&state](const class_type& self, sol::object d, udho::view::data::bridges::detail::lua::buffer& stream) mutable -> std::size_t {
-    //                 try {
-    //                     std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-    //                     std::string output = state.exec_lua(view_key, d, self.context());
-    //                     return stream.puts(output);
-    //                 } catch (const std::exception& e) {
-    //                     // If there is an error, throw Lua exception with the error message
-    //                     throw sol::error(e.what());
-    //                 }
-    //             }
-    //         ));
-    //     }
-    // };
+            // first bind according to the metatype
+            typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
+
+            // then add lua specific functionalities
+            user_type& type = binder.type();
+
+            type.set_function("render", sol::overload(
+                [&state](const class_type& self) mutable -> std::string {
+                    try {
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                        return state.exec_lua(view_key, sol::nil, self.context());
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
+                },
+                [&state](const class_type& self, sol::object d) mutable -> std::string {
+                    try {
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                        return state.exec_lua(view_key, d, self.context());
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
+                },
+                [&state](const class_type& self, sol::object d, udho::view::data::bridges::detail::lua::buffer& stream) mutable -> std::size_t {
+                    try {
+                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                        std::string output = state.exec_lua(view_key, d, self.context());
+                        return stream.puts(output);
+                    } catch (const std::exception& e) {
+                        // If there is an error, throw Lua exception with the error message
+                        throw sol::error(e.what());
+                    }
+                }
+            ));
+        }
+    };
 
     template <>
     struct bind<bridges::lua, udho::view::resources::tmpl::proxy<bridges::lua>>{

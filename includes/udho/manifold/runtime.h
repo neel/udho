@@ -5,6 +5,8 @@
 #include <vector>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/pipeline.h>
+#include <udho/manifold/portal.h>
+#include <udho/manifold/context.h>
 
 namespace udho{
 namespace manifold{
@@ -36,6 +38,8 @@ struct basic_runtime{
     using flow_type         = basic_flow<label_type, stream_type>;
     using flow_ptr_type     = std::shared_ptr<flow_type>;
     using collection_type   = std::vector<flow_ptr_type>;
+    using portal_type       = typename detail::get_portal_type<composition_type>::type;
+    using context_type      = typename detail::get_context_for_portal<StreamT, portal_type>::type;
 
     static constexpr std::size_t Count = detail::composition_max_stage<composition_type>::value +1;
 
@@ -134,6 +138,13 @@ struct basic_runtime{
         }
     }
     /// @}
+
+    void stop() {
+        std::size_t flows_count = _flows.size();
+        for(auto& flow: _flows) {
+
+        }
+    }
 
 private:
     composition_type _composition;

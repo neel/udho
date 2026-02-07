@@ -75,18 +75,26 @@ namespace feature{
             using query_params_type = std::multimap<std::string, std::string>;
         private:
             std::string              _resource;
+            std::string              _path;
             std::string              _extension;
             query_params_type        _params;
         public:
             result() = default;
             result(const result&) = default;
             inline result(const std::string_view& target): _resource(target) {}
-            inline const std::string& resource() const { return _resource; }
+
             template <typename StrT>
             inline void resource(StrT&& name) { _resource = std::move(name); }
-            inline const std::string& extension() const { return _extension; }
+            inline const std::string& resource() const { return _resource; }
+
+            template <typename StrT>
+            inline void path(StrT&& name) { _path = std::move(name); }
+            inline const std::string& path() const { return _path; }
+
             template <typename StrT>
             inline void extension(StrT&& ext) { _extension = std::move(ext); }
+            inline const std::string& extension() const { return _extension; }
+
             inline const query_params_type& params() const { return _params; }
 
             template <typename StrT>
@@ -183,6 +191,7 @@ namespace feature{
 
     struct responder{
         static constexpr const std::size_t stage = 2;
+        static constexpr const std::string_view name = "responder";
     };
 
     /**

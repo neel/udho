@@ -1,0 +1,185 @@
+digraph ostream_fsm {
+  rankdir=TB;
+  bgcolor="white";
+  fontname="Helvetica";
+
+  // Default node/edge styling
+  node [shape=plaintext, fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=8, color="#666666", fontcolor="#333333", arrowsize=0.8];
+
+  // ---- Color coding for API calls ----
+  // write(): blue
+  // disable_buffering(): orange
+  // finish(): red
+  // internal callbacks: gray
+
+
+  // ---------- States ----------
+  buffered_open [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>buffered</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_buffering</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_finishing</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_headers_sent</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  buffered_flushing [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>buffered_flushing</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_buffering</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_finishing</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_headers_sent</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  switching_to_queued [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>switching</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_buffering</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_finishing</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_headers_sent</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  queued_open [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>queued</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_buffering</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_finishing</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true/false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_headers_sent</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  queued_finishing [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>queued_finishing</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_buffering</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">false</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_finishing</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">_headers_sent</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">true</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  completed [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+      <TR>
+        <TD COLSPAN="2" ALIGN="CENTER"><B>completed</B></TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#B0B0B0" HEIGHT="1"></TD></TR>
+
+      <TR>
+        <TD ALIGN="LEFT"><FONT POINT-SIZE="9">callback</FONT></TD>
+        <TD ALIGN="RIGHT"><FONT POINT-SIZE="9">delivered</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+
+  // Start marker
+  start [shape=point, label="init", width=0.14, height=0.14];
+  reset [shape=point, label="reset", width=0.14, height=0.14];
+
+  // ---------- Transitions ----------
+  start -> buffered_open [color="#666666"];
+
+  // write(): blue
+  buffered_open -> buffered_open [label="write()", color="#1f77b4", fontcolor="#1f77b4"];
+  switching_to_queued -> switching_to_queued [label="write() (queues; paused)", color="#1f77b4", fontcolor="#1f77b4"];
+  queued_open -> queued_open [label="write()", color="#1f77b4", fontcolor="#1f77b4"];
+
+  // disable_buffering(): orange
+  buffered_open -> switching_to_queued [label="disable_buffering()", color="#ff7f0e", fontcolor="#ff7f0e"];
+
+  // finish(): red
+  buffered_open -> buffered_flushing [label="finish()", color="#d62728", fontcolor="#d62728"];
+  queued_open -> queued_finishing [label="finish()", color="#d62728", fontcolor="#d62728"];
+  queued_open -> queued_finishing [label="auto:after\nif(_finish)", color="#d62728", fontcolor="#d62728"];
+  switching_to_queued -> switching_to_queued [label="finish() (sets _finishing)", color="#d62728", fontcolor="#d62728"];
+
+  // internal callbacks: gray
+  // buffered plain: on_buffered_flush completes
+  buffered_flushing -> completed [label="on_buffered_flush (plain)", color="#777777", fontcolor="#555555"];
+
+  buffered_flushing -> buffered_flushing [label="finish() nop", color="#d62728", fontcolor="#d62728"];
+  buffered_flushing -> buffered_flushing [label="write() nop", color="#1f77b4", fontcolor="#1f77b4"];
+
+  // buffered chunked: on_buffered_flush triggers terminal then completion
+  buffered_flushing -> completed [label="on_buffered_flush (chunked)\non_buffered_completion", color="#777777", fontcolor="#555555"];
+
+  // switching: after buffered flush, queued is resumed
+  switching_to_queued -> queued_open [label="-> flush_hedaers()\l... on_header_completion(...)\l->flush_buffer()\l... on_buffered_flush(...)\l->queued_stream.resume()", color="#777777", fontcolor="#555555"];
+
+  // queued finishes when draining completes
+  queued_finishing -> completed [label="on_queued_completion", color="#777777", fontcolor="#555555"];
+
+  queued_finishing -> queued_finishing [label="finish() nop", color="#d62728", fontcolor="#d62728"];
+  queued_finishing -> queued_finishing [label="write() nop", color="#1f77b4", fontcolor="#1f77b4"];
+
+  // completed absorbs
+  completed -> reset [label="(reset)", color="#AAAAAA", fontcolor="#888888"];
+}

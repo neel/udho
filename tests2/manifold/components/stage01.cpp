@@ -83,7 +83,7 @@ using test_callbacks = basic_callbacks<boost::beast::test::stream>;
 namespace testing{
 
 template <typename StreamT>
-auto url() {
+auto router() {
     using namespace udho::hazo::string::literals;
     auto actions1 =
         udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
@@ -107,26 +107,26 @@ auto url() {
     udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
     udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
 
-    auto table      = std::move(mount_point1)/* | std::move(mount_point2) | std::move(mount_point3)*/;
+    auto table      = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
 
-    return table;
+    return udho::url::router(std::move(table));
 }
 
 auto test_url() {
-    return url<boost::beast::test::stream>();
+    return router<boost::beast::test::stream>();
 }
 
 auto tcp_url() {
-    return url<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type>();
+    return router<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type>();
 }
 
 template <typename StreamT>
-using routing_table_type = std::decay_t<decltype(url<StreamT>())>;
+using test_case_router_type = std::decay_t<decltype(router<StreamT>())>;
 
 
 template <typename StreamT>
 struct basic_www{
-    using router_type                = udho::url::basic_router<routing_table_type<StreamT>>;
+    using router_type                = test_case_router_type<StreamT>;
     using handler_component_type     = udho::manifold::components::basic_handler<StreamT>;
     using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
@@ -183,12 +183,12 @@ struct framework{
     static_assert(runtime_type::Count >= 2);
 
     template <typename... Components>
-    framework(routing_table_type<StreamT>&& table, Components&&... components): _router(std::move(table)), _handler(_router.table().summary()), _routing(_router), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
+    framework(test_case_router_type<StreamT>&& router, Components&&... components)
+        : _handler(router.summary()), _routing(std::move(router)), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
 
     runtime_type& runtime() { return _runtime; }
 
 private:
-    router_type             _router;
     handler_component_type  _handler;
     routing_component_type  _routing;
     runtime_type            _runtime;
@@ -200,7 +200,9 @@ template <typename StreamT>
 struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     using label_type        = testing::basic_www<StreamT>;
     using stream_type       = StreamT;
+    using ostream_type      = udho::net::basic_ostream<StreamT>;
     using runtime_type      = basic_runtime<label_type, StreamT>;
+    using handler_type      = udho::manifold::components::basic_handler<StreamT>;
     using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
@@ -213,16 +215,77 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     bool reenter(stream_type& stream) { return true; }
-    void prepare(stream_type& stream) { }
-    bool error(udho::manifold::exclusive_result success, stream_type& stream){
+
+    template <typename... Args>
+    void prepare(stream_type& stream, Args&&... args) { }
+
+    template <typename... Args>
+    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();
-            } catch(const std::exception& ex) {
+            } catch(const udho::http::error& error) {
+                std::cout << "exception: " << error.what() << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            } catch(boost::system::error_code error) {
+                std::cout << "system error: " << error << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            }catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
+                handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
         }
-        return false;
+    }
+
+private:
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+        ostream.status(error.status());
+        ostream.finish();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, boost::system::error_code error, stream_type& stream, Args&&... args) {
+        if(error == boost::asio::error::eof) {
+            flow.abort();
+        }
+
+        flow.abort();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::exception& error, stream_type& stream, Args&&... args) {
+        flow.abort();
+    }
+
+private:
+
+    template <typename... Args>
+    ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
+        auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
+        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+            if(error) {
+                // TODO Error while writing to socket
+                return;
+            }
+
+            if(restart) {
+                std::apply(
+                    [&](auto&&... args) {
+                        flow.restart(stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                    );
+            } else {
+                flow.abort();
+            }
+        };
+
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        return ostream;
     }
 
 private:
@@ -247,7 +310,6 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_lo
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
-    using routing_table_type     = typename routing_component_type::routing_table_type;
 
     template <typename... Args>
     static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
@@ -263,8 +325,8 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_lo
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
         const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
-        const routing_table_type& routing_table = routing_component.table();
-        routing_table.reconfigure_for(route_index, configs);
+        const auto& router = routing_component.router();
+        router.reconfigure_for(route_index, configs);
         // }
         p.next(flow, std::forward<Args>(args)...);
     }
@@ -287,7 +349,6 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
     using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
-    using routing_table_type     = typename routing_component_type::routing_table_type;
 
     template <typename... Args>
     static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
@@ -303,7 +364,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
         const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
-        const routing_table_type& routing_table = routing_component.table();
+        const auto& router = routing_component.router();
         // }
 
         // { add finish lambda to handler component
@@ -336,7 +397,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
         // }
 
         // { invoke action
-        routing_table.invoke_at(route_index, resource, context);
+        router.invoke_at(route_index, context);
         // }
     }
 };

@@ -258,10 +258,10 @@ struct store{
         }
     }
 
-    template <udho::view::resources::asset::type AssetType>
-    const asset_registration_info& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>& res) {
-        return add(prefix, &res);
-    }
+    // template <udho::view::resources::asset::type AssetType>
+    // const asset_registration_info& add(const std::string& prefix, udho::view::resources::asset::basic_resource<AssetType>& res) {
+    //     return add(prefix, res);
+    // }
 
     size_type size() const { return _resources.size(); }
 

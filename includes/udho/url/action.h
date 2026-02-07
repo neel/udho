@@ -61,6 +61,7 @@ namespace detail{
 
     template <typename T, std::size_t After>
     auto rest(){
+        static_assert(std::tuple_size<T>::value >= After);
         return rest<T, After>(std::make_index_sequence<std::tuple_size<T>::value - After>());
     }
 

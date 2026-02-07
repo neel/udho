@@ -25,6 +25,7 @@ struct pretty_url_policy{
         using size_type = typename StrT::size_type;
         auto sep    = target.find('?');
         auto path   = target.substr(0, sep); // check extension .html or .json or .xml or nothing etc...
+        result.path(path);
         extract_path(result, path);
         if(sep >= target.size()) return;
 

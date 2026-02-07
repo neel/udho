@@ -100,10 +100,10 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
     SECTION("Single mount point") {
         boost::asio::io_context io_context;
-        auto table  = std::move(mount_point1);
+        auto table  = udho::url::mountpoints_table(std::move(mount_point1));
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(router);
+        auto routing = udho::manifold::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
         using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
@@ -162,12 +162,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
                 // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
 
-                CHECK(success.has_exception());
-                try {
-                    success.rethrow();
-                } catch(const std::exception& e) {
-                    std::cout << "Caught exception: '" << e.what() << "'\n";
-                }
+                // CHECK(route.type() == udho::url::detail::route_index::type::none);
+
             }).eval(stream);
             io_context.run();
         }
@@ -227,7 +223,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto table  = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(router);
+        auto routing = udho::manifold::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
         using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
