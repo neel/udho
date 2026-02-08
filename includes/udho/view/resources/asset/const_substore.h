@@ -122,7 +122,7 @@ struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
     using basic_const_store_type::basic_const_store_type;
 
     template <typename It, typename Function>
-    udho::net::stream& importmap(udho::net::stream& stream, It begin, It end, Function&& f) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream, It begin, It end, Function&& f) const {
         stream << "<script type=\"importmap\">" << "\n";
         stream << "{" << "\n";
         std::vector<std::string> imports;
@@ -142,20 +142,20 @@ struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
     }
 
     template <typename Function>
-    udho::net::stream& importmap(udho::net::stream& stream, Function&& f) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream, Function&& f) const {
         return importmap(stream, basic_const_store_type::begin(), basic_const_store_type::end(), std::forward<Function>(f));
     }
 
     template <typename Function>
-    udho::net::stream& importmap(udho::net::stream& stream, const std::string& prefix, Function&& f) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream, const std::string& prefix, Function&& f) const {
         return importmap(stream, basic_const_store_type::begin(prefix), basic_const_store_type::end(prefix), std::forward<Function>(f));
     }
 
-    udho::net::stream& importmap(udho::net::stream& stream) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream) const {
         return importmap(stream, [](basic_const_store_type::type_const_iterator){ return true; });
     }
 
-    udho::net::stream& importmap(udho::net::stream& stream, const std::string& prefix) const {
+    udho::net::ostream_view& importmap(udho::net::ostream_view& stream, const std::string& prefix) const {
         return importmap(stream, prefix, [](basic_const_store_type::combined_const_iterator){ return true; });
     }
 

@@ -133,7 +133,8 @@ struct basic_presenter{
                 stream << properties.open();
                 tag_opened = true;
             }
-            stream << str;
+
+            stream.write(str.c_str(), str.size(), true);
             if(tag_opened){
                 stream << properties.close();
             }
@@ -148,7 +149,7 @@ struct basic_presenter{
                 stream << properties.open();
             }
 
-            stream << str;
+            stream.write(str.c_str(), str.size(), true);
 
             if(i == len-1 && properties.isset()){
                 stream << properties.close();

@@ -20,44 +20,33 @@
 #include <boost/beast/http/dynamic_body.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/_experimental/test/stream.hpp>
 
 namespace udho{
 namespace net{
 namespace protocols{
 
-template <typename StreamT>
-struct http_reader: public std::enable_shared_from_this<http_reader<StreamT>>{
-    using http_request_parser_type  = boost::beast::http::parser<true, boost::beast::http::empty_body>;
-    using handler_type              = std::function<void (boost::system::error_code, std::size_t)>;
-    using stream_type               = StreamT;
+namespace detail{
 
-    inline explicit http_reader(types::headers::request& request, stream_type& stream): _request(request), _stream(stream) {}
-    ~http_reader() {
-        std::cout << "~http_reader" << std::endl;
+template <typename StreamT>
+struct stream_termination{
+    static boost::system::error_code apply(StreamT& stream) {
+        boost::system::error_code error;
+        stream.cancel(error);
+        return error;
     }
-    template <typename Handler>
-    void start(Handler&& handler){
-        _handler = std::move(handler);
-        boost::beast::http::async_read_header(
-            _stream, _buffer, _parser,
-            std::bind(&http_reader::finished, std::enable_shared_from_this<http_reader<StreamT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
-        );
-    }
-    private:
-        void finished(boost::system::error_code ec, std::size_t bytes_transferred){
-            if(!ec){
-                _request = _parser.release();
-                // std::cout << "request parsed" << std::endl << _request << std::endl;
-            }
-            _handler(ec, bytes_transferred);
-        }
-    private:
-        udho::net::types::headers::request& _request;
-        http_request_parser_type            _parser;
-        boost::beast::flat_buffer           _buffer;
-        handler_type                        _handler;
-        stream_type&                        _stream;
 };
+
+template <>
+struct stream_termination<boost::beast::test::stream>{
+    static boost::system::error_code apply(boost::beast::test::stream& stream) {
+        stream.close();
+        stream.close_remote();
+        return boost::system::error_code{};
+    }
+};
+
+}
 
 template <typename StreamT>
 struct http_header_reader{
@@ -103,9 +92,7 @@ private:
     }
 
     void _timeout(){
-        _stream.close();
-        _stream.close_remote();
-        // _stream.cancel(boost::system::error_code{});
+        detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:
@@ -237,9 +224,7 @@ private:
     }
 
     void _timeout(){
-        _stream.close();
-        _stream.close_remote();
-        // _stream.cancel(boost::system::error_code{});
+        detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:

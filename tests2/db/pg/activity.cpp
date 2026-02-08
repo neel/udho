@@ -4,7 +4,7 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
-#include <udho/activities.h>
+#include <udho/activities/activities.h>
 #include <string>
 #include <tuple>
 #include <udho/db/pg/activities/basic.h>
@@ -12,9 +12,7 @@
 #include <udho/db/pg/activities/after.h>
 #include <udho/db/pg/activities/start.h>
 #include <udho/db/pg/activities/data.h>
-
 #include <udho/view/bridges/lua.h>
-#include <udho/net/context.h>
 #include <udho/url/router.h>
 
 namespace db = udho::db;
@@ -112,23 +110,10 @@ struct OZOStrQSelectStructRes2: pg::activity<OZOStrQSelectStructRes2, db::result
     }
 };
 
+using stream_type     = boost::beast::test::stream;
+
 TEST_CASE("postgresql activity with plain OZO SQL query", "[pg]") {
     boost::asio::io_context io;
-    udho::view::data::bridges::lua lua;
-    lua.init();
-    lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-
-    udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
-    resource_store.assets().base("assets");
-    resource_store.lock();
-    udho::view::resources::const_store<udho::view::data::bridges::lua> resource_store_proxy{resource_store};
-
-    auto router = udho::url::router();
-
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> ctx = fake_context_generator.create(io, router, resource_store_proxy);
 
     ozo::connection_pool_config dbconfig;
     ozo::connection_info<> conn_info("dbname=postgres user=postgres");
@@ -144,7 +129,7 @@ TEST_CASE("postgresql activity with plain OZO SQL query", "[pg]") {
         auto fetch     = udho::activities::after(insert).perform<OZOStrQSelectTupleRes>(collector, pool, io);
         auto fetch2    = udho::activities::after(insert).perform<OZOStrQSelectStructRes>(collector, pool, io);
         auto fetch3    = udho::activities::after(insert).perform<OZOStrQSelectStructRes2>(collector, pool, io);
-        udho::activities::after(fetch, fetch2, fetch3).finish(collector, [ctx, &fetched](const udho::activities::accessor<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
+        udho::activities::after(fetch, fetch2, fetch3).finish(collector, [&fetched](const udho::activities::accessor<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
             auto student_id  = d.success<OZOStrQInsert1Res>();
             auto students    = d.success<OZOStrQSelectTupleRes>();
             auto students_s  = d.success<OZOStrQSelectStructRes>();
@@ -185,29 +170,40 @@ TEST_CASE("postgresql activity with plain OZO SQL query", "[pg]") {
     SECTION("Using db::pg::activities"){
         bool fetched = false;
 
-        using ctx_type = udho::net::context<udho::view::data::bridges::lua>;
+        stream_type stream_in(io);
+        stream_type stream_out(io);
+        stream_in.connect(stream_out);
+
+        bool completed = false;
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t bytes_written) {
+              completed = true;
+              CHECK_FALSE(ec);
+              CHECK(bytes_written == 0);
+            }
+        );
 
         auto start     = pg::start<OZOStrQCreateNoRes, OZOStrQTruncateNoRes, OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>::with(io, pool);
         auto create    = pg::after(start).perform<OZOStrQCreateNoRes>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQCreateNoRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQCreateNoRes, udho::net::test_ostream>(stream));
         auto truncate  = pg::after(create).perform<OZOStrQTruncateNoRes>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQTruncateNoRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQTruncateNoRes, udho::net::test_ostream>(stream));
         auto insert    = pg::after(truncate).perform<OZOStrQInsert1Res>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQInsert1Res, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQInsert1Res, udho::net::test_ostream>(stream));
         auto fetch     = pg::after(insert).perform<OZOStrQSelectTupleRes>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQSelectTupleRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQSelectTupleRes, udho::net::test_ostream>(stream));
         auto fetch2    = pg::after(insert).perform<OZOStrQSelectStructRes>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQSelectStructRes, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQSelectStructRes, udho::net::test_ostream>(stream));
         auto fetch3    = pg::after(insert).perform<OZOStrQSelectStructRes2>(start)
-                            .if_failed(pg::on::failure<ctx_type>(ctx))
-                            .if_errored(pg::on::error<OZOStrQSelectStructRes2, ctx_type>(ctx));
+                            .if_failed(pg::on::failure(stream))
+                            .if_errored(pg::on::error<OZOStrQSelectStructRes2, udho::net::test_ostream>(stream));
 
-        pg::after(fetch, fetch2, fetch3).finish(start, [ctx, &fetched](const pg::data<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
+        pg::after(fetch, fetch2, fetch3).finish(start, [&stream, &fetched](const pg::data<OZOStrQInsert1Res, OZOStrQSelectTupleRes, OZOStrQSelectStructRes, OZOStrQSelectStructRes2>& d){
             auto student_id  = d.success<OZOStrQInsert1Res>();
             auto students    = d.success<OZOStrQSelectTupleRes>();
             auto students_s  = d.success<OZOStrQSelectStructRes>();

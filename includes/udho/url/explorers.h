@@ -10,6 +10,7 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/url/utils.h>
 #include <udho/url/mimes.h>
+#include <udho/net/ostream.h>
 
 namespace udho{
 namespace url{
@@ -48,7 +49,6 @@ struct is_smart_ptr: std::bool_constant<is_shared_ptr_v<T> || is_unique_ptr_v<T>
  * implement the core functionality for checking existence, serving content, and listing resources.
  */
 struct abstract_explorer {
-    using context_type = udho::net::context<udho::view::data::bridges::lua>;
 
     inline explicit abstract_explorer(const std::string& label): _label(label) {}
     virtual ~abstract_explorer() = default;
@@ -75,24 +75,29 @@ struct abstract_explorer {
      * @param stream Network stream to write the content to
      * @return true if the resource was successfully served, false otherwise
      */
-    virtual bool cat(const std::string& subject, udho::net::stream& stream) const = 0;
+    virtual bool cat(const std::string& subject, udho::net::ostream_view& stream) const = 0;
 
-    inline static udho::pages::system::layouts::sys<context_type> layout(context_type ctx) {
-        return udho::pages::system::layouts::listing(ctx);
+    template <typename ContextT>
+    inline static udho::pages::system::layouts::sys<ContextT> layout(ContextT& context) {
+        return udho::pages::system::layouts::listing(context);
     }
 
-    virtual bool ls(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const {
+    bool _ls(const std::string& subject, udho::pages::system::data::listings& d) const {
         namespace placeholders  = udho::pages::system::layouts::placeholders;
 
         if(is_subset(subject)) {
-            return populate(subject, ctx, d);
+            return populate(subject, d);
         }
 
         return false;
     }
 
+    virtual bool ls(const std::string& subject, udho::pages::system::data::listings& d) const {
+        return _ls(subject, d);
+    }
+
     protected:
-    virtual bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const = 0;
+    virtual bool populate(const std::string& subject, udho::pages::system::data::listings& d) const = 0;
 
     private:
     std::string _label;
@@ -106,8 +111,6 @@ struct abstract_explorer {
  * Manages document root directory and ensures secure path resolution.
  */
 struct files: public abstract_explorer, public mime_registry {
-    using context_type = abstract_explorer::context_type;
-
     /**
      * @brief Gets the current document root
      * @return Const reference to the document root path
@@ -156,21 +159,22 @@ struct files: public abstract_explorer, public mime_registry {
      * @return true if file was served successfully, false otherwise
      * @throws Propagates filesystem errors and libmagic exceptions
      */
-    inline bool cat(const std::string& subject, udho::net::stream& stream) const override {
+    inline bool cat(const std::string& subject, udho::net::ostream_view& ostream) const override {
         if(exists(subject)) {
             std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
-            return serve_file(normalized_path, stream);
+            return serve_file(normalized_path, ostream);
         } else {
             return false;
         }
     }
 
   protected:
-    virtual bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const override {
+    virtual bool populate(const std::string& subject, udho::pages::system::data::listings& d) const override {
         std::filesystem::path normalized_path = utils::normalize_path(subject, _root);
         d.add(udho::pages::system::data::listing{label(), normalized_path, _root, *this});
         return true;
     }
+
 
     /**
      * @brief Normalizes and secures a filesystem path
@@ -181,19 +185,21 @@ struct files: public abstract_explorer, public mime_registry {
     inline std::filesystem::path normalize(const std::string& subject) const {
         return utils::normalize_path(subject, _root);
     }
-    inline bool serve_file(const std::filesystem::path& normalized_path, udho::net::stream& stream) const {
+
+    template <typename OStreamT>
+    inline bool serve_file(const std::filesystem::path& normalized_path, OStreamT& ostream) const {
         try {
             std::string mime = mime_type(normalized_path);
             boost::iostreams::mapped_file_source file;
             file.open(normalized_path);
 
             if (file.is_open()) {
-                stream.set(boost::beast::http::field::content_type, mime);
-                stream.set(boost::beast::http::field::content_length, std::to_string(file.size()));
+                ostream.set(boost::beast::http::field::content_type, mime);
+                ostream.set(boost::beast::http::field::content_length, std::to_string(file.size()));
 
-                stream.write(file.data(), file.size());
+                ostream.write(file.data(), file.size());
                 file.close();
-                stream.finish();
+                ostream.finish();
                 return true;
             } else {
                 std::cout << "Failed to open file: " << normalized_path << std::endl;
@@ -216,8 +222,6 @@ struct files: public abstract_explorer, public mime_registry {
  * Serves static files from the asset store.
  */
 struct assets: public abstract_explorer {
-    using context_type = abstract_explorer::context_type;
-
     assets(const std::string& label, const udho::view::resources::asset::const_store& assets): abstract_explorer(label), _assets(assets) {}
 
     /**
@@ -236,7 +240,7 @@ struct assets: public abstract_explorer {
      */
     inline bool is_subset(const std::string& subject) const override {
         std::string sub = utils::slash_quote(subject);          // _base starts and ends with / -> sub starts with /
-        for(auto p: _assets.prefixes()){
+        for(const auto& p: _assets.prefixes()){
             const std::string& prefix = p.prefix();                     // prefix does not contain any leading or trailing /
             std::string prefix_q = utils::slash_quote(utils::slash_concat(_assets.base(), prefix));          // prefix_q starts and ends with /
             bool prefix_matched = boost::starts_with(sub, _assets.base()) && boost::starts_with(prefix_q, sub);    // prefix_q starts with the sub
@@ -261,18 +265,19 @@ struct assets: public abstract_explorer {
      * @return true if an asset was served successfully, false otherwise
      * @throws Propagates filesystem errors and libmagic exceptions
      */
-    inline bool cat(const std::string& subject, udho::net::stream& stream) const override {
+    inline bool cat(const std::string& subject, udho::net::ostream_view& ostream) const override {
         if(exists(subject)){
-            return _assets.serve(stream, subject);
+            return _assets.serve(ostream, subject);
         }
         return false;
     }
 
 protected:
-    bool populate(const std::string& subject, context_type ctx, udho::pages::system::data::listings& d) const override {
+    bool populate(const std::string& subject, udho::pages::system::data::listings& d) const override {
         d.add(udho::pages::system::data::listing{label(), _assets.make_prefix_proxy(), _assets.base(), subject});
         return true;
     }
+
   private:
     const udho::view::resources::asset::const_store& _assets;
 };
@@ -304,8 +309,6 @@ struct registry{
     using explorer_entry  = std::pair<std::string, explorer_ptr>;
     /// @brief Container type mapping labels to explorer instances
     using collection_type = std::vector<explorer_entry>;
-
-    using context_type = abstract_explorer::context_type;
 
     static const explorer_ptr nothing;
 
@@ -374,7 +377,8 @@ struct registry{
         return subset_of(subject) != nothing;
     }
 
-    inline bool cat(const std::string& subject, udho::net::stream& stream) const {
+    template <typename OstreamT>
+    inline bool cat(const std::string& subject, OstreamT& stream) const {
         const explorer_ptr& explorer = exists_in(subject);
         if(explorer == nothing) {
             return false;
@@ -382,8 +386,9 @@ struct registry{
         return explorer->cat(subject, stream);
     }
 
-    inline bool ls(const std::string& subject, context_type ctx) const {
-        auto layout = abstract_explorer::layout(ctx);
+    template <typename ContextT>
+    inline bool ls(const std::string& subject, ContextT& context) const {
+        auto layout = abstract_explorer::layout(context);
         layout.css().add("udho", "tabs.css");
 
         udho::pages::system::data::listings listings{subject};
@@ -391,7 +396,7 @@ struct registry{
         bool result = false;
         for(const auto& pair: _explorers){
             if(pair.second->is_subset(subject)){
-                pair.second->ls(subject, ctx, listings);
+                pair.second->ls(subject, listings);
                 result = true;
             }
         }
@@ -400,20 +405,26 @@ struct registry{
             namespace places = udho::pages::system::layouts::places;
             namespace placeholders = udho::pages::system::layouts::placeholders;
 
+            context.ostream().set(boost::beast::http::field::content_type, "text/html");
+
             layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::ok};
             layout[places::listing] = listings;
             layout[placeholders::footer] = udho::pages::system::data::status_info{};
+
+            layout();
         }
 
         return result;
     }
 
-    status serve(const std::string& subject, context_type ctx) const {
+    template <typename ContextT>
+    status serve(const std::string& subject, ContextT& context) const {
         if(exists(subject)){
-            if(cat(subject, ctx))
+            udho::net::ostream_view ostream_view = context.ostream().view();
+            if(cat(subject, ostream_view))
                 return status::file;
         } else if(is_subset(subject)){
-            if(ls(subject, ctx))
+            if(ls(subject, context))
                 return status::directory;
         }
         return status::not_found;

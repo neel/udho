@@ -192,7 +192,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
     inline std::uint64_t _revision(std::basic_istream<CharT, Traits>& file) const {
         detail::record_preamble preamble;
         _preamble(file, preamble);
-        return preamble.revision;
+        return preamble.get_revision();
     }
 
     /**
@@ -206,7 +206,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         std::streamoff file_size = _preamble(file, preamble);
         record.created(preamble.created_at());
         record.updated(preamble.updated_at());
-        record.revision(preamble.revision);
+        record.revision(preamble.get_revision());
 
         udho::session::id sessid;
         file.read(reinterpret_cast<char*>(&sessid), static_cast<std::streamsize>(sizeof(udho::session::id)));
@@ -259,7 +259,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
         detail::record_preamble preamble{};
         preamble.created_at(record.created());
         preamble.update(current_time);
-        preamble.revision = record.revision() +1;
+        preamble.set_revision(record.revision() +1);
         file.write(reinterpret_cast<const char*>(&preamble), sizeof(preamble));
 
         udho::session::id sessid = record.sessid();
@@ -291,7 +291,7 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
 
         if(result){
             auto& mutable_record = const_cast<udho::session::record_data&>(record);
-            mutable_record.sync(preamble.revision, current_time);
+            mutable_record.sync(preamble.get_revision(), current_time);
         }
 
         return result;

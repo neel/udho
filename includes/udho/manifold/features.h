@@ -5,10 +5,12 @@
 #include <type_traits>
 #include <udho/manifold/fwd.h>
 #include <udho/net/common.h>
-#include <udho/url/router.h>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
+#include <udho/cookies/jar.h>
 #include <udho/session/note.h>
+#include <udho/url/route_index.h>
 
 namespace udho {
 namespace manifold {
@@ -24,34 +26,6 @@ namespace manifold {
  * Defines the types of functionality a manifold component can provide
  */
 namespace feature{
-
-    /**
-     * @brief generates an unique signature for the request
-     */
-    struct hash{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief tracks events associated with the request (e.g. mini logging)
-     */
-    struct track{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief decides whether to accept or reject this request
-     */
-    struct filter{
-        static constexpr const std::size_t stage = 0;
-    };
-
-    /**
-     * @brief rate control, reject requests when exceeds server capacity
-     */
-    struct throttle{
-        static constexpr const std::size_t stage = 0;
-    };
 
     struct header_reader{
         static constexpr const std::size_t stage = 0;
@@ -73,18 +47,26 @@ namespace feature{
             using query_params_type = std::multimap<std::string, std::string>;
         private:
             std::string              _resource;
+            std::string              _path;
             std::string              _extension;
             query_params_type        _params;
         public:
             result() = default;
             result(const result&) = default;
             inline result(const std::string_view& target): _resource(target) {}
-            inline const std::string& resource() const { return _resource; }
+
             template <typename StrT>
             inline void resource(StrT&& name) { _resource = std::move(name); }
-            inline const std::string& extension() const { return _extension; }
+            inline const std::string& resource() const { return _resource; }
+
+            template <typename StrT>
+            inline void path(StrT&& name) { _path = std::move(name); }
+            inline const std::string& path() const { return _path; }
+
             template <typename StrT>
             inline void extension(StrT&& ext) { _extension = std::move(ext); }
+            inline const std::string& extension() const { return _extension; }
+
             inline const query_params_type& params() const { return _params; }
 
             template <typename StrT>
@@ -160,13 +142,6 @@ namespace feature{
         };
     };
 
-    struct header_writer{
-        static constexpr const std::size_t stage = 1;
-    };
-    struct body_writer{
-        static constexpr const std::size_t stage = 1;
-    };
-
     struct locator{
         static constexpr const std::size_t stage = 0;
         static constexpr const std::string_view name = "locator";
@@ -174,36 +149,14 @@ namespace feature{
         using result = udho::url::detail::route_index;
     };
 
+    struct resources_storage{
+        static constexpr const std::size_t stage = 0;
+        static constexpr const std::string_view name = "resources_storage";
+    };
+
     struct responder{
         static constexpr const std::size_t stage = 2;
-    };
-
-    /**
-     * @brief provides global and local cache facility
-     */
-    struct cache{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief provides facilities for generating, and verification of scalar tokens with TTL
-     */
-    struct token{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief provide policy based session extraction policy connected with session storage and management system
-     */
-    struct session{
-        static constexpr const std::size_t stage = 1;
-    };
-
-    /**
-     * @brief checks uploaded file satisfies constraints and if it does then copies
-     */
-    struct upload{
-        static constexpr const std::size_t stage = 1;
+        static constexpr const std::string_view name = "responder";
     };
 
 }

@@ -24,9 +24,7 @@ struct protocol{
 
     using features    = udho::manifold::features<
         udho::manifold::feature::header_reader,
-        udho::manifold::feature::body_reader// ,
-        // udho::manifold::feature::header_writer,
-        // udho::manifold::feature::body_writer
+        udho::manifold::feature::body_reader
     >;
 
     UDHO_CONFIG_PARAM(header_time_limit,      std::size_t,  1);      // maximum time spent (in seconds) for parsing only the header part of an HTTP request
@@ -86,7 +84,7 @@ private:
 
 namespace protocols {
     template <typename StreamT>
-    using http2 = udho::manifold::components::protocol<udho::net::protocols::http2<StreamT>, StreamT>;
+    using http = udho::manifold::components::protocol<udho::net::protocols::http<StreamT>, StreamT>;
 }
 
 }
@@ -164,46 +162,39 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
         const udho::manifold::feature::header_reader::result& request = journal.template at<udho::manifold::feature::header_reader>();
         const udho::manifold::feature::identifier::result& identifier = journal.template at<udho::manifold::feature::identifier>();
 
-        using result_type = udho::manifold::feature::body_reader::result;
-
-        std::size_t timeout_secs   = _config[component_type::body_time_limit::val].value();     // Mitigate CWE-400 w.r.t. time consumed (slowloris attack)
-        std::size_t memort_limit   = _config[component_type::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
-        bool use_contiguous_buffer = _config[component_type::contiguous_buffer::val].value();   // overridable by user
-
-        // struct reader_raii{
-        //     reader_raii(component_type& comp, std::size_t id): _component(comp), _id(id) {}
-        //     ~reader_raii(){
-        //         _component.remove(_id);
-        //     }
-        // private:
-        //     component_type& _component;
-        //     std::size_t     _id;
-        // };
-
-        std::string content_type = request.count(boost::beast::http::field::content_type)
-                                       ? request.at(boost::beast::http::field::content_type)
-                                       : "application/octet-stream";
-
-        // For now don't use content type to decide flat or multi buffer.
-
-        reader_ptr_type reader = _component.reader(_id);
-
-        if(use_contiguous_buffer) {
-            reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::flat_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
-                // reader_raii gaurd(_component, _id);
-                std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
-                udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, std::move(buffer), boost::beast::multi_buffer{});
-                result.bytes_transferred(bytes_transferred);
-                next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-            }, timeout_secs, memort_limit);
+        if(request.method() == boost::beast::http::verb::get) {
+            next.skip();
+            return;
         } else {
-            reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::multi_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
-                // reader_raii gaurd(_component, _id);
-                std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
-                udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, boost::beast::flat_buffer{}, std::move(buffer));
-                result.bytes_transferred(bytes_transferred);
-                next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-            }, timeout_secs, memort_limit);
+            using result_type = udho::manifold::feature::body_reader::result;
+
+            std::size_t timeout_secs   = _config[component_type::body_time_limit::val].value();     // Mitigate CWE-400 w.r.t. time consumed (slowloris attack)
+            std::size_t memort_limit   = _config[component_type::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
+            bool use_contiguous_buffer = _config[component_type::contiguous_buffer::val].value();   // overridable by user
+
+            std::string content_type = request.count(boost::beast::http::field::content_type)
+                                           ? request.at(boost::beast::http::field::content_type)
+                                           : "application/octet-stream";
+
+            // For now don't use content type to decide flat or multi buffer.
+
+            reader_ptr_type reader = _component.reader(_id);
+
+            if(use_contiguous_buffer) {
+                reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::flat_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
+                    std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
+                    udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, std::move(buffer), boost::beast::multi_buffer{});
+                    result.bytes_transferred(bytes_transferred);
+                    next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
+                }, timeout_secs, memort_limit);
+            } else {
+                reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::multi_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
+                    std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
+                    udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, boost::beast::flat_buffer{}, std::move(buffer));
+                    result.bytes_transferred(bytes_transferred);
+                    next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
+                }, timeout_secs, memort_limit);
+            }
         }
     }
 

@@ -1,146 +1,118 @@
 #ifndef UDHO_NET_LISTENER_H
 #define UDHO_NET_LISTENER_H
 
-#include <boost/enable_shared_from_this.hpp>
-#include <udho/net/common.h>
-#include <udho/net/stream.h>
-#include <boost/asio.hpp>
-#include <boost/format.hpp>
-#include <iostream>
-#include <udho/url/summary.h>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/basic_stream_socket.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
+#include <udho/manifold/fwd.h>
+#include <boost/asio/bind_executor.hpp>
+#include <udho/net/detail.h>
 
 namespace udho{
 namespace net{
 
-/**
- * @brief listener runs accept loop for HTTP sockets.
- * Creates a new shared_ptr to the ConnectionT on each successful accept.
- * Then calls the start method of the connection object with a callback to the processor.
- * A processor is callable with two inputs, boost::asio::ip::address, udho::net::stream&&.
- *
- * @ingroup server
- */
-template <typename ConnectionT>
-class listener: public std::enable_shared_from_this<listener<ConnectionT>>{
-    using socket_type      = udho::net::types::socket;
-    using self_type        = listener<ConnectionT>;
-    using connection_type  = ConnectionT;
-    using processer_type   = std::function<void (boost::asio::ip::address, udho::net::stream&&)>;
-    using connection_map   = std::map<typename std::add_pointer<connection_type>::type, std::weak_ptr<connection_type>>;
+template <typename WireT, typename RuntimeT>
+struct basic_listener: private detail::wire_traits<WireT>{
+    using protocol_type = WireT;
+    using wire_types    = detail::wire_types<protocol_type>;
+    using traits_type   = detail::wire_traits<WireT>;
+    using socket_type   = typename wire_types::socket_type;
+    using acceptor_type = typename wire_types::acceptor_type;
+    using endpoint_type = typename wire_types::endpoint_type;
+    using executor_type = typename socket_type::executor_type;
+    using strand_type   = boost::asio::strand<executor_type>;
+    using runtime_type  = RuntimeT;
 
-    boost::asio::io_context&          _service;
-    boost::asio::ip::tcp::acceptor    _acceptor;
-    socket_type                       _socket;
-    boost::asio::signal_set           _signals;
-    processer_type                    _processor;
-    std::atomic<bool>                 _running;
-    connection_map                    _connections;
-  public:
-    /**
-     * @brief Construct a socket listener that accepts an incoming connection into a socket and moves it into a newly constructed ConnectionT object and then call's it's start method to start parsing the received message.
-     * @param router HTTP url mapping router
-     * @param service I/O service
-     * @param endpoint HTTP server endpoint to listen on
-     */
-    listener(boost::asio::io_context& service, const boost::asio::ip::tcp::endpoint& endpoint): _service(service), _acceptor(service), _socket(service), _signals(service, SIGINT, SIGTERM), _running(false) {
-        boost::system::error_code ec;
-        _acceptor.open(endpoint.protocol(), ec);
-        if(ec) throw std::runtime_error((boost::format("Failed to open acceptor %1%") % ec.message()).str());
-        _acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
-        if(ec) throw std::runtime_error((boost::format("Failed to set reusable option %1%") % ec.message()).str());
-        _acceptor.bind(endpoint, ec);
-        if(ec) throw std::runtime_error((boost::format("Failed to bind acceptor %1%") % ec.message()).str());
-        _acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
-        if(ec) throw std::runtime_error((boost::format("Failed to listen %1%") % ec.message()).str());
+public:
+    basic_listener(boost::asio::io_context& io, runtime_type& runtime, endpoint_type endpoint): _strand(io.get_executor()), _runtime(runtime), _endpoint(endpoint), _acceptor(io.get_executor()), _running(false) {}
 
-        _signals.async_wait(std::bind(&self_type::stop, this));
-    }
-    /**
-     * stops accepting incomming connections
-     */
-    void stop(){
-        _running = false;
-        _acceptor.close();
-        _service.stop();
-    }
-    ~listener(){
-        stop();
-    }
-    /**
-     * @brief starts the async accept loop
-     * @details leads to on_accept once an incoming connection is accepted
-     */
-    void listen(processer_type&& processor){
-        _processor = std::move(processor);
-        if(! _acceptor.is_open())
-            return;
-        accept();
-    }
-    private:
-        auto shared_from_this(){
-            return std::enable_shared_from_this<listener<ConnectionT>>::shared_from_this();
-        }
-        /**
-         * @brief accept an incomming connection asynchronously through on_accept callback
-         */
-        void accept(){
+    void start() {
+        boost::asio::post(_strand, [this] {
+            if (_running) return;
             _running = true;
-            _acceptor.async_accept(_socket, std::bind(&self_type::on_accept, std::enable_shared_from_this<self_type>::shared_from_this(), std::placeholders::_1));
-        }
 
-        /**
-         * @brief on_accept creates a connection object once an incomming connection is successfully accepted
-         * @details calls the connection start method of the connection which starts reading the incomming payload
-         * @param ec
-         */
-        void on_accept(boost::system::error_code ec){
-            if(!_running) {
-                for(auto pair : _connections){
-                    connection_type* conn = pair.first;
-                    // TODO force stop conn
-                }
+            boost::system::error_code error;
+            _acceptor.open(_endpoint.protocol(), error);
+            if (error) {
+                _running = false;
                 return;
             }
-            if(!ec){
-                boost::asio::ip::address remote_address = _socket.remote_endpoint().address();
-                // std::cout << "accepted " << remote_address << std::endl;
-                // Assumption:
-                //  The listener outlives all connections created by it from the on_accept function
-                //  Support:
-                //      The lifetime of the listener is managed by itself through accept -> on_accept -> accept loop
-                //      which never termintes until explicitely requested by setting _running to false.
-                // Argument:
-                //  As the listener always outlives the connection, capturing this in the deleter callback is okay.
-                std::shared_ptr<connection_type> conn = std::shared_ptr<connection_type>{
-                    new connection_type{_service, std::move(_socket)},
-                    [this](connection_type* ptr){
-                        std::cout << "deleting connection " << ptr << std::endl;
-                        assert(ptr != 0x0);
-                        auto it = _connections.find(ptr);
-                        assert(it != _connections.end());
-                        auto refs = it->second.use_count();
-                        assert(refs == 0);
-                        _connections.erase(it);
-                        delete ptr;
-                        ptr = 0x0;
-                    }
-                };
-                _connections.insert(std::make_pair(conn.get(), std::weak_ptr<connection_type>{conn}));
-                std::cout << "conn.use_count() " << conn.use_count() << std::endl;
-                conn->start(std::bind(&self_type::on_ready, shared_from_this(), remote_address, std::placeholders::_1));
-            }else{
-                // TODO failed to accept
-                std::cout << "Server: Error while accepting " << ec.category().name() << " : " << ec.value() << " : " << ec.message() << std::endl;
+
+            error = traits_type::prepare(_acceptor, _endpoint);
+            if (error) {
+                _running = false;
+                return;
             }
+
+            _acceptor.bind(_endpoint, error);
+            if (error) {
+                _running = false;
+                return;
+            }
+
+            _acceptor.listen(boost::asio::socket_base::max_listen_connections, error);
+            if (error) {
+                _running = false;
+                return;
+            }
+
             accept();
+        });
+    }
+
+    void stop() {
+        boost::asio::post(_strand, [this] {
+            if (!_running) return;
+            _running = false;
+
+            boost::system::error_code error = traits_type::cancel(_acceptor);
+            _runtime.stop();
+        });
+    }
+
+private:
+    void accept() {
+        if(!_running) return;
+        _acceptor.async_accept(
+            boost::asio::bind_executor(
+                _strand,
+                [this](boost::system::error_code error, socket_type socket) {
+                    if (!_running) return;
+                    on_accept(error, std::move(socket));
+
+                    if (_running) accept();
+                }
+            )
+        );
+    }
+
+    void on_accept(boost::system::error_code error, socket_type&& socket) {
+        if(error) {
+            // TODO report error
+        } else {
+            auto flow = _runtime.spawn(std::move(socket));
+            flow->start();
+            // flows are owned by runtime
         }
-        void on_ready(boost::asio::ip::address address, udho::net::stream&& context){
-            boost::asio::post(_service, [address, context = std::move(context), this] () mutable {
-                _processor(address, std::move(context));
-                // std::cout << __FILE__ << " :" << __LINE__ << std::endl;
-            });
-        }
+    }
+
+private:
+    strand_type              _strand;
+    runtime_type&            _runtime;
+    endpoint_type            _endpoint;
+    acceptor_type            _acceptor;
+    bool                     _running;
 };
+
+template <typename RuntimeT>
+struct basic_listener<std::stringstream, RuntimeT>{};
+
+template <typename RuntimeT>
+basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT> listener(boost::asio::io_context& io, RuntimeT& runtime, typename detail::wire_traits<typename RuntimeT::stream_type::protocol_type>::endpoint_type endpoint) {
+    return basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT>(io, runtime, endpoint);
+}
 
 }
 }

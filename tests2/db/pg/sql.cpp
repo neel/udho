@@ -5,7 +5,7 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/activities.h>
+#include <udho/activities/activities.h>
 #include <udho/db/pg/schema/relation.h>
 #include <udho/db/pg/crud/join.h>
 #include <udho/db/pg/crud/from.h>
@@ -20,7 +20,6 @@
 #include <udho/db/pg/io/json.h>
 
 #include <udho/view/bridges/lua.h>
-#include <udho/net/context.h>
 #include <udho/url/router.h>
 
 #include <udho/session/abstract_catalogue.h>

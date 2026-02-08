@@ -10,8 +10,9 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
-
+#include <udho/manifold/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
+#include <cassert>
 
 namespace udho{
 namespace view{
@@ -75,7 +76,10 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     using layout_type  = LayoutT;
     using key_type     = KeyT;
     using context_type = typename LayoutT::context_type;
-    using store_type   = typename context_type::resource_store;
+    using portal_type  = typename context_type::portal_type;
+    using composition_type = typename portal_type::composition_type;
+    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
 
     context_type&       _ctx;
@@ -83,7 +87,7 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     key_type            _key;
     const store_type&   _store;
 
-    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.resources()) {}
+    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().store()) {}
 
     template <typename Data>
     renderer& render(Data&& d){
@@ -94,11 +98,15 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
 
         std::string view_addr = _layout.properties(_key).view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-            proxy += results.str();
+            if constexpr (_store.bridges_count > 0 ) {
+                udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+                proxy += results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+                const udho::view::data::bridges::view_header& header = _store.header(view_addr);
+                header_renderer_type::apply(header);
+            } else {
+                assert(0 == 1 && "trying to render a view from non-view resource store");
+            }
         } else {
             std::stringstream str_stream;
             if constexpr (helper::is_streamable_v<Data>) {
@@ -129,7 +137,10 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     using layout_type  = LayoutT;
     using key_type     = KeyT;
     using context_type = typename LayoutT::context_type;
-    using store_type   = typename context_type::resource_store;
+    using portal_type  = typename context_type::portal_type;
+    using composition_type = typename portal_type::composition_type;
+    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
     using placeholders_type = typename layout_type::placeholders_type;
     using proxy_type = typename placeholders_type::template proxy_type<key_type>;
@@ -140,7 +151,7 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     key_type            _key;
     const store_type&   _store;
 
-    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.resources()) {}
+    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().resources()) {}
 
     template <typename Data>
     renderer& render(Data&& d){
@@ -152,11 +163,15 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
         const proxy::placeholder_properties& p = _layout.properties(_key);
         std::string view_addr = p.view();
         if(!view_addr.empty()){
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-            proxy = results.str();
+            if constexpr (_store.bridges_count > 0 ) {
+                udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+                proxy = results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+                const udho::view::data::bridges::view_header& header = _store.header(view_addr);
+                header_renderer_type::apply(header);
+            } else {
+                assert(0 == 1 && "trying to render a view from non-view resource store");
+            }
         } else {
             std::stringstream str_stream;
             if constexpr (helper::is_streamable_v<Data>) {
@@ -211,7 +226,7 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
     static_assert(std::is_base_of<basic_presenter<document_type>, PresenterT>::value);
 
     template <typename... Bridges>
-    basic_layout_impl(const udho::view::resources::const_store<Bridges...>& store, on_delete_f on_delete): _document(store), _presenter(_document), _on_delete(on_delete) {}
+    basic_layout_impl(const udho::view::resources::const_store<Bridges...>& store): _document(store), _presenter(_document) {}
 
     document_type& document() { return _document; }
     const document_type& document() const { return _document; }
@@ -219,14 +234,10 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
     presenter_type& presenter() { return _presenter; }
     const presenter_type& presenter() const { return _presenter; }
 
-    ~basic_layout_impl() {
-        _on_delete();
-    }
 
     private:
         document_type   _document;
         presenter_type  _presenter;
-        on_delete_f     _on_delete;
 
 };
 
@@ -282,7 +293,7 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     template <typename KeyT, typename LayoutT, bool>
     friend struct renderer;
 
-    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.resources(), std::bind(&basic_layout_::on_delete, this))), _finished(false) { }
+    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.portal().resources())), _finished(false) { }
     basic_layout(const basic_layout_& other): _context(other._context), _pimpl(other._pimpl), _finished(other._finished) {}
 
     template <typename Key>
@@ -311,10 +322,6 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     const proxy::placeholder_properties& properties(const Key& key) const { return _pimpl->document().properties(key); }
 
     private:
-        void on_delete() {
-            std::cout << "layout is being deleted" << std::endl;
-            finish();
-        }
 
         /**
          * @brief finish the layout by presenting it to the stream associated with the context
@@ -323,12 +330,13 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
          */
         void finish() {
             if(!_finished){
-                _pimpl->presenter()(_context);
+                udho::net::ostream_view ostream_view = _context.ostream().view();
+                _pimpl->presenter()(ostream_view);
                 _finished = true;
-                _context.finish();
+                ostream_view.finish();
             }
         }
-
+    public:
         void operator()() {
             finish();
         }

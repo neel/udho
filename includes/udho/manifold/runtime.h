@@ -5,6 +5,8 @@
 #include <vector>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/pipeline.h>
+#include <udho/manifold/portal.h>
+#include <udho/manifold/context.h>
 
 namespace udho{
 namespace manifold{
@@ -25,16 +27,19 @@ namespace manifold{
  *
  * @tparam LabelT The label type identifying the pipeline configuration
  */
-template <typename LabelT>
-struct runtime{
+template <typename LabelT, typename StreamT>
+struct basic_runtime{
     using label_type        = LabelT;
+    using stream_type       = StreamT;
     using sketch_type       = sketch<label_type>;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
-    using flow_type         = flow<label_type>;
+    using flow_type         = basic_flow<label_type, stream_type>;
     using flow_ptr_type     = std::shared_ptr<flow_type>;
     using collection_type   = std::vector<flow_ptr_type>;
+    using portal_type       = typename detail::get_portal_type<composition_type>::type;
+    using context_type      = typename detail::get_context_for_portal<StreamT, portal_type>::type;
 
     static constexpr std::size_t Count = detail::composition_max_stage<composition_type>::value +1;
 
@@ -54,13 +59,13 @@ struct runtime{
     template <typename... Args>
     static composition_type compose(Args&&... args) { return composition_type::compose(std::forward<Args>(args)...); }
 
-    runtime(runtime&&) = delete;
-    runtime& operator=(runtime&&) = delete;
+    basic_runtime(basic_runtime&&) = delete;
+    basic_runtime& operator=(basic_runtime&&) = delete;
 
-    runtime(composition_type&& composition): _composition(std::move(composition)) {}
+    basic_runtime(composition_type&& composition): _composition(std::move(composition)) {}
 
     template <typename... Components>
-    runtime(Components&&... components): _composition(composition_type::compose(std::forward<Components>(components)...)) {}
+    basic_runtime(Components&&... components): _composition(composition_type::compose(std::forward<Components>(components)...)) {}
 
     /// @name Composition Access
     /// @{
@@ -94,9 +99,9 @@ struct runtime{
      *
      * @return Shared pointer to the new flow
      */
-    flow_ptr_type spawn() {
+    flow_ptr_type spawn(stream_type&& stream) {
         std::scoped_lock lock(_mutex);
-        flow_ptr_type flow_ptr = flow_type::create(*this);
+        flow_ptr_type flow_ptr = flow_type::create(*this, std::forward<stream_type>(stream));
         _flows.push_back(flow_ptr);
         return flow_ptr;
     }
@@ -133,6 +138,13 @@ struct runtime{
         }
     }
     /// @}
+
+    void stop() {
+        std::size_t flows_count = _flows.size();
+        for(auto& flow: _flows) {
+
+        }
+    }
 
 private:
     composition_type _composition;

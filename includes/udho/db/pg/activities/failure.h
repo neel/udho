@@ -32,7 +32,6 @@
 #include <string>
 #include <ozo/error.h>
 #include <udho/pretty/type.h>
-#include <udho/page.h>
 #include <boost/property_tree/detail/xml_parser_utils.hpp>
 
 namespace udho{
@@ -74,23 +73,23 @@ struct failure{
     }
 };
 
-struct exception: udho::exceptions::http_error{
-    failure _failure;
+// struct exception: udho::exceptions::http_error{
+//     failure _failure;
 
-    inline explicit exception(const failure& f, const std::string& message): udho::exceptions::http_error(boost::beast::http::status::internal_server_error, message), _failure(f){}
+//     inline explicit exception(const failure& f, const std::string& message): udho::exceptions::http_error(boost::beast::http::status::internal_server_error, message), _failure(f){}
 
-    inline void decorate(udho::exceptions::visual::page& p) const{
-        std::stringstream stream;
-        stream << "<div class='db-error'>"
-               <<     "<div class='db-prop error'>  <div class='db-key'>Error:  </div> <div class='db-value'><code>"  << _failure.error  << "</code></div></div>"
-               <<     "<div class='db-prop reason'> <div class='db-key'>Reason: </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.reason) << "</code></div></div>"
-               <<     "<div class='db-prop origin'> <div class='db-key'>Source: </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.origin) << "</code></div></div>"
-               <<     "<div class='db-prop sql'>    <div class='db-key'>SQL:    </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.sql)    << "</code></div></div>"
-               << "</div>";
-        udho::exceptions::visual::block db_block("Database", stream.str());
-        p.add_block(db_block);
-    }
-};
+//     inline void decorate(udho::exceptions::visual::page& p) const{
+//         std::stringstream stream;
+//         stream << "<div class='db-error'>"
+//                <<     "<div class='db-prop error'>  <div class='db-key'>Error:  </div> <div class='db-value'><code>"  << _failure.error  << "</code></div></div>"
+//                <<     "<div class='db-prop reason'> <div class='db-key'>Reason: </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.reason) << "</code></div></div>"
+//                <<     "<div class='db-prop origin'> <div class='db-key'>Source: </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.origin) << "</code></div></div>"
+//                <<     "<div class='db-prop sql'>    <div class='db-key'>SQL:    </div> <div class='db-value'><code>"  << boost::property_tree::xml_parser::encode_char_entities(_failure.sql)    << "</code></div></div>"
+//                << "</div>";
+//         udho::exceptions::visual::block db_block("Database", stream.str());
+//         p.add_block(db_block);
+//     }
+// };
 
 }
 }

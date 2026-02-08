@@ -47,7 +47,7 @@ struct expected_next{
 
 TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
     using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
-    using protocol_type    = udho::net::protocols::http2<stream_type>;
+    using protocol_type    = udho::net::protocols::http<stream_type>;
     using component_type   = udho::manifold::components::protocol<protocol_type,stream_type>;
     using config_type      = udho::manifold::config<component_type>;
     using fabric_type      = udho::manifold::facet<component_type, udho::manifold::feature::header_reader>;
@@ -55,6 +55,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
     using result_type      = udho::manifold::feature::header_reader::result;
     using next_type        = sim::expected_next<result_type>;
 
+    boost::asio::io_context io_context;
     component_type component;
     config_type    config;
 
@@ -66,7 +67,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 1: GET request with query parameters
         SECTION("GET request with query parameters") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -97,7 +98,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 2: POST request with headers and body (though we're only reading headers)
         SECTION("POST request with headers") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -130,7 +131,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 3: PUT request with special headers
         SECTION("PUT request with special headers") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -162,7 +163,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 4: Error case - malformed request
         SECTION("Malformed request") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -186,7 +187,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 5: DELETE request
         SECTION("DELETE request") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -213,7 +214,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         // Test Case 6: Request with cookies
         SECTION("Request with cookies") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -250,6 +251,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
     using result_type      = udho::manifold::feature::header_reader::result;
     using next_type        = sim::expected_next<result_type>;
 
+    boost::asio::io_context io_context;
     component_type component;
     config_type    config;
 
@@ -334,7 +336,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
     SECTION("reading scgi header with various request types") {
         // Test Case 1: GET request with query parameters
         SECTION("GET request with query parameters") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -367,7 +369,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
 
         // Test Case 2: POST request with headers
         SECTION("POST request with headers") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -401,7 +403,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
 
         // Test Case 3: PUT request with special headers
         SECTION("PUT request with special headers") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -435,7 +437,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
 
         // Test Case 4: DELETE request
         SECTION("DELETE request") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -465,7 +467,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
 
         // Test Case 5: Error case - malformed SCGI request
         SECTION("Malformed SCGI request - no length") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;
@@ -492,7 +494,7 @@ TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
         }
 
         SECTION("Malformed SCGI request - too long length") {
-            boost::asio::io_context io_context;
+            io_context.restart();
             result_type result;
             std::exception_ptr ex;
             journal_type journal;

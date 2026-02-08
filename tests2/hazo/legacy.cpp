@@ -4,7 +4,8 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
-#include <udho/hazo.h>
+#include <udho/hazo/hazo.h>
+#include <udho/hazo/hana.h>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>

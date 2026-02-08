@@ -21,33 +21,8 @@ namespace url{
 
 namespace detail{
 
-class route_index{
-public:
-    enum class type{
-        none, action, registry
-    };
-private:
-    type        _type;
-    int         _mountpoint;
-    int         _action;
-    std::string _target;
-
-public:
-    inline route_index(const std::string& target, int mountpoint, int action): _type(type::action), _target(target), _mountpoint(mountpoint), _action(action) {}
-    inline route_index(const std::string& target, route_index::type type = route_index::type::none): _type(type), _target(target), _mountpoint(-1), _action(-1) {}
-
-    route_index(const route_index&) = default;
-    inline route_index(route_index::type type, const route_index& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(other._target) {}
-    inline route_index(route_index::type type, route_index&& other): _type(type), _mountpoint(other._mountpoint), _action(other._action), _target(std::move(other._target)) {}
-
-    inline route_index::type type() const { return _type; }
-
-    inline bool valid() const { return _type != type::none && _mountpoint >= 0 && _action >= 0; }
-
-    inline int mountpoint() const { return _mountpoint; }
-    inline int action() const { return _action; }
-    inline const std::string target() const { return _target; }
-};
+template <typename MountpointsTable>
+struct routing_table;
 
 /**
  * @class routing_table
@@ -55,8 +30,8 @@ public:
  *
  * @tparam MountPointsT Sequence of mount points (udho::hazo::basic_seq_d<mount_point<StrT, ActionsT>, ...>)
  */
-template <typename MountPointsT>
-struct routing_table{
+template <typename... Mountpoints>
+struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
 
     /**
      * @brief operator overload for streaming the routing table's mount points
@@ -64,22 +39,23 @@ struct routing_table{
      * @param router Routing table
      * @return Reference to the output stream
      */
-    template <typename Mountpoints>
-    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
+    template <typename... XMountpoints>
+    friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<udho::url::mountpoints_table<XMountpoints...>>& router);
 
     /// Type alias for the mount points collection
-    using mountpoints_type = MountPointsT;
+    using mountpoints_table_type    = udho::url::mountpoints_table<Mountpoints...>;
+    using routing_table_type        = routing_table<udho::url::mountpoints_table<Mountpoints...>>;
 
     routing_table() = delete;
-    routing_table(const routing_table<MountPointsT>&) = delete;
-    routing_table(routing_table<MountPointsT>&&) = delete;
+    routing_table(const routing_table_type&) = delete;
+    routing_table(routing_table_type&&) = default;
 
     /**
      * @brief Constructs a routing table with mount points
      * @param mountpoints Rvalue reference to mount points collection
      * @post Initializes internal summary that can be accessed through the @ref summary function
      */
-    routing_table(mountpoints_type&& mountpoints): _mountpoints(std::move(mountpoints)) { summarize(); }
+    routing_table(mountpoints_table_type&& mountpoints): _mountpoints(std::move(mountpoints)) { summarize(); }
 
     /**
      * @brief Subscript operator for accessing mount points
@@ -249,7 +225,7 @@ struct routing_table{
         }
 
     private:
-        mountpoints_type           _mountpoints;
+        mountpoints_table_type           _mountpoints;
         udho::url::summary::router _summary;
 };
 
@@ -270,7 +246,7 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
 
     routing_table() = delete;
     routing_table(const routing_table<mountpoint_type>&) = delete;
-    routing_table(routing_table<mountpoint_type>&&) = delete;
+    routing_table(routing_table<mountpoint_type>&&) = default;
 
     /**
      * @brief Constructs a routing table with mount points
@@ -427,10 +403,10 @@ private:
 template <typename RoutingTableT = void>
 struct basic_router;
 
-template <typename MountPointsT>
-struct basic_router<detail::routing_table<MountPointsT>>: private detail::routing_table<MountPointsT>{
-    using routing_table    = detail::routing_table<MountPointsT>;
-    using mountpoints_type = MountPointsT;
+template <typename... Mountpoints>
+struct basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoints...>>>: private detail::routing_table<udho::url::mountpoints_table<Mountpoints...>>{
+    using mountpoints_type = udho::url::mountpoints_table<Mountpoints...>;
+    using routing_table    = detail::routing_table<mountpoints_type>;
 
     using routing_table::operator[];
     using routing_table::summary;
@@ -440,7 +416,7 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
-    basic_router(basic_router<routing_table>&&) = delete;
+    basic_router(basic_router<routing_table>&&) = default;
     basic_router(mountpoints_type&& mountpoints): routing_table(std::move(mountpoints)) {}
     basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): routing_table(std::move(mountpoints)), _registry(std::move(registry)) {}
 
@@ -486,15 +462,22 @@ struct basic_router<detail::routing_table<MountPointsT>>: private detail::routin
         if(index.type() == route_index::type::action) {
             return routing_table::invoke_at(index, std::forward<Args>(args)...);
         } else if(index.type() == route_index::type::registry) {
-            // udho::url::explorers::registry::status status = _registry.serve(index.target(), std::forward<Args>(args)...);
-            // return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
+            return invoke_registry(index, std::forward<Args>(args)...);
         }
+        return false;
     }
+
+    template <typename ContextT, typename... Args>
+    bool invoke_registry(const route_index& index, ContextT& context, Args&&...) const {
+        udho::url::explorers::registry::status status = _registry.serve(index.target(), context);
+        return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
+    }
+
 
     template <typename... Args>
     bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
 
-    const detail::routing_table<MountPointsT>& table() const { return *this; }
+    const detail::routing_table<mountpoints_type>& table() const { return *this; }
 
 private:
     udho::url::explorers::registry _registry;
@@ -507,19 +490,32 @@ struct basic_router<void>{
 
     basic_router() = delete;
     basic_router(const basic_router<routing_table>&) = delete;
-    basic_router(basic_router<routing_table>&&) = delete;
+    basic_router(basic_router<routing_table>&&) = default;
 
     basic_router(udho::url::explorers::registry&& registry): _registry(std::move(registry)) {}
 
     bool find(const std::string& subject) const { return _registry.exists(subject); }
 
     template <typename... Args>
-    bool invoke_at(const route_index& index, Args&&... args) const { return false; }
+    bool invoke_at(const route_index& index, Args&&... args) const {
+        if(index.type() == route_index::type::registry) {
+            return invoke_registry(index, std::forward<Args>(args)...);
+        }
+        return false;
+    }
 
     template <typename SupersetT>
-    bool reconfigure_for(const route_index& index, SupersetT& superset) { return false; }
+    bool reconfigure_for(const route_index& index, SupersetT& superset) const { return false; }
 
-    route_index index_of(const std::string& subject) const { return route_index(subject, -1, -1); }
+    route_index index_of(const std::string& subject) const {
+        bool is_file = _registry.exists(subject);
+        bool is_dir  = _registry.is_subset(subject);
+
+        if(is_file || is_dir) {
+            return route_index(subject, route_index::type::registry);
+        }
+        return route_index{subject, route_index::type::none};
+    }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
@@ -527,6 +523,13 @@ struct basic_router<void>{
             udho::url::explorers::registry::status status = _registry.serve(subject, std::forward<Args>(args)...);
             return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
         }
+        return false;
+    }
+
+    template <typename ContextT, typename... Args>
+    bool invoke_registry(const route_index& index, ContextT& context, Args&&...) const {
+        udho::url::explorers::registry::status status = _registry.serve(index.target(), context);
+        return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
     }
 
     template <typename... Args>
@@ -569,9 +572,9 @@ struct basic_router;
  * Inherits core routing functionality from detail::routing_table.
  * Use this version when you don't need embedded resources.
  */
-template <typename MountPointsT>
-struct basic_router: private detail::basic_router<detail::routing_table<MountPointsT>>{
-    using detail_basic_router   = detail::basic_router<detail::routing_table<MountPointsT>>;
+template <typename... Mountpoints>
+struct basic_router<udho::url::mountpoints_table<Mountpoints...>>: private detail::basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoints...>>>{
+    using detail_basic_router   = detail::basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoints...>>>;
     using routing_table         = typename detail_basic_router::routing_table;
     using mountpoints_type      = typename detail_basic_router::mountpoints_type;
 
@@ -580,6 +583,7 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
     using detail_basic_router::find;
     using detail_basic_router::index_of;
     using detail_basic_router::invoke_at;
+    using detail_basic_router::invoke_registry;
     using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
     using detail_basic_router::table;
@@ -587,13 +591,13 @@ struct basic_router: private detail::basic_router<detail::routing_table<MountPoi
 
 
     basic_router() = delete;
-    basic_router(const basic_router<MountPointsT>&) = delete;
-    basic_router(basic_router<MountPointsT>&&) = delete;
+    basic_router(const basic_router<udho::url::mountpoints_table<Mountpoints...>>&) = delete;
+    basic_router(basic_router<udho::url::mountpoints_table<Mountpoints...>>&&) = default;
     basic_router(mountpoints_type&& mountpoints): detail_basic_router(std::forward<mountpoints_type>(mountpoints)) {}
     basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): detail_basic_router(std::forward<mountpoints_type>(mountpoints), std::forward<udho::url::explorers::registry>(registry)) {}
 
-    template <typename Mountpoints>
-    friend std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router);
+    template <typename XMountpointsTable>
+    friend std::ostream& operator<<(std::ostream& stream, const basic_router<XMountpointsTable>& router);
 };
 
 /**
@@ -611,13 +615,14 @@ struct basic_router<void>: private detail::basic_router<void>{
     using detail_basic_router::find;
     using detail_basic_router::index_of;
     using detail_basic_router::invoke_at;
+    using detail_basic_router::invoke_registry;
     using detail_basic_router::reconfigure_for;
     using detail_basic_router::invoke;
     using detail_basic_router::operator();
 
     basic_router() = delete;
     basic_router(const basic_router<void>&) = delete;
-    basic_router(basic_router<void>&&) = delete;
+    basic_router(basic_router<void>&&) = default;
     basic_router(udho::url::explorers::registry&& registry): detail_basic_router(std::forward<udho::url::explorers::registry>(registry)) {}
 
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router);
@@ -703,14 +708,14 @@ struct basic_router<void>: private detail::basic_router<void>{
  * );
  * @endcode
  */
-template <typename MountPointsT>
-basic_router<MountPointsT> router(MountPointsT&& mountpoints, udho::url::explorers::registry&& registry){
-    return basic_router<MountPointsT>{std::forward<MountPointsT>(mountpoints), std::forward<udho::url::explorers::registry>(registry)};
+template <typename... Mountpoints>
+basic_router<udho::url::mountpoints_table<Mountpoints...>> router(udho::url::mountpoints_table<Mountpoints...>&& mountpoints, udho::url::explorers::registry&& registry){
+    return basic_router<udho::url::mountpoints_table<Mountpoints...>>{std::forward<udho::url::mountpoints_table<Mountpoints...>>(mountpoints), std::forward<udho::url::explorers::registry>(registry)};
 }
 
-template <typename MountPointsT>
-basic_router<MountPointsT> router(MountPointsT&& mountpoints){
-    return basic_router<MountPointsT>{std::forward<MountPointsT>(mountpoints)};
+template <typename... Mountpoints>
+basic_router<udho::url::mountpoints_table<Mountpoints...>> router(udho::url::mountpoints_table<Mountpoints...>&& mountpoints){
+    return basic_router<udho::url::mountpoints_table<Mountpoints...>>{std::forward<udho::url::mountpoints_table<Mountpoints...>>(mountpoints)};
 }
 
 /**
@@ -727,24 +732,24 @@ inline basic_router<void> router(ExplorerT&&... explorers){
     return basic_router<void>{udho::url::explorers::registry{std::move(explorers)...}};
 }
 
-template <typename MountPointsT>
-basic_router<MountPointsT> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets){
-    using router_type = basic_router<MountPointsT>;
+template <typename... Mountpoints>
+basic_router<udho::url::mountpoints_table<Mountpoints...>> router(udho::url::mountpoints_table<Mountpoints...>&& mountpoints, const udho::view::resources::asset::const_store& assets){
+    using router_type = basic_router<udho::url::mountpoints_table<Mountpoints...>>;
 
     return  router_type{
-                std::forward<MountPointsT>(mountpoints),
+                std::forward<udho::url::mountpoints_table<Mountpoints...>>(mountpoints),
                 udho::url::explorers::registry{
                     udho::url::explorers::assets{"assets", assets}
                 }
             };
 }
 
-template <typename MountPointsT>
-basic_router<MountPointsT> router(MountPointsT&& mountpoints, const udho::view::resources::asset::const_store& assets, const std::filesystem::path& docroot){
-    using router_type = basic_router<MountPointsT>;
+template <typename... Mountpoints>
+basic_router<udho::url::mountpoints_table<Mountpoints...>> router(udho::url::mountpoints_table<Mountpoints...>&& mountpoints, const udho::view::resources::asset::const_store& assets, const std::filesystem::path& docroot){
+    using router_type = basic_router<udho::url::mountpoints_table<Mountpoints...>>;
 
     return  router_type{
-        std::forward<MountPointsT>(mountpoints),
+        std::forward<udho::url::mountpoints_table<Mountpoints...>>(mountpoints),
         udho::url::explorers::registry{
             udho::url::explorers::files{"docroot", docroot},
             udho::url::explorers::assets{"assets", assets}
@@ -774,7 +779,33 @@ inline basic_router<void> router(const udho::view::resources::asset::const_store
     };
 }
 
+template <typename StrT, typename Actions>
+basic_router<udho::url::mountpoints_table<udho::url::mount_point<StrT, Actions>>> router(udho::url::mount_point<StrT, Actions>&& mountpoint) {
+    return router(udho::url::mountpoints_table(std::move(mountpoint)));
+}
+
+template <typename StrT, typename Actions>
+basic_router<udho::url::mountpoints_table<udho::url::mount_point<StrT, Actions>>> router(udho::url::mount_point<StrT, Actions>&& mountpoint, udho::url::explorers::registry&& registry) {
+    return router(udho::url::mountpoints_table(std::move(mountpoint)), std::forward<udho::url::explorers::registry>(registry));
+}
+
+template <typename StrT, typename Actions>
+basic_router<udho::url::mountpoints_table<udho::url::mount_point<StrT, Actions>>> router(udho::url::mount_point<StrT, Actions>&& mountpoint, const udho::view::resources::asset::const_store& assets) {
+    return router(udho::url::mountpoints_table(std::move(mountpoint)), assets);
+}
+
+template <typename StrT, typename Actions>
+basic_router<udho::url::mountpoints_table<udho::url::mount_point<StrT, Actions>>> router(udho::url::mount_point<StrT, Actions>&& mountpoint, const udho::view::resources::asset::const_store& assets, const std::filesystem::path& docroot) {
+    return router(udho::url::mountpoints_table(std::move(mountpoint)), assets, docroot);
+}
+
 /// @}
+
+template <typename T>
+struct is_router: std::false_type{};
+
+template <typename Table>
+struct is_router<basic_router<Table>>: std::true_type{};
 
 }
 }

@@ -188,9 +188,10 @@ struct const_store{
      * @param prefix string prefix of the asset
      * @param name string name of the asset
      */
-    inline bool serve(udho::net::stream& stream, std::string prefix, std::string name) const {
+    template <typename OstreamT>
+    inline bool serve(OstreamT& ostream, std::string prefix, std::string name) const {
         auto it = find(prefix, name);
-        return serve(stream, it);
+        return serve(ostream, it);
     }
 
     /**
@@ -198,9 +199,10 @@ struct const_store{
      * @param stream the response stream
      * @param subject uri of the asset
      */
-    inline bool serve(udho::net::stream& stream, std::string subject) const {
+    template <typename OstreamT>
+    inline bool serve(OstreamT& ostream, std::string subject) const {
         auto it = find(subject);
-        return serve(stream, it);
+        return serve(ostream, it);
     }
 
     /**
@@ -399,12 +401,13 @@ public:
     }
 
 private:
-    inline bool serve(udho::net::stream& stream, uri_const_iterator it) const {
+    template <typename OstreamT>
+    inline bool serve(OstreamT& ostream, uri_const_iterator it) const {
         if(it == end()){
             return false;
         }
-        it->write(stream);
-        stream.finish();
+        it->write(ostream);
+        ostream.finish();
         return true;
     }
 

@@ -1018,8 +1018,13 @@ void setup(udho::view::resources::store<Bridges...>& store){
                     << udho::view::resources::asset::css("listing.css", std::begin(css_listing), std::end(css_listing))
                     << udho::view::resources::asset::css("routes.css",  std::begin(css_routes),  std::end(css_routes))
                     << udho::view::resources::asset::css("tabs.css",    std::begin(css_tabs),    std::end(css_tabs))
-                    << udho::view::resources::asset::js("tabs.js",      std::begin(js_tabs),     std::end(js_tabs))->embedded(true)
                     << udho::view::resources::asset::img("beral.gif",   std::begin(beral_transp_gif), std::end(beral_transp_gif));
+
+    auto tabs_js = udho::view::resources::asset::js("tabs.js",      std::begin(js_tabs),     std::end(js_tabs));
+    tabs_js->embedded(true);
+
+    store["udho"]   << std::move(tabs_js);
+
 }
 
 }

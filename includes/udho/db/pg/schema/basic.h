@@ -28,7 +28,8 @@
 #ifndef UDHO_DB_PG_SCHEMA_BASIC_H
 #define UDHO_DB_PG_SCHEMA_BASIC_H
 
-#include <udho/hazo.h>
+#include <udho/hazo/hazo.h>
+#include <udho/hazo/hana.h>
 #include <udho/db/pg/schema/fwd.h>
 #include <udho/db/pg/decorators.h>
 #include <udho/db/pg/schema/constraints.h>

@@ -5,7 +5,7 @@
 #else
 #include <catch2/catch_all.hpp>
 #endif
-#include <udho/manifold/components/stream.h>
+#include <udho/net/ostream.h>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <udho/utils/encoding.h>
 #include <iostream>
@@ -117,8 +117,8 @@ struct czp_sequence<std::integer_sequence<std::size_t, Ns...>, Initial>{
 using stream_type     = boost::beast::test::stream;
 using executor_type   = typename stream_type::executor_type;
 using strand_type     = boost::asio::strand<executor_type>;
-using buffered_stream = udho::manifold::detail::basic_buffered_ostream<stream_type>;
-using queued_stream   = udho::manifold::detail::basic_queued_ostream<stream_type>;
+using buffered_stream = udho::net::detail::basic_buffered_ostream<stream_type>;
+using queued_stream   = udho::net::detail::basic_queued_ostream<stream_type>;
 
 struct TestType {
     int value;
@@ -142,7 +142,9 @@ struct multithreaded_io{
 
     void run() {
         for(std::size_t i = 0; i < N; ++i) {
-            _threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(_io)));
+            _threads.create_thread([this]{
+                _io.run();
+            });
         }
     }
 
@@ -164,18 +166,18 @@ private:
 
 TEST_CASE("udho manifold basic_buffered_ostream", "[manifold][stream][buffered]") {
     boost::asio::io_context io;
-    stream_type server(io);
-    stream_type client(io);
+    stream_type stream_in(io);
+    stream_type stream_out(io);
 
-    strand_type strand(server.get_executor());
+    strand_type strand(stream_in.get_executor());
 
-    server.connect(client);
+    stream_in.connect(stream_out);
 
     SECTION("buffered stream") {
         bool is_completed = false;
         udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
         std::size_t finish_callback_called = 0;
-        buffered_stream buffered_stream(server, strand, enc,
+        buffered_stream buffered_stream(stream_in, strand, enc,
             [&](boost::system::error_code ec, std::size_t bytes_written){
                 INFO("error: " << ec.message());
                 CHECK_FALSE(ec);
@@ -196,7 +198,9 @@ TEST_CASE("udho manifold basic_buffered_ostream", "[manifold][stream][buffered]"
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -241,7 +245,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -252,7 +258,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         queued_stream.finish();
         boost::thread_group threads2;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads2.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads2.create_thread([&io]{
+                io.run();
+            });
         }
         threads2.join_all();
 
@@ -278,7 +286,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         io.restart();
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -289,7 +299,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
         queued_stream.finish();
         boost::thread_group threads2;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads2.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads2.create_thread([&io]{
+                io.run();
+            });
         }
         threads2.join_all();
 
@@ -330,7 +342,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
 
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -380,7 +394,9 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
 
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -405,7 +421,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         server.connect(client);
 
         int callback_count = 0;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
@@ -430,7 +446,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         server.connect(client);
 
         int callback_count = 0;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
@@ -454,7 +470,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
         server.connect(client);
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(server,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -476,20 +492,22 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
 
 TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffered][queued]") {
     boost::asio::io_context io;
-    stream_type server(io);
-    stream_type client(io);
+    stream_type stream_in(io);
+    stream_type stream_out(io);
 
     SECTION("happy path") {
         io.restart();
         auto guard = boost::asio::make_work_guard(io);
         boost::thread_group threads;
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
 
-        server.connect(client);
+        stream_in.connect(stream_out);
         bool is_completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
            [&](boost::system::error_code ec, std::size_t bytes_written) {
                is_completed = true;
                // std::cout << "bytes_written " << bytes_written << std::endl;
@@ -515,7 +533,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         io.restart();
         ostream.finish();
         for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread(std::bind(&boost::asio::io_context::run, std::ref(io)));
+            threads.create_thread([&io]{
+                io.run();
+            });
         }
         threads.join_all();
 
@@ -524,16 +544,16 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     }
 
     SECTION("composite stream - empty writes") {
-        multithreaded_io<4> mio(io);
+        multithreaded_io<1> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
-           [&](boost::system::error_code ec, std::size_t bytes) {
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
+           [&](boost::system::error_code ec, std::size_t bytes_written) {
                 completed = true;
                 CHECK_FALSE(ec);
-                CHECK(bytes > 0);
+                CHECK(bytes_written == 52);
            }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -549,19 +569,27 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
 
         CHECK(completed);
         // Should still have headers
-        CHECK(client.str().find("HTTP/1.1 200 OK") != std::string::npos);
+        std::string output = stream_out.str();
+        std::string expected_output = "HTTP/1.1 200 OK\r\n"
+                                      "Transfer-Encoding: chunked\r\n"   // disable_buffering
+                                      "\r\n"
+                                      "0"
+                                      "\r\n"
+                                      "\r\n"
+        ;
+        CHECK(output == expected_output);
     }
 
     SECTION("composite stream - large writes that exceed typical buffer") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         const std::size_t large_size = 1024 * 1024; // 1MB
         std::string large_data(large_size, 'X');
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
             [&](boost::system::error_code ec, std::size_t bytes) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -577,19 +605,19 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         mio.join();
 
         CHECK(completed);
-        CHECK(client.str().size() > large_size);
+        CHECK(stream_out.str().size() > large_size);
     }
 
     SECTION("composite stream - concurrent writes from multiple threads") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         std::atomic<int> write_count{0};
         std::atomic<int> callback_count{0};
         const int total_writes = 100;
 
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
@@ -622,10 +650,10 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     SECTION("composite stream - rapid disable_buffering calls") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -650,10 +678,10 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     SECTION("composite stream with chunked encoding - buffered then queued") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
         [&](boost::system::error_code ec, std::size_t bytes) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -676,7 +704,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         mio.join();
 
         CHECK(completed);
-        std::string output = client.str();
+        std::string output = stream_out.str();
         CHECK(output.find("HTTP/1.1 200 OK") != std::string::npos);
         CHECK(output.find("0\r\n\r\n") != std::string::npos); // Terminal chunk
     }
@@ -684,10 +712,10 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     SECTION("composite stream - mixed write types (string, string_view, char*)") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
@@ -702,7 +730,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         ostream.write(temp);                                     // udho::utils::string_view
 
         const char* cstr = "CString";
-        ostream.write(cstr, strlen(cstr));                      // const char*, size_t
+        ostream.write(cstr, strlen(cstr), false);                // const char*, size_t
 
         ostream.write(TestType{42});
 
@@ -712,7 +740,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         mio.join();
 
         CHECK(completed);
-        std::string output = client.str();
+        std::string output = stream_out.str();
         CHECK(output.find("String") != std::string::npos);
         CHECK(output.find("Temporary") != std::string::npos);
         CHECK(output.find("CString") != std::string::npos);
@@ -722,13 +750,13 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
     SECTION("composite stream - sequence of many small writes") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         const int num_writes = 1000;
         std::atomic<int> writes_done{0};
 
         bool completed = false;
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
            [&](boost::system::error_code ec, std::size_t) {
                completed = true;
                CHECK_FALSE(ec);
@@ -750,19 +778,19 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
 
         CHECK(writes_done == num_writes);
         CHECK(completed);
-        std::string output = client.str();
+        std::string output = stream_out.str();
         CHECK(output.size() > num_writes);
     }
 
     SECTION("composite stream - stress test with mixed operations") {
         multithreaded_io<4> mio(io);
 
-        server.connect(client);
+        stream_in.connect(stream_out);
 
         std::atomic<int> operations_completed{0};
         const int total_operations = 50;
 
-        udho::manifold::basic_ostream<stream_type> ostream(server,
+        udho::net::basic_ostream<stream_type> ostream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 operations_completed++;
                 CHECK_FALSE(ec);

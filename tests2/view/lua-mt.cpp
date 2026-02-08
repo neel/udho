@@ -47,7 +47,8 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
 
         auto exec = [&lua, &view_results, &mutex, &waiting](std::uint32_t id){ // This id does not imply order
             std::string output;
-            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, nullptr, output);
+            std::size_t anything_as_aux;
+            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, anything_as_aux, output);
             exec_result er;
             er.job_id = id;
             er.results = results;
@@ -156,7 +157,8 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
         auto exec = [&lua, &view_results, &mutex, &waiting, &semaphore](std::uint32_t id){ // This id does not imply order
             semaphore.post();
             std::string output;
-            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, nullptr, output);
+            std::size_t anything_as_aux;
+            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, anything_as_aux, output);
             exec_result er;
             er.job_id = id;
             er.results = results;
@@ -186,7 +188,8 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
                 semaphore.wait();
             }
             std::string output;
-            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, nullptr, output);
+            std::size_t anything_as_aux;
+            udho::view::data::bridges::results results = lua.exec("view", "", nullptr, anything_as_aux, output);
             exec_result er;
             er.job_id = id;
             er.results = results;

@@ -8,7 +8,6 @@
 #include <udho/view/tmpl/layout/document.h>
 #include <udho/view/tmpl/layout/presenter.h>
 #include <udho/view/tmpl/layout/layout.h>
-#include <udho/net/context.h>
 #include <udho/pages/data.h>
 
 namespace udho{
@@ -54,14 +53,20 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
         namespace p = l::placeholders;
 
         stream <<   "<div class='system'>";
-        if(_doc[p::header].exists())
-            stream << *_doc[p::header];
+        if(_doc[p::header].exists()){
+            std::string value = *_doc[p::header];
+            stream << std::move(value);
+        }
 
-        if(_doc[places::routes].exists())
-            stream << *_doc[places::routes];
+        if(_doc[places::routes].exists()) {
+            std::string value = *_doc[places::routes];
+            stream << std::move(value);
+        }
 
-        if(_doc[places::listing].exists())
-            stream << *_doc[places::listing];
+        if(_doc[places::listing].exists()) {
+            std::string value = *_doc[places::listing];
+            stream << std::move(value);
+        }
 
         default_presenter_::present(placeholders::footer, stream);
 

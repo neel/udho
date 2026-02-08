@@ -132,7 +132,7 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
         </div>
     </div>
     <? end ?>
-    <img class="logo-parts beral-logo" src="<?= ctx.resources.img:get('udho', 'beral.gif').url ?>" />
+    <img class="logo-parts beral-logo" src="<?= ctx.portal.resources.img:get('udho', 'beral.gif').url ?>" />
 </div>
 )TEMPLATE";
 
@@ -144,7 +144,7 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
     <li> <?= d.cpp ?> </li>
     <li> <?= d.compiler ?> </li>
     <li> <?= d.boost ?> </li>
-    <li> <?= ctx.resources.bridges_label ?> </li>
+    <li> <?= ctx.portal.resources.bridges_label ?> </li>
     <li> <?= d.memory ?> </li>
     <li> <?= d.time ?> </li>
 </ul>

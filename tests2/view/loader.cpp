@@ -17,6 +17,8 @@
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/tmpl/layout/document.h>
 #include <udho/view/tmpl/layout/presenter.h>
+#include <boost/beast/http/string_body.hpp>
+#include <boost/beast/http/parser.hpp>
 
 TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     static char buffer_js[]       = "console.log(\"Hello, world!\");";
@@ -49,7 +51,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                         js->is_async(true);
                     if(key.find("module") != std::string::npos)
                         js->is_module(true);
-                    store[prefix] << js;
+                    store[prefix] << std::move(js);
                 }
                 break;
             case udho::view::resources::asset::type::css:
@@ -57,7 +59,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                     auto css = udho::view::resources::asset::css(key, content.begin(), content.end());
                     if(key.find("print") != std::string::npos)
                         css->media("print");
-                    store[prefix] << css;
+                    store[prefix] << std::move(css);
                 }
                 break;
             case udho::view::resources::asset::type::img:
@@ -72,7 +74,10 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
     for(const auto& asset : assets) {
         add_asset(asset);
     }
-    store["secondary"] << udho::view::resources::asset::js("embedded_only.js", std::begin(buffer_js_module), std::end(buffer_js_module))->embedded(true);
+
+    auto embedded_only_res = udho::view::resources::asset::js("embedded_only.js", std::begin(buffer_js_module), std::end(buffer_js_module));
+    embedded_only_res->embedded(true);
+    store["secondary"] << std::move(embedded_only_res);
 
     store.base("assets");
     store.lock();
@@ -113,17 +118,38 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         }
     }
 
-
-    boost::asio::io_context io;
-    udho::net::types::headers::request request;
-
     SECTION("Importmap includes all registered javascripts except the embedded one regardless of selection") {
-        udho::net::fake::bridge fake_bridge{request};
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
 
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
-        loader_js.importmap(stream);
-        const std::stringstream& actual_stream = fake_bridge.stream();
-        std::string output = actual_stream.str();
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t) {
+                CHECK_FALSE(ec);
+            }
+        );
+        udho::net::ostream_view stream_view = stream.view();
+        loader_js.importmap(stream_view);
+
+        stream.finish();
+        io.run();
+
+        std::string output = stream_out.str();
+        CAPTURE(output);
+        std::size_t crlf_pos = output.find("\r\n");
+        CAPTURE(crlf_pos);
+        boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+        parser.eager(true);
+        boost::beast::error_code error;
+        parser.put(boost::asio::buffer(output), error);
+
+        CHECK(!error);
+        CHECK(parser.is_done());
+
+        boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+        std::string body = response.body();
+
         std::string expected_output = R"(<script type="importmap">
         {
             "imports": {
@@ -142,7 +168,8 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
             return nlohmann::json::parse(str.substr(start, end - start + 1));
         };
         try {
-            nlohmann::json output_json = extract_json(output);
+            CAPTURE(body);
+            nlohmann::json output_json = extract_json(body);
             nlohmann::json expected_json = extract_json(expected_output);
             CHECK(output_json == expected_json);
         } catch(const nlohmann::json::exception& e) {
@@ -154,104 +181,285 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         // Add the embedded-only asset to the loader
         loader_js.add("secondary", "embedded_only.js", true);
 
-        udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
+
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t) {
+                CHECK_FALSE(ec);
+            }
+        );
+        udho::net::ostream_view stream_view = stream.view();
 
         // Should still exclude from importmap
-        loader_js.importmap(stream);
-        const std::string output = fake_bridge.stream().str();
+        loader_js.importmap(stream_view);
 
-        CHECK(output.find("embedded_only.js") == std::string::npos);
-        CHECK(output.find("module.js") != std::string::npos); // Verify non-embedded still appears
+        stream.finish();
+        io.run();
+
+        std::string output = stream_out.str();
+        CAPTURE(output);
+        std::size_t crlf_pos = output.find("\r\n");
+        CAPTURE(crlf_pos);
+        boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+        parser.eager(true);
+        boost::beast::error_code error;
+        parser.put(boost::asio::buffer(output), error);
+
+        CHECK(!error);
+        CHECK(parser.is_done());
+
+        boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+        std::string body = response.body();
+        CHECK(body.find("embedded_only.js") == std::string::npos);
+        CHECK(body.find("module.js") != std::string::npos); // Verify non-embedded still appears
     }
 
     SECTION("Embedded-only JS writes correctly") {
         loader_js.add("secondary", "embedded_only.js", true);
 
-        udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
 
-        loader_js.write(stream, true);
-        const std::string output = fake_bridge.stream().str();
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t) {
+                CHECK_FALSE(ec);
+            }
+        );
+        udho::net::ostream_view stream_view = stream.view();
 
-        CHECK(output.find("<script type=\"text/javascript\">") != std::string::npos);
-        CHECK(output.find(buffer_js_module) != std::string::npos);
+        loader_js.write(stream_view, true);
+
+        stream.finish();
+        io.run();
+
+        std::string output = stream_out.str();
+        CAPTURE(output);
+        std::size_t crlf_pos = output.find("\r\n");
+        CAPTURE(crlf_pos);
+        boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+        parser.eager(true);
+        boost::beast::error_code error;
+        parser.put(boost::asio::buffer(output), error);
+
+        CHECK(!error);
+        CHECK(parser.is_done());
+
+        boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+        std::string body = response.body();
+
+        CHECK(body.find("<script type=\"text/javascript\">") != std::string::npos);
+        CHECK(body.find(buffer_js_module) != std::string::npos);
     }
 
     SECTION("JavaScript asset writing handles embedded and external correctly") {
-        udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
+
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t) {
+                CHECK_FALSE(ec);
+            }
+        );
+        udho::net::ostream_view stream_view = stream.view();
 
         SECTION("Non-embedded scripts generate correct link tags") {
-            loader_js.write(stream, false);
-            const std::string output = fake_bridge.stream().str();
+            loader_js.write(stream_view, false);
 
-            CHECK(output.find("<script src=\"/assets/primary/profile0.js\"></script>") != std::string::npos);
-            CHECK(output.find("<script async src=\"/assets/primary/async_script.js\"></script>") != std::string::npos);
-            CHECK(output.find("secondary/module.js") == std::string::npos);  // This one is embedded
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CHECK(body.find("<script src=\"/assets/primary/profile0.js\"></script>") != std::string::npos);
+            CHECK(body.find("<script async src=\"/assets/primary/async_script.js\"></script>") != std::string::npos);
+            CHECK(body.find("secondary/module.js") == std::string::npos);  // This one is embedded
         }
 
         SECTION("Embedded scripts include content with proper formatting") {
-            loader_js.write(stream, true);
-            const std::string output = fake_bridge.stream().str();
+            loader_js.write(stream_view, true);
+
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
 
             // Should contain the module content
-            CHECK(output.find("<script type=\"module\">\n") != std::string::npos);
-            CHECK(output.find("export function example() {};") != std::string::npos);
-            CHECK(output.find("</script>") != std::string::npos);
+            CHECK(body.find("<script type=\"module\">\n") != std::string::npos);
+            CHECK(body.find("export function example() {};") != std::string::npos);
+            CHECK(body.find("</script>") != std::string::npos);
 
             // Should not contain non-embedded assets
-            CHECK(output.find("profile0.js") == std::string::npos);
+            CHECK(body.find("profile0.js") == std::string::npos);
         }
     }
 
     SECTION("CSS asset writing handles media queries and embedding") {
-        udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
+
+        udho::net::test_ostream stream(stream_in,
+            [&](boost::system::error_code ec, std::size_t) {
+                CHECK_FALSE(ec);
+            }
+        );
+        udho::net::ostream_view stream_view = stream.view();
 
         SECTION("Linked CSS generates proper link tags") {
-            loader_css.write(stream, false);
-            const std::string output = fake_bridge.stream().str();
+            loader_css.write(stream_view, false);
 
-            CHECK(output.find("<link href=\"/assets/primary/styles.css\" rel=\"stylesheet\"") != std::string::npos);
-            CHECK(output.find("media=\"all\"") != std::string::npos);
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CHECK(body.find("<link href=\"/assets/primary/styles.css\" rel=\"stylesheet\"") != std::string::npos);
+            CHECK(body.find("media=\"all\"") != std::string::npos);
         }
 
         SECTION("Embedded CSS includes content with media queries") {
-            loader_css.write(stream, true);
-            const std::string output = fake_bridge.stream().str();
+            loader_css.write(stream_view, true);
 
-            CHECK(output.find("<style media=\"print\">") != std::string::npos);
-            CHECK(output.find("@media print { .print { color: black; } }") != std::string::npos);
-            CHECK(output.find("</style>") != std::string::npos);
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CHECK(body.find("<style media=\"print\">") != std::string::npos);
+            CHECK(body.find("@media print { .print { color: black; } }") != std::string::npos);
+            CHECK(body.find("</style>") != std::string::npos);
         }
     }
 
     SECTION("Asset policies are properly reflected in output") {
-        udho::net::fake::bridge fake_bridge{request};
-        udho::net::stream stream = udho::net::fake::stream::create(io, fake_bridge.get());
+        boost::asio::io_context io;
+        boost::beast::test::stream stream_in(io);
+        boost::beast::test::stream stream_out(io);
+        stream_in.connect(stream_out);
+
+        udho::net::test_ostream stream(stream_in,
+           [&](boost::system::error_code ec, std::size_t) {
+               CHECK_FALSE(ec);
+           }
+        );
+
+        udho::net::ostream_view stream_view = stream.view();
 
         SECTION("JS async/defer attributes") {
-            loader_js.write(stream, false);
-            const std::string output = fake_bridge.stream().str();
+            loader_js.write(stream_view, false);
+
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
 
             // async_script.js should have async attribute
-            CHECK(output.find("async src=\"/assets/primary/async_script.js\"") != std::string::npos);
+            CHECK(body.find("async src=\"/assets/primary/async_script.js\"") != std::string::npos);
 
             // profile0.js should have no special attributes
-            CHECK(output.find("profile0.js\"") != std::string::npos);
-            CHECK(output.find("async src=\"/assets/primary/profile0.js\"") == std::string::npos);
+            CHECK(body.find("profile0.js\"") != std::string::npos);
+            CHECK(body.find("async src=\"/assets/primary/profile0.js\"") == std::string::npos);
         }
 
         SECTION("Module vs nomodule handling") {
             // Add a nomodule asset
             loader_js.add("primary", "profile0.js", false);
 
-            loader_js.write(stream, false);
-            const std::string output = fake_bridge.stream().str();
+            loader_js.write(stream_view, false);
 
-            CHECK(output.find("nomodule") == std::string::npos);
-            CHECK(output.find("module.js") == std::string::npos);
+            stream.finish();
+            io.run();
+
+            std::string output = stream_out.str();
+            CAPTURE(output);
+            std::size_t crlf_pos = output.find("\r\n");
+            CAPTURE(crlf_pos);
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            parser.eager(true);
+            boost::beast::error_code error;
+            parser.put(boost::asio::buffer(output), error);
+
+            CHECK(!error);
+            CHECK(parser.is_done());
+
+            boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+            std::string body = response.body();
+
+            CHECK(body.find("nomodule") == std::string::npos);
+            CHECK(body.find("module.js") == std::string::npos);
         }
     }
 

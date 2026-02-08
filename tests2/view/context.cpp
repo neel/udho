@@ -9,7 +9,6 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/view/data/data.h>
 #include <udho/url/url.h>
-#include <udho/net/context.h>
 #include <tabulate/table.hpp>
 #include <nlohmann/json.hpp>
 
@@ -18,6 +17,18 @@
 #include <udho/session/abstract_catalogue.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/catalogue.h>
+
+#include <udho/manifold/composition.h>
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/journal_view.h>
+#include <udho/manifold/configs_view.h>
+#include <udho/manifold/components/routing.h>
+#include <udho/manifold/context.h>
+#include <udho/view/bridges/lua.h>
+#include <udho/view/resources/resource.h>
+#include <udho/view/resources/lua.h>
+#include <udho/view/resources/store.h>
+#include <udho/manifold/components/resources.h>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
@@ -76,40 +87,45 @@ struct info{
     }
 };
 
-void chunk3(udho::net::stream context){
+using namespace udho::manifold::components;
+using namespace udho::manifold;
+
+namespace callbacks{
+
+using stream_type      = boost::beast::test::stream;
+using handler = basic_handler<stream_type>;
+
+void chunk3(basic_context<stream_type, handler> context){
     context << "Chunk 3 (Final)";
     context.finish();
 }
 
-void chunk2(udho::net::stream context){
+void chunk2(basic_context<stream_type, handler> context){
     context << "chunk 2";
-    context.flush(std::bind(&chunk3, context));
+    chunk3(context);
 }
 
-void chunk(udho::net::stream context){
+void chunk(basic_context<stream_type, handler> context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
-    context.flush(std::bind(&chunk2, context));
+    chunk2(context);
 }
 
-void f0(udho::net::stream context){
+void f0(basic_context<stream_type, handler> context){
     context << "Hello f0";
     context.finish();
 }
 
-int f1(udho::net::stream context, int a, const std::string& b, const double& c){
-        context << "Hello f1 ";
-        context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
-        context.finish();
-        return a+b.size()+c;
+int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
+    context << "Hello f1 ";
+    context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
+    context.finish();
+    return a+b.size()+c;
 }
 
 struct X{
-    void f0(udho::net::context<udho::view::data::bridges::lua> context){
-        using context_type = udho::net::context<udho::view::data::bridges::lua>;
-        using store_type   = typename context_type::resource_store;
-
-        const store_type& store = context.resources();
+    void f0(basic_context<stream_type, handler, resources<udho::view::data::bridges::lua>> context){
+        const auto& store = context.portal().resources();
 
         udho::view::resources::tmpl::proxy<udho::view::data::bridges::lua> proxy = store.view<udho::view::data::bridges::lua>("primary", "temp");
 
@@ -121,12 +137,12 @@ struct X{
         proxy(inf, context);
 
         context << "Hello X::f0";
-        context << context.route("f0").name();
+        context << context.portal().route("f0").name();
         context.finish();
-        std::cout << context.route("f0").name() << std::endl;
+        std::cout << context.portal().route("f0").name() << std::endl;
     }
 
-    int f1(udho::net::stream context, int a, const std::string& b, const double& c){
+    int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
         context << "Hello X::f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -134,15 +150,17 @@ struct X{
     }
 };
 
+}
+
 TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     static char buffer[] = R"TEMPLATE(
 <?! vars('d', 'ctx') ?>
 {
     "router": {
-        "size": <?= ctx.routes.size ?>,
+        "size": <?= ctx.portal.routes.size ?>,
         "mountpoints": [
             <? local is_first = true ?>
-            <? for label, mountpoint in ctx.routes:pairs() do ?>
+            <? for label, mountpoint in ctx.portal.routes:pairs() do ?>
             <? if not is_first then ?>,<? end ?>
             {
                 "label": "<?= label ?>",
@@ -166,10 +184,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     },
     "resources": {
         "js": {
-            "size": <?= ctx.resources.js.size ?>,
+            "size": <?= ctx.portal.resources.js.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, js in ctx.resources.js:ipairs() do ?>
+                <? for i, js in ctx.portal.resources.js:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= js.prefix ?>",
@@ -181,10 +199,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
             ]
         },
         "css": {
-            "size": <?= ctx.resources.css.size ?>,
+            "size": <?= ctx.portal.resources.css.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, css in ctx.resources.css:ipairs() do ?>
+                <? for i, css in ctx.portal.resources.css:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= css.prefix ?>",
@@ -196,10 +214,10 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
             ]
         },
         "img": {
-            "size": <?= ctx.resources.img.size ?>,
+            "size": <?= ctx.portal.resources.img.size ?>,
             "resources": [
                 <? local is_first = true ?>
-                <? for i, img in ctx.resources.img:ipairs() do ?>
+                <? for i, img in ctx.portal.resources.img:ipairs() do ?>
                 <? if not is_first then ?>,<? end ?>
                 {
                     "prefix": "<?= img.prefix ?>",
@@ -224,7 +242,7 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     udho::view::data::bridges::lua lua;
     lua.init();
     lua.bind(udho::view::data::type<tabulate::Table>{});
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
+    lua.bind(udho::view::data::type<udho::url::summary::router>{});
 
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
     resource_store.tmpl<udho::view::data::bridges::lua>().add("primary", udho::view::resources::tmpl::resource("ctx_explorer",  buffer, buffer+sizeof(buffer)));
@@ -257,26 +275,58 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
 
     using namespace udho::hazo::string::literals;
 
-    X x;
+    callbacks::X x;
     auto router = udho::url::router(
-          udho::url::root(
-                udho::url::slot("f0"_h,  &f0)         << udho::url::home  (udho::url::verb::get)
-              | udho::url::slot("xf0"_h, &X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
-              | udho::url::slot("chunked"_h,  &chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
-          )
+        udho::url::root(
+              udho::url::slot("f0"_h,  &callbacks::f0)         << udho::url::home  (udho::url::verb::get)
+            | udho::url::slot("xf0"_h, &callbacks::X::f0, &x)  << udho::url::fixed (udho::url::verb::get, "/x/f0", "/x/f0")
+            | udho::url::slot("chunked"_h,  &callbacks::chunk) << udho::url::fixed (udho::url::verb::get, "/chunk")
+        )
         | udho::url::mount("b"_h, "/b",
-              udho::url::slot("f1"_h,  &f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
-            | udho::url::slot("xf1"_h, &X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
+              udho::url::slot("f1"_h,  &callbacks::f1)         << udho::url::regx  (udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
+            | udho::url::slot("xf1"_h, &callbacks::X::f1, &x)  << udho::url::regx  (udho::url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
         ),
         resource_store_proxy.assets()
     );
 
-    auto sessions = session_catalogue::create(udho::session::storage::fs{});
-    udho::net::types::headers::request  request;
-    udho::net::fake::context<udho::view::data::bridges::lua> fake_context_generator{request};
-    udho::net::context<udho::view::data::bridges::lua> context = fake_context_generator.create(io, router, resource_store_proxy, *sessions);
+    using stream_type = udho::net::test_ostream;;
+
+    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>(router.table().summary());
+    auto routing_component  = udho::manifold::components::routing(std::move(router));
+    auto resource_component = udho::manifold::components::resources(resource_store_proxy);
+
+    using composition_type  = udho::manifold::composition<
+        std::decay_t<decltype(handler_component)>,
+        std::decay_t<decltype(routing_component)>,
+        std::decay_t<decltype(resource_component)>
+    >;
+
+    using context_type      = typename udho::manifold::detail::get_context_for_composition<stream_type, composition_type>::type;
+    using configs_type      = typename composition_type::configs_type;
+    using journal_type      = typename udho::manifold::detail::get_journal_for_full_fabric<composition_type>::type;
+
+    auto composition = composition_type::compose(handler_component, routing_component, resource_component);
+
+    configs_type configs;
+    journal_type journal;
+
+    auto portal = udho::manifold::portal(composition, configs, journal);
+    boost::beast::test::stream stream_in(io);
+    boost::beast::test::stream stream_out(io);
+    stream_in.connect(stream_out);
+
+    stream_type stream(stream_in,
+       [&](boost::system::error_code ec, std::size_t) {
+           CHECK_FALSE(ec);
+       }
+    );
+
+    auto context = udho::manifold::basic_context(stream, portal, 0);
+
+    lua.bind(udho::view::data::type<std::decay_t<decltype(context)>>{});
 
     std::string output = ctx_explorer(p, context).str();
+    // std::cout << output << std::endl;
     nlohmann::json output_json = nlohmann::json::parse(output);
 
     std::string expected_output = R"(

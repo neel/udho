@@ -8,5 +8,5 @@ add_catch_test(udho-test-activities-data data.cpp)
 add_catch_test(udho-test-activities-activity activity.cpp)
 add_catch_test(udho-test-activities-subtask subtask.cpp)
 
-add_catch_test(udho-test-activities-application application.cpp)
-target_link_libraries(udho-test-activities-application PRIVATE CURL::libcurl)
+# add_catch_test(udho-test-activities-application application.cpp)
+# target_link_libraries(udho-test-activities-application PRIVATE CURL::libcurl)

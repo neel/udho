@@ -22,6 +22,7 @@
 #include <udho/manifold/components/cookies.h>
 #include <udho/manifold/components/session.h>
 #include <udho/manifold/components/pg.h>
+#include <udho/manifold/components/resources.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
@@ -35,99 +36,115 @@
 #include <udho/manifold/journal.h>
 #include <udho/manifold/flow.h>
 #include <udho/manifold/visualize.h>
+#include <udho/view/bridges/lua.h>
+#include <udho/net/listener.h>
 
-using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
-namespace callbacks{
-    using namespace udho::manifold::components;
-    using namespace udho::manifold;
+using namespace udho::manifold::components;
+using namespace udho::manifold;
 
-    using handler = basic_handler<stream_type>;
+template <typename StreamT>
+struct basic_callbacks{
+    using handler = basic_handler<StreamT>;
 
     struct nodef{
         nodef() = delete;
         nodef(int) {}
     };
 
-    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+    static BOOST_SYMBOL_EXPORT void f0(basic_context<StreamT, handler, cookies> context){
         context << "f0";
         context.finish();
         return;
     }
 
-    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    static BOOST_SYMBOL_EXPORT int f1(basic_context<StreamT, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
         context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
-    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+    static BOOST_SYMBOL_EXPORT std::string f2(basic_context<StreamT, handler, cookies> context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
-    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+    static BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<StreamT, handler> context, nodef, int a){
         context << std::to_string(a);
         context.finish();
         return "hello";
     }
+};
 
-}
+using test_callbacks = basic_callbacks<boost::beast::test::stream>;
 
 namespace testing{
 
-auto url() {
+template <typename StreamT>
+auto router() {
     using namespace udho::hazo::string::literals;
     auto actions1 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions2 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     auto actions3 =
-        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
     udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
     udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
     udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
 
-    auto table      = std::move(mount_point1)/* | std::move(mount_point2) | std::move(mount_point3)*/;
+    auto table      = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
 
-    return table;
+    return udho::url::router(std::move(table));
 }
 
-using routing_table_type = std::decay_t<decltype(url())>;
+auto test_url() {
+    return router<boost::beast::test::stream>();
+}
+
+auto tcp_url() {
+    return router<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type>();
+}
+
+template <typename StreamT>
+using test_case_router_type = std::decay_t<decltype(router<StreamT>())>;
 
 
 template <typename StreamT>
-struct www{
-    using router_type                = udho::url::basic_router<routing_table_type>;
+struct basic_www{
+    using router_type                = test_case_router_type<StreamT>;
     using handler_component_type     = udho::manifold::components::basic_handler<StreamT>;
     using db_component_type          = udho::manifold::components::db::pg<>;
     using routing_component_type     = udho::manifold::components::routing<router_type>;
     using stream_type                = StreamT;
-    using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+    using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
     using navigator_component_type   = udho::manifold::components::navigators::pretty;
     using cookies_component_type     = udho::manifold::components::cookies;
     using session_component_type     = udho::manifold::components::session<udho::session::storage::fs, udho::session::modes::lazy>;
+    using resources_component_type   = udho::manifold::components::resources<udho::view::data::bridges::lua>;
 };
 
 }
 
 template <typename StreamT>
-struct udho::manifold::sketch<testing::www<StreamT>>{
-    using www_type = testing::www<StreamT>;
+struct udho::manifold::sketch<testing::basic_www<StreamT>>{
+    using www_type = testing::basic_www<StreamT>;
+
+    using stream_type = StreamT;
 
     using composition_type = udho::manifold::composition<
         typename www_type::handler_component_type,
@@ -136,7 +153,8 @@ struct udho::manifold::sketch<testing::www<StreamT>>{
         typename www_type::navigator_component_type,
         typename www_type::routing_component_type,
         typename www_type::cookies_component_type,
-        typename www_type::session_component_type
+        typename www_type::session_component_type,
+        typename www_type::resources_component_type
     >;
 
     using order_type = udho::manifold::order<
@@ -153,23 +171,25 @@ namespace testing{
 
 template <typename StreamT = boost::beast::test::stream>
 struct framework{
-    using label_type             = testing::www<StreamT>;
+    using label_type             = testing::basic_www<StreamT>;
     using sketch_type            = udho::manifold::sketch<label_type>;
-    using runtime_type           = udho::manifold::runtime<label_type>;
-    using flow_type              = udho::manifold::flow<label_type>;
+    using runtime_type           = udho::manifold::basic_runtime<label_type, StreamT>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using routing_component_type = typename label_type::routing_component_type;
     using router_type            = typename label_type::router_type;
+    using handler_component_type = typename label_type::handler_component_type;
 
     static_assert(runtime_type::Count >= 2);
 
     template <typename... Components>
-    framework(routing_table_type&& table, Components&&... components): _router(std::move(table)), _routing(_router), _runtime(_routing, std::forward<Components>(components)...) {}
+    framework(test_case_router_type<StreamT>&& router, Components&&... components)
+        : _handler(router.summary()), _routing(std::move(router)), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
 
     runtime_type& runtime() { return _runtime; }
 
 private:
-    router_type             _router;
+    handler_component_type  _handler;
     routing_component_type  _routing;
     runtime_type            _runtime;
 };
@@ -177,31 +197,95 @@ private:
 }
 
 template <typename StreamT>
-struct udho::manifold::terminal<testing::www<StreamT>> {
-    using label_type        = testing::www<StreamT>;
-    using runtime_type      = runtime<label_type>;
-    using flow_type         = flow<label_type>;
+struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
+    using label_type        = testing::basic_www<StreamT>;
+    using stream_type       = StreamT;
+    using ostream_type      = udho::net::basic_ostream<StreamT>;
+    using runtime_type      = basic_runtime<label_type, StreamT>;
+    using handler_type      = udho::manifold::components::basic_handler<StreamT>;
+    using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
     using configs_type      = typename runtime_type::configs_type;
 
-    terminal() = delete;
-    terminal(const terminal&) = delete;
+    basic_terminal() = delete;
+    basic_terminal(const basic_terminal&) = delete;
 
-    terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+    basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     bool reenter(stream_type& stream) { return true; }
-    void prepare(stream_type& stream) { }
-    bool error(udho::manifold::exclusive_result success, stream_type& stream){
+
+    template <typename... Args>
+    void prepare(stream_type& stream, Args&&... args) { }
+
+    template <typename... Args>
+    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();
-            } catch(const std::exception& ex) {
+            } catch(const udho::http::error& error) {
+                std::cout << "exception: " << error.what() << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            } catch(boost::system::error_code error) {
+                std::cout << "system error: " << error << std::endl;
+                handle_error(flow, error, stream, std::forward<Args>(args)...);
+            }catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
+                handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
         }
-        return false;
+    }
+
+private:
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+        ostream.status(error.status());
+        ostream.finish();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, boost::system::error_code error, stream_type& stream, Args&&... args) {
+        if(error == boost::asio::error::eof) {
+            flow.abort();
+        }
+
+        flow.abort();
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::exception& error, stream_type& stream, Args&&... args) {
+        flow.abort();
+    }
+
+private:
+
+    template <typename... Args>
+    ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
+        auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
+        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+            if(error) {
+                // TODO Error while writing to socket
+                return;
+            }
+
+            if(restart) {
+                std::apply(
+                    [&](auto&&... args) {
+                        flow.restart(stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                    );
+            } else {
+                flow.abort();
+            }
+        };
+
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        return ostream;
     }
 
 private:
@@ -213,11 +297,12 @@ private:
 
 static constexpr const std::size_t route_locator_stage = udho::manifold::feature::locator::stage;
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
-    using label_type             = testing::www<StreamT>;
+struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_locator_stage>{
+    using label_type             = testing::basic_www<StreamT>;
+    using stream_type            = StreamT;
     using sketch_type            = sketch<label_type>;
-    using runtime_type           = runtime<label_type>;
-    using flow_type              = flow<label_type>;
+    using runtime_type           = basic_runtime<label_type, stream_type>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
     using pipeline_type          = typename runtime_type::template pipeline_at<route_locator_stage>;
@@ -225,7 +310,6 @@ struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
-    using routing_table_type     = typename routing_component_type::routing_table_type;
 
     template <typename... Args>
     static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
@@ -241,20 +325,22 @@ struct udho::manifold::transition<testing::www<StreamT>, route_locator_stage>{
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
         const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
-        const routing_table_type& routing_table = routing_component.table();
-        routing_table.reconfigure_for(route_index, configs);
+        const auto& router = routing_component.router();
+        router.reconfigure_for(route_index, configs);
         // }
         p.next(flow, std::forward<Args>(args)...);
     }
 };
 
 static constexpr const std::size_t action_transition_stage = 2;
+
 template <typename StreamT>
-struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage>{
-    using label_type             = testing::www<StreamT>;
+struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_transition_stage>{
+    using label_type             = testing::basic_www<StreamT>;
+    using stream_type            = StreamT;
     using sketch_type            = sketch<label_type>;
-    using runtime_type           = runtime<label_type>;
-    using flow_type              = flow<label_type>;
+    using runtime_type           = basic_runtime<label_type, stream_type>;
+    using flow_type              = typename runtime_type::flow_type;
     using composition_type       = typename runtime_type::composition_type;
     using journal_type           = typename flow_type::journal_type;
     using pipeline_type          = typename runtime_type::template pipeline_at<action_transition_stage>;
@@ -263,7 +349,6 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
     using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
-    using routing_table_type     = typename routing_component_type::routing_table_type;
 
     template <typename... Args>
     static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
@@ -279,7 +364,7 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
         const routing_component_type& routing_component = composition.template get<routing_component_type>().component();
-        const routing_table_type& routing_table = routing_component.table();
+        const auto& router = routing_component.router();
         // }
 
         // { add finish lambda to handler component
@@ -298,7 +383,7 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
             );
         };
         using handler_type = udho::manifold::components::basic_handler<StreamT>;
-        using ostream_type = udho::manifold::basic_ostream<StreamT>;
+        using ostream_type = udho::net::basic_ostream<StreamT>;
 
         handler_type& handler = composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
@@ -312,7 +397,7 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
         // }
 
         // { invoke action
-        routing_table.invoke_at(route_index, resource, context);
+        router.invoke_at(route_index, context);
         // }
     }
 };
@@ -320,25 +405,21 @@ struct udho::manifold::transition<testing::www<StreamT>, action_transition_stage
 static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feature::identifier::stage);
 
 TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
-    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
-
     boost::asio::io_context io_context;
-
+    // { session component
+    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
     auto session    = udho::manifold::components::session(catalogue);
-    auto framework  = testing::framework(testing::url(), session);
-    auto flow       = framework.runtime().spawn();
+    // }
+    // { resources: views, assets
+    udho::view::data::bridges::lua lua;
+    lua.init();
 
-    {
-        std::ofstream dotfile("composition.dot");
-        udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
-    }
-
-    using framework_type = std::decay_t<decltype(framework)>;
-    using runtime_type   = framework_type::runtime_type;
-    using flow_type      = framework_type::flow_type;
-    using journal_type   = flow_type::journal_type;
-
+    udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+    store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+    auto resources  = udho::manifold::components::resources(cstore);
+    // }
 
     std::string request_data =
         "POST /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
@@ -355,11 +436,32 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         "Content-Type: text/plain\r\n"
         "\r\n"
         "Hello, Earth!"
-    ;
-    stream_type stream_in(io_context, request_data);
-    stream_type stream_out(io_context);
+        ;
+    boost::beast::test::stream stream_in(io_context, request_data);
+    boost::beast::test::stream stream_out(io_context);
     stream_in.connect(stream_out);
-    flow->start(stream_in);
+
+    auto framework  = testing::framework(testing::test_url(), session, resources);
+    auto flow       = framework.runtime().spawn(std::move(stream_in));
+
+    {
+        std::ofstream dotfile("composition.dot");
+        udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
+    }
+
+    using framework_type = std::decay_t<decltype(framework)>;
+    using runtime_type   = framework_type::runtime_type;
+    using flow_type      = framework_type::flow_type;
+    using journal_type   = flow_type::journal_type;
+
+
+    using portal_type            = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+    using context_type           = typename udho::manifold::detail::get_context_for_portal<boost::beast::test::stream, portal_type>::type;
+
+    lua.bind(udho::view::data::type<context_type>{});
+
+
+    flow->start();
 
     std::size_t counter = 0;
 
@@ -509,4 +611,39 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
     std::string output = stream_out.str();
     std::cout << "stream_out: " << std::endl << output << std::endl;
+}
+
+TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline]") {
+    boost::asio::io_context io;
+    // { session component
+    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+    catalogue_type catalogue{udho::session::storage::fs{}};
+    auto session    = udho::manifold::components::session(catalogue);
+    // }
+    // { resources: views, assets
+    udho::view::data::bridges::lua lua;
+    lua.init();
+
+    udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+    store.lock();
+    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+    auto resources  = udho::manifold::components::resources(cstore);
+    // }
+
+    using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;
+    using framework_type = testing::framework<socket_type>;
+    using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+    using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
+    using listener_type  = udho::net::basic_listener<boost::asio::ip::tcp, framework_type::runtime_type>;
+    using endpoint_type  = typename listener_type::endpoint_type;
+
+    auto framework  = framework_type(testing::tcp_url(), session, resources);
+
+    lua.bind(udho::view::data::type<context_type>{});
+
+    listener_type listener(io, framework.runtime(), endpoint_type{boost::asio::ip::tcp::v4(), 9999});
+
+    listener.start();
+
+    io.run_for(std::chrono::seconds(10));
 }

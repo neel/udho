@@ -18,34 +18,56 @@
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <udho/manifold/components/protocol.h>
 #include <udho/manifold/components/routing.h>
+#include <udho/manifold/portal.h>
+#include <udho/manifold/context.h>
+#include <udho/manifold/runtime.h>
+#include <udho/manifold/components/handler.h>
+#include <udho/manifold/components/protocol.h>
+#include <udho/manifold/components/routing.h>
+#include <udho/manifold/components/cookies.h>
+#include <udho/manifold/components/session.h>
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/journal_view.h>
+#include <udho/manifold/configs_view.h>
 
-struct nodef{
-    nodef() = delete;
-    nodef(int) {}
-};
+using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
-BOOST_SYMBOL_EXPORT void f0(udho::net::stream context){
-    context << "f0";
-    context.finish();
-    return;
-}
+namespace callbacks{
+    using namespace udho::manifold::components;
+    using namespace udho::manifold;
 
-BOOST_SYMBOL_EXPORT int f1(udho::net::stream context, int a, const std::string& b, const double& c, bool d){
-    context << std::to_string(a+b.size()+c+d);
-    context.finish();
-    return 42;
-}
+    using handler = basic_handler<stream_type>;
 
-BOOST_SYMBOL_EXPORT std::string f2(udho::net::stream context, int a, const std::string& b){
-    context << std::to_string(a+b.size());
-    context.finish();
-    return "hello";
-}
+    struct nodef{
+        nodef() = delete;
+        nodef(int) {}
+    };
 
-BOOST_SYMBOL_EXPORT std::string f_nodef(udho::net::stream context, nodef, int a){
-    context << std::to_string(a);
-    context.finish();
-    return "hello";
+    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+        context << "f0";
+        context.finish();
+        return;
+    }
+
+    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+        context << std::to_string(a.size()+b.size()+c+d);
+        std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
+        context.finish();
+        return 42;
+    }
+
+    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+        context << std::to_string(a+b.size());
+        context.finish();
+        return "hello";
+    }
+
+    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+        context << std::to_string(a);
+        context.finish();
+        return "hello";
+    }
+
 }
 
 
@@ -53,36 +75,38 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
     using namespace udho::hazo::string::literals;
+
     auto actions1 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
-    ;
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        ;
 
     auto actions2 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
-    ;
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        ;
 
     auto actions3 =
-        udho::url::slot("f0"_h,  &f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
-        udho::url::slot("f2"_h,  &f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
-    ;
+        udho::url::slot("f0"_h,  &callbacks::f0)  << udho::url::home(udho::url::verb::get)                                                         |
+        udho::url::slot("f1"_h,  &callbacks::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
+        ;
 
     udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
     udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
     udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
 
     SECTION("Single mount point") {
-        auto table  = std::move(mount_point1);
+        boost::asio::io_context io_context;
+        auto table  = udho::url::mountpoints_table(std::move(mount_point1));
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(router);
+        auto routing = udho::manifold::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+        using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
         using navigator_component_type   = udho::manifold::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
@@ -109,10 +133,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto composition = composition_type::compose(std::move(routing));
 
         SECTION("Invalid route identifier") {
+            io_context.restart();
             journal_type journal;
             configs_type configs;
             pipeline_type pipeline{composition, configs, journal, 0};
-            boost::asio::io_context io_context;
+
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
                 "Host: example.com\r\n"
@@ -137,21 +162,18 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
                 // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
 
-                CHECK(success.has_exception());
-                try {
-                    success.rethrow();
-                } catch(const std::exception& e) {
-                    std::cout << "Caught exception: '" << e.what() << "'\n";
-                }
+                // CHECK(route.type() == udho::url::detail::route_index::type::none);
+
             }).eval(stream);
             io_context.run();
         }
 
         SECTION("Valid route identifier") {
+            io_context.restart();
             journal_type journal;
             configs_type configs;
             pipeline_type pipeline{composition, configs, journal, 0};
-            boost::asio::io_context io_context;
+
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
                 "Host: example.com\r\n"
@@ -197,13 +219,14 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     }
 
     SECTION("Multiple mount points") {
+        boost::asio::io_context io_context;
         auto table  = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(router);
+        auto routing = udho::manifold::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocols::http2<stream_type>;
+        using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
         using navigator_component_type   = udho::manifold::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
@@ -230,10 +253,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto composition = composition_type::compose(std::move(routing));
 
         SECTION("Invalid route identifier") {
+            io_context.restart();
             journal_type journal;
             configs_type configs;
             pipeline_type pipeline{composition, configs, journal, 0};
-            boost::asio::io_context io_context;
+
             std::string request_data =
                 "GET /hello/world/23?name=test&id=42&filter=active HTTP/1.1\r\n"
                 "Host: example.com\r\n"
@@ -271,10 +295,10 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         }
 
         SECTION("Valid route identifier") {
+            io_context.restart();
             journal_type journal;
             configs_type configs;
             pipeline_type pipeline{composition, configs, journal, 0};
-            boost::asio::io_context io_context;
             std::string request_data =
                 "GET /f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
                 "Host: example.com\r\n"
@@ -319,10 +343,10 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         }
 
         SECTION("Valid route identifier") {
+            io_context.restart();
             journal_type journal;
             configs_type configs;
             pipeline_type pipeline{composition, configs, journal, 0};
-            boost::asio::io_context io_context;
             std::string request_data =
                 "GET /m2/f1/hello/world/23/24?name=test&id=42&filter=active HTTP/1.1\r\n"
                 "Host: example.com\r\n"

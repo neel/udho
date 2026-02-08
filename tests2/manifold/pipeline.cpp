@@ -653,12 +653,12 @@ struct sketch<testing::Label3> {
 };
 
 // Patch config specializations
-template <>
-struct default_transition<testing::Label1, 0> {
+template <typename StreamT>
+struct default_transition<testing::Label1, StreamT, 0> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
-    using runtime_type      = runtime<label_type>;
-    using flow_type         = flow<label_type>;
+    using runtime_type      = basic_runtime<label_type, StreamT>;
+    using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     static constexpr std::size_t Count = runtime_type::Count;
@@ -674,12 +674,12 @@ struct default_transition<testing::Label1, 0> {
     }
 };
 
-template <>
-struct default_transition<testing::Label1, 1> {
+template <typename StreamT>
+struct default_transition<testing::Label1, StreamT, 1> {
     using label_type        = testing::Label1;
     using sketch_type       = sketch<label_type>;
-    using runtime_type      = runtime<label_type>;
-    using flow_type         = flow<label_type>;
+    using runtime_type      = basic_runtime<label_type, StreamT>;
+    using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     static constexpr std::size_t Count = runtime_type::Count;
@@ -728,7 +728,7 @@ TEST_CASE("Pipeline System - Fabric Verification", "[manifold][pipeline][fabric]
 
 TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]") {
     using label_type = testing::Label1;
-    using runtime_type = udho::manifold::runtime<label_type>;
+    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
 
     SECTION("Complete pipeline execution with all accepts") {
         testing::MSC msc{"accept"};
@@ -760,15 +760,15 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         runtime.load(config_json);
 
         // Spawn and execute flow
-        auto flow = runtime.spawn();
         std::stringstream stream;
+        auto flow = runtime.spawn(std::move(stream));
 
         CHECK(runtime.count() == 1);
-        flow->start(stream);
+        flow->start();
         CHECK(runtime.count() == 0);
 
         // Verify execution order and content
-        std::string output = stream.str();
+        std::string output = flow->stream().str();
         INFO(output);
 
         // Stage 0 should execute
@@ -821,11 +821,11 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
         runtime.load(config_json);
 
-        auto flow = runtime.spawn();
         std::stringstream stream;
-        flow->start(stream);
+        auto flow = runtime.spawn(std::move(stream));
+        flow->start();
 
-        std::string output = stream.str();
+        std::string output = flow->stream().str();
 
         // Should have C00 failure and stop there
         CHECK(output.find("C00_F00(param=test)[FAIL]") != std::string::npos);
@@ -861,11 +861,11 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
         runtime.load(config_json);
 
-        auto flow = runtime.spawn();
         std::stringstream stream;
-        flow->start(stream);
+        auto flow = runtime.spawn(std::move(stream));
+        flow->start();
 
-        std::string output = stream.str();
+        std::string output = flow->stream().str();
         INFO(output);
 
         // Stage 0 should execute
@@ -883,7 +883,7 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
 TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]") {
     using label_type = testing::Label1;
-    using runtime_type = udho::manifold::runtime<label_type>;
+    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
 
     SECTION("Patch config modifies configuration between stages") {
         testing::MSC msc{"accept"};
@@ -912,11 +912,11 @@ TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]"
 
         runtime.load(config_json);
 
-        auto flow = runtime.spawn();
         std::stringstream stream;
-        flow->start(stream);
+        auto flow = runtime.spawn(std::move(stream));
+        flow->start();
 
-        std::string output = stream.str();
+        std::string output = flow->stream().str();
 
         // Verify patch config was applied:
         // 1. C10 should have param="patched-by-stage0" (changed by patch_config<Label1, 0>)
@@ -937,7 +937,7 @@ TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]"
 
 TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pipeline][config]") {
     using label_type = testing::Label1;
-    using runtime_type = udho::manifold::runtime<label_type>;
+    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
 
     SECTION("Components disabled by configuration should fail") {
         testing::MSC msc{"accept"};
@@ -966,11 +966,11 @@ TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pip
 
         runtime.load(config_json);
 
-        auto flow = runtime.spawn();
         std::stringstream stream;
-        flow->start(stream);
+        auto flow = runtime.spawn(std::move(stream));
+        flow->start();
 
-        std::string output = stream.str();
+        std::string output = flow->stream().str();
         INFO(output);
 
         // C10 should fail because enabled=false

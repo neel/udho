@@ -71,34 +71,31 @@ struct prefixed_store<>{
     prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
 
     template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>* res);
+    void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res);
 
     template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>& res);
-
-    template <asset::type AssetType>
-    friend prefixed_store<>& operator<<(prefixed_store<>& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<>& operator<<(prefixed_store<>& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return pstore;
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store<>& operator<<(prefixed_store<>& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return pstore;
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store<>& operator<<(prefixed_store<>& pstore, asset::basic_resource<AssetType>& res){
+    //     pstore.add(res);
+    //     return pstore;
+    // }
 
     template <asset::type AssetType>
-    friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return std::forward<prefixed_store<>>(pstore);
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return std::forward<prefixed_store<>>(pstore);
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, asset::basic_resource<AssetType>& res){
+    //     pstore.add(res);
+    //     return std::forward<prefixed_store<>>(pstore);
+    // }
 
     private:
         store_type& _store;
@@ -143,13 +140,13 @@ struct store<>{
 };
 
 template <asset::type AssetType>
-void prefixed_store<>::add(asset::basic_resource<AssetType>* res){
-    _store.assets().add(_prefix, res);
+void prefixed_store<>::add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+    _store.assets().add(_prefix, std::move(res));
 }
-template <asset::type AssetType>
-void prefixed_store<>::add(asset::basic_resource<AssetType>& res){
-    _store.assets().add(_prefix, &res);
-}
+// template <asset::type AssetType>
+// void prefixed_store<>::add(asset::basic_resource<AssetType>& res){
+//     _store.assets().add(_prefix, res);
+// }
 
 /**
  * @ingroup view
@@ -251,19 +248,21 @@ struct prefixed_store{
         _store.template add<Bridge>(_prefix, std::move(res.resource()));
     }
     template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>* res){
-        _store.assets().add(_prefix, res);
+    void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        _store.assets().add(_prefix, std::move(res));
     }
-    template <asset::type AssetType>
-    void add(asset::basic_resource<AssetType>& res){
-        _store.assets().add(_prefix, &res);
-    }
+
+    // template <asset::type AssetType>
+    // void add(asset::basic_resource<AssetType>& res){
+    //     _store.assets().add(_prefix, &res);
+    // }
 
     template <typename Bridge>
     friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return pstore;
     }
+
     template <typename Bridge>
     friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
@@ -271,28 +270,28 @@ struct prefixed_store{
     }
 
     template <asset::type AssetType>
-    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return pstore;
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return pstore;
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, asset::basic_resource<AssetType>& res){
+    //     pstore.add(res);
+    //     return pstore;
+    // }
 
     template <asset::type AssetType>
-    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>* res){
-        pstore.add(res);
+    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
+        pstore.add(std::move(res));
         return std::forward<prefixed_store<Bridges...>>(pstore);
     }
 
-    template <asset::type AssetType>
-    friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>& res){
-        pstore.add(res);
-        return std::forward<prefixed_store<Bridges...>>(pstore);
-    }
+    // template <asset::type AssetType>
+    // friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, asset::basic_resource<AssetType>& res){
+    //     pstore.add(res);
+    //     return std::forward<prefixed_store<Bridges...>>(pstore);
+    // }
 
     private:
         store_type& _store;
@@ -394,6 +393,8 @@ struct const_store{
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
     using tmpl_const_multi_substore_type = udho::view::resources::tmpl::const_store<XBridges...>;
     using view_autoresolver_type         = detail::view_bridge_auto_resolver<0, std::tuple<XBridges...>>;
+
+    static constexpr const std::size_t bridges_count = sizeof...(XBridges);
 
     /**
      * @brief construct a const_store from a resource store
@@ -548,6 +549,8 @@ struct const_store<>{
     using asset_substore_readonly_css    = udho::view::resources::asset::const_substore<asset::type::css>;
     using asset_substore_readonly_img    = udho::view::resources::asset::const_substore<asset::type::img>;
     using asset_substore_readonly_type   = udho::view::resources::asset::const_store;
+
+    static constexpr const std::size_t bridges_count = 0;
 
     /**
      * @brief construct a const_store from a resource store

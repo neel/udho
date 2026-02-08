@@ -1,3 +1,4 @@
+
 #define CATCH_CONFIG_MAIN
 
 #if WITH_CATCH_VERSION_2
@@ -9,26 +10,13 @@
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>
 #include <boost/variant.hpp>
-#include <udho/net/context.h>
 #include <udho/url/router.h>
-
+#include <udho/manifold/www.h>
 #include <udho/net/listener.h>
-#include <udho/net/connection.h>
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
-#include <udho/net/server.h>
 #include <curl/curl.h>
-#include <udho/net/artifacts.h>
-
-using socket_type       = udho::net::types::socket;
-using http_protocol     = udho::net::protocols::http<socket_type>;
-using scgi_protocol     = udho::net::protocols::scgi<socket_type>;
-using http_connection   = udho::net::connection<http_protocol>;
-using scgi_connection   = udho::net::connection<scgi_protocol>;
-using http_listener     = udho::net::listener<http_connection>;
-using scgi_listener     = udho::net::listener<scgi_connection>;
-using http_server       = udho::net::server<http_listener>;
-using scgi_server       = udho::net::server<scgi_listener>;
+#include <udho/manifold/fabric.h>
 
 static size_t curl_writef(void *contents, size_t size, size_t nmemb, void *userp){
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -87,9 +75,8 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     udho::view::data::bridges::lua lua;
     lua.init();
-    lua.bind(udho::view::data::type<udho::net::context<udho::view::data::bridges::lua>>{});
-
     udho::view::resources::store<udho::view::data::bridges::lua> resources{lua};
+
     udho::pages::system::setup(resources);
 
     auto previous_size = resources.assets().size();
@@ -150,10 +137,20 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     boost::asio::io_context service;
 
-    auto server = http_server(service, 9000);
-    auto artifacts = udho::net::artifacts{router, resources};
+    using framework_type = udho::manifold::framework<udho::manifold::www::stateless::lua>;
+    using endpoint_type  = typename framework_type::endpoint_type;
 
-    server.run(artifacts);
+    auto resource_store_component  = udho::manifold::components::resources(cstore);
+
+    auto framework = framework_type::apply(std::move(router));
+    auto runtime   = framework.runtime(resource_store_component);
+
+    lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::portal_type>{});
+    lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::context_type>{});
+
+    auto listener  = udho::net::listener(service, runtime, {boost::asio::ip::tcp::v4(), 9000});
+
+    listener.start();
 
     std::thread thread([&]{
         service.run();
@@ -418,6 +415,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
                 CHECK(results.code == 404);
             }
         }
+
     }
 
     SECTION("Assets accessible from asset store") {
@@ -580,6 +578,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
             http_results results = curl_fetch(curl, "GET", "http://localhost:9000/");
             CHECK(results.code == 200);
             std::string body = results.body;
+            std::cout << "html output " << std::endl << body << std::endl;
             std::multimap<std::string, std::string> captured_links;
             extract_links(body, captured_links);
             std::set<std::string> expected_items_set_docroot, expected_items_set_alternate;
@@ -666,7 +665,6 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
 
     curl_easy_cleanup(curl);
 
-    server.stop();
-
+    listener.stop();
     thread.join();
 }
