@@ -1,3 +1,4 @@
+
 #define CATCH_CONFIG_MAIN
 
 #if WITH_CATCH_VERSION_2

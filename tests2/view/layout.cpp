@@ -378,10 +378,11 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         namespace placeholders = udho::view::tmpl::layout::placeholders;
         layout[placeholders::central] = "Hello";
 
-        // layout();
-        io.run();
+        layout();
+
     }
 
+    io.run();
 
     std::string output = stream_out.str();
     std::cout << output << std::endl;
