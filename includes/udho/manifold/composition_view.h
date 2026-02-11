@@ -8,6 +8,11 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
+
 template <typename ComponentT, typename... Components>
 struct composition_view<ComponentT, Components...>: composition_view<Components...>{
     using wrapper_type   = udho::manifold::wrapper<ComponentT>;
@@ -87,6 +92,10 @@ struct composition_view<> {
     template <typename... OtherComponents>
     composition_view(composition_view<OtherComponents...>& other) {}
 };
+
+/**
+ * @}
+ */
 
 }
 }

@@ -13,7 +13,7 @@ namespace udho {
 namespace manifold {
 
 /**
- * @addtogroup manifold
+ * @ingroup manifold
  * @{
  */
 
@@ -202,6 +202,8 @@ struct pipeline{
     void abort(FlowT flow, Args&&... args){
         _next.abort(flow, std::forward<Args>(args)...);
     }
+
+    // const common_pipeline_type& common_pipeline() const { return _common_pipeline; }
 private:
 
     /**

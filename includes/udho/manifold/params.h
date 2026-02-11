@@ -214,6 +214,16 @@ struct params: udho::hazo::map_d<Fields...>{
         assert(json.is_object());
         map_type::visit(detail::json_deserializer{json});
     }
+
+    template <typename Function>
+    void visit(Function&& f) {
+        map_type::visit(std::forward<Function>(f));
+    }
+
+    template <typename Function>
+    void visit(Function&& f) const {
+        map_type::visit(std::forward<Function>(f));
+    }
 };
 
 #ifndef __DOXYGEN__
@@ -226,6 +236,9 @@ struct params<>{
     void load(const nlohmann::json& json) {
         assert(json.is_object());
     }
+
+    template <typename Function>
+    void visit(Function&& f) const {}
 
     template <typename>
     struct contains {

@@ -1,0 +1,599 @@
+<!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width,initial-scale=1" />
+              <title>manifold pipeline structure</title>
+              <style>
+:root{
+  --bg: #ffffff;
+
+  --panel-bg: #F4F7FC;
+  --panel-border: #CBD5E1;
+
+  --node-bg: #E6EEF9;
+  --node-border: #A7B6CC;
+
+  --text: #0f172a;
+  --muted: #475569;
+
+  --chip-bg: rgba(255,255,255,.70);
+  --chip-border: rgba(15,23,42,.18);
+
+  --gap: 14px;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body{
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.diagram{
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: relative;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.composition, .pipeline, .configuration, .flow{
+    border: 2px solid var(--panel-border);
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    padding: 14px;
+}
+
+.flow .track {
+    position: absolute;
+    bottom: 75px;
+    left: 14px;
+    right: 0px;
+    height: 25px;
+    background: white;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, .06);
+}
+
+.head{
+    font-weight: 650;
+    color: var(--muted);
+    margin: 0 0 10px 2px;
+    letter-spacing: .2px;
+}
+
+.row.pipelines{
+    gap: 18px;
+    align-items: stretch;
+    position: relative;
+    padding-top: 18px;
+}
+
+.row.pipelines > .pipeline{
+    flex: 0 0 auto;
+}
+
+.pipeline .fabric{
+    min-width: unset;
+    flex: 0 0 auto;
+    border: 2px solid var(--panel-border);
+    background: rgba(255,255,255,.55);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.transition{
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.row{
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--gap);
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.row::-webkit-scrollbar { height: 10px; }
+.row::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.row::-webkit-scrollbar-track { background: transparent; }
+
+.row.fabrics{
+    gap: 18px;
+}
+
+.transition {
+    border: 2px solid var(--panel-border);
+    background: rgba(255, 255, 255, .55);
+    border-radius: var(--radius);
+    padding: 12px;
+}
+
+.node{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto;
+    column-gap: 12px;
+    align-items: start;
+    background: var(--node-bg);
+    border: 1.5px solid var(--node-border);
+    border-radius: 10px;
+    padding: 10px 10px 9px;
+    grid-template-rows: auto 1fr auto;
+}
+
+.features{
+    grid-column: 2;
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: stretch;
+    flex-wrap: nowrap;
+}
+
+.feature{
+    display: flex;
+    width: auto;
+    font-size: 12px;
+    padding: 8px 8px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
+    color: #0b1220;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.feature .s{
+    font-weight: 700;
+    border-radius: 7px;
+    margin-right: 4px;
+    padding: 0px 4px 0px 4px;
+    background: #1f77b4;
+    color: white;
+}
+.feature .n{
+    color: #0b1220;
+}
+
+.node.component{
+    border-left-width: 4px;
+    border-left-color: #1f77b4;
+}
+.node.facet{
+    border-left-width: 4px;
+    border-left-color: #ff7f0e;
+    background: rgba(230,238,249,.75);
+    padding-top: 18px;
+    position: relative;
+    min-height: 90px;
+    z-index: 1;
+}
+
+.node.facet .feature .s{
+    background: #ff7f0e;
+}
+
+.node.facet .result{
+    position: absolute;
+    background: white;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    z-index: 2;
+    height: 24px;
+    bottom: 9px;
+    border: 1px solid var(--panel-border);
+    left: -4px;
+    right: -1px;
+    border-left: 0;
+    border-right: 0;
+}
+
+.result.empty{
+    background: transparent !important;
+    border: 0 !important;
+}
+
+.row.facets{
+    position: relative;
+    padding-top: 18px;
+}
+
+.row.facets::before{
+    content: "";
+    position: absolute;
+    bottom: 16px;
+    height: 21px;
+    background: white;
+    pointer-events: none;
+    z-index: 1;
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, .06);
+    left: 0px;
+    right: 0px;
+}
+
+.node.facet .result > .head{
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    margin-top: 3px;
+    font-weight: normal;
+}
+
+.node.facet .result:not(.empty) > .head::before{
+    content: "⛁";
+    font-size: 12px;
+    line-height: 1;
+    color: var(--muted);
+    opacity: 0.9;
+    margin-right: 5px;
+    color: #ff7f0e;
+}
+
+.result.empty > .head{
+    opacity: 0.75;
+}
+
+.params{
+    grid-column: 1 / -1;
+    grid-row: 3;
+}
+
+.params > table{
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+.params td{
+    padding: 4px 6px;
+    border-top: 1px solid rgba(15,23,42,.12);
+    vertical-align: top;
+}
+.params tr:first-child td{ border-top: 0; }
+
+.params td.t{
+    white-space: nowrap;
+    opacity: 0.85;
+}
+.params td.k{
+    white-space: nowrap;
+    font-weight: 650;
+}
+.params td.v{
+    width: auto;
+    word-break: break-word;
+}
+
+.listener {
+    position: absolute;
+    left: -50px;
+    top: 0px;
+    bottom: 0px;
+    width: 34px;
+    border: 2px solid var(--panel-border);
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: .3px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+}
+
+</style>
+            </head>
+            <body>
+                <div class="diagram">
+                <div class="listener">listener</div>
+                
+                <section class="composition">
+                    <div class="head">composition</div>
+                    <div class="row components">
+                        
+                <div class="node component">
+                    <div class="head">handler</div>
+                    <div class="features">  </div>
+                    <div class="params">
+                        <table></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">pg</div>
+                    <div class="features">  </div>
+                    <div class="params">
+                        <table></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">protocol</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">header_reader</span>
+            </div>
+            
+            <div class="feature">
+                <span class="s">2</span>
+                <span class="n">body_reader</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table><tr> <td class='t'>uint64</td> <td class='k'>header_time_limit</td> <td class='v'>1</td></tr><tr> <td class='t'>uint64</td> <td class='k'>header_memory_limit</td> <td class='v'>1024</td></tr><tr> <td class='t'>uint64</td> <td class='k'>body_time_limit</td> <td class='v'>10</td></tr><tr> <td class='t'>uint64</td> <td class='k'>body_memory_limit</td> <td class='v'>4096</td></tr><tr> <td class='t'>bool</td> <td class='k'>contiguous_buffer</td> <td class='v'>1</td></tr></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">navigator</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">identifier</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">cookies</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">1</span>
+                <span class="n">cookie_load</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">session</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">1</span>
+                <span class="n">session_load</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table><tr> <td class='t'>bool</td> <td class='k'>enabled</td> <td class='v'>0</td></tr><tr> <td class='t'>string</td> <td class='k'>sesskey</td> <td class='v'>sessid</td></tr><tr> <td class='t'>string</td> <td class='k'>domain</td> <td class='v'>localhost</td></tr><tr> <td class='t'>string</td> <td class='k'>path</td> <td class='v'>/</td></tr></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">resources</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">resources_storage</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table><tr> <td class='t'>bool</td> <td class='k'>enabled</td> <td class='v'>0</td></tr></table>
+                    </div>
+                </div>
+            
+                <div class="node component">
+                    <div class="head">router</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">locator</span>
+            </div>
+            
+            <div class="feature">
+                <span class="s">2</span>
+                <span class="n">responder</span>
+            </div>
+             </div>
+                    <div class="params">
+                        <table><tr> <td class='t'>bool</td> <td class='k'>use_trie</td> <td class='v'>0</td></tr></table>
+                    </div>
+                </div>
+            
+                    </div>
+                </section>
+            
+                
+                <section class="flow">
+                    <div class="track"></div>
+                    <div class="head">flow</div>
+                    
+                <section class="configuration">
+                    <div class="head">configs</div>
+                    <div class="row configs">
+                        <div class='node config'><div class='head'>handler</div><div class='params'><table></table></div></div><div class='node config'><div class='head'>pg</div><div class='params'><table></table></div></div><div class='node config'><div class='head'>protocol</div><div class='params'><table><tr> <td class='t'>uint64</td> <td class='k'>header_time_limit</td> <td class='v'>1</td></tr><tr> <td class='t'>uint64</td> <td class='k'>header_memory_limit</td> <td class='v'>1024</td></tr><tr> <td class='t'>uint64</td> <td class='k'>body_time_limit</td> <td class='v'>10</td></tr><tr> <td class='t'>uint64</td> <td class='k'>body_memory_limit</td> <td class='v'>4096</td></tr><tr> <td class='t'>bool</td> <td class='k'>contiguous_buffer</td> <td class='v'>1</td></tr></table></div></div><div class='node config'><div class='head'>navigator</div><div class='params'><table></table></div></div><div class='node config'><div class='head'>cookies</div><div class='params'><table></table></div></div><div class='node config'><div class='head'>session</div><div class='params'><table><tr> <td class='t'>bool</td> <td class='k'>enabled</td> <td class='v'>0</td></tr><tr> <td class='t'>string</td> <td class='k'>sesskey</td> <td class='v'>sessid</td></tr><tr> <td class='t'>string</td> <td class='k'>domain</td> <td class='v'>localhost</td></tr><tr> <td class='t'>string</td> <td class='k'>path</td> <td class='v'>/</td></tr></table></div></div><div class='node config'><div class='head'>resources</div><div class='params'><table><tr> <td class='t'>bool</td> <td class='k'>enabled</td> <td class='v'>0</td></tr></table></div></div><div class='node config'><div class='head'>router</div><div class='params'><table><tr> <td class='t'>bool</td> <td class='k'>use_trie</td> <td class='v'>0</td></tr></table></div></div>
+                    </div>
+                </section>
+            
+                    <div class="row pipelines">
+                        <section class="pipeline">
+                            <div class="head">start</div>
+                        </section>
+                        
+                <section class="pipeline">
+                    <div class="head">pipeline&lt;0&gt;</div>
+                    <section class="fabric">
+                        <div class="head">fabric&lt;0&gt;</div>
+                        <div class="row facets">
+                            
+                <div class="node facet">
+                    <div class="head">protocol</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">header_reader</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">header_reader::result</div>
+                    </div>
+                </div>
+            
+                <div class="node facet">
+                    <div class="head">navigator</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">identifier</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">identifier::result</div>
+                    </div>
+                </div>
+            
+                <div class="node facet">
+                    <div class="head">resources</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">resources_storage</span>
+            </div>
+             </div>
+                    <div class="result empty">
+                        <div class="head"></div>
+                    </div>
+                </div>
+            
+                <div class="node facet">
+                    <div class="head">router</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">0</span>
+                <span class="n">locator</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">locator::result</div>
+                    </div>
+                </div>
+            
+                        </div>
+                    </section>
+                </section>
+            
+            <section class="transition">
+                <div class="head"> 0 ⇒ 1 </div>
+            </section>
+        
+                <section class="pipeline">
+                    <div class="head">pipeline&lt;1&gt;</div>
+                    <section class="fabric">
+                        <div class="head">fabric&lt;1&gt;</div>
+                        <div class="row facets">
+                            
+                <div class="node facet">
+                    <div class="head">cookies</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">1</span>
+                <span class="n">cookie_load</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">cookie_load::result</div>
+                    </div>
+                </div>
+            
+                <div class="node facet">
+                    <div class="head">session</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">1</span>
+                <span class="n">session_load</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">session_load::result</div>
+                    </div>
+                </div>
+            
+                        </div>
+                    </section>
+                </section>
+            
+            <section class="transition">
+                <div class="head"> 1 ⇒ 2 </div>
+            </section>
+        
+                <section class="pipeline">
+                    <div class="head">pipeline&lt;2&gt;</div>
+                    <section class="fabric">
+                        <div class="head">fabric&lt;2&gt;</div>
+                        <div class="row facets">
+                            
+                <div class="node facet">
+                    <div class="head">protocol</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">2</span>
+                <span class="n">body_reader</span>
+            </div>
+             </div>
+                    <div class="result ">
+                        <div class="head">body_reader::result</div>
+                    </div>
+                </div>
+            
+                <div class="node facet">
+                    <div class="head">router</div>
+                    <div class="features"> 
+            <div class="feature">
+                <span class="s">2</span>
+                <span class="n">responder</span>
+            </div>
+             </div>
+                    <div class="result empty">
+                        <div class="head"></div>
+                    </div>
+                </div>
+            
+                        </div>
+                    </section>
+                </section>
+            
+                <section class="pipeline">
+                    <div class="head">finish</div>
+                </section>
+            
+                    </div>
+                </section>
+            
+              </div>
+            </body>
+            </html>
+        

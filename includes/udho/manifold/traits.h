@@ -241,6 +241,8 @@ struct has_features: std::bool_constant<!std::is_void<detail::has_features<Compo
  */
 struct default_constructed{};
 
+#ifndef __DOXYGEN__
+
 template <typename FacetT>
 struct facet_name;
 
@@ -284,6 +286,8 @@ struct composition_name;
 
 template <typename Fabric>
 struct fabric_name;
+
+#endif // __DOXYGEN__
 
 template <typename... Components>
 struct composition_name<composition<Components...>>{

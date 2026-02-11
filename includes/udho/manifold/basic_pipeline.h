@@ -9,6 +9,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @ingroup manifold
+ * @{
+ */
+
+/**
  * @brief Basic pipeline implementation for a single stage
  *
  * Provides the core evaluation infrastructure for a specific pipeline stage,
@@ -94,6 +99,10 @@ private:
     fabric_type  _fabric;
 
 };
+
+/**
+ * @}
+ */
 
 
 }

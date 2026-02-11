@@ -36,9 +36,9 @@
 #include <udho/manifold/transition.h>
 #include <udho/manifold/journal.h>
 #include <udho/manifold/flow.h>
-#include <udho/manifold/visualize.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/net/listener.h>
+#include <udho/manifold/visualize.h>
 
 namespace callbacks{
 
@@ -126,7 +126,7 @@ TEST_CASE("udho manifold www pipeline stateless", "[manifold][pipeline][www]") {
 
     listener.start();
 
-    io.run_for(std::chrono::seconds(5));
+    io.run_for(std::chrono::seconds(2));
 }
 
 
@@ -156,7 +156,14 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     auto runtime   = framework.runtime(session, resources);
     auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
+    {
+
+        boost::beast::test::stream stream_in(io);
+        std::ofstream html("structure.html");
+        udho::manifold::vis::html::runtime(html, runtime);
+    }
+
     listener.start();
 
-    io.run_for(std::chrono::seconds(5));
+    io.run_for(std::chrono::seconds(2));
 }

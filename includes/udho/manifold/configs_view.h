@@ -7,6 +7,12 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
+
+
 template <typename ComponentT, typename... Components>
 struct configs_view<ComponentT, Components...>: configs_view<Components...>{
     using config_type = config<ComponentT>;
@@ -53,6 +59,11 @@ struct configs_view<>{
     template <typename... OtherComponents>
     configs_view(configs_view<OtherComponents...>& other) {}
 };
+
+/**
+ * @}
+ */
+
 
 }
 }

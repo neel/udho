@@ -23,13 +23,14 @@ if (DOXYGEN_FOUND)
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
     add_custom_command(
-        OUTPUT ${DOXYGEN_XML_INDEX} 
+        OUTPUT ${DOXYGEN_XML_INDEX}
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${UDHO_HEADERS} ${UDHO_PAGES} ${CMAKE_CURRENT_SOURCE_DIR}/index.h
-        MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+        DEPENDS ${DOXYGEN_IN} ${UDHO_HEADERS} ${UDHO_PAGES} ${CMAKE_CURRENT_SOURCE_DIR}/index.h
+        MAIN_DEPENDENCY ${DOXYFILE_OUT}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM
+        USES_TERMINAL
     )
     
     add_custom_target(docs DEPENDS ${DOXYGEN_XML_INDEX})

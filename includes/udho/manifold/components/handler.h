@@ -18,6 +18,7 @@ template <typename StreamT>
 struct basic_handler{
     using features = udho::manifold::features<>;
     static constexpr const char* name = "handler";
+    using params      = udho::manifold::params<>;
 
     using stream_type   = StreamT;
     using ostream_type  = udho::net::basic_ostream<stream_type>;

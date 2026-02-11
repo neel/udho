@@ -3,13 +3,17 @@
 
 #include <cstdint>
 
+/** 
+ * @defgroup manifold Manifold
+ * @brief Core manifold framework.
+ * @{
+ */
+/** @} */
+
 namespace udho {
 namespace manifold {
 
-/**
- * @addtogroup manifold
- * @{
- */
+#ifndef __DOXYGEN__
 
 template <typename...>
 struct composition;
@@ -59,10 +63,11 @@ struct evaluator_helper;
 
 }
 
+#endif // __DOXYGEN__
 
 /**
  * @brief Implements the evaluation logic for a component-feature pair
- *
+ * @ingroup manifold
  * Facets are the units of pipeline evaluation, each representing one
  * component providing one feature, and defines how that feature is
  * provided for that component.
@@ -185,6 +190,8 @@ struct evaluator_helper;
 template <typename ComponentT, typename FeatureT>
 struct facet;
 
+#ifndef __DOXYGEN__
+
 template <typename ComponentT>
 struct config;
 
@@ -203,6 +210,7 @@ struct journal_const_view;
 /**
  * @brief Common pipeline implementation with feature ordering
  *
+ *
  * Extends basic_pipeline to provide ordered feature evaluation within a stage.
  * Manages evaluation callbacks and provides a fluent interface for chaining
  * completion handlers.
@@ -219,7 +227,6 @@ struct basic_runtime;
 
 /**
  * @brief Flow label for pipeline type identification
- *
  * Empty struct used as a tag to identify and specialize pipeline
  * configurations. Each unique flow type should have its own label.
  *
@@ -231,9 +238,11 @@ struct basic_flow;
 template <typename LabelT, typename StreamT>
 struct basic_terminal;
 
+#endif // __DOXYGEN__
+
 /**
  * @brief Pipeline execution plan blueprint
- *
+ * @ingroup manifold
  * Provides the static configuration for a pipeline type, defining:
  * - The component composition
  * - Feature evaluation order
@@ -267,16 +276,15 @@ struct basic_terminal;
 template <typename LabelT>
 struct sketch;
 
+#ifndef __DOXYGEN__
+
 template <typename... Components>
 struct portal;
 
 template <typename StreamT, typename... Components>
 struct basic_context;
 
-/**
- * @}
- */
-
+#endif // #ifndef __DOXYGEN__
 
 }
 }

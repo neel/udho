@@ -8,6 +8,11 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
+
 template <typename FacetT, typename... Rest>
 struct journal_const_view<FacetT, Rest...>{
     using feature_type   = typename udho::manifold::facet_traits<FacetT>::feature_type;
@@ -68,6 +73,11 @@ struct journal_const_view<> {
     template <typename... OtherComponents>
     journal_const_view(const journal_const_view<OtherComponents...>& other) {}
 };
+
+
+/**
+ * @}
+ */
 
 }
 }

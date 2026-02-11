@@ -16,6 +16,7 @@ template <typename OidMap = ozo::empty_oid_map, typename Statistics = ozo::no_st
 struct pg{
     using features = udho::manifold::features<>;
     static constexpr const char* name = "pg";
+    using params      = udho::manifold::params<>;
 
     using connection_source_type = ozo::connection_info<OidMap, Statistics>;
     using pool_config_type       = ozo::connection_pool_config;

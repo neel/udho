@@ -9,6 +9,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @ingroup manifold
+ * @{
+ */
+
+/**
  * @brief Configuration patching between pipeline stages
  *
  * The default configuration patching during stage transition. The apply() method
@@ -118,6 +123,11 @@ template <typename LabelT, typename StreamT, std::size_t Count>
 struct transitioner<LabelT, StreamT, Count, Count>{};
 
 }
+
+/**
+ * @}
+ */
+
 
 }
 }

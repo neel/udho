@@ -9,6 +9,7 @@
 #include <openssl/buffer.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <stdexcept>
 
 namespace udho {
@@ -30,6 +31,7 @@ namespace encoding {
      */
     enum class flavours {
         cookie,     ///< Cookie encoding per RFC 6265 Section 4.1.1
+        escape,     ///< HTML escape
         url,        ///< URL encoding per RFC 3986 Section 2.1
         base64,     ///< Standard Base64 per RFC 4648 Section 4
         base64_url, ///< URL-safe Base64 per RFC 4648 Section 5
@@ -314,6 +316,28 @@ namespace encoding {
         return result;
     }
 
+    template <flavours F, std::enable_if_t<F==flavours::escape, bool> = true>
+    std::string encode(const std::string& src) {
+        std::string result = src;
+        boost::replace_all(result, "&",  "&amp;");
+        boost::replace_all(result, "<",  "&lt;");
+        boost::replace_all(result, ">",  "&gt;");
+        boost::replace_all(result, "\"", "&quot;");
+        boost::replace_all(result, "\'", "&#39;");
+        return result;
+    }
+
+    template <flavours F, std::enable_if_t<F==flavours::escape, bool> = true>
+    std::string decode(const std::string& src) {
+        std::string result = src;
+        boost::replace_all(result, "&lt;", "<");
+        boost::replace_all(result, "&gt;", ">");
+        boost::replace_all(result, "&quot;", "\"");
+        boost::replace_all(result, "&#39;", "\'");
+        boost::replace_all(result, "&amp;", "&");
+        return result;
+    }
+
 } // namespace encoding
 
  /**
@@ -346,6 +370,9 @@ namespace encode {
     }
     std::string base16(const std::string& input){
         return encoding::encode<encoding::flavours::base16>(input);
+    }
+    std::string escape(const std::string& input){
+        return encoding::encode<encoding::flavours::escape>(input);
     }
 /// @}
 }
@@ -380,6 +407,9 @@ namespace decode {
     }
     std::string base16(const std::string& input){
         return encoding::decode<encoding::flavours::base16>(input);
+    }
+    std::string escape(const std::string& input){
+        return encoding::decode<encoding::flavours::escape>(input);
     }
 /// @}
 }

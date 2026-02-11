@@ -11,6 +11,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @ingroup manifold
+ * @{
+ */
+
+/**
  * @brief Individual pipeline execution instance
  *
  * Represents a single execution flow through the pipeline stages.
@@ -165,6 +170,8 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     composition_type& composition() { return _root_pipeline.composition(); }
     const composition_type& composition() const { return _root_pipeline.composition(); }
 
+    const runtime_type& runtime() const { return _runtime; }
+
     const configs_type& configs() const { return _root_pipeline.configs(); }
     const configs_type& baseline() const { return _runtime.baseline(); }
     const journal_type& journal() const { return _root_pipeline.journal(); }
@@ -248,6 +255,11 @@ private:
 
 template <typename LabelT, typename StreamT>
 std::size_t basic_flow<LabelT, StreamT>::_counter = 0;
+
+/**
+ * @}
+ */
+
 
 }
 }

@@ -67,6 +67,13 @@ struct facet_interface: detail::facet_interface_internal<FacetT> {
 
 }
 
+#ifndef __DOXYGEN__
+
+template <std::size_t Stage, typename FacetT, bool Enabled=facet_traits<FacetT>::stage == Stage, typename... Rest>
+struct basic_fabric;
+
+#endif // __DOXYGEN__
+
 /**
  * @brief Core fabric implementation for organizing and accessing stage-specific facets
  *
@@ -83,19 +90,6 @@ struct facet_interface: detail::facet_interface_internal<FacetT> {
  *
  * @see fabric
  * @see facet_interface
- */
-template <std::size_t Stage, typename FacetT, bool Enabled=facet_traits<FacetT>::stage == Stage, typename... Rest>
-struct basic_fabric;
-
-/**
- * @brief Specialization for enabled facets with remaining facets to process
- *
- * Includes the current facet (since Enabled=true) and recursively processes remaining facets.
- * Provides complete access methods for facet lookup by type, feature, and index.
- *
- * @tparam Stage Current pipeline stage
- * @tparam FacetT Current facet type (belongs to this stage)
- * @tparam Rest Remaining facet types
  */
 template <std::size_t Stage, typename FacetT, typename... Rest>
 struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interface<FacetT>, private fabric<Stage, Rest...>{

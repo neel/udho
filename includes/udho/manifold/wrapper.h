@@ -16,7 +16,7 @@ namespace udho {
 namespace manifold {
 
 /**
- * @addtogroup manifold
+ * @ingroup manifold
  * @{
  */
 
@@ -27,11 +27,11 @@ namespace detail{
 template <typename T>
 class basic_hybrid_storage{
 protected:
-    using value_type     = T;
+    using value_type     = std::remove_reference_t<T>;
     using variant_type   = std::variant<std::reference_wrapper<value_type>, value_type>;
 public:
-    using reference_type = std::add_lvalue_reference_t<value_type>;
-    using const_reference_type = std::add_const_t<reference_type>;
+    using reference_type       = std::add_lvalue_reference_t<value_type>;
+    using const_reference_type = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
 private:
     variant_type _variant;
 protected:

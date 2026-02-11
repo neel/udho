@@ -25,6 +25,8 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <udho/manifold/visualize.h>
 
 namespace testing {
 
@@ -762,6 +764,11 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         // Spawn and execute flow
         std::stringstream stream;
         auto flow = runtime.spawn(std::move(stream));
+
+        {
+            std::ofstream html("structure.html");
+            udho::manifold::vis::html::runtime(html, runtime);
+        }
 
         CHECK(runtime.count() == 1);
         flow->start();

@@ -35,7 +35,6 @@
 #include <udho/manifold/transition.h>
 #include <udho/manifold/journal.h>
 #include <udho/manifold/flow.h>
-#include <udho/manifold/visualize.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/net/listener.h>
 
@@ -443,11 +442,6 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
     auto framework  = testing::framework(testing::test_url(), session, resources);
     auto flow       = framework.runtime().spawn(std::move(stream_in));
-
-    {
-        std::ofstream dotfile("composition.dot");
-        udho::manifold::visualize_composition_dot(framework.runtime().composition(), dotfile);
-    }
 
     using framework_type = std::decay_t<decltype(framework)>;
     using runtime_type   = framework_type::runtime_type;

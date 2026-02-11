@@ -1,4 +1,7 @@
-\page Activities
+Async Activities {#Activities}
+========================
+
+@image html activities-anatomy.png width=50%
 
 Execution of Asynchronous Tasks may be required for executing SQL or any other data 
 queries including HTTP queries to fetch external data. Activities module provides a
@@ -9,6 +12,7 @@ result to a common heterogenous @ref udho::activities::collector "collector". Th
 heterogenous @ref udho::activities::collector "collector" is non-copiable and instantiated 
 as shared pointer. The collector is usually accessed through a copiable full or partial 
 @ref udho::activities::accessor "accessor" that provides R/W access to a subset of the main storage. 
+
 An activity is defined as a class that provides a no argument `operator()` overload and 
 a pair of success `S` and failure `F` result types. An activity `X` inherits
 from @ref udho::activities::activity "activity<X, S, F>" which provides two protected 
@@ -22,13 +26,14 @@ execution. Hence a \ref udho::activities::combinator "combinator" is used to com
 dependencies of an activity `X` and on completion of all its dependencies, it calls or
 cancels the invocation of `X::operator()`. e.g. if any of its required dependencies fail
 then the activity `X` is canceled.
+
 A \ref udho::activities::subtask "subtask" provides a convenient way of instantiating an
 activity and attaching a combinator with it. Instead of instantiating the activity or the
 combinator separately, a \ref udho::activities::subtask "subtask" is used. The subtask is 
 usually created using the \ref udho::activities::after "after" method.
 
 Example
-=========
+-------
 Following is an example of an activity `A1`. The activity starts some async operation from 
 its `operator()()`. It uses `A1::finished` as a callback which is supposed to be called once
 that *something* operation finishes. From `A1::finished` it constructs a success result `s`
@@ -86,6 +91,7 @@ eight activities A1, A2, A3, B1, B2, C1, D1 and D2 are to be executed. So the he
 \ref udho::activities::collector "collector<ContextT, A1, A2, A3, B1, B2, C1, D1, D2>" collects
 results of all these eight activities. The result may include success as well as failure result
 as yielded by an activity. The first three activities have no dependencies, hence run parallelly. 
+
 Activity B1 requires both A1 and A2 to complete before it can start. Similarly B2 requires A2 and 
 A3 to complete before it can start. `A1` inherits from \ref udho::activities::activity "activity<A1, A1S, A1F>" 
 (assuming that `A1S` and `A1F` are two classes intended to denote the success and failure result 
@@ -93,11 +99,11 @@ of A1). To signal successful completion `A1::operator()()` calls protected metho
 where `s` is an instance of `A1S`. Each of the activities contain a partial accessor to the actual 
 collector. The `success()` method stores the success result `s` to the collector through the accessor
 internally.
+
 A 2-1 combinator combines A1 and A2 and once both of them completes it calls the `B1::operator()()`. 
 A subtask consists of an activity and an appropriate combinator to combine all its dependebcies. Once
 all activities finish the final callback is called with a full accessor. The final callback can access
 the result and state of all previous activities using that accessor. 
-@image html activities-anatomy.png 
 
 Overview
 =========

@@ -8,6 +8,10 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
 
 /**
  * @brief A complete pipeline stage that evaluates features in a specified order with callback support
@@ -83,7 +87,7 @@ namespace manifold{
  * @see flow
  */
 template <std::size_t Stage, typename... Features, typename... Components>
-class common_pipepine<Stage, order<Features...>, udho::manifold::composition<Components...>>: private basic_pipeline<Stage, Components...> {
+struct common_pipepine<Stage, order<Features...>, udho::manifold::composition<Components...>>: private basic_pipeline<Stage, Components...> {
     using composition_type    = udho::manifold::composition<Components...>;
     using basic_pipeline_type = basic_pipeline<Stage, Components...>;
     using evaluator_type      = typename basic_pipeline_type::template evaluator<Features...>;
@@ -256,6 +260,8 @@ public:
         };
         return *this;
     }
+
+    // const basic_pipeline_type& basic() const { return *this; }
 private:
     void on_completion(safe_success_type&& success){
         std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
@@ -272,6 +278,9 @@ private:
     evaluator_type           _evaluator;
 };
 
+/**
+ * @}
+ */
 
 }
 }

@@ -14,7 +14,7 @@ namespace udho{
 namespace manifold{
 
 /**
- * @addtogroup manifold
+ * @ingroup manifold
  * @{
  */
 
@@ -140,6 +140,16 @@ struct basic_config{
      */
     template <typename ParamT>
     const auto& operator[](const udho::hazo::element_t<ParamT>& key) const { return _params[key]; }
+
+    template <typename Function>
+    void apply(Function&& f) {
+        _params.visit(std::forward<Function>(f));
+    }
+
+    template <typename Function>
+    void apply(Function&& f) const {
+        _params.visit(std::forward<Function>(f));
+    }
 
 private:
     params_type _params;

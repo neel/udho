@@ -12,7 +12,7 @@ namespace udho {
 namespace manifold {
 
 /**
- * @addtogroup manifold
+ * @ingroup manifold
  * @{
  */
 
