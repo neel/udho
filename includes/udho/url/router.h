@@ -544,10 +544,6 @@ private:
 
 }
 
-/**
- * @defgroup Router Routing System
- * @brief Core components for URL routing with template specialization support
- */
 
 /**
  * @brief Primary template for URL router with mount points and optional asset store

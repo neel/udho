@@ -1,18 +1,6 @@
+Views 
+========
 
-# Resources
-
-There are mainly two types of resources that we deal with in this framework. 
-One is asset and the other one is view.
-The resurces can be loaded from on memory buffer as well as from disk.
-The resource store is responsible for storage, retrival and execution (for views) of resources.
-In the next subsections we explain these two types of resources.
-
-## Assets
-
-Assets include static resources like JavaScript files, stylesheets, and images. 
-They are served directly via HTTP requests and can be processed server-side (e.g., compression and bundling) but do not interact directly with C++ data structures.
-
-## Views
 Views are the architectural component in the framework that formats and present the data. 
 A C++ data object is provided to it as an input, along with some auxilary inputs such as a context.
 A view extract the relevant parts of information from that data object and presents them in a suitable format.
@@ -94,74 +82,6 @@ So, the application may provide an init method that acceps the store as an argum
 Here in this example we consider an hypothetication application named `some_application` that has an init method.
 However that class could also take that in the constructor. 
 The framework does not impose any restruction on that. 
-
-# Router
-
-After registering the resources that application will add its own routes to the routing table as shown in teh next code listing.
-However the store has to be finalized before the server can be started.
-Because, after the server starts, no resources can be added to it.
-
-```c++
-store.finalize();
-```
-
-Now we pass the assets of the store to the router.
-
-```c++
-namespace url = udho::url;
-namespace net = udho::net;
-
-using namespace udho::hazo::string::literals;
-
-auto router = url::router(
-      url::root(
-            url::slot("f0"_h,  &f0)         << url::home  (url::verb::get)
-          | url::slot("chunked"_h,  &chunk) << url::fixed (url::verb::get, "/chunk")
-      )
-    | url::mount("b"_h, "/b",
-          url::slot("f1"_h,  &f1)         << url::regx  (url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)", "/f1/{}/{}/{}")
-        | url::slot("xf1"_h, &X::f1, &x)  << url::regx  (url::verb::get, "/x/f1/(\\d+)/(\\w+)/(\\d+\\.\\d)", "/x/f1/{}/{}/{}")
-    ),
-    | url::mount("_m"_h, "/m", app.routes()),
-    store.assets()
-);
-
-store.assets().base("/assets");                   // The document root from where the assets (js, css etc...) would be served.
-auto artifacts  = net::artifacts(router, store);
-```
-
-You can view the routing table by printing the router.
-Finally you create artifacts that coprises of the router and the assets of the store.
-
-
-```c++
-std::cout << "Routering Table: " << std::endl << router << std::endl;
-```
-
-The server runs on boost asio io_context using the artifacts.
-
-```c++
-boost::asio::io_service io;
-
-auto server = udho::net::http_server{io, "0.0.0.0", 9000};
-
-server.run(artifacts);
-
-io.run();
-```
-
-## Slot
-
-The views are executed using the context passed to the slots bounded with the url patterns. 
-Given a context of type `udho::net::context<bridges::lua>` the views can be rendered by calling the render method.
-
-```c++
-void slot(net::context<bridges::lua> context, std::size_t id){
-  user_data data = ...                  // fetch user data using id
-  view::layouts::standard layout;       // layout will provide a bigger template in which the view contents will be plugged in
-  context.view<bridges::lua>("profile", "users").render(data, layout);
-}
-```
 
 # Metatype
 

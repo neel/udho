@@ -143,10 +143,6 @@ template <asset::type AssetType>
 void prefixed_store<>::add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
     _store.assets().add(_prefix, std::move(res));
 }
-// template <asset::type AssetType>
-// void prefixed_store<>::add(asset::basic_resource<AssetType>& res){
-//     _store.assets().add(_prefix, res);
-// }
 
 /**
  * @ingroup view
@@ -252,11 +248,6 @@ struct prefixed_store{
         _store.assets().add(_prefix, std::move(res));
     }
 
-    // template <asset::type AssetType>
-    // void add(asset::basic_resource<AssetType>& res){
-    //     _store.assets().add(_prefix, &res);
-    // }
-
     template <typename Bridge>
     friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
@@ -297,8 +288,6 @@ struct prefixed_store{
         store_type& _store;
         std::string _prefix;
 };
-
-
 
 
 namespace detail {

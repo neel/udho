@@ -32,12 +32,18 @@
 namespace udho{
 namespace url{
 
+/**
+ * @defgroup Router Routing System
+ * @brief Core components for URL routing with template specialization support
+ * @{
+ */
+/** @} */
 
 namespace pattern{
 
 /**
  * @brief Enumerates the different types of URL pattern formats available for matching and generating URLs in web applications.
- *
+ * @ingroup Router
  * This enum class provides identifiers for each pattern matching strategy used by the `match` template class,
  * allowing developers to specify the type of pattern matching behavior appropriate for different routing scenarios.
  *
@@ -66,7 +72,7 @@ enum class formats{
 
 /**
  * @brief A template struct for matching and generating URLs based on specified pattern formats.
- *
+ * @ingroup Router
  * This template is designed to handle different types of URL pattern matching strategies defined by the `formats` enum.
  * It allows the creation of specialized matchers for URLs, depending on the pattern matching technique (like regex, fixed strings, etc.)
  *

@@ -9,6 +9,10 @@
 namespace udho{
 namespace url{
 
+/**
+ * @brief The action_table class
+ * @ingroup Router
+ */
 template <typename... Actions>
 class action_table: private udho::hazo::basic_seq<udho::hazo::by_data, Actions...>{
     using sequence_type = udho::hazo::basic_seq<udho::hazo::by_data, Actions...>;
@@ -50,6 +54,10 @@ public:
     constexpr std::size_t length() const { return sequence_type::depth; }
 };
 
+/**
+ * @brief The action_table class
+ * @ingroup Router
+ */
 template <typename... Mountpoints>
 class mountpoints_table: private udho::hazo::basic_seq<udho::hazo::by_data, Mountpoints...>{
     using sequence_type = udho::hazo::basic_seq<udho::hazo::by_data, Mountpoints...>;

@@ -20,7 +20,7 @@ namespace summary{
 
 /**
  * @brief Provides summarized information about a URL pattern match configuration
- *
+ * @ingroup Router
  * This struct encapsulates the essential properties of a URL pattern matching
  * configuration, including HTTP method, pattern format, and string representations
  * for both matching and replacement.
@@ -85,6 +85,10 @@ private:
     };
 };
 
+/**
+ * @brief The slot class
+ * @ingroup Router
+ */
 struct slot{
     template <typename F, typename CharT, CharT... C>
     inline explicit slot(const basic_slot<F, udho::hazo::string::str<CharT, C...>>& s): _key(s.key().c_str()), _symbol(s.symbol()), _nargs(s.args) {}
@@ -108,6 +112,10 @@ struct slot{
     std::uint8_t _nargs;
 };
 
+/**
+ * @brief The action class
+ * @ingroup Router
+ */
 struct action{
     template <typename F, typename CharT, CharT... C, typename MatchT>
     inline explicit action(const basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>& a): _slot(a), _match(a.match()) {}
@@ -131,7 +139,7 @@ struct action{
 /**
  * @class mount_point
  * @brief Represents a summarized view of a mount point in URL routing, containing replacements and mappings for URLs.
- *
+ * @ingroup Router
  * The summary::mount_point class provides a simplified, accessible and non-templated way to handle URL replacements based on predefined rules
  * associated with different parts of a URL. It is constructed from a @ref udho::url: mount_point::summary function.
  */
@@ -259,6 +267,7 @@ struct mount_point{
 /**
  * @class router
  * @brief Stores a map of mount point summary.
+ * @ingroup Router
  */
 struct router{
     using container_type = std::map<std::string, summary::mount_point>;

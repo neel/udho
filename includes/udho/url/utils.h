@@ -15,6 +15,7 @@ namespace utils{
 
 /**
  * @brief Normalizes and secures a filesystem path relative to a root directory
+ * @ingroup Router
  * @tparam Ch Character type (char/wchar_t)
  * @param subject Input path to normalize
  * @param root Base directory to contain the normalized path (default: current_path())
@@ -49,6 +50,7 @@ inline std::filesystem::path normalize_path(const std::basic_string<Ch>& subject
 
 /**
  * @brief Determines MIME type of a file using libmagic
+ * @ingroup Router
  * @param path Filesystem path to analyze
  * @return MIME type as string
  * @note Requires libmagic development files during compilation
@@ -69,6 +71,7 @@ inline std::string mime_type(const std::filesystem::path& path) {
 
 /**
  * @brief Quotes a string with  slash
+ * @ingroup Router
  * @param str std::string
  * @return the same string qouted  with slash (/ caracter)
  * @note If the string already starts with a slash then doest prepend the a slash in the
@@ -113,6 +116,7 @@ inline std::basic_string<Ch> slash_quote_right(const std::basic_string<Ch>& str)
 
 /**
  * @brief Concatenates two path components with exactly one slash between them
+ * @ingroup Router
  * @tparam Ch Character type (char/wchar_t)
  * @param l Left path component
  * @param r Right path component
@@ -143,6 +147,18 @@ inline std::basic_string<Ch> slash_concat(const std::basic_string<Ch>& l, const 
 }
 
 
+/**
+ * @brief Extracts prefix and name from a URI: subject = base/prefix/name
+ * @ingroup Router
+ *
+ * @param subject  Full URI path
+ * @param base     Base URL that must prefix subject (may contain slashes)
+ * @param[out] prefix  Path component between base and last slash (may contain slashes)
+ * @param[out] name    Final path component (must contain no slashes)
+ * @return true if subject starts with normalized base and contains a trailing slash after base, false otherwise
+ *
+ * @note Normalizes base with a trailing slash. Assumes name contains no '/'.
+ */
 inline bool extract(const std::string& subject, const std::string& base, std::string& prefix, std::string& name) {
     // Input: /BASE_URL/PREFIX/NAME
     // Assumptions:

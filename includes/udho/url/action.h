@@ -70,7 +70,7 @@ namespace detail{
 /**
  * @brief The basic_slot class is a template for creating function slots that can be invoked
  *        using string arguments.
- *
+ * @ingroup Router
  * This template class allows functions to be called with string arguments that are automatically
  * converted to the function's required argument types. The class supports both direct invocation
  * with a tuple of arguments and invocation with iterators that point to the beginning and end
@@ -173,7 +173,7 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
 
 /**
  * @brief A template struct that extends basic_slot with URL pattern matching capabilities.
- *
+ * @ingroup Router
  * This structure represents an action that is associated with a specific URL pattern. It combines a function,
  * typically representing a web endpoint or handler, with a matching pattern. This allows the function to be invoked
  * only when the incoming URL matches the specified pattern.
@@ -280,7 +280,7 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
 
 /**
  * @brief Creates a basic_action by associating a basic_slot with a URL pattern match using the left shift operator.
- *
+ * @ingroup Router
  * @tparam F Function type.
  * @tparam CharT Character type for the compile-time string.
  * @tparam C Characters of the compile-time string.
@@ -296,7 +296,7 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<(basic_s
 
 /**
  * @brief Creates a basic_action by associating a basic_slot with a URL pattern match using the right shift operator.
- *
+ * @ingroup Router
  * @tparam F Function type.
  * @tparam CharT Character type for the compile-time string.
  * @tparam C Characters of the compile-time string.
@@ -312,7 +312,7 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator>>(MatchT&
 
 /**
  * @brief Creates a slot for a free function, binding a URL pattern to a callback.
- *
+ * @ingroup Router
  * This template function takes a unique hash identifier and a free function, encapsulating
  * the function into a callable suitable for use in URL routing. This is intended for simple
  * functions that do not require access to an object's state.
@@ -343,7 +343,7 @@ basic_slot<
 
 /**
  * @brief Creates a slot for a member function, binding a URL pattern to a member function callback.
- *
+ * @ingroup Router
  * This template function takes a unique hash identifier, a member function, and a pointer to
  * the object on which the member function should be invoked. It encapsulates the member function
  * into a callable that is suitable for use in URL routing. This overload is useful for member functions
@@ -377,7 +377,13 @@ basic_slot<
     return slot_type(detail::encapsulate_mem_function<FunctionT>(std::move(function), that));
 }
 
-
+/**
+ * @brief action
+ * @ingroup Router
+ * @param function
+ * @param match
+ * @return
+ */
 template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
 basic_action<udho::url::detail::encapsulate_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
 action(FunctionT&& function, udho::hazo::string::str<CharT, C...>, const MatchT& match){
@@ -385,6 +391,13 @@ action(FunctionT&& function, udho::hazo::string::str<CharT, C...>, const MatchT&
     return action_type(detail::encapsulate_function<FunctionT>(std::move(function)), match);
 }
 
+/**
+ * @brief action
+ * @ingroup Router
+ * @param function
+ * @param match
+ * @return
+ */
 template <typename FunctionT, typename MatchT, typename CharT, CharT... C>
 basic_action<udho::url::detail::encapsulate_mem_function<FunctionT>, udho::hazo::string::str<CharT, C...>, MatchT>
 action(FunctionT&& function, typename detail::function_signature_<FunctionT>::object_type* that, udho::hazo::string::str<CharT, C...>, const MatchT& match){

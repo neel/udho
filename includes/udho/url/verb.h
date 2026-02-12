@@ -9,6 +9,10 @@
 namespace udho{
 namespace url{
 
+/**
+ * @brief HTTP method
+ * @ingroup Router
+ */
 using verb = boost::beast::http::verb;
 
 }

@@ -75,7 +75,7 @@ namespace detail{
 
 /**
  * @brief A template struct for matching and transforming URL patterns based on scanf-like patterns specified in p1729.
- *
+ * @ingroup Router
  * This class supports matching URLs using a simplified scanf format, allowing for extraction of components from the URL
  *
  * @tparam CharT Character type for strings.
@@ -203,7 +203,7 @@ struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief A template struct for strict URL pattern matching
- *
+ * @ingroup Router
  * This class provides the functionality to match URLs strictly against fixed string patterns.
  *
  * @tparam CharT Character type for strings.
@@ -344,7 +344,7 @@ struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief A specialized match struct for handling the home or root URL pattern in web applications.
- *
+ * @ingroup Router
  * This specialization of the match struct is designed specifically for matching the root ("/") or an empty string.
  * The ability to match an empty string as home is crucial for the root paths where the absence of a path segment
  * (e.g., accessing the domain without any additional slash) should logically route to the home page.
@@ -462,7 +462,7 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
 
 /**
  * @brief A template struct for matching url patterns based on regular expressions.
- *
+ * @ingroup Router
  * This class allows matching of URLs against specified regular expressions and provides functionality
  * to capture parts of the match and use them for constructing new strings.
  *
@@ -631,7 +631,7 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief Creates a regex pattern match object.
- *
+ * @ingroup Router
  * This function constructs a `match` object specialized for regex pattern matching.
  * It uses the provided HTTP method, pattern, and replacement string.
  *
@@ -646,6 +646,20 @@ template <typename CharT>
 struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> regx(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
     return pattern::match<pattern::formats::regex, udho::url::no_options, CharT>{method, pattern, replace};
 }
+
+/**
+ * @brief Creates a regex pattern match object.
+ * @ingroup Router
+ * This function constructs a `match` object specialized for regex pattern matching.
+ * It uses the provided HTTP method, pattern, and replacement string.
+ *
+ * @tparam CharT The character type of the strings.
+ * @param method The HTTP method associated with this pattern (using `boost::beast::http::verb`).
+ * @param pattern The regex pattern as a string.
+ * @param replace The replacement string formatted according to P2216 (`std::format` style).
+ * @return A `match<pattern::formats::regex, CharT>` object.
+ * @see pattern::match<pattern::formats::regex, CharT>
+ */
 template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> regx(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::regex, udho::url::no_options, CharT>{method, pattern, replace};
@@ -653,7 +667,7 @@ struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> reg
 
 /**
  * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
- *
+ * @ingroup Router
  * Overloads allow passing string literals directly. If only one pattern is provided,
  * it is used for both matching and replacement, simplifying cases where no transformation is needed.
  *
@@ -669,10 +683,39 @@ template <typename CharT>
 struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
     return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, replace};
 }
+
+/**
+ * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
+ * @ingroup Router
+ * Overloads allow passing string literals directly. If only one pattern is provided,
+ * it is used for both matching and replacement, simplifying cases where no transformation is needed.
+ *
+ * @tparam CharT The character type of the strings.
+ * @tparam M, N Compile-time sizes for array inputs.
+ * @param method The HTTP method associated with this pattern.
+ * @param pattern The p1729 pattern as a string or string literal.
+ * @param replace (Optional) The replacement string formatted according to P2216 (`std::format` style), defaults to the pattern if not provided.
+ * @return A `match<pattern::formats::p1729, CharT>` object.
+ * @see pattern::match<pattern::formats::p1729, CharT>
+ */
 template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, replace};
 }
+
+/**
+ * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
+ * @ingroup Router
+ * Overloads allow passing string literals directly. If only one pattern is provided,
+ * it is used for both matching and replacement, simplifying cases where no transformation is needed.
+ *
+ * @tparam CharT The character type of the strings.
+ * @tparam M, N Compile-time sizes for array inputs.
+ * @param method The HTTP method associated with this pattern.
+ * @param pattern The p1729 pattern as a string or string literal.
+ * @return A `match<pattern::formats::p1729, CharT>` object.
+ * @see pattern::match<pattern::formats::p1729, CharT>
+ */
 template <typename CharT, std::size_t M>
 struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> scan(boost::beast::http::verb method, const CharT(&pattern)[M]){
     return pattern::match<pattern::formats::p1729, udho::url::no_options, CharT>{method, pattern, pattern};
@@ -680,7 +723,7 @@ struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> sca
 
 /**
  * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
- *
+ * @ingroup Router
  * This function simplifies the creation of match objects for fixed patterns,
  *
  * @tparam CharT The character type of the strings.
@@ -694,10 +737,35 @@ template <typename CharT>
 struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const std::basic_string<CharT>& pattern, const std::basic_string<CharT>& replace){
     return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, replace};
 }
+
+/**
+ * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
+ * @ingroup Router
+ * This function simplifies the creation of match objects for fixed patterns,
+ *
+ * @tparam CharT The character type of the strings.
+ * @param method The HTTP method associated with this pattern.
+ * @param pattern The fixed pattern as a string.
+ * @param replace (Optional) The replacement string, defaults to the pattern if not provided.
+ * @return A `match<pattern::formats::fixed, CharT>` object.
+ * @see pattern::match<pattern::formats::fixed, CharT>
+ */
 template <typename CharT, std::size_t M, std::size_t N>
 struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M], const CharT(&replace)[N]){
     return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, replace};
 }
+
+/**
+ * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
+ * @ingroup Router
+ * This function simplifies the creation of match objects for fixed patterns,
+ *
+ * @tparam CharT The character type of the strings.
+ * @param method The HTTP method associated with this pattern.
+ * @param pattern The fixed pattern as a string.
+ * @return A `match<pattern::formats::fixed, CharT>` object.
+ * @see pattern::match<pattern::formats::fixed, CharT>
+ */
 template <typename CharT, std::size_t M>
 struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fixed(boost::beast::http::verb method, const CharT(&pattern)[M]){
     return pattern::match<pattern::formats::fixed, udho::url::no_options, CharT>{method, pattern, pattern};

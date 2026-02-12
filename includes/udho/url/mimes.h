@@ -11,7 +11,12 @@
 namespace udho{
 namespace url{
 
+/**
+ * @brief The mime_registry class
+ * @ingroup Router
+ */
 struct mime_registry{
+
     /**
      * @brief mime_registry
      * Initializes with 50+ common MIME type mappings covering:

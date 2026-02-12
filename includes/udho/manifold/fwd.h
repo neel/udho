@@ -5,7 +5,7 @@
 
 /** 
  * @defgroup manifold Manifold
- * @brief Core manifold framework.
+ * @brief Manifold Subsystem.
  * @{
  */
 /** @} */

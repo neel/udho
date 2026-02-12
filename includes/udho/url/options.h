@@ -9,6 +9,7 @@ namespace url{
 
 /**
  * @brief The basic_options encapsulates multiple configurable parameters
+ * @ingroup Router
  */
 template <typename... Params>
 class basic_options: private udho::hazo::map_d<Params...>{
@@ -61,12 +62,14 @@ struct basic_options<>{
 
 /**
  * @brief no options
+ * @ingroup Router
  */
 using no_options = udho::url::basic_options<>;
 
 /**
  * @brief convenience function to create options for url
  * @param params
+ * @ingroup Router
  * @return
  *
  * @code

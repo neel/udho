@@ -6,6 +6,8 @@ A type-safe, compile-time configurable pipeline
 manifold provides a system for building modular, multi-stage
 pipeline-based processing system with compile-time safety and runtime flexibility.
 
+@image html manifold-architecture.png 
+
 @tableofcontents
 
 ## Overview {#page_manifold_overview} 

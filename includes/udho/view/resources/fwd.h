@@ -30,6 +30,13 @@
 
 #include <filesystem>
 
+/**
+ * @defgroup resources Resources
+ * @brief Resources Subsystem.
+ * @{
+ */
+/** @} */
+
 namespace udho{
 namespace view{
 namespace resources{
