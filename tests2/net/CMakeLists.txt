@@ -7,3 +7,4 @@ find_package(CURL REQUIRED)
 # target_link_libraries(udho-test-network PRIVATE CURL::libcurl)
 
 add_catch_test(udho-test-net-ostream ostream.cpp)
+add_catch_test(udho-test-net-h11-body-reader body_reader.cpp)

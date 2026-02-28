@@ -23,7 +23,8 @@
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <udho/utils/string_view.h>
-#include <boost/charconv.hpp>
+// #include <boost/charconv.hpp>
+#include <charconv>
 #include <boost/system/error_code.hpp>
 #include <boost/system/errc.hpp>
 #include <boost/system/system_error.hpp>
@@ -36,6 +37,10 @@
 #include <boost/system/system_error.hpp>
 #include <boost/algorithm/string/find.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <fstream>
+#include <memory>
+#include <boost/beast/core.hpp>
+#include <boost/asio/buffer.hpp>
 
 namespace udho{
 namespace net{
@@ -167,6 +172,38 @@ private:
 
 }
 
+namespace detail{
+
+/**
+ * @brief The beast_buffer_ref class
+ * Satisfies https://www.boost.org/doc/libs/latest/doc/html/boost_asio/reference/DynamicBuffer_v1.html
+ */
+template <typename BeastBuffer>
+class beast_buffer_ref {
+public:
+    using const_buffers_type = typename BeastBuffer::const_buffers_type;
+    using mutable_buffers_type = typename BeastBuffer::mutable_buffers_type;
+
+    explicit beast_buffer_ref(BeastBuffer& buf) : _buffer(buf) {}
+    beast_buffer_ref(beast_buffer_ref&& other): _buffer(other._buffer) {}
+
+    std::size_t size() const { return _buffer.size(); }
+    std::size_t max_size() const { return _buffer.max_size(); }
+    std::size_t capacity() const { return _buffer.capacity(); }
+
+    // { v1
+    const_buffers_type data() const { return _buffer.data(); }
+
+    mutable_buffers_type prepare(std::size_t n) { return _buffer.prepare(n); }
+    void commit(std::size_t n) { _buffer.commit(n); }
+    void consume(std::size_t n) { _buffer.consume(n); }
+    // }
+private:
+    BeastBuffer& _buffer; // Reference to the actual storage
+};
+
+}
+
 template <typename Buffer, typename StreamT>
 struct h11_body_reader: std::enable_shared_from_this<h11_body_reader<Buffer, StreamT>> {
     using stream_type           = StreamT;
@@ -237,28 +274,34 @@ struct h11_body_reader: std::enable_shared_from_this<h11_body_reader<Buffer, Str
         }
         // }
 
+        std::string content_type = "application/octet-stream";
+        if(_request.count(boost::beast::http::field::content_type))
+            content_type = _request.at(boost::beast::http::field::content_type);
+
+        bool is_multipart = false;
+        std::string boundary;
+
+        if(content_type.find("multipart/form-data") != std::string::npos) {
+            udho::utils::string_view boundary_key("boundary=");
+            std::size_t boundary_pos   = content_type.find(boundary_key);
+            if(boundary_pos == std::string::npos) {
+                finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), 0);
+                return;
+            }
+            std::size_t boundary_start = boundary_pos + boundary_key.size();
+            std::size_t semicolon_pos  = content_type.find(';', boundary_start);
+            std::size_t boundary_len   = semicolon_pos == std::string::npos ? std::string::npos : (semicolon_pos - boundary_start);
+            std::string magic_sequence = content_type.substr(boundary_start, boundary_len);
+            boost::trim(magic_sequence);
+            boost::trim_if(magic_sequence, boost::is_any_of("\""));
+
+            boundary = "--" + magic_sequence;
+            is_multipart = true;
+        }
 
         if(count_content_length && content_length > 0) {
-            std::string content_type = "application/octet-stream";
-            if(_request.count(boost::beast::http::field::content_type))
-                content_type = _request.at(boost::beast::http::field::content_type);
-
             start_timer(seconds);
-            if(content_type.find("multipart/form-data") != std::string::npos) {
-                udho::utils::string_view boundary_key("boundary=");
-                std::size_t boundary_pos   = content_type.find(boundary_key);
-                if(boundary_pos == std::string::npos) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), 0);
-                    return;
-                }
-                std::size_t boundary_start = boundary_pos + boundary_key.size();
-                std::size_t semicolon_pos  = content_type.find(';', boundary_start);
-                std::size_t boundary_len   = semicolon_pos == std::string::npos ? std::string::npos : (semicolon_pos - boundary_start);
-                std::string magic_sequence = content_type.substr(boundary_start, boundary_len);
-                boost::trim(magic_sequence);
-                boost::trim_if(magic_sequence, boost::is_any_of("\""));
-                std::string boundary       = "--" + magic_sequence;
-
+            if(is_multipart) {
                 read_multipart_body(std::move(handler), hbuff, boundary, content_length);
             } else {
                 read_body(std::move(handler), hbuff, content_length);
@@ -268,8 +311,12 @@ struct h11_body_reader: std::enable_shared_from_this<h11_body_reader<Buffer, Str
             start_timer(seconds);
 
             std::size_t transferred = transfer_leftovers(hbuff, _buffer);
-            read_chunk_header(std::move(handler));
-            return;
+
+            if(is_multipart) {
+                // read_chunked_multipart_header(std::move(handler));
+            } else {
+                read_chunk_header(std::move(handler));
+            }
         }
     }
 
@@ -280,6 +327,15 @@ struct h11_body_reader: std::enable_shared_from_this<h11_body_reader<Buffer, Str
     const form_container_type& fields() const { return _fields; }
 private:
 
+    /**
+     * @brief Read a plain (non‑multipart) body of known content length.
+     * @param handler        Completion handler.
+     * @param hbuff          Header buffer (leftovers already transferred).
+     * @param content_length Total expected body size.
+     *
+     * @note if content_length bytes are not received before the timer
+     *       expires the operation will be cancelled.
+     */
     template <typename Handler>
     void read_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t content_length) {
         std::size_t transferred = transfer_leftovers(hbuff, _target_buffer, content_length);
@@ -290,13 +346,20 @@ private:
             return;
         }
         boost::asio::async_read(
-            _stream, _target_buffer, boost::asio::transfer_exactly(pending_size),
+            _stream, detail::beast_buffer_ref(_target_buffer), boost::asio::transfer_exactly(pending_size),
             [self = self(), handler = std::move(handler), this](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 self->finished(std::move(handler), ec, _target_buffer.size());
             }
         );
     }
 
+    /**
+     * @brief Start reading a multipart/form-data body.
+     * @param handler        Completion handler.
+     * @param hbuff          Header buffer (leftovers already transferred).
+     * @param boundary       The multipart boundary string (including leading "--").
+     * @param content_length Total body size as given by Content-Length.
+     */
     template <typename Handler>
     void read_multipart_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::string boundary, std::size_t content_length) {
         std::size_t transferred = transfer_leftovers(hbuff, _buffer, content_length);
@@ -311,29 +374,28 @@ private:
 private:
 
     /**
-     * @brief reads multipart part header
+     * @brief Read the next part’s boundary line.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param is_first       True for the first part (boundary appears alone), false otherwise (preceded by CRLF).
+     * @param content_length Total body size (used for progress tracking).
      *
      * async_read_until --boundary if first, CRLF--boundary otherwise
      * calls read_plain_multipart_follow which checks the ending of that line
-     *
-     * @param handler
-     * @param boundary
-     * @param is_first
-     * @param pending_size
      */
     template <typename Handler>
     void read_plain_multipart_header(Handler&& handler, std::string boundary, bool is_first, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
         std::string expected_delim = (is_first ? boundary : "\r\n"+boundary);
         boost::asio::async_read_until(
-            _stream, _buffer, expected_delim,
+            _stream, detail::beast_buffer_ref(_buffer), expected_delim,
             [self = self(), handler = std::move(handler), this, boundary, content_length](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -390,7 +452,7 @@ private:
     template <typename Handler>
     void read_plain_multipart_follow(Handler&& handler, std::string boundary, std::size_t content_length) {
         if(_bytes_consumed +2 > content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -398,10 +460,10 @@ private:
         std::size_t transfer_size = buffer_size >= 2 ? 0 : (2-buffer_size);
 
         boost::asio::async_read(
-            _stream, _buffer, boost::asio::transfer_exactly(transfer_size),
+            _stream, detail::beast_buffer_ref(_buffer), boost::asio::transfer_exactly(transfer_size),
             [self = self(), handler = std::move(handler), this, boundary, content_length, transfer_size](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -415,27 +477,32 @@ private:
                     if(two_bytes == "\r\n") {
                         read_plain_multipart_meta(std::move(handler), boundary, content_length);
                     } else {
-                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                     }
                 }
             }
         );
     }
 
+    /**
+     * @brief Read the final CRLF after the closing boundary ("--") and finish.
+     * @param handler        Completion handler.
+     * @param content_length Total body size.
+     */
     template <typename Handler>
     void read_plain_multipart_final(Handler&& handler, std::size_t content_length) {
         if(_bytes_consumed +2 > content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
         std::size_t buffer_size   = _buffer.size();
         std::size_t transfer_size = buffer_size >= 2 ? 0 : (2-buffer_size);
         boost::asio::async_read(
-            _stream, _buffer, boost::asio::transfer_exactly(transfer_size),
+            _stream, detail::beast_buffer_ref(_buffer), boost::asio::transfer_exactly(transfer_size),
             [self = self(), handler = std::move(handler), this, content_length](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -444,29 +511,96 @@ private:
                 udho::utils::string_view buffer_data(data, 2);
 
                 if(expected_str != buffer_data) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                     return;
                 }
 
                 _buffer.consume(2);
                 _bytes_consumed += 2;
-                finished(std::move(handler), ec, _target_buffer.size());
+                finished(std::move(handler), ec, _bytes_consumed);
             }
         );
     }
 
     template <typename Handler>
+    void read_plain_multipart_meta_buffered(Handler&& handler, std::string boundary, std::size_t content_length, std::size_t length) {
+        std::string meta(static_cast<const char*>(_buffer.data().data()), length);
+        _buffer.consume(length);
+        _bytes_consumed += length;
+
+        auto range = boost::ifind_first(meta, "Content-Disposition:");
+        if(range.empty()) {
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
+            return;
+        }
+
+        std::size_t disposition_pos = std::distance(meta.begin(), range.end());
+        std::size_t crlf_pos        = meta.find("\r\n", disposition_pos);       // must exist because we are using async_read_until with "\r\n\r\n"
+        std::string disposition     = meta.substr(disposition_pos, (crlf_pos - disposition_pos));
+
+        std::deque<std::string> disposition_parts;
+        boost::split(disposition_parts, disposition, boost::is_any_of(";"));
+        std::string form_data = disposition_parts.front();
+        boost::trim(form_data);
+        if(!boost::iequals(form_data, "form-data")) {
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
+            return;
+        }
+        disposition_parts.pop_front();
+
+        std::string name;
+        std::string filename;
+
+        for (std::string& disposition_part : disposition_parts) {
+            auto pos = disposition_part.find('=');
+            if (pos == std::string::npos)
+                continue;
+            std::string key   = disposition_part.substr(0,pos);
+            std::string value = disposition_part.substr(pos+1);
+
+            boost::trim(key);
+            boost::trim(value);
+            boost::trim_if(value, boost::is_any_of("\""));
+
+            if (boost::iequals(key, "name")) name = value;
+            if (boost::iequals(key, "filename")) filename = value;
+        }
+
+        if(name.empty()) {
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
+            return;
+        }
+
+        if(filename.empty()) {
+            // not upload -> append to a map
+            read_plain_multipart_field(std::move(handler), boundary, name, content_length);
+        } else {
+            // upload -> redirect stream to temp file
+            read_plain_multipart_file(std::move(handler), boundary, name, filename, content_length);
+        }
+    }
+
+    /**
+     * @brief Read the part headers (e.g., Content-Disposition) until CRLFCRLF.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param content_length Total body size.
+     *
+     * Parses the `Content-Disposition` header to extract the field name and optional filename.
+     * Then dispatches to either field reading or file reading.
+     */
+    template <typename Handler>
     void read_plain_multipart_meta(Handler&& handler, std::string boundary, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
         boost::asio::async_read_until(
-            _stream, _buffer, "\r\n\r\n",
+            _stream, detail::beast_buffer_ref(_buffer), "\r\n\r\n",
             [self = self(), handler = std::move(handler), this, boundary, content_length](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -487,63 +621,23 @@ private:
 
                 assert(bytes_transferred <= remaining_bytes);
 
-                std::string meta(static_cast<const char*>(_buffer.data().data()), bytes_transferred);
-                _buffer.consume(bytes_transferred);
-                _bytes_consumed += bytes_transferred;
-                auto range = boost::ifind_first(meta, "Content-Disposition:");
-                if(range.empty()) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
-                    return;
-                }
-
-                std::size_t disposition_pos = std::distance(meta.begin(), range.end());
-                std::size_t crlf_pos        = meta.find("\r\n", disposition_pos);       // must exist because we are using async_read_until with "\r\n\r\n"
-                std::string disposition     = meta.substr(disposition_pos, (crlf_pos - disposition_pos));
-
-                std::deque<std::string> disposition_parts;
-                boost::split(disposition_parts, disposition, boost::is_any_of(";"));
-                std::string form_data = disposition_parts.front();
-                boost::trim(form_data);
-                if(!boost::iequals(form_data, "form-data")) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
-                    return;
-                }
-                disposition_parts.pop_front();
-
-                std::string name;
-                std::string filename;
-
-                for (std::string& disposition_part : disposition_parts) {
-                    auto pos = disposition_part.find('=');
-                    if (pos == std::string::npos)
-                        continue;
-                    std::string key   = disposition_part.substr(0,pos);
-                    std::string value = disposition_part.substr(pos+1);
-
-                    boost::trim(key);
-                    boost::trim(value);
-                    boost::trim_if(value, boost::is_any_of("\""));
-
-                    if (boost::iequals(key, "name")) name = value;
-                    if (boost::iequals(key, "filename")) filename = value;
-                }
-
-                if(name.empty()) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
-                    return;
-                }
-
-                if(filename.empty()) {
-                    // not upload -> append to a map
-                    read_plain_multipart_field(std::move(handler), boundary, name, content_length);
-                } else {
-                    // upload -> redirect stream to temp file
-                    read_plain_multipart_file(std::move(handler), boundary, name, filename, content_length);
-                }
+                read_plain_multipart_meta_buffered(std::move(handler), boundary, content_length, bytes_transferred);
             }
         );
     }
 
+    /**
+     * @brief Process data already present in the buffer for a field.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param field_it       Iterator into `_fields`.
+     * @param content_length Total body size.
+     *
+     * Scans the buffer for the next boundary. If found and verified, consumes data up to the boundary
+     * and then calls `read_plain_multipart_header()` to start the next part.
+     * If not found, consumes all data except a trailing safety margin (to avoid missing a partial boundary)
+     * and continues reading by calling `read_plain_multipart_field_readsome()`.
+     */
     template <typename Handler>
     void read_plain_multipart_field_readsome_buffered(Handler&& handler, std::string boundary, form_iterator field_it, std::size_t content_length) {
         std::string delim_str = "\r\n"+boundary;
@@ -606,7 +700,7 @@ private:
         std::size_t length = std::distance(begin, it);
 
         if(length > content_length - _bytes_consumed) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -636,10 +730,20 @@ private:
         }
     }
 
+    /**
+     * @brief Read more data for a text field, possibly using already buffered data.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param field_it       Iterator into `_fields` pointing to the current field’s value.
+     * @param content_length Total body size.
+     *
+     * If the internal buffer already contains data, it calls `read_plain_multipart_field_readsome_buffered`; otherwise it issues
+     * `async_read_some` to fill the buffer and then calls `read_plain_multipart_field_readsome_buffered`.
+     */
     template <typename Handler>
     void read_plain_multipart_field_readsome(Handler&& handler, std::string boundary, form_iterator field_it, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -655,7 +759,7 @@ private:
             [self = self(), handler = std::move(handler), this, boundary, field_it, content_length](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 _buffer.commit(bytes_transferred);
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -664,10 +768,17 @@ private:
         );
     }
 
+    /**
+     * @brief Start reading a field part.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param name           Field name (from Content-Disposition).
+     * @param content_length Total body size.
+     */
     template <typename Handler>
     void read_plain_multipart_field(Handler&& handler, std::string boundary, std::string name, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -681,8 +792,21 @@ private:
         read_plain_multipart_field_readsome(std::move(handler), boundary, field_it, content_length);
     }
 
+    /**
+     * @brief Process buffered data for a file part.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param field_it       Iterator into `_fields`.
+     * @param stream         Owning pointer to the output file stream.
+     * @param content_length Total body size.
+     *
+     * Scans the buffer for the next boundary. If found, writes data up to the boundary to the file,
+     * flushes and closes the stream, and proceeds to the next part.
+     * If not found, writes all but a safety margin to the file and continues reading.
+     * Checks the stream state after each write.
+     */
     template <typename Handler>
-    void read_plain_multipart_file_readsome_buffered(Handler&& handler, std::string boundary, form_iterator field_it, std::unique_ptr<std::ostream>&& stream, std::size_t content_length) {
+    void read_plain_multipart_file_readsome_buffered(Handler&& handler, std::string boundary, form_iterator field_it, std::unique_ptr<std::ofstream>&& stream, std::size_t content_length) {
         std::string delim_str = "\r\n"+boundary;
 
         const char* data  = static_cast<const char*>(_buffer.data().data());
@@ -743,7 +867,7 @@ private:
         std::size_t length = std::distance(begin, it);
 
         if(length > content_length - _bytes_consumed) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -753,6 +877,11 @@ private:
             stream->write(begin, length);
             _buffer.consume(length);
             _bytes_consumed += length;
+
+            if (!stream->good()) {
+                finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::io_error), _bytes_consumed);
+                return;
+            }
         }
 
         assert(_bytes_consumed <= content_length);
@@ -773,10 +902,18 @@ private:
         }
     }
 
+    /**
+     * @brief Read more data for a file part, using buffered data if available.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param field_it       Iterator into `_fields` (pointing to the stored path).
+     * @param stream         Owning pointer to the output file stream.
+     * @param content_length Total body size.
+     */
     template <typename Handler>
-    void read_plain_multipart_file_readsome(Handler&& handler, std::string boundary, form_iterator field_it, std::unique_ptr<std::ostream>&& stream, std::size_t content_length) {
+    void read_plain_multipart_file_readsome(Handler&& handler, std::string boundary, form_iterator field_it, std::unique_ptr<std::ofstream>&& stream, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -794,7 +931,7 @@ private:
                 _buffer.commit(bytes_transferred);
 
                 if (ec) {
-                    finished(std::move(handler), ec, _target_buffer.size());
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
@@ -803,10 +940,20 @@ private:
         );
     }
 
+    /**
+     * @brief Start reading a file upload part.
+     * @param handler        Completion handler.
+     * @param boundary       Multipart boundary string.
+     * @param name           Field name.
+     * @param filename       Original filename.
+     * @param content_length Total body size.
+     *
+     * Creates a temporary file and stores its path in `_fields`. Then begins streaming data into the file.
+     */
     template <typename Handler>
     void read_plain_multipart_file(Handler&& handler, std::string boundary, std::string name, std::string filename, std::size_t content_length) {
         if(_bytes_consumed >= content_length) {
-            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
             return;
         }
 
@@ -825,13 +972,19 @@ private:
 
 private:
 
+    /**
+     * @brief Read a chunk header line (e.g., "1F\r\n").
+     * @param handler Completion handler.
+     *
+     * Parses the hexadecimal chunk size, ignoring chunk extensions. If size is zero, proceeds to trailers.
+     */
     template <typename Handler>
     void read_chunk_header(Handler&& handler){
         boost::asio::async_read_until(
-            _stream, _buffer, "\r\n",
+            _stream, detail::beast_buffer_ref(_buffer), "\r\n",
             [this, self = self(), handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
-                    finished(std::move(handler), error, _target_buffer.size());
+                    finished(std::move(handler), error, _bytes_consumed);
                     return;
                 }
 
@@ -846,7 +999,7 @@ private:
                     return;
                 }
                 std::size_t chunk_size = 0;
-                auto chunk_size_result = boost::charconv::from_chars(begin, p, chunk_size, 16);
+                auto chunk_size_result = std::from_chars(begin, p, chunk_size, 16);
                 _buffer.consume(bytes_transferred);
                 if(chunk_size_result.ec != std::errc{}){
                     finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
@@ -857,6 +1010,14 @@ private:
         );
     }
 
+    /**
+     * @brief Read a chunk payload (data + trailing CRLF).
+     * @param handler     Completion handler.
+     * @param chunk_size  Size of the chunk (from header).
+     *
+     * Copies the chunk data into `_target_buffer` and consumes the trailing CRLF.
+     * Then reads the next chunk header.
+     */
     template <typename Handler>
     void read_chunk_payload(Handler&& handler, std::size_t chunk_size){
         if(chunk_size == 0) {
@@ -869,7 +1030,7 @@ private:
         std::size_t bytes_expecting = (bytes_stored < bytes_needed) ? (bytes_needed - bytes_stored) : 0;
 
         boost::asio::async_read(
-            _stream, _buffer, boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
+            _stream, detail::beast_buffer_ref(_buffer), boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
             [this, self = self(), chunk_size, handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
@@ -886,10 +1047,16 @@ private:
         );
     }
 
+    /**
+     * @brief Read chunk trailers (after the final zero‑length chunk).
+     * @param handler Completion handler.
+     *
+     * Reads lines until an empty line is encountered, then finishes the body read.
+     */
     template <typename Handler>
     void read_chunk_trailers(Handler&& handler){
         boost::asio::async_read_until(
-            _stream, _buffer, "\r\n",
+            _stream, detail::beast_buffer_ref(_buffer), "\r\n",
             [this, self = self(), handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
@@ -915,6 +1082,13 @@ private:
 
 private:
 
+    /**
+     * @brief Transfer up to `content_length` bytes from the header buffer into a target buffer.
+     * @param hbuff          Header buffer.
+     * @param buff           Target buffer (either `_buffer` for multipart or `_target_buffer` for plain).
+     * @param content_length Maximum bytes to transfer.
+     * @return Number of bytes actually transferred.
+     */
     template <typename TargetBuffer>
     std::size_t transfer_leftovers(boost::beast::flat_buffer& hbuff, TargetBuffer& buff, std::size_t content_length) {
         detail::transfer_leftover transfer(buff);
@@ -922,6 +1096,12 @@ private:
         return transfer.bytes_transferred();
     }
 
+    /**
+     * @brief Transfer all remaining data from the header buffer into a target buffer.
+     * @param hbuff Header buffer.
+     * @param buff  Target buffer.
+     * @return Number of bytes transferred.
+     */
     template <typename TargetBuffer>
     std::size_t transfer_leftovers(boost::beast::flat_buffer& hbuff, TargetBuffer& buff) {
         detail::transfer_leftover transfer(buff);
@@ -930,6 +1110,11 @@ private:
     }
 
 private:
+
+    /**
+     * @brief Start the total timeout timer.
+     * @param seconds Number of seconds before timeout.
+     */
     void start_timer(std::size_t seconds) {
         _timer.expires_after(std::chrono::seconds(seconds));
         _timer.async_wait([self = self()](boost::system::error_code ec) {
@@ -939,15 +1124,22 @@ private:
         });
     }
 
+    /// Timeout handler: forcibly terminates the stream.
     void _timeout(){
         detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:
+
+    /**
+     * @brief Final completion function – cancels timer, invokes user handler, marks finished.
+     * @param handler           User completion handler.
+     * @param ec                Error code (or success).
+     * @param bytes_transferred Total bytes processed from the socket.
+     */
     template <typename Handler>
     void finished(Handler&& handler, boost::system::error_code ec, std::size_t bytes_transferred){
         _timer.cancel();
-        std::cout << "b ec.message(): " << ec.message() << std::endl;
         handler(std::move(_target_buffer), ec, bytes_transferred);
         _finished = true;
     }
