@@ -313,9 +313,9 @@ struct h11_body_reader: std::enable_shared_from_this<h11_body_reader<Buffer, Str
             std::size_t transferred = transfer_leftovers(hbuff, _buffer);
 
             if(is_multipart) {
-                // read_chunked_multipart_header(std::move(handler));
+                read_chunked_multipart_header(std::move(handler), boundary);
             } else {
-                read_chunk_header(std::move(handler));
+                read_chunk_header(std::move(handler), false);
             }
         }
     }
@@ -979,10 +979,10 @@ private:
      * Parses the hexadecimal chunk size, ignoring chunk extensions. If size is zero, proceeds to trailers.
      */
     template <typename Handler>
-    void read_chunk_header(Handler&& handler){
+    void read_chunk_header(Handler&& handler, bool multipart, std::string boundary = "", bool is_first = false){
         boost::asio::async_read_until(
             _stream, detail::beast_buffer_ref(_buffer), "\r\n",
-            [this, self = self(), handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
+            [this, self = self(), handler = std::move(handler), multipart, boundary](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _bytes_consumed);
                     return;
@@ -1001,10 +1001,11 @@ private:
                 std::size_t chunk_size = 0;
                 auto chunk_size_result = std::from_chars(begin, p, chunk_size, 16);
                 _buffer.consume(bytes_transferred);
+
                 if(chunk_size_result.ec != std::errc{}){
                     finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
                 } else {
-                    read_chunk_payload(std::move(handler), chunk_size);
+                    read_chunk_payload(std::move(handler), chunk_size, multipart, boundary);
                 }
             }
         );
@@ -1019,7 +1020,7 @@ private:
      * Then reads the next chunk header.
      */
     template <typename Handler>
-    void read_chunk_payload(Handler&& handler, std::size_t chunk_size){
+    void read_chunk_payload(Handler&& handler, std::size_t chunk_size, bool multipart, std::string boundary = "", bool is_first = false){
         if(chunk_size == 0) {
             read_chunk_trailers(std::move(handler));
             return;
@@ -1031,18 +1032,23 @@ private:
 
         boost::asio::async_read(
             _stream, detail::beast_buffer_ref(_buffer), boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
-            [this, self = self(), chunk_size, handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
+            [this, self = self(), chunk_size, handler = std::move(handler), multipart, boundary, is_first](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
                     return;
                 }
 
-                auto mbuff = _target_buffer.prepare(chunk_size);
-                boost::asio::buffer_copy(mbuff, _buffer.data());
-                _target_buffer.commit(chunk_size);
-                _buffer.consume(chunk_size);
-                _buffer.consume(2);
-                read_chunk_header(std::move(handler));
+                if(!multipart) {
+                    auto mbuff = _target_buffer.prepare(chunk_size);
+                    boost::asio::buffer_copy(mbuff, _buffer.data());
+                    _target_buffer.commit(chunk_size);
+                    _buffer.consume(chunk_size);
+                    _buffer.consume(2);
+
+                    read_chunk_header(std::move(handler), multipart, boundary);
+                } else {
+                    std::string expected_delim = (is_first ? boundary : "\r\n"+boundary);
+                }
             }
         );
     }
@@ -1079,6 +1085,14 @@ private:
             }
         );
     }
+
+private:
+
+    template <typename Handler>
+    void read_chunked_multipart_header(Handler&& handler, std::string boundary){
+        read_chunk_header(std::move(handler), true, boundary);
+    }
+
 
 private:
 
