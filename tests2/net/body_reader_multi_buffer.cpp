@@ -22,8 +22,8 @@ udho::net::types::headers::request make_request(std::initializer_list<std::pair<
     return req;
 }
 
-using test_reader = udho::net::protocols::h11_body_reader<boost::beast::flat_buffer, stream_type>;
-using buffer_type = boost::beast::flat_buffer;
+using test_reader = udho::net::protocols::h11_body_reader<boost::beast::multi_buffer, stream_type>;
+using buffer_type = boost::beast::multi_buffer;
 
 
 // Plain body tests begin

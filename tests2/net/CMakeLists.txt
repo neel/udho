@@ -8,3 +8,4 @@ find_package(CURL REQUIRED)
 
 add_catch_test(udho-test-net-ostream ostream.cpp)
 add_catch_test(udho-test-net-h11-body-reader body_reader.cpp)
+add_catch_test(udho-test-net-h11-body-reader-multibuf body_reader_multi_buffer.cpp)
