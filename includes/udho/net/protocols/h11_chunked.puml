@@ -1,0 +1,12 @@
+@startuml
+CHUNK_DATA: H
+
+[*] --> CHUNK_HEADER
+
+CHUNK_HEADER --> CHUNK_DATA : "H\\r\\n" (H > 0)
+CHUNK_DATA --> TRAILERS : "0\\r\\n"
+CHUNK_DATA --> CHUNK_HEADER: payload(H) + "\\r\\n"
+
+TRAILERS --> TRAILERS : trailer-field + "\\r\\n"
+TRAILERS --> [*] : "\\r\\n"
+@enduml

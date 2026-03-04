@@ -1,0 +1,17 @@
+@startuml
+[*] --> boundary_first
+
+boundary_first --> boundary_follow : boundary
+boundary_intermediate --> boundary_follow : "\\r\\n" + boundary
+
+boundary_follow --> meta_terminal : "\\r\\n"
+boundary_follow --> end : "--"
+
+meta_terminal --> data_field : "\\r\\n\\r\\n"  \n(Content-Disposition no filename)
+meta_terminal --> data_file  : "\\r\\n\\r\\n"  \n(Content-Disposition filename=...)
+
+data_field --> boundary_intermediate : "\\r\\n" + boundary
+data_file  --> boundary_intermediate : "\\r\\n" + boundary
+
+end --> [*] : "\\r\\n"
+@enduml

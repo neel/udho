@@ -11,6 +11,7 @@
 #include <iostream>
 #include <boost/thread.hpp>
 #include <udho/net/protocols/http.h>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 using stream_type     = boost::beast::test::stream;
 using executor_type   = typename stream_type::executor_type;
@@ -22,7 +23,7 @@ udho::net::types::headers::request make_request(std::initializer_list<std::pair<
     return req;
 }
 
-using test_reader = udho::net::protocols::h11_body_reader<boost::beast::multi_buffer, stream_type>;
+using test_reader = udho::net::protocols::h11::body_reader<boost::beast::multi_buffer, stream_type>;
 using buffer_type = boost::beast::multi_buffer;
 
 

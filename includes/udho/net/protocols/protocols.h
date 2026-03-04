@@ -10,20 +10,20 @@ namespace protocols{
 
 template <typename StreamT>
 struct http{
-    using reader = h11_reader<StreamT>;
-    using writer = h11_writer<StreamT>;
+    using reader = h11::reader<StreamT>;
+    using writer = h11::writer<StreamT>;
 };
 
 template <typename StreamT>
 struct scgi{
     using reader = scgi_reader<StreamT>;
-    using writer = h11_writer<StreamT>;
+    using writer = h11::writer<StreamT>;
 };
 
 template <typename StreamT>
 struct scgi2{
     using reader = scgi_reader2<StreamT>;
-    using writer = h11_writer<StreamT>;
+    using writer = h11::writer<StreamT>;
 };
 
 
