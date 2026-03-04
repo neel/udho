@@ -51,7 +51,25 @@ private:
 namespace h11{
 
 /**
- * @brief The h11_body_reader class
+ * @brief Asynchronous HTTP/1.1 body reader supporting plain, chunked, and multipart/form-data bodies.
+ *
+ * This class reads the request body from a stream after the headers have been parsed.
+ * It handles three types of payloads:
+ *   - **Plain bodies** with a known `Content-Length`.
+ *   - **Chunked bodies** (`Transfer-Encoding: chunked`), reassembling the data into a single buffer.
+ *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked.
+ *     Parsed fields and files are stored in an internal `form_data` container and can be
+ *     retrieved via `fields()`. Files are streamed incrementally to temporary files.
+ *
+ * The reader enforces a total timeout and a size limit. It is designed to be used with
+ * `boost::asio::async_read` (or any stream satisfying the Asio `AsyncReadStream` requirements).
+ * The class holds a reference to the stream and must outlive all asynchronous operations
+ * (typically via `shared_from_this()`).
+ *
+ * @tparam Buffer  The buffer type for the final body (e.g., `boost::beast::flat_buffer`).
+ *                 Must meet the requirements of `boost::asio::DynamicBuffer_v1`.
+ * @tparam StreamT The stream type (e.g., `boost::asio::ip::tcp::socket` or
+ *                 `boost::beast::test::stream`). Must satisfy `AsyncReadStream`.
  *
  * @plantumlfile h11_chunked.puml ["Chunk parsing state machine"]
  */
@@ -66,7 +84,12 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     using form_container_type    = detail::form_data::form_container_type;
     using trailer_container_type = std::multimap<std::string, std::string>;
 
-
+    /**
+     * @brief Construct a body reader.
+     * @param request          The HTTP request headers (used to determine content type, length, etc.).
+     * @param stream           The underlying stream (must outlive the reader).
+     * @param buffer_capacity  Initial capacity for internal buffers (defaults to allocator max).
+     */
     body_reader(const request_type& request, stream_type& stream, std::size_t buffer_capacity = std::allocator_traits<typename Buffer::allocator_type>::max_size(typename Buffer::allocator_type{}))
         : _request(request), _stream(stream), _buffer(buffer_capacity), _target_buffer(buffer_capacity), _finished(false), _timer(_stream.get_executor()), _bytes_consumed(0), _bytes_received(0), _multipart(_form) {}
 
@@ -173,10 +196,19 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
         }
     }
 
+    /// @return `true` if the body has been fully processed (success or error).
     bool is_finished() const { return _finished; }
 
+    /// @return A shared pointer to this object (used internally for async lifetimes).
     std::shared_ptr<body_reader> self() { return std::enable_shared_from_this<body_reader<Buffer, StreamT>>::shared_from_this(); }
 
+    /**
+     * @brief Get the parsed multipart fields.
+     * @return A const reference to a multimap mapping field names to values.
+     *         Values are either `std::string` (for text fields) or
+     *         `boost::filesystem::path` (for uploaded files). The map is empty
+     *         if the body was not multipart.
+     */
     const form_container_type& fields() const { return _form.fields(); }
 private:
 
@@ -240,6 +272,16 @@ private:
     }
 
 private:
+
+    /**
+     * @brief Continue reading a multipart body by issuing `async_read_some`.
+     * @param handler        Completion handler.
+     * @param buffer         The buffer to read into (same as `_target_buffer`).
+     * @param content_length Total body size.
+     *
+     * This function is called when the multipart parser returns `would_block`.
+     * It reads more data from the stream and feeds it to the parser.
+     */
     template <typename Handler>
     void async_read_multipart(Handler&& handler, buffer_type& buffer, std::size_t content_length){
         if (_bytes_received > content_length) {
@@ -335,7 +377,7 @@ private:
                     read_chunk_payload(std::move(handler), chunk_size, is_multipart);
                 }
             }
-            );
+        );
     }
 
     /**
@@ -407,7 +449,7 @@ private:
                     read_chunk_header(std::move(handler), is_multipart);
                 }
             }
-            );
+        );
     }
 
     /**
@@ -450,11 +492,18 @@ private:
                     read_chunk_trailers(std::move(handler));
                 }
             }
-            );
+        );
     }
 
 private:
 
+    /**
+     * @brief Start reading a chunked multipart body.
+     * @param handler  Completion handler.
+     * @param boundary The boundary string.
+     *
+     * Initializes the multipart parser and begins reading chunk headers.
+     */
     template <typename Handler>
     void read_chunked_multipart_header(Handler&& handler, std::string boundary){
         _multipart(boundary);
