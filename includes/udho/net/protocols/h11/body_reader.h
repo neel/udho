@@ -8,45 +8,15 @@
 #include <boost/asio/steady_timer.hpp>
 #include <udho/net/protocols/multipart_parser.h>
 #include <udho/net/protocols/h11/detail.h>
+#include <udho/net/protocols/request_parser_config.h>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
+#include <boost/beast/core/buffer_ref.hpp>
 
 namespace udho{
 namespace net{
 namespace protocols{
-
-namespace detail{
-
-/**
- * @brief The beast_buffer_ref class
- * Satisfies https://www.boost.org/doc/libs/latest/doc/html/boost_asio/reference/DynamicBuffer_v1.html
- */
-template <typename BeastBuffer>
-class beast_buffer_ref {
-public:
-    using const_buffers_type = typename BeastBuffer::const_buffers_type;
-    using mutable_buffers_type = typename BeastBuffer::mutable_buffers_type;
-
-    explicit beast_buffer_ref(BeastBuffer& buf) : _buffer(buf) {}
-    beast_buffer_ref(beast_buffer_ref&& other): _buffer(other._buffer) {}
-
-    std::size_t size() const { return _buffer.size(); }
-    std::size_t max_size() const { return _buffer.max_size(); }
-    std::size_t capacity() const { return _buffer.capacity(); }
-
-    // { v1
-    const_buffers_type data() const { return _buffer.data(); }
-
-    mutable_buffers_type prepare(std::size_t n) { return _buffer.prepare(n); }
-    void commit(std::size_t n) { _buffer.commit(n); }
-    void consume(std::size_t n) { _buffer.consume(n); }
-    // }
-private:
-    BeastBuffer& _buffer; // Reference to the actual storage
-};
-
-}
 
 namespace h11{
 
@@ -57,17 +27,16 @@ namespace h11{
  * It handles three types of payloads:
  *   - **Plain bodies** with a known `Content-Length`.
  *   - **Chunked bodies** (`Transfer-Encoding: chunked`), reassembling the data into a single buffer.
- *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked.
- *     Parsed fields and files are stored in an internal `form_data` container and can be
- *     retrieved via `fields()`. Files are streamed incrementally to temporary files.
+ *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked. Parsed fields
+ *     and files are stored in an internal `form_data` container and can be retrieved via `fields()`.
+ *     Files are streamed incrementally to temporary files or stored in-memory depending on config.upload_in_buffer()
  *
- * The reader enforces a total timeout and a size limit. It is designed to be used with
- * `boost::asio::async_read` (or any stream satisfying the Asio `AsyncReadStream` requirements).
- * The class holds a reference to the stream and must outlive all asynchronous operations
- * (typically via `shared_from_this()`).
+ * The reader enforces a total timeout and a size limit (when configured with non-zero values). The
+ * class holds a reference to the stream and must outlive all asynchronous operations (typically via
+ * `shared_from_this()`).
  *
- * @tparam Buffer  The buffer type for the final body (e.g., `boost::beast::flat_buffer`).
- *                 Must meet the requirements of `boost::asio::DynamicBuffer_v1`.
+ * @tparam Buffer  The buffer type for the final body (e.g., `boost::beast::flat_buffer`). Must provide
+ *                 prepare/commit/consume/data/size and be compatible with boost::beast::buffer_ref(...)
  * @tparam StreamT The stream type (e.g., `boost::asio::ip::tcp::socket` or
  *                 `boost::beast::test::stream`). Must satisfy `AsyncReadStream`.
  *
@@ -83,6 +52,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     using multipart_parser_type  = detail::multipart_parser<buffer_type>;
     using form_container_type    = detail::form_data::form_container_type;
     using trailer_container_type = std::multimap<std::string, std::string>;
+    using config_type            = udho::net::detail::body_parser_config;
 
     /**
      * @brief Construct a body reader.
@@ -90,25 +60,18 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
      * @param stream           The underlying stream (must outlive the reader).
      * @param buffer_capacity  Initial capacity for internal buffers (defaults to allocator max).
      */
-    body_reader(const request_type& request, stream_type& stream, std::size_t buffer_capacity = std::allocator_traits<typename Buffer::allocator_type>::max_size(typename Buffer::allocator_type{}))
-        : _request(request), _stream(stream), _buffer(buffer_capacity), _target_buffer(buffer_capacity), _finished(false), _timer(_stream.get_executor()), _bytes_consumed(0), _bytes_received(0), _multipart(_form) {}
+    body_reader(const request_type& request, stream_type& stream, const config_type& config)
+        : _request(request), _stream(stream), _config(config) , _finished(false), _timer(_stream.get_executor()), _bytes_consumed(0), _bytes_received(0), _multipart(_form, _config) {}
 
     /**
      * @brief start reading body
      * @param handler
      * @param hbuff reference to the buffer used to store the HTTP headers
-     * @param seconds total seconds to spend until the HTTP request body is read from the socket
-     * @param limit max number of bytes permitted for HTTP request body
-     *
-     * @note HTTP request body size must be finite. In order to enfore finiteness the usercode is expected to
-     *       provide an explicite limit that the request must obey. Therefore, the framework intentionally
-     *       doesn't allow unlimitedly large payload for HTTP requests. This helps enforcing determinism and
-     *       reducing chances of vulnerabilities.
      *
      * @warning limit = 0 doesn't have any special meaning. if limit is set to 0 then dosn't expect any body
      */
     template <typename Handler>
-    void start(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t seconds, std::size_t limit = 0){
+    void start(Handler&& handler, boost::beast::flat_buffer& hbuff){
         std::size_t content_length = 0;
         bool is_chunked = false;
 
@@ -144,7 +107,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
             return;
         }
 
-        if(count_content_length && content_length > limit) {
+        if(count_content_length && _config.total_content_limit() > 0 && content_length > _config.total_content_limit()) {
             finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), 0);
             return;
         }
@@ -176,7 +139,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
         }
 
         if(count_content_length && content_length > 0) {
-            start_timer(seconds);
+            if(_config.total_timeout().count() > 0) start_timer(_config.total_timeout());
             if(is_multipart) {
                 read_multipart_body(std::move(handler), hbuff, boundary, content_length);
             } else {
@@ -184,7 +147,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
             }
         } else {
             assert(is_chunked);
-            start_timer(seconds);
+            if(_config.total_timeout().count() > 0) start_timer(_config.total_timeout());
 
             std::size_t transferred = transfer_leftovers(hbuff, _buffer);
 
@@ -218,8 +181,8 @@ private:
      * @param hbuff          Header buffer (leftovers already transferred).
      * @param content_length Total expected body size.
      *
-     * @note if content_length bytes are not received before the timer
-     *       expires the operation will be cancelled.
+     * @note If config.total_timeout() > 0, a timer is started; on expiry the underlying stream is
+     *       terminated/cancelled and outstanding operations fail.
      */
     template <typename Handler>
     void read_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t content_length) {
@@ -231,7 +194,7 @@ private:
             return;
         }
         boost::asio::async_read(
-            _stream, detail::beast_buffer_ref(_target_buffer), boost::asio::transfer_exactly(pending_size),
+            _stream, boost::beast::buffer_ref(_target_buffer), boost::asio::transfer_exactly(pending_size),
             [self = self(), handler = std::move(handler), this](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 self->finished(std::move(handler), ec, _target_buffer.size());
             }
@@ -243,7 +206,7 @@ private:
      * @param handler        Completion handler.
      * @param hbuff          Header buffer (leftovers already transferred).
      * @param boundary       The multipart boundary string (including leading "--").
-     * @param content_length Total body size as given by Content-Length.
+     * @param content_length Total expected body size as given by Content-Length.
      */
     template <typename Handler>
     void read_multipart_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::string boundary, std::size_t content_length) {
@@ -276,7 +239,7 @@ private:
     /**
      * @brief Continue reading a multipart body by issuing `async_read_some`.
      * @param handler        Completion handler.
-     * @param buffer         The buffer to read into (same as `_target_buffer`).
+     * @param buffer         The buffer to read into (e.g. `_target_buffer`).
      * @param content_length Total body size.
      *
      * This function is called when the multipart parser returns `would_block`.
@@ -344,7 +307,7 @@ private:
     template <typename Handler>
     void read_chunk_header(Handler&& handler, bool is_multipart = false){
         boost::asio::async_read_until(
-            _stream, detail::beast_buffer_ref(_buffer), "\r\n",
+            _stream, boost::beast::buffer_ref(_buffer), "\r\n",
             [this, self = self(), handler = std::move(handler), is_multipart](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
@@ -352,6 +315,7 @@ private:
                 }
 
                 assert(bytes_transferred > 2);
+                _bytes_received += bytes_transferred;
 
                 auto begin = static_cast<const char*>(_buffer.data().data());   // _buffer is flat_buffer
                 auto end   = begin + (bytes_transferred -2);
@@ -373,6 +337,11 @@ private:
                             finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
                             return;
                         }
+                    }
+
+                    if(_config.total_content_limit() > 0 && _target_buffer.size() + chunk_size > _config.total_content_limit()) {
+                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), _target_buffer.size());
+                        return;
                     }
                     read_chunk_payload(std::move(handler), chunk_size, is_multipart);
                 }
@@ -400,18 +369,21 @@ private:
         std::size_t bytes_expecting = (bytes_stored < bytes_needed) ? (bytes_needed - bytes_stored) : 0;
 
         boost::asio::async_read(
-            _stream, detail::beast_buffer_ref(_buffer), boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
+            _stream, boost::beast::buffer_ref(_buffer), boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
             [this, self = self(), chunk_size, handler = std::move(handler), is_multipart](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
                     return;
                 }
 
+                _bytes_received += bytes_transferred;
+
                 try {
                     auto mbuff = _target_buffer.prepare(chunk_size);
                     boost::asio::buffer_copy(mbuff, _buffer.data());
                     _target_buffer.commit(chunk_size);
                     _buffer.consume(chunk_size);
+                    _bytes_consumed += chunk_size;
 
                     std::array<char,2> crlf{};
                     boost::asio::buffer_copy(boost::asio::buffer(crlf), boost::beast::buffers_prefix(2, _buffer.data()));
@@ -461,7 +433,7 @@ private:
     template <typename Handler>
     void read_chunk_trailers(Handler&& handler){
         boost::asio::async_read_until(
-            _stream, detail::beast_buffer_ref(_buffer), "\r\n",
+            _stream, boost::beast::buffer_ref(_buffer), "\r\n",
             [this, self = self(), handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
                     finished(std::move(handler), error, _target_buffer.size());
@@ -546,8 +518,8 @@ private:
      * @brief Start the total timeout timer.
      * @param seconds Number of seconds before timeout.
      */
-    void start_timer(std::size_t seconds) {
-        _timer.expires_after(std::chrono::seconds(seconds));
+    void start_timer(std::chrono::seconds seconds) {
+        _timer.expires_after(seconds);
         _timer.async_wait([self = self()](boost::system::error_code ec) {
             if (!ec) {
                 self->_timeout();
@@ -578,6 +550,7 @@ private:
 private:
     const request_type&         _request;
     stream_type&                _stream;
+    config_type                 _config;
     boost::beast::flat_buffer   _buffer;
     buffer_type                 _target_buffer;
     bool                        _finished;

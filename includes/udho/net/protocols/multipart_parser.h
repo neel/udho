@@ -3,7 +3,6 @@
 
 #include <variant>
 #include <string>
-#include <map>
 #include <boost/filesystem.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/buffers_iterator.hpp>
@@ -17,74 +16,14 @@
 #include <boost/beast/core/buffers_prefix.hpp>
 #include <deque>
 #include <fstream>
+#include <udho/net/protocols/form_data.h>
+#include <udho/net/protocols/request_parser_config.h>
 
 namespace udho{
 namespace net{
 namespace protocols{
 
 namespace detail{
-
-/**
- * @brief Container for parsed multipart form fields and uploaded files.
- *
- * This class holds the results of parsing a `multipart/form-data` body.
- * Fields are stored as strings, file uploads as `boost::filesystem::path`
- * pointing to a temporary file on disk. The class also tracks an iterator
- * to the currently active part during incremental parsing.
- *
- * The container is a `std::multimap<std::string, field_value_type>` to
- * allow multiple fields with the same name (e.g., multiple file uploads).
- */
-struct form_data{
-    /// Value type: either a string (field) or a filesystem path (uploaded file).
-    using field_value_type      = std::variant<std::string, boost::filesystem::path>;
-    /// Underlying multimap container.
-    using form_container_type   = std::multimap<std::string, field_value_type>;
-    /// Iterator (mutable).
-    using form_iterator         = form_container_type::iterator;
-    /// Const iterator.
-    using form_const_iterator   = form_container_type::const_iterator;
-
-    /// Constructor – initialises with no fields and an end iterator as current.
-    form_data(): _field_it(_fields.end()) {}
-
-    /// Returns a const reference to the entire multimap of parsed fields.
-    const form_container_type& fields() const { return _fields; }
-
-    /**
-     * @brief Insert a new field or file entry.
-     * @param name  The part name (from Content-Disposition).
-     * @param value The value (string or path).
-     * @return Iterator pointing to the newly inserted element.
-     *
-     * Also updates the internal current iterator to point to this new element.
-     */
-    form_iterator emplace(std::string name, field_value_type&& value) {
-        _field_it = _fields.emplace(name, std::move(value));
-        return _field_it;
-    }
-
-    /// Returns a const iterator to the end of the container (for comparison).
-    form_const_iterator end() const { return _fields.end(); }
-
-    /**
-     * @brief Get an iterator to the currently active part.
-     * @return Iterator to the part being parsed, or `end()` if none.
-     *
-     * This is used by the multipart parser to append data incrementally.
-     */
-    form_iterator current() { return _field_it; }
-
-    /// Clear all fields and reset the current iterator to `end()`.
-    void reset() {
-        _fields.clear();
-        _field_it = _fields.end();
-    }
-
-private:
-    form_container_type             _fields;
-    form_iterator                   _field_it;
-};
 
 /**
  * @brief Incremental parser for `multipart/form-data` content.
@@ -117,6 +56,7 @@ private:
 template <typename Buffer>
 struct multipart_parser{
     using buffer_type           = Buffer;
+    using field_value_type      = udho::net::protocols::detail::field_value_type;
 
     /**
      * @brief Current state of the multipart parser.
@@ -137,7 +77,7 @@ struct multipart_parser{
      * @brief Construct a parser that stores results in the given form container.
      * @param form Reference to a `form_data` object that will hold the parsed fields/files.
      */
-    explicit multipart_parser(form_data& form): _form(form) {}
+    explicit multipart_parser(udho::net::protocols::detail::form_data& form, const udho::net::detail::body_parser_config& config): _form(form), _config(config) {}
 
     /**
      * @brief Get the current lookahead state.
@@ -497,7 +437,8 @@ private:
 
         if(filename.empty()) {
             std::string value;
-            _form.emplace(name, std::move(value));
+            field_value_type field_value(name, std::move(value));
+            _form.emplace(name, std::move(field_value));
 
             _lookahead = lookahead::data_field;
         } else {
@@ -506,13 +447,21 @@ private:
                 return boost::system::errc::make_error_code(boost::system::errc::protocol_error);
             }
 
-            boost::filesystem::path temp_dir  = boost::filesystem::temp_directory_path();
-            boost::filesystem::path temp_file = temp_dir / boost::filesystem::unique_path(udho::utils::format("%%%%-%%%%-%%%%-%%%%-{}", filename));
+            if(_config.upload_in_buffer()) {
+                field_value_type field_value(name, boost::beast::multi_buffer{});
+                _form.emplace(name, std::move(field_value));
+            } else {
+                auto safe_filename      = udho::utils::filesystem::path(filename).filename().string();
+                auto unique_file_name   = udho::utils::format("%%%%-%%%%-%%%%-%%%%-{}", safe_filename);
+                auto temp_dir           = udho::utils::filesystem::temp_directory_path();
+                auto temp_file          = temp_dir / boost::filesystem::unique_path(unique_file_name).string();
 
-            std::unique_ptr<std::ofstream> ostream = std::make_unique<std::ofstream>(temp_file.string().c_str(), std::ios::binary);
-            _form.emplace(name, std::move(temp_file));
-            _current_file = std::move(ostream);
+                std::unique_ptr<std::ofstream> ostream  = std::make_unique<std::ofstream>(temp_file.string().c_str(), std::ios::binary);
 
+                field_value_type field_value(name, std::move(temp_file));
+                _form.emplace(name, std::move(field_value));
+                _current_file = std::move(ostream);
+            }
             _lookahead = lookahead::data_file;
         }
         return {};
@@ -524,6 +473,7 @@ private:
      * @return
      *   - `{}` on success (some data appended, possibly boundary found).
      *   - `would_block` if no data could be appended (boundary not found and buffer empty).
+     *   - `value_too_large` if the value crosses the `field_content_limit` threshold
      * @pre State is `data_field` and `_form.current()` points to a string variant.
      * @post Data up to (but not including) the next boundary is appended to the current field.
      * @post If a boundary is found and verified, state advances to `boundary_intermediate`.
@@ -531,7 +481,7 @@ private:
      */
     boost::system::error_code _field(buffer_type& buffer) {
         assert(_lookahead == lookahead::data_field);
-        assert(std::holds_alternative<std::string>(_form.current()->second));
+        assert(_form.current()->second.has_string());
 
         const auto& cbuff = buffer.data();
         auto begin = boost::asio::buffers_begin(cbuff);
@@ -543,7 +493,12 @@ private:
 
         if(length > 0) {
             auto& value = _form.current()->second;
-            std::string& str = std::get<std::string>(value);
+            std::string& str = value.string();
+
+            if(_config.field_content_limit() > 0 && (str.size() + length) > _config.field_content_limit()) {
+                return boost::system::errc::make_error_code(boost::system::errc::value_too_large);
+            }
+
             str.append(begin, it);
             buffer.consume(length);
             _bytes_consumed += length;
@@ -643,6 +598,7 @@ private:
      *   - `{}` on success (data written to file, possibly boundary found).
      *   - `would_block` if no data could be written (boundary not found and buffer empty).
      *   - `io_error` if a write to the temporary file fails.
+     *   - `file_too_large` is file contents exceeds `field_content_limit` configuration parameter and field_content_limit > 0
      * @pre State is `data_file` and `_form.current()` points to a path variant.
      * @post Data up to (but not including) the next boundary is written to `_current_file`.
      * @post If a boundary is found and verified, the file is flushed, closed, and
@@ -651,7 +607,10 @@ private:
      */
     boost::system::error_code _file(buffer_type& buffer) {
         assert(_lookahead == lookahead::data_file);
-        assert(std::holds_alternative<boost::filesystem::path>(_form.current()->second));
+        if (_config.upload_in_buffer())
+            assert(_form.current()->second.is_buffer());
+        else
+            assert(_form.current()->second.is_path());
 
         const auto& cbuff = buffer.data();
         auto buff_begin = boost::asio::buffers_begin(cbuff);
@@ -667,10 +626,36 @@ private:
                 const auto& segment = *it;
                 auto p = static_cast<char const*>(segment.data());
                 auto n = static_cast<std::size_t>(segment.size());
-                _current_file->write(p, n);
 
-                if (!_current_file->good())
-                    return boost::system::errc::make_error_code(boost::system::errc::io_error);
+                if(_config.upload_in_buffer()) {
+                    auto& value = _form.current()->second;
+                    boost::beast::multi_buffer& buffer = value.buffer();
+
+                    if(_config.field_content_limit() > 0 && (buffer.size() + n) > _config.field_content_limit()) {
+                        return boost::system::errc::make_error_code(boost::system::errc::file_too_large);
+                    }
+
+                    auto mutable_buffer = buffer.prepare(n);
+                    boost::asio::buffer_copy(mutable_buffer, boost::asio::buffer(p, n));
+                    buffer.commit(n);
+                } else {
+                    std::streampos start_position = 0; // guranteed to be a new file (no existing file gets appended during teh upload)
+                    std::streampos write_position = _current_file->tellp();
+                    if(write_position < 0) {
+                        return boost::system::errc::make_error_code(boost::system::errc::io_error);
+                    }
+
+                    std::size_t    write_buffer_length = write_position - start_position;
+
+                    if(_config.field_content_limit() > 0 && (write_buffer_length + n) > _config.field_content_limit()) {
+                        return boost::system::errc::make_error_code(boost::system::errc::file_too_large);
+                    }
+
+                    _current_file->write(p, n);
+
+                    if (!_current_file->good())
+                        return boost::system::errc::make_error_code(boost::system::errc::io_error);
+                }
             }
 
             buffer.consume(length);
@@ -684,11 +669,18 @@ private:
             // and it is the begining of delim_str
             // But delim_str should be consumed by read_plain_multipart_header
             // so here we don't consume the delim_str.size()
-            _current_file->flush();
-            if (!_current_file->good()) {
-                return boost::system::errc::make_error_code(boost::system::errc::io_error);
+
+            if(_config.upload_in_buffer()) {
+                // auto& value = _form.current()->second;
+                // boost::beast::multi_buffer& buffer = value.buffer();
+                // buffer.shrink_to_fit();
+            } else {
+                _current_file->flush();
+                if (!_current_file->good()) {
+                    return boost::system::errc::make_error_code(boost::system::errc::io_error);
+                }
+                _current_file.reset();
             }
-            _current_file.reset();
 
             _lookahead = lookahead::boundary_intermediate;
         } else {
@@ -705,6 +697,7 @@ private:
     std::size_t _start          = 0;
     bool        _finished       = false;
     form_data&  _form;
+    const udho::net::detail::body_parser_config& _config;
     std::unique_ptr<std::ofstream>  _current_file;
 };
 

@@ -30,7 +30,8 @@ struct protocol{
     UDHO_CONFIG_PARAM(header_time_limit,      std::size_t,  1);      // maximum time spent (in seconds) for parsing only the header part of an HTTP request
     UDHO_CONFIG_PARAM(header_memory_limit,    std::size_t,  1024);   // maximum number of bytes that can be used for parsing only the header part of an HTTP request
     UDHO_CONFIG_PARAM(body_time_limit,        std::size_t,  10);     // maximum time spent (in seconds) for reading the body part of an HTTP request
-    UDHO_CONFIG_PARAM(body_memory_limit,      std::size_t,  4096);   // maximum number of bytes that can be used for reading the body part of an HTTP request
+    UDHO_CONFIG_PARAM(body_memory_limit,      std::size_t,  4096);   // maximum number of bytes allowed for the HTTP request body
+    UDHO_CONFIG_PARAM(field_memory_limit,     std::size_t,  1024);   // maximum number of bytes allowed for a form field HTTP in the request body
     UDHO_CONFIG_PARAM(contiguous_buffer,      bool,         true);   // use flat_buffer if contiguous_buffer is true, otherwise use multi_buffer
 
     using params      = udho::manifold::params<
@@ -38,6 +39,7 @@ struct protocol{
         header_memory_limit,
         body_time_limit,
         body_memory_limit,
+        field_memory_limit,
         contiguous_buffer
     >;
 
@@ -169,7 +171,8 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
             using result_type = udho::manifold::feature::body_reader::result;
 
             std::size_t timeout_secs   = _config[component_type::body_time_limit::val].value();     // Mitigate CWE-400 w.r.t. time consumed (slowloris attack)
-            std::size_t memort_limit   = _config[component_type::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
+            std::size_t memory_limit   = _config[component_type::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
+            std::size_t field_limit    = _config[component_type::field_memory_limit::val].value();
             bool use_contiguous_buffer = _config[component_type::contiguous_buffer::val].value();   // overridable by user
 
             std::string content_type = request.count(boost::beast::http::field::content_type)
@@ -180,20 +183,26 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
 
             reader_ptr_type reader = _component.reader(_id);
 
+            udho::net::detail::body_parser_config config;
+            config
+                .total_content_limit(memory_limit)
+                .field_content_limit(field_limit)
+                .total_timeout(std::chrono::seconds(timeout_secs));
+
             if(use_contiguous_buffer) {
                 reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::flat_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
                     std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
                     udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, std::move(buffer), boost::beast::multi_buffer{});
                     result.bytes_transferred(bytes_transferred);
                     next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-                }, timeout_secs, memort_limit);
+                }, config);
             } else {
                 reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::multi_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
                     std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
                     udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, boost::beast::flat_buffer{}, std::move(buffer));
                     result.bytes_transferred(bytes_transferred);
                     next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-                }, timeout_secs, memort_limit);
+                }, config);
             }
         }
     }

@@ -27,6 +27,7 @@ using test_reader = udho::net::protocols::h11::body_reader<boost::beast::multi_b
 using buffer_type = boost::beast::multi_buffer;
 
 
+
 // Plain body tests begin
 // -----------------------------------------------------------------------------
 
@@ -44,7 +45,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - plain body", "[net][reader][h11][plai
     boost::beast::flat_buffer hbuff;          // empty header buffer
 
     stream_in.append(plain_body);
-    auto reader = std::make_shared<test_reader>(req, stream_in);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream_in, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -58,13 +63,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - plain body", "[net][reader][h11][plai
             result_bytes = bytes;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_bytes == 5);
 
     std::string output = boost::beast::buffers_to_string(result_buf.data());
@@ -87,7 +92,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - with leftover in header buffer", "[ne
         {boost::beast::http::field::content_length, std::to_string(leftover.size() + body.size())}
     });
 
-    auto reader = std::make_shared<test_reader>(req, stream);
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -99,13 +106,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - with leftover in header buffer", "[ne
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_buf.size() == leftover.size()+body.size());
     std::string output = boost::beast::buffers_to_string(result_buf.data());
     CHECK(output == leftover+body);
@@ -117,7 +124,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - zero length", "[net][reader][h11][pla
     auto req = make_request({{boost::beast::http::field::content_length, "0"}});
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -128,12 +139,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - zero length", "[net][reader][h11][pla
             CHECK(bytes == 0);
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - content length exceeds limit", "[net][reader][h11][plain]") {
@@ -144,7 +155,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - content length exceeds limit", "[net]
 
     auto req = make_request({{boost::beast::http::field::content_length, std::to_string(body.size())}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(3).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -154,12 +169,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - content length exceeds limit", "[net]
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 3   // limit 3 < 7
-    );
+        hbuff   // limit 3 < 7
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE(result_ec == boost::system::errc::value_too_large);
+    CHECK(completed);
+    CHECK(result_ec == boost::system::errc::value_too_large);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - content exceeds content length", "[net][reader][h11][plain]") {
@@ -170,7 +185,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - content exceeds content length", "[ne
 
     auto req = make_request({{boost::beast::http::field::content_length, std::to_string(body.size() -8)}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -184,12 +203,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - content exceeds content length", "[ne
             bytes_read = len;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
 
     CHECK(bytes_read == body.size() -8);
 
@@ -222,7 +241,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - single field", "[net][rea
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     std::size_t result_bytes = 0;
@@ -234,21 +257,22 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - single field", "[net][rea
             result_bytes = bytes;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    std::cout << "error: " << result_ec.message() << std::endl;
+    CHECK_FALSE(result_ec);
     CHECK(result_bytes == body.size());
 
     const auto& fields = reader->fields();
-    REQUIRE(fields.size() == 1);
+    CHECK(fields.size() == 1);
     auto it = fields.find("field1");
-    REQUIRE(it != fields.end());
-    CHECK(std::holds_alternative<std::string>(it->second));
-    CHECK(std::get<std::string>(it->second) == "value1");
+    CHECK(it != fields.end());
+    CHECK(it->second.is_string());
+    CHECK(it->second.string() == "value1");
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - multipart - multiple fields", "[net][reader][h11][multipart]") {
@@ -274,7 +298,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - multiple fields", "[net][
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -284,18 +311,19 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - multiple fields", "[net][
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    std::cout << "error: " << result_ec.message() << std::endl;
+    CHECK_FALSE(result_ec);
 
     const auto& fields = reader->fields();
-    REQUIRE(fields.size() == 2);
-    CHECK(std::get<std::string>(fields.find("text1")->second) == "Hello");
-    CHECK(std::get<std::string>(fields.find("text2")->second) == "World");
+    CHECK(fields.size() == 2);
+    CHECK(fields.find("text1")->second.string() == "Hello");
+    CHECK(fields.find("text2")->second.string() == "World");
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - multipart - file upload", "[net][reader][h11][multipart][upload]") {
@@ -319,7 +347,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - file upload", "[net][read
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -329,28 +361,28 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - file upload", "[net][read
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
 
     const auto& fields = reader->fields();
-    REQUIRE(fields.size() == 1);
+    CHECK(fields.size() == 1);
     auto it = fields.find("upload");
-    REQUIRE(it != fields.end());
-    REQUIRE(std::holds_alternative<boost::filesystem::path>(it->second));
-    boost::filesystem::path file_path = std::get<boost::filesystem::path>(it->second);
-    REQUIRE(boost::filesystem::exists(file_path));
-    CHECK(boost::filesystem::file_size(file_path) == file_content.size());
+    CHECK(it != fields.end());
+    CHECK(it->second.is_path());
+    udho::utils::filesystem::path file_path = it->second.path();
+    CHECK(udho::utils::filesystem::exists(file_path));
+    CHECK(udho::utils::filesystem::file_size(file_path) == file_content.size());
 
     std::ifstream f(file_path.string());
     std::string read_content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     CHECK(read_content == file_content);
 
-    boost::filesystem::remove(file_path);
+    udho::utils::filesystem::remove(file_path);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - multipart - missing boundary parameter", "[net][reader][h11][multipart][error]") {
@@ -362,7 +394,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - missing boundary paramete
 
     stream_type stream(io);
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -372,12 +408,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - missing boundary paramete
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE(result_ec == boost::system::errc::protocol_error);
+    CHECK(completed);
+    CHECK(result_ec == boost::system::errc::protocol_error);
 }
 
 // -----------------------------------------------------------------------------
@@ -398,7 +434,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - single chunk", "[net][reade
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -412,13 +451,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - single chunk", "[net][reade
             result_bytes = bytes;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_bytes == body.size());
 
     std::string output = boost::beast::buffers_to_string(result_buf.data());
@@ -435,7 +474,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - multiple chunks", "[net][re
 
     auto req = make_request({{boost::beast::http::field::transfer_encoding, "chunked"}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -447,13 +490,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - multiple chunks", "[net][re
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_buf.size() == body.size());
     std::string output = boost::beast::buffers_to_string(result_buf.data());
     CHECK(output == body);
@@ -469,7 +512,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - with trailers", "[net][read
 
     auto req = make_request({{boost::beast::http::field::transfer_encoding, "chunked"}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -481,13 +527,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - with trailers", "[net][read
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_buf.size() == body.size());
     std::string output = boost::beast::buffers_to_string(result_buf.data());
     CHECK(output == body);
@@ -503,7 +549,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - zero-length body", "[net][r
 
     auto req = make_request({{boost::beast::http::field::transfer_encoding, "chunked"}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     buffer_type result_buf;
     boost::system::error_code result_ec;
@@ -515,13 +565,13 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - zero-length body", "[net][r
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
 
-    REQUIRE(completed);
-    REQUIRE_FALSE(result_ec);
+    CHECK(completed);
+    CHECK_FALSE(result_ec);
     CHECK(result_buf.size() == 0);
 }
 
@@ -540,7 +590,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - both content-length and chunk
 
     stream_type stream(io);
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -550,12 +604,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - both content-length and chunk
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE(result_ec == boost::system::errc::protocol_error);
+    CHECK(completed);
+    CHECK(result_ec == boost::system::errc::protocol_error);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - error - invalid content-length string", "[net][reader][h11][error]") {
@@ -564,7 +618,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - invalid content-length string
 
     stream_type stream(io);
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -574,12 +632,12 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - invalid content-length string
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
-    REQUIRE(result_ec == boost::system::errc::invalid_argument);
+    CHECK(completed);
+    CHECK(result_ec == boost::system::errc::invalid_argument);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - error - premature EOF", "[net][reader][h11][error]") {
@@ -590,7 +648,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - premature EOF", "[net][reader
 
     auto req = make_request({{boost::beast::http::field::content_length, "10"}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -600,14 +662,14 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - premature EOF", "[net][reader
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
-    );
+        hbuff
+        );
 
     io.run();
-    REQUIRE(completed);
+    CHECK(completed);
     std::cout << "result_ec: " << result_ec.message() << std::endl;
     // Should get eof error or short read error (implementation dependent)
-    REQUIRE(result_ec == boost::asio::error::operation_aborted);
+    CHECK(result_ec == boost::asio::error::operation_aborted);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - error - timeout", "[net][reader][h11][timeout]") {
@@ -617,7 +679,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - timeout", "[net][reader][h11]
 
     auto req = make_request({{boost::beast::http::field::content_length, "5"}});
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(1));
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -627,14 +692,15 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - timeout", "[net][reader][h11]
             result_ec = ec;
             completed = true;
         },
-        hbuff, 1, 1024 // 1 second timeout
-    );
+        hbuff // 1 second timeout
+        );
 
     io.run_for(std::chrono::seconds(2));
-    REQUIRE(completed);
+    CHECK(completed);
     // Should get operation_aborted because the stream was terminated by timeout
-    REQUIRE(result_ec == boost::asio::error::operation_aborted);
+    CHECK(result_ec == boost::asio::error::operation_aborted);
 }
+
 // -----------------------------------------------------------------------------
 // Error and Edge cases end
 
@@ -668,7 +734,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - single field", "[
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     std::size_t result_bytes = 0;
@@ -680,7 +750,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - single field", "[
             result_bytes = bytes;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -694,8 +764,8 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - single field", "[
     CHECK(fields.size() == 1);
     auto it = fields.find("field1");
     CHECK(it != fields.end());
-    CHECK(std::holds_alternative<std::string>(it->second));
-    CHECK(std::get<std::string>(it->second) == field_value);
+    CHECK(it->second.is_string());
+    CHECK(it->second.string() == field_value);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields across chunks", "[net][reader][h11][chunked][multipart]") {
@@ -734,7 +804,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields a
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -744,7 +818,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields a
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -754,8 +828,8 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields a
 
     const auto& fields = reader->fields();
     CHECK(fields.size() == 2);
-    CHECK(std::get<std::string>(fields.find("text1")->second) == "Hello");
-    CHECK(std::get<std::string>(fields.find("text2")->second) == "World");
+    CHECK(fields.find("text1")->second.string() == "Hello");
+    CHECK(fields.find("text2")->second.string() == "World");
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split across chunks", "[net][reader][h11][chunked][multipart][edge]") {
@@ -790,7 +864,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split ac
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -800,7 +878,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split ac
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -810,7 +888,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split ac
 
     const auto& fields = reader->fields();
     CHECK(fields.size() == 1);
-    CHECK(std::get<std::string>(fields.find("field1")->second) == field_value);
+    CHECK(fields.find("field1")->second.string() == field_value);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[net][reader][h11][chunked][multipart][upload]") {
@@ -844,7 +922,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[n
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -854,7 +936,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[n
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -866,16 +948,16 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[n
     CHECK(fields.size() == 1);
     auto it = fields.find("upload");
     CHECK(it != fields.end());
-    CHECK(std::holds_alternative<boost::filesystem::path>(it->second));
-    boost::filesystem::path file_path = std::get<boost::filesystem::path>(it->second);
-    CHECK(boost::filesystem::exists(file_path));
-    CHECK(boost::filesystem::file_size(file_path) == file_content.size());
+    CHECK(it->second.is_path());
+    udho::utils::filesystem::path file_path = it->second.path();
+    CHECK(udho::utils::filesystem::exists(file_path));
+    CHECK(udho::utils::filesystem::file_size(file_path) == file_content.size());
 
     std::ifstream f(file_path.string());
     std::string read_content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     CHECK(read_content == file_content);
 
-    boost::filesystem::remove(file_path);
+    udho::utils::filesystem::remove(file_path);
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - zero parts", "[net][reader][h11][chunked][multipart]") {
@@ -896,7 +978,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - zero parts", "[ne
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -906,7 +992,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - zero parts", "[ne
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -931,7 +1017,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - malformed chunk h
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(30));
+
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -941,7 +1031,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - malformed chunk h
             result_ec = ec;
             completed = true;
         },
-        hbuff, 30, 1024
+        hbuff
         );
 
     io.run();
@@ -965,7 +1055,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - missing final chu
     });
 
     boost::beast::flat_buffer hbuff;
-    auto reader = std::make_shared<test_reader>(req, stream);
+    udho::net::detail::body_parser_config config;
+    config.total_content_limit(1024).total_timeout(std::chrono::seconds(5));
+    auto reader = std::make_shared<test_reader>(req, stream, config);
 
     boost::system::error_code result_ec;
     bool completed = false;
@@ -975,7 +1067,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - missing final chu
             result_ec = ec;
             completed = true;
         },
-        hbuff, 5, 1024
+        hbuff
         );
 
     io.run_for(std::chrono::seconds(10)); // should time out or get eof
@@ -986,3 +1078,4 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - missing final chu
 
 // -----------------------------------------------------------------------------
 // Chunked multipart form data tests end
+
