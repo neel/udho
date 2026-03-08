@@ -13,12 +13,30 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/beast/core/buffer_ref.hpp>
+#include <udho/utils/encoding.h>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 namespace udho{
 namespace net{
 namespace protocols{
 
 namespace h11{
+
+template <typename Buffer>
+struct body_reader_result{
+    using buffer_type            = Buffer;
+    using form_container_type    = detail::form_data::form_container_type;
+
+    detail::form_data& form() { return _form; }
+    const detail::form_data& form() const { return _form; }
+
+    const buffer_type& buffer() const { return _buffer; }
+    buffer_type& buffer() { return _buffer; }
+
+private:
+    buffer_type           _buffer;
+    detail::form_data     _form;
+};
 
 /**
  * @brief Asynchronous HTTP/1.1 body reader supporting plain, chunked, and multipart/form-data bodies.
@@ -27,6 +45,8 @@ namespace h11{
  * It handles three types of payloads:
  *   - **Plain bodies** with a known `Content-Length`.
  *   - **Chunked bodies** (`Transfer-Encoding: chunked`), reassembling the data into a single buffer.
+ *   - **Urlencoded form data*** with a known `Content-Length`. or chunked. Parsed fields and files
+ *     are stored in an internal `form_data` container and can be retrieved via `fields()`.
  *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked. Parsed fields
  *     and files are stored in an internal `form_data` container and can be retrieved via `fields()`.
  *     Files are streamed incrementally to temporary files or stored in-memory depending on config.upload_in_buffer()
@@ -67,8 +87,6 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
      * @brief start reading body
      * @param handler
      * @param hbuff reference to the buffer used to store the HTTP headers
-     *
-     * @warning limit = 0 doesn't have any special meaning. if limit is set to 0 then dosn't expect any body
      */
     template <typename Handler>
     void start(Handler&& handler, boost::beast::flat_buffer& hbuff){
@@ -117,17 +135,22 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
         if(_request.count(boost::beast::http::field::content_type))
             content_type = _request.at(boost::beast::http::field::content_type);
 
-        bool is_multipart = false;
+        bool is_multipart  = false;
+        bool is_urlencoded = false;
         std::string boundary;
 
-        if(content_type.find("multipart/form-data") != std::string::npos) {
+        auto range_multipart  = boost::ifind_first(content_type, "multipart/form-data");
+        auto range_urlencoded = boost::ifind_first(content_type, "application/x-www-form-urlencoded");
+
+        if(range_multipart.size() > 0) {
             udho::utils::string_view boundary_key("boundary=");
-            std::size_t boundary_pos   = content_type.find(boundary_key);
-            if(boundary_pos == std::string::npos) {
+            auto range_boundary = boost::ifind_first(content_type, boundary_key);
+            // std::size_t boundary_pos   = content_type.find(boundary_key);
+            if(range_boundary.size() == 0) {
                 finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), 0);
                 return;
             }
-            std::size_t boundary_start = boundary_pos + boundary_key.size();
+            std::size_t boundary_start = std::distance(content_type.begin(), range_boundary.end()); // boundary_pos + boundary_key.size();
             std::size_t semicolon_pos  = content_type.find(';', boundary_start);
             std::size_t boundary_len   = semicolon_pos == std::string::npos ? std::string::npos : (semicolon_pos - boundary_start);
             std::string magic_sequence = content_type.substr(boundary_start, boundary_len);
@@ -136,6 +159,8 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
 
             boundary = "--" + magic_sequence;
             is_multipart = true;
+        } else if(range_urlencoded.size() > 0) {
+            is_urlencoded = true;
         }
 
         if(count_content_length && content_length > 0) {
@@ -143,7 +168,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
             if(is_multipart) {
                 read_multipart_body(std::move(handler), hbuff, boundary, content_length);
             } else {
-                read_body(std::move(handler), hbuff, content_length);
+                read_body(std::move(handler), hbuff, content_length, is_urlencoded);
             }
         } else {
             assert(is_chunked);
@@ -154,7 +179,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
             if(is_multipart) {
                 read_chunked_multipart_header(std::move(handler), boundary);
             } else {
-                read_chunk_header(std::move(handler));
+                read_chunk_header(std::move(handler), false, is_urlencoded);
             }
         }
     }
@@ -166,7 +191,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     std::shared_ptr<body_reader> self() { return std::enable_shared_from_this<body_reader<Buffer, StreamT>>::shared_from_this(); }
 
     /**
-     * @brief Get the parsed multipart fields.
+     * @brief Get the parsed urlencoded or multipart fields.
      * @return A const reference to a multimap mapping field names to values.
      *         Values are either `std::string` (for text fields) or
      *         `boost::filesystem::path` (for uploaded files). The map is empty
@@ -185,18 +210,46 @@ private:
      *       terminated/cancelled and outstanding operations fail.
      */
     template <typename Handler>
-    void read_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t content_length) {
+    void read_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t content_length, bool urlencoded) {
         std::size_t transferred = transfer_leftovers(hbuff, _target_buffer, content_length);
+        _bytes_received += transferred;
         assert(content_length >= transferred);
         std::size_t pending_size = content_length - transferred;
         if(pending_size == 0) {
-            finished(std::move(handler), boost::system::error_code{}, transferred);
+            boost::system::error_code error = {};
+            if(urlencoded) {
+                std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
+                _bytes_consumed += _target_buffer.size();
+                _target_buffer.consume(_target_buffer.size());
+                error = parse_url_encoded_form(buffer_str);
+            } else {
+                _bytes_consumed += _target_buffer.size();
+            }
+
+            finished(std::move(handler), error, _bytes_consumed);
             return;
         }
         boost::asio::async_read(
             _stream, boost::beast::buffer_ref(_target_buffer), boost::asio::transfer_exactly(pending_size),
-            [self = self(), handler = std::move(handler), this](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-                self->finished(std::move(handler), ec, _target_buffer.size());
+            [self = self(), handler = std::move(handler), this, urlencoded](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                _bytes_received += bytes_transferred;
+                if(ec) {
+                    // _bytes_consumed may be 0 but nothing is "consumed" yet
+                    // so passing 0 to the finished() callback is consistent
+                    finished(std::move(handler), ec, _bytes_consumed);
+                    return;
+                }
+                boost::system::error_code error = {};
+                if(urlencoded) {
+                    std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
+                    _bytes_consumed += _target_buffer.size();
+                    _target_buffer.consume(_target_buffer.size());
+                    error = parse_url_encoded_form(buffer_str);
+                } else {
+                    _bytes_consumed += _target_buffer.size();
+                }
+
+                self->finished(std::move(handler), error, _bytes_consumed);
             }
         );
     }
@@ -235,6 +288,34 @@ private:
     }
 
 private:
+
+    boost::system::error_code parse_url_encoded_form(const std::string& data) {
+        std::vector<std::string> parts;
+        boost::split(parts, data, boost::is_any_of("&"));
+        for(auto& part: parts) {
+            if(part.empty()) continue;
+
+            std::string key, val;
+            auto eq_pos = part.find('=');
+
+            key = part.substr(0, eq_pos);
+            val = (eq_pos == std::string::npos) ? "" : part.substr(eq_pos+1);
+
+            try{
+                key = udho::utils::decode::url(key);
+                val = udho::utils::decode::url(val);
+            } catch(...) {
+                return boost::system::errc::make_error_code(boost::system::errc::bad_message);
+            }
+
+            if(_config.field_content_limit() > 0 && val.size() > _config.field_content_limit()) {
+                return boost::system::errc::make_error_code(boost::system::errc::value_too_large);
+            }
+
+            _form.emplace(key, detail::field_value_type(key, val));
+        }
+        return {};
+    }
 
     /**
      * @brief Continue reading a multipart body by issuing `async_read_some`.
@@ -305,12 +386,12 @@ private:
      * Parses the hexadecimal chunk size, ignoring chunk extensions. If size is zero, proceeds to trailers.
      */
     template <typename Handler>
-    void read_chunk_header(Handler&& handler, bool is_multipart = false){
+    void read_chunk_header(Handler&& handler, bool is_multipart, bool urlencoded){
         boost::asio::async_read_until(
             _stream, boost::beast::buffer_ref(_buffer), "\r\n",
-            [this, self = self(), handler = std::move(handler), is_multipart](boost::system::error_code error, std::size_t bytes_transferred) mutable {
+            [this, self = self(), handler = std::move(handler), is_multipart, urlencoded](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
-                    finished(std::move(handler), error, _target_buffer.size());
+                    finished(std::move(handler), error, _bytes_consumed);
                     return;
                 }
 
@@ -322,28 +403,29 @@ private:
                 auto p     = begin;
                 while (p != end && std::isxdigit(static_cast<unsigned char>(*p))) ++p;
                 if (p == begin) {
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                     return;
                 }
                 std::size_t chunk_size = 0;
                 auto chunk_size_result = std::from_chars(begin, p, chunk_size, 16);
                 _buffer.consume(bytes_transferred);
+                // _bytes_consumed not incremented intentionally
 
                 if(chunk_size_result.ec != std::errc{}){
-                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                    finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                 } else {
                     if(is_multipart && _multipart.finished()) {
                         if(chunk_size != 0) {
-                            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                            finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                             return;
                         }
                     }
 
                     if(_config.total_content_limit() > 0 && _target_buffer.size() + chunk_size > _config.total_content_limit()) {
-                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), _target_buffer.size());
+                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), _bytes_consumed);
                         return;
                     }
-                    read_chunk_payload(std::move(handler), chunk_size, is_multipart);
+                    read_chunk_payload(std::move(handler), chunk_size, is_multipart, urlencoded);
                 }
             }
         );
@@ -358,9 +440,9 @@ private:
      * Then reads the next chunk header.
      */
     template <typename Handler>
-    void read_chunk_payload(Handler&& handler, std::size_t chunk_size, bool is_multipart){
+    void read_chunk_payload(Handler&& handler, std::size_t chunk_size, bool is_multipart, bool urlencoded){
         if(chunk_size == 0) {
-            read_chunk_trailers(std::move(handler));
+            read_chunk_trailers(std::move(handler), urlencoded);
             return;
         }
 
@@ -370,9 +452,9 @@ private:
 
         boost::asio::async_read(
             _stream, boost::beast::buffer_ref(_buffer), boost::asio::transfer_exactly(bytes_expecting), // trailing \r\n
-            [this, self = self(), chunk_size, handler = std::move(handler), is_multipart](boost::system::error_code error, std::size_t bytes_transferred) mutable {
+            [this, self = self(), chunk_size, handler = std::move(handler), is_multipart, urlencoded](boost::system::error_code error, std::size_t bytes_transferred) mutable {
                 if(error) {
-                    finished(std::move(handler), error, _target_buffer.size());
+                    finished(std::move(handler), error, _bytes_consumed);
                     return;
                 }
 
@@ -388,7 +470,7 @@ private:
                     std::array<char,2> crlf{};
                     boost::asio::buffer_copy(boost::asio::buffer(crlf), boost::beast::buffers_prefix(2, _buffer.data()));
                     if(crlf[0] != '\r' || crlf[1] != '\n') {
-                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _target_buffer.size());
+                        finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::protocol_error), _bytes_consumed);
                         return;
                     }
 
@@ -406,19 +488,19 @@ private:
                     _bytes_consumed = _multipart.bytes_consumed();
 
                     if(ec == boost::asio::error::would_block || _multipart.finished()) {
-                        read_chunk_header(std::move(handler), true);
+                        read_chunk_header(std::move(handler), true, urlencoded);
                         return;
                     }
 
                     if(ec) {
-                        finished(std::move(handler), ec, _target_buffer.size());
+                        finished(std::move(handler), ec, _bytes_consumed);
                         return;
                     } else {
-                        read_chunk_header(std::move(handler), true);
+                        read_chunk_header(std::move(handler), true, urlencoded);
                         return;
                     }
                 } else {
-                    read_chunk_header(std::move(handler), is_multipart);
+                    read_chunk_header(std::move(handler), is_multipart, urlencoded);
                 }
             }
         );
@@ -431,21 +513,29 @@ private:
      * Reads lines until an empty line is encountered, then finishes the body read.
      */
     template <typename Handler>
-    void read_chunk_trailers(Handler&& handler){
+    void read_chunk_trailers(Handler&& handler, bool urlencoded){
         boost::asio::async_read_until(
             _stream, boost::beast::buffer_ref(_buffer), "\r\n",
-            [this, self = self(), handler = std::move(handler)](boost::system::error_code error, std::size_t bytes_transferred) mutable {
-                if(error) {
-                    finished(std::move(handler), error, _target_buffer.size());
+            [this, self = self(), handler = std::move(handler), urlencoded](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                if(ec) {
+                    finished(std::move(handler), ec, _bytes_consumed);
                     return;
                 }
 
                 assert(bytes_transferred >= 2);
+                _bytes_received += bytes_transferred;
 
                 std::size_t trailer_size = bytes_transferred -2;
                 if(trailer_size == 0) {
                     _buffer.consume(2);
-                    finished(std::move(handler), boost::system::error_code{}, _target_buffer.size());
+                    boost::system::error_code error;
+                    if(urlencoded) {
+                        std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
+                        // _bytes_consumed += _target_buffer.size(); // Already counted
+                        _target_buffer.consume(_target_buffer.size());
+                        error = parse_url_encoded_form(buffer_str);
+                    }
+                    finished(std::move(handler), error, _bytes_consumed);
                     return;
                 } else {
                     const char* begin = static_cast<char const*>(_buffer.data().data());
@@ -461,7 +551,7 @@ private:
                         _trailers.emplace(key, value); // multimap
                     }
                     _buffer.consume(trailer_size +2);
-                    read_chunk_trailers(std::move(handler));
+                    read_chunk_trailers(std::move(handler), urlencoded);
                 }
             }
         );
@@ -479,7 +569,7 @@ private:
     template <typename Handler>
     void read_chunked_multipart_header(Handler&& handler, std::string boundary){
         _multipart(boundary);
-        read_chunk_header(std::move(handler), true);
+        read_chunk_header(std::move(handler), true, false);
     }
 
 
@@ -545,7 +635,7 @@ private:
         if(_finished) return;
         _finished = true;
         _timer.cancel();
-        handler(std::move(_target_buffer), ec, bytes_transferred);
+        handler(std::move(std::exchange(_target_buffer, {})), ec, bytes_transferred);
     }
 private:
     const request_type&         _request;

@@ -149,8 +149,11 @@ namespace encoding {
                             boost::algorithm::unhex(hex.begin(), hex.end(), std::back_inserter(out));
                             result += static_cast<CharT>(out[0]);
                         } catch (const boost::algorithm::hex_decode_error&) {
-                            // on invalid hex, emit literal '%XY'
-                            result += '%'; result += c1; result += c2;
+                            // best effort forgiving decoder would emit literal '%XY' on invalid hex
+                            // result += '%';
+                            // result += c1;
+                            // result += c2;
+                            throw;
                         }
                     } else {
                         result += '%';
