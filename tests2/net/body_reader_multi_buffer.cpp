@@ -57,7 +57,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - plain body", "[net][reader][h11][plai
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t bytes) {
+        [&](boost::system::error_code ec, std::size_t bytes) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
             result_buf = std::move(buf);
             result_ec = ec;
             result_bytes = bytes;
@@ -101,7 +103,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - with leftover in header buffer", "[ne
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
             result_buf = std::move(buf);
             result_ec = ec;
             completed = true;
@@ -134,7 +138,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - zero length", "[net][reader][h11][pla
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t bytes) {
+        [&](boost::system::error_code ec, std::size_t bytes) {
             result_ec = ec;
             CHECK(bytes == 0);
             completed = true;
@@ -165,7 +169,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - content length exceeds limit", "[net]
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -197,7 +201,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - content exceeds content length", "[ne
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t len) {
+        [&](boost::system::error_code ec, std::size_t len) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
             result_buf = std::move(buf);
             result_ec = ec;
             bytes_read = len;
@@ -252,7 +258,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - single field", "[net][rea
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t bytes) {
+        [&](boost::system::error_code ec, std::size_t bytes) {
             result_ec = ec;
             result_bytes = bytes;
             completed = true;
@@ -267,7 +273,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - single field", "[net][rea
     CHECK_FALSE(result_ec);
     CHECK(result_bytes == body.size());
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 1);
     auto it = fields.find("field1");
     CHECK(it != fields.end());
@@ -307,7 +315,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - multiple fields", "[net][
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -320,7 +328,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - multiple fields", "[net][
     std::cout << "error: " << result_ec.message() << std::endl;
     CHECK_FALSE(result_ec);
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 2);
     CHECK(fields.find("text1")->second.string() == "Hello");
     CHECK(fields.find("text2")->second.string() == "World");
@@ -357,7 +367,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - file upload", "[net][read
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -369,7 +379,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - file upload", "[net][read
     CHECK(completed);
     CHECK_FALSE(result_ec);
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 1);
     auto it = fields.find("upload");
     CHECK(it != fields.end());
@@ -404,7 +416,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - multipart - missing boundary paramete
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -445,7 +457,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - single chunk", "[net][reade
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t bytes) {
+        [&](boost::system::error_code ec, std::size_t bytes) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
+
             result_buf = std::move(buf);
             result_ec = ec;
             result_bytes = bytes;
@@ -485,7 +500,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - multiple chunks", "[net][re
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
+
             result_buf = std::move(buf);
             result_ec = ec;
             completed = true;
@@ -522,7 +540,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - with trailers", "[net][read
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
+
             result_buf = std::move(buf);
             result_ec = ec;
             completed = true;
@@ -560,7 +581,10 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked - zero-length body", "[net][r
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&& buf, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
+            auto result = reader->release(hbuff);
+            buffer_type buf = result.release_buffer();
+
             result_buf = std::move(buf);
             result_ec = ec;
             completed = true;
@@ -600,7 +624,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - both content-length and chunk
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -628,7 +652,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - invalid content-length string
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -658,7 +682,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - premature EOF", "[net][reader
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -688,7 +712,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - error - timeout", "[net][reader][h11]
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -745,7 +769,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - single field", "[
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t bytes) {
+        [&](boost::system::error_code ec, std::size_t bytes) {
             result_ec = ec;
             result_bytes = bytes;
             completed = true;
@@ -760,7 +784,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - single field", "[
     // Total bytes read should be the chunked representation size, not the raw body size.
     // We can check that the total consumed bytes (from _bytes_consumed) matches the chunked data size.
     // Since we don't expose that, we can verify fields instead.
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 1);
     auto it = fields.find("field1");
     CHECK(it != fields.end());
@@ -814,7 +840,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields a
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -826,7 +852,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - multiple fields a
     CHECK(completed);
     CHECK_FALSE(result_ec);
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 2);
     CHECK(fields.find("text1")->second.string() == "Hello");
     CHECK(fields.find("text2")->second.string() == "World");
@@ -874,7 +902,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split ac
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -886,7 +914,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - boundary split ac
     CHECK(completed);
     CHECK_FALSE(result_ec);
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 1);
     CHECK(fields.find("field1")->second.string() == field_value);
 }
@@ -932,7 +962,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[n
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -944,7 +974,9 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - file upload", "[n
     CHECK(completed);
     CHECK_FALSE(result_ec);
 
-    const auto& fields = reader->fields();
+    auto upload_result = reader->release(hbuff);
+
+    const auto& fields = upload_result.form().fields();
     CHECK(fields.size() == 1);
     auto it = fields.find("upload");
     CHECK(it != fields.end());
@@ -988,7 +1020,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - zero parts", "[ne
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -999,7 +1031,11 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - zero parts", "[ne
 
     CHECK(completed);
     CHECK_FALSE(result_ec);
-    CHECK(reader->fields().empty());
+
+    auto upload_result = reader->release(hbuff);
+    const auto& fields = upload_result.form().fields();
+
+    CHECK(fields.empty());
 }
 
 TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - malformed chunk header", "[net][reader][h11][chunked][multipart][error]") {
@@ -1027,7 +1063,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - malformed chunk h
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -1063,7 +1099,7 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - missing final chu
     bool completed = false;
 
     reader->start(
-        [&](buffer_type&&, boost::system::error_code ec, std::size_t) {
+        [&](boost::system::error_code ec, std::size_t) {
             result_ec = ec;
             completed = true;
         },
@@ -1078,4 +1114,5 @@ TEST_CASE("udho net HTTP 1.1 body reader - chunked multipart - missing final chu
 
 // -----------------------------------------------------------------------------
 // Chunked multipart form data tests end
+
 

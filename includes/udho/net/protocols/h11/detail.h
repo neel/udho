@@ -2,6 +2,8 @@
 #define UDHO_NET_H11_DETAIL_H
 
 #include <boost/beast/_experimental/test/stream.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/multi_buffer.hpp>
 
 namespace udho{
 namespace net{
@@ -56,7 +58,8 @@ struct transfer_leftover{
         return _target;
     }
 
-    target_buffer_type& operator()(boost::beast::flat_buffer& source) {
+    template <typename SourceBufferT>
+    target_buffer_type& operator()(SourceBufferT& source) {
         auto src   = source.data();
         auto limit = source.size();
         _target.commit(boost::asio::buffer_copy(_target.prepare(limit), src));

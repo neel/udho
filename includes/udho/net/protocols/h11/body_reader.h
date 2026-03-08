@@ -33,6 +33,14 @@ struct body_reader_result{
     const buffer_type& buffer() const { return _buffer; }
     buffer_type& buffer() { return _buffer; }
 
+    detail::form_data release_form() {
+        return std::exchange(_form, {});
+    }
+
+    buffer_type release_buffer() {
+        return std::exchange(_buffer, {});
+    }
+
 private:
     buffer_type           _buffer;
     detail::form_data     _form;
@@ -42,18 +50,19 @@ private:
  * @brief Asynchronous HTTP/1.1 body reader supporting plain, chunked, and multipart/form-data bodies.
  *
  * This class reads the request body from a stream after the headers have been parsed.
- * It handles three types of payloads:
+ * It handles four types of payloads:
  *   - **Plain bodies** with a known `Content-Length`.
  *   - **Chunked bodies** (`Transfer-Encoding: chunked`), reassembling the data into a single buffer.
- *   - **Urlencoded form data*** with a known `Content-Length`. or chunked. Parsed fields and files
- *     are stored in an internal `form_data` container and can be retrieved via `fields()`.
- *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked. Parsed fields
- *     and files are stored in an internal `form_data` container and can be retrieved via `fields()`.
+ *   - **Urlencoded form data** with a known `Content-Length` or chunked.
+ *     Parsed fields are stored in the result `form_data` container and can be retrieved via `release(hbuff).form()`.
+ *   - **Multipart/form-data** bodies, either plain (with Content-Length) or chunked.
+ *     Parsed fields and files are stored in the result `form_data` container and can be retrieved via `release(hbuff).form()`.
  *     Files are streamed incrementally to temporary files or stored in-memory depending on config.upload_in_buffer()
  *
  * The reader enforces a total timeout and a size limit (when configured with non-zero values). The
- * class holds a reference to the stream and must outlive all asynchronous operations (typically via
- * `shared_from_this()`).
+ * Completion delivers only the status and byte count to the handler; the parsed results are obtained
+ * by calling `release(hbuff)` after completion. The header buffer hbuff will then contain the leftover
+ * bytes which can be used for parsing the next request.
  *
  * @tparam Buffer  The buffer type for the final body (e.g., `boost::beast::flat_buffer`). Must provide
  *                 prepare/commit/consume/data/size and be compatible with boost::beast::buffer_ref(...)
@@ -70,6 +79,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     using timer_type             = boost::asio::steady_timer;
     using request_type           = http_request_type;
     using multipart_parser_type  = detail::multipart_parser<buffer_type>;
+    using result_type            = body_reader_result<Buffer>;
     using form_container_type    = detail::form_data::form_container_type;
     using trailer_container_type = std::multimap<std::string, std::string>;
     using config_type            = udho::net::detail::body_parser_config;
@@ -78,10 +88,10 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
      * @brief Construct a body reader.
      * @param request          The HTTP request headers (used to determine content type, length, etc.).
      * @param stream           The underlying stream (must outlive the reader).
-     * @param buffer_capacity  Initial capacity for internal buffers (defaults to allocator max).
+     * @param config           Parser configuration (timeout, size limits, upload storage policy).
      */
     body_reader(const request_type& request, stream_type& stream, const config_type& config)
-        : _request(request), _stream(stream), _config(config) , _finished(false), _timer(_stream.get_executor()), _bytes_consumed(0), _bytes_received(0), _multipart(_form, _config) {}
+        : _request(request), _stream(stream), _config(config) , _finished(false), _timer(_stream.get_executor()), _bytes_consumed(0), _bytes_received(0), _multipart(_result.form(), _config) {}
 
     /**
      * @brief start reading body
@@ -191,13 +201,24 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     std::shared_ptr<body_reader> self() { return std::enable_shared_from_this<body_reader<Buffer, StreamT>>::shared_from_this(); }
 
     /**
-     * @brief Get the parsed urlencoded or multipart fields.
-     * @return A const reference to a multimap mapping field names to values.
-     *         Values are either `std::string` (for text fields) or
-     *         `boost::filesystem::path` (for uploaded files). The map is empty
-     *         if the body was not multipart.
+     * @brief release the results obtained from the parser.
+     * @warning release makes the body parser invalid. So no operation should be performed on the body_parser after it has been released
+     * @return parser result
      */
-    const form_container_type& fields() const { return _form.fields(); }
+    result_type release(boost::beast::flat_buffer& hbuff) {
+        if (!_finished)
+            throw std::logic_error("release() called before completion");
+
+        // _buffer may contain parts of the next request
+        detail::transfer_leftover<boost::beast::flat_buffer> transfer(hbuff);
+        transfer(_buffer);
+
+        result_type res = std::move(std::exchange(_result, {}));
+        // multipart is not move constructible because it takes reference
+        // so release operation makes multipart parser invalid
+        // But release intentionally makes the body parser invalid
+        return res;
+    }
 private:
 
     /**
@@ -211,26 +232,26 @@ private:
      */
     template <typename Handler>
     void read_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::size_t content_length, bool urlencoded) {
-        std::size_t transferred = transfer_leftovers(hbuff, _target_buffer, content_length);
+        std::size_t transferred = transfer_leftovers(hbuff, target_buffer(), content_length);
         _bytes_received += transferred;
         assert(content_length >= transferred);
         std::size_t pending_size = content_length - transferred;
         if(pending_size == 0) {
             boost::system::error_code error = {};
             if(urlencoded) {
-                std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
-                _bytes_consumed += _target_buffer.size();
-                _target_buffer.consume(_target_buffer.size());
+                std::string buffer_str = boost::beast::buffers_to_string(target_buffer().data());
+                _bytes_consumed += target_buffer().size();
+                target_buffer().consume(target_buffer().size());
                 error = parse_url_encoded_form(buffer_str);
             } else {
-                _bytes_consumed += _target_buffer.size();
+                _bytes_consumed += target_buffer().size();
             }
 
             finished(std::move(handler), error, _bytes_consumed);
             return;
         }
         boost::asio::async_read(
-            _stream, boost::beast::buffer_ref(_target_buffer), boost::asio::transfer_exactly(pending_size),
+            _stream, boost::beast::buffer_ref(target_buffer()), boost::asio::transfer_exactly(pending_size),
             [self = self(), handler = std::move(handler), this, urlencoded](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 _bytes_received += bytes_transferred;
                 if(ec) {
@@ -241,12 +262,12 @@ private:
                 }
                 boost::system::error_code error = {};
                 if(urlencoded) {
-                    std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
-                    _bytes_consumed += _target_buffer.size();
-                    _target_buffer.consume(_target_buffer.size());
+                    std::string buffer_str = boost::beast::buffers_to_string(target_buffer().data());
+                    _bytes_consumed += target_buffer().size();
+                    target_buffer().consume(target_buffer().size());
                     error = parse_url_encoded_form(buffer_str);
                 } else {
-                    _bytes_consumed += _target_buffer.size();
+                    _bytes_consumed += target_buffer().size();
                 }
 
                 self->finished(std::move(handler), error, _bytes_consumed);
@@ -263,12 +284,12 @@ private:
      */
     template <typename Handler>
     void read_multipart_body(Handler&& handler, boost::beast::flat_buffer& hbuff, std::string boundary, std::size_t content_length) {
-        std::size_t transferred = transfer_leftovers(hbuff, _target_buffer, content_length);
+        std::size_t transferred = transfer_leftovers(hbuff, target_buffer(), content_length);
         assert(content_length >= transferred);
         _bytes_received += transferred;
         _multipart(boundary);
 
-        boost::system::error_code ec = _multipart(_target_buffer);
+        boost::system::error_code ec = _multipart(target_buffer());
         _bytes_consumed = _multipart.bytes_consumed();
 
         if(_bytes_consumed > content_length) {
@@ -282,7 +303,7 @@ private:
         }
 
         if(ec == boost::asio::error::would_block) {
-            async_read_multipart(std::move(handler), _target_buffer, content_length);
+            async_read_multipart(std::move(handler), target_buffer(), content_length);
             return;
         }
     }
@@ -312,7 +333,7 @@ private:
                 return boost::system::errc::make_error_code(boost::system::errc::value_too_large);
             }
 
-            _form.emplace(key, detail::field_value_type(key, val));
+            _result.form().emplace(key, detail::field_value_type(key, val));
         }
         return {};
     }
@@ -320,7 +341,7 @@ private:
     /**
      * @brief Continue reading a multipart body by issuing `async_read_some`.
      * @param handler        Completion handler.
-     * @param buffer         The buffer to read into (e.g. `_target_buffer`).
+     * @param buffer         The buffer to read into (e.g. `target_buffer()`).
      * @param content_length Total body size.
      *
      * This function is called when the multipart parser returns `would_block`.
@@ -421,7 +442,7 @@ private:
                         }
                     }
 
-                    if(_config.total_content_limit() > 0 && _target_buffer.size() + chunk_size > _config.total_content_limit()) {
+                    if(_config.total_content_limit() > 0 && target_buffer().size() + chunk_size > _config.total_content_limit()) {
                         finished(std::move(handler), boost::system::errc::make_error_code(boost::system::errc::value_too_large), _bytes_consumed);
                         return;
                     }
@@ -436,7 +457,7 @@ private:
      * @param handler     Completion handler.
      * @param chunk_size  Size of the chunk (from header).
      *
-     * Copies the chunk data into `_target_buffer` and consumes the trailing CRLF.
+     * Copies the chunk data into `target_buffer()` and consumes the trailing CRLF.
      * Then reads the next chunk header.
      */
     template <typename Handler>
@@ -461,9 +482,9 @@ private:
                 _bytes_received += bytes_transferred;
 
                 try {
-                    auto mbuff = _target_buffer.prepare(chunk_size);
+                    auto mbuff = target_buffer().prepare(chunk_size);
                     boost::asio::buffer_copy(mbuff, _buffer.data());
-                    _target_buffer.commit(chunk_size);
+                    target_buffer().commit(chunk_size);
                     _buffer.consume(chunk_size);
                     _bytes_consumed += chunk_size;
 
@@ -484,7 +505,7 @@ private:
                 }
 
                 if(is_multipart) {
-                    boost::system::error_code ec = _multipart(_target_buffer);
+                    boost::system::error_code ec = _multipart(target_buffer());
                     _bytes_consumed = _multipart.bytes_consumed();
 
                     if(ec == boost::asio::error::would_block || _multipart.finished()) {
@@ -530,9 +551,9 @@ private:
                     _buffer.consume(2);
                     boost::system::error_code error;
                     if(urlencoded) {
-                        std::string buffer_str = boost::beast::buffers_to_string(_target_buffer.data());
-                        // _bytes_consumed += _target_buffer.size(); // Already counted
-                        _target_buffer.consume(_target_buffer.size());
+                        std::string buffer_str = boost::beast::buffers_to_string(target_buffer().data());
+                        // _bytes_consumed += target_buffer().size(); // Already counted
+                        target_buffer().consume(target_buffer().size());
                         error = parse_url_encoded_form(buffer_str);
                     }
                     finished(std::move(handler), error, _bytes_consumed);
@@ -578,7 +599,7 @@ private:
     /**
      * @brief Transfer up to `content_length` bytes from the header buffer into a target buffer.
      * @param hbuff          Header buffer.
-     * @param buff           Target buffer (either `_buffer` for multipart or `_target_buffer` for plain).
+     * @param buff           Target buffer (either `_buffer` for multipart or `target_buffer()` for plain).
      * @param content_length Maximum bytes to transfer.
      * @return Number of bytes actually transferred.
      */
@@ -623,6 +644,9 @@ private:
     }
 
 private:
+    buffer_type& target_buffer() {
+        return _result.buffer();
+    }
 
     /**
      * @brief Final completion function – cancels timer, invokes user handler, marks finished.
@@ -635,19 +659,18 @@ private:
         if(_finished) return;
         _finished = true;
         _timer.cancel();
-        handler(std::move(std::exchange(_target_buffer, {})), ec, bytes_transferred);
+        handler(ec, bytes_transferred);
     }
 private:
     const request_type&         _request;
     stream_type&                _stream;
     config_type                 _config;
     boost::beast::flat_buffer   _buffer;
-    buffer_type                 _target_buffer;
     bool                        _finished;
     std::size_t                 _bytes_consumed;
     std::size_t                 _bytes_received;
     timer_type                  _timer;
-    detail::form_data           _form;
+    result_type                 _result;
     multipart_parser_type       _multipart;
     trailer_container_type      _trailers;
 };

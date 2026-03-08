@@ -79,6 +79,10 @@ struct multipart_parser{
      */
     explicit multipart_parser(udho::net::protocols::detail::form_data& form, const udho::net::detail::body_parser_config& config): _form(form), _config(config) {}
 
+    multipart_parser(multipart_parser&& other): _form(other._form), _config(other._config) {
+        reset();
+    }
+
     /**
      * @brief Get the current lookahead state.
      * @return Current state.

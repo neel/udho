@@ -101,10 +101,11 @@ public:
         using body_reader_type = udho::net::protocols::h11::body_reader<Buffer, StreamT>;
 
         auto body = std::make_shared<body_reader_type>(request, _stream, config);
-        body->start([h = std::move(handler)](Buffer&& buffer, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+        body->start([h = std::move(handler), this, &body](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+            auto result = body->release(_header_buffer);
             // moving buffer is always legal irrespective of ec
             // std::cout << "ec.message(): " << ec.message() << std::endl;
-            h(std::move(buffer), ec, bytes_transferred);
+            h(std::move(result.release_buffer()), ec, bytes_transferred);
             // transfer body buffer to header buffer
         }, _header_buffer);
     }
