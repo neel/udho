@@ -11,6 +11,10 @@
 #include <udho/cookies/jar.h>
 #include <udho/session/note.h>
 #include <udho/url/route_index.h>
+#include <udho/net/protocols/form_data.h>
+#include <udho/net/protocols/body_reader_result.h>
+#include <boost/asio/buffers_iterator.hpp>
+#include <nlohmann/json.hpp>
 
 namespace udho {
 namespace manifold {
@@ -94,51 +98,58 @@ namespace feature{
         static constexpr const std::size_t stage = 2;
         static constexpr const std::string_view name = "body_reader";
 
-        enum errors{
-            none = 0,
-            timeout,
-            size_limit_exceeded,
-            invalid_content_length,
-            malformed_request,
-            unknown
-        };
-
         struct result{
-            result(const std::string& mime, bool contiguous)
-                : _mime(mime), _contiguous(contiguous) {}
-            result(const std::string& mime, bool contiguous, boost::beast::flat_buffer&& flat_buffer, boost::beast::multi_buffer&& multi_buffer)
-                : _mime(mime), _contiguous(contiguous), _flat_buffer(std::move(flat_buffer)), _multi_buffer(std::move(multi_buffer)) {}
+            using form_type             = udho::net::protocols::detail::form_data;
+            using buffer_variant_type   = std::variant<
+                    boost::beast::flat_buffer,
+                    boost::beast::multi_buffer
+                >;
+
+            template <typename Buffer>
+            result(const std::string& mime, udho::net::protocols::body_reader_result<Buffer>&& result, boost::system::error_code ec, std::size_t bytes): _mime(mime), _error(ec), _bytes_transferred(bytes) {
+                _buffer     = result.release_buffer();
+                _contiguous = std::is_same_v<Buffer, boost::beast::flat_buffer>;
+                _form       = result.release_form();
+            }
 
             const std::string& mime() const { return _mime; }
             bool contiguous() const { return _contiguous; }
-
-            const boost::beast::flat_buffer& flat_buffer() const { return _flat_buffer; }
-            const boost::beast::multi_buffer& multi_buffer() const { return _multi_buffer; }
-
-            boost::beast::flat_buffer& flat_buffer() { return _flat_buffer; }
-            boost::beast::multi_buffer& multi_buffer() { return _multi_buffer; }
+            const udho::net::protocols::detail::form_data& form() { return _form; }
 
             std::size_t bytes_transferred() const { return _bytes_transferred; }
             std::error_code error() const { return  _error; }
+            const buffer_variant_type& buffer() const { return _buffer; }
 
-            result& bytes_transferred(std::size_t bytes) { _bytes_transferred = bytes; return *this; }
-            result& error(std::error_code ec) { _error = ec; return *this; }
+            nlohmann::json json() const {
+                if(contiguous()) {
+                    const boost::beast::flat_buffer& flat_buffer = std::get<boost::beast::flat_buffer>(_buffer);
+                    auto begin =  boost::asio::buffers_begin(flat_buffer.data());
+                    auto end   =  boost::asio::buffers_end(flat_buffer.data());
+                    return nlohmann::json::parse(begin, end);
+                } else {
+                    const boost::beast::multi_buffer& multi_buffer = std::get<boost::beast::multi_buffer>(_buffer);
+                    auto begin =  boost::asio::buffers_begin(multi_buffer.data());
+                    auto end   =  boost::asio::buffers_end(multi_buffer.data());
+                    return nlohmann::json::parse(begin, end);
+                }
+            }
 
             std::string str() const {
                 if(contiguous()) {
-                    return boost::beast::buffers_to_string(flat_buffer().data());
+                    const boost::beast::flat_buffer& flat_buffer = std::get<boost::beast::flat_buffer>(_buffer);
+                    return boost::beast::buffers_to_string(flat_buffer.data());
                 } else {
-                    return boost::beast::buffers_to_string(multi_buffer().data());
+                    const boost::beast::multi_buffer& multi_buffer = std::get<boost::beast::multi_buffer>(_buffer);
+                    return boost::beast::buffers_to_string(multi_buffer.data());
                 }
             }
         private:
             std::string                 _mime;
-            bool                        _contiguous;
             std::error_code             _error;
             std::size_t                 _bytes_transferred;
-            boost::beast::flat_buffer   _flat_buffer;
-            boost::beast::multi_buffer  _multi_buffer;
-
+            buffer_variant_type         _buffer;
+            bool                        _contiguous;
+            form_type                   _form;
         };
     };
 

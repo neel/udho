@@ -105,7 +105,8 @@ public:
             auto result = body->release(_header_buffer);
             // moving buffer is always legal irrespective of ec
             // std::cout << "ec.message(): " << ec.message() << std::endl;
-            h(std::move(result.release_buffer()), ec, bytes_transferred);
+            // h(std::move(result.release_buffer()), ec, bytes_transferred);
+            h(std::move(result), ec, bytes_transferred);
             // transfer body buffer to header buffer
         }, _header_buffer);
     }

@@ -250,6 +250,8 @@ struct form_data{
         _field_it = _fields.end();
     }
 
+    bool empty() const { return _fields.empty(); }
+
 private:
     form_container_type             _fields;
     form_iterator                   _field_it;

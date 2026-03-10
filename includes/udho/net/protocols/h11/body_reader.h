@@ -15,6 +15,7 @@
 #include <boost/beast/core/buffer_ref.hpp>
 #include <udho/utils/encoding.h>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <udho/net/protocols/body_reader_result.h>
 
 namespace udho{
 namespace net{
@@ -22,29 +23,6 @@ namespace protocols{
 
 namespace h11{
 
-template <typename Buffer>
-struct body_reader_result{
-    using buffer_type            = Buffer;
-    using form_container_type    = detail::form_data::form_container_type;
-
-    detail::form_data& form() { return _form; }
-    const detail::form_data& form() const { return _form; }
-
-    const buffer_type& buffer() const { return _buffer; }
-    buffer_type& buffer() { return _buffer; }
-
-    detail::form_data release_form() {
-        return std::exchange(_form, {});
-    }
-
-    buffer_type release_buffer() {
-        return std::exchange(_buffer, {});
-    }
-
-private:
-    buffer_type           _buffer;
-    detail::form_data     _form;
-};
 
 /**
  * @brief Asynchronous HTTP/1.1 body reader supporting plain, chunked, and multipart/form-data bodies.
@@ -79,7 +57,7 @@ struct body_reader: std::enable_shared_from_this<body_reader<Buffer, StreamT>> {
     using timer_type             = boost::asio::steady_timer;
     using request_type           = http_request_type;
     using multipart_parser_type  = detail::multipart_parser<buffer_type>;
-    using result_type            = body_reader_result<Buffer>;
+    using result_type            = udho::net::protocols::body_reader_result<Buffer>;
     using form_container_type    = detail::form_data::form_container_type;
     using trailer_container_type = std::multimap<std::string, std::string>;
     using config_type            = udho::net::detail::body_parser_config;

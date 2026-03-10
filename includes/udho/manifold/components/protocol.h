@@ -146,6 +146,10 @@ struct accessor<components::protocol<ProtocolT, StreamT>, JournalT>: basic_acces
     const request_type& request() const {
         return basic_accessor_type::journal().template at<udho::manifold::feature::header_reader>();
     }
+
+    const udho::manifold::feature::body_reader::result& body() const {
+        return basic_accessor_type::journal().template at<udho::manifold::feature::body_reader>();
+    }
 };
 
 template <typename ProtocolT, typename StreamT>
@@ -179,8 +183,6 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
                                            ? request.at(boost::beast::http::field::content_type)
                                            : "application/octet-stream";
 
-            // For now don't use content type to decide flat or multi buffer.
-
             reader_ptr_type reader = _component.reader(_id);
 
             udho::net::detail::body_parser_config config;
@@ -190,17 +192,13 @@ struct facet<components::protocol<ProtocolT, StreamT>, udho::manifold::feature::
                 .total_timeout(std::chrono::seconds(timeout_secs));
 
             if(use_contiguous_buffer) {
-                reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::flat_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
-                    std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
-                    udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, std::move(buffer), boost::beast::multi_buffer{});
-                    result.bytes_transferred(bytes_transferred);
+                reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::flat_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                    udho::manifold::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
                     next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
                 }, config);
             } else {
-                reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](boost::beast::multi_buffer&& buffer, std::error_code ec, std::size_t bytes_transferred) mutable {
-                    std::cout << boost::beast::buffers_to_string(buffer.data()) << std::endl;
-                    udho::manifold::feature::body_reader::result result(content_type, use_contiguous_buffer, boost::beast::flat_buffer{}, std::move(buffer));
-                    result.bytes_transferred(bytes_transferred);
+                reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::multi_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                    udho::manifold::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
                     next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
                 }, config);
             }
