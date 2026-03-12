@@ -7,23 +7,25 @@
 #endif
 
 #include <udho/url/url.h>
-#include <udho/manifold/www.h>
+#include <udho/www/framework.h>
 #include <udho/manifold/composition.h>
 #include <udho/manifold/fabric.h>
 #include <udho/manifold/pipeline.h>
 #include <udho/manifold/features.h>
 #include <udho/manifold/config.h>
-#include <udho/manifold/components/navigator.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/manifold/components/handler.h>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/routing.h>
-#include <udho/manifold/components/cookies.h>
-#include <udho/manifold/components/session.h>
-#include <udho/manifold/components/pg.h>
-#include <udho/manifold/components/resources.h>
+#include <udho/www/components/navigator.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/protocol.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/session.h>
+#include <udho/www/components/pg.h>
+#include <udho/www/components/resources.h>
+#include <udho/www/context.h>
+#include <udho/www/presets.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
@@ -42,8 +44,9 @@
 
 namespace callbacks{
 
-    using namespace udho::manifold::www;
-    using namespace udho::manifold::components;
+    using namespace udho::www;
+    // using namespace udho::manifold::www;
+    using namespace udho::www::components;
 
     struct nodef{
         nodef() = delete;
@@ -114,10 +117,10 @@ TEST_CASE("udho manifold www pipeline stateless", "[manifold][pipeline][www]") {
     // populate(store)
     store.lock();
     udho::view::resources::const_store<> cstore{store};
-    auto resources  = udho::manifold::components::resources(cstore);
+    auto resources  = udho::www::components::resources(cstore);
     // }
 
-    using framework_type = udho::manifold::framework<udho::manifold::www::stateless::rest>;
+    using framework_type = udho::www::framework<udho::www::stateless::rest>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
     auto framework = framework_type::apply(udho::url::router(url()));
@@ -136,7 +139,7 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     // { session component
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
-    auto session    = udho::manifold::components::session(catalogue);
+    auto session    = udho::www::components::session(catalogue);
     // }
 
     // { resources: views, assets, docroot
@@ -146,10 +149,10 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     // populate(store)
     store.lock();
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
-    auto resources  = udho::manifold::components::resources(cstore);
+    auto resources  = udho::www::components::resources(cstore);
     // }
 
-    using framework_type = udho::manifold::framework<udho::manifold::www::stateful::lua::lazy_fs>;
+    using framework_type = udho::www::framework<udho::www::stateful::lua::lazy_fs>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
     auto framework = framework_type::apply(udho::url::router(url()));

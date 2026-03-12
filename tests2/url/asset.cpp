@@ -11,12 +11,13 @@
 #include <udho/view/resources/store.h>
 #include <boost/variant.hpp>
 #include <udho/url/router.h>
-#include <udho/manifold/www.h>
 #include <udho/net/listener.h>
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
 #include <curl/curl.h>
 #include <udho/manifold/fabric.h>
+
+#include <udho/www/www.h>
 
 static size_t curl_writef(void *contents, size_t size, size_t nmemb, void *userp){
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -44,6 +45,7 @@ http_results curl_fetch(CURL* curl, const std::string method, const std::string&
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,  curl_writef);
         curl_easy_setopt(curl, CURLOPT_HEADERDATA,      &response_headers);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA,       &response_body);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT,         10L);
         res = curl_easy_perform(curl);
         long response_code = 0;
         if(res == CURLE_OK) {
@@ -135,12 +137,12 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     }
 
 
-    boost::asio::io_context service;
+    boost::asio::io_context io;
 
-    using framework_type = udho::manifold::framework<udho::manifold::www::stateless::lua>;
+    using framework_type = udho::www::framework<udho::www::stateless::lua>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
-    auto resource_store_component  = udho::manifold::components::resources(cstore);
+    auto resource_store_component  = udho::www::components::resources(cstore);
 
     auto framework = framework_type::apply(std::move(router));
     auto runtime   = framework.runtime(resource_store_component);
@@ -148,12 +150,16 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::portal_type>{});
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::context_type>{});
 
-    auto listener  = udho::net::listener(service, runtime, {boost::asio::ip::tcp::v4(), 9000});
+    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9000});
 
-    listener.start();
+    listener.start([](boost::system::error_code error) {
+        if(error) {
+            std::cout << "Failed to start listener: " << error << std::endl;
+        }
+    });
 
     std::thread thread([&]{
-        service.run();
+        io.run();
     });
 
     CURL* curl;

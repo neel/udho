@@ -6,7 +6,7 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/manifold/components/protocol.h>
+#include <udho/www/components/protocol.h>
 #include <udho/net/protocols/protocols.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
@@ -48,11 +48,11 @@ struct expected_next{
 TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
     using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
     using protocol_type    = udho::net::protocols::http<stream_type>;
-    using component_type   = udho::manifold::components::protocol<protocol_type,stream_type>;
+    using component_type   = udho::www::components::protocol<protocol_type,stream_type>;
     using config_type      = udho::manifold::config<component_type>;
-    using fabric_type      = udho::manifold::facet<component_type, udho::manifold::feature::header_reader>;
+    using fabric_type      = udho::manifold::facet<component_type, udho::www::feature::header_reader>;
     using journal_type     = udho::manifold::journal<fabric_type>;
-    using result_type      = udho::manifold::feature::header_reader::result;
+    using result_type      = udho::www::feature::header_reader::result;
     using next_type        = sim::expected_next<result_type>;
 
     boost::asio::io_context io_context;
@@ -60,9 +60,9 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
     config_type    config;
 
     SECTION("reading http header with various request types") {
-        using fabric_type   = udho::manifold::facet<component_type, udho::manifold::feature::header_reader>;
+        using fabric_type   = udho::manifold::facet<component_type, udho::www::feature::header_reader>;
         using journal_type  = udho::manifold::journal<fabric_type>;
-        using result_type   = udho::manifold::feature::header_reader::result;
+        using result_type   = udho::www::feature::header_reader::result;
         using next_type     = sim::expected_next<result_type>;
 
         // Test Case 1: GET request with query parameters
@@ -244,11 +244,11 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {
     using stream_type      = boost::beast::test::stream;
     using protocol_type    = udho::net::protocols::scgi2<stream_type>;
-    using component_type   = udho::manifold::components::protocol<protocol_type, stream_type>;
+    using component_type   = udho::www::components::protocol<protocol_type, stream_type>;
     using config_type      = udho::manifold::config<component_type>;
-    using fabric_type      = udho::manifold::facet<component_type, udho::manifold::feature::header_reader>;
+    using fabric_type      = udho::manifold::facet<component_type, udho::www::feature::header_reader>;
     using journal_type     = udho::manifold::journal<fabric_type>;
-    using result_type      = udho::manifold::feature::header_reader::result;
+    using result_type      = udho::www::feature::header_reader::result;
     using next_type        = sim::expected_next<result_type>;
 
     boost::asio::io_context io_context;

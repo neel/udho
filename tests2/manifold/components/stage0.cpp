@@ -12,20 +12,18 @@
 #include <udho/manifold/pipeline.h>
 #include <udho/manifold/features.h>
 #include <udho/manifold/config.h>
-#include <udho/manifold/components/navigator.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/routing.h>
 #include <udho/manifold/portal.h>
 #include <udho/manifold/context.h>
 #include <udho/manifold/runtime.h>
-#include <udho/manifold/components/handler.h>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/routing.h>
-#include <udho/manifold/components/cookies.h>
-#include <udho/manifold/components/session.h>
+#include <udho/www/components/navigator.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/protocol.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/session.h>
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
@@ -33,7 +31,7 @@
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
 namespace callbacks{
-    using namespace udho::manifold::components;
+    using namespace udho::www::components;
     using namespace udho::manifold;
 
     using handler = basic_handler<stream_type>;
@@ -103,11 +101,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto table  = udho::url::mountpoints_table(std::move(mount_point1));
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(std::move(router));
+        auto routing = udho::www::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
-        using navigator_component_type   = udho::manifold::components::navigators::pretty;
+        using protocol_component_type    = udho::www::components::protocols::http<stream_type>;
+        using navigator_component_type   = udho::www::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
             protocol_component_type,
@@ -122,9 +120,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         >;
 
         using order_type = udho::manifold::order<
-            udho::manifold::feature::header_reader,
-            udho::manifold::feature::identifier,
-            udho::manifold::feature::locator
+            udho::www::feature::header_reader,
+            udho::www::feature::identifier,
+            udho::www::feature::locator
         >;
 
         using pipeline_type = udho::manifold::common_pipepine<0, order_type, composition_type>;
@@ -150,17 +148,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
             pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
                 CHECK(!success);
 
-                CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
-                CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
-                CHECK(journal.count<udho::manifold::feature::locator>()       == 1);
+                CHECK(journal.count<udho::www::feature::header_reader>() == 1);
+                CHECK(journal.count<udho::www::feature::identifier>()    == 1);
+                CHECK(journal.count<udho::www::feature::locator>()       == 1);
 
-                CHECK(journal.ready<udho::manifold::feature::header_reader>());
-                CHECK(journal.ready<udho::manifold::feature::identifier>());
-                CHECK(!journal.ready<udho::manifold::feature::locator>());
+                CHECK(journal.ready<udho::www::feature::header_reader>());
+                CHECK(journal.ready<udho::www::feature::identifier>());
+                CHECK(!journal.ready<udho::www::feature::locator>());
 
-                const udho::net::types::headers::request& request           = journal.at<udho::manifold::feature::header_reader>();
-                const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
-                // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
+                const udho::net::types::headers::request& request           = journal.at<udho::www::feature::header_reader>();
+                const udho::www::feature::identifier::result& resource = journal.at<udho::www::feature::identifier>();
+                // const udho::url::detail::route_index& route                 = journal.at<udho::www::feature::locator>();
 
                 // CHECK(route.type() == udho::url::detail::route_index::type::none);
 
@@ -196,17 +194,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                     CHECK(success);
                 }
 
-                CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
-                CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
-                CHECK(journal.count<udho::manifold::feature::locator>()       == 1);
+                CHECK(journal.count<udho::www::feature::header_reader>() == 1);
+                CHECK(journal.count<udho::www::feature::identifier>()    == 1);
+                CHECK(journal.count<udho::www::feature::locator>()       == 1);
 
-                CHECK(journal.ready<udho::manifold::feature::header_reader>());
-                CHECK(journal.ready<udho::manifold::feature::identifier>());
-                CHECK(journal.ready<udho::manifold::feature::locator>());
+                CHECK(journal.ready<udho::www::feature::header_reader>());
+                CHECK(journal.ready<udho::www::feature::identifier>());
+                CHECK(journal.ready<udho::www::feature::locator>());
 
-                const udho::net::types::headers::request& request           = journal.at<udho::manifold::feature::header_reader>();
-                const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
-                const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
+                const udho::net::types::headers::request& request           = journal.at<udho::www::feature::header_reader>();
+                const udho::www::feature::identifier::result& resource = journal.at<udho::www::feature::identifier>();
+                const udho::url::detail::route_index& route                 = journal.at<udho::www::feature::locator>();
 
                 CHECK(route.target() == "/f1/hello/world/23/24");
                 CHECK(route.mountpoint() == 0);
@@ -223,11 +221,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         auto table  = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
         auto router = udho::url::router(std::move(table));
 
-        auto routing = udho::manifold::components::routing(std::move(router));
+        auto routing = udho::www::components::routing(std::move(router));
 
         using routing_component_type     = std::decay_t<decltype(routing)>;
-        using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
-        using navigator_component_type   = udho::manifold::components::navigators::pretty;
+        using protocol_component_type    = udho::www::components::protocols::http<stream_type>;
+        using navigator_component_type   = udho::www::components::navigators::pretty;
 
         using composition_type = udho::manifold::composition<
             protocol_component_type,
@@ -242,9 +240,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         >;
 
         using order_type = udho::manifold::order<
-            udho::manifold::feature::header_reader,
-            udho::manifold::feature::identifier,
-            udho::manifold::feature::locator
+            udho::www::feature::header_reader,
+            udho::www::feature::identifier,
+            udho::www::feature::locator
         >;
 
         using pipeline_type = udho::manifold::common_pipepine<0, order_type, composition_type>;
@@ -272,17 +270,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
                 CHECK(!success);
 
-                CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
-                CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
-                CHECK(journal.count<udho::manifold::feature::locator>()       == 1);
+                CHECK(journal.count<udho::www::feature::header_reader>() == 1);
+                CHECK(journal.count<udho::www::feature::identifier>()    == 1);
+                CHECK(journal.count<udho::www::feature::locator>()       == 1);
 
-                CHECK(journal.ready<udho::manifold::feature::header_reader>());
-                CHECK(journal.ready<udho::manifold::feature::identifier>());
-                CHECK(!journal.ready<udho::manifold::feature::locator>());
+                CHECK(journal.ready<udho::www::feature::header_reader>());
+                CHECK(journal.ready<udho::www::feature::identifier>());
+                CHECK(!journal.ready<udho::www::feature::locator>());
 
-                const udho::net::types::headers::request& request           = journal.at<udho::manifold::feature::header_reader>();
-                const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
-                // const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
+                const udho::net::types::headers::request& request           = journal.at<udho::www::feature::header_reader>();
+                const udho::www::feature::identifier::result& resource = journal.at<udho::www::feature::identifier>();
+                // const udho::url::detail::route_index& route                 = journal.at<udho::www::feature::locator>();
 
                 CHECK(success.has_exception());
                 try {
@@ -321,17 +319,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                     CHECK(success);
                 }
 
-                CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
-                CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
-                CHECK(journal.count<udho::manifold::feature::locator>()       == 1);
+                CHECK(journal.count<udho::www::feature::header_reader>() == 1);
+                CHECK(journal.count<udho::www::feature::identifier>()    == 1);
+                CHECK(journal.count<udho::www::feature::locator>()       == 1);
 
-                CHECK(journal.ready<udho::manifold::feature::header_reader>());
-                CHECK(journal.ready<udho::manifold::feature::identifier>());
-                CHECK(journal.ready<udho::manifold::feature::locator>());
+                CHECK(journal.ready<udho::www::feature::header_reader>());
+                CHECK(journal.ready<udho::www::feature::identifier>());
+                CHECK(journal.ready<udho::www::feature::locator>());
 
-                const udho::net::types::headers::request& request           = journal.at<udho::manifold::feature::header_reader>();
-                const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
-                const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
+                const udho::net::types::headers::request& request           = journal.at<udho::www::feature::header_reader>();
+                const udho::www::feature::identifier::result& resource = journal.at<udho::www::feature::identifier>();
+                const udho::url::detail::route_index& route                 = journal.at<udho::www::feature::locator>();
 
                 CHECK(route.target() == "/f1/hello/world/23/24");
                 CHECK(route.mountpoint() == 0);
@@ -369,17 +367,17 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                     CHECK(success);
                 }
 
-                CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
-                CHECK(journal.count<udho::manifold::feature::identifier>()    == 1);
-                CHECK(journal.count<udho::manifold::feature::locator>()       == 1);
+                CHECK(journal.count<udho::www::feature::header_reader>() == 1);
+                CHECK(journal.count<udho::www::feature::identifier>()    == 1);
+                CHECK(journal.count<udho::www::feature::locator>()       == 1);
 
-                CHECK(journal.ready<udho::manifold::feature::header_reader>());
-                CHECK(journal.ready<udho::manifold::feature::identifier>());
-                CHECK(journal.ready<udho::manifold::feature::locator>());
+                CHECK(journal.ready<udho::www::feature::header_reader>());
+                CHECK(journal.ready<udho::www::feature::identifier>());
+                CHECK(journal.ready<udho::www::feature::locator>());
 
-                const udho::net::types::headers::request& request           = journal.at<udho::manifold::feature::header_reader>();
-                const udho::manifold::feature::identifier::result& resource = journal.at<udho::manifold::feature::identifier>();
-                const udho::url::detail::route_index& route                 = journal.at<udho::manifold::feature::locator>();
+                const udho::net::types::headers::request& request           = journal.at<udho::www::feature::header_reader>();
+                const udho::www::feature::identifier::result& resource = journal.at<udho::www::feature::identifier>();
+                const udho::url::detail::route_index& route                 = journal.at<udho::www::feature::locator>();
 
                 CHECK(route.target() == "/m2/f1/hello/world/23/24");
                 CHECK(route.mountpoint() == 1);

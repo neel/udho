@@ -9,6 +9,8 @@
 #include <udho/manifold/fwd.h>
 #include <boost/asio/bind_executor.hpp>
 #include <udho/net/detail.h>
+#include <udho/manifold/flow.h>
+#include <udho/manifold/terminal.h>
 
 namespace udho{
 namespace net{
@@ -24,12 +26,21 @@ struct basic_listener: private detail::wire_traits<WireT>{
     using executor_type = typename socket_type::executor_type;
     using strand_type   = boost::asio::strand<executor_type>;
     using runtime_type  = RuntimeT;
+    using flow_type     = typename runtime_type::flow_type;
+    using flow_ptr_type = typename runtime_type::flow_ptr_type;
 
 public:
     basic_listener(boost::asio::io_context& io, runtime_type& runtime, endpoint_type endpoint): _strand(io.get_executor()), _runtime(runtime), _endpoint(endpoint), _acceptor(io.get_executor()), _running(false) {}
 
     void start() {
-        boost::asio::post(_strand, [this] {
+        start([](boost::system::error_code error){
+            // noop
+        });
+    }
+
+    template <typename Function>
+    void start(Function&& f) {
+        boost::asio::post(_strand, [this, f = std::move(f)] {
             if (_running) return;
             _running = true;
 
@@ -37,26 +48,32 @@ public:
             _acceptor.open(_endpoint.protocol(), error);
             if (error) {
                 _running = false;
+                f(error);
                 return;
             }
 
             error = traits_type::prepare(_acceptor, _endpoint);
             if (error) {
                 _running = false;
+                f(error);
                 return;
             }
 
             _acceptor.bind(_endpoint, error);
             if (error) {
                 _running = false;
+                f(error);
                 return;
             }
 
             _acceptor.listen(boost::asio::socket_base::max_listen_connections, error);
             if (error) {
                 _running = false;
+                f(error);
                 return;
             }
+
+            f(error);
 
             accept();
         });
@@ -92,7 +109,7 @@ private:
         if(error) {
             // TODO report error
         } else {
-            auto flow = _runtime.spawn(std::move(socket));
+            flow_ptr_type flow = _runtime.spawn(std::move(socket));
             flow->start();
             // flows are owned by runtime
         }

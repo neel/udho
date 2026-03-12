@@ -1,13 +1,13 @@
-#ifndef UDHO_MANIFOLD_COMPONENTS_DB_PG_H
-#define UDHO_MANIFOLD_COMPONENTS_DB_PG_H
+#ifndef UDHO_WWW_COMPONENTS_DB_PG_H
+#define UDHO_WWW_COMPONENTS_DB_PG_H
 
 #include <ozo/connection_info.h>
 #include <ozo/connection_pool.h>
-#include <udho/manifold/features.h>
+#include <udho/www/features.h>
 #include <udho/manifold/portal.h>
 
 namespace udho{
-namespace manifold{
+namespace www{
 
 namespace components{
 namespace db{
@@ -40,19 +40,22 @@ private:
 };
 
 }
-}
+} // components
+} // www
+
+namespace manifold{
 
 template <typename OidMap, typename Statistics, typename JournalT>
-struct accessor<components::db::pg<OidMap, Statistics>, JournalT>: basic_accessor<components::db::pg<OidMap, Statistics>, JournalT>{
-    using basic_accessor_type   = basic_accessor<components::db::pg<OidMap, Statistics>, JournalT>;
-    using component_type        = components::db::pg<OidMap, Statistics>;
+struct accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>: basic_accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>{
+    using basic_accessor_type   = basic_accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>;
+    using component_type        = udho::www::components::db::pg<OidMap, Statistics>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 
     using basic_accessor_type::basic_accessor_type;
 };
 
-}
-}
+}   // manifold
+}   // udho
 
-#endif // UDHO_MANIFOLD_COMPONENTS_DB_PG_H
+#endif // UDHO_WWW_COMPONENTS_DB_PG_H

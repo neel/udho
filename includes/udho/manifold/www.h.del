@@ -3,14 +3,14 @@
 
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/order.h>
-#include <udho/manifold/features.h>
-#include <udho/manifold/components/handler.h>
-#include <udho/manifold/components/pg.h>
-#include <udho/manifold/components/routing.h>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/navigator.h>
-#include <udho/manifold/components/cookies.h>
-#include <udho/manifold/components/session.h>
+#include <udho/www/features.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/pg.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/protocol.h>
+#include <udho/www/components/navigator.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/session.h>
 #include <udho/net/listener.h>
 #include <udho/manifold/transition.h>
 #include <udho/manifold/runtime.h>
@@ -33,14 +33,14 @@ namespace tags{
 
     template <typename... Bridges>
     struct minimal{
-        using resources_component_type = udho::manifold::components::resources<Bridges...>;
+        using resources_component_type = udho::www::components::resources<Bridges...>;
     };
 
     template <typename SessionStorageT, udho::session::modes Mode, typename... Bridges>
     struct statefulx {
         using sesssion_storage_type = SessionStorageT;
         static constexpr const udho::session::modes session_storage_mode = Mode;
-        using resources_component_type = udho::manifold::components::resources<Bridges...>;
+        using resources_component_type = udho::www::components::resources<Bridges...>;
     };
 
     template <typename SessionStorageT = udho::session::storage::fs, udho::session::modes Mode = udho::session::modes::lazy>
@@ -56,14 +56,14 @@ struct basic_label{
     using append = basic_label<StreamT, Tag, ExtraComponents..., X...>;
 };
 
-template <typename StreamT, typename... Components>
-using basic_context = udho::manifold::basic_context<StreamT, udho::manifold::components::basic_handler<StreamT>, Components...>;
-
 template <typename Tag, typename... ExtraComponents>
 using label = basic_label<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Tag, ExtraComponents...>;
 
 template <typename Tag, typename... ExtraComponents>
 using test = basic_label<boost::beast::test::stream, Tag, ExtraComponents...>;
+
+template <typename StreamT, typename... Components>
+using basic_context = udho::manifold::basic_context<StreamT, udho::www::components::basic_handler<StreamT>, Components...>;
 
 template <typename... Components>
 using context = basic_context<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Components...>;
@@ -107,22 +107,22 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
     using stream_type = StreamT;
 
     using composition_type = udho::manifold::composition<
-        udho::manifold::components::basic_handler<StreamT>,
-        udho::manifold::components::db::pg<>,
-        udho::manifold::components::protocols::http<stream_type>,
-        udho::manifold::components::navigators::pretty,
-        udho::manifold::components::cookies,
-        udho::manifold::components::resources<Bridges...>,
+        udho::www::components::basic_handler<StreamT>,
+        udho::www::components::db::pg<>,
+        udho::www::components::protocols::http<stream_type>,
+        udho::www::components::navigators::pretty,
+        udho::www::components::cookies,
+        udho::www::components::resources<Bridges...>,
         ExtraComponents...
     >;
 
     using order_type = udho::manifold::order<
-        udho::manifold::feature::header_reader,
-        udho::manifold::feature::identifier,
-        udho::manifold::feature::locator,
-        udho::manifold::feature::cookie_load,
-        udho::manifold::feature::session_load,
-        udho::manifold::feature::body_reader
+        udho::www::feature::header_reader,
+        udho::www::feature::identifier,
+        udho::www::feature::locator,
+        udho::www::feature::cookie_load,
+        udho::www::feature::session_load,
+        udho::www::feature::body_reader
     >;
 };
 
@@ -133,23 +133,23 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
     using stream_type = StreamT;
 
     using composition_type = udho::manifold::composition<
-        udho::manifold::components::basic_handler<StreamT>,
-        udho::manifold::components::db::pg<>,
-        udho::manifold::components::protocols::http<stream_type>,
-        udho::manifold::components::navigators::pretty,
-        udho::manifold::components::cookies,
-        udho::manifold::components::session<SessionStorageT, Mode>,
-        udho::manifold::components::resources<Bridges...>,
+        udho::www::components::basic_handler<StreamT>,
+        udho::www::components::db::pg<>,
+        udho::www::components::protocols::http<stream_type>,
+        udho::www::components::navigators::pretty,
+        udho::www::components::cookies,
+        udho::www::components::session<SessionStorageT, Mode>,
+        udho::www::components::resources<Bridges...>,
         ExtraComponents...
     >;
 
     using order_type = udho::manifold::order<
-        udho::manifold::feature::header_reader,
-        udho::manifold::feature::identifier,
-        udho::manifold::feature::locator,
-        udho::manifold::feature::cookie_load,
-        udho::manifold::feature::session_load,
-        udho::manifold::feature::body_reader
+        udho::www::feature::header_reader,
+        udho::www::feature::identifier,
+        udho::www::feature::locator,
+        udho::www::feature::cookie_load,
+        udho::www::feature::session_load,
+        udho::www::feature::body_reader
     >;
 };
 
@@ -157,7 +157,7 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
 
 // { transitions
 
-static constexpr const std::size_t route_locator_stage = udho::manifold::feature::locator::stage;
+static constexpr const std::size_t route_locator_stage = udho::www::feature::locator::stage;
 
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, route_locator_stage>{
@@ -182,7 +182,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         // }
 
         // { patch the configs as per the route
-        const auto& route = journal.template at<udho::manifold::feature::locator>();
+        const auto& route = journal.template at<udho::www::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
         // if(route_index.type() == udho::url::detail::route_index::type::none){
@@ -213,7 +213,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         //     return;
         // }
         if(route_index.type() != udho::url::detail::route_index::type::none) {
-            const auto& routing_component = composition.template at<udho::manifold::feature::locator, 0>().component();
+            const auto& routing_component = composition.template at<udho::www::feature::locator, 0>().component();
             const auto& router     = routing_component.router();
             router.reconfigure_for(route_index, configs);
         }
@@ -248,10 +248,10 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         // }
 
         // { patch the configs as per the route
-        const auto& route = journal.template at<udho::manifold::feature::locator>();
+        const auto& route = journal.template at<udho::www::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
-        const auto& routing_component = composition.template at<udho::manifold::feature::locator, 0>().component();
+        const auto& routing_component = composition.template at<udho::www::feature::locator, 0>().component();
         const auto& router = routing_component.router();
         // }
 
@@ -270,7 +270,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 args_tuple
             );
         };
-        using handler_type = udho::manifold::components::basic_handler<StreamT>;
+        using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
         handler_type& handler = composition.template get<handler_type>().component();
@@ -300,7 +300,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using stream_type       = StreamT;
     using ostream_type      = udho::net::basic_ostream<StreamT>;
     using runtime_type      = basic_runtime<label_type, StreamT>;
-    using handler_type      = udho::manifold::components::basic_handler<StreamT>;
+    using handler_type      = udho::www::components::basic_handler<StreamT>;
     using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
@@ -428,8 +428,8 @@ namespace detail{
 template <typename Label, typename StreamT, typename RouterT>
 struct runtime_proxy{
     using router_type   = RouterT;
-    using handler_type  = udho::manifold::components::basic_handler<StreamT>;
-    using routing_type  = udho::manifold::components::routing<router_type>;
+    using handler_type  = udho::www::components::basic_handler<StreamT>;
+    using routing_type  = udho::www::components::routing<router_type>;
     using rlabel_type   = typename Label::template append<routing_type>;
     using runtime_type  = udho::manifold::basic_runtime<rlabel_type, StreamT>;
 

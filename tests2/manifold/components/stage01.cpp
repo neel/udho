@@ -12,17 +12,17 @@
 #include <udho/manifold/pipeline.h>
 #include <udho/manifold/features.h>
 #include <udho/manifold/config.h>
-#include <udho/manifold/components/navigator.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/manifold/components/handler.h>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/routing.h>
-#include <udho/manifold/components/cookies.h>
-#include <udho/manifold/components/session.h>
-#include <udho/manifold/components/pg.h>
-#include <udho/manifold/components/resources.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/protocol.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/session.h>
+#include <udho/www/components/pg.h>
+#include <udho/www/components/navigator.h>
+#include <udho/www/components/resources.h>
 #include <udho/session/storage/fs.h>
 #include <udho/session/storage/fs_mem.h>
 #include <udho/session/storage/redis.h>
@@ -39,7 +39,7 @@
 #include <udho/net/listener.h>
 
 
-using namespace udho::manifold::components;
+using namespace udho::www::components;
 using namespace udho::manifold;
 
 template <typename StreamT>
@@ -126,15 +126,15 @@ using test_case_router_type = std::decay_t<decltype(router<StreamT>())>;
 template <typename StreamT>
 struct basic_www{
     using router_type                = test_case_router_type<StreamT>;
-    using handler_component_type     = udho::manifold::components::basic_handler<StreamT>;
-    using db_component_type          = udho::manifold::components::db::pg<>;
-    using routing_component_type     = udho::manifold::components::routing<router_type>;
+    using handler_component_type     = udho::www::components::basic_handler<StreamT>;
+    using db_component_type          = udho::www::components::db::pg<>;
+    using routing_component_type     = udho::www::components::routing<router_type>;
     using stream_type                = StreamT;
-    using protocol_component_type    = udho::manifold::components::protocols::http<stream_type>;
-    using navigator_component_type   = udho::manifold::components::navigators::pretty;
-    using cookies_component_type     = udho::manifold::components::cookies;
-    using session_component_type     = udho::manifold::components::session<udho::session::storage::fs, udho::session::modes::lazy>;
-    using resources_component_type   = udho::manifold::components::resources<udho::view::data::bridges::lua>;
+    using protocol_component_type    = udho::www::components::protocols::http<stream_type>;
+    using navigator_component_type   = udho::www::components::navigators::pretty;
+    using cookies_component_type     = udho::www::components::cookies;
+    using session_component_type     = udho::www::components::session<udho::session::storage::fs, udho::session::modes::lazy>;
+    using resources_component_type   = udho::www::components::resources<udho::view::data::bridges::lua>;
 };
 
 }
@@ -157,12 +157,12 @@ struct udho::manifold::sketch<testing::basic_www<StreamT>>{
     >;
 
     using order_type = udho::manifold::order<
-        udho::manifold::feature::header_reader,
-        udho::manifold::feature::identifier,
-        udho::manifold::feature::locator,
-        udho::manifold::feature::cookie_load,
-        udho::manifold::feature::session_load,
-        udho::manifold::feature::body_reader
+        udho::www::feature::header_reader,
+        udho::www::feature::identifier,
+        udho::www::feature::locator,
+        udho::www::feature::cookie_load,
+        udho::www::feature::session_load,
+        udho::www::feature::body_reader
     >;
 };
 
@@ -201,7 +201,7 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     using stream_type       = StreamT;
     using ostream_type      = udho::net::basic_ostream<StreamT>;
     using runtime_type      = basic_runtime<label_type, StreamT>;
-    using handler_type      = udho::manifold::components::basic_handler<StreamT>;
+    using handler_type      = udho::www::components::basic_handler<StreamT>;
     using flow_type         = typename runtime_type::flow_type;
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
@@ -294,7 +294,7 @@ private:
 };
 
 
-static constexpr const std::size_t route_locator_stage = udho::manifold::feature::locator::stage;
+static constexpr const std::size_t route_locator_stage = udho::www::feature::locator::stage;
 template <typename StreamT>
 struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_locator_stage>{
     using label_type             = testing::basic_www<StreamT>;
@@ -319,7 +319,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_lo
         // }
 
         // { patch the configs as per the route
-        const auto& route = journal.template at<udho::manifold::feature::locator>();
+        const auto& route = journal.template at<udho::www::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
@@ -358,7 +358,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
         // }
 
         // { patch the configs as per the route
-        const auto& route = journal.template at<udho::manifold::feature::locator>();
+        const auto& route = journal.template at<udho::www::feature::locator>();
         assert(route.ready());
         const udho::url::detail::route_index& route_index = *route;
         assert(route_index.valid());
@@ -381,7 +381,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
                 args_tuple
             );
         };
-        using handler_type = udho::manifold::components::basic_handler<StreamT>;
+        using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
         handler_type& handler = composition.template get<handler_type>().component();
@@ -401,14 +401,14 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
     }
 };
 
-static_assert(udho::manifold::feature::body_reader::stage > udho::manifold::feature::identifier::stage);
+static_assert(udho::www::feature::body_reader::stage > udho::www::feature::identifier::stage);
 
 TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     boost::asio::io_context io_context;
     // { session component
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
-    auto session    = udho::manifold::components::session(catalogue);
+    auto session    = udho::www::components::session(catalogue);
     // }
     // { resources: views, assets
     udho::view::data::bridges::lua lua;
@@ -417,7 +417,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
     store.lock();
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
-    auto resources  = udho::manifold::components::resources(cstore);
+    auto resources  = udho::www::components::resources(cstore);
     // }
 
     std::string request_data =
@@ -468,11 +468,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         std::cout << "finished: " << reenter << std::endl;
         const journal_type& journal = flow.journal();
 
-        const auto& w_request    = journal.at<udho::manifold::feature::header_reader>();
-        const auto& w_route_desc = journal.at<udho::manifold::feature::identifier>();
-        const auto& w_uri        = journal.at<udho::manifold::feature::locator>();
-        const auto& w_jar        = journal.at<udho::manifold::feature::cookie_load>();
-        const auto& w_body       = journal.at<udho::manifold::feature::body_reader>();
+        const auto& w_request    = journal.at<udho::www::feature::header_reader>();
+        const auto& w_route_desc = journal.at<udho::www::feature::identifier>();
+        const auto& w_uri        = journal.at<udho::www::feature::locator>();
+        const auto& w_jar        = journal.at<udho::www::feature::cookie_load>();
+        const auto& w_body       = journal.at<udho::www::feature::body_reader>();
 
         if(counter == 0) {
             CHECK(reenter);
@@ -483,11 +483,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
             REQUIRE(w_jar.ready());
             REQUIRE(w_body.ready());
 
-            const udho::manifold::feature::header_reader::result& request    = w_request;
-            const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
-            const udho::manifold::feature::locator::result&       uri        = w_uri;
-            const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
-            const udho::manifold::feature::body_reader::result&   body       = w_body;
+            const udho::www::feature::header_reader::result& request    = w_request;
+            const udho::www::feature::identifier::result&    route_desc = w_route_desc;
+            const udho::www::feature::locator::result&       uri        = w_uri;
+            const udho::www::feature::cookie_load::result&   jar        = w_jar;
+            const udho::www::feature::body_reader::result&   body       = w_body;
 
             CHECK(request.method() == boost::beast::http::verb::post);
             CHECK(request.target() == "/f1/hello/world/23/24?name=test&id=42&filter=active");
@@ -543,11 +543,11 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
             CHECK(w_jar.ready());
             CHECK(w_body.ready());
 
-            const udho::manifold::feature::header_reader::result& request    = w_request;
-            const udho::manifold::feature::identifier::result&    route_desc = w_route_desc;
-            const udho::manifold::feature::locator::result&       uri        = w_uri;
-            const udho::manifold::feature::cookie_load::result&   jar        = w_jar;
-            const udho::manifold::feature::body_reader::result&   body       = w_body;
+            const udho::www::feature::header_reader::result& request    = w_request;
+            const udho::www::feature::identifier::result&    route_desc = w_route_desc;
+            const udho::www::feature::locator::result&       uri        = w_uri;
+            const udho::www::feature::cookie_load::result&   jar        = w_jar;
+            const udho::www::feature::body_reader::result&   body       = w_body;
 
             CHECK(request.method() == boost::beast::http::verb::post);
             CHECK(request.target() == "/f1/hello/world/25/23?name=test&id=42&filter=active");
@@ -612,7 +612,7 @@ TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline
     // { session component
     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
     catalogue_type catalogue{udho::session::storage::fs{}};
-    auto session    = udho::manifold::components::session(catalogue);
+    auto session    = udho::www::components::session(catalogue);
     // }
     // { resources: views, assets
     udho::view::data::bridges::lua lua;
@@ -621,7 +621,7 @@ TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline
     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
     store.lock();
     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
-    auto resources  = udho::manifold::components::resources(cstore);
+    auto resources  = udho::www::components::resources(cstore);
     // }
 
     using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;

@@ -28,7 +28,8 @@
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
-#include <udho/manifold/components/routing.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/handler.h>
 #include <udho/manifold/context.h>
 
 // using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
@@ -210,7 +211,7 @@ struct info{
     }
 };
 
-using namespace udho::manifold::components;
+using namespace udho::www::components;
 using namespace udho::manifold;
 
 using stream_type      = boost::beast::test::stream;
@@ -334,9 +335,9 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         resource_store_proxy.assets()
     );
 
-    auto handler_component  = udho::manifold::components::basic_handler<stream_type>(router.table().summary());
-    auto routing_component  = udho::manifold::components::routing(std::move(router));
-    auto resource_component = udho::manifold::components::resources(resource_store_proxy);
+    auto handler_component  = udho::www::components::basic_handler<stream_type>(router.table().summary());
+    auto routing_component  = udho::www::components::routing(std::move(router));
+    auto resource_component = udho::www::components::resources(resource_store_proxy);
 
     using composition_type  = udho::manifold::composition<
         std::decay_t<decltype(handler_component)>,

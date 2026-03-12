@@ -1,16 +1,16 @@
-#ifndef UDHO_MANIFOLD_COMPONENTS_HANDLER_H
-#define UDHO_MANIFOLD_COMPONENTS_HANDLER_H
+#ifndef UDHO_WWW_COMPONENTS_HANDLER_H
+#define UDHO_WWW_COMPONENTS_HANDLER_H
 
 #include <map>
 #include <functional>
 #include <udho/utils/format.h>
-#include <udho/manifold/features.h>
+#include <udho/www/features.h>
 #include <udho/net/ostream.h>
 #include <udho/url/summary.h>
 #include <udho/manifold/portal.h>
 
 namespace udho{
-namespace manifold{
+namespace www{
 
 namespace components{
 
@@ -74,12 +74,15 @@ private:
     udho::url::summary::router _summary;
 };
 
-}
+} // components
+} // www
+
+namespace manifold{
 
 template <typename StreamT, typename JournalT>
-struct accessor<components::basic_handler<StreamT>, JournalT>: basic_accessor<components::basic_handler<StreamT>, JournalT>{
-    using basic_accessor_type   = basic_accessor<components::basic_handler<StreamT>, JournalT>;
-    using component_type        = components::basic_handler<StreamT>;
+struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>{
+    using basic_accessor_type   = basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>;
+    using component_type        = udho::www::components::basic_handler<StreamT>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 
@@ -100,8 +103,7 @@ struct accessor<components::basic_handler<StreamT>, JournalT>: basic_accessor<co
 };
 
 
+} // manifold
+} // udho
 
-}
-}
-
-#endif // UDHO_MANIFOLD_COMPONENTS_HANDLER_H
+#endif // UDHO_WWW_COMPONENTS_HANDLER_H

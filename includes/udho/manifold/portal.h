@@ -4,6 +4,9 @@
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/detail.h>
+#include <udho/manifold/composition_view.h>
+#include <udho/manifold/configs_view.h>
+#include <udho/manifold/journal_view.h>
 #include <udho/view/data/data.h>
 
 namespace udho{

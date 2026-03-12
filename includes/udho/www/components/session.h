@@ -1,16 +1,17 @@
-#ifndef UDHO_MANIFOLD_COMPONENTS_SESSION_H
-#define UDHO_MANIFOLD_COMPONENTS_SESSION_H
+#ifndef UDHO_WWW_COMPONENTS_SESSION_H
+#define UDHO_WWW_COMPONENTS_SESSION_H
 
 #include <udho/session/catalogue.h>
-#include <udho/manifold/features.h>
+#include <udho/www/features.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/portal.h>
 #include <udho/utils/string_view.h>
 #include <boost/uuid/uuid.hpp>
 #include <iostream>
+#include <udho/www/components/params.h>
 
 namespace udho{
-namespace manifold{
+namespace www{
 
 namespace components{
 
@@ -20,13 +21,13 @@ struct session{
     using key_type       = typename catalogue_type::key_type;
     using note_type      = typename catalogue_type::note_type;
 
-    UDHO_CONFIG_PARAM(enabled, bool,        false);             // skip if not enabled
-    UDHO_CONFIG_PARAM(sesskey, std::string, "sessid");
-    UDHO_CONFIG_PARAM(domain,  std::string, "localhost");
-    UDHO_CONFIG_PARAM(path,    std::string, "/");
-
-    using features = udho::manifold::features<udho::manifold::feature::session_load>;
-    using params   = udho::manifold::params<enabled, sesskey, domain, path>;
+    using features = udho::manifold::features<udho::www::feature::session_load>;
+    using params   = udho::manifold::params<
+        udho::www::params::session::enabled,
+        udho::www::params::session::sesskey,
+        udho::www::params::session::domain,
+        udho::www::params::session::path
+    >;
 
     static constexpr const udho::utils::string_view name = "session";
 
@@ -44,11 +45,14 @@ private:
     catalogue_type& _catalogue;
 };
 
-}
+} // components
+} // www
+
+namespace manifold{
 
 template <typename StorageT, udho::session::modes Mode>
-struct facet<components::session<StorageT, Mode>, udho::manifold::feature::session_load>{
-    using component_type  = components::session<StorageT, Mode>;
+struct facet<udho::www::components::session<StorageT, Mode>, udho::www::feature::session_load>{
+    using component_type  = udho::www::components::session<StorageT, Mode>;
     using config_type     = udho::manifold::config<component_type>;
     using note_type       = typename component_type::note_type;
 
@@ -56,12 +60,12 @@ struct facet<components::session<StorageT, Mode>, udho::manifold::feature::sessi
 
     template <typename... Components, typename NextT>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next) {
-        const udho::cookies::jar& jar = journal.template first_of<udho::manifold::feature::cookie_load>();
+        const udho::cookies::jar& jar = journal.template first_of<udho::www::feature::cookie_load>();
 
-        const std::string& name   = _config[component_type::sesskey::val].value();
-        const std::string& domain = _config[component_type::domain::val].value();
-        const std::string& path   = _config[component_type::path::val].value();
-        bool enabled              = _config[component_type::enabled::val].value();
+        const std::string& name   = _config[udho::www::params::session::sesskey::val].value();
+        const std::string& domain = _config[udho::www::params::session::domain::val].value();
+        const std::string& path   = _config[udho::www::params::session::path::val].value();
+        bool enabled              = _config[udho::www::params::session::enabled::val].value();
 
         if(!enabled) {
             next.skip();
@@ -92,7 +96,7 @@ struct facet<components::session<StorageT, Mode>, udho::manifold::feature::sessi
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) {
-        std::cout << "-> facet<omponents::session<StorageT, Mode>, udho::manifold::feature::session_load>::operator()(...)" << std::endl;
+        std::cout << "-> facet<omponents::session<StorageT, Mode>, udho::www::feature::session_load>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next));
     }
 private:
@@ -101,16 +105,16 @@ private:
 };
 
 template <typename StorageT, udho::session::modes Mode, typename JournalT>
-struct accessor<components::session<StorageT, Mode>, JournalT>: basic_accessor<components::session<StorageT, Mode>, JournalT>{
-    using basic_accessor_type   = basic_accessor<components::session<StorageT, Mode>, JournalT>;
-    using component_type        = components::session<StorageT, Mode>;
+struct accessor<udho::www::components::session<StorageT, Mode>, JournalT>: basic_accessor<udho::www::components::session<StorageT, Mode>, JournalT>{
+    using basic_accessor_type   = basic_accessor<udho::www::components::session<StorageT, Mode>, JournalT>;
+    using component_type        = udho::www::components::session<StorageT, Mode>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 
     using basic_accessor_type::basic_accessor_type;
 };
 
-}
-}
+} // manifold
+} // udho
 
-#endif // UDHO_MANIFOLD_COMPONENTS_SESSION_H
+#endif // UDHO_WWW_COMPONENTS_SESSION_H

@@ -1,27 +1,27 @@
-#ifndef UDHO_MANIFOLD_COMPONENTS_NAVIGATOR_H
-#define UDHO_MANIFOLD_COMPONENTS_NAVIGATOR_H
+#ifndef UDHO_WWW_COMPONENTS_NAVIGATOR_H
+#define UDHO_WWW_COMPONENTS_NAVIGATOR_H
 
-#include <udho/manifold/features.h>
+#include <udho/www/features.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/portal.h>
 #include <udho/utils/encoding.h>
 #include <iostream>
 
 namespace udho{
-namespace manifold{
+namespace www{
 
 namespace components{
 
 struct pretty_url_policy{
-    inline udho::manifold::feature::identifier::result operator()(const udho::net::types::headers::request& request){
-        udho::manifold::feature::identifier::result result;
+    inline udho::www::feature::identifier::result operator()(const udho::net::types::headers::request& request){
+        udho::www::feature::identifier::result result;
         auto target = request.target();
         extract(result, target);
         return result;
     }
 
     template <typename StrT>
-    void extract(udho::manifold::feature::identifier::result& result, const StrT& target) {
+    void extract(udho::www::feature::identifier::result& result, const StrT& target) {
         using size_type = typename StrT::size_type;
         auto sep    = target.find('?');
         auto path   = target.substr(0, sep); // check extension .html or .json or .xml or nothing etc...
@@ -71,7 +71,7 @@ struct pretty_url_policy{
     }
 
     template <typename StrT>
-    void extract_path(udho::manifold::feature::identifier::result& result, const StrT& path) {
+    void extract_path(udho::www::feature::identifier::result& result, const StrT& path) {
         auto dot_pos = path.rfind('.');
         if(dot_pos >= path.size()) {
             result.resource(std::move(path));
@@ -88,7 +88,7 @@ struct pretty_url_policy{
 
 template <typename Policy>
 struct navigator{
-    using features = udho::manifold::features<udho::manifold::feature::identifier>;
+    using features = udho::manifold::features<udho::www::feature::identifier>;
     using params   = udho::manifold::params<>;
 
     static constexpr const udho::utils::string_view name = "navigator";
@@ -96,7 +96,7 @@ struct navigator{
     template <typename... Args>
     navigator(Args&&... args): _policy(std::forward<Args>(args)...){}
 
-    udho::manifold::feature::identifier::result operator()(const udho::net::types::headers::request& request) {
+    udho::www::feature::identifier::result operator()(const udho::net::types::headers::request& request) {
         return _policy(request);
     }
 
@@ -105,24 +105,27 @@ private:
 };
 
 namespace navigators{
-using pretty = udho::manifold::components::navigator<udho::manifold::components::pretty_url_policy>;
+using pretty = udho::www::components::navigator<udho::www::components::pretty_url_policy>;
 }
 
-}
+} // components
+} // www
+
+namespace manifold{
 
 template <typename Policy>
-struct facet<components::navigator<Policy>, udho::manifold::feature::identifier>{
-    using component_type  = components::navigator<Policy>;
+struct facet<udho::www::components::navigator<Policy>, udho::www::feature::identifier>{
+    using component_type  = udho::www::components::navigator<Policy>;
     using config_type     = udho::manifold::config<component_type>;
 
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream&) const {
-        using result = udho::manifold::feature::identifier::result;
-        static_assert(std::is_same_v<udho::manifold::feature::header_reader::result, udho::net::types::headers::request>);
+        using result = udho::www::feature::identifier::result;
+        static_assert(std::is_same_v<udho::www::feature::header_reader::result, udho::net::types::headers::request>);
 
-        const udho::net::types::headers::request& request = journal.template first_of<udho::manifold::feature::header_reader>();
+        const udho::net::types::headers::request& request = journal.template first_of<udho::www::feature::header_reader>();
         try{
             result res = _component(request);
             next.pass(std::move(res));
@@ -134,7 +137,7 @@ struct facet<components::navigator<Policy>, udho::manifold::feature::identifier>
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::navigator<Policy>, udho::manifold::feature::identifier>::operator()(...)" << std::endl;
+        std::cout << "-> facet<components::navigator<Policy>, udho::www::feature::identifier>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 private:
@@ -143,21 +146,21 @@ private:
 };
 
 template <typename Policy, typename JournalT>
-struct accessor<components::navigator<Policy>, JournalT>: basic_accessor<components::navigator<Policy>, JournalT>{
-    using basic_accessor_type   = basic_accessor<components::navigator<Policy>, JournalT>;
-    using component_type        = components::navigator<Policy>;
+struct accessor<udho::www::components::navigator<Policy>, JournalT>: basic_accessor<udho::www::components::navigator<Policy>, JournalT>{
+    using basic_accessor_type   = basic_accessor<udho::www::components::navigator<Policy>, JournalT>;
+    using component_type        = udho::www::components::navigator<Policy>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 
     using basic_accessor_type::basic_accessor_type;
 
     const std::string& resource() const {
-        return basic_accessor_type::journal().template at<udho::manifold::feature::identifier>()->resource();
+        return basic_accessor_type::journal().template at<udho::www::feature::identifier>()->resource();
     }
 };
 
-}
+} // manifold
 
-}
+} // udho
 
-#endif // UDHO_MANIFOLD_COMPONENTS_NAVIGATOR_H
+#endif // UDHO_WWW_COMPONENTS_NAVIGATOR_H

@@ -38,7 +38,8 @@
 #include <tabulate/table.hpp>
 #include <udho/view/bridges/lua/binder.h>
 #include <udho/manifold/context.h>
-#include <udho/manifold/components/fwd.h>
+#include <udho/www/components/fwd.h>
+#include <udho/www/features.h>
 
 namespace udho{
 namespace view{
@@ -193,7 +194,7 @@ namespace udho::view::data{
     };
 
     template <typename... Bridges>
-    struct bind_helper_component<udho::manifold::components::resources<Bridges...>>{
+    struct bind_helper_component<udho::www::components::resources<Bridges...>>{
         template <typename ClassT>
         static void apply(sol::usertype<ClassT>& utype) {
             utype.set("resources", sol::property([](ClassT& portal) {
@@ -204,7 +205,7 @@ namespace udho::view::data{
     };
 
     template <typename Router>
-    struct bind_helper_component<udho::manifold::components::routing<Router>>{
+    struct bind_helper_component<udho::www::components::routing<Router>>{
         template <typename ClassT>
         static void apply(sol::usertype<ClassT>& utype) {
             utype.set("routes", sol::property([](ClassT& portal) {
@@ -313,7 +314,7 @@ namespace udho::view::data{
         using context_type              = class_type;
         using portal_type               = typename context_type::portal_type;
         using composition_type          = typename portal_type::composition_view_type;
-        using resource_component_type   = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+        using resource_component_type   = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
         using store_type                = typename resource_component_type::store_type;
 
         static void apply(state_type& state){

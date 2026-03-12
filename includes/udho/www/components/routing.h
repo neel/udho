@@ -1,13 +1,14 @@
-#ifndef UDHO_MANIFOLD_COMPONENTS_ROUTING_H
-#define UDHO_MANIFOLD_COMPONENTS_ROUTING_H
+#ifndef UDHO_WWW_COMPONENTS_ROUTING_H
+#define UDHO_WWW_COMPONENTS_ROUTING_H
 
 #include <udho/url/router.h>
-#include <udho/manifold/features.h>
+#include <udho/www/features.h>
 #include <udho/manifold/config.h>
 #include <udho/exceptions/exceptions.h>
+#include <udho/www/components/params.h>
 
 namespace udho{
-namespace manifold{
+namespace www{
 
 namespace components{
 
@@ -20,13 +21,11 @@ private:
     router_type _router;
 public:
     using features = udho::manifold::features<
-        udho::manifold::feature::locator,
-        udho::manifold::feature::responder
+        udho::www::feature::locator,
+        udho::www::feature::responder
     >;
 
-    UDHO_CONFIG_PARAM(use_trie, bool, false);
-
-    using params   = udho::manifold::params<use_trie>;
+    using params   = udho::manifold::params<udho::www::params::routing::use_trie>;
 
     static constexpr const udho::utils::string_view name = "router";
 
@@ -41,20 +40,21 @@ public:
     }
 };
 
-}
+} // components
+} // www
 
-
+namespace manifold {
 
 template <typename RouterT>
-struct facet<components::routing<RouterT>, udho::manifold::feature::locator> {
-    using component_type = components::routing<RouterT>;
+struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locator> {
+    using component_type = udho::www::components::routing<RouterT>;
     using config_type    = udho::manifold::config<component_type>;
 
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        udho::manifold::feature::identifier::result res = journal.template at<udho::manifold::feature::identifier>();
+        udho::www::feature::identifier::result res = journal.template at<udho::www::feature::identifier>();
         // udho::utils::string_view tgt = res.resource();
         // std::string target(tgt.begin(), tgt.end());
         udho::url::detail::route_index index = _component.locate(res.resource());
@@ -70,7 +70,7 @@ struct facet<components::routing<RouterT>, udho::manifold::feature::locator> {
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::routing<RoutingTableT>, udho::manifold::feature::locator>::operator()(...)" << std::endl;
+        std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::locator>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 
@@ -80,9 +80,9 @@ private:
 };
 
 template <typename RouterT>
-struct facet<components::routing<RouterT>, udho::manifold::feature::responder> {
-    using component_type = components::routing<RouterT>;
-    using facet_type     = facet<component_type, udho::manifold::feature::locator>;
+struct facet<udho::www::components::routing<RouterT>, udho::www::feature::responder> {
+    using component_type = udho::www::components::routing<RouterT>;
+    using facet_type     = facet<component_type, udho::www::feature::locator>;
     using config_type    = udho::manifold::config<component_type>;
 
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
@@ -97,7 +97,7 @@ struct facet<components::routing<RouterT>, udho::manifold::feature::responder> {
 
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::routing<RoutingTableT>, udho::manifold::feature::responder>::operator()(...)" << std::endl;
+        std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::responder>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 
@@ -107,9 +107,9 @@ private:
 };
 
 template <typename RouterT, typename JournalT>
-struct accessor<components::routing<RouterT>, JournalT>: basic_accessor<components::routing<RouterT>, JournalT>{
-    using basic_accessor_type   = basic_accessor<components::routing<RouterT>, JournalT>;
-    using component_type        = components::routing<components::routing<RouterT>>;
+struct accessor<udho::www::components::routing<RouterT>, JournalT>: basic_accessor<udho::www::components::routing<RouterT>, JournalT>{
+    using basic_accessor_type   = basic_accessor<udho::www::components::routing<RouterT>, JournalT>;
+    using component_type        = udho::www::components::routing<udho::www::components::routing<RouterT>>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 
@@ -117,7 +117,7 @@ struct accessor<components::routing<RouterT>, JournalT>: basic_accessor<componen
 
 };
 
-}
-}
+} // manifold
+} // udho
 
-#endif // UDHO_MANIFOLD_COMPONENTS_ROUTING_H
+#endif // UDHO_WWW_COMPONENTS_ROUTING_H

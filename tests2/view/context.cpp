@@ -22,13 +22,14 @@
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
-#include <udho/manifold/components/routing.h>
+#include <udho/www/components/routing.h>
 #include <udho/manifold/context.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/lua.h>
 #include <udho/view/resources/store.h>
-#include <udho/manifold/components/resources.h>
+#include <udho/www/components/resources.h>
+#include <udho/www/components/handler.h>
 
 using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
@@ -87,7 +88,7 @@ struct info{
     }
 };
 
-using namespace udho::manifold::components;
+using namespace udho::www::components;
 using namespace udho::manifold;
 
 namespace callbacks{
@@ -291,9 +292,9 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
 
     using stream_type = udho::net::test_ostream;;
 
-    auto handler_component  = udho::manifold::components::basic_handler<callbacks::stream_type>(router.table().summary());
-    auto routing_component  = udho::manifold::components::routing(std::move(router));
-    auto resource_component = udho::manifold::components::resources(resource_store_proxy);
+    auto handler_component  = udho::www::components::basic_handler<callbacks::stream_type>(router.table().summary());
+    auto routing_component  = udho::www::components::routing(std::move(router));
+    auto resource_component = udho::www::components::resources(resource_store_proxy);
 
     using composition_type  = udho::manifold::composition<
         std::decay_t<decltype(handler_component)>,

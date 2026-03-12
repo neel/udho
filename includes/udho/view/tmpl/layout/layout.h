@@ -10,7 +10,7 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
-#include <udho/manifold/components/resources.h>
+#include <udho/www/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
 #include <cassert>
 
@@ -78,7 +78,7 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     using context_type = typename LayoutT::context_type;
     using portal_type  = typename context_type::portal_type;
     using composition_type = typename portal_type::composition_type;
-    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using resource_component_type = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
     using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
 
@@ -139,7 +139,7 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
     using context_type = typename LayoutT::context_type;
     using portal_type  = typename context_type::portal_type;
     using composition_type = typename portal_type::composition_type;
-    using resource_component_type = typename composition_type::template component_at<udho::manifold::feature::resources_storage, 0>;
+    using resource_component_type = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
     using store_type   = typename resource_component_type::store_type;
     using header_renderer_type = header_renderer<LayoutT>;
     using placeholders_type = typename layout_type::placeholders_type;

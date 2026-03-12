@@ -5,9 +5,15 @@
 #include <udho/net/listener.h>
 #include <udho/net/protocols/protocols.h>
 #include <udho/net/common.h>
-#include <udho/manifold/www.h>
 #include <udho/manifold/fabric.h>
 #include <curl/curl.h>
+
+#include <udho/www/sketch.h>
+#include <udho/www/presets.h>
+#include <udho/www/framework.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/navigator.h>
 
 // { experiment
 // template <typename Policy, template<typename...> class T, typename X>
@@ -38,7 +44,7 @@
 
 using stream_type = udho::net::types::socket;
 
-using namespace udho::manifold::components;
+using namespace udho::www::components;
 using namespace udho::manifold;
 
 using handler = basic_handler<stream_type>;
@@ -143,10 +149,10 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
     auto router = udho::url::router(std::move(chain4), cstore.assets(), docroot);
 
 
-    using framework_type = udho::manifold::framework<udho::manifold::www::stateless::lua>;
+    using framework_type = udho::www::framework<udho::www::stateless::lua>;
     using endpoint_type  = typename framework_type::endpoint_type;
 
-    auto resource_store_component  = udho::manifold::components::resources(cstore);
+    auto resource_store_component  = udho::www::components::resources(cstore);
 
     auto framework = framework_type::apply(std::move(router));
     auto runtime   = framework.runtime(resource_store_component);

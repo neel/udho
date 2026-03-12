@@ -11,14 +11,14 @@
 #include <boost/lexical_cast.hpp>
 #include <udho/url/url.h>
 #include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/manifold/components/handler.h>
-#include <udho/manifold/components/protocol.h>
-#include <udho/manifold/components/routing.h>
-#include <udho/manifold/components/cookies.h>
-#include <udho/manifold/components/session.h>
-#include <udho/manifold/components/pg.h>
-#include <udho/manifold/components/resources.h>
-#include <udho/manifold/components/navigator.h>
+#include <udho/www/components/handler.h>
+#include <udho/www/components/protocol.h>
+#include <udho/www/components/routing.h>
+#include <udho/www/components/cookies.h>
+#include <udho/www/components/session.h>
+#include <udho/www/components/pg.h>
+#include <udho/www/components/resources.h>
+#include <udho/www/components/navigator.h>
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
 #include <udho/manifold/configs_view.h>
@@ -54,7 +54,7 @@ using options_type = udho::url::basic_options<
 using stream_type      = boost::beast::test::stream; // udho::net::types::socket;
 
 namespace callbacks{
-using namespace udho::manifold::components;
+using namespace udho::www::components;
 using namespace udho::manifold;
 
 using handler = basic_handler<stream_type>;

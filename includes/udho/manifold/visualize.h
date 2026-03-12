@@ -5,7 +5,7 @@
 #include <udho/manifold/composition.h>
 #include <udho/manifold/pipeline.h>
 #include <udho/utils/encoding.h>
-#include <udho/manifold/components/protocol.h>
+#include <udho/www/components/protocol.h>
 #include <boost/lexical_cast.hpp>
 
 namespace udho{

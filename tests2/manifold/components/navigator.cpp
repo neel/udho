@@ -6,16 +6,16 @@
 #include <catch2/catch_all.hpp>
 #endif
 
-#include <udho/manifold/components/navigator.h>
+#include <udho/www/components/navigator.h>
 #include <udho/manifold/config.h>
 #include <udho/manifold/journal.h>
 #include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/manifold/components/protocol.h>
+#include <udho/www/components/protocol.h>
 
 TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][components][navigator][policy]") {
     SECTION("multiple query parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/hello/world/23?name=test&id=42&filter=active"};
         policy.extract(result, input);
         CHECK(result.resource() == "/hello/world/23");
@@ -27,8 +27,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("empty query parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/test?empty=&valid=value"};
         policy.extract(result, input);
         CHECK(result.resource() == "/test");
@@ -37,8 +37,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("URL encoded parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/path?name=John%20Doe&city=New%20York"};
         policy.extract(result, input);
         CHECK(result.params().find("name")->second == "John Doe");
@@ -46,8 +46,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("no query parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/simple/path"};
         policy.extract(result, input);
         CHECK(result.resource() == "/simple/path");
@@ -55,8 +55,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("multiple ampersands") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/test?&&key=value&&"};
         policy.extract(result, input);
         CHECK(result.params().size() == 4); // Correct?
@@ -64,8 +64,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("file extension detection") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/document.html"};
         policy.extract_path(result, input);
         CHECK(result.resource() == "/document");
@@ -73,8 +73,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("no extension") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/path/no/extension"};
         policy.extract_path(result, input);
         CHECK(result.resource() == "/path/no/extension");
@@ -82,8 +82,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("malformed query parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/test?=novalue&key=value&="};
         policy.extract(result, input);
         CHECK(result.params().count("") == 2); // Correct?
@@ -92,16 +92,16 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("special characters in parameters") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/api?query=a%2Bb%3Dc%26d%3De"};
         policy.extract(result, input);
         CHECK(result.params().find("query")->second == "a+b=c&d=e");
     }
 
     SECTION("multiple dots in path") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/path.with.many.dots.json"};
         policy.extract_path(result, input);
         CHECK(result.resource() == "/path.with.many.dots");
@@ -109,8 +109,8 @@ TEST_CASE("udho manifold component navigator - pretty url policy", "[manifold][c
     }
 
     SECTION("trailing question mark") {
-        udho::manifold::components::pretty_url_policy policy;
-        udho::manifold::feature::identifier::result result;
+        udho::www::components::pretty_url_policy policy;
+        udho::www::feature::identifier::result result;
         udho::utils::string_view input{"/test?"};
         policy.extract(result, input);
         CHECK(result.resource() == "/test");
@@ -151,7 +151,7 @@ struct expected_next{
 }
 
 TEST_CASE("udho manifold component navigator", "[manifold][components][navigator]") {
-    using navigator_component_type   = udho::manifold::components::navigator<udho::manifold::components::pretty_url_policy>;
+    using navigator_component_type   = udho::www::components::navigator<udho::www::components::pretty_url_policy>;
     using navigator_config_type      = udho::manifold::config<navigator_component_type>;
 
     navigator_component_type component;
@@ -160,11 +160,11 @@ TEST_CASE("udho manifold component navigator", "[manifold][components][navigator
     SECTION("reading http header with various request types") {
         using stream_type               = boost::beast::test::stream; // udho::net::types::socket;
         using protocol_type             = udho::net::protocols::http<stream_type>;
-        using protocol_component_type   = udho::manifold::components::protocol<protocol_type, stream_type>;
-        using protocol_facet_type       = udho::manifold::facet<protocol_component_type, udho::manifold::feature::header_reader>;
-        using fabric_type               = udho::manifold::facet<navigator_component_type, udho::manifold::feature::identifier>;
+        using protocol_component_type   = udho::www::components::protocol<protocol_type, stream_type>;
+        using protocol_facet_type       = udho::manifold::facet<protocol_component_type, udho::www::feature::header_reader>;
+        using fabric_type               = udho::manifold::facet<navigator_component_type, udho::www::feature::identifier>;
         using journal_type              = udho::manifold::journal<protocol_facet_type, fabric_type>;
-        using result_type               = udho::manifold::feature::identifier::result;
+        using result_type               = udho::www::feature::identifier::result;
         using next_type                 = sim::expected_next<result_type>;
         using request_type              = udho::net::types::headers::request;
 
@@ -177,9 +177,9 @@ TEST_CASE("udho manifold component navigator", "[manifold][components][navigator
         std::exception_ptr ex;
         journal_type journal;
 
-        CHECK(journal.count<udho::manifold::feature::header_reader>() == 1);
+        CHECK(journal.count<udho::www::feature::header_reader>() == 1);
 
-        journal.at<udho::manifold::feature::header_reader, 0>() = std::move(request);
+        journal.at<udho::www::feature::header_reader, 0>() = std::move(request);
 
         int x;
         fabric.eval(journal, next_type{result, ex}, x);
