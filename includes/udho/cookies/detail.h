@@ -34,7 +34,7 @@
 #include <boost/algorithm/string.hpp>
 #include <udho/cookies/policy.h>
 #include <chrono>
-#include <iomanip>
+#include <udho/utils/date_time.h>
 
 namespace udho{
 namespace cookies{
@@ -69,27 +69,7 @@ inline bool parse_unsigned(std::string_view s, unsigned long& result) {
  * @return
  */
 inline std::string format_rfc7231(std::chrono::system_clock::time_point tp) {
-    std::time_t t = std::chrono::system_clock::to_time_t(tp);
-    std::tm tm;
-
-#ifdef _WIN32
-    gmtime_s(&tm, &t);
-#else
-    gmtime_r(&t, &tm);
-#endif
-
-    // Force English locale for day/month abbreviations
-    std::ostringstream oss;
-    oss.imbue(std::locale("C"));
-
-    const std::time_put<char>& facet = std::use_facet<std::time_put<char>>(oss.getloc());
-
-    char pattern[] = "%a, %d %b %Y %H:%M:%S GMT";
-    char* pat_end = pattern + sizeof(pattern) - 1;
-
-    facet.put(oss, oss, ' ', &tm, pattern, pat_end);
-
-    return oss.str();
+    return udho::utils::date_time::format_rfc7231(tp);
 }
 
 /**
@@ -99,26 +79,7 @@ inline std::string format_rfc7231(std::chrono::system_clock::time_point tp) {
  * @throws std::invalid_argument for invalid formats
  */
 inline bool parse_rfc7231(std::string_view date_str_view, std::chrono::system_clock::time_point& result) {
-    std::tm tm = {};
-    std::string date_str(date_str_view);
-    std::istringstream iss(date_str);
-    iss.imbue(std::locale("C"));
-    iss >> std::get_time(&tm, "%a, %d %b %Y %H:%M:%S GMT");
-
-    if(iss.fail()) return false;
-
-#ifdef _WIN32
-    // Windows UTC conversion
-    tm.tm_isdst = -1;  // Let mktime determine DST
-    time_t tt = _mkgmtime(&tm);
-#else
-    // POSIX UTC conversion
-    time_t tt = timegm(&tm);
-#endif
-
-    if(tt == -1) return false;
-    result = std::chrono::system_clock::from_time_t(tt);
-    return true;
+    return udho::utils::date_time::parse_rfc7231(date_str_view, result);
 }
 
 inline std::string same_site_str(udho::cookies::policy p){
