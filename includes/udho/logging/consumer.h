@@ -41,17 +41,12 @@ struct consumer{
         // Build attribute set
         boost::log::attribute_set attrs;
 
-        char pid_str[40];
-        std::sprintf(pid_str, "%x", msg[process::val].value());
-        char tid_str[40];
-        std::sprintf(tid_str, "%zx", msg[thread::val].value());
-
 
         // ----- Mandatory fields -----
         attrs.insert("LocalID",     boost::log::attributes::make_constant(msg[local_id::val].value()) );
         attrs.insert("TimeStamp",   boost::log::attributes::make_constant(msg[timestamp::val].value()) );
         attrs.insert("Severity",    boost::log::attributes::make_constant(static_cast<std::underlying_type_t<udho::logging::severity>>(msg[udho::logging::params::severity::val].value())) );
-        attrs.insert("ThreadID",    boost::log::attributes::make_constant(tid_str) );
+        attrs.insert("ThreadID",    boost::log::attributes::make_constant(msg[thread::val].value()) );
         attrs.insert("ProcessID",   boost::log::attributes::make_constant(msg[process::val].value()) );
         attrs.insert("Subsystem",   boost::log::attributes::make_constant(msg[subsystem::val].value()) );
         attrs.insert("Message",     boost::log::attributes::make_constant(msg[udho::logging::params::message::val].value()) );

@@ -5,8 +5,6 @@
 #include <udho/logging/message.h>
 #include <array>
 
-#include <iostream>
-
 namespace udho {
 namespace logging {
 

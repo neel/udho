@@ -36,7 +36,7 @@ struct rotating_file{
             keywords::time_based_rotation   = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
             keywords::format = (
                 expressions::stream
-                << expressions::attr<std::uint64_t>("LocalID") << ":" << expressions::attr<std::uint32_t>("ProcessID") << ":" << expressions::attr<std::string>("ThreadID") << " "
+                << expressions::attr<std::uint64_t>("LocalID") << ":" << expressions::attr<std::uint32_t>("ProcessID") << ":" << std::hex << expressions::attr<std::size_t>("ThreadID") << " " << std::dec
                 << "[" << expressions::attr<std::chrono::system_clock::time_point>("TimeStamp")                     << "] "
                 << "[" << expressions::attr<std::underlying_type_t<udho::logging::severity>>("Severity")            << "] "
                 << "[" << expressions::attr<std::string>("Subsystem")                                               << "] "
@@ -56,34 +56,35 @@ struct setup{
         auto queue = udho::logging::detail::ipc_queue::create(name);
         producer::activate(name);
 
-        int std_fds[2] = {-1, -1};
-        if (pipe(std_fds) == -1) {
-            perror("pipe stdout");
-        }
+        // int std_fds[2] = {-1, -1};
+        // if (pipe(std_fds) == -1) {
+        //     perror("pipe stdout");
+        // }
 
         int io_fds[2]  = {-1, -1};
         if (pipe(io_fds) == -1) {
             perror("pipe io");
         }
 
-        int std_out, std_in, io_out, io_in;
-        std_out = std_fds[0];
-        std_in  = std_fds[1];
+        // int std_out, std_in;
+        // std_out = std_fds[0];
+        // std_in  = std_fds[1];
+        int io_out, io_in;
         io_out  = io_fds[0];
         io_in   = io_fds[1];
 
         _pid = fork();
         if (_pid == 0) {
-            close(std_out);
-            dup2(std_in, STDOUT_FILENO);
-            dup2(std_in, STDERR_FILENO);
-            close(std_in);
+            // close(std_out);
+            // dup2(std_in, STDOUT_FILENO);
+            // dup2(std_in, STDERR_FILENO);
+            // close(std_in);
             close(io_out);
 
             run_child(io_in);
             return 0;
         } else if (_pid > 0) {
-            close(std_in);
+            // close(std_in);
             close(io_in);
 
             char ok = 0;
@@ -94,8 +95,8 @@ struct setup{
         } else {
             close(io_out);
             close(io_in);
-            close(std_out);
-            close(std_in);
+            // close(std_out);
+            // close(std_in);
             return _pid;
         }
     }
