@@ -144,13 +144,13 @@ TEST_CASE("Log message binary deserialisation with absent optional fields", "[lo
     REQUIRE_FALSE(loaded[session_id::val].value().has_value());
     REQUIRE_FALSE(loaded[user_id::val].value().has_value());
 
-    REQUIRE_FALSE(loaded[client_ip::val].value().has_value());
+    REQUIRE_FALSE(loaded[client::val].value().has_value());
     REQUIRE_FALSE(loaded[host::val].value().has_value());
-    REQUIRE_FALSE(loaded[http_method::val].value().has_value());
+    REQUIRE_FALSE(loaded[method::val].value().has_value());
     REQUIRE_FALSE(loaded[uri::val].value().has_value());
     REQUIRE_FALSE(loaded[route::val].value().has_value());
     REQUIRE_FALSE(loaded[query::val].value().has_value());
-    REQUIRE_FALSE(loaded[user_agent::val].value().has_value());
+    REQUIRE_FALSE(loaded[agent::val].value().has_value());
 
     REQUIRE_FALSE(loaded[status_code::val].value().has_value());
     REQUIRE_FALSE(loaded[bytes_sent::val].value().has_value());

@@ -102,13 +102,13 @@ using message = schema<
     udho::logging::params::session_id,
     udho::logging::params::user_id,
 
-    udho::logging::params::client_ip,
+    udho::logging::params::client,
     udho::logging::params::host,
-    udho::logging::params::http_method,
+    udho::logging::params::method,
     udho::logging::params::uri,
     udho::logging::params::route,
     udho::logging::params::query,
-    udho::logging::params::user_agent,
+    udho::logging::params::agent,
 
     udho::logging::params::status_code,
     udho::logging::params::bytes_sent,

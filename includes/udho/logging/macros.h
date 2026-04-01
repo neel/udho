@@ -5,6 +5,7 @@
 #include <atomic>
 #include <udho/logging/message.h>
 #include <udho/logging/producer.h>
+#include <boost/current_function.hpp>
 
 namespace udho {
 namespace logging {
@@ -71,7 +72,7 @@ bool log(udho::logging::severity severity, const std::string& subsystem, const s
                 (message),                                   \
                 __FILE__,                                    \
                 __LINE__,                                    \
-                __func__,                                    \
+                BOOST_CURRENT_FUNCTION,                      \
                 ##__VA_ARGS__                                \
             )
 

@@ -4,6 +4,8 @@
 #include <string>
 #include <nlohmann/json.hpp>
 #include <udho/utils/traits.h>
+#include <boost/asio/ip/address.hpp>
+#include <boost/uuid/uuid.hpp>
 
 namespace udho {
 namespace logging {
@@ -64,6 +66,26 @@ private:
     template <typename T, typename Ratio>
     void write_value(const std::chrono::duration<T, Ratio>& val) {
         write_value(val.count());
+    }
+
+    void write_value(const boost::uuids::uuid& uuid) {
+        auto begin = uuid.data();
+        auto end   = begin + uuid.size();
+        _storage.insert(_storage.end(), begin, end);
+    }
+
+    void write_value(const boost::asio::ip::address& addr) {
+        if (addr.is_v4()) {
+            _storage.push_back(0x04);
+            auto v4 = addr.to_v4();
+            auto bytes = v4.to_bytes();
+            _storage.insert(_storage.end(), bytes.begin(), bytes.end());
+        } else {
+            _storage.push_back(0x06);
+            auto v6 = addr.to_v6();
+            auto bytes = v6.to_bytes();
+            _storage.insert(_storage.end(), bytes.begin(), bytes.end());
+        }
     }
 
     storage_type& _storage;
@@ -158,6 +180,34 @@ private:
         return true;
     }
 
+    bool read_value(boost::uuids::uuid& uuid) {
+        if (std::distance(_begin, _end) < 16) return false;
+        std::memcpy(uuid.data(), _begin, 16);
+        _begin += 16;
+        return true;
+    }
+
+    bool read_value(boost::asio::ip::address& addr) {
+        if (std::distance(_begin, _end) < 1) return false;
+        uint8_t family = *_begin++;
+        if (family == 0x04) {
+            if (std::distance(_begin, _end) < 4) return false;
+            boost::asio::ip::address_v4::bytes_type bytes;
+            std::memcpy(bytes.data(), _begin, 4);
+            _begin += 4;
+            addr = boost::asio::ip::address_v4(bytes);
+            return true;
+        } else if (family == 0x06) {
+            if (std::distance(_begin, _end) < 16) return false;
+            boost::asio::ip::address_v6::bytes_type bytes;
+            std::memcpy(bytes.data(), _begin, 16);
+            _begin += 16;
+            addr = boost::asio::ip::address_v6(bytes);
+            return true;
+        }
+        return false;
+    }
+
     pointer_type& _begin;
     const pointer_type  _end;
 };
@@ -211,11 +261,20 @@ private:
         return expected_size(val.count());
     }
 
+    std::size_t expected_size(const boost::uuids::uuid&) {
+        return 16;
+    }
+
+    std::size_t expected_size(const boost::asio::ip::address& addr) {
+        if (addr.is_v4()) return 1 + 4;    // family + 4 bytes
+        else              return 1 + 16;   // family + 16 bytes
+    }
 
 
 private:
     std::size_t& _byte_size;
 };
+
 }
 
 

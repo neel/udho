@@ -2,10 +2,10 @@
 #define UDHO_LOGGING_SETUP_H
 
 #include <string>
+#include <unordered_set>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/expressions.hpp>
-#include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <udho/logging/producer.h>
 #include <udho/logging/consumer.h>
@@ -13,39 +13,27 @@
 #include <sys/wait.h>
 #include <atomic>
 #include <udho/logging/macros.h>
+#include <udho/logging/formatter.h>
+
 // #include <boost/log/utility/manipulators/to_log.hpp>
 
-namespace boost::log{
-inline formatting_ostream& operator<<(formatting_ostream& stream, const std::chrono::system_clock::time_point& tp ) {
-    stream << udho::utils::date_time::format_rfc7231(tp);
-    return stream;
-}
-}
+#include <boost/log/utility/formatting_ostream.hpp>
+
+
 
 namespace udho{
 namespace logging{
 
 
 struct rotating_file{
-    static void apply() {
-        namespace keywords    = boost::log::keywords;
-        namespace expressions = boost::log::expressions;
-
-        boost::log::add_file_log(
-            keywords::file_name             = "server_%Y-%m-%d_%H-%M-%S.log",
-            keywords::rotation_size         = 10 * 1024 * 1024,
-            keywords::time_based_rotation   = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-            keywords::format = (
-                expressions::stream
-                << expressions::attr<std::uint64_t>("LocalID") << ":" << expressions::attr<std::uint32_t>("ProcessID") << ":" << std::hex << expressions::attr<std::size_t>("ThreadID") << " " << std::dec
-                << "[" << expressions::attr<std::chrono::system_clock::time_point>("TimeStamp")                     << "] "
-                << "[" << expressions::attr<std::underlying_type_t<udho::logging::severity>>("Severity")            << "] "
-                << "[" << expressions::attr<std::string>("Subsystem")                                               << "] "
-                << expressions::attr<std::string>("Message")
-            )
+    static void apply(const std::string& prefix = "server") {
+        auto sink = boost::log::add_file_log(
+            boost::log::keywords::file_name           = (prefix+"_%Y-%m-%d_%H-%M-%S.log"),
+            boost::log::keywords::rotation_size       = 10 * 1024 * 1024,
+            boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0)
         );
 
-        boost::log::add_common_attributes();
+        sink->set_formatter(udho::logging::formatter{});
     }
 };
 

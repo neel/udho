@@ -18,15 +18,30 @@
 namespace udho {
 namespace logging {
 
+/**
+ * @brief Stateless synchronous client for the consumer admin socket.
+ *
+ * The commander is intended for short-lived tools such as @c udho-log that:
+ * - connect to the Unix-domain admin socket
+ * - send exactly one request packet
+ * - receive exactly one reply packet
+ * - exit
+ */
 struct commander{
     using protocol_type = boost::asio::local::seq_packet_protocol;
     using socket_type   = protocol_type::socket;
     using endpoint_type = protocol_type::endpoint;
 
     /**
-     * @brief Result of a command execution.
+     * @brief Result of one command execution.
+     *
+     * A result captures transport status, protocol validity, remote success/failure,
+     * and any textual reply payload returned by the consumer.
      */
     struct result {
+        /**
+         * @brief High-level completion status of the command.
+         */
         enum class status_code : std::uint8_t {
             ok = 0,
             remote_error,
@@ -37,26 +52,39 @@ struct commander{
         status_code code = status_code::protocol_error;
         std::string message;
 
+        /**
+         * @brief Return @c true when the command completed successfully.
+         * @return @c true if @ref code equals @ref status_code::ok
+         */
         bool success() const noexcept { return code == status_code::ok; }
 
+        /**
+         * @brief Boolean convenience conversion.
+         * @return same value as @ref success
+         */
         explicit operator bool() const noexcept { return success(); }
     };
 
+    /**
+     * @brief Construct a commander bound to a specific admin socket path.
+     * @param socket_path filesystem path of the Unix-domain admin socket
+     * @param max_packet_size maximum receive buffer size for reply packets
+     */
     explicit commander(std::string socket_path): _socket_path(std::move(socket_path)), _max_packet_size(4096) {}
 
 public:
     /**
-     * @brief Send a string payload command.
+     * @brief Execute one command with a textual payload.
      * @param cmd command identifier
-     * @param payload textual payload
-     * @return result
+     * @param payload string payload
+     * @return command execution result
      */
     result execute(udho::logging::protocol::command cmd, std::string_view payload) const { return execute(cmd, payload.data(), payload.size()); }
 
     /**
-     * @brief Send a command with no payload.
+     * @brief Execute one command with no payload.
      * @param cmd command identifier
-     * @return result
+     * @return command execution result
      */
     result execute(udho::logging::protocol::command cmd) const { return execute(cmd, nullptr, 0); }
 
@@ -67,36 +95,15 @@ public:
     result filter_show() const { return execute(udho::logging::protocol::command::filter_show); }
 
     /**
-     * @brief Set threshold using an opaque string payload.
+     * @brief Execute one command with a raw binary payload.
+     * @param cmd command identifier
+     * @param payload pointer to payload bytes, or @c nullptr for no payload
+     * @param length payload size in bytes
+     * @return command execution result
      *
-     * Example payloads:
-     * - "trace"
-     * - "debug"
-     * - "2"
-     *
-     * The exact interpretation is up to the server side.
+     * The method opens a connection, sends one request packet, receives one reply
+     * packet, validates it, and returns the decoded result.
      */
-    result threshold_set(std::string_view threshold_value) const { return execute(udho::logging::protocol::command::threshold_set, threshold_value); }
-
-    result threshold_show() const { return execute(udho::logging::protocol::command::threshold_show); }
-
-    result sink_list() const { return execute(udho::logging::protocol::command::sink_list); }
-
-    /**
-     * @brief Add a sink using an opaque string payload.
-     *
-     * The exact payload format is defined by the server.
-     */
-    result sink_add(std::string_view sink_spec) const { return execute(udho::logging::protocol::command::sink_add, sink_spec); }
-
-    /**
-     * @brief Remove a sink using an opaque string payload.
-     *
-     * The exact payload format is defined by the server.
-     */
-    result sink_remove(std::string_view sink_spec) const { return execute(udho::logging::protocol::command::sink_remove, sink_spec); }
-
-private:
     result execute(udho::logging::protocol::command cmd, const void* payload, std::uint32_t length) const {
         static_assert(std::is_trivially_copyable<udho::logging::protocol::request_header>::value, "request_header must be trivially copyable");
         static_assert(std::is_trivially_copyable<udho::logging::protocol::reply_header>::value, "reply_header must be trivially copyable");
@@ -131,10 +138,6 @@ private:
             boost::asio::socket_base::message_flags out_flags = 0;
 
             std::size_t bytes_received = socket.receive(boost::asio::buffer(reply), out_flags);
-
-            if ((out_flags & boost::asio::socket_base::message_end_of_record) == 0) {
-                return {result::status_code::protocol_error, "reply packet truncated or incomplete"};
-            }
 
             if (bytes_received < sizeof(udho::logging::protocol::reply_header)) {
                 return {result::status_code::protocol_error, "reply packet too small"};

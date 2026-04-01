@@ -11,18 +11,6 @@
 
 #include "helpers.h"
 
-namespace {
-std::size_t count_substring(const std::string& haystack, const std::string& needle) {
-    std::size_t count = 0;
-    std::size_t pos = 0;
-    while ((pos = haystack.find(needle, pos)) != std::string::npos) {
-        ++count;
-        pos += needle.size();
-    }
-    return count;
-}
-}
-
 using namespace udho::logging::params;
 
 TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
@@ -246,10 +234,10 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             worker.join();
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
-            REQUIRE(count_substring(content, "consumer-mixed|backlog-1|") == 1);
-            REQUIRE(count_substring(content, "consumer-mixed|backlog-2|") == 1);
-            REQUIRE(count_substring(content, "consumer-mixed|live-1|") == 1);
-            REQUIRE(count_substring(content, "consumer-mixed|live-2|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|backlog-1|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|backlog-2|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|live-1|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|live-2|") == 1);
         }
     }
 
@@ -286,9 +274,9 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             const auto p2 = content.find("consumer-order|second|");
             const auto p3 = content.find("consumer-order|third|");
 
-            REQUIRE(count_substring(content, "consumer-order|first|")  == 1);
-            REQUIRE(count_substring(content, "consumer-order|second|") == 1);
-            REQUIRE(count_substring(content, "consumer-order|third|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-order|first|")  == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-order|second|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-order|third|") == 1);
 
             REQUIRE(p1 != std::string::npos);
             REQUIRE(p2 != std::string::npos);
@@ -329,9 +317,9 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             REQUIRE(content.find("consumer-batch|msg-63|") != std::string::npos);
             REQUIRE(content.find("consumer-batch|msg-99|") != std::string::npos);
 
-            REQUIRE(count_substring(content, "consumer-batch|msg-0|")  == 1);
-            REQUIRE(count_substring(content, "consumer-batch|msg-63|") == 1);
-            REQUIRE(count_substring(content, "consumer-batch|msg-99|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-0|")  == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-63|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-99|") == 1);
         }
     }
 
@@ -374,7 +362,7 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             for (std::size_t t = 0; t < thread_count; ++t) {
                 for (std::size_t i = 0; i < per_thread; ++i) {
                     const auto needle = std::string("consumer-concurrent|t") + std::to_string(t) + "-m" + std::to_string(i) + "|";
-                    REQUIRE(count_substring(content, needle) == 1);
+                    REQUIRE(udho::logging::test_helpers::count_substring(content, needle) == 1);
                 }
             }
         }

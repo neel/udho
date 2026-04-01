@@ -47,6 +47,16 @@ inline bool file_contains(const std::filesystem::path& path, const std::string& 
     return read_file(path).find(needle) != std::string::npos;
 }
 
+std::size_t count_substring(const std::string& haystack, const std::string& needle) {
+    std::size_t count = 0;
+    std::size_t pos = 0;
+    while ((pos = haystack.find(needle, pos)) != std::string::npos) {
+        ++count;
+        pos += needle.size();
+    }
+    return count;
+}
+
 template <typename Predicate>
 inline bool wait_until(Predicate&& predicate, std::chrono::milliseconds timeout = std::chrono::milliseconds(2000), std::chrono::milliseconds poll = std::chrono::milliseconds(10)) {
     const auto deadline = std::chrono::steady_clock::now() + timeout;

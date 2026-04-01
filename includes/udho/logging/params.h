@@ -7,6 +7,9 @@
 #include <optional>
 #include <udho/hazo/map.h>
 #include <udho/hazo/string/basic.h>
+#include <boost/asio/ip/address.hpp>
+#include <boost/beast/http/verb.hpp>
+#include <udho/session/defs.h>
 
 #define UDHO_LOG_PARAM(Name, Type)                                          \
 struct Name: udho::hazo::element<Name , Type> {                             \
@@ -32,6 +35,32 @@ enum class severity : std::uint32_t {
     fatal   = 5
 };
 
+inline std::ostream& operator<<(std::ostream& stream, udho::logging::severity severity){
+    switch(severity) {
+        case udho::logging::severity::trace:
+            stream << "trace";
+            break;
+        case udho::logging::severity::debug:
+            stream << "debug";
+            break;
+        case udho::logging::severity::info:
+            stream << "info";
+            break;
+        case udho::logging::severity::warning:
+            stream << "warning";
+            break;
+        case udho::logging::severity::error:
+            stream << "error";
+            break;
+        case udho::logging::severity::fatal:
+            stream << "fatal";
+            break;
+        default:
+            stream << "UNKNOWN";
+    }
+    return stream;
+}
+
 namespace params {
 
 UDHO_LOG_PARAM(local_id,        std::uint64_t);   // process-local monotonically increasing id
@@ -47,16 +76,16 @@ UDHO_LOG_PARAM(line,            std::uint64_t);   // __LINE__
 
 UDHO_LOG_PARAM(request_id,      std::optional<std::string>);
 UDHO_LOG_PARAM(flow_id,         std::optional<std::size_t>);
-UDHO_LOG_PARAM(session_id,      std::optional<std::string>);
+UDHO_LOG_PARAM(session_id,      std::optional<udho::session::id>);
 UDHO_LOG_PARAM(user_id,         std::optional<std::string>);
 
-UDHO_LOG_PARAM(client_ip,       std::optional<std::string>);
+UDHO_LOG_PARAM(client,          std::optional<boost::asio::ip::address>);
 UDHO_LOG_PARAM(host,            std::optional<std::string>);
-UDHO_LOG_PARAM(http_method,     std::optional<std::string>);
+UDHO_LOG_PARAM(method,          std::optional<boost::beast::http::verb>);
 UDHO_LOG_PARAM(uri,             std::optional<std::string>);
 UDHO_LOG_PARAM(route,           std::optional<std::string>);
 UDHO_LOG_PARAM(query,           std::optional<std::string>);
-UDHO_LOG_PARAM(user_agent,      std::optional<std::string>);
+UDHO_LOG_PARAM(agent,           std::optional<std::string>);
 
 UDHO_LOG_PARAM(status_code,     std::optional<std::uint32_t>);
 UDHO_LOG_PARAM(bytes_sent,      std::optional<std::uint64_t>);
@@ -65,6 +94,42 @@ UDHO_LOG_PARAM(retry_count,     std::optional<std::uint32_t>);
 
 UDHO_LOG_PARAM(error_code,      std::optional<std::int64_t>);
 UDHO_LOG_PARAM(error_message,   std::optional<std::string>);
+
+}
+
+namespace names {
+
+inline constexpr char local_id[]      = "LineID";
+inline constexpr char timestamp[]     = "TimeStamp";
+inline constexpr char severity[]      = "Severity";
+inline constexpr char thread[]        = "ThreadID";
+inline constexpr char process[]       = "ProcessID";
+inline constexpr char subsystem[]     = "Subsystem";
+inline constexpr char message[]       = "Message";
+inline constexpr char file[]          = "file";
+inline constexpr char function[]      = "function";
+inline constexpr char line[]          = "line";
+
+inline constexpr char request_id[]    = "Request";
+inline constexpr char flow_id[]       = "Flow";
+inline constexpr char session_id[]    = "Session";
+inline constexpr char user_id[]       = "User";
+
+inline constexpr char client[]        = "Client";
+inline constexpr char host[]          = "Host";
+inline constexpr char method[]        = "Method";
+inline constexpr char uri[]           = "URI";
+inline constexpr char route[]         = "Route";
+inline constexpr char query[]         = "Query";
+inline constexpr char agent[]         = "Agent";
+
+inline constexpr char status_code[]   = "Status";
+inline constexpr char bytes_sent[]    = "BytesSent";
+inline constexpr char latency[]       = "Latency";
+inline constexpr char retry_count[]   = "Retry";
+
+inline constexpr char error_code[]    = "ErrorCode";
+inline constexpr char error_message[] = "ErrorMessage";
 
 }
 
