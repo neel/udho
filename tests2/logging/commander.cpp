@@ -51,11 +51,11 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             const std::string filter_text = subsystem_equals("commander-allowed");
 
-            auto set_result = commander.execute(udho::logging::protocol::command::filter_set, filter_text);
+            auto set_result = commander.filter_set(filter_text);
             REQUIRE(set_result);
             REQUIRE(set_result.message.find("Applied") != std::string::npos);
 
-            auto show_result = commander.execute(udho::logging::protocol::command::filter_show);
+            auto show_result = commander.filter_show();
             REQUIRE(show_result);
             REQUIRE(show_result.message == filter_text);
 
@@ -93,7 +93,7 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             const std::string filter_text = subsystem_equals("commander-only");
 
-            auto set_result = commander.execute(udho::logging::protocol::command::filter_set, filter_text);
+            auto set_result = commander.filter_set(filter_text);
             REQUIRE(set_result);
 
             REQUIRE(UDHO_LOG_INFO("commander-other", "blocked before unset"));
@@ -110,11 +110,11 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
                 REQUIRE(content.find("commander-other|blocked before unset|") == std::string::npos);
             }
 
-            auto unset_result = commander.execute(udho::logging::protocol::command::filter_unset);
+            auto unset_result = commander.filter_unset();
             REQUIRE(unset_result);
             REQUIRE(unset_result.message.find("Removed") != std::string::npos);
 
-            auto show_result = commander.execute(udho::logging::protocol::command::filter_show);
+            auto show_result = commander.filter_show();
             REQUIRE(show_result.message.find("No filter") != std::string::npos);
 
             REQUIRE(UDHO_LOG_INFO("commander-other", "allowed after unset"));
@@ -143,7 +143,7 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             udho::logging::commander commander(socket_path);
 
-            auto show_result = commander.execute(udho::logging::protocol::command::filter_show);
+            auto show_result = commander.filter_show();
             REQUIRE(show_result.message.find("No filter") != std::string::npos);
 
             REQUIRE(UDHO_LOG_INFO("commander-show", "before filter_show"));
@@ -188,12 +188,7 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
                 return content.find("commander-enable|before disable|") != std::string::npos;
             }));
 
-            std::uint8_t disable = 0;
-            auto disable_result = commander.execute(
-                udho::logging::protocol::command::temporary_enable,
-                &disable,
-                sizeof(disable)
-            );
+            auto disable_result = commander.temporary_disable();
             REQUIRE(disable_result);
             REQUIRE(disable_result.message.find("disabled") != std::string::npos);
 
@@ -206,11 +201,7 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
             }
 
             std::uint8_t enable = 1;
-            auto enable_result = commander.execute(
-                udho::logging::protocol::command::temporary_enable,
-                &enable,
-                sizeof(enable)
-            );
+            auto enable_result = commander.temporary_enable();
             REQUIRE(enable_result);
             REQUIRE(enable_result.message.find("enabled") != std::string::npos);
 
@@ -246,10 +237,12 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
             udho::logging::commander commander(socket_path);
 
             const std::array<std::uint8_t, 2> bad_payload{{0, 1}};
-            auto bad_result = commander.execute(
+            auto bad_result = udho::logging::detail::sync_write_helper<udho::logging::commander::protocol_type>::write(
+                socket_path,
                 udho::logging::protocol::command::temporary_enable,
                 bad_payload.data(),
-                bad_payload.size()
+                bad_payload.size(),
+                commander.max_payload_size()
             );
             REQUIRE_FALSE(bad_result);
             REQUIRE(bad_result.message.find("1 byte") != std::string::npos);
@@ -284,10 +277,7 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             udho::logging::commander commander(socket_path);
 
-            auto bad_result = commander.execute(
-                udho::logging::protocol::command::filter_set,
-                "this is not a valid boost log filter [["
-            );
+            auto bad_result = commander.filter_set("this is not a valid boost log filter [[");
             REQUIRE_FALSE(bad_result);
             REQUIRE(bad_result.message.find("filter") != std::string::npos);
 
@@ -317,7 +307,13 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             udho::logging::commander commander(socket_path);
 
-            auto unknown_result = commander.execute(static_cast<udho::logging::protocol::command>(999u));
+            auto unknown_result = udho::logging::detail::sync_write_helper<udho::logging::commander::protocol_type>::write(
+                socket_path,
+                static_cast<udho::logging::protocol::command>(999u),
+                nullptr,
+                0,
+                commander.max_payload_size()
+            );
             REQUIRE_FALSE(unknown_result);
             REQUIRE(unknown_result.message.find("Unknown command") != std::string::npos);
 

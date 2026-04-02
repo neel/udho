@@ -18,105 +18,54 @@
 namespace udho {
 namespace logging {
 
+
 /**
- * @brief Stateless synchronous client for the consumer admin socket.
+ * @brief Result of one command execution.
  *
- * The commander is intended for short-lived tools such as @c udho-log that:
- * - connect to the Unix-domain admin socket
- * - send exactly one request packet
- * - receive exactly one reply packet
- * - exit
+ * A result captures transport status, protocol validity, remote success/failure,
+ * and any textual reply payload returned by the consumer.
  */
-struct commander{
-    using protocol_type = boost::asio::local::seq_packet_protocol;
-    using socket_type   = protocol_type::socket;
-    using endpoint_type = protocol_type::endpoint;
-
+struct result {
     /**
-     * @brief Result of one command execution.
-     *
-     * A result captures transport status, protocol validity, remote success/failure,
-     * and any textual reply payload returned by the consumer.
+     * @brief High-level completion status of the command.
      */
-    struct result {
-        /**
-         * @brief High-level completion status of the command.
-         */
-        enum class status_code : std::uint8_t {
-            ok = 0,
-            remote_error,
-            transport_error,
-            protocol_error
-        };
-
-        status_code code = status_code::protocol_error;
-        std::string message;
-
-        /**
-         * @brief Return @c true when the command completed successfully.
-         * @return @c true if @ref code equals @ref status_code::ok
-         */
-        bool success() const noexcept { return code == status_code::ok; }
-
-        /**
-         * @brief Boolean convenience conversion.
-         * @return same value as @ref success
-         */
-        explicit operator bool() const noexcept { return success(); }
+    enum class status_code : std::uint8_t {
+        ok = 0,
+        remote_error,
+        transport_error,
+        protocol_error
     };
 
-    /**
-     * @brief Construct a commander bound to a specific admin socket path.
-     * @param socket_path filesystem path of the Unix-domain admin socket
-     * @param max_packet_size maximum receive buffer size for reply packets
-     */
-    explicit commander(std::string socket_path): _socket_path(std::move(socket_path)), _max_packet_size(4096) {}
-
-public:
-    /**
-     * @brief Execute one command with a textual payload.
-     * @param cmd command identifier
-     * @param payload string payload
-     * @return command execution result
-     */
-    result execute(udho::logging::protocol::command cmd, std::string_view payload) const { return execute(cmd, payload.data(), payload.size()); }
+    status_code code = status_code::protocol_error;
+    std::string message;
 
     /**
-     * @brief Execute one command with no payload.
-     * @param cmd command identifier
-     * @return command execution result
+     * @brief Return @c true when the command completed successfully.
+     * @return @c true if @ref code equals @ref status_code::ok
      */
-    result execute(udho::logging::protocol::command cmd) const { return execute(cmd, nullptr, 0); }
-
-    result filter_set(std::string_view filter_expression) const { return execute(udho::logging::protocol::command::filter_set, filter_expression); }
-
-    result filter_unset() const { return execute(udho::logging::protocol::command::filter_unset); }
-
-    result filter_show() const { return execute(udho::logging::protocol::command::filter_show); }
+    bool success() const noexcept { return code == status_code::ok; }
 
     /**
-     * @brief Execute one command with a raw binary payload.
-     * @param cmd command identifier
-     * @param payload pointer to payload bytes, or @c nullptr for no payload
-     * @param length payload size in bytes
-     * @return command execution result
-     *
-     * The method opens a connection, sends one request packet, receives one reply
-     * packet, validates it, and returns the decoded result.
+     * @brief Boolean convenience conversion.
+     * @return same value as @ref success
      */
-    result execute(udho::logging::protocol::command cmd, const void* payload, std::uint32_t length) const {
-        static_assert(std::is_trivially_copyable<udho::logging::protocol::request_header>::value, "request_header must be trivially copyable");
-        static_assert(std::is_trivially_copyable<udho::logging::protocol::reply_header>::value, "reply_header must be trivially copyable");
+    explicit operator bool() const noexcept { return success(); }
+};
 
-        if (length > max_payload_size()) {
-            return {result::status_code::protocol_error, "payload too large for request packet"};
-        }
+namespace detail {
 
-        try {
+template <typename ProtocolT>
+struct sync_write_helper{
+    using protocol_type = ProtocolT;
+    using socket_type   = typename protocol_type::socket;
+    using endpoint_type = typename protocol_type::endpoint;
+
+    static result write(const std::string& socket_path, udho::logging::protocol::command cmd, const void* payload, std::uint32_t length, std::size_t max_reply_size) {
+        try{
             boost::asio::io_context io;
             socket_type socket(io);
 
-            endpoint_type endpoint(_socket_path);
+            endpoint_type endpoint(socket_path);
             socket.connect(endpoint);
 
             std::vector<std::uint8_t> request;
@@ -134,7 +83,7 @@ public:
 
             socket.send(boost::asio::buffer(request), 0);
 
-            std::vector<std::uint8_t> reply(_max_packet_size);
+            std::vector<std::uint8_t> reply(max_reply_size);
             boost::asio::socket_base::message_flags out_flags = 0;
 
             std::size_t bytes_received = socket.receive(boost::asio::buffer(reply), out_flags);
@@ -161,9 +110,109 @@ public:
             }
 
             return {rhdr.success ? result::status_code::ok : result::status_code::remote_error, std::move(message) };
-        } catch (const std::exception& e) {
+        } catch(const std::exception& e) {
             return {result::status_code::transport_error, e.what()};
         }
+    }
+
+};
+
+
+
+}
+
+/**
+ * @brief Stateless synchronous client for the consumer admin socket.
+ *
+ * The commander is intended for short-lived tools such as @c udho-log that:
+ * - connect to the Unix-domain admin socket
+ * - send exactly one request packet
+ * - receive exactly one reply packet
+ * - exit
+ */
+struct commander{
+    using protocol_type = boost::asio::local::seq_packet_protocol;
+    using socket_type   = protocol_type::socket;
+    using endpoint_type = protocol_type::endpoint;
+
+    /**
+     * @brief Construct a commander bound to a specific admin socket path.
+     * @param socket_path filesystem path of the Unix-domain admin socket
+     * @param max_packet_size maximum receive buffer size for reply packets
+     */
+    explicit commander(std::string socket_path): _socket_path(std::move(socket_path)), _max_packet_size(4096) {}
+
+public:
+    /**
+     * @brief sets a filter for the consumer
+     * @param filter_expression
+     * @return command execution result
+     */
+    result filter_set(std::string_view filter_expression) { return execute(udho::logging::protocol::command::filter_set, filter_expression); }
+
+    /**
+     * @brief remove filter
+     * @return command execution result
+     */
+    result filter_unset() { return execute(udho::logging::protocol::command::filter_unset); }
+
+    /**
+     * @brief shows current filter
+     * @return command execution result
+     */
+    result filter_show() { return execute(udho::logging::protocol::command::filter_show); }
+
+    /**
+     * @brief temporarily enable/disable logging
+     * @return command execution result
+     */
+    result temporary_enable(bool flag = true) {
+        std::uint8_t state = flag ? 1 : 0;
+        return execute(udho::logging::protocol::command::temporary_enable, &state, sizeof(std::uint8_t));
+    }
+
+    /**
+     * @brief temporarily enable/disable logging
+     * @return command execution result
+     */
+    result temporary_disable(bool flag = true) { return temporary_enable(!flag); }
+
+private:
+    /**
+     * @brief Execute one command with a textual payload.
+     * @param cmd command identifier
+     * @param payload string payload
+     * @return command execution result
+     */
+    result execute(udho::logging::protocol::command cmd, std::string_view payload) { return execute(cmd, payload.data(), payload.size()); }
+
+    /**
+     * @brief Execute one command with no payload.
+     * @param cmd command identifier
+     * @return command execution result
+     */
+    result execute(udho::logging::protocol::command cmd) { return execute(cmd, nullptr, 0); }
+
+
+    /**
+     * @brief Execute one command with a raw binary payload.
+     * @param cmd command identifier
+     * @param payload pointer to payload bytes, or @c nullptr for no payload
+     * @param length payload size in bytes
+     * @return command execution result
+     *
+     * The method opens a connection, sends one request packet, receives one reply
+     * packet, validates it, and returns the decoded result.
+     */
+    result execute(udho::logging::protocol::command cmd, const void* payload, std::uint32_t length) {
+        static_assert(std::is_trivially_copyable<udho::logging::protocol::request_header>::value, "request_header must be trivially copyable");
+        static_assert(std::is_trivially_copyable<udho::logging::protocol::reply_header>::value, "reply_header must be trivially copyable");
+
+        if (length > max_payload_size()) {
+            return {result::status_code::protocol_error, "payload too large for request packet"};
+        }
+
+        return detail::sync_write_helper<protocol_type>::write(_socket_path, cmd, payload, length, _max_packet_size);
     }
 
 public:
