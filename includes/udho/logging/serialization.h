@@ -6,6 +6,7 @@
 #include <udho/utils/traits.h>
 #include <boost/asio/ip/address.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <boost/version.hpp>
 
 namespace udho {
 namespace logging {
@@ -69,7 +70,11 @@ private:
     }
 
     void write_value(const boost::uuids::uuid& uuid) {
-        auto begin = uuid.data();
+#if BOOST_VERSION >= 108600
+        auto const* begin = uuid.data();
+#else
+        auto const* begin = uuid.data;
+#endif
         auto end   = begin + uuid.size();
         _storage.insert(_storage.end(), begin, end);
     }
