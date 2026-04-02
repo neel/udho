@@ -65,6 +65,8 @@ bool log(udho::logging::severity severity, const std::string& subsystem, const s
 }
 }
 
+
+
 #define UDHO_LOG(severity, subsystem, message, ...)          \
             ::udho::logging::log(                            \
                 (severity),                                  \

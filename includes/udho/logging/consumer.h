@@ -57,6 +57,8 @@ struct consumer{
     using socket_type   = protocol_type::socket;
     using message_flags = boost::asio::socket_base::message_flags;
 
+    static constexpr const char* default_socket_path = "/tmp/udho-log.sock";
+
     /**
      * @brief Construct a consumer for the given queue and admin socket path.
      * @param socket_path filesystem path of the Unix-domain admin socket
@@ -65,7 +67,7 @@ struct consumer{
      * The constructor unlinks any stale socket path, binds and listens on the
      * admin socket, and arms the first asynchronous accept operation.
      */
-    consumer(const char* socket_path, const char* name = 0x0): _ipc_queue(name), _socket_path(socket_path), _acceptor(_io), _socket(_io), _out_flags(0), _enabled(true) {
+    consumer(const char* socket_path = 0x0, const char* name = 0x0): _ipc_queue(name), _socket_path(socket_path ? socket_path : default_socket_path), _acceptor(_io), _socket(_io), _out_flags(0), _enabled(true) {
         ::unlink(_socket_path.c_str());
 
         typename protocol_type::endpoint ep(_socket_path);

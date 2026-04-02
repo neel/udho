@@ -15,18 +15,12 @@
 #include <udho/logging/macros.h>
 #include <udho/logging/formatter.h>
 
-// #include <boost/log/utility/manipulators/to_log.hpp>
-
-#include <boost/log/utility/formatting_ostream.hpp>
-
-
-
 namespace udho{
 namespace logging{
 
 
 struct rotating_file{
-    static void apply(const std::string& prefix = "server") {
+    static auto apply(const std::string& prefix = "server") {
         auto sink = boost::log::add_file_log(
             boost::log::keywords::file_name           = (prefix+"_%Y-%m-%d_%H-%M-%S.log"),
             boost::log::keywords::rotation_size       = 10 * 1024 * 1024,
@@ -34,12 +28,13 @@ struct rotating_file{
         );
 
         sink->set_formatter(udho::logging::formatter{});
+        return sink;
     }
 };
 
 template <typename ConsumerConfigurationT = rotating_file>
 struct setup{
-    static pid_t apply(const char* name = 0x0, const char* cmd_socket_path = "/tmp/udho-logger.sock") {
+    static pid_t apply(const char* ipc_mq_name = 0x0, const char* cmd_socket_path = "/tmp/udho-logger.sock") {
         if(_pid != -1) return _pid;
 
         int io_fds[2]  = {-1, -1};
@@ -56,8 +51,8 @@ struct setup{
             ::perror("pipe cmd");
         }
 
-        auto queue = udho::logging::detail::ipc_queue::create(name);
-        producer::activate(name);
+        auto queue = udho::logging::detail::ipc_queue::create(ipc_mq_name);
+        producer::activate(ipc_mq_name);
 
         _pid = ::fork();
         if (_pid == 0) {
@@ -72,7 +67,7 @@ struct setup{
                 }
             }
 
-            run_child(io_in, cmd_socket_path);
+            run_child(io_in, cmd_socket_path, ipc_mq_name);
             return 0;
         } else if (_pid > 0) {
             ::close(io_in);
@@ -112,7 +107,7 @@ struct setup{
     }
 
 private:
-    static void run_child(int notify_fd, const char* cmd_socket_path) {
+    static void run_child(int notify_fd, const char* cmd_socket_path, const char* ipc_mq_name) {
         struct sigaction sa;
         sa.sa_handler = &setup<ConsumerConfigurationT>::callback;
         sigemptyset(&sa.sa_mask);
@@ -121,7 +116,7 @@ private:
 
         assert(!_should_stop);
         ConsumerConfigurationT::apply();
-        udho::logging::consumer consumer(cmd_socket_path);
+        udho::logging::consumer consumer(cmd_socket_path, ipc_mq_name);
 
         char ok = 1;
         if (::write(notify_fd, &ok, 1) != 1) {

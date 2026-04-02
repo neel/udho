@@ -71,9 +71,9 @@ private:
 
     void write_value(const boost::uuids::uuid& uuid) {
 #if BOOST_VERSION >= 108600
-        auto const* begin = uuid.data();
+        const auto* begin = uuid.data();
 #else
-        auto const* begin = uuid.data;
+        const auto* begin = uuid.data;
 #endif
         auto end   = begin + uuid.size();
         _storage.insert(_storage.end(), begin, end);
@@ -187,7 +187,14 @@ private:
 
     bool read_value(boost::uuids::uuid& uuid) {
         if (std::distance(_begin, _end) < 16) return false;
-        std::memcpy(uuid.data(), _begin, 16);
+
+#if BOOST_VERSION >= 108600
+        auto* begin = uuid.data();
+#else
+        auto* begin = uuid.data;
+#endif
+
+        std::memcpy(begin, _begin, 16);
         _begin += 16;
         return true;
     }

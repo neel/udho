@@ -15,9 +15,9 @@ struct ipc_queue {
     using priority_type = std::uint32_t;
     using message_type  = udho::logging::message;
 
-    static constexpr const char* default_name     = "udho_log_queue";
-    static constexpr size_type max_messages       = 1000;
-    static constexpr size_type max_message_size   = 4 * 1024; // 4KB
+    static constexpr const char* default_ipcq_name = "udho-log-hiper";
+    static constexpr size_type max_messages        = 1000;
+    static constexpr size_type max_message_size    = 4 * 1024; // 4KB
 
     ipc_queue(const ipc_queue&) = delete;
     ipc_queue& operator=(const ipc_queue&) = delete;
@@ -27,16 +27,16 @@ struct ipc_queue {
 
     ~ipc_queue() = default;
 
-    ipc_queue(boost::interprocess::open_only_t, const char* name = 0x0): _mq(boost::interprocess::open_only, name ? name : default_name) {}
-    ipc_queue(const char* name = 0x0): ipc_queue(boost::interprocess::open_only, name ? name : default_name) {}
+    ipc_queue(boost::interprocess::open_only_t, const char* name = 0x0): _mq(boost::interprocess::open_only, name ? name : default_ipcq_name) {}
+    ipc_queue(const char* name = 0x0): ipc_queue(boost::interprocess::open_only, name ? name : default_ipcq_name) {}
 
     static ipc_queue create(const char* name = 0x0) {
-        ipc_queue::remove(name ? name : default_name);
-        return ipc_queue(boost::interprocess::create_only, name ? name : default_name);
+        ipc_queue::remove(name ? name : default_ipcq_name);
+        return ipc_queue(boost::interprocess::create_only, name ? name : default_ipcq_name);
     }
 
     static void remove(const char* name = 0x0) {
-        boost::interprocess::message_queue::remove(name ? name : default_name);
+        boost::interprocess::message_queue::remove(name ? name : default_ipcq_name);
     }
 
 public:
@@ -74,7 +74,7 @@ public:
     }
 
 private:
-    ipc_queue(boost::interprocess::create_only_t, const char* name = 0x0): _mq(boost::interprocess::create_only, name ? name : default_name, max_messages, max_message_size) {}
+    ipc_queue(boost::interprocess::create_only_t, const char* name = 0x0): _mq(boost::interprocess::create_only, name ? name : default_ipcq_name, max_messages, max_message_size) {}
 
 private:
 
