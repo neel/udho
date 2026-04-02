@@ -106,6 +106,8 @@ struct setup{
         return (result == 0);
     }
 
+    static pid_t pid() { return _pid; }
+
 private:
     static void run_child(int notify_fd, const char* cmd_socket_path, const char* ipc_mq_name) {
         struct sigaction sa;
