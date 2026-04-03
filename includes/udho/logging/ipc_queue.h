@@ -5,6 +5,14 @@
 #include <udho/logging/message.h>
 #include <array>
 
+#ifndef UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES
+#define UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES 1000
+#endif
+
+#ifndef UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES_SIZE
+#define UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES_SIZE 4*1024
+#endif
+
 namespace udho {
 namespace logging {
 
@@ -16,8 +24,8 @@ struct ipc_queue {
     using message_type  = udho::logging::message;
 
     static constexpr const char* default_ipcq_name = "udho-log-hiper";
-    static constexpr size_type max_messages        = 1000;
-    static constexpr size_type max_message_size    = 4 * 1024; // 4KB
+    static constexpr size_type max_messages        = UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES;
+    static constexpr size_type max_message_size    = UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES_SIZE;
 
     ipc_queue(const ipc_queue&) = delete;
     ipc_queue& operator=(const ipc_queue&) = delete;

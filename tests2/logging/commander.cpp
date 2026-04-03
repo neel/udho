@@ -30,6 +30,9 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
     auto queue_name  = udho::logging::test_helpers::unique_queue_name();
     auto socket_path = udho::logging::test_helpers::unique_socket_path();
     auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+    udho::logging::detail::ipc_queue::remove(queue_name.c_str());
+
     auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
 
     SECTION("filter commands") {
