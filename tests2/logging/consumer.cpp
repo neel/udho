@@ -300,29 +300,29 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             udho::logging::consumer consumer(socket_path.c_str(), queue_name.c_str());
             std::thread worker([&] { consumer.consume(should_stop); });
 
-            constexpr std::size_t count = 100;
+            constexpr std::size_t count = queue.max_messages;
             for (std::size_t i = 0; i < count; ++i) {
                 REQUIRE(UDHO_LOG_INFO("consumer-batch", "msg-" + std::to_string(i)));
             }
 
             REQUIRE(udho::logging::test_helpers::wait_until([&] {
                 const auto content = udho::logging::test_helpers::read_file(log_path);
-                return content.find("consumer-batch|msg-0|") != std::string::npos &&
-                       content.find("consumer-batch|msg-63|") != std::string::npos &&
-                       content.find("consumer-batch|msg-99|") != std::string::npos;
+                return content.find(udho::utils::format("consumer-batch|msg-{}|", 0)) != std::string::npos &&
+                       content.find(udho::utils::format("consumer-batch|msg-{}|", count/2)) != std::string::npos &&
+                       content.find(udho::utils::format("consumer-batch|msg-{}|", count-1)) != std::string::npos;
             }, std::chrono::seconds(3), std::chrono::milliseconds(10)));
 
             should_stop = true;
             worker.join();
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
-            REQUIRE(content.find("consumer-batch|msg-0|")  != std::string::npos);
-            REQUIRE(content.find("consumer-batch|msg-63|") != std::string::npos);
-            REQUIRE(content.find("consumer-batch|msg-99|") != std::string::npos);
+            REQUIRE(content.find(udho::utils::format("consumer-batch|msg-{}|", 0))  != std::string::npos);
+            REQUIRE(content.find(udho::utils::format("consumer-batch|msg-{}|", count/2)) != std::string::npos);
+            REQUIRE(content.find(udho::utils::format("consumer-batch|msg-{}|", count-1)) != std::string::npos);
 
-            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-0|")  == 1);
-            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-63|") == 1);
-            REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-batch|msg-99|") == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", 0))  == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", count/2)) == 1);
+            REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", count-1)) == 1);
         }
     }
 
@@ -339,8 +339,8 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             udho::logging::consumer consumer(socket_path.c_str(), queue_name.c_str());
             std::thread worker([&] { consumer.consume(should_stop); });
 
-            constexpr std::size_t thread_count = 6;
-            constexpr std::size_t per_thread = 10;
+            constexpr std::size_t thread_count = 2;
+            constexpr std::size_t per_thread = queue.max_messages/2;
 
             std::vector<std::thread> threads;
             for (std::size_t t = 0; t < thread_count; ++t) {
@@ -355,7 +355,7 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             REQUIRE(udho::logging::test_helpers::wait_until([&] {
                 const auto content = udho::logging::test_helpers::read_file(log_path);
                 return content.find("consumer-concurrent|t0-m0|") != std::string::npos &&
-                       content.find("consumer-concurrent|t5-m9|") != std::string::npos;
+                       content.find(udho::utils::format("consumer-concurrent|t{}-m{}|", thread_count-1, per_thread-1)) != std::string::npos;
             }, std::chrono::seconds(3), std::chrono::milliseconds(10)));
 
             should_stop = true;

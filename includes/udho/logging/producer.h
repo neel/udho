@@ -308,6 +308,14 @@ struct producer{
         return _threshold.load(std::memory_order_relaxed);
     }
 
+    static queue_type& queue() {
+        if(_ipc_queue) {
+            return *_ipc_queue;
+        }
+
+        throw std::out_of_range{"queue is not set"};
+    }
+
 private:
     static std::atomic<severity> _threshold;
     static opt_queue_type       _ipc_queue;

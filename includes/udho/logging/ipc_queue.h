@@ -48,6 +48,7 @@ struct ipc_queue {
     }
 
 public:
+
     bool try_send(const message_type& message) {
         message_type::buffer_type buffer = message.save();
         udho::logging::severity severity = message[udho::logging::params::severity::val].value();

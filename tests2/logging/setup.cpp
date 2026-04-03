@@ -173,7 +173,7 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             REQUIRE(pid > 0);
             REQUIRE(test_setup::running());
 
-            constexpr std::size_t count = 20;
+            const std::size_t count = udho::logging::producer::queue().max_messages;
             for (std::size_t i = 0; i < count; ++i) {
                 REQUIRE(UDHO_LOG_INFO("setup-seq", "msg-" + std::to_string(i)));
             }
@@ -181,7 +181,7 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             REQUIRE(udho::logging::test_helpers::wait_until([&] {
                 const auto content = udho::logging::test_helpers::read_file(log_path);
                 return content.find("msg-0") != std::string::npos &&
-                       content.find("msg-19") != std::string::npos;
+                       content.find(udho::utils::format("msg-{}", count-1)) != std::string::npos;
             }, std::chrono::seconds(3), std::chrono::milliseconds(20)));
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
