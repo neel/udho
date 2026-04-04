@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <ostream>
+#include <optional>
 
 namespace udho{
 namespace utils{
@@ -44,6 +45,12 @@ struct is_string : std::false_type {};
 
 template <typename CharT, typename TraitsT, typename AllocT>
 struct is_string<std::basic_string<CharT, TraitsT, AllocT>>: std::true_type {};
+
+template <typename T>
+struct is_optional : std::false_type {};
+
+template <typename T>
+struct is_optional<std::optional<T>>: std::true_type {};
 
 }
 }

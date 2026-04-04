@@ -82,7 +82,7 @@ ENDIF()
 # endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex serialization iostreams REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS filesystem regex serialization iostreams log log_setup REQUIRED)
 FIND_PACKAGE(OpenSSL REQUIRED)
 find_package(pegtl REQUIRED)
 find_package(LibMagic REQUIRED)

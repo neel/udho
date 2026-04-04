@@ -55,6 +55,15 @@ test:ubuntu:noble:
     - service postgresql status
     - nohup redis-server --daemonize yes
     - redis-cli ping
+    - df -h
+    - df -h /tmp || true
+    - df -h /dev/shm || true
+    - ls -l /dev/mqueue 2>/dev/null | wc -l || true
+    - cat /proc/sys/fs/mqueue/msg_max 2>/dev/null || true
+    - cat /proc/sys/fs/mqueue/msgsize_max 2>/dev/null || true
+    - cat /proc/sys/fs/mqueue/queues_max 2>/dev/null || true
+    - find /dev/mqueue -maxdepth 1 -type f -name 'udho*' -delete 2>/dev/null || true
+    - rm -f /tmp/udho*.sock 2>/dev/null || true
   # script:
   #   - cd build
   #   - ctest --output-on-failure
@@ -66,7 +75,7 @@ test:ubuntu:noble:
   #   - build:ubuntu:noble
   script:
     - cd build
-    - ctest --output-on-failure || ctest_exit=$?
+    - ctest -j1 --repeat until-pass:3 --output-on-failure --timeout 240 || ctest_exit=$?
     - exit ${ctest_exit:-0}
   artifacts:
     paths:

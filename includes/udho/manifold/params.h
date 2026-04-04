@@ -5,6 +5,7 @@
 #include <udho/hazo/map.h>
 #include <udho/hazo/string/basic.h>
 #include <nlohmann/json.hpp>
+#include <udho/utils/traits.h>
 
 /**
  * @addtogroup manifold
@@ -70,15 +71,29 @@ namespace udho{
 namespace manifold{
 namespace detail {
 
+
 struct json_serializer{
     inline json_serializer(nlohmann::json& json): _json(json) {}
 
     template <typename ParamT>
     void operator()(const ParamT& d){
-        _json[d.key().c_str()] = d.value();
+        const auto& v = d.value();
+        if constexpr (udho::utils::traits::is_optional<typename ParamT::value_type>::value) {
+            if(v.has_value()) {
+                _json[d.key().c_str()] = v;
+            }
+        } else {
+            _json[d.key().c_str()] = v;
+        }
     }
 
     nlohmann::json& _json;
+
+private:
+    template <typename ValueT>
+    void serialize(const char* key, std::optional<ValueT>) {
+
+    }
 };
 
 struct json_deserializer{

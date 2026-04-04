@@ -51,8 +51,13 @@ struct accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>: ba
     using component_type        = udho::www::components::db::pg<OidMap, Statistics>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
+    using connection_pool_type  = typename component_type::connection_pool_type;
 
     using basic_accessor_type::basic_accessor_type;
+
+    connection_pool_type& pool() {
+        return basic_accessor_type::component().pool();
+    }
 };
 
 }   // manifold

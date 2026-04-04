@@ -29,16 +29,63 @@
 #define UDHO_HAZO_MAP_IO_H
 
 #include <string>
+#include <chrono>
 #include <ostream>
 #include <udho/hazo/map/element.h>
 #include <udho/hazo/map/map.h>
+#include <udho/utils/date_time.h>
 
 namespace udho{
 namespace hazo{
-    
+
+namespace detail{
+
+template <typename ValueT, typename Enable = void>
+struct value_printer{
+    value_printer(const ValueT& v): _value(v) {}
+
+    std::ostream& operator()(std::ostream& stream) const {
+        stream << _value;
+        return stream;
+    }
+private:
+    const ValueT& _value;
+};
+
+template <typename ValueT>
+struct value_printer<ValueT, std::enable_if_t<std::is_enum_v<ValueT>>>{
+    value_printer(const ValueT& v): _value(v) {}
+
+    std::ostream& operator()(std::ostream& stream) const {
+        using underlying_t = std::underlying_type_t<ValueT>;
+        stream << static_cast<underlying_t>(_value);
+        return stream;
+    }
+private:
+    const ValueT& _value;
+};
+
+template <typename Clock, typename Duration>
+struct value_printer<std::chrono::time_point<Clock, Duration>>{
+    value_printer(const std::chrono::time_point<Clock, Duration>& v): _value(v) {}
+
+    std::ostream& operator()(std::ostream& stream) const {
+        stream << udho::utils::date_time::format_rfc7231(_value);
+        return stream;
+    }
+
+private:
+    const std::chrono::time_point<Clock, Duration>& _value;
+};
+
+}
+
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 std::ostream& operator<<(std::ostream& stream, const element<DerivedT, ValueT, Mixins...>& elem){
-    stream << "< " << elem.key().c_str() << ": " << elem.value() << ">";
+    stream << "< " << elem.key().c_str() << ": ";
+    detail::value_printer printer(elem.value());
+    printer(stream);
+    stream << ">";
     return stream;
 }
 
