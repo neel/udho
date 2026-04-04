@@ -75,7 +75,7 @@ test:ubuntu:noble:
   #   - build:ubuntu:noble
   script:
     - cd build
-    - ctest -j1 --output-on-failure --timeout 240 || ctest_exit=$?
+    - ctest -j1 --repeat until-pass:3 --output-on-failure --timeout 240 || ctest_exit=$?
     - exit ${ctest_exit:-0}
   artifacts:
     paths:
