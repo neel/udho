@@ -173,16 +173,26 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             REQUIRE(pid > 0);
             REQUIRE(test_setup::running());
 
-            const std::size_t count = udho::logging::producer::queue().max_messages;
+            const std::size_t count = udho::logging::producer::max_messages() *2;
+            std::size_t total_sent = 0;
             for (std::size_t i = 0; i < count; ++i) {
-                REQUIRE(UDHO_LOG_INFO("setup-seq", "msg-" + std::to_string(i)));
+                total_sent += UDHO_LOG_INFO("setup-seq", "msg-" + std::to_string(i));
             }
 
-            REQUIRE(udho::logging::test_helpers::wait_until([&] {
-                const auto content = udho::logging::test_helpers::read_file(log_path);
-                return content.find("msg-0") != std::string::npos &&
-                       content.find(udho::utils::format("msg-{}", count-1)) != std::string::npos;
-            }, std::chrono::seconds(3), std::chrono::milliseconds(20)));
+            bool expected_contents_found = false;
+            std::thread wait_for_completion([&]{
+                expected_contents_found = udho::logging::test_helpers::wait_until([&] {
+                    const auto content = udho::logging::test_helpers::read_file(log_path);
+                    return content.find("msg-0") != std::string::npos &&
+                           content.find(udho::utils::format("msg-{}", count-1)) != std::string::npos;
+                }, std::chrono::seconds(3), std::chrono::milliseconds(20));
+            });
+
+            test_setup::stop();
+
+            wait_for_completion.join();
+            REQUIRE(expected_contents_found);
+            REQUIRE(udho::logging::producer::backlog() == 0);
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
             for (std::size_t i = 0; i < count; ++i) {

@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <atomic>
 #include <limits>
+#include <queue>
 
 namespace udho {
 namespace logging {
@@ -115,6 +116,7 @@ struct producer{
     using opt_filter_type   = std::atomic<filter_type>;
     using atomic_type       = std::atomic_uint32_t;
     using locker_type       = detail::atomic_spinner<atomic_type>;
+    using wait_queue_type   = std::queue<message_type>;
 
     /**
      * @brief Try to produce a log message into the IPC queue.
@@ -154,7 +156,7 @@ struct producer{
      * @param message log message to forward
      * @return true if queue_type::try_send() succeeds, false otherwise
      */
-    inline static bool log(const message_type& message) {
+    inline static std::size_t log(const message_type& message) {
         atomic_type::value_type expected = _atomic.load(std::memory_order_relaxed);
         do {
             if(_admin.load(std::memory_order_acquire)) return false;
@@ -171,17 +173,27 @@ struct producer{
         }
         if(_ipc_queue) {
             auto filter = _filter.load(std::memory_order_relaxed);
-            bool accepted = filter
-                                ? filter(message)
-                                : (message[params::severity::val].value() >= threshold());
 
-            if(accepted) {
-                return (*_ipc_queue).try_send(message);
+            auto [cleared, msgs_sent] = clear_backlog();
+            if(!cleared) {    // some still waiting
+                bool msg_accepted = filter ? filter(message) : (message[params::severity::val].value() >= threshold());
+                if(msg_accepted) {
+                    push_backlog(message);
+                }
+                return msgs_sent;
+            } else {            // all pending messages sent to IPC queue
+                bool accepted = filter ? filter(message) : (message[params::severity::val].value() >= threshold());
+                if(accepted) {
+                    bool sent = (*_ipc_queue).try_send(message);
+                    if(!sent) {
+                        push_backlog(message);
+                    }
+                    return msgs_sent + (sent ? 1 : 0);
+                }
             }
-        } else {
-            // discard
         }
-        return false;
+
+        return 0;
     }
 
     /**
@@ -258,6 +270,13 @@ struct producer{
         detail::atomic_raii_zero<std::atomic_bool> admin_zero(_admin);
         // 0 is equivalent to false
         detail::atomic_raii_zero<atomic_type>      atomic_zero(_atomic);
+
+        bool none_left = false;
+        std::size_t cleared_count = 0;
+        do {
+            std::tie(none_left, cleared_count) = udho::logging::producer::clear_backlog();
+        } while(!none_left);
+
         if(_ipc_queue) {
             _ipc_queue.reset();                                                     // D_reset  -> resets the IPC queue
         }                                                                           // D_exit   -> end
@@ -308,14 +327,41 @@ struct producer{
         return _threshold.load(std::memory_order_relaxed);
     }
 
-    static queue_type& queue() {
-        if(_ipc_queue) {
-            return *_ipc_queue;
-        }
+    static constexpr std::size_t max_messages() { return queue_type::max_messages; }
 
-        throw std::out_of_range{"queue is not set"};
+    static constexpr std::size_t max_message_size() { return queue_type::max_message_size; }
+
+    static std::size_t backlog() {
+        std::scoped_lock lock(_wmutex);
+        return _waiting.size();
     }
 
+private:
+    static std::pair<bool, std::size_t> clear_backlog() {
+        std::size_t count = 0;
+        if(_backlog_exists) {
+            std::scoped_lock lock(_wmutex);
+            while(!_waiting.empty()) {
+                bool sent = _ipc_queue->try_send(_waiting.front());
+                if(sent) {
+                    _waiting.pop();
+                    ++count;
+                }
+                if(!sent) {
+                    return std::make_pair(false, count);
+                }
+            }
+            _backlog_exists = false;
+        }
+        return std::make_pair(true, count);
+    }
+
+    static void push_backlog(const message_type& msg) {
+        std::scoped_lock lock(_wmutex);
+
+        _waiting.push(msg);
+        _backlog_exists = true;
+    }
 private:
     static std::atomic<severity> _threshold;
     static opt_queue_type       _ipc_queue;
@@ -323,6 +369,9 @@ private:
     static atomic_type          _atomic;
     static std::atomic_bool     _admin;
     static const atomic_type::value_type _max;
+    static wait_queue_type      _waiting;
+    static std::mutex           _wmutex;
+    static std::atomic_bool     _backlog_exists;
 };
 
 inline std::atomic<severity>     producer::_threshold = severity::trace;
@@ -330,6 +379,9 @@ inline producer::opt_queue_type  producer::_ipc_queue = std::nullopt;
 inline producer::opt_filter_type producer::_filter    = nullptr;
 inline producer::atomic_type     producer::_atomic    = 0;
 inline std::atomic_bool          producer::_admin     = false;
+inline std::atomic_bool          producer::_backlog_exists     = false;
+inline std::mutex                producer::_wmutex;
+inline producer::wait_queue_type producer::_waiting   = producer::wait_queue_type{};
 inline const producer::atomic_type::value_type producer::_max = std::numeric_limits<producer::atomic_type::value_type>::max();
 
 }

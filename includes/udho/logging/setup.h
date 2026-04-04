@@ -51,9 +51,6 @@ struct setup{
             ::perror("pipe cmd");
         }
 
-        auto queue = udho::logging::detail::ipc_queue::create(ipc_mq_name);
-        producer::activate(ipc_mq_name);
-
         _pid = ::fork();
         if (_pid == 0) {
             ::close(io_out);
@@ -67,10 +64,14 @@ struct setup{
                 }
             }
 
+            _should_stop.store(false, std::memory_order_relaxed);
             run_child(io_in, cmd_socket_path, ipc_mq_name);
             return 0;
         } else if (_pid > 0) {
             ::close(io_in);
+
+            auto queue = udho::logging::detail::ipc_queue::create(ipc_mq_name);
+            producer::activate(ipc_mq_name);
 
             char ok = 0;
             ssize_t n = read(io_out, &ok, 1);

@@ -300,17 +300,27 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             udho::logging::consumer consumer(socket_path.c_str(), queue_name.c_str());
             std::thread worker([&] { consumer.consume(should_stop); });
 
-            constexpr std::size_t count = queue.max_messages;
+            constexpr std::size_t count = udho::logging::producer::max_messages() *2;
+            std::size_t messages_delivered = 0;
             for (std::size_t i = 0; i < count; ++i) {
-                REQUIRE(UDHO_LOG_INFO("consumer-batch", "msg-" + std::to_string(i)));
+                messages_delivered += UDHO_LOG_INFO("consumer-batch", "msg-" + std::to_string(i));
             }
 
-            REQUIRE(udho::logging::test_helpers::wait_until([&] {
-                const auto content = udho::logging::test_helpers::read_file(log_path);
-                return content.find(udho::utils::format("consumer-batch|msg-{}|", 0)) != std::string::npos &&
-                       content.find(udho::utils::format("consumer-batch|msg-{}|", count/2)) != std::string::npos &&
-                       content.find(udho::utils::format("consumer-batch|msg-{}|", count-1)) != std::string::npos;
-            }, std::chrono::seconds(3), std::chrono::milliseconds(10)));
+            bool expected_contents_found = false;
+            std::thread wait_for_completion([log_path, &expected_contents_found](){
+                expected_contents_found = udho::logging::test_helpers::wait_until([&] {
+                    const auto content = udho::logging::test_helpers::read_file(log_path);
+                    return content.find(udho::utils::format("consumer-batch|msg-{}|", 0)) != std::string::npos &&
+                           content.find(udho::utils::format("consumer-batch|msg-{}|", count/2)) != std::string::npos &&
+                           content.find(udho::utils::format("consumer-batch|msg-{}|", count-1)) != std::string::npos;
+                }, std::chrono::seconds(10), std::chrono::milliseconds(10));
+            });
+
+            udho::logging::producer::deactivate();
+
+            wait_for_completion.join();
+            REQUIRE(expected_contents_found);
+            REQUIRE(udho::logging::producer::backlog() == 0);
 
             should_stop = true;
             worker.join();

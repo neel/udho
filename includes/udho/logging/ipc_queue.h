@@ -54,7 +54,9 @@ public:
         udho::logging::severity severity = message[udho::logging::params::severity::val].value();
         static_assert(std::is_convertible_v<std::underlying_type_t<udho::logging::severity>, priority_type>);
         priority_type priority = static_cast<priority_type>(severity);
-        return try_send(buffer.data(), buffer.size(), priority);
+        std::size_t serialized_message_size = buffer.size();
+        assert(serialized_message_size <= max_message_size && "Increase UDHO_LOGGING_IPC_QUEUE_MAX_MESSAGES_SIZE");
+        return try_send(buffer.data(), serialized_message_size, priority);
     }
 
     void send(const message_type& message) {
@@ -81,6 +83,10 @@ public:
         // priority intentionally unused because severity parameter already exists in the log message
         return message.load(_read_buffer.data(), size);
     }
+
+    std::size_t size() const { return _mq.get_num_msg(); }
+
+    std::size_t capacity() const { return _mq.get_max_msg(); }
 
 private:
     ipc_queue(boost::interprocess::create_only_t, const char* name = 0x0): _mq(boost::interprocess::create_only, name ? name : default_ipcq_name, max_messages, max_message_size) {}
