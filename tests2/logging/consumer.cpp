@@ -15,17 +15,14 @@ using namespace udho::logging::params;
 
 TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
-    auto queue_name     = udho::logging::test_helpers::unique_queue_name();
-    auto socket_path    = udho::logging::test_helpers::unique_socket_path();
-    auto log_path       = udho::logging::test_helpers::unique_log_path();
-
-    udho::logging::detail::ipc_queue::remove(queue_name.c_str());
-
-    auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
-
     SECTION("lifecycle") {
 
         SECTION("Consumer stops cleanly while idle") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -41,9 +38,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
             worker.join();
             SUCCEED();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer remains idle when producer is inactive and no messages are queued") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -60,6 +64,8 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
             REQUIRE(content.empty());
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
     }
@@ -67,6 +73,11 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
     SECTION("delivery") {
 
         SECTION("Consumer drains the ipc queue and delivers to Boost.Log") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -95,9 +106,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             const auto content = udho::logging::test_helpers::read_file(log_path);
             REQUIRE(content.find("consumer-test|first delivered message|") != std::string::npos);
             REQUIRE(content.find("consumer-test|second delivered message|") != std::string::npos);
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer can remain idle and later consume produced messages") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -120,9 +138,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer drains messages that were queued before the consumer starts") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -147,9 +172,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer remains stable when producer is deactivated after earlier traffic") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -178,9 +210,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             const auto content = udho::logging::test_helpers::read_file(log_path);
             REQUIRE(content.find("consumer-deactivate|before deactivate|") != std::string::npos);
             REQUIRE(content.find("consumer-deactivate|after deactivate|") == std::string::npos);
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer can start before producer activation and later consume messages") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -202,9 +241,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer drains backlog first and later consumes live messages") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -241,11 +287,18 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|backlog-2|") == 1);
             REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|live-1|") == 1);
             REQUIRE(udho::logging::test_helpers::count_substring(content, "consumer-mixed|live-2|") == 1);
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
     }
 
     SECTION("ordering & completeness") {
         SECTION("Consumer preserves message order for sequential producer messages ensuring no reperation") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -286,9 +339,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             REQUIRE(p3 != std::string::npos);
             REQUIRE(p1 < p2);
             REQUIRE(p2 < p3);
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("Consumer eventually drains more than one batch of queued messages ensuring no reperation") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -333,12 +393,19 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", 0))  == 1);
             REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", count/2)) == 1);
             REQUIRE(udho::logging::test_helpers::count_substring(content, udho::utils::format("consumer-batch|msg-{}|", count-1)) == 1);
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
     }
 
     SECTION("Concurrency") {
 
         SECTION("Consumer drains and delivers messages produced concurrently") {
+            auto queue_name     = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path    = udho::logging::test_helpers::unique_socket_path();
+            auto log_path       = udho::logging::test_helpers::unique_log_path();
+            auto queue          = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -378,6 +445,8 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
                     REQUIRE(udho::logging::test_helpers::count_substring(content, needle) == 1);
                 }
             }
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
     }

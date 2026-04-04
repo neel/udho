@@ -40,38 +40,42 @@ using test_setup = udho::logging::setup<setup_test_file_sink>;
 } // namespace
 
 TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][setup]") {
-
-    auto queue_name  = udho::logging::test_helpers::unique_queue_name();
-    auto socket_path = udho::logging::test_helpers::unique_socket_path();
-    auto log_path    = udho::logging::test_helpers::unique_log_path();
-
-    setup_test_file_sink::path() = log_path;
-
-    auto cleanup = [&] {
+    auto cleanup = [] (const std::string& queue_name, const std::string& socket_path, const std::string& log_path) {
         test_setup::stop();
+        udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         std::error_code ec;
         std::filesystem::remove(socket_path, ec);
         std::filesystem::remove(log_path, ec);
         std::filesystem::remove("consumer.stdout", ec);
     };
 
-    cleanup();
-
     SECTION("lifecycle") {
 
         SECTION("apply starts the logger child and running reports true") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
             REQUIRE(test_setup::running());
             REQUIRE(std::filesystem::exists(socket_path));
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
 
             REQUIRE_FALSE(test_setup::running());
         }
 
         SECTION("apply is idempotent while logger is already running") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid1 = test_setup::apply(queue_name.c_str(), socket_path.c_str());
             auto pid2 = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
@@ -79,7 +83,7 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             REQUIRE(pid2 == pid1);
             REQUIRE(test_setup::running());
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
         }
 
         SECTION("stop is safe when logger is not running") {
@@ -88,6 +92,12 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
         }
 
         SECTION("stop terminates the logger and deactivates producer logging") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
@@ -97,15 +107,25 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
 
             REQUIRE_FALSE(test_setup::running());
             REQUIRE_FALSE(UDHO_LOG_INFO("setup-test", "after stop should be rejected"));
+
+            cleanup(queue_name, socket_path, log_path);
         }
 
         SECTION("logger can be started again after stop") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid1 = test_setup::apply(queue_name.c_str(), socket_path.c_str());
             REQUIRE(pid1 > 0);
             REQUIRE(test_setup::running());
 
             test_setup::stop();
             REQUIRE_FALSE(test_setup::running());
+
+            cleanup(queue_name, socket_path, log_path);
 
             auto queue_name2  = udho::logging::test_helpers::unique_queue_name();
             auto socket_path2 = udho::logging::test_helpers::unique_socket_path();
@@ -132,6 +152,8 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             std::error_code ec;
             std::filesystem::remove(socket_path2, ec);
             std::filesystem::remove(log_path2, ec);
+
+            cleanup(queue_name, socket_path, log_path);
         }
 
     }
@@ -139,6 +161,12 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
     SECTION("end-to-end logging") {
 
         SECTION("setup enables parent-side log messages to reach child consumer sink") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
@@ -164,10 +192,16 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             REQUIRE(content.find("first setup message") != std::string::npos);
             REQUIRE(content.find("second setup message") != std::string::npos);
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
         }
 
         SECTION("messages queued through setup are delivered exactly once") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
@@ -200,7 +234,7 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
                 REQUIRE(udho::logging::test_helpers::count_substring(content, needle) == 1);
             }
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
         }
 
     }
@@ -208,6 +242,12 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
     SECTION("admin transport via setup-managed child") {
 
         SECTION("commander can reach the setup-managed consumer and filter commands have effect") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
@@ -252,10 +292,16 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
                 return content.find("allowed after setup unset") != std::string::npos;
             }, std::chrono::seconds(3), std::chrono::milliseconds(20)));
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
         }
 
         SECTION("temporary_enable over setup-managed socket suppresses and restores delivery") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+
             auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
 
             REQUIRE(pid > 0);
@@ -291,7 +337,7 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
                 return content.find("after re-enable") != std::string::npos;
             }, std::chrono::seconds(3), std::chrono::milliseconds(20)));
 
-            cleanup();
+            cleanup(queue_name, socket_path, log_path);
         }
 
     }

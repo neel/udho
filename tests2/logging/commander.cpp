@@ -26,18 +26,14 @@ std::string subsystem_equals(std::string value) {
 } // namespace
 
 TEST_CASE("Commander admin commands and consumer control", "[logging][commander]") {
-
-    auto queue_name  = udho::logging::test_helpers::unique_queue_name();
-    auto socket_path = udho::logging::test_helpers::unique_socket_path();
-    auto log_path    = udho::logging::test_helpers::unique_log_path();
-
-    udho::logging::detail::ipc_queue::remove(queue_name.c_str());
-
-    auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
-
     SECTION("filter commands") {
 
         SECTION("filter_set applies the configured filter and filter_show reports it") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -77,9 +73,16 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("filter_unset restores delivery after a restrictive filter") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -129,9 +132,16 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("filter_show without configured filter reports unset state and does not alter delivery") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -164,6 +174,8 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
     }
@@ -171,6 +183,11 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
     SECTION("temporary enable command") {
 
         SECTION("temporary_enable disables delivery and later re-enables it") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -222,9 +239,16 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("temporary_enable rejects malformed payload and delivery continues") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -259,6 +283,8 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
     }
@@ -266,6 +292,11 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
     SECTION("admin command failures do not break consumption") {
 
         SECTION("invalid filter_set command reports failure and later messages are still delivered") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -293,9 +324,16 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
         SECTION("unknown command reports failure and later messages are still delivered") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
             udho::logging::test_helpers::boost_log_guard log_guard;
             udho::logging::test_helpers::producer_state_guard producer_guard;
 
@@ -329,6 +367,8 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
 
             should_stop = true;
             worker.join();
+
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
     }
