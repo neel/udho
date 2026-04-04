@@ -420,14 +420,16 @@ TEST_CASE("Consumer Initiation and consumption", "[logging][consumer]") {
             constexpr std::size_t per_thread = queue.max_messages/2;
 
             std::vector<std::thread> threads;
+            std::atomic<std::size_t> messages_sent = 0;
             for (std::size_t t = 0; t < thread_count; ++t) {
-                threads.emplace_back([t] {
+                threads.emplace_back([t, &messages_sent] {
                     for (std::size_t i = 0; i < per_thread; ++i) {
-                        REQUIRE(UDHO_LOG_INFO("consumer-concurrent", "t" + std::to_string(t) + "-m" + std::to_string(i)));
+                        messages_sent += UDHO_LOG_INFO("consumer-concurrent", "t" + std::to_string(t) + "-m" + std::to_string(i));
                     }
                 });
             }
             for (auto& th : threads) th.join();
+            REQUIRE(messages_sent == per_thread * thread_count);
 
             REQUIRE(udho::logging::test_helpers::wait_until([&] {
                 const auto content = udho::logging::test_helpers::read_file(log_path);
