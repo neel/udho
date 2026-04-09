@@ -16,6 +16,7 @@
 #include <udho/utils/encoding.h>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <udho/net/protocols/body_reader_result.h>
+#include <udho/utils/misc.h>
 
 namespace udho{
 namespace net{
@@ -334,7 +335,7 @@ private:
 
         std::size_t remaining    = content_length - _bytes_received;
         std::size_t mbuffer_size = std::min<std::size_t>(256, remaining);
-        std::size_t available    = detail::stream_available<stream_type>::apply(_stream);
+        std::size_t available    = udho::utils::misc::detail::stream_available<stream_type>::apply(_stream);
 
         if (available > 0)
             mbuffer_size = std::min(mbuffer_size, available);
@@ -618,7 +619,7 @@ private:
 
     /// Timeout handler: forcibly terminates the stream.
     void _timeout(){
-        detail::stream_termination<StreamT>::apply(_stream);
+        udho::utils::misc::detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:

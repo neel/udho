@@ -9,6 +9,7 @@
 #include <udho/manifold/portal.h>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <udho/www/components/params.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace www{
@@ -42,13 +43,20 @@ struct protocol{
 public:
     reader_ptr_type& reader(std::size_t id, stream_type& stream){
         std::scoped_lock<std::mutex> lock(_mutex);
+
+        namespace p = udho::logging::params;
         auto it = _readers.find(id);
         if(it != _readers.end()) {
+            UDHO_LOG_DEBUG("udho::www::components::protocol", "reader reused", p::flow_id(id), p::socket_id(udho::utils::misc::native_handle(stream)));
+
             return it->second;
         } else {
             reader_ptr_type reader{new reader_type{stream}};
             auto res = _readers.emplace(id, reader);
             assert(res.second);
+
+            UDHO_LOG_DEBUG("udho::www::components::protocol", "reader created", p::flow_id(id), p::socket_id(udho::utils::misc::native_handle(stream)));
+
             return res.first->second;
         }
     }
@@ -68,6 +76,11 @@ public:
         auto it = _readers.find(id);
         if (it == _readers.end())
             return false;
+
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::www::components::protocol", "reader removed", p::flow_id(id), p::request_id("req"), p::socket_id(udho::utils::misc::native_handle(it->second->stream())));
+
+        udho::utils::misc::detail::terminate_stream(it->second->stream());
 
         _readers.erase(it);
         return true;
@@ -107,11 +120,20 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
         std::size_t timeout_secs = _config[udho::www::params::protocol::header_time_limit::val].value();
 
         reader_ptr_type reader = _component.reader(_id, stream);
-        reader->start([this, next{std::move(next)}](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+        reader->start([this, next{std::move(next)}, reader](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
             if(!ec) {
                 next.pass(result{std::move(request)});
             } else {
-                std::cout << "header_reader facet: " << ec.message() << std::endl;
+                // std::cout << "header_reader facet: " << ec.message() << std::endl;
+
+                namespace p = udho::logging::params;
+                if (ec == boost::asio::error::operation_aborted) {
+                    UDHO_LOG_DEBUG("udho::www::components::protocol::facet::header_reader", "reader timeout" , p::flow_id(_id));
+                } else {
+                    UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "Removing reader designated for flow due to error " + ec.message(), p::flow_id(_id));
+                }
+
+                _component.remove(_id);
                 next.fail(std::system_error{ec});
             }
         }, timeout_secs);

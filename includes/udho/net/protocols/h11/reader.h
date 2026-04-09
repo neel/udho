@@ -6,6 +6,8 @@
 #include <udho/net/protocols/h11/body_reader.h>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <udho/utils/misc.h>
 
 namespace udho{
 namespace net{
@@ -128,6 +130,12 @@ public:
     void upload_to_multi_buffer(const http_request_type& request, Handler&& handler, const udho::net::detail::body_parser_config& config){
         upload<Handler, boost::beast::multi_buffer>(request, std::forward<Handler>(handler), config);
     }
+
+    void shutdown() {
+        udho::utils::misc::detail::stream_termination<stream_type>::apply(_stream);
+    }
+
+    stream_type& stream() { return _stream; }
 
 public:
 

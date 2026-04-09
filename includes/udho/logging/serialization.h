@@ -7,11 +7,52 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/version.hpp>
+#include <udho/utils/date_time.h>
 
 namespace udho {
 namespace logging {
 
 namespace detail {
+
+
+struct json_serializer{
+    inline json_serializer(nlohmann::json& json): _json(json) {}
+
+    template <typename ParamT>
+    void operator()(const ParamT& d){
+        const auto& v = d.value();
+        if constexpr (udho::utils::traits::is_optional<typename ParamT::value_type>::value) {
+            if(v.has_value()) {
+                serialize(d.key().c_str(), v.value());
+            }
+        } else {
+            serialize(d.key().c_str(), v);
+        }
+    }
+
+    nlohmann::json& _json;
+
+private:
+    template <typename ValueT>
+    void serialize(const char* key, const ValueT& val) {
+         _json[key] = val;
+    }
+
+    template <typename Clock, typename Duration>
+    void serialize(const char* key, const std::chrono::time_point<Clock, Duration>& val) {
+        _json[key] = udho::utils::date_time::format_rfc3339(val);
+    }
+
+    template <typename T, typename Ratio>
+    void serialize(const char* key, const std::chrono::duration<T, Ratio>& val) {
+        _json[key] = udho::utils::date_time::format_iso8601(val);
+    }
+
+    void serialize(const char* key, const boost::asio::ip::address& val) {
+        _json[key] = val.to_string();
+    }
+};
+
 struct binary_serializer {
     using storage_type = std::vector<std::uint8_t>;
 

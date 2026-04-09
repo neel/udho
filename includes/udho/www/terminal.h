@@ -36,7 +36,9 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      * @return bool
      * @note Call originates from basic_flow<LabelT, StreamT>::reenter()
      */
-    bool reenter(stream_type& stream) { return true; }
+    bool reenter(stream_type& stream) {
+        return true;
+    }
 
     /**
      * @brief prepare's the flow for reentry in both success and failure circumstances
@@ -87,6 +89,8 @@ private:
     void handle_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
         ostream.status(error.status());
+        ostream << error.what();
+
         ostream.finish();
     }
 
@@ -121,7 +125,7 @@ private:
                         flow.restart(stream, std::forward<Args>(args)...);
                     },
                     args_tuple
-                    );
+                );
             } else {
                 flow.abort();
             }

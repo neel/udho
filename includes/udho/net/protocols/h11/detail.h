@@ -11,38 +11,6 @@ namespace protocols{
 
 namespace detail{
 
-template <typename StreamT>
-struct stream_termination{
-    static boost::system::error_code apply(StreamT& stream) {
-        boost::system::error_code error;
-        stream.cancel(error);
-        return error;
-    }
-};
-
-template <>
-struct stream_termination<boost::beast::test::stream>{
-    static boost::system::error_code apply(boost::beast::test::stream& stream) {
-        stream.close();
-        stream.close_remote();
-        return boost::system::error_code{};
-    }
-};
-
-template <typename StreamT>
-struct stream_available{
-    static std::size_t apply(StreamT& stream) {
-        return stream.available();
-    }
-};
-
-template <>
-struct stream_available<boost::beast::test::stream>{
-    static std::size_t apply(boost::beast::test::stream& stream) {
-        return 256;
-    }
-};
-
 template <typename Buffer>
 struct transfer_leftover{
     using target_buffer_type = Buffer;

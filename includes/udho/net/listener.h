@@ -11,6 +11,7 @@
 #include <udho/net/detail.h>
 #include <udho/manifold/flow.h>
 #include <udho/manifold/terminal.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace net{
@@ -75,6 +76,7 @@ public:
 
             f(error);
 
+            UDHO_LOG_INFO("udho::net::listener", "started");
             accept();
         });
     }
@@ -86,6 +88,9 @@ public:
 
             boost::system::error_code error = traits_type::cancel(_acceptor);
             _runtime.stop();
+
+            namespace p = udho::logging::params;
+            UDHO_LOG_INFO("udho::net::listener", "stopped");
         });
     }
 
@@ -107,11 +112,19 @@ private:
 
     void on_accept(boost::system::error_code error, socket_type&& socket) {
         if(error) {
-            // TODO report error
+            UDHO_LOG_ERROR("udho::net::listener", "Failed to accept with error " + error.message());
         } else {
+            auto socket_id = udho::utils::misc::native_handle(socket);
             flow_ptr_type flow = _runtime.spawn(std::move(socket));
-            flow->start();
-            // flows are owned by runtime
+
+            namespace p = udho::logging::params;
+            UDHO_LOG_INFO(
+                "udho::net::listener", "Accepted incoming connection",
+                p::flow_id(flow->id()),
+                p::socket_id(socket_id)
+            );
+
+            flow->start(); // flows are owned by runtime
         }
     }
 

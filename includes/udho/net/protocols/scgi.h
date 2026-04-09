@@ -499,6 +499,9 @@ struct scgi_reader2: public std::enable_shared_from_this<scgi_reader2<StreamT>>{
             }
         });
     }
+
+    stream_type& stream() { return _stream; }
+
 private:
     template <typename Handler>
     void read_length(Handler&& handler, std::size_t bytes_transferred) {
@@ -659,6 +662,7 @@ private:
             }
         }
     }
+
 private:
     udho::net::types::headers::request  _request;
     boost::asio::streambuf              _buffer;

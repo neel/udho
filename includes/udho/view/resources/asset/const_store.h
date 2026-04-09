@@ -406,6 +406,9 @@ private:
         if(it == end()){
             return false;
         }
+
+        ostream.set(boost::beast::http::field::connection, "keep-alive");
+        ostream.status(boost::beast::http::status::ok);
         it->write(ostream);
         ostream.finish();
         return true;

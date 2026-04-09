@@ -6,6 +6,7 @@
 #include <udho/manifold/transition.h>
 #include <udho/manifold/portal.h>
 #include <udho/www/components/handler.h>
+#include <udho/logging/macros.h>
 
 namespace udho {
 namespace manifold {
@@ -118,12 +119,15 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 return;
             }
 
+            namespace params = udho::logging::params;
+            UDHO_LOG_INFO("udho::net::ostream", "Response finished", params::flow_id(flow->id()), params::socket_id(udho::utils::misc::native_handle(stream)));
+
             std::apply(
                 [&](auto&&... args) {
                     p.next(flow, stream, std::forward<Args>(args)...);
                 },
                 args_tuple
-                );
+            );
         };
         using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
@@ -134,10 +138,15 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
 
         // { create context
         portal_type portal(composition, configs, journal);
-        std::string resource = portal.resource();
-        std::cout << "resource: " << resource << std::endl;
+        // std::string resource = portal.resource();
+        // std::cout << "resource: " << resource << std::endl;
         context_type context(ostream, portal, flow->id());
         // }
+
+        udho::www::feature::identifier::result res = journal.template at<udho::www::feature::identifier>();
+
+        namespace params = udho::logging::params;
+        UDHO_LOG_INFO("www::transition2", "Invoked", params::flow_id(flow->id()), params::uri(route_index.type() == udho::url::detail::route_index::type::registry ? res.path() : res.resource()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
         // { invoke action
         router.invoke_at(route_index, context);

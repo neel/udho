@@ -17,6 +17,12 @@ struct schema: udho::hazo::map_d<Fields...>{
 
     using map_type::map_type;
 
+    nlohmann::json json() const {
+        nlohmann::json json = nlohmann::json::object();
+        map_type::visit(detail::json_serializer{json});
+        return json;
+    }
+
     buffer_type save() const {
         buffer_type buffer;
         buffer.reserve(byte_size());
@@ -99,6 +105,7 @@ using message = schema<
 
     udho::logging::params::request_id,
     udho::logging::params::flow_id,
+    udho::logging::params::socket_id,
     udho::logging::params::session_id,
     udho::logging::params::user_id,
 
@@ -113,10 +120,7 @@ using message = schema<
     udho::logging::params::status_code,
     udho::logging::params::bytes_sent,
     udho::logging::params::latency,
-    udho::logging::params::retry_count,
-
-    udho::logging::params::error_code,
-    udho::logging::params::error_message
+    udho::logging::params::retry_count
 >;
 
 }

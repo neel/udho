@@ -7,38 +7,7 @@
 #endif
 
 #include <udho/url/url.h>
-#include <udho/www/framework.h>
-#include <udho/manifold/composition.h>
-#include <udho/manifold/fabric.h>
-#include <udho/manifold/pipeline.h>
-#include <udho/manifold/features.h>
-#include <udho/manifold/config.h>
-#include <udho/manifold/config.h>
-#include <udho/manifold/journal.h>
-#include <boost/beast/_experimental/test/stream.hpp>
-#include <udho/www/components/navigator.h>
-#include <udho/www/components/handler.h>
-#include <udho/www/components/protocol.h>
-#include <udho/www/components/routing.h>
-#include <udho/www/components/cookies.h>
-#include <udho/www/components/session.h>
-#include <udho/www/components/pg.h>
-#include <udho/www/components/resources.h>
-#include <udho/www/context.h>
-#include <udho/www/presets.h>
-#include <udho/session/storage/fs.h>
-#include <udho/session/storage/fs_mem.h>
-#include <udho/session/storage/redis.h>
-#include <udho/manifold/portal.h>
-#include <udho/manifold/context.h>
-#include <udho/manifold/runtime.h>
-#include <udho/manifold/composition_view.h>
-#include <udho/manifold/journal_view.h>
-#include <udho/manifold/configs_view.h>
-#include <udho/manifold/transition.h>
-#include <udho/manifold/journal.h>
-#include <udho/manifold/flow.h>
-#include <udho/view/bridges/lua.h>
+#include <udho/www/www.h>
 #include <udho/net/listener.h>
 #include <udho/manifold/visualize.h>
 
@@ -77,7 +46,7 @@ namespace callbacks{
         context.finish();
         return "hello";
     }
-};
+}
 
 auto url() {
     using namespace udho::hazo::string::literals;
@@ -160,7 +129,6 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
     {
-
         boost::beast::test::stream stream_in(io);
         std::ofstream html("structure.html");
         udho::manifold::vis::html::runtime(html, runtime);

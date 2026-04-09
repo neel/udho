@@ -210,15 +210,15 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
             const std::size_t count = udho::logging::producer::max_messages() *2;
             std::size_t total_sent = 0;
             for (std::size_t i = 0; i < count; ++i) {
-                total_sent += UDHO_LOG_INFO("setup-seq", "msg-" + std::to_string(i));
+                total_sent += UDHO_LOG_INFO("setup-seq", "msg-" + std::to_string(i)+";");
             }
 
             bool expected_contents_found = false;
             std::thread wait_for_completion([&]{
                 expected_contents_found = udho::logging::test_helpers::wait_until([&] {
                     const auto content = udho::logging::test_helpers::read_file(log_path);
-                    return content.find("msg-0") != std::string::npos &&
-                           content.find(udho::utils::format("msg-{}", count-1)) != std::string::npos;
+                    return content.find("msg-0;") != std::string::npos &&
+                           content.find(udho::utils::format("msg-{};", count-1)) != std::string::npos;
                 }, std::chrono::seconds(3), std::chrono::milliseconds(20));
             });
 
@@ -230,8 +230,9 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
 
             const auto content = udho::logging::test_helpers::read_file(log_path);
             for (std::size_t i = 0; i < count; ++i) {
-                const auto needle = std::string("msg-") + std::to_string(i)+ " ";
-                REQUIRE(udho::logging::test_helpers::count_substring(content, needle) == 1);
+                const auto needle = std::string("msg-") + std::to_string(i)+ ";";
+                CAPTURE(needle);
+                CHECK(udho::logging::test_helpers::count_substring(content, needle) == 1);
             }
 
             cleanup(queue_name, socket_path, log_path);

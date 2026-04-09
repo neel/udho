@@ -29,17 +29,19 @@ namespace udho{
 namespace logging{
 
 /**
- * @brief Reusable Boost.Log formatter for transported log records.
+ * @brief Formatter for transported log records reconstructed in the consumer.
  *
- * This formatter prints the mandatory fields first and, when present, appends
- * all active optional fields in a compact @c key(value) comma-separated form.
- *
- * Intended output shape:
+ * Output form:
  * @code
- * <required fields> with key1(value1), key2(value2)
+ * <required fields> <: Key1(value1) Key2(value2) :>
  * @endcode
  *
- * If no optional fields are present, only the mandatory part is emitted.
+ * The mandatory fields are emitted first. Supported optional fields are then
+ * appended in fixed formatter order when present on the record.
+ *
+ * @note Optional fields are separated by spaces, not commas.
+ * @note The optional wrapper is emitted only when at least one supported
+ *       optional field is printed.
  */
 struct formatter{
     explicit formatter(bool full = false): _full(full) {}
@@ -56,8 +58,9 @@ struct formatter{
         std::size_t required_count = make_required(record, stream);
 
         if(total_count > required_count) {
-            stream << " while";
+            stream << " <:";
             make_optional(record, stream);
+            stream << " :>";
         }
     }
 
@@ -85,13 +88,13 @@ struct formatter{
         auto line      = boost::log::extract<params::line::value_type>(udho::logging::names::line, record);
         auto message   = record[boost::log::expressions::smessage];
 
-        stream << line_id.get() << "." << process.get() << "0x" << std::hex << thread.get() << std::dec << " "
-               << "" << timestamp.get() << " "
+        stream << line_id.get() << " PID(" << process.get() << ") TID(0x" << std::hex << thread.get() << std::dec << ")"
+               << " " << timestamp.get() << " "
                << "[" << severity.get()  << "] "
                << "{" << subsystem.get() << "} "
-               << *message << " ";
+               << *message;
 
-        if(_full) stream << "at " << file << ":"<< line << " " << "from " << function;
+        if(_full) stream << " " << "at " << file << ":"<< line << " " << "from `" << function << "`";
 
         return 10; // including message
     }
@@ -133,6 +136,7 @@ struct formatter{
 
         append_optional<params::request_id::value_type::value_type>(record, stream, udho::logging::names::request_id);
         append_optional<params::flow_id::value_type::value_type>(record, stream, udho::logging::names::flow_id);
+        append_optional<params::socket_id::value_type::value_type>(record, stream, udho::logging::names::socket_id);
         append_optional<params::session_id::value_type::value_type>(record, stream, udho::logging::names::session_id);
         append_optional<params::user_id::value_type::value_type>(record, stream, udho::logging::names::user_id);
         append_optional<params::client::value_type::value_type>(record, stream, udho::logging::names::client);
@@ -146,8 +150,6 @@ struct formatter{
         append_optional<params::bytes_sent::value_type::value_type>(record, stream, udho::logging::names::bytes_sent);
         append_optional<params::latency::value_type::value_type>(record, stream, udho::logging::names::latency);
         append_optional<params::retry_count::value_type::value_type>(record, stream, udho::logging::names::retry_count);
-        append_optional<params::error_code::value_type::value_type>(record, stream, udho::logging::names::error_code);
-        append_optional<params::error_message::value_type::value_type>(record, stream, udho::logging::names::error_message);
 
         return stream;
     }

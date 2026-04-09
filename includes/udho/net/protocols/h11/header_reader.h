@@ -9,6 +9,7 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/read.hpp>
 #include <udho/net/protocols/h11/detail.h>
+#include <udho/utils/misc.h>
 
 namespace udho{
 namespace net{
@@ -112,7 +113,7 @@ private:
 
     /// Timeout handler: forcibly terminates the stream.
     void _timeout(){
-        detail::stream_termination<StreamT>::apply(_stream);
+        udho::utils::misc::detail::stream_termination<StreamT>::apply(_stream);
     }
 
 private:

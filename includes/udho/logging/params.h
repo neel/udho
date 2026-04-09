@@ -10,6 +10,8 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/beast/http/verb.hpp>
 #include <udho/session/defs.h>
+#include <boost/asio/ip/tcp.hpp>
+#include <udho/utils/misc.h>
 
 #define UDHO_LOG_PARAM(Name, Type)                                          \
 struct Name: udho::hazo::element<Name , Type> {                             \
@@ -26,6 +28,9 @@ struct Name: udho::hazo::element<Name , Type> {                             \
 namespace udho {
 namespace logging {
 
+/**
+ * @brief Log severity levels.
+ */
 enum class severity : std::uint32_t {
     trace   = 0,
     debug   = 1,
@@ -61,6 +66,12 @@ inline std::ostream& operator<<(std::ostream& stream, udho::logging::severity se
     return stream;
 }
 
+/**
+ * @brief Compile‑time keys for log message fields.
+ *
+ * Each UDHO_LOG_PARAM defines a type that can be used as a key in the message
+ * container. Example: `msg[params::local_id::val] = 42;`
+ */
 namespace params {
 
 UDHO_LOG_PARAM(local_id,        std::uint64_t);   // process-local monotonically increasing id
@@ -76,6 +87,7 @@ UDHO_LOG_PARAM(line,            std::uint64_t);   // __LINE__
 
 UDHO_LOG_PARAM(request_id,      std::optional<std::string>);
 UDHO_LOG_PARAM(flow_id,         std::optional<std::size_t>);
+UDHO_LOG_PARAM(socket_id,       std::optional<udho::utils::misc::portable_socket_id>);
 UDHO_LOG_PARAM(session_id,      std::optional<udho::session::id>);
 UDHO_LOG_PARAM(user_id,         std::optional<std::string>);
 
@@ -92,11 +104,13 @@ UDHO_LOG_PARAM(bytes_sent,      std::optional<std::uint64_t>);
 UDHO_LOG_PARAM(latency,         std::optional<std::chrono::nanoseconds>);
 UDHO_LOG_PARAM(retry_count,     std::optional<std::uint32_t>);
 
-UDHO_LOG_PARAM(error_code,      std::optional<std::int64_t>);
-UDHO_LOG_PARAM(error_message,   std::optional<std::string>);
-
 }
 
+/**
+ * @brief String literals used as Boost.Log attribute names.
+ *
+ * These correspond one‑to‑one with the keys in @ref params.
+ */
 namespace names {
 
 inline constexpr char local_id[]      = "LineID";
@@ -112,6 +126,7 @@ inline constexpr char line[]          = "line";
 
 inline constexpr char request_id[]    = "Request";
 inline constexpr char flow_id[]       = "Flow";
+inline constexpr char socket_id[]     = "Socket";
 inline constexpr char session_id[]    = "Session";
 inline constexpr char user_id[]       = "User";
 
@@ -127,9 +142,6 @@ inline constexpr char status_code[]   = "Status";
 inline constexpr char bytes_sent[]    = "BytesSent";
 inline constexpr char latency[]       = "Latency";
 inline constexpr char retry_count[]   = "Retry";
-
-inline constexpr char error_code[]    = "ErrorCode";
-inline constexpr char error_message[] = "ErrorMessage";
 
 }
 

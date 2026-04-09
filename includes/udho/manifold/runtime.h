@@ -7,6 +7,7 @@
 #include <udho/manifold/pipeline.h>
 #include <udho/manifold/portal.h>
 #include <udho/manifold/context.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace manifold{
@@ -103,6 +104,7 @@ struct basic_runtime{
         std::scoped_lock lock(_mutex);
         flow_ptr_type flow_ptr = flow_type::create(*this, std::forward<stream_type>(stream));
         _flows.push_back(flow_ptr);
+
         return flow_ptr;
     }
 
@@ -128,12 +130,16 @@ struct basic_runtime{
         auto it = std::find_if(_flows.begin(), _flows.end(), [id = flow->id()](const auto& f){
             return f->id() == id;
         });
+
+        namespace p = udho::logging::params;
         if(it != _flows.end()) {
-            std::cerr << "remove() found flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            // std::cerr << "remove() found flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            UDHO_LOG_TRACE("udho::manifold", "Runtime removing flow", p::flow_id(flow->id()));
             _flows.erase(it);
             return true;
         } else {
-            std::cerr << "remove() missing flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            // std::cerr << "remove() missing flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
+            UDHO_LOG_ERROR("udho::manifold", "Runtime failed to remove flow", p::flow_id(flow->id()));
             return false;
         }
     }

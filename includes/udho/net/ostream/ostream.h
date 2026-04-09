@@ -12,6 +12,7 @@
 #include <udho/net/ostream/detail/queued_ostream.h>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace net{
@@ -407,6 +408,10 @@ private:
         _headers_sent = true;
         _bytes_written += bytes_written;
         std::cout << "on_header_completion" << std::endl;
+
+        namespace params = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::net::ostream", "Response Headers flushed", params::socket_id(udho::utils::misc::native_handle(_stream)));
+
         if(ec) on_error(ec);
         else {
             if(_state == ostream_states::switching) {
@@ -533,7 +538,7 @@ private:
     queued_stream_type           _queued_stream;
     buffered_stream_type         _buffered_stream;
 private:
-    ostream_states                       _state;
+    ostream_states               _state;
     std::atomic_bool             _header_sealed;
     bool                         _buffering;
     bool                         _headers_sent;

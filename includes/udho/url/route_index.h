@@ -29,7 +29,12 @@ public:
 
     inline route_index::type type() const { return _type; }
 
-    inline bool valid() const { return _type != type::none && _mountpoint >= 0 && _action >= 0; }
+    inline bool valid() const {
+        return _type != type::none && (
+            (_type == type::registry && !_target.empty())               ||
+            (_type == type::action   && _mountpoint >= 0 && _action >= 0)
+        );
+    }
 
     inline int mountpoint() const { return _mountpoint; }
     inline int action() const { return _action; }

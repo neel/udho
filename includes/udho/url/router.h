@@ -76,67 +76,23 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
     const auto& operator[](XStrT&& xstr) const { return _mountpoints[std::move(xstr)]; }
 
     /**
-     * @brief Checks if a URL path exists in the routing table or filesystem
-     * @tparam Ch Character type for the URL string
-     * @param subject URL path to search for
-     * @return true if path is found in mount points or filesystem, false otherwise
-     */
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = false;
-        _mountpoints.visit([&subject, &found](const auto& mointpoint){
-            if(found)
-                return;
-            auto path = mointpoint.path();
-            if(!boost::starts_with(subject, path))
-                return;
-            auto rest = path == "/" ? subject : subject.substr(path.size());
-            found = mointpoint.find(rest);
-        });
-        return found;
-    }
-
-    /**
-     * @brief Invokes the action associated with a URL path
-     * @tparam Ch Character type for the URL string
-     * @tparam Args Types of arguments to forward
-     * @param subject URL path to invoke
-     * @param args Arguments to forward to the action
-     * @return true if action was invoked or file was served, false otherwise
-     */
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool found = false;
-        _mountpoints.visit([&subject, &found, &args...](const auto& mointpoint){
-            if(found)
-                return;
-            auto path = mointpoint.path();
-            if(!boost::starts_with(subject, path))
-                return;
-            auto rest = path == "/" ? subject : subject.substr(path.size());
-            found = mointpoint.invoke(rest, std::forward<Args>(args)...);
-        });
-        return found;
-    }
-
-    /**
      * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
      * @tparam Ch Character type for the URL string
      * @param subject URL path to search for
      * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
      */
     template <typename Ch>
-    route_index index_of(const std::basic_string<Ch>& subject) const {
+    route_index index_of(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const {
         int mountpoint_index = -1;
         int action_index = -1;
 
-        _mountpoints.visit_at([&subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
+        _mountpoints.visit_at([method, &subject, &mountpoint_index, &action_index](const auto& mountpoint, std::size_t depth){
             if(mountpoint_index >= 0) return;
             auto path = mountpoint.path();
             if(!boost::starts_with(subject, path))
                 return;
             auto rest = path == "/" ? subject : subject.substr(path.size());
-            int action_idx = mountpoint.index_of(rest);
+            int action_idx = mountpoint.index_of(method, rest);
             if(action_idx >= 0){
                 mountpoint_index = depth;
                 action_index = action_idx;
@@ -177,7 +133,7 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
 
     template <typename ConfigSupersetT>
     std::size_t reconfigure_for(const route_index& index, ConfigSupersetT& config) const {
-        assert(index.valid());
+        if(!index.valid()) return 0;
 
         bool found = false;
         std::size_t total_depth = _mountpoints.length();
@@ -188,6 +144,50 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
             if(found){
                 mountpoint.reconfigure_for(index.action(), config);
             }
+        });
+        return found;
+    }
+
+    /**
+     * @brief Checks if a URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return true if path is found in mount points or filesystem, false otherwise
+     */
+    template <typename Ch>
+    bool find(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const {
+        bool found = false;
+        _mountpoints.visit([method, &subject, &found](const auto& mointpoint){
+            if(found)
+                return;
+            auto path = mointpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            found = mointpoint.find(method, rest);
+        });
+        return found;
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename Ch, typename... Args>
+    bool invoke(boost::beast::http::verb method, const std::basic_string<Ch>& subject, Args&&... args) const {
+        bool found = false;
+        _mountpoints.visit([method, &subject, &found, &args...](const auto& mointpoint){
+            if(found)
+                return;
+            auto path = mointpoint.path();
+            if(!boost::starts_with(subject, path))
+                return;
+            auto rest = path == "/" ? subject : subject.substr(path.size());
+            found = mointpoint.invoke(method, rest, std::forward<Args>(args)...);
         });
         return found;
     }
@@ -274,50 +274,18 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
     const auto& operator[](XStrT&& xstr) const { return _mountpoint[std::move(xstr)]; }
 
     /**
-     * @brief Checks if a URL path exists in the routing table or filesystem
-     * @tparam Ch Character type for the URL string
-     * @param subject URL path to search for
-     * @return true if path is found in mount points or filesystem, false otherwise
-     */
-    bool find(const std::string& subject) const {
-        auto path = _mountpoint.path();
-        if(!boost::starts_with(subject, path))
-            return false;
-        auto rest = path == "/" ? subject : subject.substr(path.size());
-        return _mountpoint.find(rest);
-    }
-
-    /**
-     * @brief Invokes the action associated with a URL path
-     * @tparam Ch Character type for the URL string
-     * @tparam Args Types of arguments to forward
-     * @param subject URL path to invoke
-     * @param args Arguments to forward to the action
-     * @return true if action was invoked or file was served, false otherwise
-     */
-    template <typename... Args>
-    bool invoke(const std::string& subject, Args&&... args) const {
-        auto path = _mountpoint.path();
-        if(!boost::starts_with(subject, path))
-            return false;
-        auto rest = path == "/" ? subject : subject.substr(path.size());
-        return _mountpoint.invoke(rest, std::forward<Args>(args)...);
-    }
-
-
-    /**
      * @brief finds the mountpoint and action index if an URL path exists in the routing table or filesystem
      * @tparam Ch Character type for the URL string
      * @param subject URL path to search for
      * @return a pair of integer indexes denoting the mountpoint index and the action index (-1 if not found)
      */
-    route_index index_of(const std::string& subject) const {
+    route_index index_of(boost::beast::http::verb method, const std::string& subject) const {
         auto path = _mountpoint.path();
         if(!boost::starts_with(subject, path))
             return route_index(subject, -1, -1);
 
         auto rest = path == "/" ? subject : subject.substr(path.size());
-        int action_idx = _mountpoint.index_of(rest);
+        int action_idx = _mountpoint.index_of(method, rest);
         if(action_idx >= 0){
             return route_index(subject, 0, action_idx);
         }
@@ -362,6 +330,37 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
         }
 
         return found;
+    }
+
+    /**
+     * @brief Checks if a URL path exists in the routing table or filesystem
+     * @tparam Ch Character type for the URL string
+     * @param subject URL path to search for
+     * @return true if path is found in mount points or filesystem, false otherwise
+     */
+    bool find(boost::beast::http::verb method, const std::string& subject) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return false;
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        return _mountpoint.find(method, rest);
+    }
+
+    /**
+     * @brief Invokes the action associated with a URL path
+     * @tparam Ch Character type for the URL string
+     * @tparam Args Types of arguments to forward
+     * @param subject URL path to invoke
+     * @param args Arguments to forward to the action
+     * @return true if action was invoked or file was served, false otherwise
+     */
+    template <typename... Args>
+    bool invoke(boost::beast::http::verb method, const std::string& subject, Args&&... args) const {
+        auto path = _mountpoint.path();
+        if(!boost::starts_with(subject, path))
+            return false;
+        auto rest = path == "/" ? subject : subject.substr(path.size());
+        return _mountpoint.invoke(method, rest, std::forward<Args>(args)...);
     }
 
     /**
@@ -421,18 +420,9 @@ struct basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoin
     basic_router(mountpoints_type&& mountpoints, udho::url::explorers::registry&& registry): routing_table(std::move(mountpoints)), _registry(std::move(registry)) {}
 
     template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = routing_table::find(subject);
-        if(!found){
-            return _registry.exists(subject);
-        }
-        return found;
-    }
-
-    template <typename Ch>
-    route_index index_of(const std::basic_string<Ch>& subject) const {
-        route_index index = routing_table::index_of(subject);
-        if(!index.valid()) {
+    route_index index_of(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const {
+        route_index index = routing_table::index_of(method, subject);
+        if(!index.valid() && method == boost::beast::http::verb::get) {
             bool is_file = _registry.exists(subject);
             bool is_dir  = _registry.is_subset(subject);
 
@@ -441,18 +431,6 @@ struct basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoin
             }
         }
         return index;
-    }
-
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
-        if(!invoked){
-            if constexpr (sizeof...(args) == 1){
-                udho::url::explorers::registry::status status = _registry.serve(subject, std::forward<Args>(args)...);
-                invoked = (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
-            }
-        }
-        return invoked;
     }
 
     template <typename... Args>
@@ -467,12 +445,32 @@ struct basic_router<detail::routing_table<udho::url::mountpoints_table<Mountpoin
         return false;
     }
 
+    template <typename Ch>
+    bool find(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const {
+        bool found = routing_table::find(method, subject);
+        if(!found && method == boost::beast::http::verb::get){
+            return _registry.exists(subject);
+        }
+        return found;
+    }
+
+    template <typename Ch, typename... Args>
+    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
+        bool invoked = routing_table::invoke(subject, std::forward<Args>(args)...);
+        if(!invoked){
+            if constexpr (sizeof...(args) == 1){
+                udho::url::explorers::registry::status status = _registry.serve(subject, std::forward<Args>(args)...);
+                invoked = (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
+            }
+        }
+        return invoked;
+    }
+
     template <typename ContextT, typename... Args>
     bool invoke_registry(const route_index& index, ContextT& context, Args&&...) const {
         udho::url::explorers::registry::status status = _registry.serve(index.target(), context);
         return (status == udho::url::explorers::registry::status::file || status == udho::url::explorers::registry::status::directory);
     }
-
 
     template <typename... Args>
     bool operator()(const std::string& url, Args&&... args) const { return this->invoke(url, std::forward<Args>(args)...); }
@@ -494,8 +492,6 @@ struct basic_router<void>{
 
     basic_router(udho::url::explorers::registry&& registry): _registry(std::move(registry)) {}
 
-    bool find(const std::string& subject) const { return _registry.exists(subject); }
-
     template <typename... Args>
     bool invoke_at(const route_index& index, Args&&... args) const {
         if(index.type() == route_index::type::registry) {
@@ -507,15 +503,19 @@ struct basic_router<void>{
     template <typename SupersetT>
     bool reconfigure_for(const route_index& index, SupersetT& superset) const { return false; }
 
-    route_index index_of(const std::string& subject) const {
-        bool is_file = _registry.exists(subject);
-        bool is_dir  = _registry.is_subset(subject);
+    route_index index_of(boost::beast::http::verb method, const std::string& subject) const {
+        if(method == boost::beast::http::verb::get) {
+            bool is_file = _registry.exists(subject);
+            bool is_dir  = _registry.is_subset(subject);
 
-        if(is_file || is_dir) {
-            return route_index(subject, route_index::type::registry);
+            if(is_file || is_dir) {
+                return route_index(subject, route_index::type::registry);
+            }
         }
         return route_index{subject, route_index::type::none};
     }
+
+    bool find(const std::string& subject) const { return _registry.exists(subject); }
 
     template <typename Ch, typename... Args>
     bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
@@ -622,7 +622,6 @@ struct basic_router<void>: private detail::basic_router<void>{
     basic_router(udho::url::explorers::registry&& registry): detail_basic_router(std::forward<udho::url::explorers::registry>(registry)) {}
 
     friend std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router);
-
 };
 
 /// @}

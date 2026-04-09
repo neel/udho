@@ -115,51 +115,17 @@ struct mount_point{
      * Finds if a given URL matches any of the actions in the mount point.
      * @tparam Ch Character type of the URL string.
      * @param subject URL to be matched.
-     * @return True if any action matches the URL, otherwise false.
-     */
-    template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const {
-        bool found = false;
-        _actions.visit([&subject, &found](const auto& action){
-            if(found) return;
-            found = action.find(subject);
-        });
-        return found;
-    }
-
-    /**
-     * Finds if a given URL matches any of the actions in the mount point.
-     * @tparam Ch Character type of the URL string.
-     * @param subject URL to be matched.
      * @return index of the matched element, -1 if not fouond
      */
-    int index_of(const std::string& subject) const {
+    int index_of(boost::beast::http::verb method, const std::string& subject) const {
         int index = -1;
-        _actions.visit_at([&subject, &index](const auto& action, std::size_t depth){
+        _actions.visit_at([method, &subject, &index](const auto& action, std::size_t depth){
             if(index >= 0) return;
-            if(action.find(subject)){
+            if(action.find(method, subject)){
                 index = depth;
             }
         });
         return index;
-    }
-
-    /**
-     * Invokes the appropriate action based on the given URL and arguments.
-     * @tparam Ch Character type of the URL string.
-     * @tparam Args Types of arguments passed to the action.
-     * @param subject URL to be processed.
-     * @param args Arguments to pass to the action handler.
-     * @return True if an action was successfully invoked, otherwise false.
-     */
-    template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const {
-        bool found = false;
-        _actions.visit([&subject, &found, &args...](auto& action){
-            if(found) return;
-            found = action.invoke(subject, std::forward<Args>(args)...);
-        });
-        return found;
     }
 
     /**
@@ -172,17 +138,15 @@ struct mount_point{
     bool invoke_at(int index, const std::string& subject, Args&&... args) const {
         assert(index > -1);
         bool found = false;
-        bool result = false;
-        _actions.visit_at([index, &subject, &found, &result, &args...](auto& action, std::size_t depth){
+        _actions.visit_at([index, &subject, &found, &args...](auto& action, std::size_t depth){
             if(found) return;
             found = (depth == index);
             if(found) {
-                result = action.invoke(subject, std::forward<Args>(args)...);
+                action.invoke(subject, std::forward<Args>(args)...);
             }
         });
-        return found && result;
+        return found;
     }
-
 
     template <typename ConfigSupersetT>
     bool reconfigure_for(int index, ConfigSupersetT& config) const {
@@ -197,6 +161,40 @@ struct mount_point{
             }
         });
         return found && result;
+    }
+
+    /**
+     * Finds if a given URL matches any of the actions in the mount point.
+     * @tparam Ch Character type of the URL string.
+     * @param subject URL to be matched.
+     * @return True if any action matches the URL, otherwise false.
+     */
+    template <typename Ch>
+    bool find(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const {
+        bool found = false;
+        _actions.visit([method, &subject, &found](const auto& action){
+            if(found) return;
+            found = action.find(method, subject);
+        });
+        return found;
+    }
+
+    /**
+     * Invokes the appropriate action based on the given URL and arguments.
+     * @tparam Ch Character type of the URL string.
+     * @tparam Args Types of arguments passed to the action.
+     * @param subject URL to be processed.
+     * @param args Arguments to pass to the action handler.
+     * @return True if an action was successfully invoked, otherwise false.
+     */
+    template <typename Ch, typename... Args>
+    bool invoke(boost::beast::http::verb method, const std::basic_string<Ch>& subject, Args&&... args) const {
+        bool found = false;
+        _actions.visit([method, &subject, &found, &args...](auto& action){
+            if(found) return;
+            found = action.invoke(method, subject, std::forward<Args>(args)...);
+        });
+        return found;
     }
 
     /**

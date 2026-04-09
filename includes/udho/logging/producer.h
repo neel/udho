@@ -119,42 +119,36 @@ struct producer{
     using wait_queue_type   = std::queue<message_type>;
 
     /**
-     * @brief Try to produce a log message into the IPC queue.
+     * @brief Attempt to forward a log message to the IPC queue.
      *
-     * Fast-path behavior:
+     * Fast path:
      * - Rejects immediately if an admin operation is active.
-     * - Otherwise joins the active-log counter.
-     * - Re-checks admin state after joining; if admin became active concurrently, the message is discarded.
-     * - If the queue exists and the filter passes, forwards the message to queue_type::try_send().
-     * - Otherwise returns false
+     * - Otherwise joins the active-producer counter.
+     * - Re-checks admin state after joining; if admin became active concurrently,
+     *   the message is discarded.
+     * - If the queue exists and the message passes the active filter/threshold,
+     *   the producer first tries to drain any existing in-memory backlog and then
+     *   tries to enqueue the current message.
      *
-     * Return value:
-     * - true  : message accepted by the IPC queue
-     * - false : message discarded or queue send failed
+     * Backlog behavior:
+     * - When the IPC queue is full, accepted messages are appended to an in-memory
+     *   backlog protected by @c _wmutex.
+     * - A later call to @ref log may flush backlog messages before sending the
+     *   current message.
      *
-     * A false return may mean any of the following:
-     * - activate() has not been called yet
-     * - deactivate() has already completed
-     * - an admin operation is active
-     * - this log() call raced with admin-lock acquisition and was discarded
-     * - the optional filter rejected the message
-     * - the IPC queue rejected the send attempt
-     * - the active counter was saturated (practically unreachable)
+     * @param message Log message to process.
+     * @return Number of messages transferred to the IPC queue during this call.
+     *         This count includes backlog messages drained during the call and may
+     *         or may not include @p message itself.
      *
-     * Concurrency guarantees:
-     * - Multiple threads may call log() concurrently.
-     * - If this call enters the counted region, _ipc_queue will remain valid until
-     *   this call leaves that region.
-     * - Calls beginning after deactivate() acquires the admin lock, are discarded.
+     * @retval 0 No message was transferred to the IPC queue during this call.
      *
-     * Precise deactivate() interaction:
-     * - Calls beginning before deactivate() acquires the admin lock may still succeed.
-     * - Calls beginning after deactivate() acquires the admin lock are rejected.
-     * - A call that races with admin-lock acquisition may increment the active counter
-     *   and still be discarded by the second _admin check.
+     * @note A return value of 0 does not necessarily mean that @p message was
+     *       dropped. The message may have been accepted and moved into the in-memory
+     *       backlog because the IPC queue was full.
      *
-     * @param message log message to forward
-     * @return true if queue_type::try_send() succeeds, false otherwise
+     * @note Calls that begin after @ref deactivate acquires the admin lock are
+     *       rejected. Calls that begin before that point may still succeed.
      */
     inline static std::size_t log(const message_type& message) {
         atomic_type::value_type expected = _atomic.load(std::memory_order_relaxed);
@@ -184,7 +178,7 @@ struct producer{
             } else {            // all pending messages sent to IPC queue
                 bool accepted = filter ? filter(message) : (message[params::severity::val].value() >= threshold());
                 if(accepted) {
-                    bool sent = (*_ipc_queue).try_send(message);
+                    bool sent = (*_ipc_queue).try_send(message, _prioritize);
                     if(!sent) {
                         push_backlog(message);
                     }
@@ -219,7 +213,7 @@ struct producer{
      * @pre The named IPC queue already exists.
      * @post After successful return, log() calls may again attempt to send messages.
      */
-    inline static void activate(const char* name = "") {
+    inline static void activate(const char* name = 0x0) {
         detail::atomic_spinner<std::atomic_bool> admin_lock(_admin);
         admin_lock.wait(true);
 
@@ -327,22 +321,61 @@ struct producer{
         return _threshold.load(std::memory_order_relaxed);
     }
 
+    /**
+     * @brief Maximum number of messages the queue can hold (determined at compile‑time).
+     * @return
+     */
     static constexpr std::size_t max_messages() { return queue_type::max_messages; }
 
+    /**
+     * @brief Maximum size in bytes of a single serialised log message.
+     * @return
+     */
     static constexpr std::size_t max_message_size() { return queue_type::max_message_size; }
 
+    /**
+     * @brief Number of messages waiting to be delivered to the consumer because IPC based
+     *        message queue was full while the producer tried to deliver them.
+     * @return
+     */
     static std::size_t backlog() {
         std::scoped_lock lock(_wmutex);
         return _waiting.size();
     }
 
+    /**
+     * @brief Check if prioritized delivery is being used by the producer
+     * @return
+     */
+    static bool prioritized() { return _prioritize; }
+
+    /**
+     * @brief Enable or disable prioritized delivery
+     * @param flag
+     *
+     * @note if prioritized delivery is enabled then messages with higher severity will be
+     *       prioritized, implying that the consumption order might be different from the
+     *       order of production, leading to unordered log messages in the log file, which
+     *       might require post-processing of the log messages for inspection.
+     */
+    static void prioritize(bool flag) {
+        _prioritize = flag;
+    }
+
 private:
+
+    /**
+     * @brief Attempt to send all waiting backlog messages to the IPC queue.
+     * @return pair<bool, std::size_t> where:
+     *         - first: true if backlog became empty, false if still non‑empty
+     *         - second: number of messages successfully sent
+     */
     static std::pair<bool, std::size_t> clear_backlog() {
         std::size_t count = 0;
         if(_backlog_exists) {
             std::scoped_lock lock(_wmutex);
             while(!_waiting.empty()) {
-                bool sent = _ipc_queue->try_send(_waiting.front());
+                bool sent = _ipc_queue->try_send(_waiting.front(), _prioritize);
                 if(sent) {
                     _waiting.pop();
                     ++count;
@@ -356,6 +389,12 @@ private:
         return std::make_pair(true, count);
     }
 
+    /**
+     * @brief Append one accepted message to the in-memory backlog.
+     * @param msg Message to store until the IPC queue has room again.
+     *
+     * This function acquires @c _wmutex internally.
+     */
     static void push_backlog(const message_type& msg) {
         std::scoped_lock lock(_wmutex);
 
@@ -366,6 +405,7 @@ private:
     static std::atomic<severity> _threshold;
     static opt_queue_type       _ipc_queue;
     static opt_filter_type      _filter;
+    static std::atomic_bool     _prioritize;
     static atomic_type          _atomic;
     static std::atomic_bool     _admin;
     static const atomic_type::value_type _max;
@@ -374,14 +414,15 @@ private:
     static std::atomic_bool     _backlog_exists;
 };
 
-inline std::atomic<severity>     producer::_threshold = severity::trace;
-inline producer::opt_queue_type  producer::_ipc_queue = std::nullopt;
-inline producer::opt_filter_type producer::_filter    = nullptr;
-inline producer::atomic_type     producer::_atomic    = 0;
-inline std::atomic_bool          producer::_admin     = false;
-inline std::atomic_bool          producer::_backlog_exists     = false;
+inline std::atomic<severity>     producer::_threshold       = severity::trace;
+inline producer::opt_queue_type  producer::_ipc_queue       = std::nullopt;
+inline producer::opt_filter_type producer::_filter          = nullptr;
+inline std::atomic_bool          producer::_prioritize      = false;
+inline producer::atomic_type     producer::_atomic          = 0;
+inline std::atomic_bool          producer::_admin           = false;
+inline std::atomic_bool          producer::_backlog_exists  = false;
 inline std::mutex                producer::_wmutex;
-inline producer::wait_queue_type producer::_waiting   = producer::wait_queue_type{};
+inline producer::wait_queue_type producer::_waiting          = producer::wait_queue_type{};
 inline const producer::atomic_type::value_type producer::_max = std::numeric_limits<producer::atomic_type::value_type>::max();
 
 }

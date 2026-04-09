@@ -7,47 +7,14 @@
 #include <udho/net/common.h>
 #include <udho/manifold/fabric.h>
 #include <curl/curl.h>
-
-#include <udho/www/sketch.h>
-#include <udho/www/presets.h>
-#include <udho/www/framework.h>
-#include <udho/www/components/cookies.h>
-#include <udho/www/components/handler.h>
-#include <udho/www/components/navigator.h>
-
-// { experiment
-// template <typename Policy, template<typename...> class T, typename X>
-// struct is_basic_seq_of : std::false_type {};
-
-// template <typename Policy, template<typename...> class T, typename... Args>
-// struct is_basic_seq_of<Policy, T, udho::hazo::basic_seq<Policy, T<Args...>> > : std::true_type {};
-
-// template <template<typename...> class T, typename X>
-// using is_basic_seq_d_of = is_basic_seq_of<udho::hazo::by_data, T, X>;
-
-// template <template<typename...> class T, typename X>
-// using is_basic_seq_v_of = is_basic_seq_of<udho::hazo::by_value, T, X>;
-
-// template <typename X>
-// using is_routable = is_basic_seq_d_of<udho::url::mount_point, X>;
-// }
-
-// using socket_type       = udho::net::types::socket;
-// using http_protocol     = udho::net::protocols::http<socket_type>;
-// using scgi_protocol     = udho::net::protocols::scgi<socket_type>;
-// using http_connection   = udho::net::connection<http_protocol>;
-// using scgi_connection   = udho::net::connection<scgi_protocol>;
-// using http_listener     = udho::net::listener<http_connection>;
-// using scgi_listener     = udho::net::listener<scgi_connection>;
-// using http_server       = udho::net::server<http_listener>;
-// using scgi_server       = udho::net::server<scgi_listener>;
+#include <udho/www/www.h>
+#include <udho/logging/setup.h>
 
 using stream_type = udho::net::types::socket;
 
 using namespace udho::www::components;
-using namespace udho::manifold;
+using namespace udho::www;
 
-using handler = basic_handler<stream_type>;
 
 namespace callbacks{
 
@@ -56,52 +23,55 @@ struct nodef{
     nodef(int) {}
 };
 
-BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+using namespace udho::www;
+using namespace udho::www::components;
+
+BOOST_SYMBOL_EXPORT void f0(context<cookies> context){
     context << "f0";
     context.finish();
     return;
 }
 
-BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+BOOST_SYMBOL_EXPORT int f1(context<navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
     context << std::to_string(a.size()+b.size()+c+d);
     std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
     context.finish();
     return 42;
 }
 
-BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+BOOST_SYMBOL_EXPORT std::string f2(context<cookies> context, int a, const std::string& b){
     context << std::to_string(a+b.size());
     context.finish();
     return "hello";
 }
 
-BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+BOOST_SYMBOL_EXPORT std::string f_nodef(context<> context, nodef, int a){
     context << std::to_string(a);
     context.finish();
     return "hello";
 }
 
 struct X{
-    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+    BOOST_SYMBOL_EXPORT void f0(context<cookies> context){
         context << "f0";
         context.finish();
         return;
     }
 
-    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    BOOST_SYMBOL_EXPORT int f1(context<navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
         context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
-    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+    BOOST_SYMBOL_EXPORT std::string f2(context<cookies> context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
-    BOOST_SYMBOL_EXPORT int f3(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c, bool d) const{
+    BOOST_SYMBOL_EXPORT int f3(context<> context, int a, const std::string& b, const double& c, bool d) const{
         context << std::to_string(84);
         context.finish();
         return 0;
@@ -110,7 +80,13 @@ struct X{
 
 }
 
+using logger_type = udho::logging::setup<udho::logging::fixed_file>;
+
 TEST_CASE("URL routes listing", "[url][routing][listing]") {
+    if(!logger_type::apply()) return;
+
+    assert(logger_type::running());
+
     using namespace udho::hazo::string::literals;
 
     callbacks::X x;
@@ -171,4 +147,5 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
     listener.stop();
     thread.join();
 
+    logger_type::stop();
 }

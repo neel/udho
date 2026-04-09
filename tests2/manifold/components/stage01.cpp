@@ -86,7 +86,7 @@ auto router() {
     using namespace udho::hazo::string::literals;
     auto actions1 =
         udho::url::slot("f0"_h,  &basic_callbacks<StreamT>::f0)  << udho::url::home(udho::url::verb::get)                                                         |
-        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
+        udho::url::slot("f1"_h,  &basic_callbacks<StreamT>::f1)  << udho::url::regx(udho::url::verb::post, "/f1/(\\w+)/(\\w+)/(\\d+)/(\\d+)", "/f1/{}/{}/{}")      |
         udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 

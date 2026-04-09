@@ -20,7 +20,6 @@ TEST_CASE("Log message binary serialisation roundtrip", "[logging][binary]") {
 
     original[request_id::val] = "req-999";
     original[status_code::val] = 404U;
-    original[error_code::val] = -1LL;
 
     // Serialise to binary
     auto buffer = original.save();
@@ -47,8 +46,6 @@ TEST_CASE("Log message binary serialisation roundtrip", "[logging][binary]") {
     REQUIRE(loaded[request_id::val].value() == "req-999");
     REQUIRE(loaded[status_code::val].value().has_value());
     REQUIRE(loaded[status_code::val].value() == 404U);
-    REQUIRE(loaded[error_code::val].value().has_value());
-    REQUIRE(loaded[error_code::val].value() == -1LL);
 }
 
 TEST_CASE("Log message binary deserialisation rejects corrupted data", "[logging][binary][negative]") {
@@ -156,7 +153,4 @@ TEST_CASE("Log message binary deserialisation with absent optional fields", "[lo
     REQUIRE_FALSE(loaded[bytes_sent::val].value().has_value());
     REQUIRE_FALSE(loaded[latency::val].value().has_value());
     REQUIRE_FALSE(loaded[retry_count::val].value().has_value());
-
-    REQUIRE_FALSE(loaded[error_code::val].value().has_value());
-    REQUIRE_FALSE(loaded[error_message::val].value().has_value());
 }

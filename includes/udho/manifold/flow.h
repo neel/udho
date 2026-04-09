@@ -6,6 +6,7 @@
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/transition.h>
 #include <udho/net/detail.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace manifold{
@@ -95,7 +96,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(Args&&... args) { _root_pipeline(self(), _stream, std::forward<Args>(args)...); }
+    void start(Args&&... args) {
+        namespace p = udho::logging::params;
+        UDHO_LOG_INFO("manifold::flow", "Flow starts", p::flow_id(id()));
+
+        _root_pipeline(self(), _stream, std::forward<Args>(args)...);
+    }
 
     /**
      * @brief Starts asynchronous pipeline execution
@@ -206,6 +212,9 @@ private:
      *       the finish pipeline (stage Count) or by flow::error() on failure.
      */
     void terminate(bool reenter) {
+        namespace p = udho::logging::params;
+        UDHO_LOG_INFO("manifold::flow", "Terminated", p::flow_id(id()), p::socket_id(udho::utils::misc::native_handle(_stream)));
+
         if(_callback){
             try{
                 _callback(*this, reenter);
@@ -215,8 +224,11 @@ private:
         }
         if(!reenter) {
             bool removed = _runtime.remove(self());
+
             if(!removed) {
-                std::cout << "Flow doesn't exist in collection" << std::endl;
+                UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(id()));
+            } else {
+                UDHO_LOG_TRACE("manifold::flow", "Flow removed", p::flow_id(id()));
             }
         }
     }

@@ -1,6 +1,15 @@
 #ifndef UDHO_WWW_H
 #define UDHO_WWW_H
 
+#include <udho/manifold/fabric.h>
+// #include <udho/www/framework.h>
+// #include <udho/manifold/composition.h>
+// #include <udho/manifold/pipeline.h>
+// #include <udho/manifold/features.h>
+// #include <udho/manifold/config.h>
+// #include <udho/manifold/config.h>
+// #include <udho/manifold/journal.h>
+
 #include <udho/www/tags.h>
 #include <udho/www/label.h>
 #include <udho/www/sketch.h>
@@ -19,6 +28,5 @@
 #include <udho/www/components/resources.h>
 #include <udho/www/components/routing.h>
 #include <udho/www/components/session.h>
-#include <udho/www/components/view.h>
 
 #endif // UDHO_WWW_H

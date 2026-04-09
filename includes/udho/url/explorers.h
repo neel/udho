@@ -405,7 +405,9 @@ struct registry{
             namespace places = udho::pages::system::layouts::places;
             namespace placeholders = udho::pages::system::layouts::placeholders;
 
+            context.ostream().status(boost::beast::http::status::ok);
             context.ostream().set(boost::beast::http::field::content_type, "text/html");
+            context.ostream().set(boost::beast::http::field::connection, "keep-alive");
 
             layout[placeholders::header] = udho::pages::system::data::listing_header{boost::beast::http::status::ok};
             layout[places::listing] = listings;

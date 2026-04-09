@@ -6,6 +6,7 @@
 #include <udho/manifold/config.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/www/components/params.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace www{
@@ -34,8 +35,8 @@ public:
     router_type& router() { return _router; }
     const router_type& router() const { return _router; }
 
-    udho::url::detail::route_index locate(const std::string& subject) {
-        udho::url::detail::route_index route = _router.index_of(subject);
+    udho::url::detail::route_index locate(boost::beast::http::verb method, const std::string& subject) {
+        udho::url::detail::route_index route = _router.index_of(method, subject);
         return route;
     }
 };
@@ -50,21 +51,30 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locato
     using component_type = udho::www::components::routing<RouterT>;
     using config_type    = udho::manifold::config<component_type>;
 
-    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
+    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config), _id(id) {}
 
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        udho::www::feature::identifier::result res = journal.template at<udho::www::feature::identifier>();
-        // udho::utils::string_view tgt = res.resource();
-        // std::string target(tgt.begin(), tgt.end());
-        udho::url::detail::route_index index = _component.locate(res.resource());
+        const udho::www::feature::header_reader::result& request = journal.template at<udho::www::feature::header_reader>();
+        udho::www::feature::identifier::result res               = journal.template at<udho::www::feature::identifier>();
+
+        udho::url::detail::route_index index = _component.locate(request.method(), res.resource());
+        bool is_path = false;
         if(!index.valid()) {
-            index = _component.locate(res.path());
+            index   = _component.locate(request.method(), res.path());
+            is_path = index.valid();
         }
+
+        namespace p = udho::logging::params;
         if(index.type() != udho::url::detail::route_index::type::none) {
+            UDHO_LOG_INFO("udho::www::components::routing::facet::locator", "Resource located", p::uri(is_path ? res.path() : res.resource()), p::method(request.method()), p::flow_id(_id));
+
             next.pass(std::move(index));
         } else {
-            next.fail(udho::http::error(boost::beast::http::status::not_found, udho::utils::format("route not found {}", res.resource())));
+            std::string route = res.path();
+
+            UDHO_LOG_INFO("udho::www::components::routing::facet::locator", "Failed to locate Resource", p::uri(route), p::method(request.method()), p::flow_id(_id));
+            next.fail(udho::http::error(boost::beast::http::status::not_found, udho::utils::format("route not found {}", route)));
         }
     }
 
@@ -75,8 +85,9 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locato
     }
 
 private:
-    component_type& _component;
-    const config_type& _config;
+    component_type&     _component;
+    const config_type&  _config;
+    std::size_t         _id;
 };
 
 template <typename RouterT>

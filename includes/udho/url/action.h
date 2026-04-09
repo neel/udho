@@ -216,27 +216,34 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
     /**
      * @brief checks whether this action matches with the pattern provided
      * @tparam Ch The character type of the URL string.
+     * @param method The HTTP method to match.
      * @param subject The URL to match.
      * @return True if the URL matches the pattern, otherwise false.
      */
     template <typename Ch>
-    bool find(const std::basic_string<Ch>& subject) const{
+    bool find(boost::beast::http::verb method, const std::basic_string<Ch>& subject) const{
+        if(method != _match.method()) return false;
+
         bool found = _match.find(subject);
         return found;
     }
+
     /**
      * @brief invokes the function with the captured arguments if this action matches with the pattern provided.
      * @tparam Ch The character type of the URL string.
      * @tparam Args Types of arguments to forward to the function if matched.
+     * @param method The HTTP method to match.
      * @param subject The URL to match and potentially invoke the action upon.
      * @param args Arguments to forward to the function.
      * @return True if the URL matches the pattern and the function is invoked, otherwise false.
      */
     template <typename Ch, typename... Args>
-    bool invoke(const std::basic_string<Ch>& subject, Args&&... args) const{
+    bool invoke(boost::beast::http::verb method, const std::basic_string<Ch>& subject, Args&&... args) const{
         auto rest = detail::rest<decayed_arguments_type, sizeof...(Args)>();    // rest is an empty tuple filled with default values
                                                                                 // Given decayed_arguments_type = {T1...Tn} rest only includes types Tk...Tn
                                                                                 // where k = sizeof...(Args)
+        if(method != _match.method()) return false;
+
         bool found = _match.find(subject, rest);                                // find fills in the rest tuple if subject matches
         if(found){
             auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
@@ -244,6 +251,16 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
             slot_type::operator()(std::move(tuple));
         }
         return found;
+    }
+
+    template <typename Ch, typename... Args>
+    void invoke(const std::basic_string<Ch>& subject, Args&&... args) const{
+        auto rest = detail::rest<decayed_arguments_type, sizeof...(Args)>();    // rest is an empty tuple filled with default values
+        // Given decayed_arguments_type = {T1...Tn} rest only includes types Tk...Tn
+        // where k = sizeof...(Args)
+        auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
+        decayed_arguments_type tuple = std::move(std::tuple_cat(std::move(head), rest));
+        slot_type::operator()(std::move(tuple));
     }
 
     /**

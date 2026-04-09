@@ -94,11 +94,20 @@ struct consumer{
     }
 
     /**
-     * @brief Run the consumer loop until stop is requested.
-     * @param should_stop external stop flag observed by the loop
+     * @brief Run the single-threaded consumer loop.
+     * @param should_stop External stop flag observed by the loop.
      *
-     * The loop polls ready admin-socket handlers, drains a bounded number of
-     * queued log messages, and uses a small backoff sleep when idle.
+     * Each iteration:
+     * - polls ready admin-socket handlers from @c _io
+     * - drains up to a bounded number of IPC log messages
+     * - sleeps with exponential backoff when both admin and queue sides are idle
+     *
+     * @note The current implementation drains at most 64 queued log messages per
+     *       iteration.
+     *
+     * @note On stop request, the current implementation exits the loop after the
+     *       current iteration. It does not guarantee that the IPC queue has been
+     *       fully drained.
      */
     void consume(std::atomic_bool& should_stop) {
         std::size_t backoff = 1, backoff_ceiling = 4;
@@ -476,6 +485,8 @@ private:
 
         boost::log::attribute_set attrs;
 
+        auto smessage = msg[udho::logging::params::message::val].value();
+
         attrs.insert(names::local_id,  boost::log::attributes::make_constant(msg[local_id::val].value()) );
         attrs.insert(names::timestamp, boost::log::attributes::make_constant(msg[timestamp::val].value()) );
         attrs.insert(names::severity,  boost::log::attributes::make_constant(msg[udho::logging::params::severity::val].value()) );
@@ -488,6 +499,7 @@ private:
 
         add_optional_attr(msg, attrs, request_id::val,      names::request_id);
         add_optional_attr(msg, attrs, flow_id::val,         names::flow_id);
+        add_optional_attr(msg, attrs, socket_id::val,       names::socket_id);
         add_optional_attr(msg, attrs, session_id::val,      names::session_id);
         add_optional_attr(msg, attrs, user_id::val,         names::user_id);
         add_optional_attr(msg, attrs, client::val,          names::client);
@@ -501,12 +513,10 @@ private:
         add_optional_attr(msg, attrs, bytes_sent::val,      names::bytes_sent);
         add_optional_attr(msg, attrs, latency::val,         names::latency);
         add_optional_attr(msg, attrs, retry_count::val,     names::retry_count);
-        add_optional_attr(msg, attrs, error_code::val,      names::error_code);
-        add_optional_attr(msg, attrs, error_message::val,   names::error_message);
 
         if (auto record = boost::log::core::get()->open_record(attrs)) {
             boost::log::record_ostream stream(record);
-            stream << msg[udho::logging::params::message::val].value();
+            stream << smessage;
             stream.flush();
             boost::log::core::get()->push_record(std::move(record));
         }
