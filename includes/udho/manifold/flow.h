@@ -179,6 +179,8 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     const runtime_type& runtime() const { return _runtime; }
 
     const configs_type& configs() const { return _root_pipeline.configs(); }
+    configs_type& configs() { return _root_pipeline.configs(); }
+
     const configs_type& baseline() const { return _runtime.baseline(); }
     const journal_type& journal() const { return _root_pipeline.journal(); }
 

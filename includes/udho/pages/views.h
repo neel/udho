@@ -108,7 +108,7 @@ constexpr static char template_routes_page[] = R"TEMPLATE(
                             <span class="route-label-name"><?= r.slot.key ?></span>
                             <span class="route-label-args"><?= r.slot.nargs -1 ?></span>
                         </div>
-                        <code class="route-callback" data-label="Callback"><?= r.slot.symbol ?></code>
+                        <code class="route-callback" data-label="Callback"><pre><?= udho.utils.htmlescape(r.slot.symbol) ?></pre></code>
                     </div>
                 <? end ?>
             </div>
@@ -122,7 +122,6 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
 <?! vars('d', 'ctx') include.css("udho", "header.css") ?>
 
 <div class="logo">
-    <? if(d.code ~= 200) then ?>
     <div class="logo-parts http-status">
         <div class="http-status-code">
             <?= d.code ?>
@@ -131,7 +130,6 @@ constexpr static char template_listing_header[] = R"TEMPLATE(
             <?= d.message ?>
         </div>
     </div>
-    <? end ?>
     <img class="logo-parts beral-logo" src="<?= ctx.portal.resources.img:get('udho', 'beral.gif').url ?>" />
 </div>
 )TEMPLATE";

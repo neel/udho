@@ -5,6 +5,7 @@
 #include <udho/www/label.h>
 #include <udho/www/components/handler.h>
 #include <udho/exceptions/exceptions.h>
+#include <udho/www/pages.h>
 
 namespace udho {
 namespace manifold {
@@ -22,11 +23,13 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using composition_type  = typename runtime_type::composition_type;
     using journal_type      = typename flow_type::journal_type;
     using configs_type      = typename runtime_type::configs_type;
+    using portal_type       = typename udho::manifold::detail::get_portal_type<composition_type>::type;
+    using context_type      = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
 
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
 
-    basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+    basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     /**
@@ -72,7 +75,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
                 success.rethrow();
             } catch(const udho::http::error& error) {
                 std::cout << "exception: " << error.what() << std::endl;
-                handle_error(flow, error, stream, std::forward<Args>(args)...);
+                handle_http_error(flow, error, stream, std::forward<Args>(args)...);
             } catch(boost::system::error_code error) {
                 std::cout << "system error: " << error << std::endl;
                 handle_error(flow, error, stream, std::forward<Args>(args)...);
@@ -86,12 +89,20 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
 private:
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+    void handle_http_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
-        ostream.status(error.status());
-        ostream << error.what();
 
-        ostream.finish();
+        portal_type portal(_composition, _configs, _journal);
+        context_type context(ostream, portal, flow.id());
+
+        if(error.status() == boost::beast::http::status::not_found) {
+            udho::www::pages::not_found<context_type> error_page(context);
+            error_page(error.what());
+        } else {
+            ostream.status(error.status());
+            ostream << error.what();
+            ostream.finish();
+        }
     }
 
     template <typename... Args>
@@ -138,7 +149,7 @@ private:
 
 private:
     composition_type&   _composition;
-    const configs_type& _configs;
+    configs_type& _configs;
     const journal_type& _journal;
 };
 

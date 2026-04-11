@@ -215,10 +215,10 @@ namespace udho::view::data{
     };
 
     /**
- * @brief A proxy around the context used internally to make a view accessible conveniently
- * @tparam XBridgeT the bridge on which the intended view is registered
- * @tparam Bridges...  The bridges supported by the context
- */
+     * @brief A proxy around the context used internally to make a view accessible conveniently
+     * @tparam XBridgeT the bridge on which the intended view is registered
+     * @tparam Bridges...  The bridges supported by the context
+     */
     template <typename XBridgeT, typename ContextT>
     struct proxy_wrapper{
         using context_type = ContextT;

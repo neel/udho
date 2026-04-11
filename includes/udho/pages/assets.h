@@ -36,6 +36,23 @@ constexpr static char css_system[] = R"ASSET(
     height: auto;
 }
 
+.headline {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+}
+
+.headline .msg {
+    flex: 1;
+}
+
+.headline a {
+    text-decoration: none;
+    color: #2b6cb0;
+    border-bottom: 2px solid #4299e1;
+}
+
 .location {
     margin: 0 auto 2rem;
     padding: 0 1rem;
@@ -275,7 +292,7 @@ constexpr static char css_routes[] = R"ASSET(
 }
 
 .route-entry > * {
-    padding: 2px 15px;
+    padding: 0px 8px;
     display: flex;
     align-items: center;
     font-size: 0.8rem;
@@ -332,7 +349,7 @@ constexpr static char css_routes[] = R"ASSET(
     align-items: center;
     gap: 8px;
     width: calc(100% - 10px);
-    padding: 2px 5px;
+    padding: 0px 5px;
 }
 
 .route-pattern-format {

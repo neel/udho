@@ -225,8 +225,6 @@ private:
     ostream_type&                       _ostream;
     portal_type                         _portal;
     std::size_t                         _flow_id;
-    udho::net::types::headers::response _response;
-    boost::beast::multi_buffer          _buffer;
 };
 
 

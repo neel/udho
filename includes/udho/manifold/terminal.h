@@ -30,7 +30,7 @@ struct basic_terminal{
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
 
-    basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
+    basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     template <typename... Args>
@@ -44,7 +44,7 @@ struct basic_terminal{
 
 private:
     composition_type&   _composition;
-    const configs_type& _configs;
+    configs_type& _configs;
     const journal_type& _journal;
 };
 

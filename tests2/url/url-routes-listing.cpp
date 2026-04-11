@@ -83,9 +83,9 @@ struct X{
 using logger_type = udho::logging::setup<udho::logging::fixed_file>;
 
 TEST_CASE("URL routes listing", "[url][routing][listing]") {
-    if(!logger_type::apply()) return;
+    // if(!logger_type::apply()) return;
 
-    assert(logger_type::running());
+    // assert(logger_type::running());
 
     using namespace udho::hazo::string::literals;
 

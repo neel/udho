@@ -29,8 +29,6 @@
 #define UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
 
 #include <map>
-#include <thread>
-#include <chrono>
 #include <string>
 #include <functional>
 #include <sol/sol.hpp>
@@ -38,6 +36,7 @@
 #include <udho/url/detail/format.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/buffer.h>
+#include <udho/view/bridges/lua/extras.h>
 #include <udho/manifold/context.h>
 
 namespace udho{
@@ -183,20 +182,8 @@ struct state{
         buffer::apply(_udho);
 
         _utils  = _udho["utils"].get_or_create<sol::table>();
-        _utils.set_function("sleep", [](std::size_t millisecs){
-            std::this_thread::sleep_for(std::chrono::milliseconds(millisecs));
-        });
-        _utils.set_function("thread_id", []() -> std::thread::id {
-            try{
-                return std::this_thread::get_id();
-            } catch(const std::exception& ex){
-                std::cout << "Exception from lua calling thread.id: " << ex.what() << std::endl;
-                return std::thread::id{};
-            }catch (...) {
-                std::cout << "An unknown exception occurred." << std::endl;
-                return std::thread::id{};
-            }
-        });
+        udho::view::data::bridges::detail::lua::extras extras(_utils);
+        extras();
     }
 
 

@@ -481,7 +481,7 @@ struct const_store{
     /**
      * @brief const reference to the assets store
      */
-    const asset_substore_readonly_type& assets() { return _assets; }
+    const asset_substore_readonly_type& assets() const { return _assets; }
 
     /**
      * @brief const reference to the asset substore specific for javascript
@@ -551,7 +551,7 @@ struct const_store<>{
     /**
      * @brief const reference to the assets store
      */
-    const asset_substore_readonly_type& assets() { return _assets; }
+    const asset_substore_readonly_type& assets() const { return _assets; }
 
     /**
      * @brief const reference to the asset substore specific for javascript

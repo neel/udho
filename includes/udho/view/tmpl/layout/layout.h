@@ -278,22 +278,22 @@ struct basic_layout_impl<basic_document<PlaceholderT>, PresenterT>{
  */
 template <typename ContextT, typename PlaceholderT, typename PresenterT>
 struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
-    using placeholder_type   = PlaceholderT;
-    using document_type      = basic_document<PlaceholderT>;
-    using placeholders_type  = typename document_type::placeholders_type;
-    using presenter_type     = PresenterT;
-    using basic_layout_impl_type  = basic_layout_impl<document_type, presenter_type>;
-    using loader_js          = typename basic_layout_impl_type::loader_js;
-    using loader_css         = typename basic_layout_impl_type::loader_css;
-    using context_type       = ContextT;
-    using mapped_view        = std::tuple<std::string, std::string>;
-    using basic_layout_pimpl_type = std::shared_ptr<basic_layout_impl_type>;
-    using basic_layout_             = basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>;
+    using placeholder_type          = PlaceholderT;
+    using document_type             = basic_document<placeholder_type>;
+    using placeholders_type         = typename document_type::placeholders_type;
+    using presenter_type            = PresenterT;
+    using basic_layout_impl_type    = basic_layout_impl<document_type, presenter_type>;
+    using loader_js                 = typename basic_layout_impl_type::loader_js;
+    using loader_css                = typename basic_layout_impl_type::loader_css;
+    using context_type              = ContextT;
+    using mapped_view               = std::tuple<std::string, std::string>;
+    using basic_layout_pimpl_type   = std::shared_ptr<basic_layout_impl_type>;
+    using basic_layout_             = basic_layout<ContextT, basic_document<placeholder_type>, PresenterT>;
 
     template <typename KeyT, typename LayoutT, bool>
     friend struct renderer;
 
-    basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.portal().resources())), _finished(false) { }
+    explicit basic_layout(context_type ctx): _context(ctx), _pimpl(std::make_shared<basic_layout_impl_type>(ctx.portal().resources())), _finished(false) { }
     basic_layout(const basic_layout_& other): _context(other._context), _pimpl(other._pimpl), _finished(other._finished) {}
 
     template <typename Key>
@@ -360,7 +360,7 @@ using standard_layout = basic_layout<ContextT, standard_document, PresenterT>;
 
 template <typename PlaceholderT, typename ContextT, typename PresenterT = default_presenter<basic_document<PlaceholderT>>>
 basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> create(ContextT ctx){
-    return basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{ctx};
+    return basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>(ctx);
 }
 
 
