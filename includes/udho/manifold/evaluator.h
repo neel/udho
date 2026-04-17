@@ -7,6 +7,7 @@
 #include <udho/manifold/features.h>
 #include <udho/manifold/journal.h>
 #include <iostream>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho {
 namespace manifold {
@@ -28,7 +29,7 @@ namespace manifold {
  *       be propagated across asynchronous boundaries.
  */
 class exclusive_result{
-    std::exception_ptr _exception;
+    udho::exceptions::captured _capex;
     bool _success;
 public:
     exclusive_result(): _success(false) {}                      ///< Default Constructor
@@ -38,16 +39,16 @@ public:
 
     /// @brief Construct with an exception
     /// @param exptr Exception pointer to store
-    exclusive_result(std::exception_ptr&& exptr): _exception(std::move(exptr)), _success(false) {}
+    exclusive_result(udho::exceptions::captured&& capex): _capex(std::move(capex)), _success(false) {}
 
-    exclusive_result(bool success): _exception(nullptr), _success(success) {}
+    exclusive_result(bool success): _success(success) {}
 
 public:
     /// @brief Assign an exception
     /// @param exptr Exception pointer to store
     /// @return Reference to this object
-    exclusive_result& operator=(std::exception_ptr&& exptr) {
-        _exception = std::move(exptr);
+    exclusive_result& operator=(udho::exceptions::captured&& capex) {
+        _capex     = std::move(capex);
         _success   = false;
         return *this;
     }
@@ -58,27 +59,31 @@ public:
     exclusive_result& operator=(bool success) {
         _success = success;
         if(_success) {
-            _exception = nullptr;
+            _capex.reset();
         }
         return *this;
+    }
+
+    const udho::exceptions::captured& capex() const {
+        return _capex;
     }
 public:
     /// @brief Check and propagate exception
     /// @return Always returns true if no exception stored
     /// @throws The stored exception if one exists
     bool operator()() const {
-        if(_exception) {
-            std::rethrow_exception(_exception);
+        if(_capex) {
+            rethrow();
         }
         return true;
     }
 public:
     bool value() const { return _success; }
-    bool has_exception() const { return !!_exception; }
+    bool has_exception() const { return !_capex.empty(); }
 public:
     /// @brief Check if operation was successful
     /// @return true if no exception stored
-    bool success() const { return !_exception && _success; }
+    bool success() const { return !_capex && _success; }
     /// @brief Check if operation failed
     /// @return true if an exception is stored
     bool error() const { return !success(); }
@@ -89,8 +94,10 @@ public:
     /// @brief Rethrow the stored exception
     /// @pre error() must be true
     void rethrow() const {
-        assert(has_exception());
-        std::rethrow_exception(_exception);
+        assert(_capex);
+        if(has_exception()) {
+            _capex.rethrow();
+        }
     }
 public:
     /// @brief Boolean conversion for checking success
@@ -187,6 +194,20 @@ public:
         _handler.completion()(false);
     }
 
+    void fail(udho::exceptions::captured&& capex){
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(std::move(capex));
+    }
+
+    void fail(std::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(std::system_error(ec)));
+    }
+
     /**
      * @brief Fail with an exception
      * @param exptr Exception pointer to propagate
@@ -194,12 +215,12 @@ public:
      * Terminates the pipeline by calling the completion handler with
      * the exception.
      */
-    void fail(std::exception_ptr&& ex){
-        if(_done) return;
+    // void fail(std::exception_ptr&& ex){
+    //     if(_done) return;
 
-        _done = true;
-        _handler.completion()(std::move(ex));
-    }
+    //     _done = true;
+    //     _handler.completion()(std::move(ex));
+    // }
 
     /**
      * @brief Fail with an exception object
@@ -213,7 +234,7 @@ public:
         if(_done) return;
 
         _done = true;
-        _handler.completion()(std::make_exception_ptr(std::move(ex)));
+        _handler.completion()(udho::exceptions::captured::propagate(std::move(ex)));
     }
 
     /**
@@ -442,7 +463,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
                     std::forward<Args>(args)...
                 ); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _callback(std::current_exception());
+                _callback(udho::exceptions::captured::propagate());
             }
         }
 
@@ -471,7 +492,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
                     std::forward<Args>(args)...
                 ); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _callback(std::current_exception());
+                _callback(udho::exceptions::captured::propagate());
             }
         }
 

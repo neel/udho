@@ -86,6 +86,21 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         }
     }
 
+    template <typename... Args>
+    void captured_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
+
+        assert(ostream.has_exception());
+
+        try{
+            capex.rethrow();
+        } catch(const std::exception& exception) {
+            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error(exception, capex.trace());
+        }
+    }
+
 private:
 
     template <typename... Args>
@@ -142,8 +157,12 @@ private:
             }
         };
 
+        auto ex_lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            ostream.finish();
+        };
+
         handler_type& handler = _composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         return ostream;
     }
 

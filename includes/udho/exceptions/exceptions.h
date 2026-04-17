@@ -60,6 +60,15 @@ struct captured {
         std::rethrow_exception(_exception);
     }
 
+    bool operator!() const { return empty(); }
+
+    operator bool() const { return !empty(); }
+
+    void reset() {
+        _exception = nullptr;
+        _trace = {};
+    }
+
 public:
     captured() {}
 

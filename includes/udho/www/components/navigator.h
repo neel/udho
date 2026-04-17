@@ -6,6 +6,7 @@
 #include <udho/manifold/portal.h>
 #include <udho/utils/encoding.h>
 #include <iostream>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho{
 namespace www{
@@ -130,7 +131,7 @@ struct facet<udho::www::components::navigator<Policy>, udho::www::feature::ident
             result res = _component(request);
             next.pass(std::move(res));
         } catch(...){
-            next.fail(std::current_exception());
+            next.fail(udho::exceptions::captured::propagate());
         }
     }
 

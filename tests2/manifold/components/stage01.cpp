@@ -220,7 +220,7 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
 
     template <typename... Args>
     void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
-        if(success.has_exception()) {
+        if(!success) {
             try{
                 success.rethrow();
             } catch(const udho::http::error& error) {
@@ -233,6 +233,20 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
                 std::cout << "exception: " << ex.what() << std::endl;
                 handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
+        }
+    }
+
+    template <typename... Args>
+    void captured_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
+
+        assert(ostream.has_exception());
+
+        try{
+            capex.rethrow();
+        } catch(const std::exception& exception) {
+            handle_error(flow, exception, stream, std::forward<Args>(args)...);
         }
     }
 
@@ -282,8 +296,12 @@ private:
             }
         };
 
+        auto ex_lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            ostream.finish();
+        };
+
         handler_type& handler = _composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         return ostream;
     }
 
@@ -384,8 +402,22 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
         using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
+        auto ex_lambda = [&flow, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            if(ostream.has_exception()){
+                const udho::exceptions::captured& capex = ostream.exception();
+                std::apply(
+                    [&](auto&&... args) {
+                        flow->error(capex, stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                );
+            } else {
+                ostream.finish();
+            }
+        };
+
         handler_type& handler = composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda), std::move(ex_lambda));
         // }
 
         // { create context

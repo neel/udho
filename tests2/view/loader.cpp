@@ -127,6 +127,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         udho::net::ostream_view stream_view = stream.view();
@@ -189,6 +192,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         udho::net::ostream_view stream_view = stream.view();
@@ -228,6 +234,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         udho::net::ostream_view stream_view = stream.view();
@@ -265,6 +274,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         udho::net::ostream_view stream_view = stream.view();
@@ -335,6 +347,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
             [&](boost::system::error_code ec, std::size_t) {
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         udho::net::ostream_view stream_view = stream.view();
@@ -400,6 +415,9 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
         udho::net::test_ostream stream(stream_in,
            [&](boost::system::error_code ec, std::size_t) {
                CHECK_FALSE(ec);
+           },
+           [&](udho::net::test_ostream& s){
+               s.finish();
            }
         );
 

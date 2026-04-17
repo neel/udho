@@ -144,6 +144,9 @@ Hello World
             udho::net::test_ostream stream(stream_in,
                [&](boost::system::error_code ec, std::size_t) {
                    CHECK_FALSE(ec);
+               },
+               [&](udho::net::test_ostream& s){
+                   s.finish();
                }
             );
 
@@ -327,6 +330,9 @@ Hello World
             udho::net::test_ostream stream(stream_in,
                 [&](boost::system::error_code ec, std::size_t) {
                     CHECK_FALSE(ec);
+                },
+                [&](udho::net::test_ostream& s){
+                    s.finish();
                 }
             );
 

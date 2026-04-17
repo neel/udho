@@ -182,17 +182,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
             stream_type stream(io_context, request_data);
 
             pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
-                if(!success) {
-                    CHECK(success.has_exception());
-                    try {
-                        success.rethrow();
-                    } catch(const std::exception& e) {
-                        std::cout << "Caught (expected) exception: '" << e.what() << "'\n";
-                    }
-                    return;
-                } else {
-                    CHECK(success);
-                }
+                CHECK(success);
 
                 CHECK(journal.count<udho::www::feature::header_reader>() == 1);
                 CHECK(journal.count<udho::www::feature::identifier>()    == 1);

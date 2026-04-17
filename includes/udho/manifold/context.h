@@ -173,10 +173,10 @@ public:
         _ostream.write(std::forward<Args>(args)...);
     }
 
-    udho::net::types::transfer::encoding encoding() const { return _ostream.encoding(); }
-    udho::net::types::transfer::compression compression() const { return _ostream.compression(); }
-    void encoding(udho::net::types::transfer::encoding enc) { _ostream.encoding(enc); }
-    void compression(udho::net::types::transfer::compression cmp) { _ostream.compression(cmp); }
+    inline udho::net::types::transfer::encoding encoding() const { return _ostream.encoding(); }
+    inline udho::net::types::transfer::compression compression() const { return _ostream.compression(); }
+    inline void encoding(udho::net::types::transfer::encoding enc) { _ostream.encoding(enc); }
+    inline void compression(udho::net::types::transfer::compression cmp) { _ostream.compression(cmp); }
 
     template <typename T>
     friend self_type& operator<<(self_type& ctx, T&& value) {
@@ -185,18 +185,24 @@ public:
     }
 
 public:
-    void disable_buffering() {
+    inline void disable_buffering() {
         // sync cookies, session, csrf etc..
         _ostream.disable_buffering();
     }
 
 public:
-    void finish() {
+    inline void finish() {
         // sync cookies, session, csrf etc.. if not synced already
         _ostream.finish();
     }
 
-    ~basic_context() { }
+    inline void capture(udho::exceptions::captured&& captured) {
+        _ostream.exception(std::move(captured));
+    }
+
+    inline void capture() {
+        capture(udho::exceptions::captured::propagate());
+    }
 
 public:
     friend auto metatype(udho::view::data::type<self_type>){

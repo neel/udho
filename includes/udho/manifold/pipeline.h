@@ -232,7 +232,7 @@ private:
                         args_tuple
                     );
                 } catch(...) {
-                    udho::manifold::exclusive_result result(std::current_exception());
+                    udho::manifold::exclusive_result result(udho::exceptions::captured::propagate());
                     std::apply(
                         [&](auto&&... args) {
                             flow->error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination

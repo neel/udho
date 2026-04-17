@@ -202,6 +202,9 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 udho::net::test_ostream stream(stream_in,
                     [&](boost::system::error_code ec, std::size_t) {
                         CHECK_FALSE(ec);
+                    },
+                    [&](udho::net::test_ostream& s){
+                        s.finish();
                     }
                 );
                 udho::net::ostream_view stream_view = stream.view();
@@ -248,6 +251,9 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 udho::net::test_ostream stream(stream_in,
                    [&](boost::system::error_code ec, std::size_t) {
                        CHECK_FALSE(ec);
+                   },
+                   [&](udho::net::test_ostream& s){
+                       s.finish();
                    }
                 );
                 udho::net::ostream_view stream_view = stream.view();
@@ -289,6 +295,9 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                 udho::net::test_ostream stream(stream_in,
                     [&](boost::system::error_code ec, std::size_t) {
                         CHECK_FALSE(ec);
+                    },
+                    [&](udho::net::test_ostream& s){
+                        s.finish();
                     }
                 );
                 udho::net::ostream_view stream_view = stream.view();

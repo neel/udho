@@ -31,13 +31,17 @@ struct expected_next{
         _result = std::move(res);
     }
 
-    template <typename Exception, std::enable_if_t<!std::is_same_v<Exception, result_type>, bool> = true>
-    void fail(Exception&& ex) {
+    template <typename ExceptionT, std::enable_if_t<std::is_base_of<std::exception, ExceptionT>::value, bool> = true>
+    void fail(ExceptionT&& ex) {
         fail(std::make_exception_ptr(std::move(ex)));
     }
 
-    void fail(std::exception_ptr ex) {
-        _ex = ex;
+    void fail(std::exception_ptr&& exp) {
+        _ex = std::move(exp);
+    }
+
+    void fail(const std::error_code& ec) {
+        fail(std::system_error(ec));
     }
 
     std::exception_ptr& exception() { return _ex; }

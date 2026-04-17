@@ -319,6 +319,9 @@ TEST_CASE("Lua Context Interop", "[view][lua][context][interop]") {
     stream_type stream(stream_in,
        [&](boost::system::error_code ec, std::size_t) {
            CHECK_FALSE(ec);
+       },
+       [&](udho::net::test_ostream& s){
+           s.finish();
        }
     );
 

@@ -40,6 +40,9 @@ struct basic_terminal{
     void error(udho::manifold::exclusive_result, flow_type& flow, Args&&...){ return; }
 
     template <typename... Args>
+    void captured_error(const udho::exceptions::captured& capex, flow_type& flow, Args&&...){ return; }
+
+    template <typename... Args>
     void prepare(Args&&... args) { }
 
 private:

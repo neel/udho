@@ -24,6 +24,8 @@ build:ubuntu:noble:
     - cd build
     - cmake -DPostgreSQL_TYPE_INCLUDE_DIR=/usr/include/postgresql/ ..
     - make
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
   artifacts:
     paths:
       - build
@@ -64,19 +66,12 @@ test:ubuntu:noble:
     - cat /proc/sys/fs/mqueue/queues_max 2>/dev/null || true
     - find /dev/mqueue -maxdepth 1 -type f -name 'udho*' -delete 2>/dev/null || true
     - rm -f /tmp/udho*.sock 2>/dev/null || true
-  # script:
-  #   - cd build
-  #   - ctest --output-on-failure
-  #   - tar -czvf results.tar.gz results
-  # artifacts:
-  #   paths:
-  #     - build/results.tar.gz
-  # dependencies:
-  #   - build:ubuntu:noble
   script:
     - cd build
     - ctest -j1 --repeat until-pass:3 --output-on-failure --timeout 240 || ctest_exit=$?
     - exit ${ctest_exit:-0}
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
   artifacts:
     paths:
       - build/results/

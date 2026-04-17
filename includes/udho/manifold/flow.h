@@ -7,6 +7,7 @@
 #include <udho/manifold/transition.h>
 #include <udho/net/detail.h>
 #include <udho/logging/macros.h>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho{
 namespace manifold{
@@ -166,6 +167,14 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
         terminal_type terminal(composition(), configs(), journal());
         terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
+
+    template <typename... Args>
+    void error(const udho::exceptions::captured& capex, Args&&... args) {
+        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
+        terminal_type terminal(composition(), configs(), journal());
+        terminal.captured_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+    }
+
 
     const start_pipeline_type& root() const { return _root_pipeline; }
 

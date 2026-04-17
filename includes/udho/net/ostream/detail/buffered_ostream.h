@@ -164,7 +164,7 @@ struct basic_buffered_ostream: private chunking_helper{
      */
     void async_flush() {
         boost::asio::dispatch(_strand, [this]() {
-            std::cout << "buffered async_flush" << std::endl;
+            // std::cout << "buffered async_flush" << std::endl;
             _write_ongoing = true;
             async_write();
         });
@@ -275,6 +275,17 @@ private:
         if(_completion) {
             _completion(ec, bytes_written);
         }
+    }
+
+    void clear() {
+        boost::asio::dispatch(_strand, [this]() {
+            if(_write_ongoing) {
+                // error
+                return;
+            }
+
+            _multibuff.clear();
+        });
     }
 
 public:

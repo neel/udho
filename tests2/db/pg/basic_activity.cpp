@@ -202,7 +202,10 @@ TEST_CASE("postgresql basic_activity with plain OZO SQL query", "[pg]") {
                completed = true;
                CHECK_FALSE(ec);
                CHECK(bytes_written == 0);
-           }
+           },
+           [&](udho::net::test_ostream& s){
+                s.finish();
+            }
         );
 
 

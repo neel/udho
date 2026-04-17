@@ -134,7 +134,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
                 }
 
                 _component.remove(_id);
-                next.fail(std::system_error{ec});
+                next.fail(ec);
             }
         }, timeout_secs);
     }

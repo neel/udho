@@ -7,6 +7,7 @@
 #include <udho/manifold/portal.h>
 #include <udho/www/components/handler.h>
 #include <udho/logging/macros.h>
+#include <udho/www/pages.h>
 
 namespace udho {
 namespace manifold {
@@ -112,6 +113,9 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         // }
 
         // { add finish lambda to handler component
+        using handler_type = udho::www::components::basic_handler<StreamT>;
+        using ostream_type = udho::net::basic_ostream<StreamT>;
+
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
@@ -129,11 +133,24 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 args_tuple
             );
         };
-        using handler_type = udho::www::components::basic_handler<StreamT>;
-        using ostream_type = udho::net::basic_ostream<StreamT>;
+
+        auto ex_lambda = [&flow, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            if(ostream.has_exception()){
+                const udho::exceptions::captured& capex = ostream.exception();
+                std::apply(
+                    [&](auto&&... args) {
+                        flow->error(capex, stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                );
+            } else {
+                ostream.finish();
+            }
+        };
 
         handler_type& handler = composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda), std::move(ex_lambda));
+
         // }
 
         // { create context
