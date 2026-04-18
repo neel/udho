@@ -219,7 +219,7 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     void prepare(stream_type& stream, Args&&... args) { }
 
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
+    void error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(!success) {
             try{
                 success.rethrow();

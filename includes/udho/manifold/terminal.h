@@ -37,7 +37,7 @@ struct basic_terminal{
     bool reenter(Args&&... args) { return false; }
 
     template <typename... Args>
-    void error(udho::manifold::exclusive_result, flow_type& flow, Args&&...){ return; }
+    void error(udho::manifold::evaluation_result, flow_type& flow, Args&&...){ return; }
 
     template <typename... Args>
     void captured_error(const udho::exceptions::captured& capex, flow_type& flow, Args&&...){ return; }

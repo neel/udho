@@ -160,7 +160,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param success
      */
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, Args&&... args) {
+    void error(udho::manifold::evaluation_result success, Args&&... args) {
         assert(!success);
 
         using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;

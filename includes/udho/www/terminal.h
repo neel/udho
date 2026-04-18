@@ -69,7 +69,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      *       passed to facet triggered by calling next.fail(...)
      */
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
+    void error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();

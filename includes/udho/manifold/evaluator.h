@@ -8,6 +8,7 @@
 #include <udho/manifold/journal.h>
 #include <iostream>
 #include <udho/exceptions/exceptions.h>
+#include <udho/manifold/evaluation_result.h>
 
 namespace udho {
 namespace manifold {
@@ -16,97 +17,6 @@ namespace manifold {
  * @ingroup manifold
  * @{
  */
-
-
-/**
- * @brief A wrapper for storing either a successful result or an exception
- *
- * This class encapsulates the result of an asynchronous operation that can
- * either succeed (returning true) or fail (storing an exception). It provides
- * a unified interface for checking success and rethrowing exceptions.
- *
- * @note Designed to be used in pipeline evaluation where exceptions need to
- *       be propagated across asynchronous boundaries.
- */
-class exclusive_result{
-    udho::exceptions::captured _capex;
-    bool _success;
-public:
-    exclusive_result(): _success(false) {}                      ///< Default Constructor
-    exclusive_result(const exclusive_result&) = default;        ///< Copy constructor
-    exclusive_result(exclusive_result&&) = default;             ///< Move constructor
-    exclusive_result& operator=(const exclusive_result&) = default;    ///< Copy assignment operator
-
-    /// @brief Construct with an exception
-    /// @param exptr Exception pointer to store
-    exclusive_result(udho::exceptions::captured&& capex): _capex(std::move(capex)), _success(false) {}
-
-    exclusive_result(bool success): _success(success) {}
-
-public:
-    /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
-    /// @return Reference to this object
-    exclusive_result& operator=(udho::exceptions::captured&& capex) {
-        _capex     = std::move(capex);
-        _success   = false;
-        return *this;
-    }
-
-    /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
-    /// @return Reference to this object
-    exclusive_result& operator=(bool success) {
-        _success = success;
-        if(_success) {
-            _capex.reset();
-        }
-        return *this;
-    }
-
-    const udho::exceptions::captured& capex() const {
-        return _capex;
-    }
-public:
-    /// @brief Check and propagate exception
-    /// @return Always returns true if no exception stored
-    /// @throws The stored exception if one exists
-    bool operator()() const {
-        if(_capex) {
-            rethrow();
-        }
-        return true;
-    }
-public:
-    bool value() const { return _success; }
-    bool has_exception() const { return !_capex.empty(); }
-public:
-    /// @brief Check if operation was successful
-    /// @return true if no exception stored
-    bool success() const { return !_capex && _success; }
-    /// @brief Check if operation failed
-    /// @return true if an exception is stored
-    bool error() const { return !success(); }
-public:
-    /// @brief Dereference operator for checking success
-    /// @return true if no exception stored
-    bool operator*() const { return success(); }
-    /// @brief Rethrow the stored exception
-    /// @pre error() must be true
-    void rethrow() const {
-        assert(_capex);
-        if(has_exception()) {
-            _capex.rethrow();
-        }
-    }
-public:
-    /// @brief Boolean conversion for checking success
-    /// @return true if no exception stored
-    operator bool() const { return success(); }
-    /// @brief Negation operator for checking failure
-    /// @return true if an exception is stored
-    bool operator!() const { return error(); }
-};
 
 namespace detail {
 
@@ -397,7 +307,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         using handler_type          = handler<JournalT, Facets...>;
         using fabric_type           = udho::manifold::fabric<Stage, Facets...>;
         using journal_type          = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type     = exclusive_result;
+        using safe_success_type     = evaluation_result;
         using async_callback_type   = std::function<void (safe_success_type)>;
 
         /**
@@ -534,7 +444,7 @@ struct evaluator_helper<Stage>{
         using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type = exclusive_result;
+        using safe_success_type = evaluation_result;
         using async_callback_type = std::function<void (safe_success_type)>;
 
         handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}

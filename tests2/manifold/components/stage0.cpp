@@ -145,7 +145,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::evaluation_result success){
                 CHECK(!success);
 
                 CHECK(journal.count<udho::www::feature::header_reader>() == 1);
@@ -181,7 +181,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::evaluation_result success){
                 CHECK(success);
 
                 CHECK(journal.count<udho::www::feature::header_reader>() == 1);
@@ -255,7 +255,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::evaluation_result success){
                 // const auto& journal = pipeline.journal();
 
                 CHECK(!success);
@@ -296,7 +296,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::evaluation_result success){
                 if(!success) {
                     CHECK(success.has_exception());
                     try {
@@ -344,7 +344,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
                 "\r\n";
             stream_type stream(io_context, request_data);
 
-            pipeline.then([&stream, &pipeline, &journal](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal](udho::manifold::evaluation_result success){
                 if(!success) {
                     CHECK(success.has_exception());
                     try {
