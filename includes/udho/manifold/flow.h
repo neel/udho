@@ -36,6 +36,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
     using ptr               = std::shared_ptr<basic_flow<LabelT, StreamT>>;
+    using terminal_type     = udho::manifold::basic_terminal<label_type, stream_type>;
 
     static constexpr std::size_t Count = runtime_type::Count;
 
@@ -127,10 +128,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <typename... Args>
     bool reenter(Args&&... args) {
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-
-        terminal_type terminal(composition(), configs(), journal());
-        bool should_reenter = terminal.reenter(std::forward<Args>(args)...);
+        bool should_reenter = _terminal.reenter(std::forward<Args>(args)...);
         terminate(should_reenter);
         return should_reenter;
     }
@@ -142,10 +140,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <typename... Args>
     void prepare(Args&&... args) {
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-
-        terminal_type terminal(composition(), configs(), journal());
-        terminal.prepare(std::forward<Args>(args)...);
+        _terminal.prepare(std::forward<Args>(args)...);
     }
 
     /**
@@ -162,17 +157,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     template <typename... Args>
     void error(udho::manifold::evaluation_result success, Args&&... args) {
         assert(!success);
-
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-        terminal_type terminal(composition(), configs(), journal());
-        terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+        _terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
 
     template <typename... Args>
     void error(const udho::exceptions::captured& capex, Args&&... args) {
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-        terminal_type terminal(composition(), configs(), journal());
-        terminal.captured_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+        _terminal.captured_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
 
 
@@ -254,7 +244,10 @@ private:
      * @param baseline Reference to baseline configuration
      */
     basic_flow(runtime_type& runtime, composition_type& composition, configs_type& baseline, stream_type&& stream)
-        : _runtime(runtime), _stream(std::move(stream)), _id(_counter++), _root_pipeline(composition, baseline, _id), _finish_pipeline(_root_pipeline.template at<Count>()) {}
+        : _runtime(runtime), _stream(std::move(stream)), _id(_counter++)
+        , _root_pipeline(composition, baseline, _id)
+        , _finish_pipeline(_root_pipeline.template at<Count>())
+        , _terminal(_root_pipeline.composition(), _root_pipeline.configs(), _root_pipeline.journal()) {}
 
     /**
      * @brief Factory method for flow creation
@@ -273,6 +266,7 @@ private:
     start_pipeline_type     _root_pipeline;
     finish_pipeline_type&   _finish_pipeline;
     callback_type           _callback;
+    terminal_type           _terminal;
     static std::size_t      _counter;
 };
 

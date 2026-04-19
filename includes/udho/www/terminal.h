@@ -76,10 +76,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             } catch(const udho::http::error& error) {
                 std::cout << "exception: " << error.what() << std::endl;
                 handle_http_error(flow, error, stream, std::forward<Args>(args)...);
-            } catch(boost::system::error_code error) {
-                std::cout << "system error: " << error << std::endl;
-                handle_error(flow, error, stream, std::forward<Args>(args)...);
-            }catch(const std::exception& ex) {
+            } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
                 handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
