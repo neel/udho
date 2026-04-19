@@ -74,11 +74,11 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             try{
                 success.rethrow();
             } catch(const udho::http::error& error) {
-                std::cout << "exception: " << error.what() << std::endl;
+                // std::cout << "exception: " << error.what() << std::endl;
                 handle_http_error(flow, error, stream, std::forward<Args>(args)...);
             } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
-                handle_error(flow, ex, stream, std::forward<Args>(args)...);
+                handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
             }
         }
     }
@@ -118,16 +118,7 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, boost::system::error_code error, stream_type& stream, Args&&... args) {
-        if(error == boost::asio::error::eof) {
-            flow.abort();
-        }
-
-        flow.abort();
-    }
-
-    template <typename... Args>
-    void handle_error(flow_type& flow, const std::exception& error, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const std::exception& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
         flow.abort();
     }
 
@@ -135,6 +126,11 @@ private:
 
     template <typename... Args>
     ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
+        handler_type& handler = _composition.template get<handler_type>().component();
+        if(handler.exists(flow.id())) {
+            return handler.ostream(flow.id());
+        }
+
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
@@ -158,14 +154,13 @@ private:
             ostream.finish();
         };
 
-        handler_type& handler = _composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         return ostream;
     }
 
 private:
     composition_type&   _composition;
-    configs_type& _configs;
+    configs_type&       _configs;
     const journal_type& _journal;
 };
 

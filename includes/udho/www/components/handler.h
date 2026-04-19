@@ -187,6 +187,11 @@ struct basic_handler{
         return responder(id).ostream();
     }
 
+    bool exists(std::size_t id) const {
+        auto responder_it = _responders.find(id);
+        return (responder_it != _responders.end());
+    }
+
     /**
      * @brief Return the router summary associated with this handler.
      * @return Const reference to the stored router summary.
