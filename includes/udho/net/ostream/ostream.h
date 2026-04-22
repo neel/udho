@@ -473,10 +473,15 @@ private:
         std::cout << "on_header_completion" << std::endl;
 
         namespace params = udho::logging::params;
-        UDHO_LOG_DEBUG("udho::net::ostream", "Response Headers flushed", params::socket_id(udho::utils::misc::native_handle(_stream)));
 
-        if(ec) on_error(ec);
-        else {
+        if(ec) {
+            std::string err_msg = ec.message();
+            UDHO_LOG_ERROR("udho::net::ostream", udho::utils::format("Error while flushing response Headers {}", err_msg), params::socket_id(udho::utils::misc::native_handle(_stream)));
+
+            on_error(ec);
+        } else {
+            UDHO_LOG_DEBUG("udho::net::ostream", "Response Headers flushed", params::socket_id(udho::utils::misc::native_handle(_stream)));
+
             if(_state == ostream_states::switching) {
                 assert(!_buffering);
                 // _finishing may or may not be true -> so don't make any decision based on that yet
@@ -568,14 +573,16 @@ public:
      * @note intended to be used to respond to multiple requests through the same socket
      * @warning must be called after the response has been flushed to the socket and the
      *          completion callback has been called
+     *
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
+    void reset(boost::system::error_code ec = {}) {
         assert(_header_sealed);
 
-        _header_stream.reset();
-        _buffered_stream.reset();
+        _header_stream.reset(ec);
+        _buffered_stream.reset(ec);
         if(!_buffering) {
-            _queued_stream.reset();
+            _queued_stream.reset(ec);
         }
 
         _response.clear();

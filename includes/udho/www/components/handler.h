@@ -96,7 +96,7 @@ struct basic_handler{
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
             _callback(ec, bytes_written);
-            _ostream.reset();
+            _ostream.reset(ec);
         }
 
         /**

@@ -69,13 +69,19 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      *       passed to facet triggered by calling next.fail(...)
      */
     template <typename... Args>
-    void error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
+    void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();
             } catch(const udho::http::error& error) {
                 // std::cout << "exception: " << error.what() << std::endl;
                 handle_http_error(flow, error, stream, std::forward<Args>(args)...);
+            } catch(const std::system_error& error) {
+                std::cout << "error: " << error.what() << std::endl;
+                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const boost::system::system_error& error) {
+                std::cout << "error: " << error.what() << std::endl;
+                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
             } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
                 handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
@@ -84,7 +90,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     }
 
     template <typename... Args>
-    void captured_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+    void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
         handler_type& handler = _composition.template get<handler_type>().component();
         ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
 
@@ -118,8 +124,36 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::exception& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
-        flow.abort();
+    void handle_error(flow_type& flow, const boost::system::error_code& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+        if(error == boost::beast::http::error::end_of_stream) {
+            flow.abort();
+        } else {
+            ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+
+            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error(error, trace);
+        }
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::error_code& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+        if(error.value() == boost::system::errc::operation_canceled) {
+            // most likely before of timeout while waiting for HTTP headers
+            flow.abort();
+        } else {
+            ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+
+            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error(error, trace);
+        }
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::exception& exception, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+
+        udho::www::pages::server_error<ostream_type> server_error(ostream);
+        server_error(exception, trace);
     }
 
 private:

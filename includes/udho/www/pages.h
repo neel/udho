@@ -58,6 +58,18 @@ struct server_error{
         _ostream.finish();
     }
 
+    template <typename ErrorCodeT>
+    void operator()(const ErrorCodeT& ec, const boost::stacktrace::stacktrace& trace){
+        if(!_ostream.headers_sealed()) {
+            _ostream.status(boost::beast::http::status::internal_server_error);
+            _ostream.set(boost::beast::http::field::content_type, "text/html");
+            _ostream.set(boost::beast::http::field::connection, "keep-alive");
+        }
+
+        _ostream.write(html(ec, trace));
+        _ostream.finish();
+    }
+
 private:
     std::string html(const std::exception& ex, const boost::stacktrace::stacktrace& trace){
         static constexpr const char* trace_line_template    = R"(
@@ -86,6 +98,37 @@ private:
             lines.emplace_back(line);
         }
         return udho::utils::format(full_exception_template, ex.what(), boost::algorithm::join(lines, "\n"));
+    }
+
+    template <typename ErrorCodeT>
+    std::string html(const ErrorCodeT& ec, const boost::stacktrace::stacktrace& trace){
+        static constexpr const char* trace_line_template    = R"(
+            <div class="stack">
+                <div class="address">{}</div>
+                <div class="name">{}</div>
+                <div class="file">{}</div>
+                <div class="line">{}</div>
+            </div>
+        )";
+        static constexpr const char* full_exception_template = R"(
+            <div class="error_code">
+                <style>
+
+                </style>
+                <div class="value">{}</div>
+                <div class="message">{}</div>
+                <div class="trace">
+                    {}
+                </div>
+            </div>
+        )";
+
+        std::vector<std::string> lines;
+        for(const auto& stack: trace) {
+            std::string line = udho::utils::format(trace_line_template, stack.address(), stack.name(), stack.source_file(), stack.source_line());
+            lines.emplace_back(line);
+        }
+        return udho::utils::format(full_exception_template, ec.value(), ec.message(), boost::algorithm::join(lines, "\n"));
     }
 
 private:

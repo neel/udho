@@ -77,11 +77,15 @@ public:
      * @note intended to be used to respond to multiple requests through the same socket
      * @warning must be called after the response has been flushed to the socket and the
      *          completion callback has been called
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
+    void reset(boost::system::error_code ec = {}) {
         assert(_started);
         assert(_finished);
-        assert(_serializer->is_header_done());
+
+        if(!ec) {
+            assert(_serializer->is_header_done());
+        }
 
         _response.clear();
         _serializer.emplace(_response);

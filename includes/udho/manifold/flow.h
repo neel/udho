@@ -155,14 +155,27 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param success
      */
     template <typename... Args>
-    void error(udho::manifold::evaluation_result success, Args&&... args) {
+    void internal_error(udho::manifold::evaluation_result success, Args&&... args) {
         assert(!success);
-        _terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+        _terminal.internal_error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
 
+    /**
+     * @brief Communicate the errors originating from the usercode to the terminal.
+     *
+     * @note call originates from usercode running inside the slots that are bound to the url patterns
+     *       delivered through the ostream. The terminal creates a 500 Internal server Error response
+     *       with the error message and the stack trace.
+     *
+     * @note When in production the terminal should behave differently and instead of showing this error
+     *       as HTTP response it should log the error only.
+     *
+     * @param capex exception with stacktrace
+     * @param args
+     */
     template <typename... Args>
-    void error(const udho::exceptions::captured& capex, Args&&... args) {
-        _terminal.captured_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+    void user_error(const udho::exceptions::captured& capex, Args&&... args) {
+        _terminal.user_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
 
 

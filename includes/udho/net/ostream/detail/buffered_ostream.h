@@ -307,10 +307,16 @@ public:
      *          and the completion callback has been called
      * @pre _ongoing_header_buffer is cleared
      * @pre _multibuff is cleared
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
-        assert(_ongoing_header_buffer.size() == 0);
-        assert(_multibuff.size() == 0);
+    void reset(boost::system::error_code ec = {}) {
+        if(!ec) {
+            assert(_ongoing_header_buffer.size() == 0);
+            assert(_multibuff.size() == 0);
+        } else {
+            _ongoing_header_buffer.clear();
+            _multibuff.clear();
+        }
 
         _bytes_written = 0;
         _flushing = 0;

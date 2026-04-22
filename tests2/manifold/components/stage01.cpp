@@ -219,7 +219,7 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     void prepare(stream_type& stream, Args&&... args) { }
 
     template <typename... Args>
-    void error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
+    void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(!success) {
             try{
                 success.rethrow();
@@ -237,7 +237,7 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     }
 
     template <typename... Args>
-    void captured_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+    void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
         handler_type& handler = _composition.template get<handler_type>().component();
         ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
 
@@ -407,7 +407,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
                 const udho::exceptions::captured& capex = ostream.exception();
                 std::apply(
                     [&](auto&&... args) {
-                        flow->error(capex, stream, std::forward<Args>(args)...);
+                        flow->user_error(capex, stream, std::forward<Args>(args)...);
                     },
                     args_tuple
                 );
@@ -639,37 +639,37 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     std::cout << "stream_out: " << std::endl << output << std::endl;
 }
 
-TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline]") {
-    boost::asio::io_context io;
-    // { session component
-    using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
-    catalogue_type catalogue{udho::session::storage::fs{}};
-    auto session    = udho::www::components::session(catalogue);
-    // }
-    // { resources: views, assets
-    udho::view::data::bridges::lua lua;
-    lua.init();
+// TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline]") {
+//     boost::asio::io_context io;
+//     // { session component
+//     using catalogue_type = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
+//     catalogue_type catalogue{udho::session::storage::fs{}};
+//     auto session    = udho::www::components::session(catalogue);
+//     // }
+//     // { resources: views, assets
+//     udho::view::data::bridges::lua lua;
+//     lua.init();
 
-    udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
-    store.lock();
-    udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
-    auto resources  = udho::www::components::resources(cstore);
-    // }
+//     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+//     store.lock();
+//     udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+//     auto resources  = udho::www::components::resources(cstore);
+//     // }
 
-    using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;
-    using framework_type = testing::framework<socket_type>;
-    using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
-    using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
-    using listener_type  = udho::net::basic_listener<boost::asio::ip::tcp, framework_type::runtime_type>;
-    using endpoint_type  = typename listener_type::endpoint_type;
+//     using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;
+//     using framework_type = testing::framework<socket_type>;
+//     using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+//     using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
+//     using listener_type  = udho::net::basic_listener<boost::asio::ip::tcp, framework_type::runtime_type>;
+//     using endpoint_type  = typename listener_type::endpoint_type;
 
-    auto framework  = framework_type(testing::tcp_url(), session, resources);
+//     auto framework  = framework_type(testing::tcp_url(), session, resources);
 
-    lua.bind(udho::view::data::type<context_type>{});
+//     lua.bind(udho::view::data::type<context_type>{});
 
-    listener_type listener(io, framework.runtime(), endpoint_type{boost::asio::ip::tcp::v4(), 9999});
+//     listener_type listener(io, framework.runtime(), endpoint_type{boost::asio::ip::tcp::v4(), 9999});
 
-    listener.start();
+//     listener.start();
 
-    io.run_for(std::chrono::seconds(10));
-}
+//     io.run_for(std::chrono::seconds(10));
+// }

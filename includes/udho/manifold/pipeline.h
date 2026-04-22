@@ -235,7 +235,7 @@ private:
                     udho::manifold::evaluation_result result(udho::exceptions::captured::propagate());
                     std::apply(
                         [&](auto&&... args) {
-                            flow->error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
+                            flow->internal_error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
                         },
                         args_tuple
                     );
@@ -244,7 +244,7 @@ private:
                 std::cout << "FAIL!!" << __LINE__ << std::endl;
                 std::apply(
                     [&](auto&&... args) {
-                        flow->error(success, std::forward<Args>(args)...);    // inform flow before termination
+                        flow->internal_error(success, std::forward<Args>(args)...);    // inform flow before termination
                     },
                     args_tuple
                 );                                  // flow->error takes care of it.

@@ -121,14 +121,16 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
 
         reader_ptr_type reader = _component.reader(_id, stream);
         reader->start([this, next{std::move(next)}, reader](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-            if(!ec) {
+            if(!ec || ec == boost::asio::error::eof) {
                 next.pass(result{std::move(request)});
             } else {
                 // std::cout << "header_reader facet: " << ec.message() << std::endl;
 
                 namespace p = udho::logging::params;
                 if (ec == boost::asio::error::operation_aborted) {
-                    UDHO_LOG_DEBUG("udho::www::components::protocol::facet::header_reader", "reader timeout" , p::flow_id(_id));
+                    UDHO_LOG_DEBUG("udho::www::components::protocol::facet::header_reader", "HTTP header reader encountered timeout" , p::flow_id(_id));
+                } else if (ec == boost::beast::http::error::end_of_stream){
+                    UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "HTTP header reader encountered end of stream", p::flow_id(_id));
                 } else {
                     UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "Removing reader designated for flow due to error " + ec.message(), p::flow_id(_id));
                 }

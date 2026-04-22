@@ -111,6 +111,13 @@ public:
         _handler.completion()(std::move(capex));
     }
 
+    void fail(boost::system::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(boost::system::system_error(ec)));
+    }
+
     void fail(std::error_code ec) {
         if(_done) return;
 

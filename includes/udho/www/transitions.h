@@ -139,7 +139,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 const udho::exceptions::captured& capex = ostream.exception();
                 std::apply(
                     [&](auto&&... args) {
-                        flow->error(capex, stream, std::forward<Args>(args)...);
+                        flow->user_error(capex, stream, std::forward<Args>(args)...);
                     },
                     args_tuple
                 );
