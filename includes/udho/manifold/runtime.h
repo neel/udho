@@ -1,8 +1,7 @@
 #ifndef UDHO_MANIFOLD_RUNTIME_H
 #define UDHO_MANIFOLD_RUNTIME_H
 
-#include <memory>
-#include <vector>
+#include <map>
 #include <udho/manifold/fwd.h>
 #include <udho/manifold/pipeline.h>
 #include <udho/manifold/portal.h>
@@ -37,8 +36,7 @@ struct basic_runtime{
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
     using flow_type         = basic_flow<label_type, stream_type>;
-    using flow_ptr_type     = std::shared_ptr<flow_type>;
-    using collection_type   = std::vector<flow_ptr_type>;
+    using collection_type   = std::unordered_map<std::size_t, flow_type>;
     using portal_type       = typename detail::get_portal_type<composition_type>::type;
     using context_type      = typename detail::get_context_for_portal<StreamT, portal_type>::type;
 
@@ -100,12 +98,17 @@ struct basic_runtime{
      *
      * @return Shared pointer to the new flow
      */
-    flow_ptr_type spawn(stream_type&& stream) {
+    flow_type& spawn(stream_type&& stream) {
         std::scoped_lock lock(_mutex);
-        flow_ptr_type flow_ptr = flow_type::create(*this, std::forward<stream_type>(stream));
-        _flows.push_back(flow_ptr);
+        auto pair = _flows.try_emplace(flow_type::counter(), *this, std::forward<stream_type>(stream));
 
-        return flow_ptr;
+        if(!pair.second) {
+            throw std::runtime_error("Failed to spawn new flow");
+        }
+
+        auto it = pair.first;
+        flow_type& res = it->second;
+        return res;
     }
 
     /**
@@ -125,21 +128,19 @@ struct basic_runtime{
      *
      * @param flow The flow to remove
      */
-    bool remove(const flow_ptr_type& flow) {
+    bool remove(const flow_type& flow) {
         std::scoped_lock<std::mutex> lock(_mutex);
-        auto it = std::find_if(_flows.begin(), _flows.end(), [id = flow->id()](const auto& f){
-            return f->id() == id;
-        });
+        auto it = _flows.find(flow.id());
 
         namespace p = udho::logging::params;
         if(it != _flows.end()) {
             // std::cerr << "remove() found flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
-            UDHO_LOG_TRACE("udho::manifold", "Runtime removing flow", p::flow_id(flow->id()));
+            UDHO_LOG_TRACE("udho::manifold", "Runtime removing flow", p::flow_id(flow.id()));
             _flows.erase(it);
             return true;
         } else {
             // std::cerr << "remove() missing flow: ptr=" << flow.get() << " id=" << flow->id() << " tracked=" << _flows.size() << "\n";
-            UDHO_LOG_ERROR("udho::manifold", "Runtime failed to remove flow", p::flow_id(flow->id()));
+            UDHO_LOG_ERROR("udho::manifold", "Runtime failed to remove flow", p::flow_id(flow.id()));
             return false;
         }
     }

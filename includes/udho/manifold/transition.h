@@ -46,7 +46,7 @@ struct default_transition{
      * @param config The configuration to modify for the next stage
      */
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, Args&&... args) {
         p.next(flow, std::forward<Args>(args)...);
     }
 };
@@ -81,7 +81,7 @@ struct transition{
      * @param config The configuration to modify for the next stage
      */
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, Args&&... args) {
         udho::manifold::default_transition<LabelT, StreamT, Stage>::apply(flow, p, config, std::forward<Args>(args)...);
     }
 };
@@ -114,7 +114,7 @@ struct transitioner: public detail::transitioner<LabelT, StreamT, Count, Stage+1
      * @param configs
      */
     template <typename... Args>
-    void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& configs, Args&&... args){
+    void apply(flow_type& flow, pipeline_type& p, configs_type& configs, Args&&... args){
         udho::manifold::transition<LabelT, StreamT, Stage>::apply(flow, p, configs, std::forward<Args>(args)...);
     }
 };

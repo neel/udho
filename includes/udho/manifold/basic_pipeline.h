@@ -37,6 +37,9 @@ struct basic_pipeline{
     template <typename... XComponents>
     basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs, std::size_t id): _fabric(composition, configs, id) {}
 
+    basic_pipeline(const basic_pipeline&) = delete;
+    basic_pipeline(basic_pipeline&&) = delete;
+
     /**
      * @brief Evaluator for executing features in a specific order
      *
@@ -60,6 +63,9 @@ struct basic_pipeline{
          * @param callback Completion callback for pipeline stage
          */
         evaluator(fabric_type& fabric, full_journal_type& journal, async_callback_type& callback): _handler(fabric, journal, callback) {}
+
+        evaluator(const evaluator&) = delete;
+        evaluator(evaluator&&) = delete;
 
         /**
          * @brief Evaluates the pipeline stage with the given arguments

@@ -32,6 +32,8 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
+    basic_terminal(basic_terminal&&) = delete;
+
     /**
      * @brief reenter is synchronously called after successful evaluation of all facet pipelines in all stages
      *        to determine whether to process next request or abort.
@@ -77,10 +79,10 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
                 // std::cout << "exception: " << error.what() << std::endl;
                 handle_http_error(flow, error, stream, std::forward<Args>(args)...);
             } catch(const std::system_error& error) {
-                std::cout << "error: " << error.what() << std::endl;
+                std::cout << "std::system_error: " << error.what() << std::endl;
                 handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
             } catch(const boost::system::system_error& error) {
-                std::cout << "error: " << error.what() << std::endl;
+                std::cout << "boost::system::system_error: " << error.what() << std::endl;
                 handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
             } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
@@ -128,7 +130,7 @@ private:
         if(error == boost::beast::http::error::end_of_stream) {
             flow.abort();
         } else {
-            ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+            ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
             udho::www::pages::server_error<ostream_type> server_error(ostream);
             server_error(error, trace);
@@ -141,7 +143,7 @@ private:
             // most likely before of timeout while waiting for HTTP headers
             flow.abort();
         } else {
-            ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+            ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
             udho::www::pages::server_error<ostream_type> server_error(ostream);
             server_error(error, trace);
@@ -150,7 +152,7 @@ private:
 
     template <typename... Args>
     void handle_error(flow_type& flow, const std::exception& exception, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
-        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+        ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
         udho::www::pages::server_error<ostream_type> server_error(ostream);
         server_error(exception, trace);

@@ -86,6 +86,14 @@ public:
         return true;
     }
 
+    ~protocol() {
+        namespace p = udho::logging::params;
+
+        if(_readers.size() > 0) {
+            UDHO_LOG_WARNING("udho::www::components::protocol", "component deallocating with active readers", p::request_id("req"));
+        }
+    }
+
 private:
     readers_collection_type _readers;
     std::mutex              _mutex;
@@ -135,8 +143,11 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
                     UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "Removing reader designated for flow due to error " + ec.message(), p::flow_id(_id));
                 }
 
-                _component.remove(_id);
                 next.fail(ec);
+                // TODO Failure path is async
+                //      Hence sync removal of the flow is inappropriate
+                //      Move it to the destructor
+                // _component.remove(_id);
             }
         }, timeout_secs);
     }
@@ -145,6 +156,11 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
+    }
+
+    ~facet() {
+        std::cout << __FUNCTION__ << std::endl;
+        _component.remove(_id);
     }
 private:
     component_type&     _component;
@@ -231,6 +247,11 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
+    }
+
+    ~facet() {
+        std::cout << __FUNCTION__ << std::endl;
+        _component.remove(_id);
     }
 private:
     component_type&     _component;

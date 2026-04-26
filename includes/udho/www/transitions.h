@@ -31,7 +31,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -97,7 +97,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
 
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -117,14 +117,14 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
                 // TODO Error while writing to socket
                 return;
             }
 
             namespace params = udho::logging::params;
-            UDHO_LOG_INFO("udho::net::ostream", "Response finished", params::flow_id(flow->id()), params::socket_id(udho::utils::misc::native_handle(stream)));
+            UDHO_LOG_INFO("udho::net::ostream", "Response finished", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
             std::apply(
                 [&](auto&&... args) {
@@ -139,7 +139,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 const udho::exceptions::captured& capex = ostream.exception();
                 std::apply(
                     [&](auto&&... args) {
-                        flow->user_error(capex, stream, std::forward<Args>(args)...);
+                        flow.user_error(capex, stream, std::forward<Args>(args)...);
                     },
                     args_tuple
                 );
@@ -149,7 +149,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         };
 
         handler_type& handler = composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda), std::move(ex_lambda));
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
 
         // }
 
@@ -157,13 +157,13 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         portal_type portal(composition, configs, journal);
         // std::string resource = portal.resource();
         // std::cout << "resource: " << resource << std::endl;
-        context_type context(ostream, portal, flow->id());
+        context_type context(ostream, portal, flow.id());
         // }
 
         udho::www::feature::identifier::result res = journal.template at<udho::www::feature::identifier>();
 
         namespace params = udho::logging::params;
-        UDHO_LOG_INFO("www::transition2", "Invoked", params::flow_id(flow->id()), params::uri(route_index.type() == udho::url::detail::route_index::type::registry ? res.path() : res.resource()), params::socket_id(udho::utils::misc::native_handle(stream)));
+        UDHO_LOG_INFO("www::transition2", "Invoked", params::flow_id(flow.id()), params::uri(route_index.type() == udho::url::detail::route_index::type::registry ? res.path() : res.resource()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
         // { invoke action
         router.invoke_at(route_index, context);

@@ -87,6 +87,14 @@ struct pipeline{
         : _composition(composition), _configs(configs), _common_pipeline(composition, _configs, journal, id), _next(composition, configs, journal, *this, id), _previous(previous)
     {}
 
+    pipeline(const pipeline&) = delete;
+
+    pipeline(pipeline&&) = delete;
+
+    // pipeline(pipeline&& other)
+    //     : _composition(other._composition), _previous(other._previous), _configs(other._configs), _common_pipeline(std::move(other._common_pipeline)), _next(std::move(other._next))
+    // {}
+
     /// @name Configuration Access
     /// @{
 
@@ -115,7 +123,7 @@ struct pipeline{
      * Sets up completion callbacks to transition to the next stage or
      * terminate the flow on failure.
      *
-     * @tparam FlowT The flow type managing this execution
+     * @tparam udho::manifold::basic_flow<LabelT, StreamT> The flow type managing this execution
      * @tparam Args... Argument types to forward to facets
      * @param flow Shared pointer to the flow managing this execution
      * @param args Arguments to forward to facets
@@ -123,12 +131,12 @@ struct pipeline{
      * @note Non-lvalue arguments must be CopyConstructible to ensure
      *       safe forwarding between pipeline stages.
      */
-    template <typename FlowT, typename... Args>
-    void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
+    template <typename LabelT, typename StreamT, typename... Args>
+    void operator()(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
-        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
-        std::cout << "::operator()(flow, ...)" << std::endl;
+        // std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
+        // std::cout << "::operator()(flow, ...)" << std::endl;
 
         using args_tuple_t = std::tuple<std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
         args_tuple_t args_tuple(std::forward<Args>(args)...);
@@ -143,18 +151,18 @@ struct pipeline{
      * Similar to the synchronous version but integrates with Boost.Asio
      * for asynchronous completion handling.
      *
-     * @tparam FlowT The flow type managing this execution
+     * @tparam udho::manifold::basic_flow<LabelT, StreamT> The flow type managing this execution
      * @tparam Args... Argument types to forward to facets
      * @param flow Shared pointer to the flow managing this execution
      * @param io Boost.Asio io_context for async operations
      * @param args Arguments to forward to facets
      */
-    template <typename FlowT, typename... Args>
-    void operator()(boost::asio::io_context& io, std::shared_ptr<FlowT> flow, Args&&... args){
+    template <typename LabelT, typename StreamT, typename... Args>
+    void operator()(boost::asio::io_context& io, udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
         static_assert((... && (std::is_lvalue_reference<Args>::value || std::is_copy_constructible<std::decay_t<Args>>::value)), "Non-lvalue arguments must be CopyConstructible");
 
-        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
-        std::cout << "::operator()(io, flow, ...)" << std::endl;
+        // std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">";
+        // std::cout << "::operator()(io, flow, ...)" << std::endl;
 
         using args_tuple_t = std::tuple<boost::asio::io_context&, std::conditional_t<std::is_lvalue_reference<Args>::value, Args, std::decay_t<Args>>...>;
         args_tuple_t args_tuple(io, std::forward<Args>(args)...);
@@ -193,13 +201,13 @@ struct pipeline{
     const pipeline<composition_type, order_type, Count, N>& at() const { return _previous.template at<N>(); }
     /// @}
 
-    template <typename FlowT, typename... Args>
-    void next(FlowT flow, Args&&... args){
+    template <typename LabelT, typename StreamT, typename... Args>
+    void next(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
         _next(flow, std::forward<Args>(args)...);
     }
 
-    template <typename FlowT, typename... Args>
-    void abort(FlowT flow, Args&&... args){
+    template <typename LabelT, typename StreamT, typename... Args>
+    void abort(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
         _next.abort(flow, std::forward<Args>(args)...);
     }
 
@@ -212,22 +220,20 @@ private:
      * Configures the completion callback for the current stage to either
      * transition to the next stage or terminate the flow on failure.
      *
-     * @tparam FlowT The flow type
+     * @tparam udho::manifold::basic_flow<LabelT, StreamT> The flow type
      * @tparam ArgsTupleT Tuple type capturing forwarded arguments
      * @param flow Shared pointer to the flow
      * @param args_tuple Tuple containing arguments to forward
      */
-    template <typename FlowT, typename... Args>
-    void _then(std::shared_ptr<FlowT> flow, std::tuple<Args...>& args_tuple){
-        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
-        auto lambda = [wflow = std::weak_ptr<FlowT>(flow), this, args_tuple](udho::manifold::evaluation_result success){
-            auto flow = wflow.lock();
-            assert(!!flow);
+    template <typename LabelT, typename StreamT, typename... Args>
+    void _then(udho::manifold::basic_flow<LabelT, StreamT>& flow, std::tuple<Args...>& args_tuple){
+        // std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Stage << ">::_then(flow, args_tuple)" << std::endl;
+        auto lambda = [&flow, this, args_tuple](udho::manifold::evaluation_result success){
             if(success) {
                 try{
                     std::apply(
                         [&](auto&&... args) {
-                            flow->apply(*this, configs(), std::forward<Args>(args)...);
+                            flow.apply(*this, configs(), std::forward<Args>(args)...);
                         },
                         args_tuple
                     );
@@ -235,7 +241,7 @@ private:
                     udho::manifold::evaluation_result result(udho::exceptions::captured::propagate());
                     std::apply(
                         [&](auto&&... args) {
-                            flow->internal_error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
+                            flow.internal_error(std::move(result), std::forward<Args>(args)...);    // inform flow before termination
                         },
                         args_tuple
                     );
@@ -244,10 +250,10 @@ private:
                 std::cout << "FAIL!!" << __LINE__ << std::endl;
                 std::apply(
                     [&](auto&&... args) {
-                        flow->internal_error(success, std::forward<Args>(args)...);    // inform flow before termination
+                        flow.internal_error(success, std::forward<Args>(args)...);    // inform flow before termination
                     },
                     args_tuple
-                );                                  // flow->error takes care of it.
+                );                                  // flow.error takes care of it.
             }
         };
         _common_pipeline.then(std::move(lambda));
@@ -308,7 +314,6 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
     using full_journal_type    = typename detail::get_journal_for_full_fabric<CompositionT>::type;
     using next_pipeline_type   = pipeline<composition_type, order_type, Count, 0>;
     using self_type            = pipeline<CompositionT, OrderT, Count, -1>;
-    using ptr                  = std::shared_ptr<self_type>;
 
     /**
      * @brief Constructs the start pipeline stage
@@ -317,6 +322,9 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
      * @param baseline Baseline configuration shared across all stages
      */
     pipeline(CompositionT& composition, configs_type& baseline, std::size_t id): _composition(composition), _configs(baseline), _next(composition, _configs, _journal, *this, id) {}
+
+    pipeline(const pipeline&) = delete;
+    pipeline(pipeline&& other): _composition(other._composition), _configs(std::move(other._configs)), _journal(std::move(other._journal)), _next(std::move(other._next)) {}
 
     /// @name Configuration Access
     /// @{
@@ -420,31 +428,27 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
      * Called when all pipeline stages have completed successfully.
      * Notifies the flow of successful termination.
      *
-     * @tparam FlowT The flow type
+     * @tparam udho::manifold::basic_flow<LabelT, StreamT> The flow type
      * @tparam Args... Argument types (unused)
      * @param flow Shared pointer to the flow
      * @param args Arguments (ignored)
      */
-    template <typename FlowT, typename... Args>
-    void operator()(std::shared_ptr<FlowT> flow, Args&&... args){
-        using label_type    = typename FlowT::label_type;
+    template <typename LabelT, typename StreamT, typename... Args>
+    void operator()(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
+        using label_type    = LabelT;
 
-        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
-        std::cout << "::operator()(io, flow, ...)" << std::endl;
+        // std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
+        // std::cout << "::operator()(io, flow, ...)" << std::endl;
 
-        if(flow->reenter(std::forward<Args>(args)...)){
+        if(flow.reenter(std::forward<Args>(args)...)){
             restart(flow, std::forward<Args>(args)...);
         }
     }
 
-    template <typename FlowT, typename... Args>
-    void abort(FlowT flow, Args&&... args){
-        std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
-        std::cout << "::abort()(io, flow, ...)" << std::endl;
-
-        // if(flow->reenter(std::forward<Args>(args)...)){
-        //     restart(flow, std::forward<Args>(args)...);
-        // }
+    template <typename LabelT, typename StreamT, typename... Args>
+    void abort(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args){
+        // std::cout << "pipeline<" << udho::manifold::composition_name<CompositionT>::get() << ",OrderT," << Count << "," << Count << ">";
+        // std::cout << "::abort()(io, flow, ...)" << std::endl;
     }
 
     /**
@@ -454,13 +458,13 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
      *
      * @note call originates either from basic_flow<LabelT, StreamT>::restart or operator()
      */
-    template <typename FlowT, typename... Args>
-    void restart(std::shared_ptr<FlowT> flow, Args&&... args) {
+    template <typename LabelT, typename StreamT, typename... Args>
+    void restart(udho::manifold::basic_flow<LabelT, StreamT>& flow, Args&&... args) {
         using start_pipeline_type = pipeline<CompositionT, OrderT, Count, -1>;
 
         start_pipeline_type& start = _previous.template at<-1>();
-        start.prepare_reentry(flow->baseline(), flow->id());
-        flow->prepare(std::forward<Args>(args)...);
+        start.prepare_reentry(flow.baseline(), flow.id());
+        flow.prepare(std::forward<Args>(args)...);
         start(flow, std::forward<Args>(args)...);
     }
 

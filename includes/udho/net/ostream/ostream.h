@@ -470,7 +470,7 @@ private:
     void on_header_completion(boost::system::error_code ec, std::size_t bytes_written) {
         _headers_sent = true;
         _bytes_written += bytes_written;
-        std::cout << "on_header_completion" << std::endl;
+        std::cout << "on_header_completion " << ec.message() << std::endl;
 
         namespace params = udho::logging::params;
 

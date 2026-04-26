@@ -35,7 +35,6 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
-    using ptr               = std::shared_ptr<basic_flow<LabelT, StreamT>>;
     using terminal_type     = udho::manifold::basic_terminal<label_type, stream_type>;
 
     static constexpr std::size_t Count = runtime_type::Count;
@@ -63,15 +62,29 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     basic_flow() = delete;
     basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
-    basic_flow(basic_flow<LabelT, StreamT>&&) = delete;
+    basic_flow(basic_flow&&) = delete;
+
+    // basic_flow(basic_flow<LabelT, StreamT>&& other)
+    //     : _runtime(other._runtime)
+    //     , _stream(std::move(other._stream))
+    //     , _id(other._id)
+    //     , _root_pipeline(std::move(other._root_pipeline))
+    //     , _finish_pipeline(other._finish_pipeline)
+    //     , _callback(std::move(other._callback))
+    //     , _terminal(std::move(other._terminal))
+    // {
+    //     other._id = -1;
+    // };
 
     std::size_t id() const { return _id; }
+
+    static std::size_t counter() { return _counter; }
 
     /**
      * @brief Gets a shared pointer to this flow
      * @return Shared pointer to this flow instance
      */
-    ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
+    // ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
 
     /**
      * @brief Applies configuration patches for a specific stage
@@ -85,7 +98,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <int Stage, typename... Args>
     void apply(pipeline_at<Stage>& p, configs_type& config, Args&&... args){
-        detail::transitioner<LabelT, StreamT, udho::manifold::basic_runtime<LabelT, StreamT>::Count, Stage>::apply(self(), p, config, std::forward<Args>(args)...);
+        detail::transitioner<LabelT, StreamT, udho::manifold::basic_runtime<LabelT, StreamT>::Count, Stage>::apply(*this, p, config, std::forward<Args>(args)...);
     }
 
     /**
@@ -102,7 +115,9 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
         namespace p = udho::logging::params;
         UDHO_LOG_INFO("manifold::flow", "Flow starts", p::flow_id(id()));
 
-        _root_pipeline(self(), _stream, std::forward<Args>(args)...);
+        // std::string out2 = _stream.str();
+
+        _root_pipeline(*this, _stream, std::forward<Args>(args)...);
     }
 
     /**
@@ -116,7 +131,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), _stream, std::forward<Args>(args)...); }
+    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, *this, _stream, std::forward<Args>(args)...); }
 
     /**
      * @brief reenter determines whether to restart the flow or not after successful evaluation
@@ -204,7 +219,7 @@ private:
     template <typename... Args>
     void restart(Args&&... args) {
         terminate(true);
-        _finish_pipeline.restart(self(), std::forward<Args>(args)...);
+        _finish_pipeline.restart(*this, std::forward<Args>(args)...);
     }
 
     void abort() {
@@ -237,7 +252,7 @@ private:
             }
         }
         if(!reenter) {
-            bool removed = _runtime.remove(self());
+            bool removed = _runtime.remove(*this);
 
             if(!removed) {
                 UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(id()));
@@ -246,6 +261,10 @@ private:
             }
         }
     }
+
+public:
+
+    basic_flow(runtime_type& runtime, stream_type&& stream): basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)) {}
 
 private:
 
@@ -260,7 +279,8 @@ private:
         : _runtime(runtime), _stream(std::move(stream)), _id(_counter++)
         , _root_pipeline(composition, baseline, _id)
         , _finish_pipeline(_root_pipeline.template at<Count>())
-        , _terminal(_root_pipeline.composition(), _root_pipeline.configs(), _root_pipeline.journal()) {}
+        , _terminal(_root_pipeline.composition(), _root_pipeline.configs(), _root_pipeline.journal())
+    {}
 
     /**
      * @brief Factory method for flow creation
@@ -268,9 +288,9 @@ private:
      * @param runtime Reference to the managing runtime
      * @return New flow instance
      */
-    static ptr create(runtime_type& runtime, stream_type&& stream) {
-        return ptr(new basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)));
-    }
+    // static ptr create(runtime_type& runtime, stream_type&& stream) {
+    //     return ptr(new basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)));
+    // }
 
 private:
     runtime_type&           _runtime;

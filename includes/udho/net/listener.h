@@ -28,7 +28,6 @@ struct basic_listener: private detail::wire_traits<WireT>{
     using strand_type   = boost::asio::strand<executor_type>;
     using runtime_type  = RuntimeT;
     using flow_type     = typename runtime_type::flow_type;
-    using flow_ptr_type = typename runtime_type::flow_ptr_type;
 
 public:
     basic_listener(boost::asio::io_context& io, runtime_type& runtime, endpoint_type endpoint): _strand(io.get_executor()), _runtime(runtime), _endpoint(endpoint), _acceptor(io.get_executor()), _running(false) {}
@@ -115,16 +114,16 @@ private:
             UDHO_LOG_ERROR("udho::net::listener", "Failed to accept with error " + error.message());
         } else {
             auto socket_id = udho::utils::misc::native_handle(socket);
-            flow_ptr_type flow = _runtime.spawn(std::move(socket));
+            flow_type& flow = _runtime.spawn(std::move(socket));
 
             namespace p = udho::logging::params;
             UDHO_LOG_INFO(
                 "udho::net::listener", "Accepted incoming connection",
-                p::flow_id(flow->id()),
+                p::flow_id(flow.id()),
                 p::socket_id(socket_id)
             );
 
-            flow->start(); // flows are owned by runtime
+            flow.start(); // flows are owned by runtime
         }
     }
 

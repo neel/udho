@@ -33,6 +33,8 @@ struct basic_terminal{
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
+    basic_terminal(basic_terminal&&) = delete;
+
     template <typename... Args>
     bool reenter(Args&&... args) { return false; }
 
