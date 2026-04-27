@@ -5,6 +5,7 @@
 #include <udho/pages/system.h>
 #include <cpptrace/cpptrace.hpp>
 #include <udho/utils/detail/libiberty_helper.h>
+#include <boost/exception/diagnostic_information.hpp>
 
 namespace udho {
 namespace www {
@@ -73,6 +74,37 @@ struct server_error{
     }
 
 private:
+    std::string html(const boost::exception& ex, const cpptrace::stacktrace& trace){
+        static constexpr const char* trace_line_template    = R"(
+            <div class="stack" tabindex="0">
+                <div class="address">{}</div>
+                <div class="name">{}</div>
+                <div class="file">{}</div>
+                <div class="line">{}</div>
+            </div>
+        )";
+        static constexpr const char* full_exception_template = R"(
+            <div class="exception">
+                <style>
+                    {}
+                </style>
+                <div class="message">{}</div>
+                <div class="trace">
+                    {}
+                </div>
+            </div>
+        )";
+
+        std::vector<std::string> lines;
+        for(const auto& stack: trace.frames) {
+            std::string symbol  = cpptrace::prettify_symbol(demangle(stack.symbol));
+            std::string address = udho::utils::format("0x{:x}", stack.raw_address);
+            std::string line    = udho::utils::format(trace_line_template, address, udho::utils::encode::escape(symbol), stack.filename, stack.line.value_or(0));
+            lines.emplace_back(line);
+        }
+        return udho::utils::format(full_exception_template, css(), udho::utils::encode::escape(boost::diagnostic_information_what(ex)), boost::algorithm::join(lines, "\n"));
+    }
+
     std::string html(const std::exception& ex, const cpptrace::stacktrace& trace){
         static constexpr const char* trace_line_template    = R"(
             <div class="stack" tabindex="0">
@@ -101,7 +133,7 @@ private:
             std::string line    = udho::utils::format(trace_line_template, address, udho::utils::encode::escape(symbol), stack.filename, stack.line.value_or(0));
             lines.emplace_back(line);
         }
-        return udho::utils::format(full_exception_template, css(), ex.what(), boost::algorithm::join(lines, "\n"));
+        return udho::utils::format(full_exception_template, css(), udho::utils::encode::escape(ex.what()), boost::algorithm::join(lines, "\n"));
     }
 
     template <typename ErrorCodeT>
@@ -134,7 +166,7 @@ private:
             std::string line    = udho::utils::format(trace_line_template, address, udho::utils::encode::escape(symbol), stack.filename, stack.line.value_or(0));
             lines.emplace_back(line);
         }
-        return udho::utils::format(full_exception_template, css(), ec.value(), ec.message(), boost::algorithm::join(lines, "\n"));
+        return udho::utils::format(full_exception_template, css(), ec.value(), udho::utils::encode::escape(ec.message()), boost::algorithm::join(lines, "\n"));
     }
 
     static std::string demangle(const std::string& input) {

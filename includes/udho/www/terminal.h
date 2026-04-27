@@ -6,6 +6,7 @@
 #include <udho/www/components/handler.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/www/pages.h>
+#include <boost/exception/diagnostic_information.hpp>
 #include <cpptrace/cpptrace.hpp>
 
 namespace udho {
@@ -85,6 +86,9 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             } catch(const boost::system::system_error& error) {
                 std::cout << "boost::system::system_error: " << error.what() << std::endl;
                 handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const boost::exception& bex) {
+                std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
+                handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
             } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
                 handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
@@ -149,6 +153,14 @@ private:
             udho::www::pages::server_error<ostream_type> server_error(ostream);
             server_error(error, trace);
         }
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const boost::exception& exception, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
+
+        udho::www::pages::server_error<ostream_type> server_error(ostream);
+        server_error(exception, trace);
     }
 
     template <typename... Args>
