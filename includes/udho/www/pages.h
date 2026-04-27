@@ -48,6 +48,12 @@ private:
 
 template <typename OStreamT>
 struct server_error{
+    static const constexpr udho::utils::string_view header_str = R"(
+        <div class="header">
+            <div class="status">500 Internal Server Error</div>
+        </div>
+    )";
+
     server_error(OStreamT& ostream): _ostream(ostream) {}
 
     void operator()(const std::exception& ex, const cpptrace::stacktrace& trace){
@@ -57,6 +63,7 @@ struct server_error{
             _ostream.set(boost::beast::http::field::connection, "keep-alive");
         }
 
+        _ostream.write(header_str);
         _ostream.write(html(ex, trace));
         _ostream.finish();
     }
@@ -69,6 +76,7 @@ struct server_error{
             _ostream.set(boost::beast::http::field::connection, "keep-alive");
         }
 
+        _ostream.write(header_str);
         _ostream.write(html(ec, trace));
         _ostream.finish();
     }
@@ -195,6 +203,19 @@ private:
 
     static udho::utils::string_view css() {
         return R"CSS(
+        .header {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #ddd;
+            font-family: system-ui, sans-serif;
+        }
+
+        .status {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #c0392b;
+        }
+
         .error_code, .exception {
             max-width: 100%;
             margin: 1rem;

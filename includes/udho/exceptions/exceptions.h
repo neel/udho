@@ -74,7 +74,7 @@ struct captured {
 public:
     captured() {}
 
-    explicit captured(std::exception_ptr&& ptr, cpptrace::stacktrace trace = cpptrace::generate_trace(1)) noexcept: _exception(std::move(ptr)), _trace(std::move(trace)) {}
+    explicit captured(std::exception_ptr&& ptr, cpptrace::stacktrace trace = cpptrace::generate_trace(2)) noexcept: _exception(std::move(ptr)), _trace(std::move(trace)) {}
 
     template <typename E, typename D = std::decay_t<E>, typename = std::enable_if_t<!std::is_same_v<D, captured> && !std::is_same_v<D, std::exception_ptr>>>
     explicit captured(E&& exception) {
@@ -82,7 +82,7 @@ public:
             throw std::forward<E>(exception);
         } catch (...) {
             _exception = std::current_exception();
-            _trace     = cpptrace::generate_trace(1);
+            _trace     = cpptrace::generate_trace(2);
         }
     }
 
