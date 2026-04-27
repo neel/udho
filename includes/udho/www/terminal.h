@@ -6,6 +6,7 @@
 #include <udho/www/components/handler.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/www/pages.h>
+#include <cpptrace/cpptrace.hpp>
 
 namespace udho {
 namespace manifold {
@@ -126,7 +127,7 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const boost::system::error_code& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const boost::system::error_code& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
         if(error == boost::beast::http::error::end_of_stream) {
             flow.abort();
         } else {
@@ -138,7 +139,7 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::error_code& error, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const std::error_code& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
         if(error.value() == boost::system::errc::operation_canceled) {
             // most likely before of timeout while waiting for HTTP headers
             flow.abort();
@@ -151,7 +152,7 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::exception& exception, const boost::stacktrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const std::exception& exception, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
         udho::www::pages::server_error<ostream_type> server_error(ostream);

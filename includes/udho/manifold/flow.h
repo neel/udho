@@ -64,18 +64,6 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
     basic_flow(basic_flow&&) = delete;
 
-    // basic_flow(basic_flow<LabelT, StreamT>&& other)
-    //     : _runtime(other._runtime)
-    //     , _stream(std::move(other._stream))
-    //     , _id(other._id)
-    //     , _root_pipeline(std::move(other._root_pipeline))
-    //     , _finish_pipeline(other._finish_pipeline)
-    //     , _callback(std::move(other._callback))
-    //     , _terminal(std::move(other._terminal))
-    // {
-    //     other._id = -1;
-    // };
-
     std::size_t id() const { return _id; }
 
     static std::size_t counter() { return _counter; }
@@ -114,8 +102,6 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     void start(Args&&... args) {
         namespace p = udho::logging::params;
         UDHO_LOG_INFO("manifold::flow", "Flow starts", p::flow_id(id()));
-
-        // std::string out2 = _stream.str();
 
         _root_pipeline(*this, _stream, std::forward<Args>(args)...);
     }
@@ -247,7 +233,7 @@ private:
         if(_callback){
             try{
                 _callback(*this, reenter);
-            } catch(std::exception ex) {
+            } catch(const std::exception& ex) {
                 std::cout << "Exception thrown from terminate callback: " << ex.what() << std::endl;
             }
         }
@@ -281,16 +267,6 @@ private:
         , _finish_pipeline(_root_pipeline.template at<Count>())
         , _terminal(_root_pipeline.composition(), _root_pipeline.configs(), _root_pipeline.journal())
     {}
-
-    /**
-     * @brief Factory method for flow creation
-     *
-     * @param runtime Reference to the managing runtime
-     * @return New flow instance
-     */
-    // static ptr create(runtime_type& runtime, stream_type&& stream) {
-    //     return ptr(new basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)));
-    // }
 
 private:
     runtime_type&           _runtime;
