@@ -29,6 +29,10 @@ public:
 namespace exceptions{
 
 struct captured {
+    using trace_type = cpptrace::raw_trace;
+
+    static constexpr const std::size_t skip = 1;
+
     static captured propagate() {
         std::exception_ptr eptr = std::current_exception();
 
@@ -36,9 +40,9 @@ struct captured {
             throw std::logic_error("exceptions::captured::propagate() called without an active exception");
         }
 
-        auto trace = cpptrace::from_current_exception();
+        auto trace = cpptrace::raw_trace_from_current_exception();
         if (trace.empty()) {
-            trace = cpptrace::generate_trace();
+            trace = cpptrace::generate_raw_trace(skip);
         }
 
         return captured(std::move(eptr), std::move(trace));
@@ -51,7 +55,7 @@ struct captured {
 
     bool empty() const noexcept { return !_exception; }
 
-    const cpptrace::stacktrace& trace() const noexcept { return _trace; }
+    const trace_type& trace() const noexcept { return _trace; }
 
     const std::exception_ptr& exception() const noexcept { return _exception; }
 
@@ -74,7 +78,7 @@ struct captured {
 public:
     captured() {}
 
-    explicit captured(std::exception_ptr&& ptr, cpptrace::stacktrace trace = cpptrace::generate_trace(2)) noexcept: _exception(std::move(ptr)), _trace(std::move(trace)) {}
+    explicit captured(std::exception_ptr&& ptr, trace_type trace = cpptrace::generate_raw_trace(skip)) noexcept: _exception(std::move(ptr)), _trace(std::move(trace)) {}
 
     template <typename E, typename D = std::decay_t<E>, typename = std::enable_if_t<!std::is_same_v<D, captured> && !std::is_same_v<D, std::exception_ptr>>>
     explicit captured(E&& exception) {
@@ -82,13 +86,13 @@ public:
             throw std::forward<E>(exception);
         } catch (...) {
             _exception = std::current_exception();
-            _trace     = cpptrace::generate_trace(2);
+            _trace     = cpptrace::generate_raw_trace(skip);
         }
     }
 
 private:
     std::exception_ptr   _exception;
-    cpptrace::stacktrace _trace;
+    trace_type _trace;
 };
 
 }

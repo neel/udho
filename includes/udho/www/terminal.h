@@ -27,6 +27,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using configs_type      = typename runtime_type::configs_type;
     using portal_type       = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using context_type      = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
+    using trace_type        = udho::exceptions::captured::trace_type;
 
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
@@ -107,14 +108,15 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             capex.rethrow();
         } catch(const std::exception& exception) {
             udho::www::pages::server_error<ostream_type> server_error(ostream);
-            server_error(exception, capex.trace());
+            cpptrace::stacktrace stacktrace = capex.trace().resolve();
+            server_error(exception, stacktrace);
         }
     }
 
 private:
 
     template <typename... Args>
-    void handle_http_error(flow_type& flow, const udho::http::error& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_http_error(flow_type& flow, const udho::http::error& error, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
 
         if(error.status_class() == boost::beast::http::status_class::client_error) {
@@ -125,7 +127,8 @@ private:
             error_page(error.status(), error.what());
         } else if(error.status_class() == boost::beast::http::status_class::server_error) {
             udho::www::pages::server_error<ostream_type> server_error(ostream);
-            server_error(error, trace);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
          } else {
             ostream.status(error.status());
             ostream << error.what();
@@ -134,19 +137,20 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const boost::system::error_code& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const boost::system::error_code& error, const trace_type& trace, stream_type& stream, Args&&... args) {
         if(error == boost::beast::http::error::end_of_stream) {
             flow.abort();
         } else {
             ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
             udho::www::pages::server_error<ostream_type> server_error(ostream);
-            server_error(error, trace);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
         }
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::error_code& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const std::error_code& error, const trace_type& trace, stream_type& stream, Args&&... args) {
         if(error.value() == boost::system::errc::operation_canceled) {
             // most likely before of timeout while waiting for HTTP headers
             flow.abort();
@@ -154,24 +158,27 @@ private:
             ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
             udho::www::pages::server_error<ostream_type> server_error(ostream);
-            server_error(error, trace);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
         }
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const boost::exception& exception, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const boost::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
         udho::www::pages::server_error<ostream_type> server_error(ostream);
-        server_error(exception, trace);
+        cpptrace::stacktrace stacktrace = trace.resolve();
+        server_error(exception, stacktrace);
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::exception& exception, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
+    void handle_error(flow_type& flow, const std::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
         udho::www::pages::server_error<ostream_type> server_error(ostream);
-        server_error(exception, trace);
+        cpptrace::stacktrace stacktrace = trace.resolve();
+        server_error(exception, stacktrace);
     }
 
 private:
