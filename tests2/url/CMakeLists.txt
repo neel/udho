@@ -34,8 +34,14 @@ target_enable_symbol_export(udho-test-url-patterns)
 
 add_catch_test(udho-test-url-options options.cpp)
 
+target_sources(udho-test-url-options
+  PRIVATE
+    curl.h
+)
+
 add_catch_test(udho-test-url-router-asset asset.cpp)
 target_link_libraries(udho-test-url-router-asset PRIVATE CURL::libcurl)
 
 add_catch_test(udho-test-url-router-listing url-routes-listing.cpp)
 target_enable_symbol_export(udho-test-url-router-listing)
+target_link_libraries(udho-test-url-router-listing PRIVATE CURL::libcurl)

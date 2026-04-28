@@ -79,7 +79,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
                 success.rethrow();
             } catch(const udho::http::error& error) {
                 // std::cout << "exception: " << error.what() << std::endl;
-                handle_http_error(flow, error, stream, std::forward<Args>(args)...);
+                handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
             } catch(const std::system_error& error) {
                 std::cout << "std::system_error: " << error.what() << std::endl;
                 handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
@@ -114,16 +114,19 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
 private:
 
     template <typename... Args>
-    void handle_http_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+    void handle_http_error(flow_type& flow, const udho::http::error& error, const cpptrace::stacktrace& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
 
-        portal_type portal(_composition, _configs, _journal);
-        context_type context(ostream, portal, flow.id());
+        if(error.status_class() == boost::beast::http::status_class::client_error) {
+            portal_type portal(_composition, _configs, _journal);
+            context_type context(ostream, portal, flow.id());
 
-        if(error.status() == boost::beast::http::status::not_found) {
-            udho::www::pages::not_found<context_type> error_page(context);
-            error_page(error.what());
-        } else {
+            udho::www::pages::client_error<context_type> error_page(context);
+            error_page(error.status(), error.what());
+        } else if(error.status_class() == boost::beast::http::status_class::server_error) {
+            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error(error, trace);
+         } else {
             ostream.status(error.status());
             ostream << error.what();
             ostream.finish();

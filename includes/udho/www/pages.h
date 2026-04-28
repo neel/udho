@@ -13,20 +13,20 @@ namespace www {
 namespace pages{
 
 template <typename ContextT>
-struct not_found{
-    not_found(ContextT& context): _context(context) {}
+struct client_error{
+    client_error(ContextT& context): _context(context) {}
 
-    void operator()(const std::string& message){
+    void operator()(boost::beast::http::status status, const std::string& message){
         auto layout = udho::pages::system::layouts::listing(_context);
 
         namespace places = udho::pages::system::layouts::places;
         namespace placeholders = udho::pages::system::layouts::placeholders;
 
-        _context.ostream().status(boost::beast::http::status::not_found);
+        _context.ostream().status(status);
         _context.ostream().set(boost::beast::http::field::content_type, "text/html");
         _context.ostream().set(boost::beast::http::field::connection, "keep-alive");
 
-        layout[placeholders::header]    = udho::pages::system::data::listing_header{boost::beast::http::status::not_found};
+        layout[placeholders::header]    = udho::pages::system::data::listing_header{status};
         layout[places::routes]          = _context.portal().routes();
         layout[placeholders::footer]    = udho::pages::system::data::status_info{};
 
@@ -48,27 +48,40 @@ private:
 
 template <typename OStreamT>
 struct server_error{
-    static const constexpr udho::utils::string_view header_str = R"(
+    static const constexpr udho::utils::string_view header_str_template = R"(
         <div class="header">
-            <div class="status">500 Internal Server Error</div>
+            <div class="status">{} {}</div>
         </div>
     )";
 
     server_error(OStreamT& ostream): _ostream(ostream) {}
 
-    void operator()(const std::exception& ex, const cpptrace::stacktrace& trace){
+    template <typename ExceptionT, std::enable_if_t<std::is_base_of_v<std::exception, ExceptionT> || std::is_base_of_v<boost::exception, ExceptionT>, bool> = true>
+    void operator()(const ExceptionT& ex, const cpptrace::stacktrace& trace){
+        boost::beast::http::status status = boost::beast::http::status::internal_server_error;
+        std::string message = "Internal Server Error";
+
+        try{
+            const udho::http::error& herror = dynamic_cast<const udho::http::error&>(ex);
+
+            status = herror.status();
+            std::stringstream stream;
+            stream << status;
+            message = stream.str();
+        } catch (const std::bad_cast&) { }
+
         if(!_ostream.headers_sealed()) {
-            _ostream.status(boost::beast::http::status::internal_server_error);
+            _ostream.status(status);
             _ostream.set(boost::beast::http::field::content_type, "text/html");
             _ostream.set(boost::beast::http::field::connection, "keep-alive");
         }
 
-        _ostream.write(header_str);
+        _ostream.write(udho::utils::format(header_str_template, static_cast<std::underlying_type_t<boost::beast::http::status>>(status), message));
         _ostream.write(html(ex, trace));
         _ostream.finish();
     }
 
-    template <typename ErrorCodeT>
+    template <typename ErrorCodeT, std::enable_if_t<std::is_same_v<ErrorCodeT, std::error_code> || std::is_same_v<ErrorCodeT, boost::system::error_code>, bool> = true>
     void operator()(const ErrorCodeT& ec, const cpptrace::stacktrace& trace){
         if(!_ostream.headers_sealed()) {
             _ostream.status(boost::beast::http::status::internal_server_error);
@@ -76,13 +89,14 @@ struct server_error{
             _ostream.set(boost::beast::http::field::connection, "keep-alive");
         }
 
-        _ostream.write(header_str);
+        _ostream.write(udho::utils::format(header_str_template, 500, "Internal Server Error"));
         _ostream.write(html(ec, trace));
         _ostream.finish();
     }
 
 private:
-    std::string html(const boost::exception& ex, const cpptrace::stacktrace& trace){
+    template <typename ExceptionT, std::enable_if_t<std::is_base_of_v<std::exception, ExceptionT> || std::is_base_of_v<boost::exception, ExceptionT>, bool> = true>
+    std::string html(const ExceptionT& ex, const cpptrace::stacktrace& trace){
         static constexpr const char* trace_line_template    = R"(
             <div class="stack" tabindex="0">
                 <div class="address">{}</div>
@@ -110,41 +124,10 @@ private:
             std::string line    = udho::utils::format(trace_line_template, address, udho::utils::encode::escape(symbol), stack.filename, stack.line.value_or(0));
             lines.emplace_back(line);
         }
-        return udho::utils::format(full_exception_template, css(), udho::utils::encode::escape(boost::diagnostic_information_what(ex)), boost::algorithm::join(lines, "\n"));
+        return udho::utils::format(full_exception_template, css(), udho::utils::encode::escape(exception_message(ex)), boost::algorithm::join(lines, "\n"));
     }
 
-    std::string html(const std::exception& ex, const cpptrace::stacktrace& trace){
-        static constexpr const char* trace_line_template    = R"(
-            <div class="stack" tabindex="0">
-                <div class="address">{}</div>
-                <div class="name">{}</div>
-                <div class="file">{}</div>
-                <div class="line">{}</div>
-            </div>
-        )";
-        static constexpr const char* full_exception_template = R"(
-            <div class="exception">
-                <style>
-                    {}
-                </style>
-                <div class="message">{}</div>
-                <div class="trace">
-                    {}
-                </div>
-            </div>
-        )";
-
-        std::vector<std::string> lines;
-        for(const auto& stack: trace.frames) {
-            std::string symbol  = cpptrace::prettify_symbol(demangle(stack.symbol));
-            std::string address = udho::utils::format("0x{:x}", stack.raw_address);
-            std::string line    = udho::utils::format(trace_line_template, address, udho::utils::encode::escape(symbol), stack.filename, stack.line.value_or(0));
-            lines.emplace_back(line);
-        }
-        return udho::utils::format(full_exception_template, css(), udho::utils::encode::escape(ex.what()), boost::algorithm::join(lines, "\n"));
-    }
-
-    template <typename ErrorCodeT>
+    template <typename ErrorCodeT, std::enable_if_t<std::is_same_v<ErrorCodeT, std::error_code> || std::is_same_v<ErrorCodeT, boost::system::error_code>, bool> = true>
     std::string html(const ErrorCodeT& ec, const cpptrace::stacktrace& trace){
         static constexpr const char* trace_line_template    = R"(
             <div class="stack" tabindex="0">
@@ -175,30 +158,6 @@ private:
             lines.emplace_back(line);
         }
         return udho::utils::format(full_exception_template, css(), ec.value(), udho::utils::encode::escape(ec.message()), boost::algorithm::join(lines, "\n"));
-    }
-
-    static std::string demangle(const std::string& input) {
-        if(input.empty()) {
-            return {};
-        }
-
-#ifdef WITH_LIBIBERTY
-        return udho::utils::detail::demangle_with_libiberty(input);
-#else
-        int status = 0;
-
-        std::unique_ptr<char, void(*)(void*)> demangled(
-            abi::__cxa_demangle(input.c_str(), nullptr, nullptr, &status),
-            std::free
-        );
-
-        if(status == 0 && demangled) {
-            return std::string(demangled.get());
-        }
-
-        return input;
-#endif // WITH_LIBIBERTY
-
     }
 
     static udho::utils::string_view css() {
@@ -348,6 +307,34 @@ private:
         )CSS";
     }
 
+private:
+    static std::string demangle(const std::string& input) {
+        if(input.empty()) {
+            return {};
+        }
+
+#ifdef WITH_LIBIBERTY
+        return udho::utils::detail::demangle_with_libiberty(input);
+#else
+        int status = 0;
+
+        std::unique_ptr<char, void(*)(void*)> demangled(
+            abi::__cxa_demangle(input.c_str(), nullptr, nullptr, &status),
+            std::free
+            );
+
+        if(status == 0 && demangled) {
+            return std::string(demangled.get());
+        }
+
+        return input;
+#endif // WITH_LIBIBERTY
+
+    }
+
+    static std::string exception_message(const boost::exception& ex) { return boost::diagnostic_information_what(ex); }
+
+    static std::string exception_message(const std::exception& ex) { return ex.what(); }
 private:
     OStreamT& _ostream;
 };
