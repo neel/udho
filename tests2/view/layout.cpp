@@ -361,12 +361,12 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     stream_in.connect(stream_out);
 
     udho::net::test_ostream stream(stream_in,
-       [&](boost::system::error_code ec, std::size_t) {
-           CHECK_FALSE(ec);
-       },
-       [&](udho::net::test_ostream& s){
-           s.finish();
-       }
+        [&](boost::system::error_code ec, std::size_t) {
+            CHECK_FALSE(ec);
+        },
+        [&](udho::net::test_ostream& s){
+            s.finish();
+        }
     );
 
     auto context = udho::manifold::basic_context(stream, portal, 0);

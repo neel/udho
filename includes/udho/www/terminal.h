@@ -14,6 +14,15 @@ namespace manifold {
 
 // { terminal
 
+template <typename Label>
+struct error{
+    template <typename OstreamT>
+    using server_error = udho::www::pages::server_error<OstreamT>;
+
+    template <typename ContextT>
+    using client_error = udho::www::pages::client_error<ContextT>;
+};
+
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {
     using label_type        = www::basic_label<StreamT, Tag, ExtraComponents...>;
@@ -28,6 +37,13 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using portal_type       = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using context_type      = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using trace_type        = udho::exceptions::captured::trace_type;
+    using pages_type        = error<label_type>;
+
+    template <typename OstreamT>
+    using server_error = typename pages_type::template server_error<OstreamT>;
+
+    template <typename ContextT>
+    using client_error = typename pages_type::template client_error<ContextT>;
 
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
@@ -107,7 +123,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         try{
             capex.rethrow();
         } catch(const std::exception& exception) {
-            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(exception, stacktrace);
         }
@@ -123,10 +139,10 @@ private:
             portal_type portal(_composition, _configs, _journal);
             context_type context(ostream, portal, flow.id());
 
-            udho::www::pages::client_error<context_type> error_page(context);
+            client_error<context_type> error_page(context);
             error_page(error.status(), error.what());
         } else if(error.status_class() == boost::beast::http::status_class::server_error) {
-            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
             server_error(error, stacktrace);
          } else {
@@ -143,7 +159,7 @@ private:
         } else {
             ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
-            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
             server_error(error, stacktrace);
         }
@@ -157,7 +173,7 @@ private:
         } else {
             ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
-            udho::www::pages::server_error<ostream_type> server_error(ostream);
+            server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
             server_error(error, stacktrace);
         }
@@ -167,7 +183,7 @@ private:
     void handle_error(flow_type& flow, const boost::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
-        udho::www::pages::server_error<ostream_type> server_error(ostream);
+        server_error<ostream_type> server_error(ostream);
         cpptrace::stacktrace stacktrace = trace.resolve();
         server_error(exception, stacktrace);
     }
@@ -176,7 +192,7 @@ private:
     void handle_error(flow_type& flow, const std::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
-        udho::www::pages::server_error<ostream_type> server_error(ostream);
+        server_error<ostream_type> server_error(ostream);
         cpptrace::stacktrace stacktrace = trace.resolve();
         server_error(exception, stacktrace);
     }
