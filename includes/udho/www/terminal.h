@@ -6,11 +6,22 @@
 #include <udho/www/components/handler.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/www/pages.h>
+#include <boost/exception/diagnostic_information.hpp>
+#include <cpptrace/cpptrace.hpp>
 
 namespace udho {
 namespace manifold {
 
 // { terminal
+
+template <typename Label>
+struct error{
+    template <typename OstreamT>
+    using server_error = udho::www::pages::server_error<OstreamT>;
+
+    template <typename ContextT>
+    using client_error = udho::www::pages::client_error<ContextT>;
+};
 
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {
@@ -25,12 +36,22 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using configs_type      = typename runtime_type::configs_type;
     using portal_type       = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using context_type      = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
+    using trace_type        = udho::exceptions::captured::trace_type;
+    using pages_type        = error<label_type>;
+
+    template <typename OstreamT>
+    using server_error = typename pages_type::template server_error<OstreamT>;
+
+    template <typename ContextT>
+    using client_error = typename pages_type::template client_error<ContextT>;
 
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
 
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
+
+    basic_terminal(basic_terminal&&) = delete;
 
     /**
      * @brief reenter is synchronously called after successful evaluation of all facet pipelines in all stages
@@ -69,36 +90,62 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      *       passed to facet triggered by calling next.fail(...)
      */
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
+    void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
         if(success.has_exception()) {
             try{
                 success.rethrow();
             } catch(const udho::http::error& error) {
-                std::cout << "exception: " << error.what() << std::endl;
-                handle_http_error(flow, error, stream, std::forward<Args>(args)...);
-            } catch(boost::system::error_code error) {
-                std::cout << "system error: " << error << std::endl;
-                handle_error(flow, error, stream, std::forward<Args>(args)...);
-            }catch(const std::exception& ex) {
+                // std::cout << "exception: " << error.what() << std::endl;
+                handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const std::system_error& error) {
+                std::cout << "std::system_error: " << error.what() << std::endl;
+                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const boost::system::system_error& error) {
+                std::cout << "boost::system::system_error: " << error.what() << std::endl;
+                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const boost::exception& bex) {
+                std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
+                handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
+            } catch(const std::exception& ex) {
                 std::cout << "exception: " << ex.what() << std::endl;
-                handle_error(flow, ex, stream, std::forward<Args>(args)...);
+                handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
             }
+        }
+    }
+
+    template <typename... Args>
+    void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
+
+        assert(ostream.has_exception());
+
+        try{
+            capex.rethrow();
+        } catch(const std::exception& exception) {
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = capex.trace().resolve();
+            server_error(exception, stacktrace);
         }
     }
 
 private:
 
     template <typename... Args>
-    void handle_http_error(flow_type& flow, const udho::http::error& error, stream_type& stream, Args&&... args) {
+    void handle_http_error(flow_type& flow, const udho::http::error& error, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
 
-        portal_type portal(_composition, _configs, _journal);
-        context_type context(ostream, portal, flow.id());
+        if(error.status_class() == boost::beast::http::status_class::client_error) {
+            portal_type portal(_composition, _configs, _journal);
+            context_type context(ostream, portal, flow.id());
 
-        if(error.status() == boost::beast::http::status::not_found) {
-            udho::www::pages::not_found<context_type> error_page(context);
-            error_page(error.what());
-        } else {
+            client_error<context_type> error_page(context);
+            error_page(error.status(), error.what());
+        } else if(error.status_class() == boost::beast::http::status_class::server_error) {
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
+         } else {
             ostream.status(error.status());
             ostream << error.what();
             ostream.finish();
@@ -106,23 +153,59 @@ private:
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, boost::system::error_code error, stream_type& stream, Args&&... args) {
-        if(error == boost::asio::error::eof) {
+    void handle_error(flow_type& flow, const boost::system::error_code& error, const trace_type& trace, stream_type& stream, Args&&... args) {
+        if(error == boost::beast::http::error::end_of_stream) {
             flow.abort();
-        }
+        } else {
+            ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
-        flow.abort();
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
+        }
     }
 
     template <typename... Args>
-    void handle_error(flow_type& flow, const std::exception& error, stream_type& stream, Args&&... args) {
-        flow.abort();
+    void handle_error(flow_type& flow, const std::error_code& error, const trace_type& trace, stream_type& stream, Args&&... args) {
+        if(error.value() == boost::system::errc::operation_canceled) {
+            // most likely before of timeout while waiting for HTTP headers
+            flow.abort();
+        } else {
+            ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
+
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = trace.resolve();
+            server_error(error, stacktrace);
+        }
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const boost::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
+
+        server_error<ostream_type> server_error(ostream);
+        cpptrace::stacktrace stacktrace = trace.resolve();
+        server_error(exception, stacktrace);
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const std::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
+
+        server_error<ostream_type> server_error(ostream);
+        cpptrace::stacktrace stacktrace = trace.resolve();
+        server_error(exception, stacktrace);
     }
 
 private:
 
     template <typename... Args>
     ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
+        handler_type& handler = _composition.template get<handler_type>().component();
+        if(handler.exists(flow.id())) {
+            return handler.ostream(flow.id());
+        }
+
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
@@ -142,14 +225,17 @@ private:
             }
         };
 
-        handler_type& handler = _composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        auto ex_lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            ostream.finish();
+        };
+
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         return ostream;
     }
 
 private:
     composition_type&   _composition;
-    configs_type& _configs;
+    configs_type&       _configs;
     const journal_type& _journal;
 };
 

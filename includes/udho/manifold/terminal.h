@@ -33,11 +33,16 @@ struct basic_terminal{
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
+    basic_terminal(basic_terminal&&) = delete;
+
     template <typename... Args>
     bool reenter(Args&&... args) { return false; }
 
     template <typename... Args>
-    void error(udho::manifold::exclusive_result, flow_type& flow, Args&&...){ return; }
+    void internal_error(udho::manifold::evaluation_result, flow_type& flow, Args&&...){ return; }
+
+    template <typename... Args>
+    void user_error(const udho::exceptions::captured& capex, flow_type& flow, Args&&...){ return; }
 
     template <typename... Args>
     void prepare(Args&&... args) { }

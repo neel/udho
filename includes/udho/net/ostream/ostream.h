@@ -13,6 +13,7 @@
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/logging/macros.h>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho{
 namespace net{
@@ -128,6 +129,7 @@ enum class ostream_states {
 template <typename StreamT>
 struct basic_ostream{
     using stream_type               = StreamT;
+    using ostream_type              = basic_ostream<StreamT>;
     using executor_type             = typename stream_type::executor_type;
     using strand_type               = boost::asio::strand<executor_type>;
     using encoding_type             = udho::net::types::transfer_encoding;
@@ -135,20 +137,24 @@ struct basic_ostream{
     using buffered_stream_type      = detail::basic_buffered_ostream<StreamT>;
     using queued_stream_type        = detail::basic_queued_ostream<StreamT>;
     using completion_callback_type  = std::function<void (boost::system::error_code, std::size_t)>;
+    using exception_callback_type   = std::function<void (ostream_type&)>;
     using response_headers_type     = boost::beast::http::header<false, boost::beast::http::fields>;
-    using ostream_type              = basic_ostream<StreamT>;
     using response_type             = boost::beast::http::response<boost::beast::http::empty_body>;
+    using traced_exception_type     = udho::exceptions::captured;
+    using opt_traced_exception_type = std::optional<traced_exception_type>;
 
     /**
      * @brief Construct composite ostream.
      * @param stream Underlying async write stream.
      * @param callback Completion callback (final completion).
+     * @param ex_callback Exception handler callback (must call finish() after processing exception).
      * @note callback should have regular boost asio completion callback signature. bytes_written
      *       will only include bytes written for the body of the HTTP response
-     *
+     * @note ex_callback gets a mutable reference to the ostream as argument. The ex_callback should
+     *       write exception and related information to the ostream and call finish() function.
      * @note The queued stream starts paused, it is resumed only after switching away from buffering; if never resumed then uses buffered stream only
      */
-    basic_ostream(stream_type& stream, completion_callback_type&& callback)
+    basic_ostream(stream_type& stream, completion_callback_type&& callback, exception_callback_type&& ex_callback)
         : _stream(stream), _strand(stream.get_executor()), _state(ostream_states::buffered), _header_sealed(false), _buffering(true), _finishing(false)
         , _header_stream(stream, _strand, _response, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
         , _queued_stream(stream, _strand, _encoding,
@@ -232,6 +238,7 @@ public:
     void write(T&& value) {
         boost::asio::post(_strand, [this, value = std::move(value)](){
             if(_finishing) return;
+            if(_capex.has_value()) return;
             if(_buffering) {
                 _buffered_stream.write(std::move(value));
             } else {
@@ -244,6 +251,7 @@ public:
     void write(std::string&& str) {
         boost::asio::post(_strand, [this, str = std::move(str)](){
             if(_finishing) return;
+            if(_capex.has_value()) return;
             if(_buffering) {
                 _buffered_stream.write(std::move(str));
             } else {
@@ -256,6 +264,7 @@ public:
     void write(udho::utils::string_view str) {
         boost::asio::post(_strand, [this, str](){
             if(_finishing) return;
+            if(_capex.has_value()) return;
             if(_buffering) {
                 _buffered_stream.write(str);
             } else {
@@ -280,6 +289,7 @@ public:
 
             boost::asio::post(_strand, [this, buff = std::move(buffer)]() mutable {
                 if(_finishing) return;
+                if(_capex.has_value()) return;
                 if(_buffering) {
                     _buffered_stream.write(std::move(buff));
                 } else {
@@ -289,6 +299,7 @@ public:
         } else {
             boost::asio::post(_strand, [this, data, size](){
                 if(_finishing) return;
+                if(_capex.has_value()) return;
                 if(_buffering) {
                     _buffered_stream.write(data, size);
                 } else {
@@ -302,6 +313,7 @@ public:
     void write(boost::iostreams::mapped_file_source&& mmaped_file) {
         boost::asio::post(_strand, [this, file = std::move(mmaped_file)](){
             if(_finishing) return;
+            if(_capex.has_value()) return;
             if(_buffering) {
                 _buffered_stream.write(file);
             } else {
@@ -309,6 +321,57 @@ public:
             }
         });
     }
+
+    bool headers_sealed() const {
+        return _header_sealed;
+    }
+
+    void try_clear() {
+        boost::asio::post(_strand, [this](){
+            if(_buffering) {
+                _buffered_stream.clear();
+            }
+        });
+    }
+
+    /**
+     * @brief pass a captured exception to the ostream
+     * This leads to a call to the exception handler set to the ostream from the
+     * constructor. The exception handler may write the exception and related
+     * information to the ostream. Afterwards the callback **MUST** call `finish()`
+     * to flush the output to the socket including both previous output as well as
+     * exception related output.
+     *
+     * @param traced_exception may be captured using udho::exceptions::captured
+     * @pre finish() has not yet been called
+     * @warning the exception handler must call the finish() method
+     * @note If headers have not been flushed then set it response status as 500
+     *       Internal Server error. Contents that have already been written to the
+     *       buffered or queued stream will still be written.
+     * @note Any contents or exceptions added after calling this function will be ignored.
+     * @post All write() calls will be ignored, after an exception is passed to it.
+     * @note if ostream was using queued_stream then whatever was written to the stream
+     *       before setting the exception will be written to the HTTP response
+     */
+    void exception(traced_exception_type&& traced_exception) {
+        assert(!_finishing);
+        boost::asio::post(_strand, [this, ex = std::move(traced_exception)](){
+            if(_capex.has_value()) return;
+            if(!_headers_sent) {
+                status(boost::beast::http::status::internal_server_error);
+            }
+            _capex = std::move(ex);
+            _capex_handler(*this);
+        });
+    }
+
+    bool has_exception() const { return _capex.has_value(); }
+
+    const traced_exception_type& exception() const {
+        assert(has_exception());
+        return _capex.value();
+    }
+public:
 
     /**
      * @brief Finish the response.
@@ -329,10 +392,10 @@ public:
             if(_state == ostream_states::queued_finishing)   return;
 
             if(_state == ostream_states::buffered) {
-                // assert(_headers_sent);
                 assert(_buffering);
                 if(!_headers_sent) {
                     flush_headers(false);
+                    // once the feaders are flushed asynchronously on_header_completion() will call _buffered_stream.async_flush()
                 }
             } else if(_state == ostream_states::queued) {
                 assert(_headers_sent);
@@ -407,13 +470,18 @@ private:
     void on_header_completion(boost::system::error_code ec, std::size_t bytes_written) {
         _headers_sent = true;
         _bytes_written += bytes_written;
-        std::cout << "on_header_completion" << std::endl;
+        std::cout << "on_header_completion " << ec.message() << std::endl;
 
         namespace params = udho::logging::params;
-        UDHO_LOG_DEBUG("udho::net::ostream", "Response Headers flushed", params::socket_id(udho::utils::misc::native_handle(_stream)));
 
-        if(ec) on_error(ec);
-        else {
+        if(ec) {
+            std::string err_msg = ec.message();
+            UDHO_LOG_ERROR("udho::net::ostream", udho::utils::format("Error while flushing response Headers {}", err_msg), params::socket_id(udho::utils::misc::native_handle(_stream)));
+
+            on_error(ec);
+        } else {
+            UDHO_LOG_DEBUG("udho::net::ostream", "Response Headers flushed", params::socket_id(udho::utils::misc::native_handle(_stream)));
+
             if(_state == ostream_states::switching) {
                 assert(!_buffering);
                 // _finishing may or may not be true -> so don't make any decision based on that yet
@@ -505,14 +573,16 @@ public:
      * @note intended to be used to respond to multiple requests through the same socket
      * @warning must be called after the response has been flushed to the socket and the
      *          completion callback has been called
+     *
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
+    void reset(boost::system::error_code ec = {}) {
         assert(_header_sealed);
 
-        _header_stream.reset();
-        _buffered_stream.reset();
+        _header_stream.reset(ec);
+        _buffered_stream.reset(ec);
         if(!_buffering) {
-            _queued_stream.reset();
+            _queued_stream.reset(ec);
         }
 
         _response.clear();
@@ -546,6 +616,9 @@ private:
     bool                         _finishing;
 private:
     completion_callback_type     _completion;
+private:
+    opt_traced_exception_type    _capex;
+    exception_callback_type      _capex_handler;
 };
 
 using tcp_ostream  = basic_ostream<udho::net::types::socket>;

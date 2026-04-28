@@ -289,8 +289,9 @@ public:
      * @pre _finished is set to true
      * @pre _eoq is set to true
      * @pre _ongoing_header_buffer is cleared
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
+    void reset(boost::system::error_code ec = {}) {
         detail::buffer_queue::reset();
         assert(_ongoing_header_buffer.size() == 0);
         assert(_finished);

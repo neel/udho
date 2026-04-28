@@ -32,33 +32,9 @@ option(UDHO_USE_NLOHMANN_JSON "Build with Nlohmann JSON Support" ON)
 option(UDHO_USE_FCGI "Build with FCGI" ON)
 option(UDHO_HEADER_ONLY "Use Udho as Header Only Library" ON)
 option(UDHO_USE_LUAJIT "Use LuaJIT is available" OFF)
+option(UDHO_ENABLE_STACKTRACE "Enable Stack Trace" ON)
 option(UDHO_ENABLE_ASAN  "Enable AddressSanitizer" OFF)
 option(UDHO_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
-
-function(udho_enable_sanitizers target)
-  if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"))
-    message(WARNING "Sanitizers requested, but unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
-    return()
-  endif()
-
-  set(san_flags "")
-  if(UDHO_ENABLE_ASAN)
-    list(APPEND san_flags -fsanitize=address)
-  endif()
-  if(UDHO_ENABLE_UBSAN)
-    list(APPEND san_flags -fsanitize=undefined)
-  endif()
-
-  if(san_flags)
-    # Compile flags
-    target_compile_options(${target} PRIVATE ${san_flags} -fno-omit-frame-pointer -g)
-    # Link flags (CMake 3.9: LINK_FLAGS)
-    foreach(f IN LISTS san_flags)
-      set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${f}")
-    endforeach()
-    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " -fno-omit-frame-pointer")
-  endif()
-endfunction()
 
 IF(UNIX AND APPLE)
     SET(OPENSSL_ROOT_DIR "/usr/local/Cellar/openssl@3/3.0.1")
@@ -82,7 +58,12 @@ ENDIF()
 # endif()
 
 FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS filesystem regex serialization iostreams log log_setup REQUIRED)
+FIND_PACKAGE(Boost 1.65...<1.90 COMPONENTS filesystem regex serialization iostreams log log_setup)
+if(NOT BOOST_FOUND)
+    message(STATUS "Usable Boost version not found, using /opt/boost-1.89")
+    SET(BOOST_ROOT "/opt/boost-1.89")
+    FIND_PACKAGE(Boost 1.65...<1.90 COMPONENTS filesystem regex serialization iostreams log log_setup REQUIRED)
+endif()
 FIND_PACKAGE(OpenSSL REQUIRED)
 find_package(pegtl REQUIRED)
 find_package(LibMagic REQUIRED)
@@ -99,9 +80,9 @@ IF(UDHO_USE_NLOHMANN_JSON)
 ENDIF()
 
 SET(INCLUDE_DIRS
-  ${CMAKE_CURRENT_SOURCE_DIR}/includes
-  ${CMAKE_CURRENT_SOURCE_DIR}/impl
-  ${CMAKE_CURRENT_SOURCE_DIR}/vendor/certify/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/includes
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/certify/include
 )
 
 file(GLOB_RECURSE UDHO_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/includes/*.h)
@@ -122,6 +103,34 @@ TARGET_LINK_LIBRARIES(udho INTERFACE OpenSSL::SSL certify::core ctti ozo scn::sc
 
 TARGET_LINK_LIBRARIES(udho INTERFACE fmt)
 TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${INCLUDE_DIRS})
+
+if(UDHO_ENABLE_STACKTRACE)
+    include(FetchContent)
+    # Protect cpptrace/libdwarf from a parent PACKAGE_VERSION variable.
+    set(_UDHO_SAVED_PACKAGE_VERSION "${PACKAGE_VERSION}")
+    unset(PACKAGE_VERSION)
+    unset(PACKAGE_VERSION CACHE)
+
+    FetchContent_Declare(
+        cpptrace
+        GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+        GIT_TAG        v1.0.4 # <HASH or TAG>
+    )
+    FetchContent_MakeAvailable(cpptrace)
+    # Restore PACKAGE_VERSION
+    if(DEFINED _UDHO_SAVED_PACKAGE_VERSION)
+        set(PACKAGE_VERSION "${_UDHO_SAVED_PACKAGE_VERSION}")
+    endif()
+    target_link_libraries(udho INTERFACE cpptrace::cpptrace)
+
+    find_package(Libiberty)
+    if(LIBIBERTY_FOUND)
+        target_link_libraries(udho INTERFACE ${LIBIBERTY_LIBRARIES})
+        add_compile_definitions(WITH_LIBIBERTY)
+    endif()
+
+    add_compile_definitions(WITH_STACKTRACE)
+endif()
 
 # IF(UDHO_USE_FCGI)
 #     TARGET_LINK_LIBRARIES(udho INTERFACE ${FCGI_LIBRARIES})
@@ -157,12 +166,12 @@ if(UDHO_USE_LUAJIT)
         TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUAJIT_INCLUDE_DIR})
         add_compile_definitions(WITH_LUA_JIT)
     else()
-        find_package(Lua REQUIRED)
+        find_package(Lua 5.1...5.4 REQUIRED)
         TARGET_LINK_LIBRARIES(udho INTERFACE ${LUA_LIBRARIES})
         TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUA_INCLUDE_DIR})
     endif()
 else()
-    find_package(Lua REQUIRED)
+    find_package(Lua 5.1...5.4 REQUIRED)
     message(STATUS "Lua found: ${LUA_VERSION_STRING} ${LUA_INCLUDE_DIR} ${LUA_LIBRARIES}")
     TARGET_LINK_LIBRARIES(udho INTERFACE ${LUA_LIBRARIES})
     TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUA_INCLUDE_DIR})
@@ -180,6 +189,31 @@ IF(HIREDIS_FOUND)
 ELSE()
     message(STATUS "Hiredis not found")
 ENDIF()
+
+function(udho_enable_sanitizers target)
+    if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang"))
+        message(WARNING "Sanitizers requested, but unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+        return()
+    endif()
+
+    set(san_flags "")
+    if(UDHO_ENABLE_ASAN)
+        list(APPEND san_flags -fsanitize=address)
+    endif()
+    if(UDHO_ENABLE_UBSAN)
+        list(APPEND san_flags -fsanitize=undefined)
+    endif()
+
+    if(san_flags)
+        # Compile flags
+        target_compile_options(${target} PRIVATE ${san_flags} -fno-omit-frame-pointer -g)
+        # Link flags (CMake 3.9: LINK_FLAGS)
+        foreach(f IN LISTS san_flags)
+            set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${f}")
+        endforeach()
+        set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " -fno-omit-frame-pointer")
+    endif()
+endfunction()
 
 udho_enable_sanitizers(udho)
 

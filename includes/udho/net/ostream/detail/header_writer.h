@@ -1,7 +1,6 @@
 #ifndef UDHO_NET_OSTREAM_DETAIL_HEADER_WRITER_H
 #define UDHO_NET_OSTREAM_DETAIL_HEADER_WRITER_H
 
-#include <iostream>
 #include <boost/asio/strand.hpp>
 #include <udho/net/common.h>
 #include <boost/beast/http/message.hpp>
@@ -31,7 +30,6 @@ struct basic_header_writer{
     using strand_type               = boost::asio::strand<executor_type>;
     using encoding_type             = udho::net::types::transfer_encoding;
     using completion_callback_type  = std::function<void (boost::system::error_code, std::size_t)>;
-    // using response_headers_type     = udho::net::types::headers::response;
     using response_type             = boost::beast::http::response<boost::beast::http::empty_body>;
     using serializer_type           = boost::beast::http::response_serializer<boost::beast::http::empty_body>;
     using opt_serializer_type       = std::optional<serializer_type>;
@@ -50,12 +48,12 @@ struct basic_header_writer{
                 return;
             }
             _started = true;
-            std::cout << "header started" << std::endl;
+            // std::cout << "header started" << std::endl;
             boost::beast::http::async_write_header(
                 _stream, *_serializer,
                 boost::asio::bind_executor(_strand,
                        [this](boost::system::error_code ec, std::size_t bytes) {
-                           std::cout << "header ended" << std::endl;
+                           // std::cout << "header ended" << std::endl;
                            _bytes_written = bytes;
                            _finished      = true;
                            if (_completion)
@@ -79,11 +77,15 @@ public:
      * @note intended to be used to respond to multiple requests through the same socket
      * @warning must be called after the response has been flushed to the socket and the
      *          completion callback has been called
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
+    void reset(boost::system::error_code ec = {}) {
         assert(_started);
         assert(_finished);
-        assert(_serializer->is_header_done());
+
+        if(!ec) {
+            assert(_serializer->is_header_done());
+        }
 
         _response.clear();
         _serializer.emplace(_response);
@@ -96,7 +98,6 @@ public:
 private:
     stream_type&                    _stream;
     strand_type&                    _strand;
-    // const response_headers_type&    _headers;
     response_type&                  _response;
     opt_serializer_type             _serializer;
     completion_callback_type        _completion;

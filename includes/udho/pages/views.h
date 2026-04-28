@@ -80,12 +80,16 @@ constexpr static char template_routes_page[] = R"TEMPLATE(
 
 <div class='routes-container'>
     <? for k, m in d:pairs() do ?>
+        <!-- begin udho::mark::mount -->
         <div class="mount-point">
+            <!-- begin udho::mark::point -->
             <div class="mount-header">
                 <span class="mount-label"><?= k ?></span>
                 <span class="mount-path"><?= m.path ?></span>
             </div>
+            <!-- end udho::mark::point -->
 
+            <!-- begin udho::mark::table -->
             <div class="routes-table">
                 <div class="table-header">
                     <span>Method</span>
@@ -96,6 +100,7 @@ constexpr static char template_routes_page[] = R"TEMPLATE(
                 </div>
 
                 <? for l, r in m:pairs() do ?>
+                    <!-- begin udho::mark::route -->
                     <div class="route-entry">
                         <span class="http-method <?= r.match.method:lower() ?>" data-label="Method"><?= r.match.method ?></span>
                         <div class="route-pattern" data-label="Pattern">
@@ -110,9 +115,12 @@ constexpr static char template_routes_page[] = R"TEMPLATE(
                         </div>
                         <code class="route-callback" data-label="Callback"><pre><?= udho.utils.htmlescape(r.slot.symbol) ?></pre></code>
                     </div>
+                    <!-- end udho::mark::route -->
                 <? end ?>
             </div>
+            <!-- end udho::mark::table -->
         </div>
+        <!-- end udho::mark::mount -->
     <? end ?>
 </div>
 

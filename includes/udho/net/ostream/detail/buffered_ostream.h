@@ -1,7 +1,6 @@
 #ifndef UDHO_NET_OSTREAM_DETAIL_BUFFERED_STREAM_H
 #define UDHO_NET_OSTREAM_DETAIL_BUFFERED_STREAM_H
 
-#include <iostream>
 #include <udho/net/ostream/detail/chunking_helper.h>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core/ostream.hpp>
@@ -12,6 +11,7 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace net{
@@ -56,7 +56,7 @@ struct basic_buffered_ostream: private chunking_helper{
      * @note This type stores references to stream, strand, and encoding.
      */
     basic_buffered_ostream(stream_type& stream, strand_type& strand, const encoding_type& encoding, completion_callback_type&& flush_callback, completion_callback_type&& completion_callback)
-        : _stream(stream), _flush(std::move(flush_callback)), _completion(std::move(completion_callback)), _encoding(encoding), _strand(strand), _bytes_written(0), _write_ongoing(false) {}
+        : _stream(stream), _flush(std::move(flush_callback)), _completion(std::move(completion_callback)), _encoding(encoding), _strand(strand), _bytes_written(0), _flushing(false) {}
 
     /**
      * @brief Append ostreamable value into the internal buffer.
@@ -67,9 +67,11 @@ struct basic_buffered_ostream: private chunking_helper{
      */
     template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T> && !udho::utils::traits::is_string<T>::value, bool> = true>
     void write(T&& value) {
+        namespace params = udho::logging::params;
+
         boost::asio::dispatch(_strand, [this, val = std::move(value)]() {
-            if(_write_ongoing) {
-                // error
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
                 return;
             }
             boost::beast::ostream(_multibuff) << val;
@@ -78,9 +80,11 @@ struct basic_buffered_ostream: private chunking_helper{
 
     /// @brief Append owned std::string into the internal buffer.
     void write(std::string&& str) {
+        namespace params = udho::logging::params;
+
         boost::asio::dispatch(_strand, [this, str = std::move(str)]() {
-            if(_write_ongoing) {
-                // error
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
                 return;
             }
             auto mutable_buffer = _multibuff.prepare(str.size());
@@ -91,9 +95,11 @@ struct basic_buffered_ostream: private chunking_helper{
 
     /// @brief Append string_view into the internal buffer (copies into multi_buffer).
     void write(udho::utils::string_view str) {
+        namespace params = udho::logging::params;
+
         boost::asio::dispatch(_strand, [this, str]() {
-            if(_write_ongoing) {
-                // error
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
                 return;
             }
             auto mutable_buffer = _multibuff.prepare(str.size());
@@ -111,9 +117,11 @@ struct basic_buffered_ostream: private chunking_helper{
      * @note This overload still copies; it is only “borrowed” until dispatch executes.
      */
     void write(const char* data, std::size_t size) {
+        namespace params = udho::logging::params;
+
         boost::asio::dispatch(_strand, [this, data, size]() {
-            if(_write_ongoing) {
-                // error
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
                 return;
             }
 
@@ -130,9 +138,11 @@ struct basic_buffered_ostream: private chunking_helper{
      * @note This introduces a copy.
      */
     void write(boost::beast::flat_buffer&& buffer) {
+        namespace params = udho::logging::params;
+
         boost::asio::dispatch(_strand, [this, buff = std::move(buffer)]() mutable {
-            if(_write_ongoing) {
-                // error
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
                 return;
             }
             auto mutable_buffer = _multibuff.prepare(buff.size());
@@ -160,12 +170,11 @@ struct basic_buffered_ostream: private chunking_helper{
      * For chunked encoding, this writes header + payload + CRLF as one write.
      * On completion, calls the flush callback (not the completion callback).
      *
-     * @post `_write_ongoing` is set true until the flush completes (success or error).
+     * @post `_flushing` is set true until the flush completes (success or error).
      */
     void async_flush() {
         boost::asio::dispatch(_strand, [this]() {
-            std::cout << "buffered async_flush" << std::endl;
-            _write_ongoing = true;
+            _flushing = true;
             async_write();
         });
     }
@@ -262,8 +271,7 @@ private:
      * @brief Flush callback hook.
      */
     void on_flush_cb(boost::system::error_code ec, std::size_t bytes_written) {
-        // TODO _write_ongoing = false should set it to false?
-        _write_ongoing = false;
+        _flushing = false;
         if(_flush) {
             _flush(ec, bytes_written);
         }
@@ -271,10 +279,23 @@ private:
 
     /// @brief Final completion callback hook.
     void on_finish_cb(boost::system::error_code ec, std::size_t bytes_written) {
-        _write_ongoing = false;
+        _flushing = false;
         if(_completion) {
             _completion(ec, bytes_written);
         }
+    }
+
+    void clear() {
+        namespace params = udho::logging::params;
+
+        boost::asio::dispatch(_strand, [this]() {
+            if(_flushing) {
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Ignored clear while flushing", params::bytes_sent(_bytes_written));
+                return;
+            }
+
+            _multibuff.clear();
+        });
     }
 
 public:
@@ -286,13 +307,19 @@ public:
      *          and the completion callback has been called
      * @pre _ongoing_header_buffer is cleared
      * @pre _multibuff is cleared
+     * @param ec error code if reset is called after some error occured
      */
-    void reset() {
-        assert(_ongoing_header_buffer.size() == 0);
-        assert(_multibuff.size() == 0);
+    void reset(boost::system::error_code ec = {}) {
+        if(!ec) {
+            assert(_ongoing_header_buffer.size() == 0);
+            assert(_multibuff.size() == 0);
+        } else {
+            _ongoing_header_buffer.clear();
+            _multibuff.clear();
+        }
 
         _bytes_written = 0;
-        _write_ongoing = 0;
+        _flushing = 0;
     }
 
     /**
@@ -310,7 +337,7 @@ private:
     strand_type&               _strand;
     boost::beast::flat_buffer  _ongoing_header_buffer;
     std::size_t                _bytes_written;
-    bool                       _write_ongoing;
+    bool                       _flushing;
 };
 
 

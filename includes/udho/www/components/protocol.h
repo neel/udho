@@ -86,6 +86,14 @@ public:
         return true;
     }
 
+    ~protocol() {
+        namespace p = udho::logging::params;
+
+        if(_readers.size() > 0) {
+            UDHO_LOG_WARNING("udho::www::components::protocol", "component deallocating with active readers", p::request_id("req"));
+        }
+    }
+
 private:
     readers_collection_type _readers;
     std::mutex              _mutex;
@@ -121,20 +129,25 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
 
         reader_ptr_type reader = _component.reader(_id, stream);
         reader->start([this, next{std::move(next)}, reader](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-            if(!ec) {
+            if(!ec || ec == boost::asio::error::eof) {
                 next.pass(result{std::move(request)});
             } else {
                 // std::cout << "header_reader facet: " << ec.message() << std::endl;
 
                 namespace p = udho::logging::params;
                 if (ec == boost::asio::error::operation_aborted) {
-                    UDHO_LOG_DEBUG("udho::www::components::protocol::facet::header_reader", "reader timeout" , p::flow_id(_id));
+                    UDHO_LOG_DEBUG("udho::www::components::protocol::facet::header_reader", "HTTP header reader encountered timeout" , p::flow_id(_id));
+                } else if (ec == boost::beast::http::error::end_of_stream){
+                    UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "HTTP header reader encountered end of stream", p::flow_id(_id));
                 } else {
                     UDHO_LOG_WARNING("udho::www::components::protocol::facet::header_reader", "Removing reader designated for flow due to error " + ec.message(), p::flow_id(_id));
                 }
 
-                _component.remove(_id);
-                next.fail(std::system_error{ec});
+                next.fail(ec);
+                // TODO Failure path is async
+                //      Hence sync removal of the flow is inappropriate
+                //      Move it to the destructor
+                // _component.remove(_id);
             }
         }, timeout_secs);
     }
@@ -143,6 +156,11 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
+    }
+
+    ~facet() {
+        std::cout << __FUNCTION__ << std::endl;
+        _component.remove(_id);
     }
 private:
     component_type&     _component;
@@ -229,6 +247,11 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
+    }
+
+    ~facet() {
+        std::cout << __FUNCTION__ << std::endl;
+        _component.remove(_id);
     }
 private:
     component_type&     _component;

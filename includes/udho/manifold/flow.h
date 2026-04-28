@@ -7,6 +7,7 @@
 #include <udho/manifold/transition.h>
 #include <udho/net/detail.h>
 #include <udho/logging/macros.h>
+#include <udho/exceptions/exceptions.h>
 
 namespace udho{
 namespace manifold{
@@ -34,7 +35,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     using composition_type  = typename sketch_type::composition_type;
     using order_type        = typename sketch_type::order_type;
     using configs_type      = typename composition_type::configs_type;
-    using ptr               = std::shared_ptr<basic_flow<LabelT, StreamT>>;
+    using terminal_type     = udho::manifold::basic_terminal<label_type, stream_type>;
 
     static constexpr std::size_t Count = runtime_type::Count;
 
@@ -61,15 +62,17 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     basic_flow() = delete;
     basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
-    basic_flow(basic_flow<LabelT, StreamT>&&) = delete;
+    basic_flow(basic_flow&&) = delete;
 
     std::size_t id() const { return _id; }
+
+    static std::size_t counter() { return _counter; }
 
     /**
      * @brief Gets a shared pointer to this flow
      * @return Shared pointer to this flow instance
      */
-    ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
+    // ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
 
     /**
      * @brief Applies configuration patches for a specific stage
@@ -83,7 +86,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <int Stage, typename... Args>
     void apply(pipeline_at<Stage>& p, configs_type& config, Args&&... args){
-        detail::transitioner<LabelT, StreamT, udho::manifold::basic_runtime<LabelT, StreamT>::Count, Stage>::apply(self(), p, config, std::forward<Args>(args)...);
+        detail::transitioner<LabelT, StreamT, udho::manifold::basic_runtime<LabelT, StreamT>::Count, Stage>::apply(*this, p, config, std::forward<Args>(args)...);
     }
 
     /**
@@ -100,7 +103,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
         namespace p = udho::logging::params;
         UDHO_LOG_INFO("manifold::flow", "Flow starts", p::flow_id(id()));
 
-        _root_pipeline(self(), _stream, std::forward<Args>(args)...);
+        _root_pipeline(*this, _stream, std::forward<Args>(args)...);
     }
 
     /**
@@ -114,7 +117,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param args Arguments to forward to pipeline stages
      */
     template <typename... Args>
-    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, self(), _stream, std::forward<Args>(args)...); }
+    void start(boost::asio::io_context& io, Args&&... args) { _root_pipeline(io, *this, _stream, std::forward<Args>(args)...); }
 
     /**
      * @brief reenter determines whether to restart the flow or not after successful evaluation
@@ -126,10 +129,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <typename... Args>
     bool reenter(Args&&... args) {
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-
-        terminal_type terminal(composition(), configs(), journal());
-        bool should_reenter = terminal.reenter(std::forward<Args>(args)...);
+        bool should_reenter = _terminal.reenter(std::forward<Args>(args)...);
         terminate(should_reenter);
         return should_reenter;
     }
@@ -141,10 +141,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      */
     template <typename... Args>
     void prepare(Args&&... args) {
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-
-        terminal_type terminal(composition(), configs(), journal());
-        terminal.prepare(std::forward<Args>(args)...);
+        _terminal.prepare(std::forward<Args>(args)...);
     }
 
     /**
@@ -159,13 +156,29 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @param success
      */
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, Args&&... args) {
+    void internal_error(udho::manifold::evaluation_result success, Args&&... args) {
         assert(!success);
-
-        using terminal_type = udho::manifold::basic_terminal<label_type, stream_type>;
-        terminal_type terminal(composition(), configs(), journal());
-        terminal.error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+        _terminal.internal_error(success, *this, std::forward<Args>(args)...); // flow is owned by the runtime
     }
+
+    /**
+     * @brief Communicate the errors originating from the usercode to the terminal.
+     *
+     * @note call originates from usercode running inside the slots that are bound to the url patterns
+     *       delivered through the ostream. The terminal creates a 500 Internal server Error response
+     *       with the error message and the stack trace.
+     *
+     * @note When in production the terminal should behave differently and instead of showing this error
+     *       as HTTP response it should log the error only.
+     *
+     * @param capex exception with stacktrace
+     * @param args
+     */
+    template <typename... Args>
+    void user_error(const udho::exceptions::captured& capex, Args&&... args) {
+        _terminal.user_error(capex, *this, std::forward<Args>(args)...); // flow is owned by the runtime
+    }
+
 
     const start_pipeline_type& root() const { return _root_pipeline; }
 
@@ -192,7 +205,7 @@ private:
     template <typename... Args>
     void restart(Args&&... args) {
         terminate(true);
-        _finish_pipeline.restart(self(), std::forward<Args>(args)...);
+        _finish_pipeline.restart(*this, std::forward<Args>(args)...);
     }
 
     void abort() {
@@ -220,12 +233,12 @@ private:
         if(_callback){
             try{
                 _callback(*this, reenter);
-            } catch(std::exception ex) {
+            } catch(const std::exception& ex) {
                 std::cout << "Exception thrown from terminate callback: " << ex.what() << std::endl;
             }
         }
         if(!reenter) {
-            bool removed = _runtime.remove(self());
+            bool removed = _runtime.remove(*this);
 
             if(!removed) {
                 UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(id()));
@@ -234,6 +247,10 @@ private:
             }
         }
     }
+
+public:
+
+    basic_flow(runtime_type& runtime, stream_type&& stream): basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)) {}
 
 private:
 
@@ -245,17 +262,11 @@ private:
      * @param baseline Reference to baseline configuration
      */
     basic_flow(runtime_type& runtime, composition_type& composition, configs_type& baseline, stream_type&& stream)
-        : _runtime(runtime), _stream(std::move(stream)), _id(_counter++), _root_pipeline(composition, baseline, _id), _finish_pipeline(_root_pipeline.template at<Count>()) {}
-
-    /**
-     * @brief Factory method for flow creation
-     *
-     * @param runtime Reference to the managing runtime
-     * @return New flow instance
-     */
-    static ptr create(runtime_type& runtime, stream_type&& stream) {
-        return ptr(new basic_flow(runtime, runtime.composition(), runtime.baseline(), std::forward<stream_type>(stream)));
-    }
+        : _runtime(runtime), _stream(std::move(stream)), _id(_counter++)
+        , _root_pipeline(composition, baseline, _id)
+        , _finish_pipeline(_root_pipeline.template at<Count>())
+        , _terminal(_root_pipeline.composition(), _root_pipeline.configs(), _root_pipeline.journal())
+    {}
 
 private:
     runtime_type&           _runtime;
@@ -264,6 +275,7 @@ private:
     start_pipeline_type     _root_pipeline;
     finish_pipeline_type&   _finish_pipeline;
     callback_type           _callback;
+    terminal_type           _terminal;
     static std::size_t      _counter;
 };
 

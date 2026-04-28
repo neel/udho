@@ -213,14 +213,16 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
     basic_terminal(composition_type& composition, const configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
+    basic_terminal(basic_terminal&&) = delete;
+
     bool reenter(stream_type& stream) { return true; }
 
     template <typename... Args>
     void prepare(stream_type& stream, Args&&... args) { }
 
     template <typename... Args>
-    void error(udho::manifold::exclusive_result success, flow_type& flow, stream_type& stream, Args&&... args){
-        if(success.has_exception()) {
+    void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
+        if(!success) {
             try{
                 success.rethrow();
             } catch(const udho::http::error& error) {
@@ -233,6 +235,20 @@ struct udho::manifold::basic_terminal<testing::basic_www<StreamT>, StreamT> {
                 std::cout << "exception: " << ex.what() << std::endl;
                 handle_error(flow, ex, stream, std::forward<Args>(args)...);
             }
+        }
+    }
+
+    template <typename... Args>
+    void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+        handler_type& handler = _composition.template get<handler_type>().component();
+        ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
+
+        assert(ostream.has_exception());
+
+        try{
+            capex.rethrow();
+        } catch(const std::exception& exception) {
+            handle_error(flow, exception, stream, std::forward<Args>(args)...);
         }
     }
 
@@ -282,8 +298,12 @@ private:
             }
         };
 
+        auto ex_lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            ostream.finish();
+        };
+
         handler_type& handler = _composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         return ostream;
     }
 
@@ -311,7 +331,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, route_lo
     using routing_component_type = typename label_type::routing_component_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -350,7 +370,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
     using routing_component_type = typename label_type::routing_component_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, configs_type& config, StreamT& stream, Args&&... args) {
         // { essentials
         composition_type& composition = p.composition();
         const journal_type& journal   = p.journal();
@@ -368,7 +388,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
 
         // { add finish lambda to handler component
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
                 // TODO Error while writing to socket
                 return;
@@ -384,15 +404,29 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
         using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
+        auto ex_lambda = [&flow, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
+            if(ostream.has_exception()){
+                const udho::exceptions::captured& capex = ostream.exception();
+                std::apply(
+                    [&](auto&&... args) {
+                        flow.user_error(capex, stream, std::forward<Args>(args)...);
+                    },
+                    args_tuple
+                );
+            } else {
+                ostream.finish();
+            }
+        };
+
         handler_type& handler = composition.template get<handler_type>().component();
-        ostream_type& ostream = handler.add(flow->id(), stream, std::move(lambda));
+        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         // }
 
         // { create context
         portal_type portal(composition, configs, journal);
         std::string resource = portal.resource();
         std::cout << "resource: " << resource << std::endl;
-        context_type context(ostream, portal, flow->id());
+        context_type context(ostream, portal, flow.id());
         // }
 
         // { invoke action
@@ -441,7 +475,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     stream_in.connect(stream_out);
 
     auto framework  = testing::framework(testing::test_url(), session, resources);
-    auto flow       = framework.runtime().spawn(std::move(stream_in));
+    auto& flow      = framework.runtime().spawn(std::move(stream_in));
 
     using framework_type = std::decay_t<decltype(framework)>;
     using runtime_type   = framework_type::runtime_type;
@@ -455,16 +489,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     lua.bind(udho::view::data::type<context_type>{});
 
 
-    flow->start();
-
     std::size_t counter = 0;
 
-    // the callback gets called in two circumstances
-    //  1. pipeline finished processing
-    //  2. pipeline encountered error
-    // in both circumstances a decision whether to reenter or not
-    // has been made already which is passed to reenter argument
-    flow->then([&counter](const auto& flow, bool reenter) {
+    flow.then([&counter](const auto& flow, bool reenter) {
         std::cout << "finished: " << reenter << std::endl;
         const journal_type& journal = flow.journal();
 
@@ -597,6 +624,15 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
         ++counter;
     });
+
+    flow.start();
+
+
+    // the callback gets called in two circumstances
+    //  1. pipeline finished processing
+    //  2. pipeline encountered error
+    // in both circumstances a decision whether to reenter or not
+    // has been made already which is passed to reenter argument
 
     io_context.run();
 

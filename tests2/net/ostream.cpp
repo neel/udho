@@ -425,6 +425,9 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -450,6 +453,9 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -474,6 +480,9 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::chunked);
@@ -513,6 +522,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                // std::cout << "bytes_written " << bytes_written << std::endl;
                INFO("error: " << ec.message());
                CHECK_FALSE(ec);
+           },
+           [&](udho::net::test_ostream& s){
+               s.finish();
            }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -554,6 +566,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 completed = true;
                 CHECK_FALSE(ec);
                 CHECK(bytes_written == 52);
+           },
+           [&](udho::net::test_ostream& s){
+               s.finish();
            }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -594,6 +609,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 completed = true;
                 CHECK_FALSE(ec);
                 CHECK(bytes > large_size);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -621,6 +639,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
             [&](boost::system::error_code ec, std::size_t) {
                 callback_count++;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -657,6 +678,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
 
@@ -687,6 +711,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 CHECK_FALSE(ec);
                 // Calculate expected bytes: headers + chunked data + terminal chunk
                 CHECK(bytes > 0);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::chunked);
@@ -719,6 +746,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
             [&](boost::system::error_code ec, std::size_t) {
                 completed = true;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -760,6 +790,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
            [&](boost::system::error_code ec, std::size_t) {
                completed = true;
                CHECK_FALSE(ec);
+           },
+           [&](udho::net::test_ostream& s){
+               s.finish();
            }
         );
         ostream.encoding(udho::net::types::transfer::encoding::plain);
@@ -794,6 +827,9 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
             [&](boost::system::error_code ec, std::size_t) {
                 operations_completed++;
                 CHECK_FALSE(ec);
+            },
+            [&](udho::net::test_ostream& s){
+                s.finish();
             }
         );
 

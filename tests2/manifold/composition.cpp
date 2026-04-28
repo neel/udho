@@ -729,7 +729,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             bool evaluated = true;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
@@ -801,7 +801,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\n");
@@ -859,7 +859,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             pipeline_type pipeline{composition, configs, journal, 0};
             std::stringstream stream;
             bool evaluated = false;
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
@@ -920,7 +920,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
 
-            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then([&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
@@ -1015,7 +1015,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
 
             bool evaluated = true;
 
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");
 
@@ -1080,7 +1080,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\n");
@@ -1139,7 +1139,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\n");
@@ -1201,7 +1201,7 @@ TEST_CASE("manifold Pipeline", "[manifold][pipeline]") {
             std::stringstream stream;
             bool evaluated = false;
             boost::asio::io_context io;
-            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::exclusive_result success){
+            pipeline.then(io, [&stream, &pipeline, &journal, &evaluated](udho::manifold::evaluation_result success){
                 evaluated = true;
 
                 CHECK(stream.str() == "C0F0\nC2F0\nC1F1\nC4F1\nC5F1\nX0F1\nC5F5\nC5F6\nC6F6\n");

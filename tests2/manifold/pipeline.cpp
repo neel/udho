@@ -669,7 +669,7 @@ struct default_transition<testing::Label1, StreamT, 0> {
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 1>::configs_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, next_config_type& config, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, next_config_type& config, Args&&... args) {
         // Example patch: modify C10's param for stage 1
         config[testing::C10::param::val] = "patched-by-stage0";
         p.next(flow, std::forward<Args>(args)...);
@@ -690,7 +690,7 @@ struct default_transition<testing::Label1, StreamT, 1> {
     using next_config_type  = typename pipeline<composition_type, order_type, Count, 2>::configs_type;
 
     template <typename... Args>
-    static void apply(std::shared_ptr<flow_type> flow, pipeline_type& p, next_config_type& config, Args&&... args) {
+    static void apply(flow_type& flow, pipeline_type& p, next_config_type& config, Args&&... args) {
         // Example patch: modify C20's param for stage 2
         config[testing::C20::param::val] = "patched-by-stage1";
         p.next(flow, std::forward<Args>(args)...);
@@ -729,8 +729,9 @@ TEST_CASE("Pipeline System - Fabric Verification", "[manifold][pipeline][fabric]
 }
 
 TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]") {
-    using label_type = testing::Label1;
-    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using label_type    = testing::Label1;
+    using runtime_type  = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using flow_type     = runtime_type::flow_type;
 
     SECTION("Complete pipeline execution with all accepts") {
         testing::MSC msc{"accept"};
@@ -763,42 +764,46 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
 
         // Spawn and execute flow
         std::stringstream stream;
-        auto flow = runtime.spawn(std::move(stream));
+        flow_type& flow = runtime.spawn(std::move(stream));
 
         {
             std::ofstream html("structure.html");
             udho::manifold::vis::html::runtime(html, runtime);
         }
 
+        flow.then([](const flow_type& cflow, bool reenter){
+            CHECK(!reenter);
+
+            // Verify execution order and content
+            std::string output = cflow.stream().str();
+            INFO(output);
+
+            // Stage 0 should execute
+            CHECK(output.find("C00_F00(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("C01_F01(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("MSC_F00(param=runtime-param)[PASS]") != std::string::npos);
+
+            // Stage 1 should execute
+            CHECK(output.find("C10_F10(param=test-value)[PASS]") == std::string::npos);
+            CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
+            CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
+            INFO("C10 configs patched after stage 0 ends before stage 1 starts");
+            CHECK(output.find("C11_F11(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("C11_X11(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("MSC_F11(param=runtime-param)[PASS]") != std::string::npos);
+
+            // Stage 2 should execute
+            CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
+            CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
+            INFO("C20 configs patched after stage 1 ends before stage 2 starts");
+            CHECK(output.find("C21_F21(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("C21_F24(param=test-value)[PASS]") != std::string::npos);
+            CHECK(output.find("MSC_F22(param=runtime-param)[PASS]") != std::string::npos);
+        });
+
         CHECK(runtime.count() == 1);
-        flow->start();
+        flow.start();
         CHECK(runtime.count() == 0);
-
-        // Verify execution order and content
-        std::string output = flow->stream().str();
-        INFO(output);
-
-        // Stage 0 should execute
-        CHECK(output.find("C00_F00(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("C01_F01(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("MSC_F00(param=runtime-param)[PASS]") != std::string::npos);
-
-        // Stage 1 should execute
-        CHECK(output.find("C10_F10(param=test-value)[PASS]") == std::string::npos);
-        CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
-        CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
-        INFO("C10 configs patched after stage 0 ends before stage 1 starts");
-        CHECK(output.find("C11_F11(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("C11_X11(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("MSC_F11(param=runtime-param)[PASS]") != std::string::npos);
-
-        // Stage 2 should execute
-        CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
-        CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
-        INFO("C20 configs patched after stage 1 ends before stage 2 starts");
-        CHECK(output.find("C21_F21(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("C21_F24(param=test-value)[PASS]") != std::string::npos);
-        CHECK(output.find("MSC_F22(param=runtime-param)[PASS]") != std::string::npos);
     }
 
     SECTION("Pipeline with early failure in stage 0") {
@@ -829,16 +834,21 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         runtime.load(config_json);
 
         std::stringstream stream;
-        auto flow = runtime.spawn(std::move(stream));
-        flow->start();
+        flow_type& flow = runtime.spawn(std::move(stream));
 
-        std::string output = flow->stream().str();
+        flow.then([](const flow_type& cflow, bool reenter){
+            CHECK(!reenter);
 
-        // Should have C00 failure and stop there
-        CHECK(output.find("C00_F00(param=test)[FAIL]") != std::string::npos);
-        CHECK(output.find("C01_F01") == std::string::npos); // Should not execute
-        CHECK(output.find("C10_F10") == std::string::npos); // Should not execute
-        CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+            std::string output = cflow.stream().str();
+
+            // Should have C00 failure and stop there
+            CHECK(output.find("C00_F00(param=test)[FAIL]") != std::string::npos);
+            CHECK(output.find("C01_F01") == std::string::npos); // Should not execute
+            CHECK(output.find("C10_F10") == std::string::npos); // Should not execute
+            CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+        });
+
+        flow.start();
     }
 
     SECTION("Pipeline with failure in stage 1") {
@@ -869,28 +879,34 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         runtime.load(config_json);
 
         std::stringstream stream;
-        auto flow = runtime.spawn(std::move(stream));
-        flow->start();
+        flow_type& flow = runtime.spawn(std::move(stream));
 
-        std::string output = flow->stream().str();
-        INFO(output);
+        flow.then([](const flow_type& cflow, bool reenter){
+            CHECK(!reenter);
 
-        // Stage 0 should execute
-        CHECK(output.find("C00_F00(param=test)[PASS]") != std::string::npos);
-        CHECK(output.find("C01_F01(param=test)[PASS]") != std::string::npos);
-        CHECK(output.find("MSC_F00(param=test)[PASS]") != std::string::npos);
+            std::string output = cflow.stream().str();
+            INFO(output);
 
-        // Stage 1 should fail at C10_F10
-        CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
-        INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
-        CHECK(output.find("C11_F11") == std::string::npos); // Should not execute
-        CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+            // Stage 0 should execute
+            CHECK(output.find("C00_F00(param=test)[PASS]") != std::string::npos);
+            CHECK(output.find("C01_F01(param=test)[PASS]") != std::string::npos);
+            CHECK(output.find("MSC_F00(param=test)[PASS]") != std::string::npos);
+
+            // Stage 1 should fail at C10_F10
+            CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
+            INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
+            CHECK(output.find("C11_F11") == std::string::npos); // Should not execute
+            CHECK(output.find("C20_F20") == std::string::npos); // Should not execute
+        });
+
+        flow.start();
     }
 }
 
 TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]") {
-    using label_type = testing::Label1;
-    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using label_type    = testing::Label1;
+    using runtime_type  = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using flow_type     = runtime_type::flow_type;
 
     SECTION("Patch config modifies configuration between stages") {
         testing::MSC msc{"accept"};
@@ -920,31 +936,39 @@ TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]"
         runtime.load(config_json);
 
         std::stringstream stream;
-        auto flow = runtime.spawn(std::move(stream));
-        flow->start();
+        flow_type& flow = runtime.spawn(std::move(stream));
 
-        std::string output = flow->stream().str();
+        flow.then([](const flow_type& cflow, bool reenter){
+            CHECK(!reenter);
 
-        // Verify patch config was applied:
-        // 1. C10 should have param="patched-by-stage0" (changed by patch_config<Label1, 0>)
-        CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
-        CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
+            std::string output = cflow.stream().str();
 
-        // 2. C20 should have param="patched-by-stage1" (changed by patch_config<Label1, 1>)
-        CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
-        CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
+            // Verify patch config was applied:
+            // 1. C10 should have param="patched-by-stage0" (changed by patch_config<Label1, 0>)
+            CHECK(output.find("C10_F10(param=patched-by-stage0)[PASS]") != std::string::npos);
+            CHECK(output.find("C10_X10(param=patched-by-stage0)[PASS]") != std::string::npos);
 
-        // 3. Other components should still have original value
-        CHECK(output.find("C00_F00(param=initial)[PASS]") != std::string::npos);
-        CHECK(output.find("C01_F01(param=initial)[PASS]") != std::string::npos);
-        CHECK(output.find("C11_F11(param=initial)[PASS]") != std::string::npos);
-        CHECK(output.find("C21_F21(param=initial)[PASS]") != std::string::npos);
+            // 2. C20 should have param="patched-by-stage1" (changed by patch_config<Label1, 1>)
+            CHECK(output.find("C20_F20(param=patched-by-stage1)[PASS]") != std::string::npos);
+            CHECK(output.find("C20_F23(param=patched-by-stage1)[PASS]") != std::string::npos);
+
+            // 3. Other components should still have original value
+            CHECK(output.find("C00_F00(param=initial)[PASS]") != std::string::npos);
+            CHECK(output.find("C01_F01(param=initial)[PASS]") != std::string::npos);
+            CHECK(output.find("C11_F11(param=initial)[PASS]") != std::string::npos);
+            CHECK(output.find("C21_F21(param=initial)[PASS]") != std::string::npos);
+        });
+
+        std::string out2 = flow.stream().str();
+
+        flow.start();
     }
 }
 
 TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pipeline][config]") {
-    using label_type = testing::Label1;
-    using runtime_type = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using label_type    = testing::Label1;
+    using runtime_type  = udho::manifold::basic_runtime<label_type, std::stringstream>;
+    using flow_type     = runtime_type::flow_type;
 
     SECTION("Components disabled by configuration should fail") {
         testing::MSC msc{"accept"};
@@ -974,17 +998,22 @@ TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pip
         runtime.load(config_json);
 
         std::stringstream stream;
-        auto flow = runtime.spawn(std::move(stream));
-        flow->start();
+        flow_type& flow = runtime.spawn(std::move(stream));
 
-        std::string output = flow->stream().str();
-        INFO(output);
+        flow.then([](const flow_type& cflow, bool reenter){
+            CHECK(!reenter);
 
-        // C10 should fail because enabled=false
-        CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
-        INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
-        // Pipeline should stop at C10 failure
-        CHECK(output.find("C11_F11") == std::string::npos);
-        CHECK(output.find("C20_F20") == std::string::npos);
+            std::string output = cflow.stream().str();
+            INFO(output);
+
+            // C10 should fail because enabled=false
+            CHECK(output.find("C10_F10(param=patched-by-stage0)[FAIL]") != std::string::npos);
+            INFO("C10 is unconditionally patched in transision of stage 0 to stage 1");
+            // Pipeline should stop at C10 failure
+            CHECK(output.find("C11_F11") == std::string::npos);
+            CHECK(output.find("C20_F20") == std::string::npos);
+        });
+
+        flow.start();
     }
 }

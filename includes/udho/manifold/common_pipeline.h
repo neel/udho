@@ -133,6 +133,18 @@ public:
         _callback(std::bind(&common_pipepine::on_completion, this, std::placeholders::_1)),
         _evaluator(basic_pipeline_type::fabric(), journal, _callback)
     {}
+
+    common_pipepine(const common_pipepine&) = delete;
+
+    common_pipepine(common_pipepine&&) = delete;
+
+    // common_pipepine(common_pipepine&& other)
+    //     : basic_pipeline_type(std::forward<common_pipepine>(other))
+    //     , _callback(std::move(other._callback))
+    //     , _user_callback(std::move(other._user_callback))
+    //     , _evaluator(std::move(other._evaluator))
+    // {}
+
     /**
      * @name Fabric Access
      * Access to the underlying fabric for direct facet manipulation
@@ -264,7 +276,7 @@ public:
     // const basic_pipeline_type& basic() const { return *this; }
 private:
     void on_completion(safe_success_type&& success){
-        std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
+        // std::cout << "common_pipeline<" << Stage << "," << (std::string(Features::name) + "," + ... ) << components_name<Components...>::get() << ">::on_completion(success_callback)" << std::endl;
         if(_user_callback) {
             // Will be called in case of failure
             _user_callback(std::forward<safe_success_type>(success));

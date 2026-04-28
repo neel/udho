@@ -7,6 +7,8 @@
 #include <udho/manifold/features.h>
 #include <udho/manifold/journal.h>
 #include <iostream>
+#include <udho/exceptions/exceptions.h>
+#include <udho/manifold/evaluation_result.h>
 
 namespace udho {
 namespace manifold {
@@ -15,91 +17,6 @@ namespace manifold {
  * @ingroup manifold
  * @{
  */
-
-
-/**
- * @brief A wrapper for storing either a successful result or an exception
- *
- * This class encapsulates the result of an asynchronous operation that can
- * either succeed (returning true) or fail (storing an exception). It provides
- * a unified interface for checking success and rethrowing exceptions.
- *
- * @note Designed to be used in pipeline evaluation where exceptions need to
- *       be propagated across asynchronous boundaries.
- */
-class exclusive_result{
-    std::exception_ptr _exception;
-    bool _success;
-public:
-    exclusive_result(): _success(false) {}                      ///< Default Constructor
-    exclusive_result(const exclusive_result&) = default;        ///< Copy constructor
-    exclusive_result(exclusive_result&&) = default;             ///< Move constructor
-    exclusive_result& operator=(const exclusive_result&) = default;    ///< Copy assignment operator
-
-    /// @brief Construct with an exception
-    /// @param exptr Exception pointer to store
-    exclusive_result(std::exception_ptr&& exptr): _exception(std::move(exptr)), _success(false) {}
-
-    exclusive_result(bool success): _exception(nullptr), _success(success) {}
-
-public:
-    /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
-    /// @return Reference to this object
-    exclusive_result& operator=(std::exception_ptr&& exptr) {
-        _exception = std::move(exptr);
-        _success   = false;
-        return *this;
-    }
-
-    /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
-    /// @return Reference to this object
-    exclusive_result& operator=(bool success) {
-        _success = success;
-        if(_success) {
-            _exception = nullptr;
-        }
-        return *this;
-    }
-public:
-    /// @brief Check and propagate exception
-    /// @return Always returns true if no exception stored
-    /// @throws The stored exception if one exists
-    bool operator()() const {
-        if(_exception) {
-            std::rethrow_exception(_exception);
-        }
-        return true;
-    }
-public:
-    bool value() const { return _success; }
-    bool has_exception() const { return !!_exception; }
-public:
-    /// @brief Check if operation was successful
-    /// @return true if no exception stored
-    bool success() const { return !_exception && _success; }
-    /// @brief Check if operation failed
-    /// @return true if an exception is stored
-    bool error() const { return !success(); }
-public:
-    /// @brief Dereference operator for checking success
-    /// @return true if no exception stored
-    bool operator*() const { return success(); }
-    /// @brief Rethrow the stored exception
-    /// @pre error() must be true
-    void rethrow() const {
-        assert(has_exception());
-        std::rethrow_exception(_exception);
-    }
-public:
-    /// @brief Boolean conversion for checking success
-    /// @return true if no exception stored
-    operator bool() const { return success(); }
-    /// @brief Negation operator for checking failure
-    /// @return true if an exception is stored
-    bool operator!() const { return error(); }
-};
 
 namespace detail {
 
@@ -142,7 +59,10 @@ public:
     next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
 
     /// @brief Move constructor
-    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)), _done(other._done) {}
+    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)), _done(other._done) {
+        other._done = false;
+    }
+    // next_evaluator_helper_internal(next_evaluator_helper_internal&&) = delete;
 
     /**
      * @brief Pass proceed to the next evaluator with a successful result
@@ -187,18 +107,25 @@ public:
         _handler.completion()(false);
     }
 
-    /**
-     * @brief Fail with an exception
-     * @param exptr Exception pointer to propagate
-     *
-     * Terminates the pipeline by calling the completion handler with
-     * the exception.
-     */
-    void fail(std::exception_ptr&& ex){
+    void fail(udho::exceptions::captured&& capex){
         if(_done) return;
 
         _done = true;
-        _handler.completion()(std::move(ex));
+        _handler.completion()(std::move(capex));
+    }
+
+    void fail(boost::system::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(boost::system::system_error(ec)));
+    }
+
+    void fail(std::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(std::system_error(ec)));
     }
 
     /**
@@ -213,7 +140,7 @@ public:
         if(_done) return;
 
         _done = true;
-        _handler.completion()(std::make_exception_ptr(std::move(ex)));
+        _handler.completion()(udho::exceptions::captured::propagate(std::move(ex)));
     }
 
     /**
@@ -235,7 +162,7 @@ private:
      * Invokes the next evaluator in the pipeline with the stored arguments.
      */
     void proceed(){
-        std::cout << "next_evaluator_helper_internal<" << Idx << ", ArgsTuple, " << facet_name<FacetT>::get() << ", HandlerT, " << YieldsResult << ">::proceed()" << std::endl;
+        // std::cout << "next_evaluator_helper_internal<" << Idx << ", ArgsTuple, " << facet_name<FacetT>::get() << ", HandlerT, " << YieldsResult << ">::proceed()" << std::endl;
         std::apply([&](auto&&... args){
             _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
         }, _args);
@@ -274,7 +201,10 @@ public:
      */
     inline explicit next_evaluator_helper_internal(handler_type&& handler, args_tuple_type&& args): _handler(std::move(handler)), _args(std::move(args)), _done(false) {}
     next_evaluator_helper_internal(const next_evaluator_helper_internal&) = delete;
-    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)), _done(other._done) {}
+    next_evaluator_helper_internal(next_evaluator_helper_internal&& other): _handler(std::move(other._handler)), _args(std::move(other._args)), _done(other._done) {
+        other._done = false;
+    }
+    // next_evaluator_helper_internal(next_evaluator_helper_internal&&) = delete;
 
     /**
      * @brief Pass to the next facet
@@ -286,7 +216,7 @@ public:
         if(_done) return;
 
         _done = true;
-        std::cout << "next_evaluator_helper_internal<" << Idx << ", ArgsTuple, " << facet_name<FacetT>::get() << ", HandlerT, " << false << ">::pass()" << std::endl;
+        // std::cout << "next_evaluator_helper_internal<" << Idx << ", ArgsTuple, " << facet_name<FacetT>::get() << ", HandlerT, " << false << ">::pass()" << std::endl;
         std::apply([&](auto&&... args){
             _handler.template operator()<Idx>(std::forward<decltype(args)>(args)...);
         }, _args);
@@ -316,6 +246,27 @@ public:
         _handler.completion()(false);
     }
 
+    void fail(udho::exceptions::captured&& capex){
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(std::move(capex));
+    }
+
+    void fail(boost::system::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(boost::system::system_error(ec)));
+    }
+
+    void fail(std::error_code ec) {
+        if(_done) return;
+
+        _done = true;
+        _handler.completion()(udho::exceptions::captured::propagate(std::system_error(ec)));
+    }
+
     /**
      * @brief Fail with an exception object
      * @param ex Exception to propagate
@@ -323,11 +274,12 @@ public:
      * Converts the exception to a std::exception_ptr and terminates
      * the pipeline.
      */
-    void fail(std::exception&& ex){
+    template <typename ExceptionT, std::enable_if_t<std::is_base_of<std::exception, ExceptionT>::value, bool> = true>
+    void fail(ExceptionT&& ex){
         if(_done) return;
 
         _done = true;
-        _handler.completion()(std::make_exception_ptr(std::move(ex)));
+        _handler.completion()(udho::exceptions::captured::propagate(std::move(ex)));
     }
 
     /**
@@ -376,7 +328,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         using handler_type          = handler<JournalT, Facets...>;
         using fabric_type           = udho::manifold::fabric<Stage, Facets...>;
         using journal_type          = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type     = exclusive_result;
+        using safe_success_type     = evaluation_result;
         using async_callback_type   = std::function<void (safe_success_type)>;
 
         /**
@@ -392,6 +344,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
         handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
         /// @brief Move constructor
         handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _callback(other._callback) {}
+        // handler(handler&&) = delete;
         handler(const handler&) = delete;
 
         /// @brief Access the journal
@@ -407,9 +360,9 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
          */
         template <std::size_t Idx, typename... Args, std::enable_if_t<std::is_void_v<typename fabric_type::template facet_type<FeatureX, Idx>>, bool> = true>
         void eval(Args&&... args){
-            std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
-            std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
-            std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [rest]" << std::endl;
+            // std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
+            // std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
+            // std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [rest]" << std::endl;
 
             using args_tuple_type   = std::tuple<Args&&...>;
             using rest_handler_type = typename evaluator_helper<Stage, Features...>::template handler<journal_type, Facets...>;
@@ -424,9 +377,9 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
          */
         template <std::size_t Idx, typename... Args, std::enable_if_t<(fabric_type::template count<FeatureX>() > 0 && fabric_type::template count<FeatureX>()-1 > Idx), bool> = true>
         void eval(Args&&... args){
-            std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
-            std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
-            std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [next]" << std::endl;
+            // std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
+            // std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
+            // std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [next]" << std::endl;
 
             using facet_type      = typename fabric_type::template facet_type<FeatureX, Idx>;
             using args_tuple_type = std::tuple<Args&&...>;
@@ -442,7 +395,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
                     std::forward<Args>(args)...
                 ); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _callback(std::current_exception());
+                _callback(udho::exceptions::captured::propagate());
             }
         }
 
@@ -452,9 +405,9 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
          */
         template <std::size_t Idx, typename... Args, std::enable_if_t<(fabric_type::template count<FeatureX>() > 0 && fabric_type::template count<FeatureX>()-1 == Idx), bool> = true>
         void eval(Args&&... args){
-            std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
-            std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
-            std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [last]" << std::endl;
+            // std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
+            // std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
+            // std::cout << udho::utils::format("::eval()<{}>(...)", Idx) << " [last]" << std::endl;
 
             using facet_type        = typename fabric_type::template facet_type<FeatureX, Idx>;
             using args_tuple_type   = std::tuple<Args&&...>;
@@ -471,7 +424,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
                     std::forward<Args>(args)...
                 ); // facet will call the pass or fail method of the next_evaluator_helper
             } catch(...) {
-                _callback(std::current_exception());
+                _callback(udho::exceptions::captured::propagate());
             }
         }
 
@@ -488,9 +441,9 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
          */
         template <std::size_t Idx, typename... Args>
         void operator()(Args&&... args){
-            std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
-            std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
-            std::cout << udho::utils::format("::operator()<{}>(...)", Idx) << std::endl;
+            // std::cout << "evaluation_helper<" << Stage << "," << FeatureX::name << (std::string("") + ... + ("," + std::string(Features::name))) << ">";
+            // std::cout << "::handler<JournalT, fabric<" << udho::manifold::facets_name<Facets...>::get() << ">";
+            // std::cout << udho::utils::format("::operator()<{}>(...)", Idx) << std::endl;
             eval<Idx>(std::forward<Args>(args)...);
         }
 
@@ -513,11 +466,12 @@ struct evaluator_helper<Stage>{
         using handler_type = handler<JournalT, Facets...>;
         using fabric_type  = udho::manifold::fabric<Stage, Facets...>;
         using journal_type = JournalT; // typename udho::manifold::detail::journal_for_facets<Facets...>::type;
-        using safe_success_type = exclusive_result;
+        using safe_success_type = evaluation_result;
         using async_callback_type = std::function<void (safe_success_type)>;
 
         handler(fabric_type& fabric, journal_type& journal, async_callback_type& callback): _fabric(fabric), _journal(journal), _callback(callback) {}
         handler(handler&& other): _fabric(other._fabric), _journal(other._journal), _callback(other._callback) {}
+        // handler(handler&&) = delete;
         handler(const handler&) = delete;
 
         journal_type& journal() { return _journal; }
