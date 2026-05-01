@@ -38,6 +38,13 @@ struct meta_tags: property_map<std::string, std::string>{
         refresh
     };
 
+    using properties_type::property;
+    using properties_type::operator[];
+    using properties_type::count;
+    using properties_type::empty;
+    using properties_type::begin;
+    using properties_type::end;
+
     /**
      * @brief Get the value of an http-equiv property
      * @param key The http-equiv enum key to retrieve

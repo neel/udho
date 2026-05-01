@@ -12,6 +12,8 @@ add_catch_test(udho-test-view-error error.cpp)
 add_catch_test(udho-test-view-layout layout.cpp)
 add_catch_test(udho-test-view-layout-placeholders placeholders.cpp)
 add_catch_test(udho-test-view-layout-loaders loader.cpp)
+add_catch_test(udho-test-view-layout-document document.cpp)
+add_catch_test(udho-test-view-layout-presenter presenter.cpp)
 
 if(UDHO_USE_NLOHMANN_JSON)
     find_package(nlohmann_json)
