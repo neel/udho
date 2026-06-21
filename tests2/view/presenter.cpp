@@ -94,10 +94,10 @@ void add_asset(ResourceStore& store, const std::string& prefix, const std::strin
 
 template <typename ResourceStore>
 void add_presenter_assets(ResourceStore& store){
-    const std::string external_js  = "console.log('external presenter js');";
-    const std::string embedded_js  = "console.log('embedded presenter js');";
-    const std::string external_css = ".external_presenter{color: blue}";
-    const std::string embedded_css = ".embedded_presenter{color: red}";
+    static const std::string external_js  = "console.log('external presenter js');";
+    static const std::string embedded_js  = "console.log('embedded presenter js');";
+    static const std::string external_css = ".external_presenter{color: blue}";
+    static const std::string embedded_css = ".embedded_presenter{color: red}";
 
     add_asset(store, "primary", "external.js",  udho::view::resources::asset::type::js,  external_js);
     add_asset(store, "primary", "external.css", udho::view::resources::asset::type::css, external_css);
@@ -410,7 +410,7 @@ TEST_CASE("View layout default presenter asset placement", "[view][layout][prese
 
     const auto importmap   = body.find("<script type=\"importmap\">");
     const auto external_js = body.find("<script src=\"/assets/primary/external.js\"></script>");
-    const auto external_css = body.find("<link href=\"/assets/primary/external.css\" rel=\"stylesheet\" type=\"text/css\" media=\"\">");
+    const auto external_css = body.find("<link href=\"/assets/primary/external.css\" rel=\"stylesheet\" type=\"text/css\" media=\"all\">");
     const auto embedded_css = body.find("<style media=\"print\">");
     const auto asset_body   = body.find("Asset body");
     const auto embedded_js  = body.find("console.log('embedded presenter js');");
@@ -497,7 +497,7 @@ TEST_CASE("View layout custom presenter", "[view][layout][presenter][custom]") {
         REQUIRE(body_close  != std::string::npos);
 
         CHECK(body.find("<script src=\"/assets/primary/external.js\"></script>") != std::string::npos);
-        CHECK(body.find("<link href=\"/assets/primary/external.css\" rel=\"stylesheet\" type=\"text/css\" media=\"\">") != std::string::npos);
+        CHECK(body.find("<link href=\"/assets/primary/external.css\" rel=\"stylesheet\" type=\"text/css\" media=\"all\">") != std::string::npos);
         CHECK(body.find("<style media=\"print\">") != std::string::npos);
 
         CHECK(head_close < body_open);

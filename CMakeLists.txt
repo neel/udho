@@ -57,13 +57,31 @@ ENDIF()
 #     FIND_PACKAGE(PUGIXML REQUIRED)
 # endif()
 
-FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Boost 1.65...<1.90 COMPONENTS filesystem regex serialization iostreams log log_setup)
-if(NOT BOOST_FOUND)
-    message(STATUS "Usable Boost version not found, using /opt/boost-1.89")
-    SET(BOOST_ROOT "/opt/boost-1.89")
-    FIND_PACKAGE(Boost 1.65...<1.90 COMPONENTS filesystem regex serialization iostreams log log_setup REQUIRED)
+find_package(Threads REQUIRED)
+
+set(UDHO_BOOST_COMPONENTS
+    filesystem
+    regex
+    serialization
+    iostreams
+    log
+    log_setup
+)
+set(UDHO_BOOST_MAX_VERSION "1.90.0")
+if(DEFINED BOOST_ROOT AND NOT BOOST_ROOT STREQUAL "")
+    message(STATUS "Searching exclusively for Boost under: ${BOOST_ROOT}")
+    unset(Boost_DIR CACHE)
+    find_package(Boost ${UDHO_BOOST_MIN_VERSION} CONFIG REQUIRED COMPONENTS ${UDHO_BOOST_COMPONENTS} PATHS "${BOOST_ROOT}" NO_DEFAULT_PATH)
+else()
+    find_package(Boost COMPONENTS ${UDHO_BOOST_COMPONENTS})
+    if(Boost_VERSION VERSION_GREATER_EQUAL UDHO_BOOST_MAX_VERSION)
+        message(FATAL_ERROR
+            "Boost ${Boost_VERSION} is too new. Please configure with -DBOOST_ROOT=/opt/boost-1.89 "
+            "or install a supported Boost version. Required range: < ${UDHO_BOOST_MAX_VERSION}."
+        )
+    endif()
 endif()
+
 FIND_PACKAGE(OpenSSL REQUIRED)
 find_package(pegtl REQUIRED)
 find_package(LibMagic REQUIRED)
@@ -158,6 +176,53 @@ if(nlohmann_json_FOUND)
     target_compile_definitions(udho INTERFACE WITH_JSON_NLOHMANN)
 endif()
 
+set(UDHO_LUA_SUPPORTED_VERSIONS 5.4 5.3 5.2 5.1)
+function(udho_find_supported_lua)
+    foreach(_lua_requested_version IN ITEMS ${UDHO_LUA_SUPPORTED_VERSIONS})
+            foreach(_cache_variable IN ITEMS
+                LUA_INCLUDE_DIR
+                LUA_LIBRARY
+                LUA_MATH_LIBRARY
+            )
+            unset(${_cache_variable} CACHE)
+            unset(${_cache_variable})
+        endforeach()
+
+        unset(LUA_LIBRARIES)
+        unset(Lua_FOUND)
+        unset(LUA_FOUND)
+
+        unset(Lua_VERSION)
+        unset(Lua_VERSION_MAJOR)
+        unset(Lua_VERSION_MINOR)
+        unset(Lua_VERSION_PATCH)
+
+        unset(LUA_VERSION_STRING)
+        unset(LUA_VERSION_MAJOR)
+        unset(LUA_VERSION_MINOR)
+        unset(LUA_VERSION_PATCH)
+
+        find_package(Lua ${_lua_requested_version} EXACT QUIET)
+
+        if(Lua_FOUND)
+            if(DEFINED Lua_VERSION)
+                set(_lua_found_version "${Lua_VERSION}")
+            else()
+                # Compatibility with CMake versions before 4.2.
+                set(_lua_found_version "${LUA_VERSION_STRING}")
+            endif()
+
+            set(UDHO_LUA_FOUND TRUE PARENT_SCOPE)
+            set(UDHO_LUA_VERSION  "${_lua_found_version}" PARENT_SCOPE)
+            set(LUA_INCLUDE_DIR "${LUA_INCLUDE_DIR}" PARENT_SCOPE)
+            set(LUA_LIBRARIES "${LUA_LIBRARIES}" PARENT_SCOPE)
+
+            return()
+        endif()
+    endforeach()
+    set(UDHO_LUA_FOUND FALSE PARENT_SCOPE)
+endfunction()
+
 if(UDHO_USE_LUAJIT)
     find_package(LuaJIT)
     if(LUAJIT_FOUND)
@@ -166,13 +231,18 @@ if(UDHO_USE_LUAJIT)
         TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUAJIT_INCLUDE_DIR})
         add_compile_definitions(WITH_LUA_JIT)
     else()
-        find_package(Lua 5.1...5.4 REQUIRED)
+        udho_find_supported_lua()
+        if(NOT UDHO_LUA_FOUND)
+            message(FATAL_ERROR "No supported Lua installation found. Udho supports Lua 5.1 through 5.4.")
+        endif()
         TARGET_LINK_LIBRARIES(udho INTERFACE ${LUA_LIBRARIES})
         TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUA_INCLUDE_DIR})
     endif()
 else()
-    find_package(Lua 5.1...5.4 REQUIRED)
-    message(STATUS "Lua found: ${LUA_VERSION_STRING} ${LUA_INCLUDE_DIR} ${LUA_LIBRARIES}")
+    udho_find_supported_lua()
+    if(NOT UDHO_LUA_FOUND)
+        message(FATAL_ERROR "No supported Lua installation found. Udho supports Lua 5.1 through 5.4.")
+    endif()
     TARGET_LINK_LIBRARIES(udho INTERFACE ${LUA_LIBRARIES})
     TARGET_INCLUDE_DIRECTORIES(udho INTERFACE ${LUA_INCLUDE_DIR})
 endif()
