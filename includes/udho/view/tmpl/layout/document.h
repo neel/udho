@@ -38,12 +38,24 @@ struct meta_tags: property_map<std::string, std::string>{
         refresh
     };
 
+    /**
+     * @name Standard meta properties
+     *
+     * Re-exposes the string-keyed property interface inherited from
+     * property_map. These overloads are used for ordinary metadata such as
+     * `description`, `keywords`, `charset`, and Open Graph properties.
+     *
+     * The http_equiv overloads declared below provide the corresponding
+     * strongly typed interface for HTTP-equivalent metadata.
+     */
+    /// @{
     using properties_type::property;
     using properties_type::operator[];
     using properties_type::count;
     using properties_type::empty;
     using properties_type::begin;
     using properties_type::end;
+    /// @}
 
     /**
      * @brief Get the value of an http-equiv property
@@ -130,6 +142,12 @@ struct meta_tags: property_map<std::string, std::string>{
  * - Meta tags
  */
 struct document_preamble{
+    /**
+     * @brief Construct an empty document preamble.
+     *
+     * The HTML doctype declaration is enabled by default. Language, namespace,
+     * direction, classes, title, and metadata are initially empty.
+     */
     inline explicit document_preamble(): _doctype(true) {}
 
     /**
@@ -157,8 +175,9 @@ struct document_preamble{
     inline const std::string& doclang() const { return _doc_lang; }
 
     /**
-     * @brief Get current XML namespace
-     * @return Current XML namespace URI
+     * @brief Set the XML namespace of the root document element.
+     * @param uri Namespace URI, such as `http://www.w3.org/1999/xhtml`.
+     * @return Reference to this preamble for method chaining.
      */
     inline document_preamble& xmlns(const std::string& uri) { _xmlns = uri; return *this; }
     /**
@@ -204,6 +223,11 @@ struct document_preamble{
     inline const std::string& title() const { return _title; }
 
     public:
+        /**
+         * @brief Metadata associated with the document.
+         *
+         * The presenter writes these entries into the document's `<head>` section.
+         */
         meta_tags meta;
     private:
         bool        _doctype;
@@ -219,7 +243,8 @@ struct basic_document;
 
 /**
  * @brief A document wraps multiple view outputs into an envelop.
- * @tparam PlaceholderT basic_placeholder<Spots...> placeholders for the view contents
+ * @tparam Spots Placeholder spot definitions contained in the specialized basic_placeholder type.
+ * @note The document is non-copyable because its asset loaders refer to substores owned by the associated resource store.
  *
  * Responsibilities
  * -----------------
@@ -248,22 +273,82 @@ struct basic_document<basic_placeholder<Spots...>>: protected document_preamble,
     template <typename Key>
     using const_proxy_type = typename placeholders_type::template const_proxy_type<Key>;
 
+    /**
+     * @brief Construct a document backed by a resource store.
+     *
+     * Initializes the JavaScript and CSS loaders from the corresponding
+     * substores and initializes the document body as an HTML `<body>` tag.
+     *
+     * @tparam Bridges View bridges supported by the resource store.
+     * @param store Immutable resource store supplying JavaScript and CSS assets.
+     *
+     * @warning The resource store and its asset substores must outlive the document.
+     */
     template <typename... Bridges>
     basic_document(const udho::view::resources::const_store<Bridges...>& store): _js(store.js()), _css(store.css()), _body("body") {}
+
+    /**
+     * @brief Documents cannot be copied.
+     */
     basic_document(const basic_document&) = delete;
+
+    /**
+     * @brief Move-construct a document.
+     *
+     * Transfers the JavaScript loader, CSS loader, and body-tag state from `other`.
+     *
+     * @param other Document whose state is transferred.
+     */
     basic_document(basic_document&& other): _js(std::move(other._js)), _css(std::move(other._css)), _body(std::move(other._body)) {}
 
+    /**
+     * @brief Access the JavaScript asset loader.
+     * @return Mutable JavaScript asset loader associated with this document.
+     */
     loader_js& js() { return _js; }
+
+    /**
+     * @brief Access the CSS asset loader.
+     * @return Mutable CSS asset loader associated with this document.
+     */
     loader_css& css() { return _css; }
 
+    /**
+     * @brief Access the JavaScript asset loader.
+     * @return Read-only JavaScript asset loader associated with this document.
+     */
     const loader_js& js() const { return _js; }
+
+    /**
+     * @brief Access the CSS asset loader.
+     * @return Read-only CSS asset loader associated with this document.
+     */
     const loader_css& css() const { return _css; }
 
+
+    /**
+     * @brief Access the document preamble.
+     * @return Mutable document preamble.
+     */
     layout::document_preamble& preamble() { return *this; }
+
+    /**
+     * @brief Access the document preamble.
+     * @return Read-only document preamble.
+     */
     const layout::document_preamble& preamble() const { return *this; }
 
-    udho::view::tmpl::layout::html_tag_fixed body() const { return _body; }
-    const udho::view::tmpl::layout::html_tag_fixed& body() { return _body; }
+    /**
+     * @brief Obtain a copy of the document body tag.
+     * @return Copy of the configured `<body>` tag.
+     */
+    udho::view::tmpl::layout::html_tag_fixed& body() { return _body; }
+
+    /**
+     * @brief Access the document body tag.
+     * @return Read-only reference to the configured `<body>` tag.
+     */
+    const udho::view::tmpl::layout::html_tag_fixed& body() const { return _body; }
 
     private:
         loader_js  _js;
@@ -271,6 +356,9 @@ struct basic_document<basic_placeholder<Spots...>>: protected document_preamble,
         udho::view::tmpl::layout::html_tag_fixed _body;
 };
 
+/**
+ * @brief Standard HTML document using the standard placeholder arrangement.
+ */
 using standard_document = basic_document<placeholders::standard>;
 
 }
