@@ -87,7 +87,7 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
     key_type            _key;
     const store_type&   _store;
 
-    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().store()) {}
+    renderer(context_type& ctx, layout_type& layout, const key_type& key): header_renderer_type(layout), _ctx(ctx), _layout(layout), _key(key), _store(ctx.portal().resources()) {}
 
     template <typename Data>
     renderer& render(Data&& d){

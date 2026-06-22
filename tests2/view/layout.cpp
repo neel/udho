@@ -32,6 +32,9 @@
 #include <udho/www/components/handler.h>
 #include <udho/manifold/context.h>
 
+#include <boost/beast/http/string_body.hpp>
+#include <boost/beast/http/parser.hpp>
+
 // using session_catalogue = udho::session::catalogue<udho::session::storage::fs, udho::session::modes::lazy>;
 
 static char buffer_router[] = R"TEMPLATE(
@@ -374,16 +377,187 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
     // udho::net::ostream_view stream_view = stream.view();
 
 
-    {
-        // udho::view::tmpl::layout::standard_layout<context_type> layout{context};
+    // udho::net::ostream_view stream_view = stream.view();
+
+    namespace placeholders = udho::view::tmpl::layout::placeholders;
+
+    auto response_body = [&](){
+        io.run();
+
+        std::string output = stream_out.str();
+        CAPTURE(output);
+
+        boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+        parser.eager(true);
+
+        boost::beast::error_code error;
+        parser.put(boost::asio::buffer(output), error);
+
+        CHECK(!error);
+        CHECK(parser.is_done());
+
+        boost::beast::http::response<boost::beast::http::string_body> response = parser.release();
+        return response.body();
+    };
+
+    SECTION("Layout renders content assigned through a single-valued renderer") {
         auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
 
+        auto central = layout[placeholders::central];
+
+        CHECK_FALSE(central.exists());
+        CHECK(central.count() == 0);
+
         layout.preamble().title("Page title");
-        namespace placeholders = udho::view::tmpl::layout::placeholders;
+        central = "Hello";
+
+        CHECK(central.exists());
+        CHECK(central.count() == 1);
+
+        layout();
+
+        std::string body = response_body();
+
+        CHECK(body.find("<title>Page title</title>") != std::string::npos);
+        CHECK(body.find("<body>Hello</body>") != std::string::npos);
+    }
+
+    SECTION("Layout appends content through multi-valued renderers") {
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+        auto left  = layout[placeholders::left];
+        auto right = layout[placeholders::right];
+
+        CHECK_FALSE(left.exists());
+        CHECK(left.count() == 0);
+        CHECK_FALSE(right.exists());
+        CHECK(right.count() == 0);
+
+        left += "L1";
+        left += "L2";
+
+        layout[placeholders::central] = "C";
+
+        right += "R1";
+        right += "R2";
+
+        CHECK(left.exists());
+        CHECK(left.count() == 2);
+        CHECK(right.exists());
+        CHECK(right.count() == 2);
+
+        layout();
+
+        std::string body = response_body();
+
+        CHECK(body.find("<body>L1L2CR1R2</body>") != std::string::npos);
+    }
+
+    SECTION("Layout forwards placeholder properties to the document and presenter") {
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+        layout.properties(placeholders::header).classes("header_class").id("header_id");
+        layout.properties(placeholders::left).classes("left_class").id("left_id");
+        layout.properties(placeholders::central).classes("central_class").id("central_id");
+        layout.properties(placeholders::right).classes("right_class").id("right_id");
+        layout.properties(placeholders::footer).classes("footer_class").id("footer_id");
+
+        layout[placeholders::header] = "H";
+        layout[placeholders::left] += "L1";
+        layout[placeholders::left] += "L2";
+        layout[placeholders::central] = "C";
+        layout[placeholders::right] += "R1";
+        layout[placeholders::right] += "R2";
+        layout[placeholders::footer] = "F";
+
+        layout();
+
+        std::string body = response_body();
+
+        CAPTURE(body);
+
+        CHECK(body.find(
+            "<body>"
+                "<div class=\"header_class\" id=\"header_id\">H</div>"
+                "<div class=\"left_class\" id=\"left_id\">L1L2</div>"
+                "<div class=\"central_class\" id=\"central_id\">C</div>"
+                "<div class=\"right_class\" id=\"right_id\">R1R2</div>"
+                "<div class=\"footer_class\" id=\"footer_id\">F</div>"
+            "</body>"
+        ) != std::string::npos);
+    }
+
+    SECTION("Layout forwards preamble configuration") {
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+        layout.preamble()
+            .title("Page title")
+            .doclang("en")
+            .xmlns("http://www.w3.org/1999/xhtml")
+            .dir("ltr")
+            .classes("app shell");
+
+        layout.preamble().meta.property("description", "Layout integration test");
+
         layout[placeholders::central] = "Hello";
 
         layout();
 
+        std::string body = response_body();
+
+        CHECK(body.find(
+            "<!doctype html>"
+            "<html lang=\"en\" xmlns=\"http://www.w3.org/1999/xhtml\" dir=\"ltr\" class=\"app shell\">"
+        ) != std::string::npos);
+
+        CHECK(body.find("<title>Page title</title>") != std::string::npos);
+        CHECK(body.find("<meta name=\"description\" content=\"Layout integration test\" />") != std::string::npos);
+        CHECK(body.find("<body>Hello</body>") != std::string::npos);
+    }
+
+    SECTION("Layout forwards asset selections to its document loaders") {
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+        CHECK(layout.js().add("primary", "0profile1.js", false));
+        CHECK(layout.js().add("primary", "1profile2.js", true));
+        CHECK(layout.css().add("primary", "2profile.css", false));
+
+        layout[placeholders::central] = "Hello";
+
+        layout();
+
+        std::string body = response_body();
+
+        CHECK(body.find("<script type=\"importmap\">") != std::string::npos);
+        CHECK(body.find("\"primary/0profile1.js\": \"/assets/primary/0profile1.js\"") != std::string::npos);
+        CHECK(body.find("\"primary/1profile2.js\": \"/assets/primary/1profile2.js\"") != std::string::npos);
+
+        CHECK(body.find("<script src=\"/assets/primary/0profile1.js\"></script>") != std::string::npos);
+        CHECK(body.find("href=\"/assets/primary/2profile.css\"") != std::string::npos);
+
+        CHECK(body.find("<body>Hello") != std::string::npos);
+        CHECK(body.find("console.log('Hello, Mars!');") != std::string::npos);
+        CHECK(body.find("</script>\n</body>") != std::string::npos);
+    }
+
+    SECTION("Calling layout more than once does not present the document more than once") {
+        auto layout = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+
+        layout.preamble().title("Page title");
+        layout[placeholders::central] = "Hello";
+
+        layout();
+        layout();
+
+        std::string body = response_body();
+
+        CHECK(body.find("<title>Page title</title>") != std::string::npos);
+        CHECK(body.find("<body>Hello</body>") != std::string::npos);
+
+        std::size_t first = body.find("Hello");
+        REQUIRE(first != std::string::npos);
+
+        CHECK(body.find("Hello", first + 1) == std::string::npos);
     }
 
     io.run();
