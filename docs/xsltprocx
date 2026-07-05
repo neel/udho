@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /usr/bin/xsltproc --maxdepth 50000 --maxvars 500000 "$@"
