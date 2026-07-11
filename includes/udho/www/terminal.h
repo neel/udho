@@ -14,15 +14,51 @@ namespace manifold {
 
 // { terminal
 
+/**
+ * @brief Error-page type policy for a www runtime label.
+ *
+ * Maps a label to the page types used for rendering server and client errors.
+ * Specialize this template to customize error-page rendering for a particular
+ * label.
+ *
+ * @tparam Label www label type.
+ *
+ * @ingroup www
+ */
 template <typename Label>
 struct error{
+    /**
+     * @brief Server-error page template used by the label.
+     *
+     * @tparam OstreamT Output stream type used by the error page.
+     */
     template <typename OstreamT>
     using server_error = udho::www::pages::server_error<OstreamT>;
 
+    /**
+     * @brief Client-error page template used by the label.
+     *
+     * @tparam ContextT Request context type used by the error page.
+     */
     template <typename ContextT>
     using client_error = udho::www::pages::client_error<ContextT>;
 };
 
+
+/**
+ * @brief www terminal policy for HTTP connection flow handling.
+ *
+ * This terminal specialization keeps successful flows alive for the next
+ * request, renders HTTP/client/server error pages, aborts flows on stream-end
+ * or cancellation, and routes user-code exceptions through the active response
+ * stream.
+ *
+ * @tparam StreamT Stream type used by the runtime.
+ * @tparam Tag www label tag.
+ * @tparam ExtraComponents Extra components appended to the www label.
+ *
+ * @ingroup www
+ */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {
     using label_type        = www::basic_label<StreamT, Tag, ExtraComponents...>;
@@ -48,6 +84,19 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
 
+    /**
+     * @brief Constructs a terminal bound to runtime state.
+     *
+     * The terminal stores references to the runtime composition, configs, and
+     * current journal. These references are used while handling re-entry and
+     * errors.
+     *
+     * @param composition Runtime component composition.
+     * @param configs Runtime configuration collection.
+     * @param journal Journal associated with the current flow.
+     *
+     * @warning The referenced objects must outlive the terminal.
+     */
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
@@ -113,6 +162,18 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         }
     }
 
+    /**
+     * @brief Handles an exception captured from user route/action code.
+     *
+     * The function retrieves the active response stream from the handler and renders
+     * a server-error page using the captured exception and resolved stack trace.
+     *
+     * @tparam Args Additional runtime argument types.
+     * @param capex Captured exception from user code.
+     * @param flow Flow that encountered the exception.
+     * @param stream Active stream.
+     * @param args Additional runtime arguments.
+     */
     template <typename... Args>
     void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
         handler_type& handler = _composition.template get<handler_type>().component();

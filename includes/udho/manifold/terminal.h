@@ -30,20 +30,69 @@ struct basic_terminal{
     basic_terminal() = delete;
     basic_terminal(const basic_terminal&) = delete;
 
+    /**
+     * @brief Constructs a terminal attached to runtime state.
+     *
+     * @param composition Runtime component composition.
+     * @param configs Runtime configuration collection.
+     * @param journal Flow journal containing evaluation results.
+     *
+     * @warning The referenced composition, configs, and journal must outlive this
+     *          terminal.
+     */
     basic_terminal(composition_type& composition, configs_type& configs, const journal_type& journal)
         : _composition(composition), _configs(configs), _journal(journal) {}
 
     basic_terminal(basic_terminal&&) = delete;
 
+    /**
+     * @brief Determines whether a completed flow should re-enter evaluation.
+     *
+     * The default implementation returns `false`, meaning the flow terminates after
+     * successful completion.
+     *
+     * @tparam Args Additional terminal argument types.
+     * @param args Additional arguments supplied by the runtime.
+     * @return `true` to re-enter the flow, `false` to terminate it.
+     */
     template <typename... Args>
     bool reenter(Args&&... args) { return false; }
 
+    /**
+     * @brief Handles an internal evaluation error.
+     *
+     * The default implementation does nothing.
+     *
+     * @tparam Args Additional terminal argument types.
+     * @param result Evaluation result describing the internal failure.
+     * @param flow Flow that encountered the error.
+     * @param args Additional arguments supplied by the runtime.
+     */
     template <typename... Args>
     void internal_error(udho::manifold::evaluation_result, flow_type& flow, Args&&...){ return; }
 
+    /**
+     * @brief Handles a user-code exception captured during flow execution.
+     *
+     * The default implementation does nothing.
+     *
+     * @tparam Args Additional terminal argument types.
+     * @param capex Captured exception thrown or propagated by user code.
+     * @param flow Flow that encountered the error.
+     * @param args Additional arguments supplied by the runtime.
+     */
     template <typename... Args>
     void user_error(const udho::exceptions::captured& capex, flow_type& flow, Args&&...){ return; }
 
+    /**
+     * @brief Prepares terminal state before flow processing.
+     *
+     * The default implementation does nothing. Custom terminal policies may use this
+     * hook to initialize per-flow or per-cycle state.
+     *
+     * @tparam Args Additional terminal argument types.
+     * @param args Additional arguments supplied by the runtime.
+     */
     template <typename... Args>
     void prepare(Args&&... args) { }
 

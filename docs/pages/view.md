@@ -1,4 +1,4 @@
-Views 
+Views {#ViewsPage}
 ========
 
 Views are the architectural component in the framework that formats and present the data. 

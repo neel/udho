@@ -1,4 +1,4 @@
-Resources
+Resources {#ResourcesPage}
 =============
 
 There are mainly two types of resources that we deal with in this framework. 

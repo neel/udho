@@ -1,4 +1,4 @@
-Postgresql Async Activities {#PgOverview}
+Postgresql {#PgOverview}
 ===================
 
 ## Navigation

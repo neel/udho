@@ -1,43 +1,61 @@
-Manifold {#page_manifold}
-=============================
+Manifold {#ManifoldPage}
+========================
 
-A type-safe, compile-time configurable pipeline
+`udho::manifold` is the compile-time orchestration layer used by udho to build staged processing systems. It provides a generic component architecture where independently defined components expose capabilities through features, while the manifold system discovers those capabilities, orders their evaluation, records intermediate results, and exposes request-scoped state through structured views.
 
-manifold provides a system for building modular, multi-stage
-pipeline-based processing system with compile-time safety and runtime flexibility.
+Most application code does not interact with `udho::manifold` directly. Instead, higher-level modules such as @ref WWWPage specialize it for a concrete domain. For example, `udho::www` uses manifold to construct an HTTP pipeline from protocol, routing, cookie, session, resource, and response-handling components. The purpose of this page is to explain the architecture behind that mechanism: what manifold is, how its parts fit together, and which concepts are involved when extending the framework.
 
 @image html manifold-architecture.png 
 
 @tableofcontents
 
-## Overview {#page_manifold_overview} 
+## Design Overview {#page_manifold_design_overview}
 
-Manifold enables you to build complex processing systems by:
-- Defining reusable **Components** that provide specific functionality
-- Declaring **Features** that components implement
-- Composing components into **Compositions** that can be configured at runtime
-- Executing components through staged **Pipelines** with automatic error propagation
-- Managing configuration and state through **Journals** and **Patch Systems**
+The manifold system is built around a small set of cooperating constructs. A [component](#page_manifold_component) is a concrete object that participates in the system. It exposes one or more [features](#page_manifold_feature), where each feature represents a capability that can be evaluated in a pipeline stage. For every component-feature pair, a [facet](#page_manifold_facet) defines how that component implements that feature.
 
-The framework emphasizes:
-- **Type Safety**: Most errors caught at compile time
-- **Flexibility**: Components can be mixed and matched arbitrarily
-- **Performance**: Zero-cost abstractions, compile-time resolution
-- **Testability**: Components can be tested in isolation
+A @ref udho::manifold::composition "composition" stores the component instances that form the runtime system. From this composition, manifold derives stage-specific [fabrics](#page_manifold_fabric), each of which selects the facets that must be evaluated in a particular pipeline stage. During execution, a [flow](#page_manifold_flow) moves through these stages, while a @ref udho::manifold::journal "journal" records intermediate results produced by feature evaluation. Component configuration is stored in @ref udho::manifold::configs "configs", allowing each component to receive type-safe runtime parameters.
 
-## Core Concepts {#page_manifold_core_concepts} 
+The following table summarizes the core constructs.
 
-### Components {#page_manifold_components} 
+| Construct | Role |
+|---|---|
+| [Feature](#page_manifold_features) | A capability tag associated with a numeric stage, that can be provided by one or more components and evaluated in a pipeline stage. |
+| [Component](#page_manifold_components) | A component provides one or more features and may define configuration parameters. |
+| [Composition](#page_manifold_composition) | A composition is a type-safe collection of component wrappers that form the runtime system. |
+| [Facet](#page_manifold_facets) | Given a component `C` provides features `F1`, `F2`, `F3`, a facet provides a per-feature interface to the component through specialization. The component `C` should be complemented with 3 facets `<C, F1>`, `<C, F2>`, `<C, F3>` |
+| [Fabric](#page_manifold_fabric) | A stage-specific view that instantiates and owns the facets relevant to a pipeline stage. |
+| [Pipeline](#page_manifold_pipeline) | Pipeline evaluates each facet in a fabric sequentially in the feature order. Each stage has a dedicated pipeline. |
+| [Flow](#page_manifold_flow) | A single execution instance moving through the multiple pipelines dedicated to each stage. |
+| @ref udho::manifold::journal "Journal" | A flow-scoped result store for values produced during feature evaluation. |
+| @ref udho::manifold::configs "Configs" | A collection of component-specific configuration objects. |
 
-Components are the building blocks of your system. Each component:
-- Declares the @ref manifold_features it provides
-- May have configuration @ref manifold_params
-- Can be owned or borrowed by the composition
-- Is wrapped in a @ref wrapper that manages ownership
+These constructs form the core of manifold. Other types such as labels, orders, sketches, transitions, terminals, portals, and contexts organize, customize, or expose this core machinery, but the basic execution model is defined by the relationship between components, features, facets, fabrics, flows, journals, and configs.
+
+The figure below shows the same idea in the context of a web pipeline. The upper part shows the runtime composition: a fixed set of components and their configuration. The lower part shows a flow: a single execution instance moving through stage-specific fabrics. As facets are evaluated, their results are recorded into the journal, and the flow advances until it finishes, re-enters, or aborts.
+
+## Components {#page_manifold_components}
+
+A component is a concrete object that participates in a manifold pipeline. Components provide behavior by declaring the set of features they support.
+
+A component may also define configuration parameters. These parameters are collected into a component-specific @ref udho::manifold::config object and later grouped into a @ref udho::manifold::configs collection for the full runtime.
+
+Conceptually, a component describes the capabilities it provides to the pipeline.
+
+A component usually contributes the following information:
+
+| Item | Purpose |
+|---|---|
+| `features` | The list of features provided by the component. |
+| `params` | The list of configuration parameters supported by the component. |
+| `name` | A human-readable or serialization-friendly component name. |
+| Component instance | The actual runtime object stored in the composition. |
 
 ```cpp
 struct AuthenticationComponent {
-    using features = features<feature::filter, feature::session>;
+    using features = udho::manifold::features<
+        feature::filter,
+        feature::session
+    >;
 
     UDHO_CONFIG_PARAM(enabled, bool, true);
     UDHO_CONFIG_PARAM(timeout, int, 5000);
@@ -47,365 +65,574 @@ struct AuthenticationComponent {
 };
 ```
 
-### Features {#page_manifold_features} 
+Components are not evaluated directly by the pipeline. Their features are evaluated through facets.
 
-Features represent capabilities that components can provide:
-- Each feature has a @a stage (0, 1, 2, ...) determining pipeline execution order
-- Features can optionally define a @a result type that's stored in the journal
-- Features are implemented by components through @ref manifold_facets
+## Features {#page_manifold_features}
+
+A feature is a type-level description of a capability.
+
+A feature does not implement behavior by itself. Instead, it declares what kind of capability exists and, optionally, what result type is produced when the capability is evaluated.
+
+A feature normally defines:
+
+| Item | Purpose |
+|---|---|
+| `stage` | The pipeline stage in which the feature participates. |
+| `name` | A human-readable feature name used for diagnostics and visualization. |
+| `result` | Optional result type stored in the journal after evaluation. |
 
 ```cpp
 namespace feature {
-    struct filter {
-        static constexpr const std::size_t stage = 0;
-        using result = FilterResult;
-    };
 
-    struct cache {
-        static constexpr const std::size_t stage = 1;
-        // No result type - side effects only
+struct filter {
+    static constexpr const std::size_t stage = 0;
+    static constexpr const std::string_view name = "filter";
+
+    struct result {
+        bool accepted;
     };
+};
+
+struct cache {
+    static constexpr const std::size_t stage = 1;
+    static constexpr const std::string_view name = "cache";
+
+    // No result type: this feature performs side effects only.
+};
+
 }
 ```
 
-### Facets manifold_facets 
+Features are the primary decoupling mechanism in manifold. Components advertise the features they provide, while the pipeline is ordered in terms of features rather than concrete component instances.
 
-Facets are the glue between components and features:
-- A facet implements a specific feature for a specific component
-- Facets are automatically instantiated when needed
-- They receive the component instance, configuration, and journal
-- They control pipeline flow via @a next evaluators
+This means a pipeline can be expressed in terms of features rather than concrete components. In other words, it can evaluate feature `F` at stage `S` without directly calling component `C`.
+
+The mapping from feature to component is resolved statically from the composition and component feature lists.
+
+## Facets {#page_manifold_facets}
+
+A facet is the implementation of a feature for a specific component.
+
+Where a feature says *what capability exists*, a facet says *how this component provides that capability*.
+
+A facet is specialized for a pair:
 
 ```cpp
+udho::manifold::facet<ComponentT, FeatureT>
+```
+
+During pipeline evaluation, manifold constructs or accesses the facet corresponding to a component-feature pair and invokes it. The facet receives access to the component, its configuration, the journal, and the continuation object used to advance or fail evaluation.
+
+```cpp
+namespace udho {
+namespace manifold {
+
 template <>
 struct facet<AuthenticationComponent, feature::filter> {
     using component_type = AuthenticationComponent;
-    using feature = feature::filter;
-    using result = typename feature::result;
+    using feature        = feature::filter;
+    using result         = typename feature::result;
+    using config         = udho::manifold::config<component_type>;
 
-    template <typename JournalT, typename NextT>
-    void operator()(const JournalT& journal, NextT&& next, Request& req) const {
-        if (authenticate(req)) {
-            next.pass(Result{true});
+    facet(component_type& component, const config& conf, std::size_t id)
+        : _component(component), _config(conf) {}
+
+    template <typename JournalT, typename NextT, typename RequestT>
+    void operator()(const JournalT& journal, NextT&& next, RequestT& request) const {
+        if (!_config[component_type::enabled::val].value()) {
+            next.pass(result{true});
+            return;
+        }
+
+        if (authenticate(request)) {
+            next.pass(result{true});
         } else {
-            next.fail(Result{false});
+            next.fail(result{false});
         }
     }
+
+private:
+    component_type& _component;
+    const config&   _config;
 };
+
+}
+}
 ```
 
-### Composition {#page_manifold_composition} 
+A facet is responsible for one of the following outcomes:
 
-A composition is a type-safe collection of component instances:
-- Components can be owned or borrowed
-- Automatic construction from unordered arguments
-- Feature-based access via `at<Feature, Index>()`
-- Type-based access via `get<Component>()`
+| Outcome | Meaning |
+|---|---|
+| `next.pass(...)` | The feature evaluation succeeded. If the feature has a result, the result is stored in the journal. |
+| `next.fail(...)` | The feature evaluation failed. The flow enters the error path. |
+| Exception capture | An exception may be propagated through the manifold error mechanism. |
+
+Facets are the main implementation point for new component behavior.
+
+## Composition {#page_manifold_composition}
+
+A @ref udho::manifold::composition is the type-safe collection of component instances used by the runtime.
+
+The composition is statically typed. Its component set is known at compile time, which allows manifold to resolve feature providers, stage membership, and typed access without dynamic lookup.
 
 ```cpp
-// Create components
+using composition_type = udho::manifold::composition<
+    AuthenticationComponent,
+    LoggingComponent,
+    CacheComponent
+>;
+```
+
+A composition supports two important access patterns:
+
+| Access pattern | Purpose |
+|---|---|
+| `get<ComponentT>()` | Access the wrapper for a specific component type. |
+| `at<FeatureT, Index>()` | Access the component that provides a specific feature occurrence. |
+
+```cpp
+auto& auth_wrapper = composition.get<AuthenticationComponent>();
+auto& auth         = auth_wrapper.component();
+
+auto& first_filter_provider = composition.at<feature::filter, 0>().component();
+```
+
+The `Index` in feature-based access is needed because multiple components may provide the same feature. The first provider is index `0`, the next is index `1`, and so on.
+
+Composition also manages ownership. A component can be owned, borrowed, or default constructed.
+
+```cpp
 AuthenticationComponent auth;
 LoggingComponent logger;
 
-// Compose with automatic argument matching
-auto comp = composition<AuthenticationComponent, LoggingComponent>::compose(
-    auth,      // Borrowed
-    logger     // Borrowed
+// Borrow externally owned components.
+auto comp1 = composition_type::compose(auth, logger);
+
+// Move an owned component into the composition.
+auto comp2 = composition_type::compose(
+    AuthenticationComponent{},
+    logger
 );
 
-// Or with owned components
-auto comp2 = composition<AuthenticationComponent, LoggingComponent>::compose(
-    AuthenticationComponent{},  // Owned (moved)
-    logger                      // Borrowed
-);
+// Omitted default-constructible components are constructed by the composition.
+auto comp3 = composition_type::compose(auth);
 ```
 
-### Fabric {#page_manifold_fabric} 
+Borrowed components must outlive the composition that references them.
 
-A fabric provides a stage-specific view of a composition:
-- Automatically filters components by feature stage
-- Provides uniform access to facets
-- Used internally by pipelines for execution
+## Configuration {#page_manifold_configuration}
 
-### Journal {#page_manifold_journal} 
+Each component may define a set of type-safe parameters. Manifold stores those parameters in @ref udho::manifold::config objects and groups them into a @ref udho::manifold::configs collection.
 
-The journal stores execution results:
-- Each facet with a result type gets a journal entry
-- Results are stored as `std::optional` until evaluated
-- Provides type-safe access to results
-- Enables data sharing between pipeline stages
+Configuration has three main purposes:
+
+| Purpose | Description |
+|---|---|
+| Type-safe access | Parameters are accessed by parameter keys rather than string lookup. |
+| Runtime modification | Values may be changed before or during pipeline execution. |
+| Serialization | Configurations can be saved to and loaded from JSON. |
 
 ```cpp
-// Access results from journal
-if (journal.at<feature::filter>().ready()) {
-    auto& result = journal.at<feature::filter>().value();
-    // Use result
+UDHO_CONFIG_PARAM(enabled, bool, true);
+UDHO_CONFIG_PARAM(timeout, int, 5000);
+
+struct AuthenticationComponent {
+    using features = udho::manifold::features<feature::filter>;
+    using params   = udho::manifold::params<enabled, timeout>;
+
+    static constexpr udho::utils::string_view name = "auth";
+};
+```
+
+```cpp
+udho::manifold::configs<AuthenticationComponent> configs;
+
+configs[AuthenticationComponent::enabled::val] = true;
+configs[AuthenticationComponent::timeout::val] = 3000;
+```
+
+Configuration is component-scoped. This prevents unrelated components from accidentally sharing parameter names or accessing each other's settings without an explicit type-level relationship.
+
+Configurations can also be serialized.
+
+```cpp
+nlohmann::json json = nlohmann::json::object();
+
+configs.save(json);
+configs.load(json);
+```
+
+In staged systems, configuration may also be patched between pipeline stages. This is how a transition can use an earlier result, such as route lookup, to adjust the configuration used by later features.
+
+## Journal {#page_manifold_journal}
+
+The @ref udho::manifold::journal stores the results produced during feature evaluation.
+
+If a feature defines a `result` type, each facet that evaluates that feature gets a corresponding result entry in the journal. Before evaluation, the entry is empty. After successful evaluation, the result becomes available.
+
+The journal enables later stages, transitions, terminals, portals, and user code to inspect what earlier features produced.
+
+Conceptually, the journal records what has already been evaluated in the current flow and which results it produced.
+
+Journal access is type-safe and feature-oriented:
+
+| Access pattern | Purpose |
+|---|---|
+| `at<FeatureT>()` | Access the first result for a feature. |
+| `at<FeatureT, Index>()` | Access a specific feature result occurrence. |
+| `get<FacetT>()` | Access the result associated with a specific facet. |
+
+```cpp
+auto& filter_result = journal.at<feature::filter>();
+
+if (filter_result.ready()) {
+    const auto& value = filter_result.value();
+
+    if (value.accepted) {
+        // Feature evaluation succeeded.
+    }
 }
 ```
 
-### Pipeline {#page_manifold_pipeline} 
+The journal is scoped to a flow. It represents the state of one execution instance, not global runtime state.
 
-Pipelines orchestrate multi-stage execution:
-- Stages execute in numerical order (0, 1, 2, ...)
-- Features within a stage execute in declaration order
-- Early termination on failure
-- Automatic error propagation
-- Async support via Boost.Asio
+## Fabric {#page_manifold_fabric}
+
+A fabric is a stage-specific view of the composition.
+
+The full composition may contain many components, but a single pipeline stage only needs the components that provide features belonging to that stage. A fabric selects those relevant component-feature pairs and presents them to the pipeline evaluator.
+
+Conceptually, the fabric identifies which facets should be evaluated in a given stage.
 
 ```cpp
-// Define pipeline order
-using my_order = order<
-    feature::hash,      // Stage 0
-    feature::filter,    // Stage 0
-    feature::cache,     // Stage 1
-    feature::responder  // Stage 2
+using stage0_fabric = typename composition_type::template fabric_type<0>;
+using stage1_fabric = typename composition_type::template fabric_type<1>;
+```
+
+This is mostly an internal construct, but it is important for understanding the architecture. It is the bridge between the static composition and the staged pipeline evaluator.
+
+## Pipeline {#page_manifold_pipeline}
+
+A pipeline evaluates the features belonging to one stage.
+
+The full system is divided into numbered stages. Within each stage, features are evaluated according to the order declared by @ref udho::manifold::order. For each feature, the pipeline evaluates the facets provided by the components selected into the stage fabric.
+
+```cpp
+using order_type = udho::manifold::order<
+    feature::filter,    // stage 0
+    feature::cache,     // stage 1
+    feature::responder  // stage 2
+>;
+```
+
+A pipeline stage has three responsibilities:
+
+| Responsibility | Description |
+|---|---|
+| Select | Use the fabric to determine which facets belong to the stage. |
+| Evaluate | Invoke each facet in order. |
+| Propagate | Continue on success or enter the error path on failure. |
+
+```cpp
+using pipeline_type = udho::manifold::common_pipeline<
+    0,
+    order_type,
+    composition_type
 >;
 
-// Create and execute pipeline
-common_pipepine<0, my_order, decltype(composition)> pipeline{composition, configs, journal};
-pipeline.then([](auto result){
-    // Handle completion
-}).eval(request);
+pipeline_type pipeline{composition, configs, journal};
+
+pipeline
+    .then([](auto result) {
+        // Called when this stage completes.
+    })
+    .eval(request);
 ```
 
-### Flows and Sketches {#page_manifold_flow_sketch} 
+Pipeline evaluation is continuation-based. A facet does not return directly to the pipeline with a status value. Instead, it calls `next.pass(...)` or `next.fail(...)`, allowing both synchronous and asynchronous implementations to fit into the same model.
 
-For complex multi-stage systems, use flows and sketches:
+## Flow {#page_manifold_flow}
 
-A sketch defines a complete execution plan:
-- Specifies the composition type
-- Defines the feature execution order
-- Declares the number of stages
-- Can be specialized for different use cases
+A flow is a single execution instance of a manifold runtime.
+
+The runtime owns the shared composition and baseline configuration. A flow owns or references the per-execution state needed to move through the pipeline stages, including the journal and patched configuration state.
+
+In an HTTP system, a flow corresponds to request processing on a connection. A completed flow may terminate, abort, or re-enter depending on the terminal policy. For example, the `www` terminal allows re-entry so that a persistent HTTP connection can process another request.
+
+A flow is responsible for:
+
+| Responsibility | Description |
+|---|---|
+| Starting evaluation | Begin the first pipeline stage. |
+| Advancing stages | Move from one stage to the next through transitions. |
+| Handling failure | Route evaluation failures to the terminal. |
+| Re-entry or termination | Decide whether execution should continue after completion. |
 
 ```cpp
-struct MySketchLabel {};
+auto flow = runtime.spawn();
+
+flow->start(stream);
+```
+
+When asynchronous execution is used, the runtime and pipeline can be driven through Boost.Asio.
+
+```cpp
+flow->start(io_context, stream);
+
+io_context.run();
+```
+
+## Runtime {#page_manifold_runtime}
+
+A runtime owns the long-lived state of a manifold-based system.
+
+It is constructed from a sketch-derived composition type and feature order. The runtime stores the component composition and baseline configuration, then creates flows to process individual execution instances.
+
+Conceptually, the runtime defines the components and policies that shape this processing system. The flow then captures what is happening in a particular execution.
+
+```cpp
+using runtime_type = udho::manifold::basic_runtime<MyLabel, StreamT>;
+
+runtime_type runtime{component_a, component_b};
+
+auto flow = runtime.spawn();
+```
+
+This separation allows shared infrastructure to remain stable while each execution receives its own journal and flow state.
+
+## Sketch and Order {#page_manifold_sketch_order}
+
+A @ref udho::manifold::sketch is a compile-time description of a complete manifold system.
+
+A sketch associates a label with:
+
+| Type | Purpose |
+|---|---|
+| `composition_type` | The component set required by the system. |
+| `order_type` | The ordered feature list evaluated by the pipeline. |
+
+The label itself is usually a lightweight type. It identifies the kind of system being built. The sketch specialization contains the actual architectural definition.
+
+```cpp
+struct MyLabel {};
 
 template <>
-struct sketch<MySketchLabel> {
-    using composition_type = composition<AuthComponent, CacheComponent, LogComponent>;
-    using order_type = order<feature::filter, feature::cache, feature::log>;
-    static constexpr std::size_t Count = 3; // 3 stages
+struct udho::manifold::sketch<MyLabel> {
+    using composition_type = udho::manifold::composition<
+        AuthenticationComponent,
+        CacheComponent,
+        LoggingComponent
+    >;
+
+    using order_type = udho::manifold::order<
+        feature::filter,
+        feature::cache,
+        feature::log
+    >;
 };
 ```
 
-### Runtime {#page_manifold_runtime} 
+The @ref udho::manifold::order type lists features in evaluation order. Each feature also declares a stage. Together, the feature order and feature stages determine how the runtime builds its staged pipelines.
 
-Runtime manages the lifecycle of flows:
-- Holds the composition and baseline configuration
-- Spawns and tracks flows
-- Provides serialization/deserialization
+This is how higher-level modules specialize manifold. For example, `udho::www` defines labels and sketches for stateless and stateful HTTP pipelines.
 
-```cpp
-using my_runtime = runtime<MySketchLabel>;
-my_runtime rt{std::move(composition)};
+## Transitions {#page_manifold_transitions}
 
-// Load configuration
-nlohmann::json config = ...;
-rt.load(config);
+A transition is a hook between pipeline stages.
 
-// Spawn flows
-auto flow = rt.spawn();
-```
+Transitions allow a domain-specific framework to inspect the current flow state, read journal results, update configs, and decide how to continue. They are one of the main ways a manifold specialization adds behavior that is not simply a feature evaluation.
 
-### Flow {#page_manifold_flow} 
+For example, in a web pipeline, a transition may use a route lookup result from an earlier stage to reconfigure later components before the request body is read or the route action is invoked.
 
-Flows represent individual execution instances:
-- Created by runtime
-- Execute through the complete pipeline
-- Can apply @ref manifold_patch_config between stages
-- Terminate with success/failure status
+Conceptually, a transition describes what should happen after one stage completes and before the next one begins.
+
+Transitions are specialized by label, stream type, and stage.
 
 ```cpp
-flow->start(request);           // Synchronous
-flow->start(io_context, request); // Async
-```
+template <typename LabelT, typename StreamT, std::size_t Stage>
+struct default_transition;
 
-## Quick Start {#page_manifold_quickstart} 
-
-### Minimal Example {manifold_minimal_example} 
-
-```cpp
-// 1. Define a feature
-namespace my_features {
-    struct greet {
-        static constexpr const std::size_t stage = 0;
-        struct result {
-            std::string message;
-        };
-    };
-}
-
-// 2. Define a component
-struct GreeterComponent {
-    using features = features<my_features::greet>;
-
-    UDHO_CONFIG_PARAM(enabled, bool, true);
-    UDHO_CONFIG_PARAM(greeting, std::string, "Hello");
-
-    static constexpr const char* name = "greeter";
-    using params = udho::manifold::params<enabled, greeting>;
+template <typename StreamT>
+struct default_transition<MyLabel, StreamT, 1> {
+    template <typename FlowT, typename PipelineT, typename ConfigsT, typename... Args>
+    static void apply(
+        FlowT& flow,
+        PipelineT& pipeline,
+        ConfigsT& configs,
+        StreamT& stream,
+        Args&&... args
+    ) {
+        // Inspect journal/configuration and decide how to continue.
+        pipeline.next(flow, stream, std::forward<Args>(args)...);
+    }
 };
+```
 
-// 3. Implement the facet
-namespace udho { namespace manifold {
-    template <>
-    struct facet<GreeterComponent, my_features::greet> {
-        using component_type = GreeterComponent;
-        using feature = my_features::greet;
-        using result = typename feature::result;
+## Terminal Policy {#page_manifold_terminal}
 
-        template <typename JournalT, typename NextT>
-        void operator()(const JournalT& journal, NextT&& next, const std::string& name) const {
-            result res{_config[GreeterComponent::greeting::val] + ", " + name + "!"};
-            next.pass(std::move(res));
-        }
+A terminal defines what happens when a flow completes or fails.
 
-    private:
-        const config<GreeterComponent>& _config;
-    };
-}}
+The default terminal can simply terminate the flow. A specialized terminal may restart the flow, re-enter request processing, render error responses, abort a connection, or perform cleanup.
 
-// 4. Create and run
-int main() {
-    // Create composition
-    auto comp = composition<GreeterComponent>::compose();
+Conceptually, a terminal describes what should happen at the boundary of a flow.
 
-    // Create configuration
-    configs<GreeterComponent> configs;
-    configs[GreeterComponent::greeting::val] = "Welcome";
+In `udho::www`, the terminal is specialized to support HTTP behavior: successful flows may re-enter for persistent connections, while errors may produce HTTP error responses or abort the flow.
 
-    // Create journal
-    using fabric_type = decltype(comp)::fabric_type<0>;
-    using journal_type = detail::journal_for_fabric<fabric_type>::type;
-    journal_type journal;
+```cpp
+template <>
+struct udho::manifold::basic_terminal<MyLabel, StreamT> {
+    using runtime_type = udho::manifold::basic_runtime<MyLabel, StreamT>;
+    using flow_type    = typename runtime_type::flow_type;
 
-    // Create and execute pipeline
-    using order_type = order<my_features::greet>;
-    common_pipepine<0, order_type, decltype(comp)> pipeline{comp, configs, journal};
-
-    pipeline.then([](auto result){
-        if (result.index() == 0 && std::get<0>(result)) {
-            std::cout << "Pipeline completed successfully!" << std::endl;
-        }
-    }).eval("World");
-
-    // Access result
-    if (journal.at<my_features::greet>().ready()) {
-        std::cout << journal.at<my_features::greet>()->message << std::endl;
+    template <typename CompositionT, typename ConfigsT, typename JournalT>
+    basic_terminal(CompositionT& composition, ConfigsT& configs, const JournalT& journal) {
     }
 
-    return 0;
+    bool reenter(StreamT& stream) {
+        return false;
+    }
+
+    template <typename... Args>
+    void internal_error(
+        udho::manifold::evaluation_result result,
+        flow_type& flow,
+        StreamT& stream,
+        Args&&... args
+    ) {
+        flow.abort();
+    }
+};
+```
+
+## Portal and Context {#page_manifold_portal_context}
+
+A portal is a request-scoped access layer over the composition, configs, and journal.
+
+It exposes selected components and their associated configuration and journal view through typed accessors. This allows user code or framework code to interact with the current execution state without directly manipulating the full runtime internals.
+
+A context builds on top of this idea. It combines the portal with additional execution-specific state, such as an output stream or flow identifier. Higher-level modules may expose their own context aliases so application code receives a domain-specific interface.
+
+In short:
+
+| Construct | Role |
+|---|---|
+| Portal | Typed access to components, configs, and journal results. |
+| Context | Domain-specific execution object built around a portal. |
+
+```cpp
+portal_type portal(composition, configs, journal);
+
+context_type context(ostream, portal, flow.id());
+```
+
+For web applications, the context passed to route actions is the main user-facing object. It is backed by manifold, but exposed through the `www` layer.
+
+## Error Handling {#page_manifold_error_handling}
+
+Manifold uses explicit continuation-based error propagation.
+
+A facet can report failure by calling `next.fail(...)`. The failure may carry a feature result, an error state, or a captured exception depending on the evaluator path. Once a failure is reported, the current pipeline stage stops normal progression and the flow enters the configured error path.
+
+```cpp
+if (accepted) {
+    next.pass(result{true});
+} else {
+    next.fail(result{false});
 }
 ```
 
-## Configuration System {#page_manifold_configuration} 
-
-Parameters are compile-time defined configuration values:
-- Type-safe with default values
-- Automatic JSON serialization/deserialization
-- Compile-time validation
+Exceptions can also be propagated through the same evaluation path.
 
 ```cpp
-// Define parameters
-UDHO_CONFIG_PARAM(enabled, bool, true);
-UDHO_CONFIG_PARAM(port, int, 8080);
-UDHO_CONFIG_PARAM(host, std::string, "localhost");
-
-// Use in component
-struct ServerComponent {
-    using params = udho::manifold::params<enabled, port, host>;
-    // ...
-};
-
-// Access in configuration
-configs<ServerComponent> cfg;
-cfg[port::val] = 9000;  // Modify at runtime
+try {
+    perform_operation();
+    next.pass();
+} catch (...) {
+    next.fail(std::current_exception());
+}
 ```
 
-Patch configuration allows dynamic modification between pipeline stages:
+Error handling is completed by the terminal policy. This separation is important:
 
+| Layer | Responsibility |
+|---|---|
+| Facet | Detects local success or failure. |
+| Pipeline | Propagates the success or failure. |
+| Flow | Routes failure to the terminal. |
+| Terminal | Decides the final outcome: abort, restart, render error, or terminate. |
 
-### Async Operations {#page_manifold_async_operations} 
+This model allows generic manifold code to remain independent of domain-specific error behavior.
 
-Manifold integrates seamlessly with Boost.Asio:
+## Ownership Model {#page_manifold_ownership_model}
+
+Manifold supports mixed component ownership.
+
+Some components are naturally owned by the runtime. Others may represent external services, database handles, resource managers, or application objects that should be borrowed. Composition construction supports both cases.
+
+| Mode | Description |
+|---|---|
+| Default constructed | The composition constructs the component. |
+| Moved | The component is moved into the composition and owned by it. |
+| Borrowed | The composition stores a reference to an externally managed object. |
 
 ```cpp
-boost::asio::io_context io;
+ExternalService service;
 
-// Async pipeline execution
-pipeline.then(io, [](auto result){
-    // Called in IO context thread
-}).eval(request);
+// Borrowed: user manages lifetime.
+auto comp1 = composition_type::compose(service);
 
-// Async flow execution
-flow->start(io, request);
-io.run();
-```
+// Owned: composition receives the moved object.
+auto comp2 = composition_type::compose(InternalComponent{});
 
-@subsection manifold_ownership_models Ownership Models
-Components can have different ownership semantics:
-
-```cpp
-// Borrowed (reference) - user manages lifetime
-ExternalComponent ext;
-auto comp = composition<ExternalComponent>::compose(ext);
-
-// Owned (moved) - composition manages lifetime
-auto comp2 = composition<InternalComponent>::compose(InternalComponent{});
-
-// Default constructed - composition creates instance
-auto comp3 = composition<DefaultConstructibleComponent>::compose();
-
-// Mixed ownership
-auto comp4 = composition<BorrowedComponent, OwnedComponent>::compose(
-    borrowed_ref,      // Borrowed
-    OwnedComponent{}   // Owned
+// Mixed ownership.
+auto comp3 = composition_type::compose(
+    service,
+    InternalComponent{}
 );
 ```
 
-### Error Handling {#page_manifold_error_handling} 
+Borrowed components must outlive the composition that references them.
 
-Comprehensive error handling strategies:
+## Extension Points {#page_manifold_extension_points}
 
-```cpp
-// 1. Fail with result
-next.fail(Result{false});
+Manifold is primarily an extension framework. Higher-level modules such as `udho::www` are built by specializing manifold concepts.
 
-// 2. Fail with exception
-next.fail(std::runtime_error("Failed"));
+Typical extension points include:
 
-// 3. Exception propagation
-try {
-    // ...
-} catch(...) {
-    next.fail(std::current_exception());
-}
+| Extension | Use case |
+|---|---|
+| New component | Add a new service or capability provider to a pipeline. |
+| New feature | Introduce a new capability that can be ordered and evaluated. |
+| New facet | Implement an existing or new feature for a component. |
+| New config specialization | Validate or customize component configuration. |
+| New sketch | Define a new pipeline shape from a label. |
+| New transition | Add behavior between pipeline stages. |
+| New terminal | Customize flow completion and error behavior. |
+| New accessor or portal behavior | Expose higher-level request-scoped APIs to user code. |
 
-// 4. Completion callback
-pipeline.then([](std::variant<bool, std::exception_ptr> result){
-    if (result.index() == 1) {
-        try {
-            std::rethrow_exception(std::get<1>(result));
-        } catch(const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-        }
-    }
-});
-```
+When extending `udho::www`, many changes can be made at the `www` layer by adding components or choosing a preset. Deeper changes, such as adding a new feature stage, defining a new evaluation policy, or changing flow behavior, are manifold-level extensions.
 
 ## API Reference {#page_manifold_api_reference}
 
-@ref udho::manifold::wrapper
-@ref composition
-@ref facet
-@ref fabric
-@ref journal
-@ref pipeline
-@ref runtime
-@ref flow
-@ref sketch
-@ref config
-@ref params
-@ref patch_config
-@ref features
+| API | Description |
+|---|---|
+| @ref udho::manifold::features | Type-list of features provided by a component. |
+| @ref udho::manifold::facet | Component-feature implementation point. |
+| @ref udho::manifold::composition | Type-safe component collection. |
+| @ref udho::manifold::composition_view | Non-owning typed view over selected composition components. |
+| @ref udho::manifold::wrapper | Ownership wrapper used by compositions. |
+| @ref udho::manifold::config | Component-specific configuration object. |
+| @ref udho::manifold::configs | Configuration collection for a component composition. |
+| @ref udho::manifold::configs_view | Non-owning typed view over selected component configs. |
+| @ref udho::manifold::journal | Flow-scoped result store. |
+| @ref udho::manifold::journal_const_view | Const typed view over selected journal results. |
+| @ref udho::manifold::fabric | Stage-specific component and facet view. |
+| @ref udho::manifold::order | Compile-time feature evaluation order. |
+| @ref udho::manifold::pipeline | Stage evaluator. |
+| @ref udho::manifold::flow | Single execution instance created by a runtime. |
+| @ref udho::manifold::basic_runtime | Runtime owning composition and baseline configuration. |
+| @ref udho::manifold::sketch | Compile-time definition of a runtime composition and feature order. |
+| @ref udho::manifold::portal | Request-scoped access layer over components, configs, and journal results. |
+| @ref udho::manifold::basic_context | Generic context object built around a portal. |
+| @ref udho::manifold::basic_terminal | Flow completion and error policy. |

@@ -136,24 +136,66 @@ struct internal_get_components_storage_for_features<udho::manifold::composition<
 
 }
 
+/**
+ * @brief context passed to the user specified handlers that respond to the HTTP requests.
+ *
+ * `basic_context` combines an output stream, a portal, and the current
+ * flow identifier. It provides the write-facing interface used by handlers or
+ * component code, while also exposing the portal for controlled access to
+ * components, configurations, and journal results.
+ *
+ * @tparam StreamT Underlying stream type used by `basic_ostream`.
+ * @tparam Components Component types exposed through the context portal.
+ *
+ * @see portal
+ * @see udho::net::basic_ostream
+ */
 template <typename StreamT, typename... Components>
 struct basic_context {
+    /**
+     * @brief Underlying stream type.
+     */
     using stream_type               = StreamT;
+    /**
+     * @brief Output stream wrapper used by the context.
+     */
     using ostream_type              = udho::net::basic_ostream<stream_type>;
+    /**
+     * @brief Portal type exposed by the context.
+     */
     using portal_type               = udho::manifold::portal<Components...>;
     using self_type                 = basic_context<StreamT, Components...>;
 
     template <typename, typename...>
     friend struct basic_context;
 
+    /**
+     * @brief Checks whether the context portal exposes a component type.
+     *
+     * @tparam ComponentQ Component type to query.
+     */
     template <typename ComponentQ>
     using has = typename portal_type::template has<ComponentQ>;
 
 public:
+
+    /**
+     * @brief Constructs a context from an output stream, portal, and flow id.
+     *
+     * @param stream Output stream used by `write()`, `operator<<()`, and response
+     *        finalization helpers.
+     * @param portal Portal exposing component, config, and journal access.
+     * @param id Flow identifier associated with this context.
+     */
     basic_context(ostream_type& stream, const portal_type& portal, std::size_t id)
         : _ostream(stream), _portal(portal), _flow_id(id)
     {}
 
+    /**
+     * @brief Deleted conversion to Boost.Asio executor.
+     *
+     * This prevents accidental use of a context object as an executor.
+     */
     operator boost::asio::executor() const = delete;
 
     /**
@@ -165,19 +207,70 @@ public:
     template <typename... OtherComponents>
     basic_context(udho::manifold::basic_context<StreamT, OtherComponents...>& other): _ostream(other._ostream), _portal(other._portal), _flow_id(other._flow_id) { }
 
+    /**
+     * @brief Gets the mutable portal.
+     *
+     * @return Reference to the portal exposed by this context.
+     */
     portal_type& portal() { return _portal; }
+
+    /**
+     * @brief Gets the output stream.
+     *
+     * @return Reference to the context output stream.
+     */
     ostream_type& ostream() { return _ostream; }
 public:
+
+    /**
+     * @brief Writes values to the context output stream.
+     *
+     * Arguments are forwarded to `basic_ostream::write()`.
+     *
+     * @tparam Args Argument types accepted by the output stream.
+     * @param args Values to write.
+     */
     template <typename... Args>
     void write(Args&&... args) {
         _ostream.write(std::forward<Args>(args)...);
     }
 
+
+    /**
+     * @brief Gets the current transfer encoding mode.
+     *
+     * @return Transfer encoding configured on the output stream.
+     */
     inline udho::net::types::transfer::encoding encoding() const { return _ostream.encoding(); }
+    /**
+     * @brief Gets the current transfer compression mode.
+     *
+     * @return Transfer compression configured on the output stream.
+     */
     inline udho::net::types::transfer::compression compression() const { return _ostream.compression(); }
+    /**
+     * @brief Sets the transfer encoding mode.
+     *
+     * @param enc Transfer encoding to apply to the output stream.
+     */
     inline void encoding(udho::net::types::transfer::encoding enc) { _ostream.encoding(enc); }
+    /**
+     * @brief Sets the transfer compression mode.
+     *
+     * @param cmp Transfer compression to apply to the output stream.
+     */
     inline void compression(udho::net::types::transfer::compression cmp) { _ostream.compression(cmp); }
 
+    /**
+     * @brief Streams a value into the context output stream.
+     *
+     * This is a convenience wrapper around `write()`.
+     *
+     * @tparam T Value type.
+     * @param ctx Context receiving the value.
+     * @param value Value to write.
+     * @return Reference to `ctx`.
+     */
     template <typename T>
     friend self_type& operator<<(self_type& ctx, T&& value) {
         ctx.write(std::forward<T>(value));
@@ -185,26 +278,61 @@ public:
     }
 
 public:
+
+    /**
+     * @brief Disables output buffering for the underlying stream.
+     *
+     * After buffering is disabled, subsequent writes are forwarded according to the
+     * stream's immediate-output behavior.
+     *
+     * @see basic_ostream<StreamT>::disable_buffering()
+     */
     inline void disable_buffering() {
         // sync cookies, session, csrf etc..
         _ostream.disable_buffering();
     }
 
 public:
+    /**
+     * @brief Finalizes the output stream.
+     *
+     * This flushes or completes the stream according to `basic_ostream::finish()`.
+     * It should be called when response generation is complete.
+     *
+     * @see basic_ostream<StreamT>::finish()
+     */
     inline void finish() {
         // sync cookies, session, csrf etc.. if not synced already
         _ostream.finish();
     }
 
+    /**
+     * @brief Captures an already propagated exception in the output stream.
+     *
+     * @param captured Captured exception object to move into the stream.
+     *
+     * @see basic_ostream<StreamT>::exception(udho::exceptions::captured&&)
+     */
     inline void capture(udho::exceptions::captured&& captured) {
         _ostream.exception(std::move(captured));
     }
-
+    /**
+     * @brief Captures the current exception in the output stream.
+     */
     inline void capture() {
         capture(udho::exceptions::captured::propagate());
     }
 
 public:
+    /**
+     * @brief Provides view-data metadata for a context.
+     *
+     * Exposes the context, portal metadata, flow id, routes, and resources to the
+     * view-data reflection system.
+     *
+     * @param type Tag identifying `self_type`.
+     * @return View-data metadata association for `self_type`.
+     */
     friend auto metatype(udho::view::data::type<self_type>){
         using namespace udho::view::data;
 
@@ -216,6 +344,11 @@ public:
         ;
     }
 
+    /**
+     * @brief Gets the flow identifier associated with this context.
+     *
+     * @return Flow id.
+     */
     std::size_t flow_id() const { return _flow_id; }
 
 private:

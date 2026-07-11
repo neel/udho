@@ -18,9 +18,23 @@ namespace manifold {
 
 // { sketches
 
+/**
+ * @brief Manifold sketch for a stateless/minimal www label.
+ *
+ * Defines the default component composition and evaluation order for a minimal
+ * www application. The composition includes the handler, database placeholder,
+ * HTTP protocol component, pretty navigator, cookies component, resources
+ * component, and any extra components appended to the label.
+ *
+ * @tparam StreamT Stream type used by the runtime.
+ * @tparam Bridges View-data bridge types exposed through the resources component.
+ * @tparam ExtraComponents Extra components appended to the label.
+ *
+ * @ingroup www
+ */
 template <typename StreamT, typename... Bridges, typename... ExtraComponents>
 struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>>{
-    using www_type = www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>;
+    // using www_type = www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>;
 
     using stream_type = StreamT;
 
@@ -44,16 +58,32 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
     >;
 };
 
+/**
+ * @brief Manifold sketch for a stateful www label.
+ *
+ * Defines the default component composition and evaluation order for a www
+ * application with session support. Compared with the minimal sketch, this
+ * composition adds `components::session<SessionStorageT, Mode>` before the
+ * resources component.
+ *
+ * @tparam StreamT Stream type used by the runtime.
+ * @tparam SessionStorageT Session storage backend type.
+ * @tparam Mode Session persistence mode.
+ * @tparam Bridges View-data bridge types exposed through the resources component.
+ * @tparam ExtraComponents Extra components appended to the label.
+ *
+ * @ingroup www
+ */
 template <typename StreamT, typename SessionStorageT, udho::session::modes Mode, typename... Bridges, typename... ExtraComponents>
 struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mode, Bridges...>, ExtraComponents...>>{
-    using www_type = www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mode, Bridges...>, ExtraComponents...>;
+    // using www_type = www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mode, Bridges...>, ExtraComponents...>;
 
-    using stream_type = StreamT;
+    // using stream_type = StreamT;
 
     using composition_type = udho::manifold::composition<
         udho::www::components::basic_handler<StreamT>,
         udho::www::components::db::pg<>,
-        udho::www::components::protocols::http<stream_type>,
+        udho::www::components::protocols::http<StreamT>,
         udho::www::components::navigators::pretty,
         udho::www::components::cookies,
         udho::www::components::session<SessionStorageT, Mode>,

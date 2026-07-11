@@ -1,4 +1,4 @@
-Async Activities {#Activities}
+Activities {#ActivitiesPage}
 ========================
 
 @image html activities-anatomy.png width=50%

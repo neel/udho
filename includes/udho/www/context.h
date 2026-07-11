@@ -8,9 +8,31 @@
 namespace udho {
 namespace www {
 
+/**
+ * @brief www context alias that always includes the stream handler component.
+ *
+ * This alias adapts the generic manifold context for www code by prepending the
+ * `basic_handler<StreamT>` component to the component list exposed through the
+ * context portal.
+ *
+ * @tparam StreamT Stream type used by the context.
+ * @tparam Components Additional www components exposed by the context.
+ *
+ * @ingroup www
+ */
 template <typename StreamT, typename... Components>
 using basic_context = udho::manifold::basic_context<StreamT, udho::www::components::basic_handler<StreamT>, Components...>;
 
+/**
+ * @brief TCP www context alias.
+ *
+ * Uses the default TCP socket type selected by `udho::net::detail::wire_types`
+ * and exposes the handler component plus any additional components.
+ *
+ * @tparam Components Additional www components exposed by the context.
+ *
+ * @ingroup www
+ */
 template <typename... Components>
 using context = basic_context<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Components...>;
 

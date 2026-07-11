@@ -11,7 +11,7 @@ namespace handler{}
 namespace pg{}
 
 namespace protocol{
-    UDHO_CONFIG_PARAM(header_time_limit,      std::size_t,  30);      // maximum time spent (in seconds) for parsing only the header part of an HTTP request
+    UDHO_CONFIG_PARAM(header_time_limit,      std::size_t,  30);     // maximum time spent (in seconds) for parsing only the header part of an HTTP request
     UDHO_CONFIG_PARAM(header_memory_limit,    std::size_t,  1024);   // maximum number of bytes that can be used for parsing only the header part of an HTTP request
     UDHO_CONFIG_PARAM(body_time_limit,        std::size_t,  60);     // maximum time spent (in seconds) for reading the body part of an HTTP request
     UDHO_CONFIG_PARAM(body_memory_limit,      std::size_t,  4096);   // maximum number of bytes allowed for the HTTP request body

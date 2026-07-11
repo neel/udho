@@ -16,6 +16,19 @@ namespace manifold {
 
 static constexpr const std::size_t route_locator_stage = udho::www::feature::locator::stage;
 
+/**
+ * @brief Default www transition that applies route-specific configuration.
+ *
+ * After the route locator has produced a valid route index, this transition
+ * asks the routing component to reconfigure the next-stage configs according
+ * to the selected route. It then advances the flow to the next pipeline stage.
+ *
+ * @tparam StreamT Stream type used by the runtime.
+ * @tparam Tag www label tag.
+ * @tparam ExtraComponents User-supplied extra components appended to the www label.
+ *
+ * @ingroup www
+ */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, route_locator_stage>{
     using label_type             = www::basic_label<StreamT, Tag, ExtraComponents...>;
@@ -30,6 +43,20 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
 
+    /**
+     * @brief Applies route-derived configuration and advances the pipeline.
+     *
+     * Reads the `locator` result from the journal. When a route is found, the
+     * routing component is retrieved from the composition and used to patch the
+     * runtime configs for the selected route.
+     *
+     * @tparam Args Additional runtime argument types forwarded to the next stage.
+     * @param flow Flow being processed.
+     * @param p Current pipeline stage.
+     * @param config Configuration object supplied by the transition protocol.
+     * @param stream Active stream.
+     * @param args Additional runtime arguments.
+     */
     template <typename... Args>
     static void apply(flow_type& flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
@@ -79,6 +106,20 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     }
 };
 
+/**
+ * @brief Default www transition that invokes the selected route action.
+ *
+ * This transition creates an output stream entry in the handler, builds a portal
+ * and context for the current request, and invokes the route action selected by
+ * the router. Pipeline continuation is deferred until the response stream
+ * finishes.
+ *
+ * @tparam StreamT Stream type used by the runtime.
+ * @tparam Tag www label tag.
+ * @tparam ExtraComponents User-supplied extra components appended to the www label.
+ *
+ * @ingroup www
+ */
 static constexpr const std::size_t action_transition_stage = 2;
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, action_transition_stage>{
@@ -95,7 +136,21 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
 
-
+    /**
+     * @brief Creates request context and invokes the selected route action.
+     *
+     * Registers response-finish and exception callbacks with the handler component,
+     * constructs a portal and request context, logs the selected URI, and dispatches
+     * the selected route through `router.invoke_at(route_index, context)`.
+     *
+     * @tparam Args Additional runtime argument types forwarded when the response
+     *         finishes or when a user exception is detected.
+     * @param flow Flow being processed.
+     * @param p Current pipeline stage.
+     * @param config Configuration object supplied by the transition protocol.
+     * @param stream Active stream.
+     * @param args Additional runtime arguments.
+     */
     template <typename... Args>
     static void apply(flow_type& flow, pipeline_type& p, configs_type& config, stream_type& stream, Args&&... args) {
         // { essentials
