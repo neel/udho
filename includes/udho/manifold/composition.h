@@ -250,6 +250,7 @@ struct compositor {
     }
 };
 
+#ifdef __DOXYGEN__
 /**
  * @brief A type-safe container of component instances with feature-based access
  * @ingroup manifold
@@ -339,8 +340,12 @@ struct compositor {
  * @see features
  * @see configs
  */
+template <typename... Components>
+struct composition{
+#else
 template <typename ComponentT, typename... Rest>
 struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private composition<Rest...>{
+#endif // __DOXYGEN__
     using component_type = ComponentT;
     using features_type  = typename ComponentT::features;
     using wrapper_type   = wrapper<component_type>;
@@ -498,8 +503,12 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     wrapper_type& get() { return *this; }
 
+#ifndef __DOXYGEN__
+
     template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     auto& get() { return composition<Rest...>::template get<ComponentQ>(); }
+
+#endif // __DOXYGEN__
 
     /**
      * @brief Get const wrapper for a specific component type
@@ -510,8 +519,12 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     template <typename ComponentQ, std::enable_if_t<std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     const wrapper_type& get() const { return *this; }
 
+#ifndef __DOXYGEN__
+
     template <typename ComponentQ, std::enable_if_t<!std::is_same_v<ComponentQ, ComponentT>, bool> = true>
     const auto& get() const { return composition<Rest...>::template get<ComponentQ>(); }
+
+#endif // __DOXYGEN__
     /** @} */
 
     /**
@@ -576,11 +589,15 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     wrapper_type& at() { return *this; }
 
+#ifndef __DOXYGEN__
+
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx != 0, bool> = true>
     auto& at() { return composition<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!features_type::template has<FeatureT>::value, bool> = true>
     auto& at() { return composition<Rest...>::template at<FeatureT, Idx>(); }
+
+#endif // __DOXYGEN__
 
     /**
      * @brief Access the Idx-th component with feature (const)
@@ -592,11 +609,16 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx == 0, bool> = true>
     const wrapper_type& at() const { return *this; }
 
+#ifndef __DOXYGEN__
+
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<features_type::template has<FeatureT>::value && Idx != 0, bool> = true>
     const auto& at() const { return composition<Rest...>::template at<FeatureT, Idx-1>(); }
 
     template <typename FeatureT, std::uint32_t Idx, std::enable_if_t<!features_type::template has<FeatureT>::value, bool> = true>
     const auto& at() const { return composition<Rest...>::template at<FeatureT, Idx>(); }
+
+#endif // __DOXYGEN__
+
     /** @} */
 
     /**
@@ -645,9 +667,14 @@ struct composition<ComponentT, Rest...>: private wrapper<ComponentT>, private co
     /// @}
 
 private:
+
+#ifndef __DOXYGEN__
+
     composition<Rest...>& tail() { return *this; }
 
     const composition<Rest...>& tail() const { return *this; }
+
+#endif // __DOXYGEN__
 };
 
 #ifndef __DOXYGEN__
