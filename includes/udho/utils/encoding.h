@@ -359,24 +359,24 @@ namespace encode {
  * These functions provide simplified access to the template-based
  * encoding/decoding implementations
  */
-    std::string cookie(const std::string& input){
-        return encoding::encode<encoding::flavours::cookie>(input);
-    }
-    std::string url(const std::string& input){
-        return encoding::encode<encoding::flavours::url>(input);
-    }
-    std::string base64(const std::string& input){
-        return encoding::encode<encoding::flavours::base64>(input);
-    }
-    std::string base64_url(const std::string& input){
-        return encoding::encode<encoding::flavours::base64_url>(input);
-    }
-    std::string base16(const std::string& input){
-        return encoding::encode<encoding::flavours::base16>(input);
-    }
-    std::string escape(const std::string& input){
-        return encoding::encode<encoding::flavours::escape>(input);
-    }
+inline std::string cookie(const std::string& input){
+    return encoding::encode<encoding::flavours::cookie>(input);
+}
+inline std::string url(const std::string& input){
+    return encoding::encode<encoding::flavours::url>(input);
+}
+inline std::string base64(const std::string& input){
+    return encoding::encode<encoding::flavours::base64>(input);
+}
+inline std::string base64_url(const std::string& input){
+    return encoding::encode<encoding::flavours::base64_url>(input);
+}
+inline std::string base16(const std::string& input){
+    return encoding::encode<encoding::flavours::base16>(input);
+}
+inline std::string escape(const std::string& input){
+    return encoding::encode<encoding::flavours::escape>(input);
+}
 /// @}
 }
 
@@ -396,24 +396,24 @@ namespace decode {
  * These functions provide simplified access to the template-based
  * encoding/decoding implementations
  */
-    std::string cookie(const std::string& input){
-        return encoding::decode<encoding::flavours::cookie>(input);
-    }
-    std::string url(const std::string& input){
-        return encoding::decode<encoding::flavours::url>(input);
-    }
-    std::string base64(const std::string& input){
-        return encoding::decode<encoding::flavours::base64>(input);
-    }
-    std::string base64_url(const std::string& input){
-        return encoding::decode<encoding::flavours::base64_url>(input);
-    }
-    std::string base16(const std::string& input){
-        return encoding::decode<encoding::flavours::base16>(input);
-    }
-    std::string escape(const std::string& input){
-        return encoding::decode<encoding::flavours::escape>(input);
-    }
+inline std::string cookie(const std::string& input){
+    return encoding::decode<encoding::flavours::cookie>(input);
+}
+inline std::string url(const std::string& input){
+    return encoding::decode<encoding::flavours::url>(input);
+}
+inline std::string base64(const std::string& input){
+    return encoding::decode<encoding::flavours::base64>(input);
+}
+inline std::string base64_url(const std::string& input){
+    return encoding::decode<encoding::flavours::base64_url>(input);
+}
+inline std::string base16(const std::string& input){
+    return encoding::decode<encoding::flavours::base16>(input);
+}
+inline std::string escape(const std::string& input){
+    return encoding::decode<encoding::flavours::escape>(input);
+}
 /// @}
 }
 
