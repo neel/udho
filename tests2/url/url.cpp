@@ -222,7 +222,7 @@ TEST_CASE("Home pattern matching operations", "[url][pattern][home]") {
 }
 
 
-TEST_CASE("url common functionalities using regex", "[url][pattern][router]") {
+TEST_CASE("url common functionalities", "[url][pattern][router]") {
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature(&f0))::return_type, void>);
     static_assert(std::is_same_v<decltype(udho::url::detail::function_signature( f1))::return_type, int>);
@@ -321,7 +321,7 @@ TEST_CASE("url common functionalities using regex", "[url][pattern][router]") {
     // chain3.xyz;
     // std::cout << chain3 << std::endl;
 
-    udho::url::mount_point mount_point{"chain"_h, "/pchain", std::move(chain)};
+    auto mount_point = udho::url::mount("chain"_h, "/pchain", std::move(chain));
     CHECK(mount_point.find(boost::beast::http::verb::get, std::string("/")) == true);
     CHECK(mount_point.find(boost::beast::http::verb::get, std::string("/f1/23/hello/24/1")) == true);
     CHECK(mount_point.find(boost::beast::http::verb::get, std::string("/f1")) == false);
@@ -342,7 +342,7 @@ TEST_CASE("url common functionalities using regex", "[url][pattern][router]") {
     CHECK(mount_point.index_of(boost::beast::http::verb::get, "/x/f1/23/hello/24/1") == 0);
 
     // std::cout << mount_point << std::endl;
-    auto m2 = udho::url::mount_point("root"_h, "/", std::move(chain3));
+    auto m2 = udho::url::mount("root"_h, "/", std::move(chain3));
 
     CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f2-23/hello") == 1);
     CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f3/hello/world/24/1") == 0);

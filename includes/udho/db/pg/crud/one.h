@@ -37,7 +37,7 @@ namespace pg{
 
 /**
  * @brief Dataset having zero or one row with the specified fields
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * @tparam Fields...
  */
 template <typename... Fields>

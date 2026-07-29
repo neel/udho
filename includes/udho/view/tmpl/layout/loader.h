@@ -15,14 +15,8 @@ namespace tmpl{
 namespace layout{
 
 /**
- * @defgroup AssetLoaders Asset Loader System
- * @brief Manages loading and embedding of web assets (JS/CSS) with dependency tracking
- */
-
-
-/**
  * @struct common_asset_loader
- * @ingroup AssetLoaders
+ * @ingroup DoxyG_view_tmpl_asset_loaders DoxyG_view_tmpl_layout
  * @brief Base class for asset loading functionality
  * @tparam AssetType Type of asset to handle (js/css from udho::view::resources::asset::type)
  *
@@ -72,7 +66,7 @@ struct common_asset_loader{
 
 /**
  * @struct asset_loader
- * @ingroup AssetLoaders
+ * @ingroup DoxyG_view_tmpl_asset_loaders DoxyG_view_tmpl_layout
  * @brief Generic asset loader template
  * @tparam AssetType Asset type specialization (js/css)
  *
@@ -87,7 +81,7 @@ struct asset_loader: common_asset_loader<AssetType>{
 
 /**
  * @struct asset_loader<udho::view::resources::asset::type::js>
- * @ingroup AssetLoaders
+ * @ingroup DoxyG_view_tmpl_asset_loaders DoxyG_view_tmpl_layout
  * @brief JavaScript-specific asset loader
  *
  * Adds JS-specific output capabilities:
@@ -165,7 +159,7 @@ struct asset_loader<udho::view::resources::asset::type::js>: common_asset_loader
 
 /**
  * @struct asset_loader<udho::view::resources::asset::type::css>
- * @ingroup AssetLoaders
+ * @ingroup DoxyG_view_tmpl_asset_loaders DoxyG_view_tmpl_layout
  * @brief CSS-specific asset loader
  *
  * Handles CSS-specific output considerations:

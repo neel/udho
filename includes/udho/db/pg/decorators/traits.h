@@ -39,8 +39,8 @@ namespace traits{
 namespace fields{
 
 /**
- * @ingroup decorators
- * @addtogroup traits
+ * @ingroup DoxyG_db_pg_decorators
+ * @addtogroup DoxyG_db_pg_decorators_traits
  * @brief decoration trait of a field or *field like* entity.
  * Used by the decorators while decorating a field.
  * @{

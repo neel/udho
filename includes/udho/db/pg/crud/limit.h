@@ -41,7 +41,7 @@ namespace pg{
  * @tparam Limit 
  * @tparam Offset 
  * 
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <int Limit, int Offset>
 struct limited{

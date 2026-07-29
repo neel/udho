@@ -28,6 +28,8 @@
 #ifndef UDHO_VIEW_DATA_ASSOCIATIVE_H
 #define UDHO_VIEW_DATA_ASSOCIATIVE_H
 
+
+
 #include <string>
 #include <utility>
 #include <type_traits>
@@ -44,6 +46,11 @@
 namespace udho{
 namespace view{
 namespace data{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
 
 namespace detail{
 
@@ -402,13 +409,11 @@ std::size_t assign(DataT& data, associative<HeadT, TailT>& assoc, IteratorT begi
 
 /**
  * @brief expose associative metatype
- * @ingroup view
  */
 inline detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{name}; }
 
 /**
  * @brief assigns values to the nvp's of an associative container
- * @ingroup view
  * @param data  the targeted data object
  * @param assoc the associative container
  * @param begin iterator to a string container
@@ -427,8 +432,12 @@ std::size_t assign(DataT& data, IteratorT begin, IteratorT end){
 template <typename DataT, typename IteratorT, typename std::enable_if<!udho::view::data::has_metatype<DataT>::value, int>::type* = nullptr>
 std::size_t assign(DataT&, IteratorT, IteratorT){ return 0; }
 
+
+/** @} */
+
 }
 }
 }
+
 
 #endif // UDHO_VIEW_DATA_ASSOCIATIVE_H

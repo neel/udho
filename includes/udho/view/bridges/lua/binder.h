@@ -48,6 +48,11 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
 namespace helper{
 
 template <typename T>
@@ -503,9 +508,10 @@ struct binder{
         user_type _type;
 };
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

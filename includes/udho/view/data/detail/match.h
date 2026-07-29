@@ -28,6 +28,11 @@
 #ifndef UDHO_VIEW_DATA_DETAIL_MATCH_H
 #define UDHO_VIEW_DATA_DETAIL_MATCH_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <udho/view/data/fwd.h>
 #include <udho/view/data/nvp.h>
 
@@ -68,5 +73,6 @@ namespace detail{
 }
 }
 
-#endif // UDHO_VIEW_DATA_DETAIL_MATCH_H
+/** @} */
 
+#endif // UDHO_VIEW_DATA_DETAIL_MATCH_H

@@ -36,7 +36,8 @@ namespace pg{
     
 /**
  * @brief handful of frequently used ozo string constants 
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
+ * @{
  */
 namespace constants{
     

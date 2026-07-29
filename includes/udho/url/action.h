@@ -37,6 +37,12 @@
 namespace udho{
 namespace url{
 
+/**
+ * @addtogroup DoxyG_url
+ * @{
+ */
+
+
 namespace detail{
 
     // template <typename T, typename HeadT, std::size_t... I>
@@ -70,7 +76,7 @@ namespace detail{
 /**
  * @brief The basic_slot class is a template for creating function slots that can be invoked
  *        using string arguments.
- * @ingroup Router
+ *
  * This template class allows functions to be called with string arguments that are automatically
  * converted to the function's required argument types. The class supports both direct invocation
  * with a tuple of arguments and invocation with iterators that point to the beginning and end
@@ -173,7 +179,7 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
 
 /**
  * @brief A template struct that extends basic_slot with URL pattern matching capabilities.
- * @ingroup Router
+ *
  * This structure represents an action that is associated with a specific URL pattern. It combines a function,
  * typically representing a web endpoint or handler, with a matching pattern. This allows the function to be invoked
  * only when the incoming URL matches the specified pattern.
@@ -183,9 +189,10 @@ struct basic_slot<F, udho::hazo::string::str<CharT, C...>>{
  * @tparam C Characters constituting the compile-time string.
  * @tparam MatchT Type of the matching mechanism used to check URL patterns.
  *
- * @example
+ * @code{.cpp}
  * auto action = udho::url::slot("example"_h, &example_function) << udho::url::regx(udho::url::verb::get, "/example/(\\d+)", "/example/{}");
  * // Here, `action` is a basic_action configured to match URLs to `example_function` based on the regex pattern provided.
+ * @endcode
  */
 template <typename F, typename CharT, CharT... C, typename MatchT>
 struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot<F, udho::hazo::string::str<CharT, C...>>{
@@ -295,9 +302,15 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
         match_type    _match;
 };
 
+template <typename>
+struct is_action: std::false_type{};
+
+template <typename F, typename CharT, CharT... C, typename MatchT>
+struct is_action<basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>>: std::true_type{};
+
 /**
  * @brief Creates a basic_action by associating a basic_slot with a URL pattern match using the left shift operator.
- * @ingroup Router
+ *
  * @tparam F Function type.
  * @tparam CharT Character type for the compile-time string.
  * @tparam C Characters of the compile-time string.
@@ -313,7 +326,7 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator<<(basic_s
 
 /**
  * @brief Creates a basic_action by associating a basic_slot with a URL pattern match using the right shift operator.
- * @ingroup Router
+ *
  * @tparam F Function type.
  * @tparam CharT Character type for the compile-time string.
  * @tparam C Characters of the compile-time string.
@@ -329,7 +342,7 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator>>(MatchT&
 
 /**
  * @brief Creates a slot for a free function, binding a URL pattern to a callback.
- * @ingroup Router
+ *
  * This template function takes a unique hash identifier and a free function, encapsulating
  * the function into a callable suitable for use in URL routing. This is intended for simple
  * functions that do not require access to an object's state.
@@ -341,13 +354,14 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator>>(MatchT&
  * @param function A rvalue reference to the free function to be used as the callback.
  * @return Returns a `basic_slot` instance encapsulating the provided function.
  * @see basic_slot
- * @example
+ * @code{.cpp}
  * void f0() {
  *     std::cout << "Home page" << std::endl;
  * }
  * auto router = udho::url::router(
  *     udho::url::slot("f0"_h, &f0) << udho::url::home(udho::url::verb::get)
  * );
+ * @endcode
  */
 template <typename FunctionT, typename CharT, CharT... C>
 basic_slot<
@@ -360,7 +374,7 @@ basic_slot<
 
 /**
  * @brief Creates a slot for a member function, binding a URL pattern to a member function callback.
- * @ingroup Router
+ *
  * This template function takes a unique hash identifier, a member function, and a pointer to
  * the object on which the member function should be invoked. It encapsulates the member function
  * into a callable that is suitable for use in URL routing. This overload is useful for member functions
@@ -374,7 +388,7 @@ basic_slot<
  * @param that Pointer to the object on which the member function will be called.
  * @return Returns a `basic_slot` instance encapsulating the provided member function and object pointer.
  * @see basic_slot
- * @example
+ * @code{.cpp}
  * struct X {
  *     void f0() {
  *         std::cout << "X's f0" << std::endl;
@@ -384,6 +398,7 @@ basic_slot<
  * auto router = udho::url::router(
  *     udho::url::slot("xf0"_h, &X::f0, &x) << udho::url::fixed(udho::url::verb::get, "/x/f0", "/x/f0")
  * );
+ * @endcode
  */
 template <typename FunctionT, typename CharT, CharT... C>
 basic_slot<
@@ -396,7 +411,7 @@ basic_slot<
 
 /**
  * @brief action
- * @ingroup Router
+ *
  * @param function
  * @param match
  * @return
@@ -410,7 +425,7 @@ action(FunctionT&& function, udho::hazo::string::str<CharT, C...>, const MatchT&
 
 /**
  * @brief action
- * @ingroup Router
+ *
  * @param function
  * @param match
  * @return
@@ -433,6 +448,8 @@ struct is_basic_action<basic_action<FunctionT, StrT, MatchT>> : std::true_type {
 };
 
 }
+
+/// @}
 
 }
 }

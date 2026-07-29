@@ -37,7 +37,7 @@ namespace db{
 namespace pg{
     
 /**
- * @ingroup schema
+ * @ingroup DoxyG_db_pg_schema
  * @{
  */
 

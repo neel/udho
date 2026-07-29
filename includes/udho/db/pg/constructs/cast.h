@@ -49,7 +49,7 @@ namespace pg{
  * @tparam FieldT The Postgresql field 
  * @tparam PgType The new type of that field
  * 
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
  */
 template <typename FieldT, typename PgType>
 struct cast: FieldT::template alter<PgType>{

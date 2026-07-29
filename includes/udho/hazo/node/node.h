@@ -516,8 +516,8 @@ struct basic_node: private TailT /*basic_node<typename TailT::data_type, typenam
     /// @}
 
     /**
-     * @name visit
-     * Apply a function over all elements in the chain of nodes
+     * @name visit_at
+     * Apply a function over all elements in the chain of nodes and passes deptch to the callback as an additional parameter
      * @{
      */
     template <typename FunctionT>
@@ -531,7 +531,7 @@ struct basic_node: private TailT /*basic_node<typename TailT::data_type, typenam
         tail_type::visit_at(std::forward<FunctionT>(f));
     }
     /// @}
-       
+
     /**
      * @name accumulate
      * accumulate a function f over the chain e.g. f(a, f(b, f(c, initial)))

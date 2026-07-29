@@ -6,11 +6,17 @@
 #include <udho/view/tmpl/layout/property_map.h>
 #include <udho/view/tmpl/layout/property_tree.h>
 #include <udho/view/tmpl/layout/placeholder.h>
+#include <udho/view/tmpl/layout/fwd.h>
 
 namespace udho{
 namespace view{
 namespace tmpl{
 namespace layout{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
 
 /**
  * @brief provides basic functionalities for rendering a layout document but does not perform complete rendering of the document.
@@ -466,6 +472,8 @@ struct default_presenter<DocumentT, void>: basic_presenter<DocumentT>{
         }
 
 };
+
+/** @} */
 
 }
 }

@@ -18,7 +18,7 @@ namespace bridges{
  * @warning Do not specialize. Not intended to be used directly by the user code.
  * @details checks whether the type is already bound or not. If not then forwards to @ref udho::view::data::bind
  * @details borrows state. does not own anything.
- * @ingroup view
+ * @ingroup DoxyG_view
  */
 template <typename BridgeT>
 struct bind{

@@ -12,7 +12,12 @@ namespace view{
 namespace tmpl{
 
 /**
- * @ingroup view
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
+
+/**
+ * @ingroup DoxyG_view_tmpl_layout
  * @struct section
  * @brief Represents a segment or section of a template, categorized by type and containing specific content.
  *
@@ -140,6 +145,8 @@ struct section {
         types _type;
         std::string _content;
 };
+
+/** @} */
 
 }
 }

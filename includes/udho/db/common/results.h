@@ -36,7 +36,7 @@ namespace db{
 /**
  * @brief wrapper around a multi row result.
  * Intended to be used for queries where 0 or more record(s) are expected to be in the resultset.
- * @ingroup db
+ * @ingroup DoxyG_db
  * @tparam DataT specifies schema of a row
  */
 template <typename DataT>
@@ -122,7 +122,7 @@ struct results{
  * @param res 
  * @param data 
  * @return results<DataT>& 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename DataT>
 results<DataT>& operator<<(results<DataT>& res, const DataT& data){

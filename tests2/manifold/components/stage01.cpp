@@ -102,9 +102,9 @@ auto router() {
         udho::url::slot("f2"_h,  &basic_callbacks<StreamT>::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
     ;
 
-    udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
-    udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
-    udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
+    auto mount_point1 = udho::url::mount("root"_h, "/",    std::move(actions1));
+    auto mount_point2 = udho::url::mount("m2"_h,   "/m2",  std::move(actions2));
+    auto mount_point3 = udho::url::mount("m3"_h,   "/m3",  std::move(actions2));
 
     auto table      = std::move(mount_point1) | std::move(mount_point2) | std::move(mount_point3);
 

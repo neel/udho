@@ -28,6 +28,7 @@
 #ifndef UDHO_VIEW_NVP_H
 #define UDHO_VIEW_NVP_H
 
+
 #include <string>
 #include <utility>
 #include <cassert>
@@ -39,6 +40,11 @@
 namespace udho{
 namespace view{
 namespace data{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
 
 template <typename X>
 struct member_variable;
@@ -330,7 +336,6 @@ inline constexpr bool is_wrappable_v = is_wrappable<T>::value;
 
 /**
  * @namespace policies
- * @ingroup view
  * @brief Contains policy classes and templates for defining and checking property characteristics in a type-safe manner.
  *
  * This namespace provides a set of structures and type traits that help in defining and querying the characteristics
@@ -436,7 +441,6 @@ namespace policies{
 
 /**
  * @struct nvp
- * @ingroup view
  * @brief Represents a name-value pair where the value is a wrapped entity, governed by a specific policy.
  *
  * This template struct is used to associate a name (key) with a wrapper that encapsulates some properties, possibly of a class,
@@ -486,7 +490,6 @@ struct nvp<PolicyT, KeyT, wrapper<X...>>{
 
 
 /**
- * @ingroup view
  * @brief Creates a name-value pair for a member variable or member function.
  *
  * This function template assists in creating a name-value pair for properties, which can then be used for named properties.
@@ -504,7 +507,6 @@ nvp<P, K, wrapper<X...>> make_nvp(P, K&& name, X&&... v){
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member variable as mutable property.
  * @warn If a C++ class provides two methods begin and end then sol2 expects it to provide value_type and an emplace method too.
  *       So, either satisfy all stl container requirements and use mvar on that object. Otherwise use cvar instead. The third
@@ -521,7 +523,6 @@ nvp< policies::property<policies::writable>, K, wrapper<X...> > mvar(K&& name, X
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member variable as constant property.
  *
  * @param name The name of the property.
@@ -536,7 +537,6 @@ nvp< policies::property<policies::readonly>, K, wrapper<X...> > cvar(K&& name, X
 }
 
 /**
- * @ingroup view
  * @brief Convenience function for encapsulate a pair of getter and setter as mutable property.
  *
  * @param name The name of the property.
@@ -551,7 +551,6 @@ nvp< policies::property<policies::functional>, K, wrapper<X...> > fvar(K&& name,
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member function.
  *
  * @param name The name of the function.
@@ -566,7 +565,6 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -578,7 +576,6 @@ nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGet
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -591,7 +588,6 @@ nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSizeF> > ind
 }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -603,7 +599,6 @@ nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSizeF> > ind
 // }
 
 /**
- * @ingroup view
  * @brief Convenience function to encapsulate a an iterable object.
  *
  * @param BeginF function that returns the begin iterator.
@@ -615,8 +610,12 @@ nvp< policies::iterable, std::string, wrapper<BeginF, EndF> > iter(BeginF&& u, E
     return make_nvp(policies::iterable{}, std::string{"__iter__"}, std::forward<BeginF>(u), std::forward<EndF>(v));
 }
 
+/** @} */
+
 }
 }
 }
+
+
 
 #endif // UDHO_VIEW_NVP_H

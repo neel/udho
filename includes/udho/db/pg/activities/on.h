@@ -59,7 +59,7 @@ namespace pg{
  * return a value of type `X<ActivityT>::value_type`.
  * @see traits::error_code
  * @see traits::allow_empty
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
  */
 namespace traits{
 
@@ -184,7 +184,7 @@ namespace on{
     
     /**
      * Specialize this template to customize error message on SQL failure
-     * @ingroup pg
+     * @ingroup DoxyG_db_pg
      */
     template <typename ContextT>
     struct failure{
@@ -210,7 +210,7 @@ namespace on{
 
     /**
      * Specialize this template to customize error message on error (unexpected response from SQL query)
-     * @ingroup pg
+     * @ingroup DoxyG_db_pg
      */
     template <typename ActivityT, typename ContextT>
     struct error{
@@ -244,7 +244,7 @@ namespace on{
      *       If empty result is NOT allowed for the success result type then uses the default empty 
      *       checker `traits::detail::check_empty` to check whether the success result is considered
      *       as empty or not.
-     * @ingroup pg 
+     * @ingroup DoxyG_db_pg
      */
     template <typename ActivityT>
     struct invalidate{

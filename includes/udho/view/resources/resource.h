@@ -42,10 +42,14 @@ namespace udho{
 namespace view{
 namespace resources{
 
+/**
+ * @addtogroup DoxyG_view_resources
+ * @{
+ */
+
 namespace tmpl{
     /**
      * @brief a view template written in a foreign language
-     * @ingroup view
      */
     struct resource{
         using buffer_type   = std::vector<char>;
@@ -123,6 +127,12 @@ namespace tmpl{
             buffer_type _buffer;
     };
 
+    /**
+     * @brief Associates a view template resource written in a foreign language
+     *        with the bridge used to execute it.
+     * @tparam BridgeT Bridge type responsible for compiling or executing the
+     *                 view template written in a foreign language.
+     */
     template <typename BridgeT>
     struct bridged{
         using buffer_type   = tmpl::resource::buffer_type;
@@ -146,7 +156,10 @@ namespace tmpl{
          */
         inline bridged(const std::string& name, const boost::filesystem::path& path): _res(name, path) {}
 
+        /// @brief Returns the underlying view template resource.
         const tmpl::resource& resource() const { return _res;}
+
+        /// @brief Returns the underlying mutable view template resource.
         tmpl::resource& resource() { return _res;}
         private:
             tmpl::resource _res;
@@ -155,12 +168,24 @@ namespace tmpl{
 }
 
 namespace asset{
+    /**
+     * @brief Storage policy selected by resource source and ownership.
+     * @tparam Source Source descriptor such as memory, disk, or remote.
+     * @tparam Owned Whether the storage owns its underlying data.
+     */
     template <typename Source, bool Owned>
     struct storage;
 
     template <asset::type AssetType, typename Source, bool Owned>
     struct common_resource;
 
+    /**
+     * @brief Owned in-memory asset storage.
+     *
+     * Copies the supplied range into an internal buffer.
+     *
+     * @tparam Iterator Iterator type used to supply the source range.
+     */
     template <typename Iterator>
     struct storage<asset::source::memory<Iterator>, true>{
         using source = asset::source::memory<Iterator>;
@@ -174,12 +199,23 @@ namespace asset{
         using size_type     = std::size_t;
         using buffer_type   = std::vector<value_type>;
 
+        /// @brief Returns the begin iterator.
         iterator_type begin() const { return _buffer.begin(); }
+
+        /// @brief Returns the end iterator.
         iterator_type end()   const { return _buffer.end();   }
+
+        /// @brief Returns the number of stored elements.
         size_type     size()  const { return _buffer.size();  }
 
 
         private:
+            /**
+             * @brief Writes the owned buffer to an output stream.
+             * @tparam OstreamT Output-stream type.
+             * @param stream Destination stream.
+             * @return Number of elements written.
+             */
             template <typename OstreamT>
             std::size_t write(OstreamT& stream) const {
                 if (!_buffer.empty()) {
@@ -190,6 +226,11 @@ namespace asset{
             }
 
         private:
+            /**
+             * @brief Copies a source range into owned storage.
+             * @param begin Iterator to the first source element.
+             * @param end End iterator of the source range.
+             */
             storage(Iterator begin, Iterator end) {
                 if (begin == end) return;
 
@@ -200,6 +241,11 @@ namespace asset{
                 }
                 _buffer.assign(begin, end);
             }
+            /**
+             * @brief Detects the MIME type of the stored data.
+             * @return Detected MIME type, or `application/octet-stream` when
+             *         detection fails.
+             */
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic_load(magic, nullptr) != 0) {
@@ -218,6 +264,14 @@ namespace asset{
             buffer_type _buffer;
     };
 
+    /**
+     * @brief Non-owning in-memory asset storage.
+     *
+     * Retains the supplied iterators rather than copying their contents. The
+     * referenced range must remain valid for the lifetime of the resource.
+     *
+     * @tparam Iterator Iterator type used to reference the source range.
+     */
     template <typename Iterator>
     struct storage<asset::source::memory<Iterator>, false>{
         using source = asset::source::memory<Iterator>;
@@ -230,11 +284,21 @@ namespace asset{
         using value_type    = typename std::iterator_traits<Iterator>::value_type;
         using size_type     = std::size_t;
 
+        /// @brief Returns the begin iterator.
         iterator_type begin() const { return _begin; }
+
+        /// @brief Returns the end iterator.
         iterator_type end()   const { return _end;   }
+
+        /// @brief Returns the number of referenced elements.
         size_type     size()  const { return _size;  }
 
         private:
+            /**
+             * @brief Writes the referenced range to the output stream.
+             * @param stream Destination stream.
+             * @return Number of elements written.
+             */
             std::size_t write(udho::net::ostream_view& stream) const {
                 if (_size > 0) {
                     assert(*(_end - 1) != '\0' && "Null in non-owned storage!");
@@ -244,8 +308,19 @@ namespace asset{
             }
 
         private:
+            /**
+             * @brief Constructs non-owning storage over an iterator range.
+             * @param begin Begin iterator of the source range.
+             * @param end End iterator of the source range.
+             */
             storage(iterator_type begin, iterator_type end): _begin(begin), _end(adjust_end(begin, end)), _size(std::distance(_begin, _end)) { }
 
+            /**
+             * @brief Adjusts the end iterator used for the stored range.
+             * @param begin Begin iterator of the source range.
+             * @param end Original end iterator.
+             * @return Adjusted end iterator.
+             */
             static iterator_type adjust_end(iterator_type begin, iterator_type end) {
                 if constexpr (std::is_same_v<value_type, char>) {
                     if (begin != end && *(std::prev(end)) == '\0') {
@@ -255,6 +330,11 @@ namespace asset{
                 return end;
             }
 
+            /**
+             * @brief Detects the MIME type of the referenced data.
+             * @return Detected MIME type, or `application/octet-stream` when
+             *         detection fails.
+             */
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (!magic) {
@@ -287,6 +367,13 @@ namespace asset{
             size_type     _size;
     };
 
+    /**
+     * @brief Owned storage loaded from a file.
+     *
+     * Reads the complete file into an internal buffer during construction.
+     *
+     * @tparam Path Filesystem path type.
+     */
     template <typename Path>
     struct storage<asset::source::disk<Path>, true>{
         using source = asset::source::disk<Path>;
@@ -301,13 +388,25 @@ namespace asset{
         using value_type    = char;
         using size_type     = buffer_type::size_type;
 
+        /// @brief Returns the source path.
         const boost::filesystem::path& path() const { return _path; }
 
+        /// @brief Returns the begin iterator.
         iterator_type begin() const { return _buffer.begin(); }
+
+        /// @brief Returns the end iterator.
         iterator_type end()   const { return _buffer.end();   }
+
+        /// @brief Returns the number of loaded bytes.
         size_type     size()  const { return _buffer.size();  }
 
         private:
+            /**
+             * @brief Writes the loaded file contents to an output stream.
+             * @tparam OstreamT Output-stream type.
+             * @param stream Destination stream.
+             * @return Number of bytes written.
+             */
             template <typename OstreamT>
             std::size_t write(OstreamT& stream) const {
                 if (!_buffer.empty()) {
@@ -317,6 +416,11 @@ namespace asset{
             }
 
         private:
+            /**
+             * @brief Loads the complete contents of a file.
+             * @param path Path of the file to load.
+             * @throws std::runtime_error If the file cannot be opened or read.
+             */
             storage(const path_type& path): _path(path) {
                 std::ifstream file(path.c_str(), std::ios::binary | std::ios::ate);
                 if (!file) {
@@ -336,6 +440,11 @@ namespace asset{
                 }
             }
 
+            /**
+             * @brief Detects the MIME type of the loaded file contents.
+             * @return Detected MIME type, or `application/octet-stream` when
+             *         detection fails.
+             */
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic_load(magic, nullptr) != 0) {
@@ -355,11 +464,21 @@ namespace asset{
             std::vector<char> _buffer;
     };
 
+    /**
+     * @brief Unsupported non-owning disk-storage specialization.
+     * @tparam Path Filesystem path type.
+     */
     template <typename Path>
     struct storage<asset::source::disk<Path>, false>{
         static_assert("Non owned disk resource is not supported");
     };
 
+    /**
+     * @brief Non-owning remote resource storage.
+     *
+     * Stores a remote URL and writes an HTTP permanent-redirect response when
+     * the resource is served.
+     */
     template <>
     struct storage<asset::source::remote, false>{
         using source = asset::source::remote;
@@ -368,9 +487,16 @@ namespace asset{
         template <asset::type AssetType, typename Source, bool Owned>
         friend struct common_resource;
 
+        /// @brief Returns the remote resource location.
         const std::string& location() const  { return _location; }
 
         private:
+            /**
+             * @brief Writes a permanent redirect response to the remote URL.
+             * @tparam OstreamT Output-stream type.
+             * @param stream Destination HTTP stream.
+             * @return Size of the generated response message.
+             */
             template <typename OstreamT>
             std::size_t write(OstreamT& stream) const {
                 stream.status(boost::beast::http::status::moved_permanently);
@@ -381,12 +507,17 @@ namespace asset{
             }
 
         private:
+            /**
+             * @brief Constructs remote storage for a URL.
+             * @param location Remote resource URL.
+             */
             storage(const std::string& location): _location(location) { }
 
         private:
             std::string _location;
     };
 
+    /// @brief Unsupported owned remote-storage specialization.
     template <>
     struct storage<asset::source::remote, true>{
         static_assert("Owned remore resource is not supported");
@@ -404,6 +535,7 @@ namespace asset{
          * @brief Construct a new abstract resource object.
          * @param name The name of the resource.
          * @param type The type of the resource.
+         * @param source Source from which the resource is obtained.
          * @param owned Indicates whether the resource is owned by this object.
          */
         inline abstract_resource(const std::string& name, asset::type type, asset::source::type source, bool owned): _name(name), _type(type), _source(source), _owned(owned) {}
@@ -419,7 +551,11 @@ namespace asset{
          * @return bool True if the resource is owned, false otherwise.
          */
         inline bool owned() const { return _owned; }
+
+        /// @brief Returns the resource source category.
         inline asset::source::type source() const { return _source; }
+
+        /// @brief Returns the asset type.
         inline asset::type type() const { return _type; }
 
         /**
@@ -428,7 +564,15 @@ namespace asset{
          * @return std::size_t The number of bytes written to the stream.
          */
         inline virtual std::size_t write(udho::net::ostream_view& stream) const = 0;
+
+        /**
+         * @brief Writes only the resource body to an output stream.
+         * @param stream Destination stream.
+         * @return Number of body bytes written.
+         */
         inline virtual std::size_t write_contents(udho::net::ostream_view& stream) const = 0;
+
+        /// @brief Returns the resource MIME type, or an empty string if unset.
         inline virtual std::string mime() const { return ""; }
 
         /**
@@ -448,23 +592,34 @@ namespace asset{
     template <asset::type AssetType>
     struct basic_resource;
 
+    /**
+     * @brief Base policy for asset types; specializations provide additional
+     *        presentation attributes.
+     * @tparam AssetType Asset category.
+     */
     template <asset::type AssetType>
     struct asset_policy{
         using basic_type = basic_resource<AssetType>;
 
+        /// @brief Binds the policy to its resource.
         asset_policy(basic_type& res): _res(res) {}
 
         private:
             basic_type& _res;
     };
 
+    /// @brief CSS-specific presentation policy.
     template <>
     struct asset_policy<asset::type::css>{
         using basic_type = basic_resource<asset::type::css>;
 
+        /// @brief Constructs a CSS policy with media set to `all`.
         asset_policy(basic_type& res): _res(res), _media("all") {}
 
+        /// @brief Returns the CSS media query value.
         const std::string& media() const { return _media; }
+
+        /// @brief Sets the CSS media query value.
         basic_type& media(const std::string& m) { _media = m; return _res; }
 
         private:
@@ -473,31 +628,54 @@ namespace asset{
             std::string _media;
     };
 
+    /// @brief JavaScript-specific loading and embedding policy.
     template <>
     struct asset_policy<asset::type::js>{
         using basic_type = basic_resource<asset::type::js>;
 
+        /// @brief Constructs a JavaScript policy with all flags disabled.
         asset_policy(basic_type& res): _res(res), _async(false), _defer(false), _module(false), _nomodule(false), _embedded(false) {}
 
+        /// @brief Returns whether asynchronous loading is enabled.
         const bool& is_async() const { return _async; }
+
+        /// @brief Enables or disables asynchronous loading.
         basic_type& is_async(const bool& flag) { _async = flag; return _res; }
 
+        /// @brief Returns whether deferred loading is enabled.
         const bool& is_defer() const { return _defer; }
+
+        /// @brief Enables or disables deferred loading.
         basic_type& is_defer(const bool& flag) { _defer = flag; return _res; }
 
+        /// @brief Returns whether the script is an ECMAScript module.
         const bool& is_module() const { return _module; }
+
+        /// @brief Enables or disables ECMAScript-module mode.
         basic_type& is_module(const bool& flag) { _module = flag; return _res; }
 
+        /// @brief Returns whether the script uses the `nomodule` attribute.
         const bool& is_nomodule() const { return _nomodule; }
+
+        /// @brief Enables or disables the `nomodule` attribute.
         basic_type& is_nomodule(const bool& flag) { _nomodule = flag; return _res; }
 
+        /// @brief Returns the configured CORS mode.
         const std::string& cross_origin() const { return _cross_origin; }
+
+        /// @brief Sets the CORS mode.
         basic_type& cross_origin(const std::string& v) { _cross_origin = v; return _res; }
 
+        /// @brief Returns the configured referrer policy.
         const std::string& referrer_policy() const { return _referrer_policy; }
+
+        /// @brief Sets the referrer policy.
         basic_type& referrer_policy(const std::string& v) { _referrer_policy = v; return _res; }
 
+        /// @brief Returns whether the script should be embedded inline.
         bool embedded() const { return _embedded; }
+
+        /// @brief Enables or disables inline embedding.
         basic_type& embedded(bool flag) { _embedded = flag; return _res; }
 
         private:
@@ -512,11 +690,21 @@ namespace asset{
             std::string _referrer_policy;
     };
 
+    /**
+     * @brief Common metadata and policy base for a typed asset resource.
+     * @tparam AssetType Asset category represented by the resource.
+     */
     template <asset::type AssetType>
     struct basic_resource: abstract_resource, asset_policy<AssetType>{
         using policy_type  = asset_policy<AssetType>;
         using basic_type   = basic_resource<AssetType>;
 
+        /**
+         * @brief Constructs metadata for a typed asset.
+         * @param name Resource name.
+         * @param source Resource source category.
+         * @param owned Whether the resource owns its data.
+         */
         basic_resource(const std::string& name, asset::source::type source, bool owned): abstract_resource(name, AssetType, source, owned), asset_policy<AssetType>(*this) {}
 
 
@@ -529,12 +717,17 @@ namespace asset{
         /**
          * @brief Set the MIME type of the resource.
          * @param type The MIME type to set.
+         * @return This resource.
          */
         basic_type& mime(const std::string& type) { _mime = type; return *this; }
 
+        /// @brief Returns this resource as its concrete basic type.
         basic_type& self() { return *this; }
 
+        /// @brief Returns the mutable type-specific asset policy.
         policy_type& policy() { return *this; }
+
+        /// @brief Returns the type-specific asset policy.
         const policy_type& policy() const { return *this; }
 
         private:
@@ -545,6 +738,7 @@ namespace asset{
      * @class common_resource
      * @brief Template class for basic resources handling specific types of asset sources.
      *
+     * @tparam AssetType Asset category.
      * @tparam Source The source type of the resource.
      * @tparam Owned Flag indicating whether the resource is owned or not.
      */
@@ -559,7 +753,6 @@ namespace asset{
          *
          * @tparam Args Variadic template for constructor arguments.
          * @param name The name of the resource.
-         * @param type The type of the resource.
          * @param mime Mime type
          * @param args Arguments forwarded to the storage constructor.
          */
@@ -595,6 +788,11 @@ namespace asset{
             return write_contents(stream);
         }
 
+        /**
+         * @brief Writes the stored body without adding HTTP metadata.
+         * @param stream Destination stream.
+         * @return Number of body bytes written.
+         */
         std::size_t write_contents(udho::net::ostream_view& stream) const {
             return _storage.write(stream);
         }
@@ -606,6 +804,7 @@ namespace asset{
     /**
      * @class common_resource
      * @brief Template class for basic resources handling url based remote resource.
+     * @tparam AssetType Asset category.
      */
     template <asset::type AssetType>
     struct common_resource<AssetType, asset::source::remote, false>: basic_resource<AssetType>{
@@ -616,12 +815,12 @@ namespace asset{
          *
          * @tparam Args Variadic template for constructor arguments.
          * @param name The name of the resource.
-         * @param type The type of the resource.
          * @param args Arguments forwarded to the storage constructor.
          */
         template <typename... Args>
         common_resource(const std::string& name, Args&&... args): basic_resource<AssetType>(name, asset::source::remote::source, false), _storage(std::forward<Args>(args)...) {}
 
+        /// @brief Returns the remote storage descriptor.
         const storage_type& storage() const { return _storage; }
 
         /**
@@ -633,6 +832,11 @@ namespace asset{
             return _storage.write(stream);
         }
 
+        /**
+         * @brief Writes no local body for a remote resource.
+         * @param stream Unused destination stream.
+         * @return Always zero.
+         */
         std::size_t write_contents(udho::net::ostream_view& stream) const {
             return 0;
         }
@@ -893,6 +1097,8 @@ namespace asset{
 }
 
 
+
+/** @} */
 
 }
 }

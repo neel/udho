@@ -11,7 +11,7 @@ namespace url{
 
 /**
  * @brief HTTP method
- * @ingroup Router
+ * @ingroup DoxyG_url
  */
 using verb = boost::beast::http::verb;
 
@@ -19,4 +19,3 @@ using verb = boost::beast::http::verb;
 }
 
 #endif // UDHO_URL_VERB_H
-

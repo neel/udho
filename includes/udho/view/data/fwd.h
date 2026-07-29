@@ -28,6 +28,8 @@
 #ifndef UDHO_VIEW_DATA_FWD_H
 #define UDHO_VIEW_DATA_FWD_H
 
+
+
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
 #endif
@@ -55,5 +57,6 @@ struct associative;
 }
 }
 }
+
 
 #endif // UDHO_VIEW_DATA_FWD_H

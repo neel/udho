@@ -64,7 +64,7 @@ struct relation_of_helper<SchemaT, FieldT, false>{
     
 /**
  * @brief FROM clause, often the start point for building the query.
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * Given a relation defined the following 
  * @code 
  * PG_ELEMENT(id,          pg::types::integer);

@@ -47,7 +47,7 @@ namespace bridges{
 
 /**
  * @struct stream
- * @ingroup view
+ * @ingroup DoxyG_view
  * @brief A generic text stream class for handling formatted text output with controlled indentation.
  *
  * This template class facilitates structured text generation, which is particularly useful for scripting and code generation in various languages. It manages indentation and newlines to produce readable and well-formatted output.

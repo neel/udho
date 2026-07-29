@@ -43,7 +43,7 @@ namespace pg{
     
 /**
  * @brief SQL Query builder.
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * @tparam RelationT can be a single relation or a chain of one or more joins using @ref basic_join_on
  */
 template <typename RelationT>

@@ -39,6 +39,11 @@
 namespace udho{
 namespace url{
 
+/**
+ * @addtogroup DoxyG_url_op
+ * @{
+ */
+
 template <typename... Args>
 tabulate::Table& operator<<(tabulate::Table& table, const action_table<Args...>& actions){
     table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
@@ -109,6 +114,8 @@ std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& 
 inline std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
     return stream;
 }
+
+/// @}
 
 }
 }

@@ -40,7 +40,7 @@ namespace pg{
     
 /**
  * @brief Different types of join
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  */
 namespace join_types{
     
@@ -104,7 +104,7 @@ namespace join_types{
 /**
  * @brief Datastructure to store a pair of relations and the corresponding fields to be joined at compile time
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -124,7 +124,7 @@ struct joined{
 /**
  * @brief Compile time datastructure to store a chain of chaining multiple joins
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * @tparam CurrentJoin A join defined by the @ref joined template
  * @tparam RestJoin An optional join clause
  */
@@ -134,7 +134,7 @@ struct join_clause;
 /**
  * @brief Specialization for Simple join clause.
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -159,7 +159,7 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, void>
 /**
  * @brief Specialization for a join clause chained with another.
  * @note Not to be used directly. Used internally by @ref basic_join_on
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * @tparam JoinType Type of join @ref join_types
  * @tparam RelationL The relation on the left side of join
  * @tparam RelationR The relation on the right side of join
@@ -185,7 +185,7 @@ struct join_clause<joined<JoinType, RelationL, RelationR, FieldL, FieldR>, join_
 
 /**
  * @brief helper to produce an appropriate column for a given field.
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * 
  * @tparam OnlyFieldT 
  * @tparam SchemaT 
@@ -203,7 +203,7 @@ struct column_helper{
 
 /**
  * @brief helper to produce an appropriate column for a given field.
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * 
  * @tparam OnlyFields...
  * @tparam SchemaT 
@@ -224,7 +224,7 @@ struct column_helper<pg::basic_schema<OnlyFields...>, SchemaT>{
  * @tparam PreviousJoin Previous joins in the chain
  * 
  * @note Not to be used directly, Rather to be used wih the \ref basic_join convenience structure
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * The `FromRelationT` is associated with `FieldL` and used as the lhs column for composing JOIN SQL queries. Similarly 
  * the `RelationT` is associated with `FieldR` and used as the  while composing the JOIN SQL query. Chain of multiple
  * JOINs can be constructed using the `PreviousJoin` template parameter which is `void` by default. `JoinType` is used
@@ -674,7 +674,7 @@ struct basic_join_on{
  * @tparam RelationT The relation on the right side of the join
  * @tparam PreviousJoin The previous join in the chain or void
  * 
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * 
  * Constructs a chain of one or more JOIN clauses relating multiple tables. 
  * @code 
@@ -874,7 +874,7 @@ struct basic_join{
 
 /**
  * @brief join attach 
- * @ingroup joining
+ * @ingroup DoxyG_db_pg_crud_joining
  * @tparam FromRelationT The relation which is supposed to be in the FROM clause
  * 
  * Compose joining clause involving one or more relations. It takes the relation in the FROM clause as a template

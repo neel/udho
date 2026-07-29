@@ -153,8 +153,8 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
 
     auto chain3 = chain | chain2;
 
-    udho::url::mount_point mount_point{"chain"_h, "/pchain", std::move(chain)};
-    auto chain4 = std::move(mount_point) | udho::url::mount_point("root"_h, "/", std::move(chain3));
+    auto mount_point = udho::url::mount("chain"_h, "/pchain", std::move(chain));
+    auto chain4 = std::move(mount_point) | udho::url::mount("root"_h, "/", std::move(chain3));
 
     std::cout << "chain4" << std::endl << chain4 << std::endl;
 

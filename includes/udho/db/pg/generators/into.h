@@ -41,7 +41,7 @@ namespace generators{
 /**
  * @brief generator for the into part of the query
  * @tparam RelationT 
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename RelationT>
 struct into<pg::from<RelationT>>{
@@ -77,4 +77,3 @@ struct into<pg::from<RelationT>>{
 }
 
 #endif // UDHO_DB_PG_GENERATORS_PARTS_INTO_H
-

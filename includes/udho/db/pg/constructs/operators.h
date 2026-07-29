@@ -53,7 +53,7 @@
  * }
  * @endcode
  * @note A generator has to be created using @ref GENERATE_OPERATOR
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
  */
 #define DECLARE_OPERATOR(OPCODE)                                                                                                                                                                                            \
     template <typename FieldT, typename ColumnT = void>                                                                                                                                                                     \

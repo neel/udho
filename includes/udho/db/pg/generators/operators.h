@@ -40,7 +40,7 @@
  * @param OPCODE C++ name of teh operator
  * @param OPSYM  actual postgresql symbol for the operator
  * @note Requires the operator to be declared using @ref DECLARE_OPERATOR before using @ref GENERATE_OPERATOR
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 #define GENERATE_OPERATOR(OPCODE, OPSYM)                                   \
     template <typename FieldT, typename ColumnT>                           \

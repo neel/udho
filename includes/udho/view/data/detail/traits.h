@@ -28,6 +28,11 @@
 #ifndef UDHO_VIEW_DATA_DETAIL_TRAITS_H
 #define UDHO_VIEW_DATA_DETAIL_TRAITS_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <type_traits>
 
 namespace udho{
@@ -53,5 +58,7 @@ namespace detail{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_DATA_DETAIL_TRAITS_H

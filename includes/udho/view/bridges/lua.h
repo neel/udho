@@ -48,7 +48,7 @@ namespace bridges{
 
 /**
  * @typedef lua
- * @ingroup view
+ * @ingroup DoxyG_view
  * @brief A specialized bridge configured for Lua scripting.
  *
  * This type alias represents lua specific instantiation of the `bridge` template, configured to use Lua-specific components for state management, scripting, and binding. It encapsulates the interaction between template parsing, Lua script generation, and execution, providing a streamlined interface for integrating Lua scripting into the template engine.
@@ -466,4 +466,3 @@ namespace udho::view::data{
 
 
 #endif // UDHO_VIEW_BRIDGES_LUA_H
-

@@ -43,8 +43,8 @@ namespace pg{
 namespace decorators{
     
 /**
- * @ingroup decorators
- * @addtogroup keys
+ * @ingroup DoxyG_db_pg_decorators
+ * @addtogroup DoxyG_db_pg_decorators_keys
  * @brief decorates a schema as comma separeted keys
  * Given the following:
  * @code 

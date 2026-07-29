@@ -42,7 +42,7 @@ namespace generators{
 
 /**
  * @brief from table part of the query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename RelationT>
 struct from<pg::from<RelationT>>{
@@ -67,7 +67,7 @@ struct from<pg::from<RelationT>>{
 /**
  * @brief from table [inner join other on table.field = other.field]* part of the query
  * Specialization of from for joining multiple relations
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename JoinType, typename FromRelationT, typename RelationT, typename FieldL, typename FieldR, typename PreviousJoin>
 struct from<basic_join_on<JoinType, FromRelationT, RelationT, FieldL, FieldR, PreviousJoin>>{

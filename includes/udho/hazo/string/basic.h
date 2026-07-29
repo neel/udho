@@ -86,7 +86,7 @@ struct basic{
     }
 
     constexpr bool operator==(const std::basic_string<CharT>& other) const {
-        if(other.size() == length || other.size() == length-1){ // The other string might not be terminated with \0
+        if(other.size() == length /*|| other.size() == length-1*/){ // The other string might not be terminated with \0
             return std::equal(other.begin(), other.end(), begin());
         }
         return false;

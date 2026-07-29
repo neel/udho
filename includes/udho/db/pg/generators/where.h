@@ -39,7 +39,7 @@ namespace generators{
     
 /**
  * @brief where [field = value]* part of the where query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename... Fields>
 struct where<pg::basic_schema<Fields...>>{

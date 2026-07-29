@@ -33,7 +33,7 @@ namespace db{
 
 /**
  * @brief A none result implies that the query does not yield any result
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 struct none{
     typedef void data_type;

@@ -11,7 +11,11 @@ namespace resources{
 namespace asset{
 
 /**
- * @ingroup view
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
+/**
  * @brief copiable readonly accessor (obtained from a const_store) for the asset store for a specific asset type e.g. javascript, css etc..
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  */
@@ -227,6 +231,8 @@ struct const_substore<asset::type::js>: basic_const_substore<asset::type::js>{
 //         std::string _prefix;
 //         const store_type& _substore;
 // };
+
+/** @} */
 
 }
 

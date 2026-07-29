@@ -46,7 +46,7 @@ namespace pg{
     
 /**
  * @brief basic select query
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * @tparam ResultT 
  * @tparam SchemaT 
  */

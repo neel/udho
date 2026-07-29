@@ -92,9 +92,9 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
         udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}")
         ;
 
-    udho::url::mount_point mount_point1{"root"_h, "/",    std::move(actions1)};
-    udho::url::mount_point mount_point2{"m2"_h,   "/m2",  std::move(actions2)};
-    udho::url::mount_point mount_point3{"m3"_h,   "/m3",  std::move(actions2)};
+    auto mount_point1 = udho::url::mount("root"_h, "/",    std::move(actions1));
+    auto mount_point2 = udho::url::mount("m2"_h,   "/m2",  std::move(actions2));
+    auto mount_point3 = udho::url::mount("m3"_h,   "/m3",  std::move(actions2));
 
     SECTION("Single mount point") {
         boost::asio::io_context io_context;

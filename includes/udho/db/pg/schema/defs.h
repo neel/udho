@@ -75,7 +75,7 @@ struct attached<IdentifierT, void>{
  * @tparam FieldT 
  * @tparam ValueT 
  * 
- * @ingroup schema
+ * @ingroup DoxyG_db_pg_schema
  */
 template <typename FieldT, typename ValueT>
 struct field_lhs{
@@ -210,7 +210,7 @@ struct field_lhs{
  *       where `X` is a PostgreSQL type different from `Type`. This is useful for
  *       type casting.
  *
- * @ingroup schema
+ * @ingroup DoxyG_db_pg_schema
  */
 #define PG_ELEMENT(Name, Type, ...)                                          \
 template <typename T>                                                        \
@@ -260,7 +260,7 @@ using Name = Name ## _ <Type>
  * Used in relations created using pg::relation
  * @see pg::relation
  * 
- * @ingroup schema
+ * @ingroup DoxyG_db_pg_schema
  */
 #define PG_NAME(Name)                   \
     static auto name(){                 \

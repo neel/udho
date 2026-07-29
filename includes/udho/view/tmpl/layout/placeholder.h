@@ -10,6 +10,7 @@
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <udho/view/tmpl/layout/property_map.h>
+#include <udho/view/tmpl/layout/fwd.h>
 
 namespace udho{
 namespace view{
@@ -27,21 +28,11 @@ namespace detail {
 template <typename T>
 inline constexpr bool has_less_than_operator_v = detail::has_less_than_operator<T>::value;
 
-/**
- * @defgroup Placeholders Placeholder System
- * @brief Flexible template system for managing layout sections with content and properties
- */
-
 namespace proxy{
-
-template <typename ContainerT>
-struct content;
-
-template <typename ContainerT>
-struct const_content;
 
 /**
  * @struct placeholder_properties
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
  * @brief Configures HTML placeholder elements and their styling attributes which could be used by a presenter
  */
 
@@ -68,23 +59,14 @@ namespace detail{
 template <bool EnableLocking>
 struct maybe_locker{
     struct lock_guard{
-        lock_guard(maybe_locker& self): _self(self) {
-            _self.lock();
-        }
-        ~lock_guard() {
-            _self.unlock();
-        }
+        lock_guard(maybe_locker& self): _self(self) { _self.lock(); }
+        ~lock_guard() { _self.unlock(); }
         maybe_locker& _self;
     };
-    void lock()   {
-        _mutex.lock();
-    }
-    void unlock() {
-        _mutex.unlock();
-    }
-    lock_guard guard() {
-        return lock_guard{*this};
-    }
+
+    void lock()   { _mutex.lock();   }
+    void unlock() { _mutex.unlock(); }
+    lock_guard guard() { return lock_guard{*this}; }
     private:
         std::mutex _mutex;
 };
@@ -108,6 +90,10 @@ struct locker{
 }
 
 // { std::map
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Mutable content proxy for a single value identified by a key.
+ */
 template <typename KeyT>
 struct content<std::map<KeyT, std::string>>{
     using self_type         = content<std::map<KeyT, std::string>>;
@@ -159,6 +145,10 @@ struct content<std::map<KeyT, std::string>>{
         key_type        _key;
         locker_type&    _locker;
 };
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Read-only content proxy for a single value identified by a key.
+ */
 template <typename KeyT>
 struct const_content<std::map<KeyT, std::string>>{
     using container_type    = std::map<KeyT, std::string>;
@@ -199,6 +189,10 @@ struct const_content<std::map<KeyT, std::string>>{
 // }
 
 // { std::multimap
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Mutable content proxy for multiple values identified by a key.
+ */
 template <typename KeyT>
 struct content<std::multimap<KeyT, std::string>>{
     using self_type             = content<std::multimap<KeyT, std::string>>;
@@ -283,6 +277,10 @@ struct content<std::multimap<KeyT, std::string>>{
         key_type        _key;
         locker_type&    _locker;
 };
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Read-only content proxy for multiple values identified by a key.
+ */
 template <typename KeyT>
 struct const_content<std::multimap<KeyT, std::string>>{
     using container_type        = std::multimap<KeyT, std::string>;
@@ -343,6 +341,10 @@ struct const_content<std::multimap<KeyT, std::string>>{
 // }
 
 // { std::optional
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Mutable content proxy for an optional unkeyed value.
+ */
 template <>
 struct content<std::optional<std::string>>{
     using self_type         = content<std::optional<std::string>>;
@@ -372,6 +374,10 @@ struct content<std::optional<std::string>>{
         container_type& _spots;
         locker_type&    _locker;
 };
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Read-only content proxy for an optional unkeyed value.
+ */
 template <>
 struct const_content<std::optional<std::string>>{
     using self_type         = content<std::optional<std::string>>;
@@ -398,6 +404,10 @@ struct const_content<std::optional<std::string>>{
 // }
 
 // { std::vector
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Mutable content proxy for multiple unkeyed values.
+ */
 template <>
 struct content<std::vector<std::string>>{
     using self_type             = content<std::vector<std::string>>;
@@ -444,6 +454,10 @@ struct content<std::vector<std::string>>{
         container_type& _spots;
         locker_type&    _locker;
 };
+/**
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
+ * @brief Read-only content proxy for multiple unkeyed values.
+ */
 template <>
 struct const_content<std::vector<std::string>>{
     using self_type             = content<std::vector<std::string>>;
@@ -584,7 +598,7 @@ struct basic_placeholder_container<Multi, KeyT, std::enable_if_t<!has_less_than_
 
 /**
  * @struct basic_placeholder_container
- * @ingroup Placeholders
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
  * @brief Core container managing content and properties for layout placeholders
  * @tparam Multi Whether to support multiple values (true) or single value (false)
  * @tparam KeyT Type of placeholder identifier (typically enum or tag type)
@@ -683,7 +697,7 @@ struct basic_placeholder_container {
 
 /**
  * @struct spot
- * @ingroup Placeholders
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
  * @brief Defines a single-value layout section
  * @tparam KeyT Section identifier type
  *
@@ -698,8 +712,7 @@ struct spot{
 };
 
 /**
- * @struct multispot
- * @ingroup Placeholders
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
  * @brief Defines a multi-value layout section
  * @tparam KeyT Section identifier type
  *
@@ -772,6 +785,7 @@ struct basic_placeholder<nullspot>: protected basic_placeholder_container<true, 
 #else
 /**
  * @struct basic_placeholder
+ * @ingroup DoxyG_view_tmpl_layout_placeholders
  * @brief Composable placeholder system for building layout structures
  * @tparam Spot First placeholder spot type
  * @tparam Spots Remaining placeholder spot types

@@ -16,6 +16,11 @@ namespace view{
 namespace tmpl{
 namespace layout{
 
+/**
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
+
 
 namespace helper{
 template <typename T>
@@ -112,8 +117,6 @@ struct header_renderer{
 template <typename KeyT, typename LayoutT, bool IsMultiple = helper::proxy_type<LayoutT, KeyT>::multiple >
 struct renderer;
 
-
-
 /**
  * @brief Renderer for a multi-valued layout placeholder.
  *
@@ -178,15 +181,6 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
         std::string view_addr = _layout.properties(_key).view();
         if(!view_addr.empty()){
             _render(proxy, view_addr, std::forward<Data>(d));
-            // if constexpr (_store.bridges_count > 0 ) {
-            //     udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-            //     proxy += results.str();
-
-            //     const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            //     header_renderer_type::apply(header);
-            // } else {
-            //     assert(0 == 1 && "trying to render a view from non-view resource store");
-            // }
         } else {
             std::stringstream str_stream;
             if constexpr (helper::is_streamable_v<Data>) {
@@ -208,18 +202,6 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
         if(!view_addr.empty()){
             _render(proxy, view_addr, std::forward<Data>(d));
         }
-
-        // if(!view_addr.empty()){
-        //     if constexpr (_store.bridges_count > 0 ) {
-        //         udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-        //         proxy = results.str();
-
-        //         const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-        //         header_renderer_type::apply(header);
-        //     } else {
-        //         assert(0 == 1 && "trying to render a view from non-view resource store");
-        //     }
-        // }
 
         return *this;
     }
@@ -365,18 +347,6 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
             _render(proxy, view_addr, std::forward<Data>(d));
         }
 
-        // if(!view_addr.empty()){
-        //     if constexpr (_store.bridges_count > 0 ) {
-        //         udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
-        //         proxy = results.str();
-
-        //         const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-        //         header_renderer_type::apply(header);
-        //     } else {
-        //         assert(0 == 1 && "trying to render a view from non-view resource store");
-        //     }
-        // }
-
         return *this;
     }
 
@@ -410,22 +380,6 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
         return _layout.document()[_key].count();
     }
 
-    // typename proxy_type::value_type& operator*(){
-    //     return _layout.document()[_key].value();
-    // }
-
-    // typename proxy_type::value_type& operator->(){
-    //     return _layout.document()[_key].value();
-    // }
-
-    // const typename proxy_type::value_type& operator*() const{
-    //     return _layout.document()[_key].value();
-    // }
-
-    // const typename proxy_type::value_type& operator->() const{
-    //     return _layout.document()[_key].value();
-    // }
-
 private:
     template <typename ProxyT, typename Data>
     renderer& _render(ProxyT& proxy, const std::string& view_addr, Data&& d){
@@ -446,7 +400,7 @@ private:
     }
 };
 
-
+/** @} */
 
 }
 }

@@ -49,11 +49,15 @@ namespace resources{
 
 namespace asset{
 
+/**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
 struct prefixed_store;
 
 /**
  * @class store
- * @ingroup view
  * @brief The global asset store that holds all assets from all modules.
  *
  * Usage:
@@ -351,6 +355,8 @@ inline udho::view::resources::asset::prefixed_store udho::view::resources::asset
     return udho::view::resources::asset::prefixed_store{*this, prefix};
 }
 
+/** @} */
+
 }
 
 
@@ -360,4 +366,3 @@ inline udho::view::resources::asset::prefixed_store udho::view::resources::asset
 
 
 #endif // UDHO_VIEW_RESOURCES_ASSET_SUBSTORE_H
-

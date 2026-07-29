@@ -40,7 +40,7 @@ namespace generators{
     
 /**
  * @brief order by field asc part of the select query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename FieldT>
 struct order<pg::ascending<FieldT, true>>{

@@ -14,6 +14,11 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
 struct extras{
     explicit extras(sol::table& utils): _utils(utils) {}
 
@@ -43,9 +48,10 @@ private:
     sol::table& _utils;
 };
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

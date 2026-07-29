@@ -39,7 +39,7 @@ namespace pg{
     
 /**
  * @brief remove returning none 
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * modifiable pg::schema<Fields...> for where query
  */
 template <typename... Fields>
@@ -82,7 +82,7 @@ struct basic_remove{
     
 /**
  * @brief REMOVE query
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * @tparam Fields...
  */
 template <typename... Fields>

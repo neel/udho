@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <udho/view/resources/fwd.h>
+#include <udho/view/tmpl/layout/fwd.h>
 #include <udho/view/tmpl/layout/loader.h>
 #include <udho/view/tmpl/layout/property_map.h>
 #include <udho/view/tmpl/layout/placeholder.h>
@@ -17,12 +18,10 @@ namespace view{
 namespace tmpl{
 namespace layout{
 
-
-template <typename ContextT, typename DocumentT, typename PresenterT>
-struct basic_layout;
-
-template <typename DocumentT, typename PresenterT>
-struct basic_layout_impl;
+/**
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
 
 
 /**
@@ -326,6 +325,7 @@ basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> create(ContextT
     return basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>(ctx);
 }
 
+/** @} */
 
 
 

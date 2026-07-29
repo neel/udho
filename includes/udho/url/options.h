@@ -8,8 +8,12 @@ namespace udho{
 namespace url{
 
 /**
+ * @addtogroup DoxyG_url
+ * @{
+ */
+
+/**
  * @brief The basic_options encapsulates multiple configurable parameters
- * @ingroup Router
  */
 template <typename... Params>
 class basic_options: private udho::hazo::map_d<Params...>{
@@ -29,6 +33,11 @@ public:
     /**
      * @brief applies the parameters on the input superset
      * @param superset
+     *
+     * @note expects this options to be a subset of the input superset implying
+     *       that all properties present in the current options must also be
+     *       available in the superset container.
+     *
      * @return number of properties in the superset modified
      */
     template <typename SupersetT>
@@ -62,14 +71,13 @@ struct basic_options<>{
 
 /**
  * @brief no options
- * @ingroup Router
  */
 using no_options = udho::url::basic_options<>;
 
 /**
  * @brief convenience function to create options for url
  * @param params
- * @ingroup Router
+ * @ingroup DoxyG_url_router
  * @return
  *
  * @code
@@ -87,6 +95,8 @@ template <typename... Params>
 basic_options<Params...> options(Params&&... params){
     return basic_options<Params...>{std::forward<Params>(params)...};
 }
+
+/// @}
 
 }
 }

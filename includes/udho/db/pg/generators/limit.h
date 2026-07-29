@@ -40,7 +40,7 @@ namespace generators{
     
 /**
  * @brief limit N Offset M part of the select query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <int Limit, int Offset>
 struct limit<pg::limited<Limit, Offset>>{

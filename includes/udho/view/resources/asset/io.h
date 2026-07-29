@@ -39,6 +39,11 @@ namespace resources{
 
 namespace asset{
 
+/**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
 inline tabulate::Table& operator<<(tabulate::Table& table, const udho::view::resources::asset::const_store& store){
     table.add_row({"prefix", "name", "type", "mime", "url"});
     for(const auto& asset: store){
@@ -60,6 +65,8 @@ inline std::ostream& operator<<(std::ostream& stream, const udho::view::resource
     stream << table;
     return stream;
 }
+
+/** @} */
 
 }
 

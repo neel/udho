@@ -40,7 +40,7 @@ namespace generators{
     
 /**
  * @brief "select [field]*" part of the select query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename... Fields>
 struct select<pg::basic_schema<Fields...>>{

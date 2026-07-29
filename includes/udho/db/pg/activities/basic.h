@@ -64,7 +64,7 @@ namespace pg{
  * @tparam RowT If SuccessT provides a data_type typedef (which is expected to be either of db::result<T> or db::results<T> for 
  *         some T or db::none) then RowT is same as SuccessT. However, usercode may provide a custom RowT which will be used to 
  *         store the query result(s).
- * @ingroup pg 
+ * @ingroup DoxyG_db_pg
  */
 template <
     typename DerivedT,
@@ -224,7 +224,7 @@ struct basic_activity: udho::activity<DerivedT, typename std::conditional<db::de
  * error then the activity fails and yields failure data (pg::failure) which consists of information related to that failure.
  * @see pg::activity
  * @tparam DerivedT 
- * @ingroup pg 
+ * @ingroup DoxyG_db_pg
  */
 template <typename DerivedT>
 struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg::failure>{
@@ -321,4 +321,3 @@ struct basic_activity<DerivedT, db::none>: udho::activity<DerivedT, db::none, pg
 }
 
 #endif // UDHO_DB_PG_ACTIVITY_BASIC_H
-

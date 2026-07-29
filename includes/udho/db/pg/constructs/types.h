@@ -50,7 +50,7 @@ namespace oz{
     
 /**
  * @brief PostgreSQL datatypes
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
  */
 namespace types{
 
@@ -111,7 +111,7 @@ struct timestamp_tz{
  * };
  * using bigint = type<std::int64_t, names::bigint>;
  * @endcode 
- * @ingroup types
+ * @ingroup DoxyG_db_pg_types
  */
 template <typename ValueT, typename NameT>
 struct type{
@@ -153,7 +153,7 @@ using json        = type<ozo::pg::json, names::json>;
 }
  
 /**
- * @ingroup types
+ * @ingroup DoxyG_db_pg_types
  * @{
  */
 using bigint      = types::bigint;           ///< @copydoc types::bigint convenient typedef in `udho::db::pg` namespace

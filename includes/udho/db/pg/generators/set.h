@@ -39,7 +39,7 @@ namespace generators{
     
 /**
  * @brief set [field = value]* part of the update query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename... Fields>
 struct set<pg::basic_schema<Fields...>>{

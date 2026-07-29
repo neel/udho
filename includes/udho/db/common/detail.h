@@ -46,7 +46,7 @@ namespace detail{
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename TargetT, typename SourceT, bool convertible = std::is_convertible<const SourceT&, TargetT>::value>
 struct conversion;
@@ -71,7 +71,7 @@ struct conversion<ThatT, TargetT, SourceT, true>{
  * @tparam TargetT 
  * @tparam SourceT 
  * @tparam convertible 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename TargetT, typename SourceT>
 struct conversion<ThatT, TargetT, SourceT, false>{
@@ -92,7 +92,7 @@ struct conversion<ThatT, TargetT, SourceT, false>{
  * @tparam ThatT 
  * @tparam TargetT 
  * @tparam SourceT 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename TargetT, typename SourceT = TargetT>
 struct transform: private detail::conversion<ThatT, TargetT, SourceT>{
@@ -116,7 +116,7 @@ struct transform: private detail::conversion<ThatT, TargetT, SourceT>{
  *       row (usually a tuple like object) to the intended object
  * @tparam ThatT 
  * @tparam TargetT 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename TargetT>
 struct transform<ThatT, TargetT, TargetT> {
@@ -144,7 +144,7 @@ struct transform<ThatT, TargetT, TargetT> {
  * 
  * @tparam ThatT 
  * @tparam SuccessT 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename SuccessT>
 struct processor{
@@ -168,7 +168,7 @@ struct processor{
  *
  * @tparam ThatT 
  * @tparam DataT 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::results<DataT>>{
@@ -194,7 +194,7 @@ struct processor<ThatT, db::results<DataT>>{
  * 
  * @tparam ThatT 
  * @tparam DataT 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template <typename ThatT, typename DataT>
 struct processor<ThatT, db::result<DataT>>{
@@ -218,7 +218,7 @@ struct processor<ThatT, db::result<DataT>>{
  * @brief Checks whether the provided struct T has a `data_type` typedef 
  * 
  * @tparam T 
- * @ingroup db
+ * @ingroup DoxyG_db
  */
 template< typename T >
 struct HasDataType{

@@ -13,8 +13,12 @@ namespace resources{
 namespace asset{
 
 /**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
+/**
  * @struct proxy
- * @ingroup view
  * @brief proxies an asset.
  */
 struct proxy{
@@ -115,6 +119,8 @@ inline bool operator<(const proxy& l, const proxy& r) {
 inline bool operator==(const proxy& l, const proxy& r) {
     return l.url() == r.url();
 }
+
+/** @} */
 
 }
 

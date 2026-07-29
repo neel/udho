@@ -16,6 +16,14 @@ namespace udho{
 namespace url{
 
 /**
+ * @addtogroup DoxyG_url
+ * @{
+ */
+
+template <typename StrT, typename ActionsT>
+struct mount_point;
+
+/**
  * @brief Manages a collection of URL actions, organizing them as a mount point in a web application's URL space.
  *
  * The `mount_point` class acts as a container and manager for actions associated with specific URL patterns.
@@ -23,18 +31,21 @@ namespace url{
  * such as regex or fixed string patterns. This class facilitates the grouping of these actions under a common
  * base URL path, allowing for structured and organized URL handling.
  *
+ * @note Use udho::url::mount function to instantiate instead.
+ *
  * @tparam StrT Compile-time string type used for identifying the mount_point.
  * @tparam ActionsT A sequence type (typically a variant or tuple) that holds different action types.
  *
- * @example
+ * @code{.cpp}
  * auto chain = udho::url::slot("f0"_h,  &f0) << udho::url::home(udho::url::verb::get) |
  *              udho::url::slot("f1"_h,  &f1) << udho::url::regx(udho::url::verb::get, "/f1/(\\w+)/(\\d+)", "/f1/{}/{}");
- * udho::url::mount_point mount_point{"chain"_h, "/pchain", std::move(chain)};
+ * auto mount_point = udho::url::mount{"chain"_h, "/pchain", std::move(chain)};
  * std::cout << mount_point.find("/f1/john/42") << std::endl; // Outputs: true
+ * @endcode
  */
-template <typename StrT, typename ActionsT>
-struct mount_point{
-    using actions_type = ActionsT;
+template <typename StrT, typename... Actions>
+struct mount_point<StrT, udho::url::action_table<Actions...>>{
+    using actions_type = udho::url::action_table<Actions...>;
     using name_type    = StrT;
     using key_type     = StrT;
 
@@ -56,6 +67,12 @@ struct mount_point{
      * @return Compile-time string key.
      */
     static constexpr key_type key() { return key_type{}; }
+
+    /**
+     * @brief number of actions in the action table
+     * @return std::size_t
+     */
+    static constexpr std::size_t length() { return 1+ depth; }
 
     /**
      * Accessor for the mount point's name.
@@ -89,8 +106,9 @@ struct mount_point{
      * @param xstr A forward reference to the compile-time string representing the action's key.
      * @return A reference to the action associated with the given key.
      *
-     * @example
+     * @code{.cpp}
      * auto& action = mount_point["f1"_h]; // Accesses the action associated with the "f1" key
+     * @endcode
      */
     template <typename XStrT>
     auto& operator[](XStrT&& xstr) { return _actions[std::move(xstr)]; }
@@ -105,14 +123,15 @@ struct mount_point{
      * @param xstr A forward reference to the compile-time string representing the action's key.
      * @return A constant reference to the action associated with the given key.
      *
-     * @example
+     * @code{.cpp}
      * const auto& action = mount_point["f1"_h]; // Accesses the action associated with the "f1" key for read-only operations
+     * @endcode
      */
     template <typename XStrT>
     const auto& operator[](XStrT&& xstr) const { return _actions[std::move(xstr)]; }
 
     /**
-     * Finds if a given URL matches any of the actions in the mount point.
+     * @brief Finds if a given URL matches any of the actions in the mount point.
      * @tparam Ch Character type of the URL string.
      * @param subject URL to be matched.
      * @return index of the matched element, -1 if not fouond
@@ -129,7 +148,7 @@ struct mount_point{
     }
 
     /**
-     * Invokes the appropriate action at a given index.
+     * @brief Invokes the appropriate action at a given index.
      * @param subject URL to be processed.
      * @param args Arguments to pass to the action handler.
      * @return True if an action was successfully invoked, otherwise false.
@@ -148,6 +167,12 @@ struct mount_point{
         return found;
     }
 
+    /**
+     * @brief reconfigures the config superset by applying the options (subset) associated with action at the given index
+     * @param index
+     * @param config superset
+     * @return bool
+     */
     template <typename ConfigSupersetT>
     bool reconfigure_for(int index, ConfigSupersetT& config) const {
         assert(index > -1);
@@ -250,18 +275,40 @@ struct mount_point{
 
 /**
  * @brief Creates a mount_point with a specified name, path, and actions.
- * @tparam ActionsT Type of the actions container.
+
  * @tparam CharT Character type for the compile-time string.
  * @tparam C Characters of the compile-time string.
  * @param name Compile-time string representing the name of the mount point.
  * @param path Base URL path for the mount point.
- * @param actions Container of actions associated with the mount point.
+ * @tparam Actions... Actions stored in the actions table.
+ *
+ * @param actions Table of actions associated with the mount point.
  * @return A fully configured mount_point object.
  */
-template <typename ActionsT, typename CharT, CharT... C>
-mount_point<udho::hazo::string::str<CharT, C...>, ActionsT> mount(udho::hazo::string::str<CharT, C...>&& name, const std::string& path, ActionsT&& actions){
-    return mount_point<udho::hazo::string::str<CharT, C...>, ActionsT>{std::move(name), path, std::move(actions)};
+template <typename CharT, CharT... C, typename... Actions>
+mount_point<udho::hazo::string::str<CharT, C...>, udho::url::action_table<Actions...>> mount(udho::hazo::string::str<CharT, C...>&& name, const std::string& path, udho::url::action_table<Actions...>&& actions){
+    return mount_point<udho::hazo::string::str<CharT, C...>, udho::url::action_table<Actions...>>{std::move(name), path, std::move(actions)};
 }
+
+/**
+ * @brief Creates a mount_point with a specified name, path, and actions.
+ *
+ * Overload for a single action
+ *
+ * @tparam ActionsT Type of the action.
+ * @tparam CharT Character type for the compile-time string.
+ * @tparam C Characters of the compile-time string.
+ * @param name Compile-time string representing the name of the mount point.
+ * @param path Base URL path for the mount point.
+ *
+ * @param action action bound to the mount point.
+ * @return A fully configured mount_point object.
+ */
+template <typename CharT, CharT... C, typename F, CharT... X, typename MatchT>
+mount_point<udho::hazo::string::str<CharT, C...>, udho::url::action_table<basic_action<F, udho::hazo::string::str<CharT, X...>, MatchT>>> mount(udho::hazo::string::str<CharT, C...>&& name, const std::string& path, basic_action<F, udho::hazo::string::str<CharT, X...>, MatchT>&& action){
+    return mount_point<udho::hazo::string::str<CharT, C...>, udho::url::action_table<basic_action<F, udho::hazo::string::str<CharT, X...>, MatchT>>>{std::move(name), path, udho::url::action_table(std::move(action))};
+}
+
 
 /**
  * @brief Creates a root mount_point, representing the base of the URL space.
@@ -287,6 +334,8 @@ struct is_mount_point<mount_point<StrT, ActionsT>> : std::true_type {
 
 
 }
+
+/// @}
 
 }
 }

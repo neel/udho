@@ -1,0 +1,59 @@
+/**
+ * @defgroup DoxyG_view Views
+ * @brief Functionalities for storing and rendering views and assets.
+ * @ingroup udho
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl Templates
+ * @brief Functionalities for parsing and rendering view templates.
+ * @ingroup DoxyG_view
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl_lua Lua
+ * @brief Lua bridge for compiling and executing view templates.
+ * @ingroup DoxyG_view_tmpl
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl_data Data
+ * @brief Data binding and metadata facilities for view templates.
+ * @ingroup DoxyG_view_tmpl
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl_layout Layout
+ * @brief Template layout, document, presentation, and rendering components.
+ * @ingroup DoxyG_view_tmpl
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl_layout_placeholders Placeholder System
+ * @brief Flexible template system for managing layout sections with content and properties.
+ * @ingroup DoxyG_view_tmpl_layout
+ */
+
+/**
+ * @defgroup DoxyG_view_resources Resources
+ * @brief Resources subsystem for storing views and assets.
+ * @ingroup DoxyG_view
+ */
+
+/**
+ * @defgroup DoxyG_view_resources_tmpl View Templates
+ * @brief View template resources written in supported foreign languages.
+ * @ingroup DoxyG_view_resources
+ */
+
+/**
+ * @defgroup DoxyG_view_resources_assets Assets
+ * @brief Functionalities for storing and rendering assets.
+ * @ingroup DoxyG_view_resources
+ */
+
+/**
+ * @defgroup DoxyG_view_tmpl_asset_loaders Asset Loader System
+ * @brief Manages loading and embedding of web assets (JS/CSS) with dependency tracking.
+ * @ingroup DoxyG_view_resources_assets
+ */

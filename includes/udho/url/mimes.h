@@ -12,8 +12,13 @@ namespace udho{
 namespace url{
 
 /**
+ * @addtogroup DoxyG_url_router
+ * @{
+ */
+
+
+/**
  * @brief The mime_registry class
- * @ingroup Router
  */
 struct mime_registry{
 
@@ -108,12 +113,13 @@ struct mime_registry{
      *
      * @note Extension is case-insensitive (automatically lowercased)
      * @warning Overwrites existing entries for the same extension
-     * @example
+     * @code{.cpp}
      * // Register Markdown files
      * explorer.mime("md", "text/markdown");
      *
      * // Register custom application type
      * explorer.mime("myapp", "application/x-myapp");
+     * @endcode
      */
     mime_registry& mime(const std::string& extension, const std::string& mime){
         static const std::regex ext_re("^[a-zA-Z0-9_]+$");
@@ -203,6 +209,8 @@ struct mime_registry{
 private:
     std::map<std::string, std::string> _mapping;
 };
+
+/// @}
 
 }
 }

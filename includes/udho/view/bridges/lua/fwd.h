@@ -28,7 +28,6 @@
 #ifndef UDHO_VIEW_BRIDGES_LUA_FWD_H
 #define UDHO_VIEW_BRIDGES_LUA_FWD_H
 
-
 namespace udho{
 namespace view{
 namespace data{
@@ -36,6 +35,11 @@ namespace bridges{
 
 namespace detail{
 namespace lua{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
 
 struct state;
 
@@ -46,9 +50,10 @@ struct compiler;
 
 struct script;
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

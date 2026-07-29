@@ -43,8 +43,8 @@ namespace pg{
 namespace decorators{
     
 /**
- * @ingroup decorators
- * @addtogroup values
+ * @ingroup DoxyG_db_pg_decorators
+ * @addtogroup DoxyG_db_pg_decorators_values
  * @{
  */
 

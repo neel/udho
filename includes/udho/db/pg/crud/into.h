@@ -38,7 +38,7 @@ namespace pg{
     
 /**
  * @brief INTO query.
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * @tparam RelationT 
  */
 template <typename RelationT>
@@ -114,4 +114,3 @@ struct into{
 }
 
 #endif // UDHO_DB_PG_CRUD_INTO_H
-

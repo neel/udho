@@ -1,6 +1,11 @@
 #ifndef UDHO_VIEW_DATA_DETAIL_BIND_H
 #define UDHO_VIEW_DATA_DETAIL_BIND_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <udho/view/data/type.h>
 
 namespace udho{
@@ -67,7 +72,6 @@ struct bind<BridgeT, ClassT, false>{
  *
  * }
  * @endcode
- * @ingroup view
  */
 template <typename BridgeT, typename ClassT>
 struct bind: detail::bind<BridgeT, ClassT>{};
@@ -76,5 +80,7 @@ struct bind: detail::bind<BridgeT, ClassT>{};
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_DATA_DETAIL_BIND_H

@@ -303,7 +303,7 @@ TEST_CASE("url router can apply configurations", "[url][router][options]") {
     |   udho::url::slot("f2"_h,  &callbacks::f2)  << udho::url::regx(udho::url::verb::get, "/f2-(\\d+)/(\\w+)", "/f2-{}/{}").options(opt::a("x2"))
     ;
 
-    auto table  = udho::url::mount_point{"root"_h, "/", std::move(routes1)} | udho::url::mount_point{"m2"_h, "/m2", std::move(routes2)};
+    auto table  = udho::url::mount("root"_h, "/", std::move(routes1)) | udho::url::mount("m2"_h, "/m2", std::move(routes2));
     auto router = udho::url::router(std::move(table));
 
     all_options_type all_options;

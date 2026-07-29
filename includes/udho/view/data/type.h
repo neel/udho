@@ -28,6 +28,8 @@
 #ifndef UDHO_VIEW_DATA_TYPE_H
 #define UDHO_VIEW_DATA_TYPE_H
 
+
+
 #include <type_traits>
 
 namespace udho{
@@ -35,7 +37,11 @@ namespace view{
 namespace data{
 
 /**
- * @ingroup view
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
+/**
  * @brief declare metatype for the Class
  * @tparam Class the class for which a metatype has to be declared
  */
@@ -44,7 +50,6 @@ struct type {};
 
 
 /**
- * @ingroup view
  * @brief Default metatype function template used when specific type overloads are absent.
  *
  * This function serves as a default implementation of the metatype function for any class type that is not explicitly overloaded.
@@ -136,13 +141,16 @@ auto metatype(udho::view::data::type<ClassT>){
 
 /**
  * @brief checks whether a metatype overload exists for a given class
- * @ingroup view
  */
 template <typename ClassT>
 struct has_metatype: std::integral_constant<bool, !std::is_void_v<decltype(metatype(std::declval<type<ClassT>>()))>>{};
 
+/** @} */
+
 }
 }
 }
+
+
 
 #endif // UDHO_VIEW_DATA_TYPE_H

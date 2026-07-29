@@ -39,6 +39,11 @@ namespace tmpl{
 
 // multi_substore
 
+/**
+ * @addtogroup DoxyG_view_resources_tmpl
+ * @{
+ */
+
 #ifndef __DOXYGEN__
 
 template <typename BridgeT, typename TailT = void>
@@ -133,7 +138,6 @@ struct store<Bridge>: store_<Bridge> {
 #else
 
 /**
- * @ingroup view
  * @brief template store containing multiple substores each with a different bridge.
  * Provides a unified interface to manage a collection of substores, each tailored to a specific bridge type.
  * @tparam Bridges Variadic template parameters representing view bridges
@@ -269,7 +273,6 @@ class const_store{
 #else
 
 /**
- * @ingroup view
  * @brief readonly interface to multi substore
  * @tparam Bridges... set of bridges of which a readonly interface is requested (defaults to void)
  */
@@ -315,6 +318,11 @@ struct const_store{
 //         std::string _prefix;
 //         const const_multi_substore<Bridges...>& _multi_substore;
 // };
+
+/**
+ * @}
+ * 
+ */
 
 }
 

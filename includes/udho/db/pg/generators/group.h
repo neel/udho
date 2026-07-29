@@ -40,7 +40,7 @@ namespace generators{
     
 /**
  * @brief generates group by part of a select query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  * @tparam Fields... fields to use in teh group by query
  */
 template <typename... Fields>

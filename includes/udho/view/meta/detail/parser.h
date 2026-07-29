@@ -1,6 +1,11 @@
 #ifndef UDHO_VIEW_META_PARSER_H
 #define UDHO_VIEW_META_PARSER_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <map>
 #include <string>
 #include <tao/pegtl.hpp>
@@ -166,5 +171,7 @@ struct ast{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_META_PARSER_H

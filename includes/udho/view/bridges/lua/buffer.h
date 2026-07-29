@@ -41,6 +41,11 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
 struct buffer{
     inline explicit buffer(std::size_t min_size = 0) {
         if(min_size > 0){
@@ -116,9 +121,10 @@ struct buffer{
         std::string _buffer;
 };
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

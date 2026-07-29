@@ -10,11 +10,17 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/asset/store.h>
 #include <udho/view/resources/store.h>
+#include <udho/view/tmpl/layout/fwd.h>
 
 namespace udho{
 namespace view{
 namespace tmpl{
 namespace layout{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
 
 /**
  * @struct meta_tags
@@ -238,8 +244,6 @@ struct document_preamble{
         std::string _title;
 };
 
-template <typename PlaceholderT>
-struct basic_document;
 
 /**
  * @brief A document wraps multiple view outputs into an envelop.
@@ -360,6 +364,8 @@ struct basic_document<basic_placeholder<Spots...>>: protected document_preamble,
  * @brief Standard HTML document using the standard placeholder arrangement.
  */
 using standard_document = basic_document<placeholders::standard>;
+
+/** @} */
 
 }
 }

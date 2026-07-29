@@ -15,8 +15,12 @@ namespace resources{
 namespace asset{
 
 /**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
+/**
  * @brief description of an asset
- * @ingroup view
  */
 class asset_registration_info{
     using resource_ptr = std::unique_ptr<asset::abstract_resource>;
@@ -95,6 +99,8 @@ class asset_registration_info{
                 fvar("type",        &asset_registration_info::type_str);
     }
 };
+
+/** @} */
 
 }
 

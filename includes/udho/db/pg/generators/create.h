@@ -91,7 +91,7 @@ struct create_{
 
 /**
  * @brief generator for create query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename RelationT>
 struct create{

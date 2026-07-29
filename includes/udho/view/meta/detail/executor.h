@@ -1,6 +1,11 @@
 #ifndef UDHO_VIEW_META_EXECUTOR_H
 #define UDHO_VIEW_META_EXECUTOR_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <map>
 #include <vector>
 #include <string>
@@ -169,5 +174,7 @@ namespace detail{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_META_EXECUTOR_H

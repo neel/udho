@@ -43,6 +43,11 @@ namespace udho{
 namespace view{
 namespace resources{
 
+/**
+ * @addtogroup DoxyG_view_resources
+ * @{
+ */
+
 template <typename... Bridges>
 struct store;
 
@@ -62,17 +67,44 @@ template <>
 struct prefixed_store<>;
 
 
+/**
+ * @brief Prefix-bound insertion interface for resource store.
+ *
+ * Resources inserted through this proxy are registered using the prefix
+ * supplied during construction.
+ */
 template <>
 struct prefixed_store<>{
     using store_type = store<>;
 
+    /**
+     * @brief Constructs a prefix-bound store proxy.
+     * @param store Resource store receiving inserted assets.
+     * @param prefix Prefix assigned to each inserted asset.
+     */
     explicit prefixed_store(store_type& store, const std::string& prefix): _store(store), _prefix(prefix) {}
+
+    /// @brief Copying a prefix-bound store proxy is disabled.
     prefixed_store(const prefixed_store&) = delete;
+
+    /// @brief Move-constructs a prefix-bound store proxy.
     prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
 
+    /**
+     * @brief Adds an asset using this proxy's prefix.
+     * @tparam AssetType Asset category.
+     * @param res Asset transferred to the underlying store.
+     */
     template <asset::type AssetType>
     void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res);
 
+    /**
+     * @brief Adds an asset through an lvalue prefix proxy.
+     * @tparam AssetType Asset category.
+     * @param pstore Prefix-bound destination store.
+     * @param res Asset transferred to the underlying store.
+     * @return The supplied prefix proxy.
+     */
     template <asset::type AssetType>
     friend prefixed_store<>& operator<<(prefixed_store<>& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
         pstore.add(std::move(res));
@@ -85,6 +117,13 @@ struct prefixed_store<>{
     //     return pstore;
     // }
 
+    /**
+     * @brief Adds an asset through a temporary prefix proxy.
+     * @tparam AssetType Asset category.
+     * @param pstore Prefix-bound destination store.
+     * @param res Asset transferred to the underlying store.
+     * @return The supplied temporary prefix proxy.
+     */
     template <asset::type AssetType>
     friend prefixed_store<>&& operator<<(prefixed_store<>&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
         pstore.add(std::move(res));
@@ -145,7 +184,6 @@ void prefixed_store<>::add(std::unique_ptr<asset::basic_resource<AssetType>>&& r
 }
 
 /**
- * @ingroup view
  * @brief The resource store combines storage for view templates written in foreign languages (such as lua) as well as assets (e.g. js, css, images etc..)
  * @tparam Bridges... the foreign language bridges for view executaion of the views
  *
@@ -231,35 +269,84 @@ struct store{
         tmpl_multi_substore_type _tmpls;
 };
 
+/**
+ * @brief Prefix-bound insertion interface for a resource store.
+ *
+ * View template resources and assets inserted through this proxy are
+ * registered using the prefix supplied during construction.
+ *
+ * @tparam Bridges Foreign-language bridges supported by the resource store.
+ */
 template <typename... Bridges>
 struct prefixed_store{
     using store_type = store<Bridges...>;
 
+    /**
+     * @brief Constructs a prefix-bound store proxy.
+     * @param store Resource store receiving inserted resources.
+     * @param prefix Prefix assigned to each inserted resource.
+     */
     explicit prefixed_store(store_type& store, const std::string& prefix): _store(store), _prefix(prefix) {}
+
+    /// @brief Copying a prefix-bound store proxy is disabled.
     prefixed_store(const prefixed_store&) = delete;
+
+    /// @brief Move-constructs a prefix-bound store proxy.
     prefixed_store(prefixed_store&& other): _store(other._store), _prefix(std::move(other._prefix)) {}
 
+    /**
+     * @brief Adds a bridged view template resource using this proxy's prefix.
+     * @tparam Bridge Bridge used to compile or execute the view template.
+     * @param res Bridged view template resource.
+     */
     template <typename Bridge>
     void add(udho::view::resources::tmpl::bridged<Bridge>&& res){
         _store.template add<Bridge>(_prefix, std::move(res.resource()));
     }
+
+    /**
+     * @brief Adds an asset using this proxy's prefix.
+     * @tparam AssetType Asset category.
+     * @param res Asset transferred to the underlying store.
+     */
     template <asset::type AssetType>
     void add(std::unique_ptr<asset::basic_resource<AssetType>>&& res){
         _store.assets().add(_prefix, std::move(res));
     }
 
+    /**
+     * @brief Adds a bridged view template through an lvalue prefix proxy.
+     * @tparam Bridge Bridge associated with the view template.
+     * @param pstore Prefix-bound destination store.
+     * @param res Bridged view template resource.
+     * @return The supplied prefix proxy.
+     */
     template <typename Bridge>
     friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return pstore;
     }
 
+    /**
+     * @brief Adds a bridged view template through a temporary prefix proxy.
+     * @tparam Bridge Bridge associated with the view template.
+     * @param pstore Prefix-bound destination store.
+     * @param res Bridged view template resource.
+     * @return The supplied temporary prefix proxy.
+     */
     template <typename Bridge>
     friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, udho::view::resources::tmpl::bridged<Bridge>&& res){
         pstore.add(std::forward<udho::view::resources::tmpl::bridged<Bridge>>(res));
         return std::forward<prefixed_store<Bridges...>>(pstore);
     }
 
+    /**
+     * @brief Adds an asset through an lvalue prefix proxy.
+     * @tparam AssetType Asset category.
+     * @param pstore Prefix-bound destination store.
+     * @param res Asset transferred to the underlying store.
+     * @return The supplied prefix proxy.
+     */
     template <asset::type AssetType>
     friend prefixed_store<Bridges...>& operator<<(prefixed_store<Bridges...>& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
         pstore.add(std::move(res));
@@ -272,6 +359,13 @@ struct prefixed_store{
     //     return pstore;
     // }
 
+    /**
+     * @brief Adds an asset through a temporary prefix proxy.
+     * @tparam AssetType Asset category.
+     * @param pstore Prefix-bound destination store.
+     * @param res Asset transferred to the underlying store.
+     * @return The supplied temporary prefix proxy.
+     */
     template <asset::type AssetType>
     friend prefixed_store<Bridges...>&& operator<<(prefixed_store<Bridges...>&& pstore, std::unique_ptr<asset::basic_resource<AssetType>>&& res){
         pstore.add(std::move(res));
@@ -362,7 +456,6 @@ namespace detail {
 }
 
 /**
- * @ingroup view
  * @brief Once a resource store is constructed, it is accessed through a const_store.
  * This ensures that the resources are added to the store only once during the initialization and never again.
  * The const_store only supports readonly operations on the resource store (including rendering of the views).
@@ -455,17 +548,39 @@ struct const_store{
         }
     }
 
+    /**
+     * @brief Returns metadata for a view registered on a specific bridge.
+     * @tparam XBridgeT Bridge on which the view is registered.
+     * @param prefix View prefix.
+     * @param name View name.
+     * @return Parsed metadata header for the view.
+     */
     template <typename XBridgeT>
     const udho::view::data::bridges::view_header& header(const std::string& prefix, const std::string& name) const {
         udho::view::resources::tmpl::const_substore<XBridgeT> tmpl_substore = tmpl<XBridgeT>();
         return tmpl_substore.header(prefix, name);
     }
 
+    /**
+     * @brief Returns view metadata while selecting the bridge at runtime.
+     * @param lang Bridge language name.
+     * @param prefix View prefix.
+     * @param name View name.
+     * @return Parsed metadata header for the view.
+     * @throws std::runtime_error If the requested bridge is unavailable.
+     */
     const udho::view::data::bridges::view_header& header(const std::string& lang, const std::string& prefix, const std::string& name) const {
         view_autoresolver_type renderer{*this};
         return renderer.header(lang, prefix, name);
     }
 
+    /**
+     * @brief Returns metadata for a view identified by a complete address.
+     * @param view_address Address in `language://prefix/name` form.
+     * @return Parsed metadata header for the view.
+     * @throws std::runtime_error If the address cannot be parsed or its bridge
+     *         is unavailable.
+     */
     const udho::view::data::bridges::view_header& header(std::string view_address) const{
         std::string lang, prefix, name;
         bool parsed = detail::parse_view_address(view_address, lang, prefix, name);
@@ -496,6 +611,10 @@ struct const_store{
      */
     const asset_substore_readonly_img& img() const { return _assets_img; }
 
+    /**
+     * @brief Returns the label of the view bridge.
+     * @return Bridge collection label.
+     */
     std::string bridges_label() const {
         return _tmpls_proxy.label();
     }
@@ -621,6 +740,8 @@ struct const_store<>{
 //
 // };
 
+
+/** @} */
 
 }
 }

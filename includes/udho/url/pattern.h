@@ -23,6 +23,11 @@ namespace udho{
 namespace url{
 
 /**
+ * @addtogroup DoxyG_url_pattern
+ * @{
+ */
+
+/**
  * @brief patterns to match against string url
  */
 namespace pattern{
@@ -75,13 +80,13 @@ namespace detail{
 
 /**
  * @brief A template struct for matching and transforming URL patterns based on scanf-like patterns specified in p1729.
- * @ingroup Router
+ *
  * This class supports matching URLs using a simplified scanf format, allowing for extraction of components from the URL
  *
  * @tparam CharT Character type for strings.
  * @see pattern::p1729() for a convenient way to create instances of this class.
  * @note Dependency: This class requires the scnlib library to parse the p1729 format strings.
- * @example
+ * @code{.cpp}
  * match<pattern::formats::p1729, char> matcher(udho::url::verb::get, "/user/{}/{:d}", "/user/{}/{}");
  * std::string url = "/user/john/42";
  * std::tuple<std::string, int> args;
@@ -91,6 +96,7 @@ namespace detail{
  *     std::cout << href << std::endl;
  *     // Outputs: /user/john/42
  * }
+ * @endcode
  */
 template <typename CharT, typename... Params>
 struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT>{
@@ -203,12 +209,12 @@ struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief A template struct for strict URL pattern matching
- * @ingroup Router
+ *
  * This class provides the functionality to match URLs strictly against fixed string patterns.
  *
  * @tparam CharT Character type for strings.
  * @see pattern::fixed() for a convenient way to create instances of this class.
- * @example
+ * @code{.cpp}
  * // Example of matching and generating URLs from a fixed pattern
  * match<char> matcher(udho::url::verb::get, "/example/path", "/example/path");
  * std::string url = "/example/path";
@@ -218,6 +224,7 @@ struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT
  *     std::cout << href << std::endl;
  *     // Outputs: /example/path
  * }
+ * @endcode
  */
 template <typename CharT, typename... Params>
 struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT>{
@@ -344,14 +351,14 @@ struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief A specialized match struct for handling the home or root URL pattern in web applications.
- * @ingroup Router
+ *
  * This specialization of the match struct is designed specifically for matching the root ("/") or an empty string.
  * The ability to match an empty string as home is crucial for the root paths where the absence of a path segment
  * (e.g., accessing the domain without any additional slash) should logically route to the home page.
  *
  * @tparam CharT Character type, specialized to char in this instance.
  * @see pattern::home() for a convenient way to create instances of this class.
- * @example
+ * @code{.cpp}
  * match<udho::url::pattern::formats::home, char> matcher(udho::url::verb::GET);
  * std::string url = "/";
  * if(matcher.find(url)) {
@@ -362,6 +369,7 @@ struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT
  * if(matcher.find(empty_url)) {
  *     std::cout << "Empty URL treated as home." << std::endl; // Outputs: Empty URL treated as home.
  * }
+ * @endcode
  */
 template <typename... Params>
 struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
@@ -462,13 +470,13 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
 
 /**
  * @brief A template struct for matching url patterns based on regular expressions.
- * @ingroup Router
+ *
  * This class allows matching of URLs against specified regular expressions and provides functionality
  * to capture parts of the match and use them for constructing new strings.
  *
  * @tparam CharT Character type for strings and regular expressions.
  * @see pattern::regx() for a convenient way to create instances of this class.
- * @example
+ * @code{.cpp}
  * match<pattern::formats::regex, char> matcher(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
  * std::string url = "/user/john/42";
  * if(matcher.find(url)) {
@@ -481,6 +489,7 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
  *     std::cout << href << std::endl;
  *     // Outputs: /user/john/42
  * }
+ * @endcode
  */
 template <typename CharT, typename... Params>
 struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT>{
@@ -553,12 +562,13 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
      * @param tuple Tuple to store the matched elements.
      * @return True if the pattern matches the subject, otherwise false.
      *
-     * @example
+     * @code{.cpp}
      * match<pattern::formats::regex, char> matcher(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
      * std::tuple<std::string, std::uint32_t> args;
      * if(matcher.find("/user/alexa/12345", args)) {
      *     // args now holds the captured "alexa" and 12345
      * }
+     * @endcode
      */
     template <typename TupleT>
     bool find(const string_type& subject, TupleT& tuple) const {
@@ -578,10 +588,11 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
      * @param subject The string to be checked.
      * @return True if the pattern matches the subject, otherwise false.
      *
-     * @example
+     * @code{.cpp}
      * match<pattern::formats::regex, char> matcher(udho::url::verb::get, "/user/(\\w+)/(\\d+)", "/user/{}/{}");
      * auto href = matcher.replace(std::make_tuple("alexa", 12345));
      * // href would be "/user/alexa/12345"
+     * @endcode
      */
     bool find(const string_type& subject) const {
         std::smatch matches;
@@ -631,7 +642,7 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
 
 /**
  * @brief Creates a regex pattern match object.
- * @ingroup Router
+ *
  * This function constructs a `match` object specialized for regex pattern matching.
  * It uses the provided HTTP method, pattern, and replacement string.
  *
@@ -649,7 +660,7 @@ struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> reg
 
 /**
  * @brief Creates a regex pattern match object.
- * @ingroup Router
+ *
  * This function constructs a `match` object specialized for regex pattern matching.
  * It uses the provided HTTP method, pattern, and replacement string.
  *
@@ -667,7 +678,7 @@ struct pattern::match<pattern::formats::regex, udho::url::no_options, CharT> reg
 
 /**
  * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
- * @ingroup Router
+ *
  * Overloads allow passing string literals directly. If only one pattern is provided,
  * it is used for both matching and replacement, simplifying cases where no transformation is needed.
  *
@@ -686,7 +697,7 @@ struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> sca
 
 /**
  * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
- * @ingroup Router
+ *
  * Overloads allow passing string literals directly. If only one pattern is provided,
  * it is used for both matching and replacement, simplifying cases where no transformation is needed.
  *
@@ -705,7 +716,7 @@ struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> sca
 
 /**
  * @brief Creates a p1729 pattern match object with optional same-pattern replacement.
- * @ingroup Router
+ *
  * Overloads allow passing string literals directly. If only one pattern is provided,
  * it is used for both matching and replacement, simplifying cases where no transformation is needed.
  *
@@ -723,7 +734,7 @@ struct pattern::match<pattern::formats::p1729, udho::url::no_options, CharT> sca
 
 /**
  * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
- * @ingroup Router
+ *
  * This function simplifies the creation of match objects for fixed patterns,
  *
  * @tparam CharT The character type of the strings.
@@ -740,7 +751,7 @@ struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fix
 
 /**
  * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
- * @ingroup Router
+ *
  * This function simplifies the creation of match objects for fixed patterns,
  *
  * @tparam CharT The character type of the strings.
@@ -757,7 +768,7 @@ struct pattern::match<pattern::formats::fixed, udho::url::no_options, CharT> fix
 
 /**
  * @brief Creates a fixed pattern match object, optionally using the same string for matching and replacement.
- * @ingroup Router
+ *
  * This function simplifies the creation of match objects for fixed patterns,
  *
  * @tparam CharT The character type of the strings.
@@ -784,6 +795,7 @@ inline struct pattern::match<pattern::formats::home, udho::url::no_options, char
     return pattern::match<pattern::formats::home, udho::url::no_options, char>{method};
 }
 
+/// @}
 
 }
 }

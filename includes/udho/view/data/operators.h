@@ -28,6 +28,8 @@
 #ifndef UDHO_VIEW_DATA_OPERATORS_H
 #define UDHO_VIEW_DATA_OPERATORS_H
 
+
+
 #include <string>
 #include <utility>
 #include <type_traits>
@@ -39,6 +41,11 @@
 namespace udho{
 namespace view{
 namespace data{
+
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
 
 namespace detail{
 
@@ -226,8 +233,12 @@ typename concat_<assoc_<MembersT>, RhsT>::result_type operator,(assoc_<MembersT>
 
 }
 
+/** @} */
+
 }
 }
 }
+
+
 
 #endif // UDHO_VIEW_DATA_OPERATORS_H

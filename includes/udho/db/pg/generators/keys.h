@@ -43,7 +43,7 @@ namespace generators{
  * @brief Generated comma separeted keys as OZO string.
  * e.g. id, first_name, last_name, which can be used inside an insert query.
  * @tparam Fields... One or more fields 
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename... Fields>
 struct keys<pg::basic_schema<Fields...>>{

@@ -45,7 +45,7 @@ namespace pg{
     
 /**
  * @brief INSERT query builder.
- * @ingroup crud
+ * @ingroup DoxyG_db_pg_crud
  * insert returning one pg::schema<Fields...> (e.g. the record just inserted)
  * modifiable pg::schema<Fields...> for assignments using [] 
  * @note no where query

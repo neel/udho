@@ -1,6 +1,8 @@
 #ifndef UDHO_VIEW_META_META_H
 #define UDHO_VIEW_META_META_H
 
+
+
 #include <string>
 #include <exception>
 #include <udho/url/detail/format.h>
@@ -12,7 +14,11 @@ namespace data{
 namespace meta{
 
 /**
- * @ingroup view
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
+/**
  * @brief Executes a given operation on data.
  *
  * This function executes an operation specified by a syntax string.
@@ -32,7 +38,6 @@ void exec(DataT& data, const std::string& syntax){
 }
 
 /**
- * @ingroup view
  * @brief Attempts to retrieve a value based on a given expression.
  *
  * This function template tries to get a value by executing a reader executor constructed with the given syntax.
@@ -58,7 +63,6 @@ bool get(DataT& data, const std::string& syntax, ValueT& value){
 }
 
 /**
- * @ingroup view
  * @brief Retrieves a value based on a given syntax or throws an exception if unsuccessful.
  *
  * This function template retrieves a value by executing a reader executor. If the value cannot be successfully retrieved, it throws a runtime_error.
@@ -89,7 +93,6 @@ ValueT get(DataT& data, const std::string& syntax){
 }
 
 /**
- * @ingroup view
  * @brief Sets a value on the data based on a given syntax.
  *
  * This function template attempts to set a value by executing a writer executor constructed with the given syntax. It returns a boolean indicating if the value was successfully set.
@@ -113,9 +116,13 @@ bool set(DataT& data, const std::string& syntax, const ValueT& value){
     return function.assigned();
 }
 
+/** @} */
+
 }
 }
 }
 }
+
+
 
 #endif // UDHO_VIEW_META_META_H

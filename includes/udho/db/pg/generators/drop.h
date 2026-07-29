@@ -42,7 +42,7 @@ namespace generators{
 
 /**
  * @brief generator for drop query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename RelationT>
 struct drop{
@@ -68,4 +68,3 @@ struct drop{
 }
 
 #endif // UDHO_DB_PG_GENERATORS_PARTS_DROP_H
-

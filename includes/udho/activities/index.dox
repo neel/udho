@@ -1,0 +1,6 @@
+/**
+ * @defgroup activities Activities
+ * @brief Udho asynchronous activities.
+ * @copydoc Activities
+ * @ingroup udho
+ */

@@ -10,6 +10,11 @@ namespace resources{
 
 namespace asset{
 
+/**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
+
 namespace utils{
 
 inline std::string to_string(asset::type type){
@@ -55,6 +60,9 @@ inline std::string to_string(asset::source::type type){
 
 
 }
+
+/** @} */
+
 }
 
 }

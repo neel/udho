@@ -39,7 +39,7 @@ namespace generators{
     
 /**
  * @brief values ([value]*) part of the insert query
- * @ingroup generators
+ * @ingroup DoxyG_db_pg_generators
  */
 template <typename... Fields>
 struct values<pg::basic_schema<Fields...>>{

@@ -44,6 +44,11 @@ namespace detail{
 namespace lua{
 
 /**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
+/**
  * @class script
  * @brief Extends the generic script functionality to implement Lua-specific script operations.
  *
@@ -160,9 +165,10 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
 
 };
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

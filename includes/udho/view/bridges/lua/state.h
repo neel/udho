@@ -47,6 +47,11 @@ namespace bridges{
 namespace detail{
 namespace lua{
 
+/**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
 namespace scripts{
 
 inline const std::string& dir() {
@@ -310,14 +315,13 @@ struct state{
         mutable std::vector<std::function<void (const state&)>> _unbinders;
 };
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }
 }
 
 #endif // UDHO_VIEW_BRIDGES_LUA_BRIDGE_H
-
-

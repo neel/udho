@@ -43,8 +43,8 @@ namespace pg{
 namespace decorators{
 
 /**
- * @ingroup decorators
- * @addtogroup assignments
+ * @ingroup DoxyG_db_pg_decorators
+ * @addtogroup DoxyG_db_pg_decorators_assignments
  * @brief decorates a schema as comma separeted assignments
  * Given the following:
  * @code 
@@ -100,7 +100,7 @@ namespace decorators{
 
 /**
  * @brief Decorate the schema as comma separeted assignments while using the given field trait.
- * @tparam FieldTraitT The field decoration @ref traits "trait"
+ * @tparam FieldTraitT The field decoration @ref DoxyG_db_pg_decorators_traits "trait"
  */
 template <typename FieldTraitT>
 struct basic_assignments: private FieldTraitT{
@@ -126,7 +126,7 @@ struct basic_assignments: private FieldTraitT{
 
 /**
  * @brief Decorate a subset of the schema as comma separeted assignments while using the given field trait.
- * @tparam FieldTraitT The field decoration @ref traits "trait"
+ * @tparam FieldTraitT The field decoration @ref DoxyG_db_pg_decorators_traits "trait"
  * @tparam Enabler To decide whether to include a given field or not. Usually one of the following:
  *         - @ref udho::db::pg::decorators::logical_and "logical_and" 
  *         - @ref udho::db::pg::decorators::logical_or "logical_or"

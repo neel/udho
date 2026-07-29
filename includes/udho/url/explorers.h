@@ -42,8 +42,12 @@ struct is_smart_ptr: std::bool_constant<is_shared_ptr_v<T> || is_unique_ptr_v<T>
 }
 
 /**
+ * @addtogroup DoxyG_url_explorers
+ * @{
+ */
+
+/**
  * @brief Abstract base class for resource explorers providing unified interface for file/asset access
- * @ingroup Router
  * This class defines the common interface for exploring different types of resources,
  * whether they exist in the filesystem or as embedded assets. Derived classes must
  * implement the core functionality for checking existence, serving content, and listing resources.
@@ -106,7 +110,6 @@ struct abstract_explorer {
 /**
  * @class files
  * @brief Filesystem-based resource explorer
- * @ingroup Router
  * Serves static files from the filesystem.
  * Manages document root directory and ensures secure path resolution.
  */
@@ -218,7 +221,7 @@ struct files: public abstract_explorer, public mime_registry {
 /**
  * @class assets
  * @brief Embedded asset resource explorer
- * @ingroup Router
+ *
  * Serves static files from the asset store.
  */
 struct assets: public abstract_explorer {
@@ -285,7 +288,6 @@ protected:
 /**
  * @class explorers_hub
  * @brief Central registry for managing resource explorers
- * @ingroup Router
  * This class acts as an immutable container for abstract_explorer instances, providing:
  * - Ownership management of explorers
  * - Unique label enforcement
@@ -474,6 +476,8 @@ struct registry{
 };
 
 inline const registry::explorer_ptr registry::nothing = nullptr;
+
+/// @}
 
 }
 }

@@ -35,8 +35,8 @@ namespace pg{
 namespace decorators{
     
 /**
- * @ingroup decorators
- * @addtogroup helpers
+ * @ingroup DoxyG_db_pg_decorators
+ * @addtogroup DoxyG_db_pg_decorators_helpers
  * @{
  */
 

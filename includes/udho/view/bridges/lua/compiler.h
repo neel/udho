@@ -47,6 +47,11 @@ namespace detail{
 namespace lua{
 
 /**
+ * @addtogroup DoxyG_view_tmpl_lua
+ * @{
+ */
+
+/**
  * @struct compiler
  * @brief Compiles Lua scripts into the Lua environment and manages their registration.
  *
@@ -102,9 +107,10 @@ bool compiler::operator()(script_type&& script){
     return it.second;
 }
 
-}
-}
+/** @} */
 
+} // namespace lua
+}
 }
 }
 }

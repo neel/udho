@@ -1,0 +1,25 @@
+/**
+ * @defgroup DoxyG_url URL
+ * @brief Core components for Route construction for url::router
+ * @{
+ *
+ * @defgroup DoxyG_url_pattern URL Matching Patterns
+ * @{
+ * @}
+ *
+ * @defgroup DoxyG_url_router Routing System
+ * @brief Core components for URL routing with template specialization support
+ * @{
+ * @}
+ *
+ * @defgroup DoxyG_url_explorers Explorers
+ * @brief Explorers
+ * @{
+ * @}
+ *
+ * @defgroup DoxyG_url_op Operators
+ * @{
+ * @}
+ *
+ * @}
+ */

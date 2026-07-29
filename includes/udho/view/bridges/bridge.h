@@ -96,7 +96,7 @@ enum class policy{
 
 /**
  * @brief common functionalities required by bridges of all languages
- * @ingroup view
+ * @ingroup DoxyG_view
  */
 struct common{
     /**
@@ -112,7 +112,7 @@ struct common{
 
 /**
  * @class bridge
- * @ingroup view
+ * @ingroup DoxyG_view
  * @brief Manages the compilation and execution of scripts within a template engine framework.
  *
  * This template class binds scripting functionality with a state management system, allowing for dynamic compilation and execution of templates.

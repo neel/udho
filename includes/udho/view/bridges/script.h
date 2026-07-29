@@ -44,7 +44,7 @@ namespace bridges{
 
 /**
  * @struct basic_script
- * @ingroup view
+ * @ingroup DoxyG_view
  * @brief A specialized stream for handling script generation, particularly useful in scenarios where scripts or code need to be dynamically generated from templates.
  *
  * Inherits from `stream<char, '\t'>` to utilize generic text streaming capabilities with a focus on script formatting.
@@ -150,4 +150,3 @@ struct basic_script: stream<char, '\t'>{
 }
 
 #endif // UDHO_VIEW_BRIDGES_SCRIPT_H
-

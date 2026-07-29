@@ -53,7 +53,7 @@ namespace pg{
  * requested field is not part of the schema or a value of an unexpected type
  * is being set for a field. 
  *  
- * @ingroup schema
+ * @ingroup DoxyG_db_pg_schema
  */
 template <typename... Fields>
 struct basic_schema: udho::hazo::map_d<Fields...>{
@@ -219,4 +219,3 @@ decltype(auto) operator>>(const basic_schema<Fields...>& sch, T& var){
 }
 
 #endif // UDHO_DB_PG_SCHEMA_BASIC_H
-

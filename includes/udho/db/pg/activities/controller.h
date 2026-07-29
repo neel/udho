@@ -46,7 +46,7 @@ namespace activities{
  * through the underlying init activity.
  * @see udho::activities::init
  * @tparam T... Activity types that are to be performed. 
- * @ingroup pg
+ * @ingroup DoxyG_db_pg
  */
 template <typename... Activities>
 struct controller: udho::db::pg::activities::subtask<udho::activities::init<Activities...>>{

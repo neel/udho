@@ -28,6 +28,7 @@
 #ifndef UDHO_VIEW_DATA_BINDINGS_H
 #define UDHO_VIEW_DATA_BINDINGS_H
 
+
 #include <udho/view/data/fwd.h>
 #include <udho/view/bridges/fwd.h>
 #include <udho/view/data/nvp.h>
@@ -45,8 +46,12 @@ namespace view{
 namespace data{
 
 /**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
+/**
  * @class bindings
- * @ingroup view
  * @brief keeps track of binding of a C++ wiith with a foreign language backend.
  * @tparam StateT the state class representing the state of the foreign language runtime
  * @tparam T type C++ type
@@ -131,9 +136,13 @@ struct binder{
 
 }
 
+/** @} */
+
 }
 }
 }
+
+
 
 
 #endif // UDHO_VIEW_DATA_BINDINGS_H

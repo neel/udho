@@ -28,6 +28,11 @@
 #ifndef UDHO_VIEW_DATA_DETAIL_JSON_H
 #define UDHO_VIEW_DATA_DETAIL_JSON_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <udho/view/data/fwd.h>
 #include <udho/view/data/type.h>
 #include <udho/view/data/nvp.h>
@@ -148,5 +153,7 @@ namespace detail{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_DATA_DETAIL_JSON_H

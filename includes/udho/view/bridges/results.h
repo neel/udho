@@ -14,7 +14,7 @@ namespace bridges{
 
 /**
  * @brief results of view execution
- * @ingroup view
+ * @ingroup DoxyG_view
  * @details Intended to be constructed by a view bridge::exec method.
  */
 struct results{

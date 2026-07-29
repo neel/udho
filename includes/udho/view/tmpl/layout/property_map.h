@@ -26,8 +26,8 @@ namespace layout{
  *
  * @tparam Key The type of the keys. Default is std::string.
  * @tparam Value The type of the values. Default is std::string.
- * @example Example usage of property_map and value_proxy:
- * @code
+ * Example usage of property_map and value_proxy:
+ * @code{.cpp}
  * property_map<std::string, std::string> props;
  * props["color"] = "blue";    // Sets the color property clears all other values added for color key before blue
  * props["color"] += " red";   // Adds another value to the color property
@@ -149,8 +149,8 @@ struct property_map{
      * @brief Gets a range of all values associated with the same key
      * @return Boost range of class name strings
      * @note Returns a transformed range that directly provides class names
-     * @example Iterating through classes:
-     * @code
+     * Iterating through classes:
+     * @code{.cpp}
      * for (const std::string& cls : tag.values("class")) {
      *     std::cout << "Class: " << cls << std::endl;
      * }
@@ -238,8 +238,8 @@ struct property_map{
  * It supports generating properly formatted HTML tags, including handling of self-closing tags
  * and HTML entity escaping for attribute values.
  *
- * @example Example usage of the tag class:
- * @code
+ * Example usage of the tag class:
+ * @code{.cpp}
  * html_tag div("div");
  * div.add_class({"container", "main-content"});
  * div.property("id", "page-container");
@@ -328,9 +328,10 @@ struct basic_html_tag: property_map<std::string, std::string>{
      * @param list Initializer list of class names to add
      * @return Reference to self for method chaining
      * @note Preserves existing classes while adding new ones
-     * @example
+     * @code{.cpp}
      * html_tag div("div");
      * div.add_class({"container", "active"});
+     * @endcode
      */
     inline tag_type& add_class(std::initializer_list<std::string>&& list){
         for(const auto& class_name: list){
@@ -348,10 +349,11 @@ struct basic_html_tag: property_map<std::string, std::string>{
      * @details if no tag name is set yet, then sets name to div, to avoid creation of invalid HTML element
      * @param class_name Class name to add
      * @return Reference to self for method chaining
-     * @example
+     * @code{.cpp}
      * html_tag button("button");
      * button.add_class("primary");
      * button.add_class("large");
+     * @endcode
      */
     inline tag_type& add_class(const std::string& class_name){
         pmap_type::property("class", class_name);
@@ -366,8 +368,8 @@ struct basic_html_tag: property_map<std::string, std::string>{
     }
 
     /**
-     * @example Iterating through classes:
-     * @code
+     * Iterating through classes:
+     * @code{.cpp}
      * html_tag div("div");
      * div.add_class({"container", "active"});
      * for (const std::string& cls : div.classes()) {
@@ -395,8 +397,8 @@ struct basic_html_tag: property_map<std::string, std::string>{
      * 3. Values are HTML-entity escaped automatically
      * 4. Attributes are rendered in insertion order
      *
-     * @example Example with boolean attribute and value trimming:
-     * @code
+     * Example with boolean attribute and value trimming:
+     * @code{.cpp}
      * html_tag input("input");
      * input.property("type", "checkbox");
      * input.property("checked", "");  // Boolean attribute
@@ -444,11 +446,12 @@ struct basic_html_tag: property_map<std::string, std::string>{
     /**
      * @brief Renders the closing tag
      * @return Closing tag string or empty string for self-closing tags
-     * @example
+     * @code{.cpp}
      * html_tag div("div");
      * std::cout << div.open(); // <div>
      * std::cout << "Content";
      * std::cout << div.close(); // </div>
+     * @endcode
      */
     inline std::string close() const {
         return self_closing_tags.count(_name) ? "" : "</" + _name + ">";

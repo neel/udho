@@ -18,7 +18,12 @@ namespace view{
 namespace tmpl{
 
 /**
- * @ingroup view
+ * @addtogroup DoxyG_view_tmpl_layout
+ * @{
+ */
+
+/**
+ * @ingroup DoxyG_view_tmpl_layout
  * @struct parser
  * @brief Handles the parsing of template files into sections based on predefined tags and constructs.
  *
@@ -238,10 +243,11 @@ struct parser{
         std::string _close, _close_comment, _close_verbatim;
 };
 
+/** @} */
+
 }
 
 }
 }
 
 #endif // UDHO_VIEW_PARSER_H
-

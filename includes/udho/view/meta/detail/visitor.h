@@ -1,6 +1,11 @@
 #ifndef UDHO_VIEW_META_VISITOR_H
 #define UDHO_VIEW_META_VISITOR_H
 
+/**
+ * @addtogroup DoxyG_view_tmpl_data
+ * @{
+ */
+
 #include <map>
 #include <vector>
 #include <string>
@@ -437,5 +442,7 @@ namespace detail{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_VIEW_META_VISITOR_H

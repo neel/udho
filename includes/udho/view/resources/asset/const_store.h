@@ -13,9 +13,12 @@ namespace resources{
 
 namespace asset{
 
+/**
+ * @addtogroup DoxyG_view_resources_assets
+ * @{
+ */
 
 /**
- * @ingroup view
  * @brief copiable readonly accessor for the asset store
  * @details the lifetime of the store must be longer than the readonly accessor as it contains a const reference to the actual store
  */
@@ -418,7 +421,7 @@ private:
     const store_type& _store;
 };
 
-
+/** @} */
 
 }
 
