@@ -335,23 +335,23 @@ TEST_CASE("url common functionalities", "[url][pattern][router]") {
     CHECK(mount_point("f1"_h, 24, "world", 2.4, 0) == "/pchain/f1/24/world/2.4");
     CHECK(mount_point.fill("f1"_h, std::make_tuple(24, "world", 2.4, 0)) == "/pchain/f1/24/world/2.4");
 
-    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/") == 4);
-    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/f1/23/hello/24/1") == 3);
+    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/") == 0);
+    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/f1/23/hello/24/1") == 1);
     CHECK(mount_point.index_of(boost::beast::http::verb::get, "/f2-23/hello") == 2);
-    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/x/f0") == 1);
-    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/x/f1/23/hello/24/1") == 0);
+    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/x/f0") == 3);
+    CHECK(mount_point.index_of(boost::beast::http::verb::get, "/x/f1/23/hello/24/1") == 4);
 
     // std::cout << mount_point << std::endl;
     auto m2 = udho::url::mount("root"_h, "/", std::move(chain3));
 
-    CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f2-23/hello") == 1);
-    CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f3/hello/world/24/1") == 0);
+    CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f2-23/hello") == 5);
+    CHECK(m2.index_of(boost::beast::http::verb::get, "/x/f3/hello/world/24/1") == 6);
 
     {
-        m2.invoke_at(1, "/x/f2-23/hello");
+        m2.invoke_at(5, "/x/f2-23/hello");
         CHECK(x._msg == "f2");
     } {
-        m2.invoke_at(0, "/x/f3/42/world/24/1");
+        m2.invoke_at(6, "/x/f3/42/world/24/1");
         CHECK(x._msg == "f3");
     }
 
@@ -363,11 +363,49 @@ TEST_CASE("url common functionalities", "[url][pattern][router]") {
     auto router = udho::url::router(std::move(chain4));
 
     CHECK(router["chain"_h]["f0"_h].symbol()                   == "f0()");
+
+    auto chain_f1_index = router.index_of(boost::beast::http::verb::get, std::string("/pchain/f1/23/hello/24/1"));
+    CHECK(chain_f1_index.valid());
+    CHECK(chain_f1_index.mountpoint() == 0);
+    CHECK(chain_f1_index.action() == 1);
+
+    auto root_xf2_index = router.index_of(boost::beast::http::verb::get, std::string("/x/f2-23/hello"));
+    CHECK(root_xf2_index.valid());
+    CHECK(root_xf2_index.mountpoint() == 1);
+    CHECK(root_xf2_index.action() == 5);
+
     CHECK(router.find(boost::beast::http::verb::get, std::string("/pchain/"))                 == true);
     CHECK(router.find(boost::beast::http::verb::get, std::string("/pchain"))                  == true);
     CHECK(router.find(boost::beast::http::verb::get, std::string("/pchain/f1/23/hello/24/1")) == true);
     CHECK(router.find(boost::beast::http::verb::get, std::string("/f1/23/hello/24/1"))        == true);
     CHECK(router.find(boost::beast::http::verb::get, std::string("f1/23/hello/24/1"))         == false);
+}
+
+TEST_CASE("Router index lookup negative paths", "[url][router][invalid]") {
+    using namespace udho::hazo::string::literals;
+
+    auto actions =
+        udho::url::slot("f0"_h, &f0) <<
+        udho::url::fixed(udho::url::verb::get, "/action", "/action");
+    auto router = udho::url::router(udho::url::mount("mounted"_h, "/mounted", std::move(actions)));
+
+    SECTION("URL matches neither a mount point nor an action") {
+        auto index = router.index_of(boost::beast::http::verb::get, std::string("/unknown/not-an-action"));
+
+        CHECK_FALSE(index.valid());
+    }
+
+    SECTION("URL matches the mount point but no action in it") {
+        auto index = router.index_of(boost::beast::http::verb::get, std::string("/mounted/not-an-action"));
+
+        CHECK_FALSE(index.valid());
+    }
+
+    SECTION("URL matches an action path but not its mount point") {
+        auto index = router.index_of(boost::beast::http::verb::get, std::string("/action"));
+
+        CHECK_FALSE(index.valid());
+    }
 }
 
 TEST_CASE("Extended pattern matching operations", "[url][pattern][extended]") {
@@ -404,4 +442,3 @@ TEST_CASE("Extended pattern matching operations", "[url][pattern][extended]") {
         }
     }
 }
-

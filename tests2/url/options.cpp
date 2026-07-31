@@ -309,8 +309,9 @@ TEST_CASE("url router can apply configurations", "[url][router][options]") {
     all_options_type all_options;
 
     {
-        router.reconfigure_for(udho::url::detail::route_index{"f1", 0, 0}, all_options);
-        CHECK(all_options[opt::a::val] == "a2");
+        bool success = router.reconfigure_for(udho::url::detail::route_index{"f1", 0, 2}, all_options);
+        CHECK(success);
+        CHECK(all_options[opt::a::val].value() == "a2");
     }{
         router.reconfigure_for(udho::url::detail::route_index{"f1", 0, 1}, all_options);
         CHECK(all_options[opt::a::val] == "a1");

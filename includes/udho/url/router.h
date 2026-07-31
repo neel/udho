@@ -120,8 +120,8 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
         if(mountpoint_index < 0) {
             return route_index{subject};
         } else {
-            std::size_t total_depth = _mountpoints.length();
-            return route_index{subject, static_cast<int>(total_depth) - mountpoint_index, action_index};
+            std::size_t total_depth = _mountpoints.length() -1;
+            return route_index{subject, (static_cast<int>(total_depth) - mountpoint_index), action_index};
         }
     }
 
@@ -140,7 +140,7 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
         assert(index.valid());
 
         bool found = false;
-        std::size_t total_depth = _mountpoints.length();
+        std::size_t total_depth = _mountpoints.length() -1;
         _mountpoints.visit_at([total_depth, &index, &found, &args...](const auto& mountpoint, std::size_t depth){
             if(found)  return;
             std::size_t expected_depth = (total_depth - depth);
@@ -166,7 +166,7 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
         if(!index.valid()) return false;
 
         bool found = false;
-        std::size_t total_depth = _mountpoints.length();
+        std::size_t total_depth = _mountpoints.length() -1;
         _mountpoints.visit_at([total_depth, &index, &found, &config](const auto& mountpoint, std::size_t depth) mutable {
             if(found)  return;
             std::size_t expected_depth = (total_depth - depth);

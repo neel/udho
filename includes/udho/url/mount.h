@@ -137,14 +137,15 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
      * @return index of the matched element, -1 if not fouond
      */
     int index_of(boost::beast::http::verb method, const std::string& subject) const {
-        int index = -1;
-        _actions.visit_at([method, &subject, &index](const auto& action, std::size_t depth){
-            if(index >= 0) return;
+        int action_index = -1;
+        std::size_t total_depth = _actions.length() -1;
+        _actions.visit_at([method, &subject, &action_index](const auto& action, std::size_t depth){
+            if(action_index >= 0) return;
             if(action.find(method, subject)){
-                index = depth;
+                action_index = depth;
             }
         });
-        return index;
+        return action_index >= 0 ? (static_cast<int>(total_depth) - action_index): action_index;
     }
 
     /**
@@ -156,10 +157,12 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
     template <typename... Args>
     bool invoke_at(int index, const std::string& subject, Args&&... args) const {
         assert(index > -1);
+        std::size_t total_depth = _actions.length() -1;
         bool found = false;
-        _actions.visit_at([index, &subject, &found, &args...](auto& action, std::size_t depth){
+        _actions.visit_at([total_depth, index, &subject, &found, &args...](auto& action, std::size_t depth){
             if(found) return;
-            found = (depth == index);
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index);
             if(found) {
                 action.invoke(subject, std::forward<Args>(args)...);
             }
@@ -176,11 +179,13 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
     template <typename ConfigSupersetT>
     bool reconfigure_for(int index, ConfigSupersetT& config) const {
         assert(index > -1);
+        std::size_t total_depth = _actions.length() -1;
         bool found = false;
         bool result = false;
-        _actions.visit_at([index, &found, &result, &config](auto& action, std::size_t depth){
+        _actions.visit_at([total_depth, index, &found, &result, &config](auto& action, std::size_t depth){
             if(found) return;
-            found = (depth == index);
+            std::size_t expected_depth = (total_depth - depth);
+            found = (expected_depth == index);
             if(found) {
                 result = action.options().apply(config);
             }
