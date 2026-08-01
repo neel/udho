@@ -1,0 +1,6 @@
+# Shared defaults live in docs/Doxyfile. Paths are relative to this module.
+@INCLUDE = ../../../docs/Doxyfile
+
+PROJECT_NAME           = udho::manifold
+INPUT                  = .
+GENERATE_TAGFILE       = .doxygen/manifold.tag

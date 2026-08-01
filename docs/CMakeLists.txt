@@ -1,118 +1,134 @@
-cmake_minimum_required(VERSION 3.9)
-project(udho-docs)
+# Public module boundaries are the immediate directories below includes/udho.
+# _deleted is intentionally absent because it is not a public module.
+set(UDHO_DOCUMENTATION_MODULES
+    activities
+    cookies
+    core
+    db
+    exceptions
+    hazo
+    logging
+    manifold
+    net
+    pages
+    pretty
+    session
+    url
+    utils
+    view
+    www
+)
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+# Documentation targets are available whenever Doxygen is installed. Doxygen
+# remains optional and documentation is never part of the default build.
+find_package(Doxygen QUIET)
+if(NOT DOXYGEN_FOUND)
+    message(STATUS "Doxygen not found; documentation targets are unavailable")
+    return()
+endif()
 
-find_package(Doxygen)
+set(UDHO_DOXYGEN_TEMPLATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.wrapper.in")
+set(UDHO_DOXYGEN_SHARED_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
+set(UDHO_DOXYGEN_TAG_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.tags")
+set(UDHO_DOXYGEN_HTML_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.html")
+include(UdhoDoxygen)
 
-if (DOXYGEN_FOUND)
-    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-    set(DOXYGEN_XML_DIR ${CMAKE_CURRENT_BINARY_DIR}/xml)
-    set(DOXYGEN_XML_INDEX ${DOXYGEN_XML_DIR}/index.xml)
-    get_target_property(UDHO_INCLUDE_DIRS udho UDHO_INCLUDE_DIRS)
-    file(GLOB_RECURSE UDHO_PAGES ${CMAKE_CURRENT_SOURCE_DIR}/*.md)
-    get_target_property(UDHO_SOURCE_DIR udho SOURCE_DIR)
-    get_property(UDHO_HEADERS TARGET udho PROPERTY UDHO_HEADERS)
+get_target_property(UDHO_SOURCE_DIR udho SOURCE_DIR)
+file(GLOB_RECURSE UDHO_DOCUMENTATION_PAGES "${CMAKE_CURRENT_SOURCE_DIR}/pages/*.md")
+file(GLOB_RECURSE UDHO_DOCUMENTATION_PARTS "${CMAKE_CURRENT_SOURCE_DIR}/parts/*.dox")
+file(GLOB_RECURSE UDHO_DOCUMENTATION_IMAGES "${CMAKE_CURRENT_SOURCE_DIR}/images/*")
 
-    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+set(UDHO_DOXYGEN_MODULAR_ROOT "${CMAKE_CURRENT_BINARY_DIR}/modular")
+set(UDHO_DOXYGEN_TAG_DIR "${UDHO_DOXYGEN_MODULAR_ROOT}/tags")
 
-    add_custom_command(
-        OUTPUT ${DOXYGEN_XML_INDEX}
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${DOXYGEN_IN} ${UDHO_HEADERS} ${UDHO_PAGES} ${CMAKE_CURRENT_SOURCE_DIR}/index.h
-        MAIN_DEPENDENCY ${DOXYGEN_OUT}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM
-        USES_TERMINAL
+# Phase one creates tags and per-module XML without rendering HTML or consuming
+# external tags.  These targets depend only on their own headers, which is the
+# key to module-local incremental rebuilds.
+set(UDHO_DOXYGEN_TAG_TARGETS)
+foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
+    set(module_source_dir "${UDHO_SOURCE_DIR}/includes/udho/${module}")
+    set(module_config "${module_source_dir}/Doxyfile")
+    file(GLOB_RECURSE module_sources "${module_source_dir}/*.h" "${module_source_dir}/*.dox")
+    set(UDHO_DOCUMENTATION_SOURCES_${module} ${module_sources})
+
+    set(tag_target "docs-tag-${module}")
+    set(tag_file "${UDHO_DOXYGEN_TAG_DIR}/${module}.tag")
+    udho_add_doxygen_target(${tag_target}
+        DOXYFILE "${module_config}"
+        OVERLAY "${UDHO_DOXYGEN_TAG_CONFIG}"
+        WORKING_DIRECTORY "${module_source_dir}"
+        BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
+        TAG_FILE "${tag_file}"
+        OUTPUTS
+            "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/xml/index.xml"
+            "${tag_file}"
+        DEPENDS
+            ${module_sources}
+            "${UDHO_DOXYGEN_SHARED_CONFIG}"
     )
-    
-    add_custom_target(docs DEPENDS ${DOXYGEN_XML_INDEX})
+    list(APPEND UDHO_DOXYGEN_TAG_TARGETS ${tag_target})
+endforeach()
 
-    # --- Boostbook ---
-    find_program(XSLTPROC xsltproc)
-    if (XSLTPROC)
-        set(BOOSTBOOK_DIR                   "/usr/share/boostbook" CACHE PATH "BoostBook root directory containing xsl/ and dtd/")
-        set(BOOSTBOOK_DOXYGEN_XSL_DIR       "${BOOSTBOOK_DIR}/xsl/doxygen")
-        set(BOOSTBOOK_COLLECT_XSL           "${BOOSTBOOK_DOXYGEN_XSL_DIR}/collect.xsl")
-        set(BOOSTBOOK_DOXYGEN2BOOSTBOOK_XSL "${BOOSTBOOK_DOXYGEN_XSL_DIR}/doxygen2boostbook.xsl")
-        set(DOXYGEN_XML_DIR                 "${CMAKE_CURRENT_BINARY_DIR}/xml")
-        set(DOXYGEN_XML_INDEX               "${DOXYGEN_XML_DIR}/index.xml")
-        set(BOOSTBOOK_WORK_DIR              "${CMAKE_CURRENT_BINARY_DIR}/boostbook")
-        set(DOXYGEN_COMBINED                "${BOOSTBOOK_WORK_DIR}/udho.doxygen")
-        set(BOOSTBOOK_XML                   "${BOOSTBOOK_WORK_DIR}/udho.xml")
-        set(BOOSTBOOK_USER_CONFIG_JAM_IN    ${CMAKE_CURRENT_SOURCE_DIR}/user-config.jam.in)
-        set(BOOSTBOOK_USER_CONFIG_JAM       ${BOOSTBOOK_WORK_DIR}/user-config.jam)
-        set(BOOSTBOOK_JAMROOT               "${BOOSTBOOK_WORK_DIR}/Jamroot.jam")
-        set(BOOSTBOOK_HTML_MANIFEST         "${BOOSTBOOK_WORK_DIR}/html/udho_HTML.manifest")
-        set(XSLTPROCX_PATH                  ${CMAKE_CURRENT_SOURCE_DIR}/xsltprocx)
+add_custom_target(docs-tags)
+add_dependencies(docs-tags ${UDHO_DOXYGEN_TAG_TARGETS})
 
-        configure_file(${BOOSTBOOK_USER_CONFIG_JAM_IN} ${BOOSTBOOK_USER_CONFIG_JAM} @ONLY)
-
-        file(MAKE_DIRECTORY "${BOOSTBOOK_WORK_DIR}")
-        file(WRITE "${BOOSTBOOK_JAMROOT}" [=[
-        using boostbook ;
-
-        boostbook udho
-            : udho.xml
-            ;
-        ]=])
-
-        if (NOT EXISTS "${BOOSTBOOK_COLLECT_XSL}")
-            message(FATAL_ERROR "BoostBook collect.xsl not found: ${BOOSTBOOK_COLLECT_XSL}")
+# Phase two reparses each module to render HTML with every other module's tag
+# file available. This resolves documentation-only references without a
+# manually maintained module graph. Tag targets are order-only dependencies, so
+# changing one module does not force otherwise unchanged module HTML to run.
+set(UDHO_DOXYGEN_MODULE_TARGETS)
+foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
+    set(tag_mappings)
+    foreach(other_module IN LISTS UDHO_DOCUMENTATION_MODULES)
+        if(NOT other_module STREQUAL module)
+            list(APPEND tag_mappings "${UDHO_DOXYGEN_TAG_DIR}/${other_module}.tag=../../${other_module}/html")
         endif()
+    endforeach()
 
-        if (NOT EXISTS "${BOOSTBOOK_DOXYGEN2BOOSTBOOK_XSL}")
-            message(FATAL_ERROR "BoostBook doxygen2boostbook.xsl not found: ${BOOSTBOOK_DOXYGEN2BOOSTBOOK_XSL}")
-        endif()
+    set(module_target "docs-module-${module}")
+    udho_add_doxygen_target(${module_target}
+        DOXYFILE "${UDHO_SOURCE_DIR}/includes/udho/${module}/Doxyfile"
+        OVERLAY "${UDHO_DOXYGEN_HTML_CONFIG}"
+        WORKING_DIRECTORY "${UDHO_SOURCE_DIR}/includes/udho/${module}"
+        BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
+        TAG_MAPPINGS ${tag_mappings}
+        OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/html/index.html"
+        ORDER_DEPENDS ${UDHO_DOXYGEN_TAG_TARGETS}
+        DEPENDS
+            ${UDHO_DOCUMENTATION_SOURCES_${module}}
+            "${UDHO_DOXYGEN_SHARED_CONFIG}"
+    )
+    list(APPEND UDHO_DOXYGEN_MODULE_TARGETS ${module_target})
+endforeach()
 
-        add_custom_command(
-            OUTPUT  "${DOXYGEN_COMBINED}"
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "${BOOSTBOOK_WORK_DIR}"
-            COMMAND "${XSLTPROC}" --stringparam doxygen.xml.path "${DOXYGEN_XML_DIR}" -o "${DOXYGEN_COMBINED}" "${BOOSTBOOK_COLLECT_XSL}" "${DOXYGEN_XML_INDEX}"
-            DEPENDS
-                    "${DOXYGEN_XML_INDEX}"
-                    "${BOOSTBOOK_COLLECT_XSL}"
-            COMMENT "Collecting Doxygen XML for BoostBook"
-            VERBATIM
-        )
+add_custom_target(docs-modules)
+add_dependencies(docs-modules ${UDHO_DOXYGEN_MODULE_TARGETS})
 
+# Hand-written pages get their own fast Doxygen invocation.  It sees API
+# symbols only through tags and never parses the public-header tree itself.
+set(page_tag_mappings)
+foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
+    list(APPEND page_tag_mappings
+        "${UDHO_DOXYGEN_TAG_DIR}/${module}.tag=../../modules/${module}/html")
+endforeach()
 
-        add_custom_command(
-            OUTPUT  "${BOOSTBOOK_XML}"
-            COMMAND "${XSLTPROC}" -o "${BOOSTBOOK_XML}" "${BOOSTBOOK_DOXYGEN2BOOSTBOOK_XSL}" "${DOXYGEN_COMBINED}"
-            DEPENDS
-                    "${DOXYGEN_COMBINED}"
-                    "${BOOSTBOOK_DOXYGEN2BOOSTBOOK_XSL}"
-            COMMENT "Converting Doxygen XML to BoostBook XML"
-            VERBATIM
-        )
+udho_add_doxygen_target(docs-pages
+    DOXYFILE "${CMAKE_CURRENT_SOURCE_DIR}/pages/Doxyfile"
+    OVERLAY "${UDHO_DOXYGEN_HTML_CONFIG}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pages"
+    BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/pages"
+    TAG_MAPPINGS ${page_tag_mappings}
+    OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/html/index.html"
+    ORDER_DEPENDS ${UDHO_DOXYGEN_MODULE_TARGETS}
+    DEPENDS
+        ${UDHO_DOCUMENTATION_PAGES}
+        ${UDHO_DOCUMENTATION_PARTS}
+        ${UDHO_DOCUMENTATION_IMAGES}
+        "${UDHO_DOXYGEN_SHARED_CONFIG}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/index.h"
+        "${UDHO_SOURCE_DIR}/README.md"
+)
 
-        add_custom_target(boostbook-xml DEPENDS "${BOOSTBOOK_XML}")
-
-        find_program(B2 b2)
-
-        if (NOT B2)
-            message(FATAL_ERROR "b2 not found")
-        endif()
-
-        add_custom_command(
-                OUTPUT "${BOOSTBOOK_HTML_MANIFEST}"
-                COMMAND "${B2}" "--user-config=${BOOSTBOOK_USER_CONFIG_JAM}" html
-                WORKING_DIRECTORY "${BOOSTBOOK_WORK_DIR}"
-                DEPENDS
-                        "${BOOSTBOOK_XML}"
-                        "${BOOSTBOOK_JAMROOT}"
-                        "${BOOSTBOOK_USER_CONFIG_JAM}"
-                COMMENT "Creating BoostBook HTML"
-                VERBATIM
-                USES_TERMINAL
-        )
-
-        add_custom_target(boostbook DEPENDS "${BOOSTBOOK_HTML_MANIFEST}")
-    endif()
-else (DOXYGEN_FOUND)
-  message("Doxygen need to be installed to generate the doxygen documentation")
-endif (DOXYGEN_FOUND)
-
+add_custom_target(docs)
+add_dependencies(docs docs-pages)

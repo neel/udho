@@ -4,7 +4,7 @@ Routing {#RoutingPage}
 The routing module maps an incoming HTTP method and URL path to a C++ callback. It is designed around a compact, declarative syntax:
 
 ```cpp
-udho::url::slot("label"_h, &callback) << udho::url::pattern_factory(udho::url::verb::get, ...)
+udho::url::slot("label"_h, &callback) << udho::url::fixed(udho::url::verb::get, "/path")
 ```
 
 A route is made by binding a **slot** to a **match pattern**. A slot names and wraps the callback. A match pattern describes the HTTP verb, URL pattern, URL argument extraction, and URL-generation replacement. Routes can be chained with `|`, grouped under a mount point, and finally given to a router.
@@ -118,7 +118,7 @@ auto route = udho::url::fixed(udho::url::verb::get, "/about") >> udho::url::slot
 In normal documentation and examples, prefer the forward form:
 
 ```cpp
-udho::url::slot("label"_h, &callback) << udho::url::match_factory(...)
+udho::url::slot("label"_h, &callback) << udho::url::fixed(udho::url::verb::get, "/path")
 ```
 
 A chain can be extended by chaining another route or another `action_table`:
@@ -126,6 +126,8 @@ A chain can be extended by chaining another route or another `action_table`:
 ```cpp
 auto all_routes = public_routes | admin_routes;
 ```
+
+Routes retain their declaration order. When more than one route in a mount point can match a request, the first matching route is selected.
 
 ### Building blocks of a route
 
@@ -225,6 +227,8 @@ auto root = udho::url::root(std::move(root_routes));
 
 A route pattern is relative to the mount point. If the mounted action uses pattern `/users/{:d}` under mount `/api`, the full URL is `/api/users/42`.
 
+Mount paths are matched as string prefixes. For example, `/api` is also a prefix of `/apix`; the remaining `/x` must then match an action in that mount point for the request to resolve. Declare overlapping mount points in the desired precedence order because the first complete mount-and-action match is selected.
+
 A mount point supports route lookup, invocation, keyed action access, and full mounted URL generation:
 
 ```cpp
@@ -313,7 +317,7 @@ Summary types expose this view:
 | Type | API | Meaning |
 | --- | --- | --- |
 | `udho::url::summary::router` | `size()`, `begin()`, `end()`, `route(name)`, `operator[](name)` | Collection of summarized mount points. |
-| `udho::url::summary::mount_point` | `name()`, `path()`, `size()`, `begin()`, `end()`, `url(key)`, `operator[](key)` | Summarized mount point and its actions. |
+| `udho::url::summary::mount_point` | `name()`, `path()`, `size()`, `begin()`, `end()`, `url(key)`, `operator[](key)` | Summarized mount point. Iterate to access actions; `url(key)` and `operator[](key)` return URL-generation proxies. |
 | `udho::url::summary::action` | `slot()`, `match()` | Summary of one route action. |
 | `udho::url::summary::slot` | `key()`, `symbol()`, `nargs()` | Route label, callback symbol, callback argument count. |
 | `udho::url::summary::match` | `method()`, `format()`, `pattern()`, `replacement()` | HTTP verb and URL pattern details. |
@@ -327,7 +331,7 @@ std::string href = router.summary()["root"].url("article")(42, "routing");
 Important distinction: `summary::mount_point::url(key)` uses the action replacement string. It does not prepend the mount path by itself. When you need the full mounted URL from a concrete mount point, use the concrete mount point API:
 
 ```cpp
-std::string full_href = api_mount("show_user"_h, 42);
+std::string full_href = api("show_user"_h, 42);
 ```
 
 When you only have the summary, combine the mount path and replacement-generated URL explicitly if needed.
@@ -345,6 +349,7 @@ namespace opt {
     HAZO_ELEMENT(layout, std::string);
     HAZO_ELEMENT(auth,   bool);
     HAZO_ELEMENT(title,  std::string);
+    HAZO_ELEMENT(other,  std::string);
 }
 ```
 
@@ -545,3 +550,14 @@ if (index.valid()) {
 
 For action matches, `invoke_at()` dispatches the callback. For registry matches, `invoke_at()` serves the file or generated listing through the explorer registry.
 
+For the common asset-store setup, convenience overloads create the explorer registry automatically:
+
+```cpp
+auto static_router = udho::url::router(cstore.assets());
+auto static_with_files = udho::url::router(cstore.assets(), docroot);
+
+auto application_router = udho::url::router(std::move(mounts), cstore.assets());
+auto application_with_files = udho::url::router(std::move(mounts), cstore.assets(), docroot);
+```
+
+The overloads that accept `docroot` register a filesystem explorer named `docroot` and an asset explorer named `assets`. The asset store must remain valid for the lifetime of the router.

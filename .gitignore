@@ -4,7 +4,7 @@ build
 cmake-build-*
 .idea
 .cache
-docs/source/Doxyfile
-docs/source/api
 dox
 coverage
+.doxygen/
+.doxygen-warnings.log

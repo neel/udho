@@ -1,0 +1,9 @@
+# Hand-written pages consume API tags but do not parse public headers.
+@INCLUDE = ../Doxyfile
+
+PROJECT_NAME           = udho
+INPUT                  = . ../parts ../index.h ../../README.md
+STRIP_FROM_PATH        = ../..
+IMAGE_PATH             = ../images
+USE_MDFILE_AS_MAINPAGE = ../../README.md
+GENERATE_TAGFILE       =
