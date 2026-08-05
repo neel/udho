@@ -1,7 +1,6 @@
 /**
  * @defgroup DoxyG_view Views
  * @brief Functionalities for storing and rendering views and assets.
- * @ingroup udho
  */
 
 /**

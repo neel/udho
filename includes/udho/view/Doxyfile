@@ -3,4 +3,5 @@
 
 PROJECT_NAME           = udho::view
 INPUT                  = .
+CLANG_OPTIONS         += -include cassert -include udho/view/bridges/bridge.h
 GENERATE_TAGFILE       = .doxygen/view.tag

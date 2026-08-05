@@ -1,0 +1,4 @@
+/**
+ * @defgroup DoxyG_session Session
+ * @brief Session management and persistence.
+ */

@@ -42,6 +42,10 @@
 namespace udho {
 namespace cookies{
 
+/** @addtogroup DoxyG_cookies
+ *  @{
+ */
+
 /**
  * @brief Thread-safe cookie container for HTTP request/response handling
  *
@@ -608,6 +612,8 @@ udho::cookies::jar& operator<<(udho::cookies::jar& cookies, const udho::cookies:
     cookies.add(cookie);
     return cookies;
 }
+
+/** @} */
 
 }
 }

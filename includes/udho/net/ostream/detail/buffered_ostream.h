@@ -18,6 +18,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Buffered ostream that accumulates payload in memory and flushes later.
  *
@@ -33,7 +37,8 @@ namespace detail{
  *
  * @tparam StreamT A Boost.Asio AsyncWriteStream (e.g., tcp::socket, beast test stream, etc.).
  *
- * @thread_safety
+ * ### Thread safety
+ *
  * All public methods use `dispatch(_strand, ...)` and therefore are safe to call from any thread,
  * assuming the referenced `strand` remains alive. All internal state is mutated only on the strand.
  */
@@ -340,6 +345,8 @@ private:
     bool                       _flushing;
 };
 
+
+/** @} */
 
 }
 

@@ -25,9 +25,8 @@ struct proxy{
 
     /**
      * @brief Constructs a proxy for a given resource and bridge.
-     * @param name The name of the resource
-     * @param prefix The prefix used in resource identification.
-     * @param bridge Reference to the bridge used for resource execution.
+     * @param desc Asset registration information.
+     * @param base Base path.
      */
     inline proxy(const asset_registration_info& desc,  const std::string& base): _desc(desc), _base(base) {}
 

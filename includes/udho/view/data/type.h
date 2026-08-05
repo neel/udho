@@ -61,7 +61,6 @@ struct type {};
  * thereby enforcing the requirement that all classes exposed to the view must have an explicit metatype definition.
  *
  * @tparam ClassT The class type for which the metatype function is to be defined.
- * @param data A type tag representing the ClassT, used for specializing the function for different classes.
  * @return returns an instance of metatype
  *
  * @note This function will compile only if there is a specific overload for the type `ClassT`. If not, it will cause a compile-time error.

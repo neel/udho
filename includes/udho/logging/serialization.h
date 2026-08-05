@@ -14,6 +14,10 @@ namespace logging {
 
 namespace detail {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 
 struct json_serializer{
     inline json_serializer(nlohmann::json& json): _json(json) {}
@@ -328,6 +332,7 @@ private:
     std::size_t& _byte_size;
 };
 
+/** @} */
 }
 
 

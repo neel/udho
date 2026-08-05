@@ -151,7 +151,6 @@ struct store<>{
 
     /**
      * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
-     * @param bridges... references to the bridges
      */
     store() {}
 
@@ -222,7 +221,7 @@ struct store{
 
     /**
      * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
-     * @param bridges... references to the bridges
+     * @param bridges bridge references
      */
     store(Bridges&... bridges): _tmpls(bridges...) {}
 
@@ -514,7 +513,7 @@ struct const_store{
      * @param prefix view prefix
      * @param name view name
      * @param data data passed to the view
-     * @param args... additional arguments
+     * @param args additional arguments
      */
     template <typename DataT, typename... Args>
     udho::view::resources::results render(const std::string& lang, const std::string& prefix, const std::string& name, DataT&& data, Args&&... args) const{
@@ -532,7 +531,7 @@ struct const_store{
      * @tparam Args... Types of the additional arguments passed to the view template.
      * @param view_address The view address in the format `lang://prefix/name`.
      * @param data Data passed to the view.
-     * @param args... Additional arguments passed to the view.
+     * @param args Additional arguments passed to the view.
      * @return udho::view::resources::results The result of rendering the view.
      * @throws std::runtime_error If the `view_address` cannot be parsed.
      */

@@ -91,6 +91,7 @@ struct proxy{
      * @brief Executes the resource using the stored bridge and returns the results.
      * @tparam T The type of the data passed to the resource during execution.
      * @param data The data to be used during the resource execution.
+     * @param aux Auxiliary data.
      * @return A results object containing the output from the execution.
      */
     template <typename T, typename Aux>
@@ -104,6 +105,7 @@ struct proxy{
      * @brief Function call operator that executes the resource using provided data.
      * @tparam T The type of the data passed to the resource during execution.
      * @param data The data to be used during the execution.
+     * @param aux Auxiliary data.
      * @return A results object containing the output from the execution.
      */
     template <typename T, typename Aux>
@@ -364,7 +366,6 @@ struct const_substore{
 
     /**
      * @brief A prefix specific interface to the store
-     * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the store.
      */
     explicit const_substore(const store_type& store): _substore(store) {
@@ -412,6 +413,7 @@ struct const_substore{
 
     /**
      * @brief Retrieves a view proxy for a specified resource by name.
+     * @param prefix View prefix.
      * @param name The name of the resource to retrieve.
      * @return A view proxy associated with the named resource.
      * @throws std::out_of_range if the resource is not found within the bundle.

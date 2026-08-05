@@ -17,6 +17,10 @@ namespace protocols{
 
 namespace h11{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Asynchronous HTTP/1.1 header reader with timeout support.
  *
@@ -149,6 +153,8 @@ private:
     bool                                _finished;
     timer_type                          _timer;
 };
+
+/** @} */
 
 }
 

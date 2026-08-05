@@ -23,7 +23,7 @@ namespace manifold {
  *
  * @tparam Label www label type.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename Label>
 struct error{
@@ -57,7 +57,7 @@ struct error{
  * @tparam Tag www label tag.
  * @tparam ExtraComponents Extra components appended to the www label.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT> {

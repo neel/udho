@@ -3,12 +3,7 @@
 
 #include <cstdint>
 
-/** 
- * @defgroup manifold Manifold
- * @brief Manifold Subsystem.
- * @{
- */
-/** @} */
+
 
 namespace udho {
 namespace manifold {

@@ -40,6 +40,10 @@ namespace udho{
 namespace cookies{
 namespace detail{
 
+/** @addtogroup DoxyG_cookies
+ *  @{
+ */
+
 inline std::string_view trim_view(std::string_view s) {
     auto front = s.find_first_not_of(" \t");
     if (front == std::string_view::npos) return "";
@@ -111,6 +115,8 @@ inline bool parse_policy(std::string_view policy_str, udho::cookies::policy& p) 
     }
     return false;
 }
+
+/** @} */
 
 }
 }

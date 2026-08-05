@@ -1,7 +1,6 @@
 /**
  * @defgroup hazo Hazo
  * @brief Udho heterogeneous data storage.
- * @ingroup udho
  */
 
 /**

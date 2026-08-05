@@ -70,8 +70,6 @@ public:
 
     /**
      * @brief Copy-constructs a route index.
-     *
-     * @param other Route index to copy.
      */
     route_index(const route_index&) = default;
 

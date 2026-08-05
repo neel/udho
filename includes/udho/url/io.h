@@ -44,6 +44,12 @@ namespace url{
  * @{
  */
 
+/**
+ * @brief Appends an action table to a tabulated table.
+ * @tparam Args Action types.
+ * @param table Destination table.
+ * @param actions Actions to append.
+ */
 template <typename... Args>
 tabulate::Table& operator<<(tabulate::Table& table, const action_table<Args...>& actions){
     table.add_row({"method", "label", "args", "pattern", "replacement", "callback"});
@@ -58,6 +64,12 @@ tabulate::Table& operator<<(tabulate::Table& table, const action_table<Args...>&
     return table;
 }
 
+/**
+ * @brief Writes an action table to an output stream.
+ * @tparam Args Action types.
+ * @param stream Destination stream.
+ * @param actions Actions to write.
+ */
 template <typename... Args>
 std::ostream& operator<<(std::ostream& stream, const action_table<Args...>& actions){
     tabulate::Table table;
@@ -66,6 +78,13 @@ std::ostream& operator<<(std::ostream& stream, const action_table<Args...>& acti
     return stream;
 }
 
+/**
+ * @brief Appends a mount point to a tabulated table.
+ * @tparam StrT Mount-path string type.
+ * @tparam ActionsT Action-table type.
+ * @param table Destination table.
+ * @param point Mount point to append.
+ */
 template <typename StrT, typename ActionsT>
 tabulate::Table& operator<<(tabulate::Table& table, const mount_point<StrT, ActionsT>& point){
     table.add_row({point.name().c_str(), point.path()});
@@ -75,6 +94,13 @@ tabulate::Table& operator<<(tabulate::Table& table, const mount_point<StrT, Acti
     return table;
 }
 
+/**
+ * @brief Writes a mount point to an output stream.
+ * @tparam StrT Mount-path string type.
+ * @tparam ActionsT Action-table type.
+ * @param stream Destination stream.
+ * @param point Mount point to write.
+ */
 template <typename StrT, typename ActionsT>
 std::ostream& operator<<(std::ostream& stream, const mount_point<StrT, ActionsT>& point){
     tabulate::Table table;
@@ -83,6 +109,12 @@ std::ostream& operator<<(std::ostream& stream, const mount_point<StrT, ActionsT>
     return stream;
 }
 
+/**
+ * @brief Appends a mount-points table to a tabulated table.
+ * @tparam Args Mount-point types.
+ * @param table Destination table.
+ * @param mountpoints Mount points to append.
+ */
 template <typename... Args>
 tabulate::Table& operator<<(tabulate::Table& table, const mountpoints_table<Args...>& mountpoints){
     tabulize tab(table);
@@ -90,6 +122,12 @@ tabulate::Table& operator<<(tabulate::Table& table, const mountpoints_table<Args
     return table;
 }
 
+/**
+ * @brief Writes a mount-points table to an output stream.
+ * @tparam Args Mount-point types.
+ * @param stream Destination stream.
+ * @param mountpoints Mount points to write.
+ */
 template <typename... Args>
 std::ostream& operator<<(std::ostream& stream, const mountpoints_table<Args...>& mountpoints){
     tabulate::Table tab;
@@ -98,12 +136,24 @@ std::ostream& operator<<(std::ostream& stream, const mountpoints_table<Args...>&
     return stream;
 }
 
+/**
+ * @brief Writes a routing table to an output stream.
+ * @tparam Mountpoints Mount-points table type.
+ * @param stream Destination stream.
+ * @param router Routing table to write.
+ */
 template <typename Mountpoints>
 std::ostream& operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router){
     router.print(stream);
     return stream;
 }
 
+/**
+ * @brief Writes a router to an output stream.
+ * @tparam Mountpoints Mount-points table type.
+ * @param stream Destination stream.
+ * @param router Router to write.
+ */
 template <typename Mountpoints>
 std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& router){
     const detail::routing_table<Mountpoints>& table = router.table();
@@ -111,6 +161,11 @@ std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& 
     return stream;
 }
 
+/**
+ * @brief Leaves the output stream unchanged for an explorer-only router.
+ * @param stream Destination stream.
+ * @param router Explorer-only router.
+ */
 inline std::ostream& operator<<(std::ostream& stream, const basic_router<void>& router){
     return stream;
 }

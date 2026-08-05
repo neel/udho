@@ -27,7 +27,7 @@ static constexpr const std::size_t route_locator_stage = udho::www::feature::loc
  * @tparam Tag www label tag.
  * @tparam ExtraComponents User-supplied extra components appended to the www label.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, StreamT, route_locator_stage>{
@@ -118,7 +118,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
  * @tparam Tag www label tag.
  * @tparam ExtraComponents User-supplied extra components appended to the www label.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 static constexpr const std::size_t action_transition_stage = 2;
 template <typename StreamT, typename Tag, typename... ExtraComponents>

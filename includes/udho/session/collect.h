@@ -11,6 +11,10 @@ namespace udho {
 namespace session {
 namespace collection{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 enum class strategies {
     cookies,
     header,
@@ -315,10 +319,9 @@ struct collector{
         udho::session::abstract_catalogue& _catalogue;
 };
 
+/** @} */
+
 }
-
-
-
 }
 }
 

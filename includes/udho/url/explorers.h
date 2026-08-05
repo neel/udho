@@ -158,7 +158,7 @@ struct files: public abstract_explorer, public mime_registry {
     /**
      * @brief Serves a file through the provided stream
      * @param subject Path to serve
-     * @param stream Network stream to write to
+     * @param ostream Network stream to write to
      * @return true if file was served successfully, false otherwise
      * @throws Propagates filesystem errors and libmagic exceptions
      */
@@ -264,7 +264,7 @@ struct assets: public abstract_explorer {
     /**
      * @brief Serves aan asset through the provided stream
      * @param subject path to asset
-     * @param stream network stream to write to
+     * @param ostream network stream to write to
      * @return true if an asset was served successfully, false otherwise
      * @throws Propagates filesystem errors and libmagic exceptions
      */

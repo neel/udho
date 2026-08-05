@@ -26,7 +26,7 @@ namespace feature{
  * This feature represents the first HTTP parsing stage. Its result is the
  * Beast request-header object containing method, target, version, and fields.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct header_reader{
     static constexpr const std::size_t stage = 0;
@@ -44,7 +44,7 @@ struct header_reader{
  * by the routing subsystem: original resource, path, extension, and query
  * parameters.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct identifier{
     static constexpr const std::size_t stage = 0;
@@ -120,7 +120,7 @@ struct identifier{
  * Produces a cookie jar from the incoming request. The result can be consumed
  * by later features, accessors, handlers, or view code through the journal.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct cookie_load{
     static constexpr const std::size_t stage = 1;
@@ -138,7 +138,7 @@ struct cookie_load{
  * This feature runs after cookie loading and produces the session note visible
  * to later stages.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct session_load{
     static constexpr const std::size_t stage = 1;
@@ -157,7 +157,7 @@ struct session_load{
  * transfer status, and body length. It supports both contiguous and segmented
  * Beast buffers.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct body_reader{
     static constexpr const std::size_t stage = 2;
@@ -295,7 +295,7 @@ struct body_reader{
  * Produces a route index identifying the route registry entry or the absence of
  * a matching route.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 struct locator{
     static constexpr const std::size_t stage = 0;

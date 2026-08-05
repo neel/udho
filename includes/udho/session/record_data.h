@@ -12,6 +12,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 /**
  * @struct record_data
  * @brief Core data container for session records
@@ -180,6 +184,7 @@ private:
     std::set<std::string> _removed_fields;
 };
 
+/** @} */
 }
 }
 

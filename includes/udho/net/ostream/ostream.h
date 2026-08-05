@@ -18,6 +18,21 @@
 namespace udho{
 namespace net{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
+/**
+ * @brief Non-owning, type-erased view of an HTTP response output stream.
+ *
+ * This view exposes the response metadata, body-writing, and completion
+ * operations needed by code that should not depend on the concrete stream
+ * type used by basic_ostream. bind() stores the address of the concrete stream
+ * and a small forwarding table; it does not take ownership of that stream.
+ *
+ * @note The bound stream must outlive this view and all operations initiated
+ *       through it.
+ */
 struct ostream_view{
 private:
     void* _self = nullptr;
@@ -29,6 +44,17 @@ private:
     void (*_finish)(void*) = nullptr;
     void (*_status)(void*, boost::beast::http::status) = nullptr;
 
+    /**
+     * @brief Construct a view from an erased stream instance and its forwarding functions.
+     * @param self Address of the concrete stream instance.
+     * @param st Response-header setter.
+     * @param ws Owned-string writer.
+     * @param wsv String-view writer.
+     * @param wr Raw byte-range writer.
+     * @param db Buffering-control function.
+     * @param status Response-status setter.
+     * @param fn Response-finishing function.
+     */
     ostream_view(
         void* self,
         void (*st)(void*, const boost::beast::http::field&, udho::utils::string_view),
@@ -50,6 +76,13 @@ private:
     {}
 
 public:
+    /**
+     * @brief Create a type-erased view of a compatible output stream.
+     * @tparam OstreamT Concrete stream type providing the operations exposed by ostream_view.
+     * @param ostream Stream instance to expose through the view.
+     * @return A non-owning view bound to @p ostream.
+     * @note @p ostream must outlive the returned view and its pending operations.
+     */
     template <typename OstreamT>
     static ostream_view bind(OstreamT& ostream) {
         return {
@@ -64,26 +97,83 @@ public:
         };
     }
 
+    /// @brief Disabled; an ostream_view must be created by binding a concrete stream.
     ostream_view() = delete;
 public:
+    /**
+     * @brief Set a response header on the bound stream.
+     * @param field Header field to set.
+     * @param value Header value.
+     */
     void set(const boost::beast::http::field& field, udho::utils::string_view value)  { _set(_self, field, value); }
+
+    /**
+     * @brief Write an owned string to the bound stream.
+     * @param s String whose contents are transferred to the stream operation.
+     */
     void write(std::string&& s)               { _write_string(_self, std::move(s)); }
+
+    /**
+     * @brief Write a string view to the bound stream.
+     * @param sv Character range to write.
+     * @warning In queued mode the referenced characters must remain valid until
+     *          the asynchronous write completes.
+     */
     void write(udho::utils::string_view sv)   { _write_sv(_self, sv); }
+
+    /**
+     * @brief Write a raw byte range to the bound stream.
+     * @param p Pointer to the first byte.
+     * @param n Number of bytes to write.
+     * @param c Whether to copy the bytes before queueing the write.
+     * @warning When @p c is false, the byte range must remain valid until the
+     *          asynchronous write completes.
+     */
     void write(const char* p, std::size_t n, bool c = true)  { _write_raw(_self, p, n, c); }
+
+    /// @brief Switch the bound stream from buffered output to queued streaming.
     void disable_buffering()                  { _disable_buffering(_self); }
+
+    /// @brief Finish the response after all accepted body data has been written.
     void finish()                             { _finish(_self); }
+
+    /**
+     * @brief Set the HTTP response status on the bound stream.
+     * @param t Status to assign to the response.
+     */
     void status(boost::beast::http::status t) { _status(_self, t); }
 
+    /**
+     * @brief Write an owned string through a type-erased stream view.
+     * @param ostream View receiving the string.
+     * @param value String whose contents are transferred to the stream operation.
+     * @return @p ostream, allowing insertion operations to be chained.
+     */
     friend ostream_view& operator<<(ostream_view& ostream, std::string&& value) {
         ostream.write(std::move(value));
         return ostream;
     }
 
+    /**
+     * @brief Write a string view through a type-erased stream view.
+     * @param ostream View receiving the character range.
+     * @param value Character range to write.
+     * @return @p ostream, allowing insertion operations to be chained.
+     * @warning In queued mode the referenced characters must remain valid until
+     *          the asynchronous write completes.
+     */
     friend ostream_view& operator<<(ostream_view& ostream, std::string_view value) {
         ostream.write(value);
         return ostream;
     }
 
+    /**
+     * @brief Write a string literal without its terminating null character.
+     * @tparam N Size of the literal array, including its null terminator.
+     * @param os View receiving the literal.
+     * @param literal Literal to write.
+     * @return @p os, allowing insertion operations to be chained.
+     */
     template <std::size_t N>
     friend ostream_view& operator<<(ostream_view& os, const char (&literal)[N]) {
         os.write(literal, N - 1);
@@ -91,13 +181,14 @@ public:
     }
 };
 
+/// @brief States of the buffered-to-queued response output lifecycle.
 enum class ostream_states {
-    buffered,
-    switching,
-    queued,
-    buffered_flushing,
-    queued_finishing,
-    completed
+    buffered,           ///< Body data is accumulating in the in-memory buffer.
+    switching,          ///< Headers and buffered data are being flushed before queued output starts.
+    queued,             ///< Body data is being written through the ordered output queue.
+    buffered_flushing,  ///< The final buffered response is being flushed.
+    queued_finishing,   ///< Queued output is draining and completing the response.
+    completed           ///< The response and its completion callback have finished.
 };
 
 /**
@@ -120,7 +211,9 @@ enum class ostream_states {
  *
  * @tparam StreamT A Boost.Asio AsyncWriteStream.
  *
- * @thread_safety Public API methods post onto the strand; safe to call from any thread.
+ * ### Thread safety
+ *
+ * Public API methods post onto the strand; safe to call from any thread.
  * The class assumes it outlives all posted handlers (typical Asio lifetime rule).
  *
  * ## State transition
@@ -169,11 +262,24 @@ struct basic_ostream{
         _queued_stream.pause();
     }
 
+    /// @brief Copy construction is disabled because asynchronous handlers refer to this instance.
     basic_ostream(const basic_ostream&) = delete;
+
+    /// @brief Move construction is disabled because asynchronous handlers refer to this instance.
     basic_ostream(basic_ostream&&) = delete;
 
+    /**
+     * @brief Access the current HTTP response headers.
+     * @return Read-only response headers, including the current status.
+     */
     const response_headers_type& headers() const { return _response; }
 
+    /**
+     * @brief Set an HTTP response header before the headers are sealed.
+     * @param field Header field to set.
+     * @param value Header value.
+     * @throws std::runtime_error if the response headers have already been sealed.
+     */
     void set(const boost::beast::http::field& field, udho::utils::string_view value){
         if(_header_sealed) {
             throw std::runtime_error(udho::utils::format("headers must be set before the headers are sent to the socket"));
@@ -181,12 +287,29 @@ struct basic_ostream{
         _response.set(field, value);
     }
 
+    /**
+     * @brief Get the configured transfer encoding.
+     * @return Current transfer encoding.
+     */
     udho::net::types::transfer::encoding encoding() const { return _encoding.encoding(); }
 
+    /**
+     * @brief Get the configured transfer compression.
+     * @return Current transfer compression.
+     */
     udho::net::types::transfer::compression compression() const { return _encoding.compression(); }
 
+    /**
+     * @brief Set the HTTP response status.
+     * @param st Status to assign to the response.
+     */
     void status(boost::beast::http::status st) { _response.result(st); }
 
+    /**
+     * @brief Set the transfer encoding before the headers are sealed.
+     * @param enc Transfer encoding to use.
+     * @throws std::runtime_error if the response headers have already been sealed.
+     */
     void encoding(udho::net::types::transfer::encoding enc) {
         if(_header_sealed) {
             throw std::runtime_error(udho::utils::format("encoding must be set before the headers are sent to the socket"));
@@ -194,6 +317,11 @@ struct basic_ostream{
         _encoding.encoding(enc);
     }
 
+    /**
+     * @brief Set the transfer compression before the headers are sealed.
+     * @param cmp Transfer compression to use.
+     * @throws std::runtime_error if the response headers have already been sealed.
+     */
     void compression(udho::net::types::transfer::compression cmp) {
         if(_header_sealed) {
             throw std::runtime_error(udho::utils::format("compression must be set before the headers are sent to the socket"));
@@ -201,14 +329,33 @@ struct basic_ostream{
         _encoding.compression(cmp);
     }
 
+    /**
+     * @brief Obtain a non-owning, type-erased view of this stream.
+     * @return A view forwarding operations to this stream.
+     * @note This stream must outlive the returned view and its pending operations.
+     */
     ostream_view view () { return ostream_view::bind(*this); }
 
+    /**
+     * @brief Write a value through the response output stream.
+     * @tparam T Value type accepted by a corresponding write() overload.
+     * @param ostream Stream receiving the value.
+     * @param value Value forwarded to the active buffered or queued stream.
+     * @return @p ostream, allowing insertion operations to be chained.
+     */
     template <typename T>
     friend ostream_type& operator<<(ostream_type& ostream, T&& value) {
         ostream.write(std::forward<T>(value));
         return ostream;
     }
 
+    /**
+     * @brief Write a string literal without its terminating null character.
+     * @tparam N Size of the literal array, including its null terminator.
+     * @param os Stream receiving the literal.
+     * @param literal Literal to write.
+     * @return @p os, allowing insertion operations to be chained.
+     */
     template <std::size_t N>
     friend ostream_type& operator<<(ostream_type& os, const char (&literal)[N]) {
         os.write(literal, N - 1);
@@ -277,6 +424,7 @@ public:
      * @brief No-copy write in queued mode; buffered mode still copies into internal buffer.
      * @param data Pointer to bytes.
      * @param size Number of bytes.
+     * @param copy Whether to copy the bytes before queueing the write.
      *
      * @warning In queued mode, caller must ensure lifetime until async write completion.
      */
@@ -310,6 +458,10 @@ public:
 
     }
 
+    /**
+     * @brief Submit a memory-mapped file to the active output stream.
+     * @param mmaped_file Open mapped file whose ownership is transferred to the queued operation.
+     */
     void write(boost::iostreams::mapped_file_source&& mmaped_file) {
         boost::asio::post(_strand, [this, file = std::move(mmaped_file)](){
             if(_finishing) return;
@@ -322,10 +474,21 @@ public:
         });
     }
 
+    /**
+     * @brief Check whether response metadata can no longer be changed.
+     * @return true after streaming or response completion has sealed the headers.
+     */
     bool headers_sealed() const {
         return _header_sealed;
     }
 
+    /**
+     * @brief Discard body data accumulated while the stream is still buffering.
+     *
+     * The request is posted to the stream strand. It has no effect after the
+     * stream has switched to queued output, or while the buffered stream is
+     * already flushing.
+     */
     void try_clear() {
         boost::asio::post(_strand, [this](){
             if(_buffering) {
@@ -365,8 +528,17 @@ public:
         });
     }
 
+    /**
+     * @brief Check whether a captured exception has been assigned to the stream.
+     * @return true when exception(traced_exception_type&&) has stored an exception.
+     */
     bool has_exception() const { return _capex.has_value(); }
 
+    /**
+     * @brief Access the captured exception assigned to the stream.
+     * @return The stored captured exception.
+     * @pre has_exception() is true.
+     */
     const traced_exception_type& exception() const {
         assert(has_exception());
         return _capex.value();
@@ -621,8 +793,13 @@ private:
     exception_callback_type      _capex_handler;
 };
 
+/// @brief HTTP response output stream backed by the project's TCP socket type.
 using tcp_ostream  = basic_ostream<udho::net::types::socket>;
+
+/// @brief HTTP response output stream backed by a Boost.Beast test stream.
 using test_ostream = basic_ostream<boost::beast::test::stream>;
+
+/** @} */
 
 }
 }

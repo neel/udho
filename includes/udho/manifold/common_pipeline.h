@@ -124,6 +124,7 @@ public:
      * @param composition Reference to the composition of components to evaluate
      * @param configs Configuration parameters for all components in the composition
      * @param journal Journal for storing facet evaluation results (shared across stages)
+     * @param id Flow identifier
      *
      * @note The journal must outlive this pipeline instance, as it stores results
      *       that may be accessed by subsequent pipeline stages or user code.

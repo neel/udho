@@ -2,5 +2,10 @@
  * @defgroup activities Activities
  * @brief Udho asynchronous activities.
  * @copydoc Activities
- * @ingroup udho
+ */
+
+
+/**
+ * @defgroup activities_data Activities data
+ * @ingroup activities
  */

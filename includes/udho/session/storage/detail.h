@@ -7,8 +7,11 @@
 namespace udho{
 namespace session{
 namespace storage{
-
 namespace detail{
+
+/** @addtogroup DoxyG_session
+ *  @{
+ */
     static constexpr std::uint32_t SESSION_FILE_MAGIC = 0x4F484455;
 
     #pragma pack(push, 1)
@@ -64,8 +67,10 @@ namespace detail{
     static_assert(sizeof(record_preamble) == 4+2+8+8+8, "preamble must be exactly 30 bytes");
 
     static constexpr auto MIN_SIZE = sizeof(record_preamble) + sizeof(udho::session::id) + sizeof(std::uint32_t);
-}
 
+/** @} */
+
+}
 }
 }
 }

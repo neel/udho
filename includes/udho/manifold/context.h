@@ -330,7 +330,7 @@ public:
      * Exposes the context, portal metadata, flow id, routes, and resources to the
      * view-data reflection system.
      *
-     * @param type Tag identifying `self_type`.
+     * The unnamed type tag identifies `self_type`.
      * @return View-data metadata association for `self_type`.
      */
     friend auto metatype(udho::view::data::type<self_type>){

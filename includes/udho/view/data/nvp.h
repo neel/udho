@@ -567,7 +567,8 @@ nvp< policies::function, K, wrapper<X...> > func(K&& name, X&&... v){
 /**
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
- * @param IndexGetterF The name of the function.
+ * @tparam IndexGetterF Getter function type.
+ * @param v Getter function.
  * @return A name-value pair encapsulating the function.
  */
 template <typename IndexGetterF>
@@ -578,8 +579,10 @@ nvp< policies::index<false>, std::string, wrapper<IndexGetterF> > index(IndexGet
 /**
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
- * @param IndexGetterF The name of the function.
- * @param IndexSizeF The name of the function
+ * @tparam IndexGetterF Getter function type.
+ * @tparam IndexSizeF Size function type.
+ * @param v Getter function.
+ * @param s Size function.
  * @return A name-value pair encapsulating the function.
  */
 template <typename IndexGetterF, typename IndexSizeF>
@@ -587,7 +590,7 @@ nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSizeF> > ind
     return make_nvp(policies::index<true>{}, std::string{"__index__"}, std::forward<IndexGetterF>(v), std::forward<IndexSizeF>(s));
 }
 
-/**
+/*
  * @brief Convenience function to encapsulate a member function that takes a key type and return a value type (e.g. operator[]).
  *
  * @param IndexGetterF The name of the function.
@@ -601,8 +604,10 @@ nvp< policies::index<true>, std::string, wrapper<IndexGetterF, IndexSizeF> > ind
 /**
  * @brief Convenience function to encapsulate a an iterable object.
  *
- * @param BeginF function that returns the begin iterator.
- * @param EndF function that returns the end iterator.
+ * @tparam BeginF Begin function type.
+ * @tparam EndF End function type.
+ * @param u Begin function.
+ * @param v End function.
  * @return A name-value pair encapsulating the function.
  */
 template <typename BeginF, typename EndF>

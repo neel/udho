@@ -9,6 +9,10 @@
 #include <udho/url/summary.h>
 #include <udho/manifold/portal.h>
 
+/** @addtogroup DoxyG_www_components
+ *  @{
+ */
+
 namespace udho{
 namespace www{
 
@@ -28,6 +32,7 @@ namespace components{
  * - the router summary is stored by value and exposed through @ref summary.
  *
  * @tparam StreamT Stream type associated with a flow.
+ * @ingroup DoxyG_www_components
  */
 template <typename StreamT>
 struct basic_handler{
@@ -187,6 +192,10 @@ struct basic_handler{
         return responder(id).ostream();
     }
 
+    /**
+     * @brief Returns whether a responder is registered for the flow id.
+     * @param id Flow identifier.
+     */
     bool exists(std::size_t id) const {
         auto responder_it = _responders.find(id);
         return (responder_it != _responders.end());
@@ -208,6 +217,12 @@ private:
 
 namespace manifold{
 
+/**
+ * @brief Portal accessor for handler route summaries.
+ * @tparam StreamT Handler stream type.
+ * @tparam JournalT Journal view type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename StreamT, typename JournalT>
 struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>{
     using basic_accessor_type   = basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>;
@@ -217,13 +232,24 @@ struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_
 
     using basic_accessor_type::basic_accessor_type;
 
+    /** @brief Returns the stored router summary. */
     const udho::url::summary::router& routes() const {
         return basic_accessor_type::component().summary();
     }
 
+    /**
+     * @brief Returns the named mount-point summary.
+     * @param name Mount-point name.
+     */
     const udho::url::summary::mount_point& route(const std::string& name) const {
         return routes()[name];
     }
+    /**
+     * @brief Returns the mount-point summary named by a compile-time string.
+     * @tparam Char Character type.
+     * @tparam C Characters in the compile-time string.
+     * @param hstr Compile-time mount-point name.
+     */
     template <typename Char, Char... C>
     const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
         return route(hstr.str());
@@ -234,5 +260,7 @@ struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_
 
 } // manifold
 } // udho
+
+/** @} */
 
 #endif // UDHO_WWW_COMPONENTS_HANDLER_H

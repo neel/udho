@@ -10,6 +10,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Helper for HTTP chunked transfer framing.
  * @note Intended to be used only from within a strand.
@@ -56,6 +60,8 @@ public:
     std::array<char, 5>        _last_chunk;
 };
 
+
+/** @} */
 
 }
 

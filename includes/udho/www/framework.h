@@ -22,7 +22,7 @@ namespace www{
  * @tparam StreamT Stream type used by the runtime.
  * @tparam RouterT Router type used by the routing component.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename Label, typename StreamT, typename RouterT>
 struct runtime_generator{
@@ -81,7 +81,7 @@ struct framework;
  *
  * @tparam LabelT www label type.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct framework<www::basic_label<StreamT, Tag, ExtraComponents...>>  {

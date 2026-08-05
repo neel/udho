@@ -11,6 +11,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 using id = boost::uuids::uuid;
 
 static_assert(std::is_trivially_copyable<udho::session::id>::value);
@@ -84,6 +88,7 @@ enum class modes{
     immediate
 };
 
+/** @} */
 }
 }
 

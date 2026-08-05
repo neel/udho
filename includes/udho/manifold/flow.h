@@ -69,12 +69,6 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     static std::size_t counter() { return _counter; }
 
     /**
-     * @brief Gets a shared pointer to this flow
-     * @return Shared pointer to this flow instance
-     */
-    // ptr self() { return std::enable_shared_from_this<basic_flow<LabelT, StreamT>>::shared_from_this(); }
-
-    /**
      * @brief Applies configuration patches for a specific stage
      *
      * Called internally during stage transitions to apply any
@@ -83,6 +77,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      * @tparam Stage The completed stage index
      * @param p The completed pipeline stage
      * @param config Configuration to modify for next stage
+     * @param args Arguments forwarded to the transition
      */
     template <int Stage, typename... Args>
     void apply(pipeline_at<Stage>& p, configs_type& config, Args&&... args){
@@ -153,7 +148,8 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
      *       next.fail(...) from some facet while evaluating the pipeline. The callback is set
      *       from pipeline::_then
      *
-     * @param success
+     * @param success Failed evaluation result
+     * @param args Arguments forwarded to the terminal
      */
     template <typename... Args>
     void internal_error(udho::manifold::evaluation_result success, Args&&... args) {
@@ -260,6 +256,7 @@ private:
      * @param runtime Reference to the managing runtime
      * @param composition Reference to the component composition
      * @param baseline Reference to baseline configuration
+     * @param stream Output stream owned by the flow
      */
     basic_flow(runtime_type& runtime, composition_type& composition, configs_type& baseline, stream_type&& stream)
         : _runtime(runtime), _stream(std::move(stream)), _id(_counter++)

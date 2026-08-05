@@ -42,8 +42,10 @@ struct default_transition{
      * Called after stage completion to modify configuration before
      * the next stage begins. The default implementation does nothing.
      *
+     * @param flow Flow advancing to the next stage
      * @param p The completed pipeline stage
      * @param config The configuration to modify for the next stage
+     * @param args Arguments forwarded to the next stage
      */
     template <typename... Args>
     static void apply(flow_type& flow, pipeline_type& p, configs_type& config, Args&&... args) {
@@ -77,8 +79,10 @@ struct transition{
      * Called after stage completion to modify configuration before
      * the next stage begins. The default implementation does nothing.
      *
+     * @param flow Flow advancing to the next stage
      * @param p The completed pipeline stage
      * @param config The configuration to modify for the next stage
+     * @param args Arguments forwarded to the next stage
      */
     template <typename... Args>
     static void apply(flow_type& flow, pipeline_type& p, configs_type& config, Args&&... args) {
@@ -110,8 +114,10 @@ struct transitioner: public detail::transitioner<LabelT, StreamT, Count, Stage+1
 
     /**
      * @brief apply patch_config on the configs with the current pipeline
+     * @param flow Flow advancing to the next stage
      * @param p
      * @param configs
+     * @param args Arguments forwarded to the transition
      */
     template <typename... Args>
     void apply(flow_type& flow, pipeline_type& p, configs_type& configs, Args&&... args){

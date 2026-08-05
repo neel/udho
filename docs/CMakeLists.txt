@@ -30,6 +30,7 @@ endif()
 set(UDHO_DOXYGEN_TEMPLATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.wrapper.in")
 set(UDHO_DOXYGEN_SHARED_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
+set(UDHO_DOXYGEN_COMPILE_FLAGS "${CMAKE_CURRENT_SOURCE_DIR}/compile_flags.txt")
 set(UDHO_DOXYGEN_TAG_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.tags")
 set(UDHO_DOXYGEN_HTML_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.html")
 include(UdhoDoxygen)
@@ -46,10 +47,14 @@ set(UDHO_DOXYGEN_TAG_DIR "${UDHO_DOXYGEN_MODULAR_ROOT}/tags")
 # external tags.  These targets depend only on their own headers, which is the
 # key to module-local incremental rebuilds.
 set(UDHO_DOXYGEN_TAG_TARGETS)
+set(UDHO_DOXYGEN_TAG_FILES)
 foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
     set(module_source_dir "${UDHO_SOURCE_DIR}/includes/udho/${module}")
     set(module_config "${module_source_dir}/Doxyfile")
-    file(GLOB_RECURSE module_sources "${module_source_dir}/*.h" "${module_source_dir}/*.dox")
+    file(GLOB_RECURSE module_sources CONFIGURE_DEPENDS
+        "${module_source_dir}/*.h"
+        "${module_source_dir}/*.dox"
+        "${module_source_dir}/*.md")
     set(UDHO_DOCUMENTATION_SOURCES_${module} ${module_sources})
 
     set(tag_target "docs-tag-${module}")
@@ -66,8 +71,10 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         DEPENDS
             ${module_sources}
             "${UDHO_DOXYGEN_SHARED_CONFIG}"
+            "${UDHO_DOXYGEN_COMPILE_FLAGS}"
     )
     list(APPEND UDHO_DOXYGEN_TAG_TARGETS ${tag_target})
+    list(APPEND UDHO_DOXYGEN_TAG_FILES "${tag_file}")
 endforeach()
 
 add_custom_target(docs-tags)
@@ -98,6 +105,7 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         DEPENDS
             ${UDHO_DOCUMENTATION_SOURCES_${module}}
             "${UDHO_DOXYGEN_SHARED_CONFIG}"
+            "${UDHO_DOXYGEN_COMPILE_FLAGS}"
     )
     list(APPEND UDHO_DOXYGEN_MODULE_TARGETS ${module_target})
 endforeach()
@@ -125,6 +133,7 @@ udho_add_doxygen_target(docs-pages
         ${UDHO_DOCUMENTATION_PAGES}
         ${UDHO_DOCUMENTATION_PARTS}
         ${UDHO_DOCUMENTATION_IMAGES}
+        ${UDHO_DOXYGEN_TAG_FILES}
         "${UDHO_DOXYGEN_SHARED_CONFIG}"
         "${CMAKE_CURRENT_SOURCE_DIR}/index.h"
         "${UDHO_SOURCE_DIR}/README.md"

@@ -17,6 +17,10 @@ namespace udho{
 namespace session{
 namespace storage{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 /**
  * @brief Memory-mapped file storage for HTTP sessions
  */
@@ -299,6 +303,8 @@ private:
 private:
     udho::utils::filesystem::path _root;
 };
+
+/** @} */
 
 }
 }

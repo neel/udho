@@ -4,6 +4,8 @@
 #include <udho/url/fwd.h>
 #include <udho/url/tabulate.h>
 
+#ifndef __DOXYGEN__
+
 namespace udho{
 namespace url{
 
@@ -33,5 +35,7 @@ std::ostream& operator<<(std::ostream& stream, const basic_router<Mountpoints>& 
 
 }
 }
+
+#endif // __DOXYGEN__
 
 #endif // UDHO_URL_IO_FWD_H

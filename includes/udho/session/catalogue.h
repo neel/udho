@@ -21,6 +21,9 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
 
 /**
  * @class catalogue
@@ -322,6 +325,7 @@ struct catalogue: abstract_catalogue{
         mutable std::mutex _mutex;
 };
 
+/** @} */
 }
 }
 

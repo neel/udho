@@ -11,6 +11,10 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
 
 namespace vis{
 namespace html{
@@ -722,6 +726,10 @@ static std::ostream& flow(std::ostream& stream, const udho::manifold::basic_flow
 
 }
 }
+
+/**
+ * @}
+ */
 
 }
 }

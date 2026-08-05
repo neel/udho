@@ -71,19 +71,19 @@ struct const_store{
 
     /**
      * @brief Returns an iterator to the beginning of the assets of the specified type.
-     * @param type The asset type to filter the assets by (e.g., js, css, img).
+     * @param prefix Asset prefix.
      * @return An iterator pointing to the first asset of the specified type, or end iterator if no such asset exists.
      */
     inline prefix_const_iterator begin(const std::string& prefix) const { return prefix_const_iterator{_store.by_prefix().lower_bound(prefix), _store.by_prefix().end(), base()}; }
     /**
      * @brief Returns an iterator to the end of the assets of the specified type.
-     * @param type The asset type to filter the assets by (e.g., js, css, img).
+     * @param prefix Asset prefix.
      * @return An iterator pointing just past the last asset of the specified type.
      */
     inline prefix_const_iterator end(const std::string& prefix)   const { return prefix_const_iterator{_store.by_prefix().upper_bound(prefix), _store.by_prefix().end(), base()}; }
     /**
      * @brief Returns the number of assets of a given type.
-     * @param type The asset type to count in the store (e.g., js, css, img).
+     * @param prefix Asset prefix.
      * @return The number of assets of the specified type.
      */
     inline size_type size(const std::string& prefix) const { return std::distance(begin(prefix), end(prefix)); }
@@ -187,7 +187,7 @@ struct const_store{
 
     /**
      * @brief server an asset resource through the stream
-     * @param stream the response stream
+     * @param ostream response stream
      * @param prefix string prefix of the asset
      * @param name string name of the asset
      */
@@ -199,7 +199,7 @@ struct const_store{
 
     /**
      * @brief server an asset resource through the stream
-     * @param stream the response stream
+     * @param ostream response stream
      * @param subject uri of the asset
      */
     template <typename OstreamT>

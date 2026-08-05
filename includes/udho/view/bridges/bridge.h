@@ -347,8 +347,11 @@ struct bridge{
 
     /**
      * @brief Compiles a template from a resource file into a script.
-     * @param view The resource file containing the template data.
+     * @param name Script name.
      * @param prefix A prefix used in the naming of the script.
+     * @param data Input data.
+     * @param aux Auxiliary data.
+     * @param output Output string.
      * @return True if compilation was successful, false otherwise.
      */
     template <typename T, typename Aux>

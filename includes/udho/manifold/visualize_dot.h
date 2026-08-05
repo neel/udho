@@ -7,6 +7,10 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
 
 namespace vis{
 namespace dot{
@@ -247,6 +251,10 @@ std::ostream& visualize_fabric_dot(const udho::manifold::fabric<Stage, Facets...
 
     return stream;
 }
+
+/**
+ * @}
+ */
 
 }
 }

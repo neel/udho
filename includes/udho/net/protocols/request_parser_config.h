@@ -8,6 +8,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 struct body_parser_config {
     body_parser_config()
         : _total_timeout(std::chrono::seconds(0))
@@ -46,6 +50,8 @@ private:
     std::size_t          _field_content_limit;
     bool                 _upload_in_buffer;
 };
+
+/** @} */
 
 }
 

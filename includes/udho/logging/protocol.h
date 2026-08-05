@@ -10,6 +10,10 @@ namespace logging {
 
 namespace protocol {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 /**
  * @brief Magic constant used to identify valid admin protocol packets.
  *
@@ -101,6 +105,8 @@ struct reply_header {
 
 static_assert(std::is_trivially_copyable<reply_header>::value, "reply_header must be trivially copyable");
 static_assert(sizeof(reply_header) == 16, "unexpected reply_header size");
+
+/** @} */
 
 }
 

@@ -266,6 +266,7 @@ struct assign_<DataT, associative<HeadT, TailT>>{
 
     /**
      * @brief Assigns i'th item in the associative container
+     * @param data target data
      * @param assoc reference to the container
      * @param idx index of the target nvp
      */
@@ -325,6 +326,7 @@ struct assign_<DataT, associative<HeadT, void>>{
 
     /**
      * @brief Assigns i'th item in the associative container
+     * @param data target data
      * @param assoc reference to the container
      * @param idx index of the target nvp
      */
@@ -415,7 +417,6 @@ inline detail::assoc_<> assoc(const std::string& name){ return detail::assoc_<>{
 /**
  * @brief assigns values to the nvp's of an associative container
  * @param data  the targeted data object
- * @param assoc the associative container
  * @param begin iterator to a string container
  * @param end   iterator to a string container
  */

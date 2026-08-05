@@ -45,7 +45,7 @@ struct routing_table;
  */
 template <typename... Mountpoints>
 struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
-
+#ifndef __DOXYGEN__
     /**
      * @brief operator overload for streaming the routing table's mount points
      * @param stream Output stream
@@ -54,6 +54,7 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
      */
     template <typename... XMountpoints>
     friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<udho::url::mountpoints_table<XMountpoints...>>& router);
+#endif // __DOXYGEN__
 
     /// Type alias for the mount points collection
     using mountpoints_table_type    = udho::url::mountpoints_table<Mountpoints...>;
@@ -283,6 +284,8 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
 template <typename StrT, typename ActionsT>
 struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
 
+#ifndef __DOXYGEN__
+
     /**
      * @brief operator overload for streaming the routing table's mount points
      * @param stream Output stream
@@ -291,6 +294,8 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      */
     template <typename Mountpoints>
     friend std::ostream& udho::url::operator<<(std::ostream& stream, const udho::url::detail::routing_table<Mountpoints>& router);
+
+#endif // __DOXYGEN__
 
     /// Type alias for the mount points collection
     using mountpoint_type = udho::url::mount_point<StrT, ActionsT>;
@@ -418,6 +423,7 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
      * @brief Invokes the action associated with a URL path
      * @tparam Ch Character type for the URL string
      * @tparam Args Types of arguments to forward
+     * @param method HTTP method
      * @param subject URL path to invoke
      * @param args Arguments to forward to the action
      * @return true if action was invoked or file was served, false otherwise
@@ -993,7 +999,6 @@ struct basic_router<udho::url::mountpoints_table<Mountpoints...>>: private detai
      * @tparam Args Types of additional ignored arguments.
      * @param index Registry route index whose target is served.
      * @param context Context passed to the matching explorer.
-     * @param args Additional arguments accepted for interface compatibility.
      * @return `true` when a file or directory is served; otherwise `false`.
      *
      * @see detail::basic_router<detail::routing_table<mountpoints_type>>::invoke_registry
@@ -1180,7 +1185,6 @@ struct basic_router<void>: private detail::basic_router<void>{
      * @tparam Args Types of additional ignored arguments.
      * @param index Registry route index whose target is served.
      * @param context Context passed to the matching explorer.
-     * @param args Additional arguments accepted for interface compatibility.
      * @return `true` when a file or directory is served; otherwise `false`.
      *
      * @see detail::basic_router<void>::invoke_registry
@@ -1269,8 +1273,9 @@ struct basic_router<void>: private detail::basic_router<void>{
 
 /**
  * @brief Create basic router from a set of mountpoints without asset store
- * @tparam MountPointsT Deduced mount points type
+ * @tparam Mountpoints Deduced mount-point types
  * @param mountpoints Routing configuration
+ * @param registry Explorer registry
  * @return Router without asset support
  *
  * @par Example:

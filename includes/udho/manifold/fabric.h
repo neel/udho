@@ -124,6 +124,7 @@ struct basic_fabric<Stage, FacetT, true, Rest...>: private detail::facet_interfa
      * @tparam Components... Types of components in the composition
      * @param composition The composition containing component instances
      * @param conf Configuration for all components
+     * @param id Flow identifier
      */
     template <typename... Components>
     basic_fabric(composition<Components...>& composition, const configs<Components...>& conf, std::size_t id)

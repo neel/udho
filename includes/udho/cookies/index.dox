@@ -1,0 +1,4 @@
+/**
+ * @defgroup DoxyG_cookies Cookies
+ * @brief HTTP cookie creation, parsing, and storage.
+ */

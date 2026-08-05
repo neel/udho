@@ -18,7 +18,7 @@ namespace www {
  * @tparam StreamT Stream type used by the context.
  * @tparam Components Additional www components exposed by the context.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename... Components>
 using basic_context = udho::manifold::basic_context<StreamT, udho::www::components::basic_handler<StreamT>, Components...>;
@@ -31,7 +31,7 @@ using basic_context = udho::manifold::basic_context<StreamT, udho::www::componen
  *
  * @tparam Components Additional www components exposed by the context.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename... Components>
 using context = basic_context<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Components...>;

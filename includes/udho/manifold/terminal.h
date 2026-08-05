@@ -9,6 +9,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @ingroup manifold
+ * @{
+ */
+
+/**
  * @brief The terminal class determines whether the flow will be deleted or not.
  *
  * By default the reenter() and error() return false which implies the following.
@@ -64,9 +69,8 @@ struct basic_terminal{
      * The default implementation does nothing.
      *
      * @tparam Args Additional terminal argument types.
-     * @param result Evaluation result describing the internal failure.
+     * The unnamed evaluation result and additional arguments are ignored.
      * @param flow Flow that encountered the error.
-     * @param args Additional arguments supplied by the runtime.
      */
     template <typename... Args>
     void internal_error(udho::manifold::evaluation_result, flow_type& flow, Args&&...){ return; }
@@ -79,7 +83,7 @@ struct basic_terminal{
      * @tparam Args Additional terminal argument types.
      * @param capex Captured exception thrown or propagated by user code.
      * @param flow Flow that encountered the error.
-     * @param args Additional arguments supplied by the runtime.
+     * The unnamed additional arguments are ignored.
      */
     template <typename... Args>
     void user_error(const udho::exceptions::captured& capex, flow_type& flow, Args&&...){ return; }
@@ -101,6 +105,10 @@ private:
     configs_type& _configs;
     const journal_type& _journal;
 };
+
+/**
+ * @}
+ */
 
 }
 }

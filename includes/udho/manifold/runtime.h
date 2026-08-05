@@ -12,6 +12,11 @@ namespace udho{
 namespace manifold{
 
 /**
+ * @ingroup manifold
+ * @{
+ */
+
+/**
  * @brief Runtime manager for pipeline executions
  *
  * Manages the lifecycle of flows providing:
@@ -53,7 +58,7 @@ struct basic_runtime{
     /**
      * @brief Constructs a runtime
      *
-     * @param composition Component composition for this runtime
+     * @param args Components used to construct the composition
      */
     template <typename... Args>
     static composition_type compose(Args&&... args) { return composition_type::compose(std::forward<Args>(args)...); }
@@ -160,6 +165,10 @@ private:
     collection_type    _flows;
     mutable std::mutex _mutex;
 };
+
+/**
+ * @}
+ */
 
 }
 }

@@ -18,6 +18,16 @@ namespace protocols{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
+/**
+ * @brief Value of a parsed form field.
+ *
+ * A field contains a string, filesystem path, or in-memory buffer according
+ * to its declared type.
+ */
 struct field_value_type{
     using path_type = udho::utils::filesystem::path;
     using variant_type = std::variant<
@@ -33,58 +43,74 @@ struct field_value_type{
         buffer
     };
 
+    /** @brief Construct an empty field of the specified type. */
     explicit field_value_type(const std::string& name, types t): _name(name), _type(t) {
         if (t == types::string) _value = std::string{};
         if (t == types::path)   _value = path_type{};
         if (t == types::buffer) _value = boost::beast::multi_buffer{};
     }
+    /** @brief Construct a string field by copying its value. */
     field_value_type(const std::string& name, const std::string& str): _name(name), _type(types::string) {
         value(str);
     }
+    /** @brief Construct a path field by copying its value. */
     field_value_type(const std::string& name, const path_type& path): _name(name), _type(types::path) {
         value(path);
     }
+    /** @brief Construct a buffer field by moving its value. */
     field_value_type(const std::string& name, boost::beast::multi_buffer&& buffer): _name(name), _type(types::buffer) {
         value(std::forward<boost::beast::multi_buffer>(buffer));
     }
+    /** @brief Construct a string field by moving its value. */
     field_value_type(const std::string& name, std::string&& str): _name(name), _type(types::string) {
         value(std::forward<std::string>(str));
     }
+    /** @brief Construct a path field by moving its value. */
     field_value_type(const std::string& name, path_type&& path): _name(name), _type(types::path) {
         value(std::forward<path_type>(path));
     }
 
+    /** @brief Copy a field value. */
     field_value_type(const field_value_type&) = default;
+    /** @brief Move a field value. */
     field_value_type(field_value_type&&) = default;
 
+    /** @brief Return the declared field type. */
     types type() const { return _type; }
+    /** @brief Return the field name. */
     const std::string& name() const { return _name; }
+    /** @brief Return the stored variant. */
     const variant_type& value() const { return _value; }
 
+    /** @brief Set the value of a string field by copying it. */
     void value(const std::string& str) {
         if(!is_string()) {
             throw std::domain_error{udho::utils::format("field {} expects string values only", _name)};
         }
         _value = str;
     }
+    /** @brief Set the value of a path field by copying it. */
     void value(const path_type& path)  {
         if(!is_path()) {
             throw std::domain_error{udho::utils::format("field {} expects path values only", _name)};
         }
         _value = path;
     }
+    /** @brief Set the value of a string field by moving it. */
     void value(std::string&& str) {
         if(!is_string()) {
             throw std::domain_error{udho::utils::format("field {} expects string values only", _name)};
         }
         _value = std::move(str);
     }
+    /** @brief Set the value of a path field by moving it. */
     void value(path_type&& path)  {
         if(!is_path()) {
             throw std::domain_error{udho::utils::format("field {} expects path values only", _name)};
         }
         _value = std::move(path);
     }
+    /** @brief Set the value of a buffer field by moving it. */
     void value(boost::beast::multi_buffer&& buffer)  {
         if(!is_buffer()) {
             throw std::domain_error{udho::utils::format("field {} expects buffer values only", _name)};
@@ -92,26 +118,45 @@ struct field_value_type{
         _value = std::move(buffer);
     }
 
+    /**
+     * @brief Assign a field value by copying it.
+     * @tparam V Assigned value type.
+     * @param v Value to assign.
+     * @return Reference to this field.
+     */
     template <typename V>
     field_value_type& operator=(const V& v) {
         value(v);
         return *this;
     }
 
+    /**
+     * @brief Assign a field value by forwarding it.
+     * @tparam V Assigned value type.
+     * @param v Value to assign.
+     * @return Reference to this field.
+     */
     template <typename V>
     field_value_type& operator=(V&& v) {
         value(std::forward<V>(v));
         return *this;
     }
 
+    /** @brief Return whether the stored variant contains a string. */
     bool has_string() const { return std::holds_alternative<std::string>(_value); }
+    /** @brief Return whether the stored variant contains a path. */
     bool has_path() const { return std::holds_alternative<path_type>(_value); }
+    /** @brief Return whether the stored variant contains a buffer. */
     bool has_buffer() const { return std::holds_alternative<boost::beast::multi_buffer>(_value); }
 
+    /** @brief Return whether this field is declared as a string. */
     bool is_string() const { return _type == types::string; }
+    /** @brief Return whether this field is declared as a path. */
     bool is_path() const { return _type == types::path; }
+    /** @brief Return whether this field is declared as a buffer. */
     bool is_buffer() const { return _type == types::buffer; }
 
+    /** @brief Return the mutable string value. */
     std::string& string() {
         if(is_string()) {
             if(has_string()) {
@@ -124,6 +169,7 @@ struct field_value_type{
         }
     }
 
+    /** @brief Return the mutable path value. */
     path_type& path() {
         if(is_path()) {
             if(has_path()) {
@@ -136,6 +182,7 @@ struct field_value_type{
         }
     }
 
+    /** @brief Return the mutable buffer value. */
     boost::beast::multi_buffer& buffer() {
         if(is_buffer()) {
             if(has_buffer()) {
@@ -148,6 +195,7 @@ struct field_value_type{
         }
     }
 
+    /** @brief Return the string value. */
     const std::string& string() const {
         if(is_string()) {
             if(has_string()) {
@@ -160,6 +208,7 @@ struct field_value_type{
         }
     }
 
+    /** @brief Return the path value. */
     const path_type& path() const {
         if(is_path()) {
             if(has_path()) {
@@ -172,6 +221,7 @@ struct field_value_type{
         }
     }
 
+    /** @brief Return the buffer value. */
     const boost::beast::multi_buffer& buffer() const {
         if(is_buffer()) {
             if(has_buffer()) {
@@ -250,6 +300,7 @@ struct form_data{
         _field_it = _fields.end();
     }
 
+    /** @brief Return whether the form contains no fields. */
     bool empty() const { return _fields.empty(); }
 
 private:
@@ -257,13 +308,23 @@ private:
     form_iterator                   _field_it;
 };
 
+/** @brief Read-only lookup view over parsed form fields. */
 struct form_view{
+    /** @brief Construct a view over parsed form data. */
     explicit form_view(const form_data& form): _form(form) {}
 
+    /**
+     * @brief Return the iterator range for a field name.
+     * @param name Field name to find.
+     */
     std::pair<form_data::form_const_iterator, form_data::form_const_iterator> get(const std::string& name) const {
         return _form._fields.equal_range(name);
     }
 
+    /**
+     * @brief Return copies of all values with a field name.
+     * @param name Field name to find.
+     */
     std::vector<field_value_type> values(const std::string& name) const {
         auto range = get(name);
         std::vector<field_value_type> field_values;
@@ -273,6 +334,12 @@ struct form_view{
         return field_values;
     }
 
+    /**
+     * @brief Return one value with a field name.
+     * @param name Field name to find.
+     * @param index Zero-based index among values with the same name.
+     * @throws std::out_of_range If the field or index does not exist.
+     */
     const field_value_type& field(const std::string& name, std::size_t index = 0) const {
         auto range = get(name);
         std::size_t count = std::distance(range.first, range.second);
@@ -290,12 +357,14 @@ struct form_view{
         return it->second;
     }
 
+    /** @brief Return the number of values with a field name. */
     std::size_t count(const std::string& name) const {
         auto range = get(name);
         std::size_t count = std::distance(range.first, range.second);
         return count;
     }
 
+    /** @brief Return the total number of form values. */
     std::size_t count() const {
         return _form._fields.size();
     }
@@ -303,6 +372,8 @@ struct form_view{
 private:
     const form_data& _form;
 };
+
+/** @} */
 
 }
 

@@ -1,0 +1,8 @@
+/**
+ * @defgroup DoxyG_logging Logging
+ * @brief Structured logging, transport, formatting, and administration.
+ *
+ * @defgroup DoxyG_logging_params Parameters and Schema
+ * @ingroup DoxyG_logging
+ * @brief Logging field parameters and message schema.
+ */

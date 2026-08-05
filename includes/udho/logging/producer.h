@@ -14,6 +14,10 @@ namespace logging {
 
 namespace detail{
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 template <typename AtomicT, typename Enable = void>
 struct atomic_spinner;
 
@@ -73,8 +77,13 @@ struct atomic_raii_zero<std::atomic<T>>{
     ~atomic_raii_zero() { _obj.store(std::numeric_limits<T>::min(), std::memory_order_release); }
     std::atomic<T>& _obj;
 };
+
+/** @} */
 }
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Lock-free producer for the IPC based log queue.
@@ -424,6 +433,8 @@ inline std::atomic_bool          producer::_backlog_exists  = false;
 inline std::mutex                producer::_wmutex;
 inline producer::wait_queue_type producer::_waiting          = producer::wait_queue_type{};
 inline const producer::atomic_type::value_type producer::_max = std::numeric_limits<producer::atomic_type::value_type>::max();
+
+/** @} */
 
 }
 }

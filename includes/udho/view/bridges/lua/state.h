@@ -197,6 +197,7 @@ struct state{
      *
      * @param name The identifier of the script to execute.
      * @param data The data to be passed to the script, typically involving context or configuration.
+     * @param aux Auxiliary data.
      * @param output Reference to a string where the script's output will be stored.
      * @return The size of the generated output.
      * @tparam T The type of the data passed to the script.
@@ -241,9 +242,9 @@ struct state{
      * @warning supposed to be called from lua
      * @param name The identifier of the script to execute.
      * @param d The data to be passed to the script, typically involving context or configuration.
-     * @param output Reference to a string where the script's output will be stored.
+     * @param aux Auxiliary data.
      * @return The size of the generated output.
-     * @tparam T The type of the data passed to the script.
+     * @tparam AuxT Auxiliary data type.
      *
      * Searches for the script in the internal map and executes it if found. If the script execution is successful, captures the output using the provided buffer. Handles and reports errors if the script execution fails.
      */

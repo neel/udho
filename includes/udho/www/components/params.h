@@ -3,6 +3,10 @@
 
 #include <udho/manifold/config.h>
 
+/** @addtogroup DoxyG_www_components
+ *  @{
+ */
+
 namespace udho{
 namespace www{
 namespace params{
@@ -42,5 +46,7 @@ namespace resources{
 }
 }
 }
+
+/** @} */
 
 #endif // UDHO_WWW_SETTINGS_H

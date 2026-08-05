@@ -12,6 +12,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 /**
  * @brief The note class
  * A note can only be created by the catalog. It is created using a reference to the unique_ptr to the record.
@@ -189,6 +193,7 @@ struct note{
         relesef_type _releasef;
 };
 
+/** @} */
 }
 }
 

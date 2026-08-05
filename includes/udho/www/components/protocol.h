@@ -11,11 +11,21 @@
 #include <udho/www/components/params.h>
 #include <udho/logging/macros.h>
 
+/** @addtogroup DoxyG_www_components
+ *  @{
+ */
+
 namespace udho{
 namespace www{
 
 namespace components{
 
+/**
+ * @brief Component managing protocol readers indexed by flow id.
+ * @tparam ProtocolT Protocol type providing reader and writer types.
+ * @tparam StreamT Stream type used by the protocol.
+ * @ingroup DoxyG_www_components
+ */
 template <typename ProtocolT, typename StreamT = udho::net::types::socket>
 struct protocol{
     using reader_type       = typename ProtocolT::reader;
@@ -41,6 +51,11 @@ struct protocol{
     static constexpr const udho::utils::string_view name = "protocol";
 
 public:
+    /**
+     * @brief Returns the existing reader for a flow or creates one for the stream.
+     * @param id Flow identifier.
+     * @param stream Stream used when a reader is created.
+     */
     reader_ptr_type& reader(std::size_t id, stream_type& stream){
         std::scoped_lock<std::mutex> lock(_mutex);
 
@@ -61,6 +76,10 @@ public:
         }
     }
 
+    /**
+     * @brief Returns the reader registered for a flow id.
+     * @param id Flow identifier.
+     */
     reader_ptr_type& reader(std::size_t id){
         std::scoped_lock<std::mutex> lock(_mutex);
         auto it = _readers.find(id);
@@ -71,6 +90,10 @@ public:
         return it->second;
     }
 
+    /**
+     * @brief Removes a registered reader and terminates its stream.
+     * @param id Flow identifier.
+     */
     bool remove(std::size_t id) {
         std::scoped_lock<std::mutex> lock(_mutex);
         auto it = _readers.find(id);
@@ -100,6 +123,10 @@ private:
 };
 
 namespace protocols {
+    /**
+     * @brief HTTP protocol component for a stream type.
+     * @tparam StreamT Stream type.
+     */
     template <typename StreamT>
     using http = udho::www::components::protocol<udho::net::protocols::http<StreamT>, StreamT>;
 }
@@ -109,6 +136,12 @@ namespace protocols {
 
 namespace manifold{
 
+/**
+ * @brief Reads a request header through the protocol reader.
+ * @tparam ProtocolT Protocol type.
+ * @tparam StreamT Stream type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename ProtocolT, typename StreamT>
 struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>{
     using component_type  = udho::www::components::protocol<ProtocolT, StreamT>;
@@ -119,8 +152,22 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     using reader_ptr_type = std::shared_ptr<reader_type>;
     using config_type     = udho::manifold::config<component_type>;
 
+    /**
+     * @brief Constructs the facet.
+     * @param component Protocol component.
+     * @param config Component configuration.
+     * @param id Flow identifier.
+     */
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config), _id(id) {}
 
+    /**
+     * @brief Starts asynchronous header reading.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         using result = udho::www::feature::header_reader::result;
@@ -152,6 +199,14 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
         }, timeout_secs);
     }
 
+    /**
+     * @brief Invokes header reading.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>::operator()(...)" << std::endl;
@@ -170,6 +225,13 @@ private:
     struct http_reader{};
 };
 
+/**
+ * @brief Portal accessor for the parsed request and body.
+ * @tparam ProtocolT Protocol type.
+ * @tparam StreamT Stream type.
+ * @tparam JournalT Journal view type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename ProtocolT, typename StreamT, typename JournalT>
 struct accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>: basic_accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>{
     using basic_accessor_type   = basic_accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>;
@@ -180,15 +242,23 @@ struct accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>: 
 
     using basic_accessor_type::basic_accessor_type;
 
+    /** @brief Returns the parsed request header from the journal. */
     const request_type& request() const {
         return basic_accessor_type::journal().template at<udho::www::feature::header_reader>();
     }
 
+    /** @brief Returns the body-reader result from the journal. */
     const udho::www::feature::body_reader::result& body() const {
         return basic_accessor_type::journal().template at<udho::www::feature::body_reader>();
     }
 };
 
+/**
+ * @brief Reads non-GET request bodies through the protocol reader.
+ * @tparam ProtocolT Protocol type.
+ * @tparam StreamT Stream type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename ProtocolT, typename StreamT>
 struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>{
     using component_type  = udho::www::components::protocol<ProtocolT, StreamT>;
@@ -198,8 +268,22 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     using reader_ptr_type = std::shared_ptr<reader_type>;
     using config_type     = udho::manifold::config<component_type>;
 
+    /**
+     * @brief Constructs the facet.
+     * @param component Protocol component.
+     * @param config Component configuration.
+     * @param id Flow identifier.
+     */
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config), _id(id) {}
 
+    /**
+     * @brief Reads or skips the request body according to the request method.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         const udho::www::feature::header_reader::result& request = journal.template at<udho::www::feature::header_reader>();
@@ -243,6 +327,14 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     }
 
 
+    /**
+     * @brief Invokes body reading.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
         std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>::operator()(...)" << std::endl;
@@ -261,5 +353,7 @@ private:
 
 } // manifold
 } // udho
+
+/** @} */
 
 #endif // UDHO_WWW_COMPONENTS_PROTOCOL_H

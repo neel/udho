@@ -28,6 +28,10 @@ struct Name: udho::hazo::element<Name , Type> {                             \
 namespace udho {
 namespace logging {
 
+/** @addtogroup DoxyG_logging_params
+ *  @{
+ */
+
 /**
  * @brief Log severity levels.
  */
@@ -66,6 +70,8 @@ inline std::ostream& operator<<(std::ostream& stream, udho::logging::severity se
     return stream;
 }
 
+/** @} */
+
 /**
  * @brief Compile‑time keys for log message fields.
  *
@@ -73,6 +79,10 @@ inline std::ostream& operator<<(std::ostream& stream, udho::logging::severity se
  * container. Example: `msg[params::local_id::val] = 42;`
  */
 namespace params {
+
+/** @addtogroup DoxyG_logging_params
+ *  @{
+ */
 
 UDHO_LOG_PARAM(local_id,        std::uint64_t);   // process-local monotonically increasing id
 UDHO_LOG_PARAM(timestamp,       std::chrono::system_clock::time_point);    // unix epoch nanoseconds
@@ -104,6 +114,8 @@ UDHO_LOG_PARAM(bytes_sent,      std::optional<std::uint64_t>);
 UDHO_LOG_PARAM(latency,         std::optional<std::chrono::nanoseconds>);
 UDHO_LOG_PARAM(retry_count,     std::optional<std::uint32_t>);
 
+/** @} */
+
 }
 
 /**
@@ -112,6 +124,10 @@ UDHO_LOG_PARAM(retry_count,     std::optional<std::uint32_t>);
  * These correspond one‑to‑one with the keys in @ref params.
  */
 namespace names {
+
+/** @addtogroup DoxyG_logging_params
+ *  @{
+ */
 
 inline constexpr char local_id[]      = "LineID";
 inline constexpr char timestamp[]     = "TimeStamp";
@@ -142,6 +158,8 @@ inline constexpr char status_code[]   = "Status";
 inline constexpr char bytes_sent[]    = "BytesSent";
 inline constexpr char latency[]       = "Latency";
 inline constexpr char retry_count[]   = "Retry";
+
+/** @} */
 
 }
 

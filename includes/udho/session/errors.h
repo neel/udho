@@ -12,6 +12,10 @@ namespace udho{
 namespace session{
 namespace errors{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 class conflict: std::exception{
     std::string   _message;
     udho::session::id _id;
@@ -88,6 +92,8 @@ class io: std::exception{
         inline const std::string& message() const { return _message; }
         virtual const char* what() const noexcept { return _message.c_str(); }
 };
+
+/** @} */
 
 }
 }

@@ -3,4 +3,6 @@
 
 PROJECT_NAME           = udho::db
 INPUT                  = .
+EXCLUDE                = pg/schema/primary.h
+CLANG_OPTIONS         += -include udho/db/pg.h
 GENERATE_TAGFILE       = .doxygen/db.tag

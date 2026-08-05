@@ -18,7 +18,7 @@ namespace www {
  * @tparam Tag Tag selecting the www sketch.
  * @tparam ExtraComponents Components appended to the default www composition.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct basic_label{
@@ -44,7 +44,7 @@ struct basic_label{
  * @tparam Tag Tag selecting the www sketch.
  * @tparam ExtraComponents Components appended to the default www composition.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename Tag, typename... ExtraComponents>
 using label = basic_label<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Tag, ExtraComponents...>;
@@ -57,7 +57,7 @@ using label = basic_label<udho::net::detail::wire_types<boost::asio::ip::tcp>::s
  * @tparam Tag Tag selecting the www sketch.
  * @tparam ExtraComponents Components appended to the default www composition.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename Tag, typename... ExtraComponents>
 using test = basic_label<boost::beast::test::stream, Tag, ExtraComponents...>;

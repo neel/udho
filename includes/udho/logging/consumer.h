@@ -32,13 +32,23 @@ namespace logging {
 
 namespace {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 template <typename KeyT>
 void add_optional_attr(const udho::logging::message& msg, boost::log::attribute_set& attrs, const KeyT k, const char* name){
     if (msg[k].value().has_value())
         attrs.insert(name, boost::log::attributes::make_constant(msg[k].value().value()));
 }
 
+/** @} */
+
 }
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Single-threaded log consumer and admin-command endpoint.
@@ -534,6 +544,8 @@ private:
     std::optional<std::string>       _filter_text;
     bool                             _enabled;
 };
+
+/** @} */
 
 }
 }

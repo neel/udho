@@ -1,0 +1,11 @@
+/**
+ * @defgroup DoxyG_www WWW
+ * @brief WWW subsystem
+ * @ingroup manifold
+ */
+
+/**
+ * @defgroup DoxyG_www_components Components
+ * @brief Components used by the WWW manifold materialization.
+ * @ingroup DoxyG_www
+ */

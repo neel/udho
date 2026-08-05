@@ -6,6 +6,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 struct record_data;
 struct record;
 struct note;
@@ -17,6 +21,7 @@ namespace storage{
     struct fs;
 }
 
+/** @} */
 }
 }
 

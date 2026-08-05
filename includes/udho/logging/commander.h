@@ -18,6 +18,9 @@
 namespace udho {
 namespace logging {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Result of one command execution.
@@ -52,7 +55,13 @@ struct result {
     explicit operator bool() const noexcept { return success(); }
 };
 
+/** @} */
+
 namespace detail {
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 template <typename ProtocolT>
 struct sync_write_helper{
@@ -117,9 +126,14 @@ struct sync_write_helper{
 
 };
 
+/** @} */
 
 
 }
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Stateless synchronous client for the consumer admin socket.
@@ -234,6 +248,8 @@ private:
     std::string _socket_path;
     std::size_t _max_packet_size;
 };
+
+/** @} */
 
 }
 }

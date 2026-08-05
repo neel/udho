@@ -32,7 +32,7 @@ namespace manifold {
  *
  * Expects reference of the configuration owned by the root pipeline (Stage -1) to be
  * passed during construction which is not copied but stored as reference only, so that
- * each @ref udho::manifold::flow "flow" can have its own copy of configs, while allowing
+ * each @ref udho::manifold::basic_flow "flow" can have its own copy of configs, while allowing
  * it to be reconfigured by usercode specialization during stage transition.
  *
  * ## Composition (borrowed)
@@ -81,6 +81,7 @@ struct pipeline{
      * @param configs Configuration shared across all stages
      * @param journal Journal for storing facet results
      * @param previous Reference to the previous pipeline stage
+     * @param id Flow identifier
      */
     template <typename JournalT>
     pipeline(composition_type& composition, typename composition_type::configs_type& configs, JournalT& journal, prev_pipeline_type& previous, std::size_t id)
@@ -288,12 +289,12 @@ private:
  *
  * ## Configurattions (owned)
  *
- * @ref udho::manifold::flow "Flow" passes a reference to the baseline configs
+ * @ref udho::manifold::basic_flow "Flow" passes a reference to the baseline configs
  * obtained from the runtime which is copied into a member variable. A reference
  * to that configs is passed to the next pipeline. Subsequent configs hold reference
  * of the configs only.
  *
- * Each @ref udho::manifold::flow "flow" has its own copy of configs, owned by stage
+ * Each @ref udho::manifold::basic_flow "flow" has its own copy of configs, owned by stage
  * -1 pipeline shared accross all other stage > -1 pipelines through mutable references
  * which could be patched by the usercode during stage transition. Patching of that
  * reference would impact pipelines of all stages.
@@ -320,6 +321,7 @@ struct pipeline<CompositionT, OrderT, Count, -1> {
      *
      * @param composition The component composition
      * @param baseline Baseline configuration shared across all stages
+     * @param id Flow identifier
      */
     pipeline(CompositionT& composition, configs_type& baseline, std::size_t id): _composition(composition), _configs(baseline), _next(composition, _configs, _journal, *this, id) {}
 
@@ -408,10 +410,10 @@ struct pipeline<CompositionT, OrderT, Count, static_cast<int>(Count)>{
     /**
      * @brief Constructs the finish pipeline stage
      *
-     * @param composition The component composition (unused)
+     * The unnamed composition and journal arguments are unused.
      * @param configs Configuration reference
-     * @param journal Journal (unused)
      * @param previous Reference to the previous pipeline stage
+     * @param id Flow identifier
      */
     template <typename JournalT>
     pipeline(CompositionT&, typename CompositionT::configs_type& configs, JournalT&, prev_pipeline_type& previous, std::size_t id): _configs(configs), _previous(previous), _id(id) {}

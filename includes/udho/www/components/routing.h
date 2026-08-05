@@ -8,11 +8,20 @@
 #include <udho/www/components/params.h>
 #include <udho/logging/macros.h>
 
+/** @addtogroup DoxyG_www_components
+ *  @{
+ */
+
 namespace udho{
 namespace www{
 
 namespace components{
 
+/**
+ * @brief Component owning a URL router and providing route-related features.
+ * @tparam RouterT URL router type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename RouterT>
 class routing{
     static_assert(udho::url::is_router<RouterT>::value);
@@ -30,11 +39,22 @@ public:
 
     static constexpr const udho::utils::string_view name = "router";
 
+    /**
+     * @brief Constructs the component by moving in a router.
+     * @param router Router to store.
+     */
     routing(router_type&& router): _router(std::move(router)) {}
 
+    /** @brief Returns the owned router. */
     router_type& router() { return _router; }
+    /** @brief Returns the owned router. */
     const router_type& router() const { return _router; }
 
+    /**
+     * @brief Finds a route for an HTTP method and subject.
+     * @param method HTTP method.
+     * @param subject Route subject.
+     */
     udho::url::detail::route_index locate(boost::beast::http::verb method, const std::string& subject) {
         udho::url::detail::route_index route = _router.index_of(method, subject);
         return route;
@@ -46,13 +66,33 @@ public:
 
 namespace manifold {
 
+/**
+ * @brief Evaluates route lookup for the identified request target.
+ * @tparam RouterT URL router type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename RouterT>
 struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locator> {
     using component_type = udho::www::components::routing<RouterT>;
     using config_type    = udho::manifold::config<component_type>;
 
+    /**
+     * @brief Constructs the facet.
+     * @param component Routing component.
+     * @param config Component configuration.
+     * @param id Flow identifier.
+     */
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config), _id(id) {}
 
+    /**
+     * @brief Locates the route identified by the journal results.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @tparam Stream Stream type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
         const udho::www::feature::header_reader::result& request = journal.template at<udho::www::feature::header_reader>();
@@ -78,6 +118,15 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locato
         }
     }
 
+    /**
+     * @brief Invokes route lookup.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @tparam Stream Stream type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Current stream.
+     */
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
         std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::locator>::operator()(...)" << std::endl;
@@ -90,14 +139,34 @@ private:
     std::size_t         _id;
 };
 
+/**
+ * @brief Invokes a previously located route.
+ * @tparam RouterT URL router type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename RouterT>
 struct facet<udho::www::components::routing<RouterT>, udho::www::feature::responder> {
     using component_type = udho::www::components::routing<RouterT>;
     using facet_type     = facet<component_type, udho::www::feature::locator>;
     using config_type    = udho::manifold::config<component_type>;
 
+    /**
+     * @brief Constructs the facet.
+     * @param component Routing component.
+     * @param config Component configuration.
+     * @param id Flow identifier.
+     */
     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
+    /**
+     * @brief Invokes the route stored in the journal.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @tparam Stream Stream type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Stream passed to the router.
+     */
     template <typename... Components, typename NextT, typename Stream>
     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
         udho::url::detail::route_index route_index = journal.template get<facet_type>();
@@ -106,6 +175,15 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::respon
         else        next.fail();
     }
 
+    /**
+     * @brief Invokes responder evaluation.
+     * @tparam Components Components represented by the journal.
+     * @tparam NextT Continuation type.
+     * @tparam Stream Stream type.
+     * @param journal Current flow journal.
+     * @param next Pipeline continuation.
+     * @param stream Stream passed to the router.
+     */
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
         std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::responder>::operator()(...)" << std::endl;
@@ -117,6 +195,12 @@ private:
     const config_type& _config;
 };
 
+/**
+ * @brief Portal accessor for the routing component.
+ * @tparam RouterT URL router type.
+ * @tparam JournalT Journal view type.
+ * @ingroup DoxyG_www_components
+ */
 template <typename RouterT, typename JournalT>
 struct accessor<udho::www::components::routing<RouterT>, JournalT>: basic_accessor<udho::www::components::routing<RouterT>, JournalT>{
     using basic_accessor_type   = basic_accessor<udho::www::components::routing<RouterT>, JournalT>;
@@ -130,5 +214,7 @@ struct accessor<udho::www::components::routing<RouterT>, JournalT>: basic_access
 
 } // manifold
 } // udho
+
+/** @} */
 
 #endif // UDHO_WWW_COMPONENTS_ROUTING_H

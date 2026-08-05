@@ -12,6 +12,11 @@
 namespace udho{
 namespace manifold{
 
+/**
+ * @ingroup manifold
+ * @{
+ */
+
 template <typename ComponentT, typename JournalViewT>
 struct basic_accessor;
 
@@ -290,6 +295,10 @@ struct get_portal_type<udho::manifold::composition<Components...>>{
 };
 
 }
+
+/**
+ * @}
+ */
 
 }
 }

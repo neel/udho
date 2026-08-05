@@ -42,6 +42,10 @@ namespace udho{
 
 namespace cookies{
 
+/** @addtogroup DoxyG_cookies
+ *  @{
+ */
+
 /**
  * @class cookie
  * @brief RFC 6265 compliant HTTP cookie implementation
@@ -565,6 +569,8 @@ inline cookie<std::string> read(std::string_view header) {
 }
 
 
+
+/** @} */
 
 }
 

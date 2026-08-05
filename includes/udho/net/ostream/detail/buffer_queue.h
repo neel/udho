@@ -10,6 +10,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 
 /**
  * @brief Queue-based buffer manager that preserves write order across owned and borrowed payloads.
@@ -28,6 +32,7 @@ struct buffer_queue{
 
     /**
      * @brief Borrowed payload descriptor (either real data or terminal marker).
+     * @ingroup DoxyG_net
      */
     class payload_borrowed{
         boost::asio::const_buffer _buf;
@@ -46,6 +51,7 @@ struct buffer_queue{
 
     /**
      * @brief Owned payload descriptor stored in `_dat_queue`.
+     * @ingroup DoxyG_net
      *
      * Owns data (flat_buffer) and can yield a borrowed view via borrowed().
      */
@@ -254,6 +260,8 @@ private:
     std::size_t             _count = 0;
 };
 
+
+/** @} */
 
 }
 

@@ -9,6 +9,10 @@
 namespace udho{
 namespace net{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 // template <typename ProtocolT>
 // struct connection;
 
@@ -25,6 +29,8 @@ namespace net{
 
 template <typename WireT, typename RuntimeT>
 struct basic_listener;
+
+/** @} */
 
 }
 }

@@ -12,6 +12,9 @@
 #include <udho/utils/date_time.h>
 
 namespace boost::log{
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 inline formatting_ostream& operator<<(formatting_ostream& stream, const std::chrono::system_clock::time_point& tp ) {
     stream << udho::utils::date_time::format_rfc3339(tp);
     return stream;
@@ -22,11 +25,16 @@ inline formatting_ostream& operator<<(formatting_ostream& stream, const std::chr
     stream << udho::utils::date_time::format_iso8601(duration);
     return stream;
 }
+/** @} */
 
 }
 
 namespace udho{
 namespace logging{
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Formatter for transported log records reconstructed in the consumer.
@@ -157,6 +165,8 @@ struct formatter{
 private:
     bool _full;
 };
+
+/** @} */
 
 }
 }

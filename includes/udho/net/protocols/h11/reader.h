@@ -15,6 +15,10 @@ namespace protocols{
 
 namespace h11{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Combined HTTP/1.1 reader that reads both headers and body sequentially.
  *
@@ -90,8 +94,7 @@ public:
      *                `void(Buffer&&, boost::system::error_code, std::size_t)`.
      *                The buffer contains the body (for non‑multipart) or is empty
      *                (for multipart); the `size_t` is the total raw bytes read.
-     * @param seconds Total timeout for body reading.
-     * @param limit   Maximum allowed body size (raw bytes).
+     * @param config  Body parser configuration.
      *
      * @pre `request` must be the same request that was previously parsed by `start()`.
      * @note The internal header buffer is passed to the body reader, which will
@@ -149,6 +152,8 @@ private:
     boost::beast::flat_buffer     _header_buffer;
     header_reader_type            _header;
 };
+
+/** @} */
 
 }
 

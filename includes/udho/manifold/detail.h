@@ -75,7 +75,7 @@ struct arguments {
      * @brief finds the first suitable argument for the given component
      * @tparam ComponentT component for which a feasible type has to be found
      * @tparam Args... types of the arguments from where to select
-     * @param args... variadic arguments from which to select the first feasible argument
+     * @param args Variadic arguments from which to select the first feasible argument
      * @return the first feasible argument or default_constructed instance
      */
     template <typename ComponentT>

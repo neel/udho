@@ -110,12 +110,13 @@ struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT
      * @param method HTTP method associated with the pattern.
      * @param format p1729 scanf-like pattern string for matching.
      * @param replace Replacement string (in p2216 format std::format or fmt) for the matched pattern, using placeholders {} that correspond to captured groups in the format.
+     * @param options Matching options.
      */
     match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = "", options_type&& options = options_type{}): _method(method), _format(format), _replace(!replace.empty() ? replace : format), _options(std::move(options)) { check(); }
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param opts New matching options.
      * @return
      */
     template <typename... XParams>
@@ -125,7 +126,7 @@ struct match<pattern::formats::p1729, udho::url::basic_options<Params...>, CharT
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param xp Options used to construct the new match.
      * @return
      */
     template <typename... XParams>
@@ -238,12 +239,13 @@ struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT
      * @param method HTTP method associated with the pattern.
      * @param format Fixed string pattern for matching.
      * @param replace String used for URL generation, defaults to the format if not specified.
+     * @param options Matching options.
      */
     match(udho::url::verb method, const pattern_type& format, const pattern_type& replace = "", options_type&& options = options_type{}): _method(method), _format(format), _replace(!replace.empty() ? replace : format), _options(std::move(options)) { check(); }
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param opts New matching options.
      * @return
      */
     template <typename... XParams>
@@ -253,7 +255,7 @@ struct match<pattern::formats::fixed, udho::url::basic_options<Params...>, CharT
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param xp Options used to construct the new match.
      * @return
      */
     template <typename... XParams>
@@ -381,12 +383,13 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
      * @brief Constructs a new match object with an HTTP method, implicitly set to handle the root or home pattern.
      *
      * @param method HTTP method associated with the root URL pattern, typically GET for home page requests.
+     * @param options Matching options.
      */
     match(udho::url::verb method, options_type&& options = options_type{}): _method(method), _options(std::move(options)) {  }
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param opts New matching options.
      * @return
      */
     template <typename... XParams>
@@ -396,7 +399,7 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param xp Options used to construct the new match.
      * @return
      */
     template <typename... XParams>
@@ -448,7 +451,6 @@ struct match<pattern::formats::home, udho::url::basic_options<Params...>, char>{
      * Since the home pattern is fixed, this method ignores any provided arguments and consistently returns the root path.
      *
      * @tparam Args Types of arguments, ignored in this context.
-     * @param args Arguments provided, but not utilized.
      * @return Always returns "/", the root path.
      */
     template <typename... Args>
@@ -504,12 +506,13 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
      * @param method HTTP method associated with the pattern.
      * @param pattern Regex pattern for matching URLs must begin with a /
      * @param replace Replacement string (in p2216 format std::format or fmt) for the matched pattern must begin with a /
+     * @param options Matching options.
      */
     match(udho::url::verb method, const string_type& pattern, const std::string& replace, options_type&& options = options_type{}): _method(method), _regex(pattern), _pattern(pattern), _replace(replace), _options(std::move(options)) { check(); }
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param opts New matching options.
      * @return
      */
     template <typename... XParams>
@@ -519,7 +522,7 @@ struct match<pattern::formats::regex, udho::url::basic_options<Params...>, CharT
 
     /**
      * @brief returned a new match with the same method, format, replace string but with new options
-     * @param options
+     * @param xp Options used to construct the new match.
      * @return
      */
     template <typename... XParams>

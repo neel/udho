@@ -151,7 +151,6 @@ struct store{
 
     /**
      * @brief Constructs a bundle with a specified bridge.
-     * @param bridge Reference to the bridge used for resource compilation and execution.
      */
     explicit store(): _locked(false), _base("/") {}
     store(const store&) = delete; ///< Prevents copying.

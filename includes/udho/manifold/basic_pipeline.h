@@ -33,6 +33,7 @@ struct basic_pipeline{
      * @tparam XComponents... Component types in the provided composition
      * @param composition The component composition to evaluate
      * @param configs Configuration for all components
+     * @param id Flow identifier
      */
     template <typename... XComponents>
     basic_pipeline(udho::manifold::composition<XComponents...>& composition, const udho::manifold::configs<XComponents...>& configs, std::size_t id): _fabric(composition, configs, id) {}

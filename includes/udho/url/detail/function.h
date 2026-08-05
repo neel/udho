@@ -158,7 +158,11 @@ namespace detail{
     };
 
     template <typename TupleT, int Index=std::tuple_size<TupleT>::value-1>
+#ifdef __DOXYGEN__
+    struct arg_to_tuple{
+#else
     struct arg_to_tuple: arg_to_tuple<TupleT, Index-1>{
+#endif
         typedef arg_to_tuple<TupleT, Index-1> base_type;
 
         template <typename IteratorT>

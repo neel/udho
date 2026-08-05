@@ -7,6 +7,10 @@ namespace udho{
 namespace session{
 namespace storage{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 template <modes... M>
 struct features {
     static constexpr modes values[] = { M... };
@@ -18,6 +22,8 @@ struct features {
         return false;
     }
 };
+
+/** @} */
 
 }
 }

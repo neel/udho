@@ -16,6 +16,15 @@
 namespace udho{
 namespace net{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
+/**
+ * @brief Asynchronously accepts connections and starts a flow for each one.
+ * @tparam WireT Transport protocol type.
+ * @tparam RuntimeT Runtime that owns and creates flows.
+ */
 template <typename WireT, typename RuntimeT>
 struct basic_listener: private detail::wire_traits<WireT>{
     using protocol_type = WireT;
@@ -30,14 +39,25 @@ struct basic_listener: private detail::wire_traits<WireT>{
     using flow_type     = typename runtime_type::flow_type;
 
 public:
+    /**
+     * @brief Construct a listener for an endpoint.
+     * @param io I/O context used for asynchronous operations.
+     * @param runtime Runtime that owns accepted flows.
+     * @param endpoint Endpoint on which to listen.
+     */
     basic_listener(boost::asio::io_context& io, runtime_type& runtime, endpoint_type endpoint): _strand(io.get_executor()), _runtime(runtime), _endpoint(endpoint), _acceptor(io.get_executor()), _running(false) {}
 
+    /** @brief Start listening for connections. */
     void start() {
         start([](boost::system::error_code error){
             // noop
         });
     }
 
+    /**
+     * @brief Start listening and report the setup result.
+     * @param f Function invoked with the setup error code.
+     */
     template <typename Function>
     void start(Function&& f) {
         boost::asio::post(_strand, [this, f = std::move(f)] {
@@ -80,6 +100,7 @@ public:
         });
     }
 
+    /** @brief Stop accepting connections and stop the runtime. */
     void stop() {
         boost::asio::post(_strand, [this] {
             if (!_running) return;
@@ -94,6 +115,7 @@ public:
     }
 
 private:
+    /** @brief Begin the next asynchronous accept operation. */
     void accept() {
         if(!_running) return;
         _acceptor.async_accept(
@@ -109,6 +131,11 @@ private:
         );
     }
 
+    /**
+     * @brief Start a flow for an accepted connection.
+     * @param error Result of the accept operation.
+     * @param socket Accepted socket.
+     */
     void on_accept(boost::system::error_code error, socket_type&& socket) {
         if(error) {
             UDHO_LOG_ERROR("udho::net::listener", "Failed to accept with error " + error.message());
@@ -135,13 +162,23 @@ private:
     bool                     _running;
 };
 
+/** @brief Empty specialization for stream-based test runtimes. */
 template <typename RuntimeT>
 struct basic_listener<std::stringstream, RuntimeT>{};
 
+/**
+ * @brief Create a listener for a runtime and endpoint.
+ * @param io I/O context used for asynchronous operations.
+ * @param runtime Runtime that owns accepted flows.
+ * @param endpoint Endpoint on which to listen.
+ * @return Listener configured for the runtime's transport protocol.
+ */
 template <typename RuntimeT>
 basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT> listener(boost::asio::io_context& io, RuntimeT& runtime, typename detail::wire_traits<typename RuntimeT::stream_type::protocol_type>::endpoint_type endpoint) {
     return basic_listener<typename RuntimeT::stream_type::protocol_type, RuntimeT>(io, runtime, endpoint);
 }
+
+/** @} */
 
 }
 }

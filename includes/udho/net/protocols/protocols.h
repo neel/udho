@@ -8,6 +8,10 @@ namespace udho{
 namespace net{
 namespace protocols{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 template <typename StreamT>
 struct http{
     using reader = h11::reader<StreamT>;
@@ -26,6 +30,8 @@ struct scgi2{
     using writer = h11::writer<StreamT>;
 };
 
+
+/** @} */
 
 }
 }

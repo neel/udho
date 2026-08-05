@@ -30,7 +30,7 @@ namespace manifold {
  * @tparam Bridges View-data bridge types exposed through the resources component.
  * @tparam ExtraComponents Extra components appended to the label.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename... Bridges, typename... ExtraComponents>
 struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraComponents...>>{
@@ -72,7 +72,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
  * @tparam Bridges View-data bridge types exposed through the resources component.
  * @tparam ExtraComponents Extra components appended to the label.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename StreamT, typename SessionStorageT, udho::session::modes Mode, typename... Bridges, typename... ExtraComponents>
 struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mode, Bridges...>, ExtraComponents...>>{

@@ -23,6 +23,9 @@ namespace udho{
 namespace net{
 namespace protocols{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
 
 
 template <typename StreamT>
@@ -100,7 +103,13 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
         field_map_type                      _field_map;
 };
 
+/** @} */
+
 namespace detail{
+
+/** @addtogroup DoxyG_net
+ *  @{
+ */
 
 struct fields{
     static const std::unordered_map<udho::utils::string_view, boost::beast::http::field>& table() {
@@ -468,7 +477,13 @@ struct fields{
     }
 };
 
+/** @} */
+
 }
+
+/** @addtogroup DoxyG_net
+ *  @{
+ */
 
 template <typename StreamT>
 struct scgi_reader2: public std::enable_shared_from_this<scgi_reader2<StreamT>>{
@@ -672,10 +687,11 @@ private:
     time_unit                           _wait_til;
 };
 
+/** @} */
+
 }
 }
 }
 
 
 #endif // UDHO_NET_PROTOCOL_SCGI_H
-

@@ -13,6 +13,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Writes HTTP response headers once.
  *
@@ -21,7 +25,9 @@ namespace detail{
  *
  * @tparam StreamT A Boost.Asio AsyncWriteStream.
  *
- * @thread_safety flush() dispatches on strand; safe from any thread.
+ * ### Thread safety
+ *
+ * flush() dispatches on strand; safe from any thread.
  */
 template <typename StreamT>
 struct basic_header_writer{
@@ -106,6 +112,8 @@ private:
     bool                            _finished;
 };
 
+
+/** @} */
 
 }
 

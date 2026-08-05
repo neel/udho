@@ -3,4 +3,5 @@
 
 PROJECT_NAME           = udho::manifold
 INPUT                  = .
+EXCLUDE                = components/x.h
 GENERATE_TAGFILE       = .doxygen/manifold.tag

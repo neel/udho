@@ -8,6 +8,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 struct abstract_catalogue {
     using key_type  = udho::session::id;
     using note_type = note;
@@ -23,6 +27,7 @@ struct abstract_catalogue {
 private:
     udho::session::modes _mode;
 };
+/** @} */
 }
 }
 

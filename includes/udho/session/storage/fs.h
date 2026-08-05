@@ -18,6 +18,10 @@ namespace udho{
 namespace session{
 namespace storage{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 /**
  * @brief on disk storage for HTTP session
  */
@@ -322,6 +326,8 @@ struct fs: public udho::session::storage::features<udho::session::modes::lazy, u
     private:
     udho::utils::filesystem::path _root;
 };
+
+/** @} */
 
 }
 }

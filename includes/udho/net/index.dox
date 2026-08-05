@@ -1,0 +1,4 @@
+/**
+ * @defgroup DoxyG_net Networking
+ * @brief Asynchronous networking, protocol handling, and response streaming.
+ */

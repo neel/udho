@@ -7,4 +7,3 @@ cmake-build-*
 dox
 coverage
 .doxygen/
-.doxygen-warnings.log

@@ -123,7 +123,6 @@ struct basic_script: stream<char, '\t'>{
         inline void accept(const udho::view::tmpl::section& section){ stream::append(section.begin(), section.end()); }
         /**
          * @brief Discards a section from a template. Currently, this function does not perform any operation.
-         * @param section The template section to discard.
          */
         inline void discard(const udho::view::tmpl::section&){}
 

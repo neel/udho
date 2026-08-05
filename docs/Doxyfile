@@ -851,7 +851,7 @@ WARN_FORMAT            = "$file:$line: $text"
 # messages should be written. If left blank the output is written to standard
 # error (stderr).
 
-WARN_LOGFILE           = .doxygen-warnings.log
+WARN_LOGFILE           =
 
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
@@ -956,7 +956,7 @@ RECURSIVE              = YES
 EXCLUDE                =
 
 CLANG_ASSISTED_PARSING = YES
-CLANG_DATABASE_PATH    =
+CLANG_DATABASE_PATH    = ../../../docs
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

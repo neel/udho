@@ -25,6 +25,10 @@ namespace protocols{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Incremental parser for `multipart/form-data` content.
  *
@@ -76,6 +80,7 @@ struct multipart_parser{
     /**
      * @brief Construct a parser that stores results in the given form container.
      * @param form Reference to a `form_data` object that will hold the parsed fields/files.
+     * @param config Body parser configuration.
      */
     explicit multipart_parser(udho::net::protocols::detail::form_data& form, const udho::net::detail::body_parser_config& config): _form(form), _config(config) {}
 
@@ -704,6 +709,8 @@ private:
     const udho::net::detail::body_parser_config& _config;
     std::unique_ptr<std::ofstream>  _current_file;
 };
+
+/** @} */
 
 }
 

@@ -13,6 +13,10 @@
 namespace udho{
 namespace session{
 
+/** @addtogroup DoxyG_session
+ *  @{
+ */
+
 /**
  * @struct record
  * @brief Thread-safe session record
@@ -187,6 +191,7 @@ struct record: private record_data{
         bool               _removed;
 };
 
+/** @} */
 }
 }
 

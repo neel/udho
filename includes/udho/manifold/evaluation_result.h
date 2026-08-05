@@ -3,14 +3,14 @@
 
 #include <udho/exceptions/exceptions.h>
 
+namespace udho {
+namespace manifold {
+
 /**
  * @ingroup manifold
  * @{
  */
 
-
-namespace udho {
-namespace manifold {
 
 /**
  * @brief A wrapper for storing either a successful result or an exception
@@ -32,14 +32,14 @@ public:
     evaluation_result& operator=(const evaluation_result&) = default;    ///< Copy assignment operator
 
     /// @brief Construct with an exception
-    /// @param exptr Exception pointer to store
+    /// @param capex Captured exception to store
     evaluation_result(udho::exceptions::captured&& capex): _capex(std::move(capex)), _success(false) {}
 
     evaluation_result(bool success): _success(success) {}
 
 public:
     /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
+    /// @param capex Captured exception to store
     /// @return Reference to this object
     evaluation_result& operator=(udho::exceptions::captured&& capex) {
         _capex     = std::move(capex);
@@ -48,7 +48,7 @@ public:
     }
 
     /// @brief Assign an exception
-    /// @param exptr Exception pointer to store
+    /// @param success Success state to assign
     /// @return Reference to this object
     evaluation_result& operator=(bool success) {
         _success = success;
@@ -102,13 +102,15 @@ public:
     bool operator!() const { return error(); }
 };
 
-}
-}
-
-
 /**
  * @}
  */
+
+
+}
+}
+
+
 
 
 #endif // UDHO_MANIFOLD_EVALUATION_RESULT_H

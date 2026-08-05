@@ -19,6 +19,10 @@
 namespace udho{
 namespace logging{
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 struct fixed_file {
     static auto apply(const std::string& path = "server.log") {
         auto sink = boost::log::add_file_log(
@@ -345,6 +349,8 @@ template <typename ConsumerConfigurationT = rotating_file>
 BOOST_ATTRIBUTE_NODISCARD logger<ConsumerConfigurationT> start(const char* name = 0x0, const char* cmd_socket_path = 0x0) {
     return logger<ConsumerConfigurationT>(name, cmd_socket_path);
 }
+
+/** @} */
 
 }
 }

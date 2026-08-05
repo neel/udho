@@ -21,7 +21,7 @@ namespace tags{
  *
  * @tparam Bridges View-data bridge types exposed through the resources component.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename... Bridges>
 struct minimal{
@@ -38,7 +38,7 @@ struct minimal{
  * @tparam Mode Session persistence mode.
  * @tparam Bridges View-data bridge types exposed through the resources component.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename SessionStorageT, udho::session::modes Mode, typename... Bridges>
 struct statefulx {
@@ -55,7 +55,7 @@ struct statefulx {
  * @tparam SessionStorageT Session storage backend type.
  * @tparam Mode Session persistence mode.
  *
- * @ingroup www
+ * @ingroup DoxyG_www
  */
 template <typename SessionStorageT = udho::session::storage::fs, udho::session::modes Mode = udho::session::modes::lazy>
 using stateful = statefulx<SessionStorageT, Mode>;

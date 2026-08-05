@@ -281,7 +281,7 @@ struct const_store{
     /**
      * @brief construct a readonly interface to an existing multi_substore
      * The multi_substore must contain the bridges provided as the template parameters of const_multi_substore
-     * @param const reference to the multi_substore
+     * @param store Source store.
      * @tparam XBridges... set of bridges of the multi_substore (XBridges... must be a superset of Bridges...)
      */
     template <typename... XBridges>

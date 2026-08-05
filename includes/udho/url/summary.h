@@ -145,7 +145,7 @@ struct action{
  * @brief Represents a summarized view of a mount point in URL routing, containing replacements and mappings for URLs.
  *
  * The summary::mount_point class provides a simplified, accessible and non-templated way to handle URL replacements based on predefined rules
- * associated with different parts of a URL. It is constructed from a @ref udho::url: mount_point::summary function.
+ * associated with different parts of a URL. It is constructed by the detailed mount point's summary function.
  */
 struct mount_point{
     using mappings_type  = std::map<std::string, std::string>;
@@ -194,6 +194,7 @@ struct mount_point{
     /**
      * @brief Constructs a summary mount point with the specified name.
      * @param name The name of the mount point, typically derived from a compile-time string in the detailed mount_point.
+     * @param path The path where the mount point is mounted.
      */
     inline explicit mount_point(const char* name, const std::string& path): _name(name), _path(path) {}
 
@@ -315,7 +316,7 @@ struct router{
 
    /**
      * @brief Retrieves a mount point by its name.
-     * @param key The name of the mount point to retrieve.
+     * @param hstr The compile-time name of the mount point to retrieve.
      * @return The mount point associated with the given name.
      */
     template <typename Char, Char... C>

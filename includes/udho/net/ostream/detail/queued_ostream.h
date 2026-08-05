@@ -17,6 +17,10 @@ namespace net{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 /**
  * @brief Streaming ostream that writes as data arrives (queued, ordered, strand-serialized).
  *
@@ -35,7 +39,9 @@ namespace detail{
  *
  * @tparam StreamT A Boost.Asio AsyncWriteStream
  *
- * @thread_safety All public methods dispatch onto the strand; safe to call from any thread.
+ * ### Thread safety
+ *
+ * All public methods dispatch onto the strand; safe to call from any thread.
  */
 template <typename StreamT>
 struct basic_queued_ostream: private detail::buffer_queue, private chunking_helper{
@@ -316,6 +322,8 @@ private:
     bool                       _eoq; // end of queue
 };
 
+
+/** @} */
 
 }
 

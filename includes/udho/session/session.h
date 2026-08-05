@@ -40,6 +40,11 @@ namespace udho {
  */
 namespace session {
 
+/** @addtogroup DoxyG_session
+ *  @{
+ *  @}
+ */
+
 }
 
 }

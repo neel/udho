@@ -34,7 +34,6 @@ struct basic_const_substore{
 
     /**
      * @brief A prefix specific interface to the store
-     * @param prefix The prefix to identify a set of resources belonging to the same module
      * @param store Reference to the const_store.
      */
     basic_const_substore(const store_type& store): _store(store) {}

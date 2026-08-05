@@ -2,14 +2,6 @@
 #define UDHO_WWW_H
 
 #include <udho/manifold/fabric.h>
-// #include <udho/www/framework.h>
-// #include <udho/manifold/composition.h>
-// #include <udho/manifold/pipeline.h>
-// #include <udho/manifold/features.h>
-// #include <udho/manifold/config.h>
-// #include <udho/manifold/config.h>
-// #include <udho/manifold/journal.h>
-
 #include <udho/www/tags.h>
 #include <udho/www/label.h>
 #include <udho/www/sketch.h>

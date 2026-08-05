@@ -11,6 +11,10 @@ namespace protocols{
 
 namespace detail{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 template <typename Buffer>
 struct transfer_leftover{
     using target_buffer_type = Buffer;
@@ -41,6 +45,8 @@ private:
     target_buffer_type& _target;
     std::size_t         _bytes_transferred;
 };
+
+/** @} */
 
 }
 

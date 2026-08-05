@@ -430,7 +430,7 @@ struct evaluator_helper<Stage, FeatureX, Features...>{
 
         /**
          * @brief forwards the call to @ref eval<Idx>
-         * @param args...
+         * @param args Arguments forwarded to the evaluator
          * @note called by next_evaluator_helper for passing to the next facet
          * @details operator<0>() -> eval<0>(args...) resolve to either of the eval:{count<FeatureX>()-1 == Idx} or eval:{count<FeatureX>()-1 > Idx} depending of count<FeatureX>().
          *          In case of eval<0> these two options translate to either   eval:{count<FeatureX>() == 1}     or eval:{count<FeatureX>() > 1}.

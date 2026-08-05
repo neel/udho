@@ -33,8 +33,11 @@
 namespace udho{
 namespace session{
 namespace storage{
-
 namespace detail{
+
+/** @addtogroup DoxyG_session
+ *  @{
+ */
 
 /**
  * @brief The internal redis_commander class
@@ -223,7 +226,13 @@ struct redis_commander{
 
 };
 
+/** @} */
+
 }
+
+/** @addtogroup DoxyG_session
+ *  @{
+ */
 
 struct redis: public udho::session::storage::features<udho::session::modes::lazy, udho::session::modes::optimistic, udho::session::modes::immediate> {
 
@@ -438,6 +447,8 @@ private:
     redisContext* _redis;
     detail::redis_commander _commander;
 };
+
+/** @} */
 
 }
 }

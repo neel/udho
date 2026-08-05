@@ -24,6 +24,10 @@ namespace protocols{
 
 namespace h11{
 
+/** @addtogroup DoxyG_net
+ *  @{
+ */
+
 
 /**
  * @brief Asynchronous HTTP/1.1 body reader supporting plain, chunked, and multipart/form-data bodies.
@@ -205,6 +209,7 @@ private:
      * @param handler        Completion handler.
      * @param hbuff          Header buffer (leftovers already transferred).
      * @param content_length Total expected body size.
+     * @param urlencoded     Whether the body contains URL-encoded form data.
      *
      * @note If config.total_timeout() > 0, a timer is started; on expiry the underlying stream is
      *       terminated/cancelled and outstanding operations fail.
@@ -382,6 +387,8 @@ private:
     /**
      * @brief Read a chunk header line (e.g., "1F\r\n").
      * @param handler Completion handler.
+     * @param is_multipart Whether the body contains multipart form data.
+     * @param urlencoded Whether the body contains URL-encoded form data.
      *
      * Parses the hexadecimal chunk size, ignoring chunk extensions. If size is zero, proceeds to trailers.
      */
@@ -435,6 +442,8 @@ private:
      * @brief Read a chunk payload (data + trailing CRLF).
      * @param handler     Completion handler.
      * @param chunk_size  Size of the chunk (from header).
+     * @param is_multipart Whether the body contains multipart form data.
+     * @param urlencoded Whether the body contains URL-encoded form data.
      *
      * Copies the chunk data into `target_buffer()` and consumes the trailing CRLF.
      * Then reads the next chunk header.
@@ -509,6 +518,7 @@ private:
     /**
      * @brief Read chunk trailers (after the final zero‑length chunk).
      * @param handler Completion handler.
+     * @param urlencoded Whether the body contains URL-encoded form data.
      *
      * Reads lines until an empty line is encountered, then finishes the body read.
      */
@@ -653,6 +663,8 @@ private:
     multipart_parser_type       _multipart;
     trailer_container_type      _trailers;
 };
+
+/** @} */
 
 }
 

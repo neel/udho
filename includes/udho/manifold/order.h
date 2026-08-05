@@ -12,6 +12,8 @@ namespace manifold{
  * they appear in the template parameter list.
  *
  * @tparam Features... The feature types in evaluation order
+ *
+ * @ingroup manifold
  */
 template <typename... Features>
 struct order{};

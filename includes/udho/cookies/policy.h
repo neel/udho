@@ -5,6 +5,10 @@ namespace udho{
 
 namespace cookies{
 
+/** @addtogroup DoxyG_cookies
+ *  @{
+ */
+
 /**
  * @enum policy
  * @brief Defines SameSite cookie policies
@@ -17,6 +21,8 @@ enum class policy{
     strict, ///< Cookies only sent in first-party context
     lax     ///< Cookies sent with top-level navigation
 };
+
+/** @} */
 
 }
 

@@ -20,6 +20,10 @@ namespace logging {
 
 namespace detail {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 /**
  * @brief RAII wrapper for a Boost.Interprocess message queue.
  *
@@ -232,6 +236,7 @@ private:
 
 };
 
+/** @} */
 }
 
 }

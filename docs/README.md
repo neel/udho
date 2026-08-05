@@ -31,6 +31,12 @@ output and tag-file paths. The source-controlled `docs/Doxyfile.html` and
 `docs/Doxyfile.tags` select the outputs for the two passes. Inputs, exclusions,
 warnings, appearance, and all other Doxygen behavior remain in Doxyfiles.
 
+Clang-assisted parsing uses the fixed compiler options in
+`docs/compile_flags.txt`; it does not require generated compilation-database
+entries or a documentation-only C++ target. Module Doxyfiles may append any
+prerequisites needed by that module through `CLANG_OPTIONS`. Update the fixed
+flags if the compiler or dependency layout changes.
+
 The first pass generates XML and tag files for every module. The second pass
 generates each module's HTML with all other module tags available, so
 documentation-only cross-references and cyclic module relationships do not
@@ -47,6 +53,9 @@ following targets are available:
 * `docs-modules` builds all module API sites;
 * `docs-tags` builds cross-reference tag files and per-module XML;
 * `docs` builds tags, module API sites, and pages in pass order.
+
+Doxygen diagnostics are written to `doxygen-warnings.log` beside each modular
+target's generated `html` and `xml` directories in the build tree.
 
 Doxygen commands are backed by generated stamp files and explicit source
 dependencies. Rebuilding an unchanged target is a no-op; changing a page only

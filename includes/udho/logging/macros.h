@@ -11,6 +11,10 @@ namespace udho {
 namespace logging {
 namespace detail {
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 inline std::uint64_t next_local_id() {
     static std::atomic<std::uint64_t> counter{0};
     return ++counter;
@@ -80,7 +84,13 @@ udho::logging::message make_record(udho::logging::severity severity, const std::
     return record;
 }
 
+/** @} */
+
 }
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Create and submit a log record to the producer.
@@ -109,9 +119,14 @@ std::size_t log(udho::logging::severity severity, const std::string& subsystem, 
     return producer::log(record);
 }
 
+/** @} */
+
 }
 }
 
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
 
 /**
  * @brief Emit a log record with explicit severity.
@@ -148,5 +163,7 @@ std::size_t log(udho::logging::severity severity, const std::string& subsystem, 
 #define UDHO_LOG_DEBUG(subsystem, message, ...)     UDHO_LOG(udho::logging::severity::debug,    subsystem, message, ##__VA_ARGS__)
 /** @brief Emit a trace-severity log record. */
 #define UDHO_LOG_TRACE(subsystem, message, ...)     UDHO_LOG(udho::logging::severity::trace,    subsystem, message, ##__VA_ARGS__)
+
+/** @} */
 
 #endif // UDHO_LOGGING_MACROS_H

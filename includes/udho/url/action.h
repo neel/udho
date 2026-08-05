@@ -350,7 +350,6 @@ basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT> operator>>(MatchT&
  * @tparam FunctionT Type of the function to be encapsulated.
  * @tparam CharT Character type for the compile-time hash string.
  * @tparam C Characters forming the compile-time hash string.
- * @param identifier A compile-time hash string used as a unique identifier for the slot.
  * @param function A rvalue reference to the free function to be used as the callback.
  * @return Returns a `basic_slot` instance encapsulating the provided function.
  * @see basic_slot
@@ -383,7 +382,6 @@ basic_slot<
  * @tparam FunctionT Type of the member function to be encapsulated.
  * @tparam CharT Character type for the compile-time hash string.
  * @tparam C Characters forming the compile-time hash string.
- * @param identifier A compile-time hash string used as a unique identifier for the slot.
  * @param function A rvalue reference to the member function to be used as the callback.
  * @param that Pointer to the object on which the member function will be called.
  * @return Returns a `basic_slot` instance encapsulating the provided member function and object pointer.
@@ -427,6 +425,7 @@ action(FunctionT&& function, udho::hazo::string::str<CharT, C...>, const MatchT&
  * @brief action
  *
  * @param function
+ * @param that
  * @param match
  * @return
  */

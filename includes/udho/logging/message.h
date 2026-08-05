@@ -10,6 +10,10 @@
 namespace udho {
 namespace logging {
 
+/** @addtogroup DoxyG_logging_params
+ *  @{
+ */
+
 template <typename... Fields>
 struct schema: udho::hazo::map_d<Fields...>{
     using map_type      = udho::hazo::map_d<Fields...>;
@@ -91,6 +95,12 @@ private:
 template <typename... Fields>
 std::size_t schema<Fields...>::_min_size = schema<Fields...>::min_size();
 
+/** @} */
+
+/** @addtogroup DoxyG_logging
+ *  @{
+ */
+
 using message = schema<
     udho::logging::params::local_id,
     udho::logging::params::timestamp,
@@ -122,6 +132,8 @@ using message = schema<
     udho::logging::params::latency,
     udho::logging::params::retry_count
 >;
+
+/** @} */
 
 }
 }

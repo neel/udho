@@ -850,9 +850,9 @@ namespace asset{
      *
      * This function creates a unique_ptr to an abstract_resource, managing memory resources, disk resources, or remote resources.
      *
+     * @tparam AssetType Asset type.
      * @tparam Iterator Type of iterator (only valid for memory resources).
      * @param name Name of the resource.
-     * @param type The type of the resource.
      * @param begin Iterator to the beginning of the resource data.
      * @param end Iterator to the end of the resource data.
      * @param mime String mime type.
@@ -873,9 +873,9 @@ namespace asset{
      *
      * This function creates a unique_ptr to an abstract_resource, managing memory resources, disk resources, or remote resources.
      *
+     * @tparam AssetType Asset type.
      * @tparam Iterator Type of iterator (only valid for memory resources).
      * @param name Name of the resource.
-     * @param type The type of the resource.
      * @param begin Iterator to the beginning of the resource data.
      * @param end Iterator to the end of the resource data.
      * @param owned Boolean flag indicating ownership of the resource.
@@ -893,8 +893,8 @@ namespace asset{
     /**
      * @brief Overload of resource function for creating disk resources.
      *
+     * @tparam AssetType Asset type.
      * @param name Name of the resource.
-     * @param type The type of the resource.
      * @param path Path to the file
      * @param mime String mime type
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
@@ -907,8 +907,8 @@ namespace asset{
     /**
      * @brief Overload of resource function for creating disk resources.
      *
+     * @tparam AssetType Asset type.
      * @param name Name of the resource.
-     * @param type The type of the resource.
      * @param path Path to the file
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
@@ -920,8 +920,8 @@ namespace asset{
     /**
      * @brief Overload of resource function for creating remote resources.
      *
+     * @tparam AssetType Asset type.
      * @param name Name of the resource.
-     * @param type The type of the resource.
      * @param url URL of the remote resource.
      * @return basic_resource<AssetType>* A raw pointer to the created resource.
      */
@@ -953,6 +953,7 @@ namespace asset{
      *
      * @tparam Char Type of character.
      * @param name Name of the CSS resource.
+     * @param str CSS content.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return basic_resource<asset::type::css>* A raw pointer to the created resource.
      */
@@ -966,6 +967,7 @@ namespace asset{
      *
      * @tparam Char Type of character.
      * @param name Name of the CSS resource.
+     * @param str CSS content.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return basic_resource<asset::type::css>* A raw pointer to the created resource.
      */
@@ -980,6 +982,7 @@ namespace asset{
      * @tparam Char Type of character.
      * @tparam N Number of characters.
      * @param name Name of the CSS resource.
+     * @param str CSS content.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return basic_resource<asset::type::css>* A raw pointer to the created resource.
      */
@@ -1026,6 +1029,7 @@ namespace asset{
      *
      * @tparam Char Type of character.
      * @param name Name of the javascript resource.
+     * @param str Javascript content.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return basic_resource<asset::type::js>* A raw pointer to the created resource.
      */
@@ -1040,6 +1044,7 @@ namespace asset{
      * @tparam Char Type of character.
      * @tparam N Number of characters.
      * @param name Name of the javascript resource.
+     * @param str Javascript content.
      * @param owned Boolean flag indicating ownership of the resource.
      * @return basic_resource<asset::type::js>* A raw pointer to the created resource.
      */

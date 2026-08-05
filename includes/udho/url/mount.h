@@ -133,6 +133,7 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
     /**
      * @brief Finds if a given URL matches any of the actions in the mount point.
      * @tparam Ch Character type of the URL string.
+     * @param method HTTP method to match.
      * @param subject URL to be matched.
      * @return index of the matched element, -1 if not fouond
      */
@@ -150,6 +151,7 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
 
     /**
      * @brief Invokes the appropriate action at a given index.
+     * @param index Index of the action to invoke.
      * @param subject URL to be processed.
      * @param args Arguments to pass to the action handler.
      * @return True if an action was successfully invoked, otherwise false.
@@ -196,6 +198,7 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
     /**
      * Finds if a given URL matches any of the actions in the mount point.
      * @tparam Ch Character type of the URL string.
+     * @param method HTTP method to match.
      * @param subject URL to be matched.
      * @return True if any action matches the URL, otherwise false.
      */
@@ -213,6 +216,7 @@ struct mount_point<StrT, udho::url::action_table<Actions...>>{
      * Invokes the appropriate action based on the given URL and arguments.
      * @tparam Ch Character type of the URL string.
      * @tparam Args Types of arguments passed to the action.
+     * @param method HTTP method to invoke.
      * @param subject URL to be processed.
      * @param args Arguments to pass to the action handler.
      * @return True if an action was successfully invoked, otherwise false.
