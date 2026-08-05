@@ -1,5 +1,5 @@
 /**
- * @defgroup hazo Hazo
+ * @defgroup DoxyG_hazo Hazo
  * @brief Udho heterogeneous data storage.
  */
 
@@ -15,7 +15,7 @@
  * as data_type as well as value_type. If the data_type has a member function
  * named value() and a type named value_type, then that type is used as
  * the value_type of the capsule too.
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 
 /**
@@ -36,15 +36,15 @@
  * @endcode
  * @tparam HeadT Type of the value in a node.
  * @tparam TailT Type of the tail (void for a terminal node).
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 
 /**
  * @defgroup seq Sequences
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 
 /**
  * @defgroup map Maps
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */

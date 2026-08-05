@@ -53,7 +53,7 @@ struct feasible_for<ArgT, Args...>: feasible_for<Args...>{
 
 /**
  * @brief Factory for creating composition instances with flexible argument handling
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  * The compositor provides static factory methods to create composition instances
  * from a variadic set of component arguments. It handles the complexity of matching
  * arguments to their corresponding components and applying default construction
@@ -253,7 +253,7 @@ struct compositor {
 #ifdef __DOXYGEN__
 /**
  * @brief A type-safe container of component instances with feature-based access
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  * The composition class holds instances of multiple components and provides
  * uniform access mechanisms for retrieving components either by type or by
  * the features they provide. This is the central data structure for assembling

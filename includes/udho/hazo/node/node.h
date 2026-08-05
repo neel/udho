@@ -955,7 +955,7 @@ decltype(auto) operator>>(const basic_node<T...>& node, V& var){
  * @tparam HeadT Head Type
  * @tparam TailT another basic_node or void
  * @see node
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename HeadT, typename TailT>
 struct basic_node{
@@ -1395,7 +1395,7 @@ struct basic_node{
 /**
  * @brief build a chain of nodes with given types
  * @tparam T...
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  * @see basic_node
  */
 template <typename... T>

@@ -42,7 +42,7 @@ namespace hazo{
  * @param stream 
  * @param s 
  * @return std::ostream& 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename Policy, typename... X>
 std::ostream& operator<<(std::ostream& stream, const basic_seq<Policy, X...>& s){

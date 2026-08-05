@@ -65,7 +65,7 @@ namespace hazo{
  * @tparam ValueT The type of value the element intends to contain
  * @tparam Mixins ... extend features of the element.
  * @see HAZO_ELEMENT, HAZO_ELEMENT_HANA
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename DerivedT, typename ValueT, template<class, typename> class... Mixins>
 struct element: Mixins<DerivedT, ValueT>...{
@@ -194,7 +194,7 @@ const element_t<DerivedT> element<DerivedT, ValueT, Mixins...>::val;
  * @endcode 
  * @param Name Name of the element
  * @param Type Type of the element
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 #define HAZO_ELEMENT(Name, Type, ...)                                   \
     struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{      \

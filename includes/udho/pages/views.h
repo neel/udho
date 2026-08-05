@@ -156,6 +156,12 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
 </ul>
 )TEMPLATE";
 
+/**
+ * @brief Registers system-page Lua views in a resource store.
+ * @tparam Bridges Bridge types supported by the store.
+ * @param store Resource store to populate.
+ * @ingroup DoxyG_pages
+ */
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"] << udho::view::resources::lua{"listing_table",   std::begin(template_listing_table),  std::end(template_listing_table)}

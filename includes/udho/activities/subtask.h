@@ -294,7 +294,7 @@ namespace activities{
      * auto t1 = activities::after()  .perform<A1>(data);    // NO dependencies (root subtask)
      * auto t2 = activities::after(t1).perform<A2>(data);    // Performs A2, while A1 is the only dependency
      * @endcode 
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      * @see activities::after
      * @see activities::perform
      * @see activities::require

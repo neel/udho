@@ -46,7 +46,7 @@ namespace hazo{
  * @brief 
  * 
  * @tparam T...
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... T>
 using seq_d = typename operations::flatten<basic_seq_d, T...>::type;
@@ -55,7 +55,7 @@ using seq_d = typename operations::flatten<basic_seq_d, T...>::type;
  * @brief 
  * 
  * @tparam T...
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... T>
 using seq_v = typename operations::flatten<basic_seq_v, T...>::type;
@@ -67,7 +67,7 @@ using seq_v = typename operations::flatten<basic_seq_v, T...>::type;
  * @tparam X...
  * @param xs... 
  * @return basic_seq<Policy, X...> 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename Policy, typename... X>
 basic_seq<Policy, X...> make_seq(const X&... xs){ return basic_seq<Policy, X...>(xs...); }
@@ -78,7 +78,7 @@ basic_seq<Policy, X...> make_seq(const X&... xs){ return basic_seq<Policy, X...>
  * @tparam X... 
  * @param xs... 
  * @return seq_d<X...> 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... X>
 seq_d<X...> make_seq_d(const X&... xs){ return seq_d<X...>(xs...); }
@@ -89,7 +89,7 @@ seq_d<X...> make_seq_d(const X&... xs){ return seq_d<X...>(xs...); }
  * @tparam X...
  * @param xs... 
  * @return seq_v<X...> 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... X>
 seq_v<X...> make_seq_v(const X&... xs){ return seq_v<X...>(xs...); }

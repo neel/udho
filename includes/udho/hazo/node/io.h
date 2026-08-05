@@ -109,7 +109,7 @@ std::ostream& operator<<(std::ostream& stream, const capsule<ValueT, false>& c){
  * @param cap udho::hazo::capsule<X>
  * @return std::ostream& 
  * @see @ref udho::hazo::capsule
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename X>
 std::ostream& operator<<(std::ostream& stream, const capsule<X>& cap);

@@ -8,7 +8,7 @@ namespace udho{
 namespace manifold{
 
 /**
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  * @{
  */
 

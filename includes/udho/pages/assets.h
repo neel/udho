@@ -1027,7 +1027,12 @@ constexpr static char js_tabs[] = R"ASSET(
     });
 )ASSET";
 
-
+/**
+ * @brief Registers system-page assets in a resource store.
+ * @tparam Bridges Bridge types supported by the store.
+ * @param store Resource store to populate.
+ * @ingroup DoxyG_pages
+ */
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     store["udho"]   << udho::view::resources::asset::css("system.css",  std::begin(css_system),  std::end(css_system))

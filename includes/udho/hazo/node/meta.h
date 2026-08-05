@@ -357,7 +357,7 @@ using meta = typename detail::meta_<T...>::type;
  * @note use @ref meta instead of using meta_node directly
  * @tparam HeadT type of the data inside this node
  * @tparam TailT tail of the current node
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename HeadT, typename TailT = void>
 struct meta_node{
@@ -500,7 +500,7 @@ struct meta_node{
  * @brief builds a chain of basic node with the given type
  * @tparam T... 
  * @see meta_node
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... T>
 using meta = typename detail::meta_<T...>::type;

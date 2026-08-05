@@ -120,7 +120,7 @@ namespace detail{
  * @tparam SuccessT success data type
  * @tparam FailureT failure data type
  * @note Both SuccessT and FailureT must be default constructible.
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename SuccessT, typename FailureT>
 struct result_data{

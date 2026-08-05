@@ -221,7 +221,7 @@ namespace manifold{
  * @brief Portal accessor for handler route summaries.
  * @tparam StreamT Handler stream type.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename StreamT, typename JournalT>
 struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>{

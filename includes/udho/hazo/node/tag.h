@@ -36,7 +36,7 @@ namespace hazo{
     
 /**
  * @brief Element handle of an item in the hazo data structure
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  * @tparam DerivedT 
  */
 template <typename DerivedT>
@@ -51,12 +51,12 @@ struct element_t{
 
 /**
  * @brief Access items by data
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 struct by_data{};
 /**
  * @brief Access items by value
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 struct by_value{};
 

@@ -110,7 +110,7 @@ namespace activities{
      *
      * @tparam SuccessT success data associated with the activity (requires default constructible)
      * @tparam FailureT failure data associated with the activity (requires default constructible)
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename DerivedT, typename SuccessT, typename FailureT>
     struct result: private udho::activities::result_data<SuccessT, FailureT>{

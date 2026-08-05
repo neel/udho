@@ -69,7 +69,7 @@ namespace manifold {
 /**
  * @brief Evaluates route lookup for the identified request target.
  * @tparam RouterT URL router type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename RouterT>
 struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locator> {
@@ -142,7 +142,7 @@ private:
 /**
  * @brief Invokes a previously located route.
  * @tparam RouterT URL router type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename RouterT>
 struct facet<udho::www::components::routing<RouterT>, udho::www::feature::responder> {
@@ -199,7 +199,7 @@ private:
  * @brief Portal accessor for the routing component.
  * @tparam RouterT URL router type.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename RouterT, typename JournalT>
 struct accessor<udho::www::components::routing<RouterT>, JournalT>: basic_accessor<udho::www::components::routing<RouterT>, JournalT>{

@@ -47,7 +47,7 @@ namespace activities{
      * This is a special activity that always succeeds and cannot be canceled. The activity is invoked via its operator() 
      * which succeeds and invokes all other activities that depend on this activity,
      * @tparam Activities... List of activities
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename... Activities>
     struct init{
@@ -193,7 +193,7 @@ namespace activities{
  * @brief A wrapper around the subtask for init activity.
  * @see start
  * @tparam T 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename... T>
 struct starter: activities::subtask<activities::init<T...>>{
@@ -262,7 +262,7 @@ struct starter: activities::subtask<activities::init<T...>>{
  * @brief conveniance function to create a starter for an activity graph
  * 
  * @tparam Activities...
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename... Activities>
 struct start{

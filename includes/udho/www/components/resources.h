@@ -50,7 +50,7 @@ namespace manifold{
 /**
  * @brief Pipeline facet representing availability of resource storage.
  * @tparam Bridges Resource bridge types.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename... Bridges>
 struct facet<udho::www::components::resources<Bridges...>, udho::www::feature::resources_storage>{
@@ -89,7 +89,7 @@ private:
  * @brief Portal accessor for resources and view lookup.
  * @tparam Bridges Resource bridge types.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename... Bridges, typename JournalT>
 struct accessor<udho::www::components::resources<Bridges...>, JournalT>: basic_accessor<udho::www::components::resources<Bridges...>, JournalT>{

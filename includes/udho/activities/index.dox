@@ -1,11 +1,11 @@
 /**
- * @defgroup activities Activities
+ * @defgroup DoxyG_activities Activities
  * @brief Udho asynchronous activities.
  * @copydoc Activities
  */
 
 
 /**
- * @defgroup activities_data Activities data
- * @ingroup activities
+ * @defgroup DoxyG_activities_data Activities data
+ * @ingroup DoxyG_activities
  */

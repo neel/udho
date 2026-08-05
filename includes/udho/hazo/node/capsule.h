@@ -580,7 +580,7 @@ class capsule<DataT, true>: public encapsulate<DataT>{
  *   .
  * .
  * @tparam DataT data type 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename DataT>
 struct capsule<DataT>: private encapsulate<DataT>{

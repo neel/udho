@@ -46,7 +46,7 @@ namespace activities{
  * 
  * @tparam AccessorT 
  * @tparam SubAccessorT 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename AccessorT, typename SubAccessorT>
 struct is_superset_of;
@@ -56,7 +56,7 @@ struct is_superset_of;
  * 
  * @tparam SubAccessorT 
  * @tparam AccessorT 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  * @see is_superset_of
  */
 template <typename SubAccessorT, typename AccessorT>
@@ -68,7 +68,7 @@ using is_subset_of = is_superset_of<AccessorT, SubAccessorT>;
  * The specialization must also provide a static apply(X& x) method that returns an accessor of the above mentioned type from x
  * @note If X is accessible then std::shared_ptr<X> is also accessible. No need to specialize std::shared_ptr or boost::shared_ptr
  * @tparam AccessibleT 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename AccessibleT>
 struct accessor_of{
@@ -80,7 +80,7 @@ struct accessor_of{
  * @brief Checks whether the given type Xis accessible (e.g. an accessor can be retrieved from and instance of X)
  * 
  * @tparam AccessibleT 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  * @see accessor_of
  */
 template <typename AccessibleT>
@@ -92,7 +92,7 @@ using is_accessible = std::integral_constant<bool, !std::is_void<typename access
  * @tparam AccessibleT 
  * @param accessible 
  * @return accessor_of<AccessibleT>::type 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename AccessibleT>
 typename accessor_of<AccessibleT>::type accessor_from(const AccessibleT& accessible){
@@ -163,7 +163,7 @@ struct accessor_of<accessor<T...>>{
  * activities::accessor<A, B> accessor(collector);
  * @endcode 
  * The above mentioned accessor can only be used to get results from A and B activities.
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename... Activities>
 struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_labeled<Activities>::value, Activities, detail::labeled<Activities, typename Activities::result_type>>::type...>{
@@ -335,7 +335,7 @@ struct accessor: private udho::hazo::proxy<typename std::conditional<detail::is_
 };
 
 /**
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename U, typename... T>
 accessor<T...>& operator<<(accessor<T...>& h, const U& data){
@@ -344,7 +344,7 @@ accessor<T...>& operator<<(accessor<T...>& h, const U& data){
 }
 
 /**
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename U, typename... T>
 const accessor<T...>& operator>>(const accessor<T...>& h, U& data){

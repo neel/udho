@@ -37,7 +37,7 @@
 
 namespace udho{
 /**
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 namespace activities{
     
@@ -47,7 +47,7 @@ namespace activities{
      * There can be multiple callbacks joined in the leaf of activity tree.
      * @warning a joined subtask cannot be used as a dependency of another subtask.
      * @see basic_after::finish
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename CallbackT, typename... T>
     struct joined<CallbackT, activities::collector<T...>>{

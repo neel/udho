@@ -65,7 +65,7 @@ namespace activities{
      *          @endcode
      * @note    @ref activities::after on the other hand creates the subtask and then connects its dependencies with the 
      *          created subtask.
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      * @see activities::after
      */
     template <typename ActivityT>

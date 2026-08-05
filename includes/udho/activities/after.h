@@ -138,7 +138,7 @@ struct after_none{
  * @tparam T...
  * @param dependencies... 
  * @return udho::activities::after<T...> 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename... T>
 udho::activities::basic_after<subtask, T...> after(T&... dependencies){
@@ -148,7 +148,7 @@ udho::activities::basic_after<subtask, T...> after(T&... dependencies){
  * @brief after overload for the root subtask
  * 
  * @return after_none 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 inline after_none after(){ return after_none{}; }
 
@@ -173,7 +173,7 @@ inline after_none after(){ return after_none{}; }
  * a3.after(a2);
  * @endcode
  * @see activities::perform
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <template <typename, typename...> class SubtaskT, typename... Dependencies>
 struct basic_after{
@@ -215,7 +215,7 @@ struct basic_after{
  * @tparam D... Dependencies
  * @param dependencies... 
  * @return udho::activities::basic_after<udho::activities::subtask, D...> 
- * @ingroup activities
+ * @ingroup DoxyG_activities
  * @see udho::activities::basic_after<udho::activities::subtask, D...> 
  */
 template <typename... D>
@@ -226,7 +226,7 @@ udho::activities::basic_after<udho::activities::subtask, D...> after(D&... depen
 /**
  * @brief conveniance function to construct subtasks with no dependencies
  * Similar to @ref activities::perform with no require
- * @ingroup activities
+ * @ingroup DoxyG_activities
  * @see activities::perform
  */
 inline after_none after(){ return after_none{}; }

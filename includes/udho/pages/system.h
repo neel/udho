@@ -10,6 +10,12 @@ namespace udho{
 namespace pages{
 namespace system{
 
+/**
+ * @brief Registers system-page views and assets in a resource store.
+ * @tparam Bridges Bridge types supported by the store.
+ * @param store Resource store to populate.
+ * @ingroup DoxyG_pages
+ */
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
     udho::pages::system::views::setup(store);

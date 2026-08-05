@@ -63,7 +63,7 @@ namespace activities{
      * @endcode 
      * A combinator also provides a `prepare` function which takes a callback as an input which is called 
      * after all its depedencies have completed and before the next activity is invoked.
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename NextT, typename... DependenciesT>
     struct combinator{

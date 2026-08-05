@@ -47,7 +47,7 @@ namespace activities{
      * @tparam SuccessDataT data associated to the activity if the activity succeeds
      * @tparam FailureDataT data associated to the activity if the activity fails
      * 
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename DerivedT, typename SuccessDataT = void, typename FailureDataT = void>
     struct activity: std::enable_shared_from_this<DerivedT>, udho::activities::result<DerivedT, SuccessDataT, FailureDataT>{
@@ -243,7 +243,7 @@ namespace activities{
      * |     *     |           |          |   FALSE   |      N/A     |      N/A     |      N/A      |     TRUE    |    FALSE   |  TRUE  |   FALSE  |  FALSE  | proceed() |
      *
      *
-     * @ingroup activities 
+     * @ingroup DoxyG_activities
      */
     template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
     struct activity: std::enable_shared_from_this<DerivedT>{
@@ -361,4 +361,3 @@ namespace activities{
 }
 
 #endif // UDHO_ACTIVITIES_ACTIVITY_H
-

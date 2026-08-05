@@ -38,7 +38,7 @@ namespace udho{
 
 /**
  * shorthand for udho::activities::collect
- * @ingroup activities_data
+ * @ingroup DoxyG_activities_data
  */
 template <typename... T>
 auto collect(){
@@ -48,7 +48,7 @@ auto collect(){
 /**
  * shorthand for udho::activities::accessor
  * @see udho::activities::accessor
- * @ingroup activities_data
+ * @ingroup DoxyG_activities_data
  */
 template <typename... T>
 using accessor = udho::activities::accessor<T...>;
@@ -56,7 +56,7 @@ using accessor = udho::activities::accessor<T...>;
 /**
  * shorthand for udho::activities::activity
  * @see udho::activities::activity
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename DerivedT, typename SuccessDataT, typename FailureDataT>
 using activity = udho::activities::activity<DerivedT, SuccessDataT, FailureDataT>;
@@ -64,7 +64,7 @@ using activity = udho::activities::activity<DerivedT, SuccessDataT, FailureDataT
 /**
  * shorthand for udho::activities::require
  * @see udho::activities::require
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename... DependenciesT>
 using require = udho::activities::require<DependenciesT...>;
@@ -72,7 +72,7 @@ using require = udho::activities::require<DependenciesT...>;
 /**
  * shorthand for udho::activities::perform
  * @see udho::activities::perform
- * @ingroup activities
+ * @ingroup DoxyG_activities
  */
 template <typename ActivityT>
 using perform = udho::activities::perform<ActivityT>;

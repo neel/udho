@@ -34,7 +34,7 @@ namespace manifold{
 template <>
 /**
  * @brief Evaluates cookie loading from the request header.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 struct facet<udho::www::components::cookies, udho::www::feature::cookie_load>{
     using component_type  = www::components::cookies;

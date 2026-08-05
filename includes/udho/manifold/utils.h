@@ -9,7 +9,7 @@ namespace udho{
 namespace manifold {
 
 /**
- * @addtogroup manifold
+ * @addtogroup DoxyG_manifold
  * @{
  */
 

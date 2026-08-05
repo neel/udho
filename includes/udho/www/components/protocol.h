@@ -140,7 +140,7 @@ namespace manifold{
  * @brief Reads a request header through the protocol reader.
  * @tparam ProtocolT Protocol type.
  * @tparam StreamT Stream type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename ProtocolT, typename StreamT>
 struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>{
@@ -230,7 +230,7 @@ private:
  * @tparam ProtocolT Protocol type.
  * @tparam StreamT Stream type.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename ProtocolT, typename StreamT, typename JournalT>
 struct accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>: basic_accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>{
@@ -257,7 +257,7 @@ struct accessor<udho::www::components::protocol<ProtocolT, StreamT>, JournalT>: 
  * @brief Reads non-GET request bodies through the protocol reader.
  * @tparam ProtocolT Protocol type.
  * @tparam StreamT Stream type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename ProtocolT, typename StreamT>
 struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>{

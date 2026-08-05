@@ -38,7 +38,7 @@ namespace operations{
  * @note specialized for each conatiner
  * @tparam ContainerT 
  * @tparam U 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename ContainerT, typename U>
 struct eliminate;
@@ -48,7 +48,7 @@ struct eliminate;
  * @note specialized for each conatiner
  * @tparam ContainerT 
  * @tparam ConditionT 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename ContainerT, template <typename> class ConditionT>
 struct eliminate_if;
@@ -58,7 +58,7 @@ struct eliminate_if;
  * @note specialized for each conatiner
  * @tparam ContainerT 
  * @tparam U 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename ContainerT, typename U>
 struct eliminate_all;
@@ -101,7 +101,7 @@ struct exclude_if;
  * @note specialized for each conatiner
  * @tparam ContainerT 
  * @tparam T 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename ContainerT, typename... T>
 struct append;
@@ -111,7 +111,7 @@ struct append;
  * @note specialized for each conatiner
  * @tparam ContainerT 
  * @tparam T 
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename ContainerT, typename... T>
 struct prepend;

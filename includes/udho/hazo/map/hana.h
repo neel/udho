@@ -48,7 +48,7 @@
  * @endcode 
  * @param Name Name of the element
  * @param Type Type of the element
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 #define HAZO_ELEMENT_HANA(Name, Type, ...)                                  \
     struct Name: udho::hazo::element<Name , Type , ##__VA_ARGS__>{          \

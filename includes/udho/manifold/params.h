@@ -8,7 +8,7 @@
 #include <udho/utils/traits.h>
 
 /**
- * @addtogroup manifold
+ * @addtogroup DoxyG_manifold
  * @{
  */
 
@@ -115,7 +115,7 @@ struct json_deserializer{
 }
 
 /**
- * @addtogroup manifold
+ * @addtogroup DoxyG_manifold
  * @{
  */
 

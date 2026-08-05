@@ -33,6 +33,10 @@ namespace pages{
 namespace system{
 namespace data{
 
+/**
+ * @brief Describes one filesystem or registered-asset entry.
+ * @ingroup DoxyG_pages
+ */
 class entry{
     std::string _name;
     bool        _is_directory;
@@ -42,6 +46,12 @@ class entry{
     std::string _type;
 
     public:
+    /**
+     * @brief Constructs an entry from a filesystem directory entry.
+     * @param entry Filesystem entry.
+     * @param root Root used to form the URL.
+     * @param mimes MIME registry used for files.
+     */
     inline explicit entry(const std::filesystem::directory_entry& entry, const std::filesystem::path& root, const udho::url::mime_registry& mimes):
         _name(entry.path().filename()), _is_directory(entry.is_directory()), _size(_is_directory ? 0 : entry.file_size())
     {
@@ -79,6 +89,11 @@ class entry{
         }
     }
 
+    /**
+     * @brief Constructs an entry from registered asset information.
+     * @param info Registered asset information.
+     * @param base Base URL.
+     */
     inline explicit entry(const udho::view::resources::asset::asset_registration_info& info, const std::string& base):
         _name(info.name()), _is_directory(false), _mime(info.mime()), _size(0), _url(udho::url::utils::slash_concat(udho::url::utils::slash_concat(base, info.prefix()), info.name()))
     {
@@ -88,15 +103,26 @@ class entry{
         }
     }
 
+    /**
+     * @brief Constructs a directory entry for an asset prefix.
+     * @param subprefix Asset subprefix.
+     * @param base Base URL.
+     */
     inline explicit entry(const std::string& subprefix, const std::string& base):
         _name(subprefix), _is_directory(true), _mime("N/A"), _size(0), _url(udho::url::utils::slash_quote(udho::url::utils::slash_concat(base, subprefix))), _type("prefix")
     {}
 
+    /** @brief Returns the entry name. */
     inline const std::string& name() const { return _name; }
+    /** @brief Returns the MIME type. */
     inline const std::string& mime() const { return _mime; }
+    /** @brief Returns the entry URL. */
     inline const std::string& url() const { return _url; }
+    /** @brief Returns the entry type description. */
     inline const std::string& type() const { return _type; }
+    /** @brief Returns whether the entry represents a directory. */
     inline bool is_directory() const { return _is_directory; }
+    /** @brief Returns the filename extension, or an empty string when absent. */
     inline std::string extension() const {
         if(_is_directory) return "";
 
@@ -106,6 +132,7 @@ class entry{
         }
         return "";
     }
+    /** @brief Returns a formatted size or `N/A` for directories. */
     inline std::string size() const {
         if (_is_directory) return "N/A";
 
@@ -130,6 +157,7 @@ class entry{
         return oss.str();
     }
 
+    /** @brief Defines view-data metadata for an entry. */
     friend auto metatype(udho::view::data::type<entry>){
         using namespace udho::view::data;
 
@@ -144,6 +172,10 @@ class entry{
     }
 };
 
+/**
+ * @brief Collection of entries for one filesystem path or asset prefix.
+ * @ingroup DoxyG_pages
+ */
 class listing{
     std::string         _base;
     std::vector<entry>  _entries;
@@ -157,10 +189,11 @@ class listing{
         using size_type      = typename container_type::size_type;
 
         /**
-         * @brief directory_listing
-         * @param path requested to be shown
-         * @param root base filesystem path
-         * @note path is supposed to be subset of root
+         * @brief Constructs a listing from a filesystem directory.
+         * @param label Listing label.
+         * @param path Directory to enumerate.
+         * @param root Root used to form entry URLs.
+         * @param mimes MIME registry used for files.
          */
         inline listing(const std::string& label, const std::filesystem::path& path, const std::filesystem::path& root, const udho::url::mime_registry& mimes): _subject(path), _base(root), _label(label) {
             std::filesystem::directory_iterator dit{path};
@@ -168,6 +201,13 @@ class listing{
                 _entries.emplace_back( entry{e, root, mimes} );
             }
         }
+        /**
+         * @brief Constructs a listing from an asset-store prefix proxy.
+         * @param label Listing label.
+         * @param proxy Asset prefix proxy.
+         * @param base Base URL.
+         * @param subject Subject prefix to list.
+         */
         inline listing(const std::string& label, const udho::view::resources::asset::const_store::prefix_proxy& proxy, const std::string& base, const std::string& subject): _base(base), _subject(subject), _label(label) {
             std::string subject_q = udho::url::utils::slash_quote(_subject);
             for(const auto& group: proxy){
@@ -192,12 +232,21 @@ class listing{
             }
         }
 
+        /** @brief Returns the listed subject. */
         inline std::string subject() const { return _subject; }
+        /** @brief Returns the number of entries. */
         inline std::size_t size() const { return _entries.size(); }
+        /**
+         * @brief Returns the entry at the given index.
+         * @param i Entry index.
+         */
         inline const entry& at(size_t i) const { return _entries.at(i); }
+        /** @brief Returns an iterator to the first entry. */
         inline const_iterator begin() const { return _entries.begin(); }
+        /** @brief Returns the past-the-end iterator. */
         inline const_iterator end() const { return _entries.end(); }
 
+        /** @brief Defines view-data metadata for a listing. */
         friend auto metatype(udho::view::data::type<listing>){
             using namespace udho::view::data;
 
@@ -210,6 +259,10 @@ class listing{
         }
 };
 
+/**
+ * @brief Collection of listings for a current URL path.
+ * @ingroup DoxyG_pages
+ */
 class listings{
     std::vector<listing>  _collection;
     std::filesystem::path _current;
@@ -222,19 +275,36 @@ class listings{
         listings() = delete;
         listings(const listings&) = default;
 
+        /**
+         * @brief Constructs the collection for a current path.
+         * @param current Current URL path.
+         */
         listings(const std::string& current): _current(current) {
             assert(current[0] == '/');
         }
 
+        /**
+         * @brief Adds a listing.
+         * @param l Listing to move into the collection.
+         */
         inline void add(listing&& l){
             _collection.emplace_back(std::move(l));
         }
 
+        /** @brief Returns the number of listings. */
         inline std::size_t size() const { return _collection.size(); }
+        /**
+         * @brief Returns the listing at the given index.
+         * @param i Listing index.
+         */
         inline const listing& at(size_t i) const { return _collection.at(i); }
+        /** @brief Returns an iterator to the first listing. */
         inline const_iterator begin() const { return _collection.begin(); }
+        /** @brief Returns the past-the-end iterator. */
         inline const_iterator end() const { return _collection.end(); }
+        /** @brief Returns the current path. */
         inline std::string current() const { return _current.string(); }
+        /** @brief Returns the parent of the current path. */
         inline std::string parent() const {
             std::filesystem::path p = _current.parent_path();
             if(_current.string().back() != '/'){
@@ -243,6 +313,7 @@ class listings{
             return p.parent_path();
         }
 
+        /** @brief Defines view-data metadata for a listings collection. */
         friend auto metatype(udho::view::data::type<listings>){
             using namespace udho::view::data;
 
@@ -255,18 +326,29 @@ class listings{
         }
 };
 
+/**
+ * @brief HTTP status data used by a listing header view.
+ * @ingroup DoxyG_pages
+ */
 class listing_header{
     boost::beast::http::status _status;
 
     public:
+    /**
+     * @brief Constructs header data for an HTTP status.
+     * @param status HTTP status.
+     */
     inline explicit listing_header(boost::beast::http::status status): _status(status) {}
+    /** @brief Returns the numeric status code. */
     inline int code() const { return static_cast<int>(_status); }
+    /** @brief Returns the formatted status text. */
     inline std::string message() const {
         std::stringstream stream;
         stream << _status;
         return stream.str();
     }
 
+    /** @brief Defines view-data metadata for listing header data. */
     friend auto metatype(udho::view::data::type<listing_header>){
         using namespace udho::view::data;
 
@@ -276,6 +358,10 @@ class listing_header{
     }
 };
 
+/**
+ * @brief Collects runtime information displayed by system pages.
+ * @ingroup DoxyG_pages
+ */
 struct status_info{
     std::string compiler;
     std::string os;
@@ -284,6 +370,7 @@ struct status_info{
     std::string memory;
     std::string time;
 
+    /** @brief Collects the status information. */
     status_info() {
         compiler = compiler_info();
         os       = os_info();
@@ -293,6 +380,7 @@ struct status_info{
         time     = time_str();
     }
 
+    /** @brief Returns compiler identification. */
     std::string compiler_info() const {
         std::ostringstream oss;
     #ifdef __clang__  // Check for Clang FIRST
@@ -307,6 +395,7 @@ struct status_info{
         return oss.str();
     }
 
+    /** @brief Returns operating-system information. */
     std::string os_info() const {
         std::ostringstream oss;
 
@@ -394,12 +483,14 @@ struct status_info{
         return oss.str();
     }
 
+    /** @brief Returns the configured C++ language version. */
     std::string cpp_version() const {
         std::ostringstream oss;
         oss << "C++" << (__cplusplus / 100 % 100);
         return oss.str();
     }
 
+    /** @brief Returns the Boost version. */
     std::string boost_version() const {
         std::ostringstream oss;
         oss << "Boost " << BOOST_VERSION / 100000 << "."
@@ -408,6 +499,7 @@ struct status_info{
         return oss.str();
     }
 
+    /** @brief Returns formatted physical-memory information. */
     std::string memory_available() const {
         std::ostringstream oss;
 #ifdef _WIN32
@@ -423,6 +515,7 @@ struct status_info{
         return oss.str();
     }
 
+    /** @brief Returns formatted local date, time, and UTC offset. */
     std::string time_str() const{
         std::ostringstream oss;
         auto now = std::chrono::system_clock::now();
@@ -432,6 +525,7 @@ struct status_info{
         return oss.str();
     }
 
+    /** @brief Defines view-data metadata for status information. */
     friend auto metatype(udho::view::data::type<status_info>){
         using namespace udho::view::data;
 

@@ -62,7 +62,7 @@ struct evaluator_helper;
 
 /**
  * @brief Implements the evaluation logic for a component-feature pair
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  * Facets are the units of pipeline evaluation, each representing one
  * component providing one feature, and defines how that feature is
  * provided for that component.
@@ -237,7 +237,7 @@ struct basic_terminal;
 
 /**
  * @brief Pipeline execution plan blueprint
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  * Provides the static configuration for a pipeline type, defining:
  * - The component composition
  * - Feature evaluation order

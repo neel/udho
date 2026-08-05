@@ -222,7 +222,7 @@ using basic_seq_v = basic_seq<by_value, X...>;
  * 
  * @tparam Policy @ref udho::hazo::by_data or @ref udho::hazo::by_value
  * @tparam X...
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  * @see basic_node
  */
 template <typename Policy, typename... X>
@@ -304,7 +304,7 @@ struct basic_seq{
  * @brief hazo basic sequence specialized with @ref udho::hazo::by_data policy
  * @tparam X...
  * @see basic_seq
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... X>
 using basic_seq_d = basic_seq<by_data, X...>;
@@ -312,7 +312,7 @@ using basic_seq_d = basic_seq<by_data, X...>;
  * @brief hazo basic sequence specialized with @ref udho::hazo::by_value policy
  * @tparam X...
  * @see basic_seq
- * @ingroup hazo
+ * @ingroup DoxyG_hazo
  */
 template <typename... X>
 using basic_seq_v = basic_seq<by_value, X...>;

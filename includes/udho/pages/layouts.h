@@ -19,8 +19,20 @@ namespace l = udho::view::tmpl::layout;
 
 namespace places {
 namespace segments {
+    /**
+     * @brief Placeholder tag for the system-page headline.
+     * @ingroup DoxyG_pages
+     */
     struct headline{};
+    /**
+     * @brief Placeholder tag for listing content.
+     * @ingroup DoxyG_pages
+     */
     struct listing{};
+    /**
+     * @brief Placeholder tag for route content.
+     * @ingroup DoxyG_pages
+     */
     struct routes{};
 }
 }
@@ -28,6 +40,10 @@ namespace segments {
 
 namespace placeholders = l::placeholders;
 
+/**
+ * @brief Placeholder set used by system listing and client-error pages.
+ * @ingroup DoxyG_pages
+ */
 using minimal = l::basic_placeholder<
     l::spot<placeholders::segments::header>,
     l::spot<places::segments::headline>,
@@ -42,15 +58,29 @@ namespace places{
     static segments::routes   routes;
 }
 
+/**
+ * @brief Presents the populated sections of a system-page document.
+ * @tparam DocumentT Layout document type.
+ * @ingroup DoxyG_pages
+ */
 template <class DocumentT>
 struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
     using default_presenter_ = l::default_presenter<DocumentT, presenter<DocumentT>>;
     using basic_presenter_   = typename default_presenter_::basic_presenter_;
 
+    /**
+     * @brief Constructs a presenter for a document.
+     * @param doc Document to present.
+     */
     presenter(const DocumentT& doc): default_presenter_(doc), _doc(doc) {}
 
     using default_presenter_::operator();
 
+    /**
+     * @brief Writes the system-page sections to a stream.
+     * @tparam Stream Output stream type.
+     * @param stream Destination stream.
+     */
     template <typename Stream>
     void render(Stream& stream) const {
         namespace p = l::placeholders;
@@ -85,6 +115,11 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
     const DocumentT& _doc;
 };
 
+/**
+ * @brief System-page layout type for a rendering context.
+ * @tparam ContextT Rendering context type.
+ * @ingroup DoxyG_pages
+ */
 template <typename ContextT>
 using sys = udho::view::tmpl::layout::basic_layout<
                 ContextT,
@@ -92,6 +127,12 @@ using sys = udho::view::tmpl::layout::basic_layout<
                 presenter<l::basic_document<minimal>>
             >;
 
+/**
+ * @brief Creates the configured system-page listing layout.
+ * @tparam ContextT Rendering context type.
+ * @param context Rendering context.
+ * @ingroup DoxyG_pages
+ */
 template <typename ContextT>
 sys<ContextT> listing(ContextT context) {
     namespace p = l::placeholders;
@@ -117,4 +158,3 @@ sys<ContextT> listing(ContextT context) {
 }
 
 #endif // UDHO_PAGES_LAYOUTS_H
-

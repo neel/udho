@@ -13,7 +13,7 @@ namespace manifold{
  *
  * @tparam Features... The feature types in evaluation order
  *
- * @ingroup manifold
+ * @ingroup DoxyG_manifold
  */
 template <typename... Features>
 struct order{};

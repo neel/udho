@@ -82,7 +82,7 @@ namespace manifold{
  * @brief Loads a configured session from the request cookie jar.
  * @tparam StorageT Session storage type.
  * @tparam Mode Session catalogue mode.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename StorageT, udho::session::modes Mode>
 struct facet<udho::www::components::session<StorageT, Mode>, udho::www::feature::session_load>{
@@ -165,7 +165,7 @@ private:
  * @tparam StorageT Session storage type.
  * @tparam Mode Session catalogue mode.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename StorageT, udho::session::modes Mode, typename JournalT>
 struct accessor<udho::www::components::session<StorageT, Mode>, JournalT>: basic_accessor<udho::www::components::session<StorageT, Mode>, JournalT>{

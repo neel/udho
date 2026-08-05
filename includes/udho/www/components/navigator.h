@@ -155,7 +155,7 @@ namespace manifold{
 /**
  * @brief Evaluates request-target identification.
  * @tparam Policy Target-identification policy type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_facets
  */
 template <typename Policy>
 struct facet<udho::www::components::navigator<Policy>, udho::www::feature::identifier>{
@@ -216,7 +216,7 @@ private:
  * @brief Portal accessor for the identified request resource.
  * @tparam Policy Target-identification policy type.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename Policy, typename JournalT>
 struct accessor<udho::www::components::navigator<Policy>, JournalT>: basic_accessor<udho::www::components::navigator<Policy>, JournalT>{

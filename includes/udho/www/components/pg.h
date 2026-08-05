@@ -63,7 +63,7 @@ namespace manifold{
  * @tparam OidMap OZO OID map type.
  * @tparam Statistics OZO statistics type.
  * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components
+ * @ingroup DoxyG_www_components_accessors
  */
 template <typename OidMap, typename Statistics, typename JournalT>
 struct accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>: basic_accessor<udho::www::components::db::pg<OidMap, Statistics>, JournalT>{

@@ -35,7 +35,7 @@ namespace udho{
 namespace activities{
     
     /**
-     * @ingroup activities
+     * @ingroup DoxyG_activities
      */
     template <typename... DependenciesT>
     struct require{

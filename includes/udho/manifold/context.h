@@ -149,6 +149,7 @@ struct internal_get_components_storage_for_features<udho::manifold::composition<
  *
  * @see portal
  * @see udho::net::basic_ostream
+ * @ingroup DoxyG_manifold
  */
 template <typename StreamT, typename... Components>
 struct basic_context {
