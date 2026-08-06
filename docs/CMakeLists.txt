@@ -27,9 +27,9 @@ if(NOT DOXYGEN_FOUND)
     return()
 endif()
 
-set(UDHO_DOXYGEN_TEMPLATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.wrapper.in")
+set(UDHO_DOXYGEN_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.wrapper.in")
 set(UDHO_DOXYGEN_SHARED_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
+set(UDHO_DOXYGEN_DIAGRAM_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.diagrams")
 set(UDHO_DOXYGEN_CLANG_DATABASE_PATH "${CMAKE_BINARY_DIR}")
 set(UDHO_DOXYGEN_TAG_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.tags")
 set(UDHO_DOXYGEN_HTML_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.html")
@@ -51,6 +51,7 @@ udho_add_doxygen_target(docs-tag-udho
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/root"
     STRIP_FROM_PATH "${UDHO_SOURCE_DIR}"
+    STRIP_FROM_INC_PATH "${UDHO_SOURCE_DIR}/includes"
     TAG_FILE "${UDHO_DOXYGEN_ROOT_TAG}"
     OUTPUTS
         "${UDHO_DOXYGEN_MODULAR_ROOT}/root/xml/index.xml"
@@ -84,6 +85,7 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         WORKING_DIRECTORY "${module_source_dir}"
         BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
         STRIP_FROM_PATH "${UDHO_SOURCE_DIR}/includes"
+        STRIP_FROM_INC_PATH "${UDHO_SOURCE_DIR}/includes"
         TAG_FILE "${tag_file}"
         TAG_MAPPINGS "${UDHO_DOXYGEN_ROOT_TAG}"
         ORDER_DEPENDS docs-tag-udho
@@ -123,6 +125,7 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         WORKING_DIRECTORY "${UDHO_SOURCE_DIR}/includes/udho/${module}"
         BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
         STRIP_FROM_PATH "${UDHO_SOURCE_DIR}/includes"
+        STRIP_FROM_INC_PATH "${UDHO_SOURCE_DIR}/includes"
         TAG_MAPPINGS ${tag_mappings}
         OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/html/index.html"
         ORDER_DEPENDS ${UDHO_DOXYGEN_TAG_TARGETS}
@@ -152,6 +155,7 @@ udho_add_doxygen_target(docs-pages
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pages"
     BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/pages"
     STRIP_FROM_PATH "${UDHO_SOURCE_DIR}"
+    STRIP_FROM_INC_PATH "${UDHO_SOURCE_DIR}/includes"
     TAG_MAPPINGS ${page_tag_mappings}
     OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/html/index.html"
     ORDER_DEPENDS ${UDHO_DOXYGEN_MODULE_TARGETS}

@@ -4,11 +4,11 @@ include(CMakeParseArguments)
 # source configuration and overlay; this helper only describes the build graph
 # and redirects generated files into the build tree.
 function(udho_add_doxygen_target target)
-    set(one_value_args DOXYFILE OVERLAY WORKING_DIRECTORY BUILD_OUTPUT_DIRECTORY TAG_FILE STRIP_FROM_PATH)
+    set(one_value_args DOXYFILE OVERLAY WORKING_DIRECTORY BUILD_OUTPUT_DIRECTORY TAG_FILE STRIP_FROM_PATH STRIP_FROM_INC_PATH)
     set(multi_value_args OUTPUTS DEPENDS TAG_MAPPINGS ORDER_DEPENDS)
     cmake_parse_arguments(UDHO_DOXYGEN "" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
-    foreach(required_arg IN ITEMS DOXYFILE OVERLAY WORKING_DIRECTORY BUILD_OUTPUT_DIRECTORY STRIP_FROM_PATH OUTPUTS)
+    foreach(required_arg IN ITEMS DOXYFILE OVERLAY WORKING_DIRECTORY BUILD_OUTPUT_DIRECTORY STRIP_FROM_PATH STRIP_FROM_INC_PATH OUTPUTS)
         if(NOT UDHO_DOXYGEN_${required_arg})
             message(FATAL_ERROR "udho_add_doxygen_target(${target}) requires ${required_arg}")
         endif()
@@ -48,6 +48,7 @@ function(udho_add_doxygen_target target)
         DEPENDS
             "${UDHO_DOXYGEN_TEMPLATE}"
             "${UDHO_DOXYGEN_DOXYFILE}"
+            "${UDHO_DOXYGEN_DIAGRAM_CONFIG}"
             "${UDHO_DOXYGEN_OVERLAY}"
             ${UDHO_DOXYGEN_DEPENDS}
         VERBATIM
