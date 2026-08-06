@@ -5,17 +5,36 @@ foreach(required IN ITEMS
     UDHO_MODULE
     UDHO_MODULE_INDEX
     UDHO_OUTPUT_DIR
-    UDHO_STAMP)
+    UDHO_STAMP
+    UDHO_HTML_DIR
+    UDHO_DIAGRAM_PREFIX)
     if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
         message(FATAL_ERROR "RenderModule.cmake requires ${required}")
     endif()
 endforeach()
+
+# The XML output contains several graph topologies, but call/caller graph data
+# is only materialized by Doxygen's HTML renderer. Index the generated SVGs so
+# XSLT can conditionally reference both kinds without copying the large asset
+# set into the custom output directory.
+file(GLOB diagram_assets LIST_DIRECTORIES false "${UDHO_HTML_DIR}/*.svg")
+list(SORT diagram_assets)
+set(diagram_manifest "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-diagrams.xml")
+set(diagram_manifest_xml "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<diagrams>\n")
+foreach(diagram IN LISTS diagram_assets)
+    get_filename_component(diagram_name "${diagram}" NAME)
+    string(APPEND diagram_manifest_xml "  <diagram name=\"${diagram_name}\"/>\n")
+endforeach()
+string(APPEND diagram_manifest_xml "</diagrams>\n")
+file(WRITE "${diagram_manifest}" "${diagram_manifest_xml}")
 
 function(udho_run_xslt output page_type)
     set(arguments
         --nonet
         --stringparam page-type "${page_type}"
         --stringparam selected-module "${UDHO_MODULE}"
+        --stringparam diagram-manifest "${diagram_manifest}"
+        --stringparam diagram-prefix "${UDHO_DIAGRAM_PREFIX}"
     )
     if(ARGC GREATER 2)
         list(APPEND arguments --stringparam selected-compound "${ARGV2}")

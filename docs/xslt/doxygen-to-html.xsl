@@ -13,6 +13,8 @@
   <xsl:param name="selected-member" select="''"/>
   <xsl:param name="page-type" select="'module'"/>
   <xsl:param name="index-only" select="'no'"/>
+  <xsl:param name="diagram-manifest" select="''"/>
+  <xsl:param name="diagram-prefix" select="''"/>
 
   <xsl:template match="/documentation">
     <xsl:variable name="manifest" select="."/>
@@ -74,7 +76,7 @@
                           <p class="eyebrow"><xsl:choose><xsl:when test="$page-type='free-member'">Free function</xsl:when><xsl:otherwise>Member function</xsl:otherwise></xsl:choose></p>
                           <h2><xsl:choose><xsl:when test="$page-type='free-member'"><xsl:value-of select="concat($selected-owner-name, '::', $compound//memberdef[@id=$selected-member]/name)"/></xsl:when><xsl:otherwise><xsl:value-of select="$compound//memberdef[@id=$selected-member]/qualifiedname"/></xsl:otherwise></xsl:choose></h2>
                         </header>
-                        <xsl:apply-templates select="$compound//memberdef[@id=$selected-member]"/>
+                        <xsl:apply-templates select="$compound//memberdef[@id=$selected-member]" mode="function-page"/>
                       </article>
                     </xsl:when>
                     <xsl:when test="$page-type='group'">
@@ -233,6 +235,7 @@
       <nav class="breadcrumbs"><a href="{$module}.html"><xsl:value-of select="$module"/></a><span>/</span><strong><xsl:value-of select="$group/title"/></strong></nav>
       <header class="module-header"><p class="eyebrow">Group</p><h2><xsl:value-of select="$group/title"/></h2></header>
       <xsl:apply-templates select="$group/briefdescription|$group/detaileddescription"/>
+      <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="$group/@id"/><xsl:with-param name="title" select="'Group dependency diagram'"/></xsl:call-template>
       <div class="typed-index">
         <xsl:call-template name="compound-overview-section"><xsl:with-param name="title" select="'Groups'"/><xsl:with-param name="items" select="$index/compound[@kind='group' and @refid=$group/innergroup/@refid]"/><xsl:with-param name="module" select="$module"/><xsl:with-param name="base" select="$base"/></xsl:call-template>
         <xsl:call-template name="compound-overview-section"><xsl:with-param name="title" select="'Namespaces'"/><xsl:with-param name="items" select="$index/compound[@kind='namespace' and @refid=$group/innernamespace/@refid]"/><xsl:with-param name="module" select="$module"/><xsl:with-param name="base" select="$base"/></xsl:call-template>
@@ -256,7 +259,7 @@
       <details open="open"><xsl:attribute name="class">overview-section<xsl:call-template name="category-class-for-title"><xsl:with-param name="title" select="$title"/></xsl:call-template></xsl:attribute><summary><span><xsl:value-of select="$title"/></span><small><xsl:value-of select="count($items)"/></small></summary>
         <table class="overview-table"><tbody>
           <xsl:for-each select="$items"><xsl:sort select="name"/><xsl:variable name="member-id" select="@id"/><xsl:variable name="owner-compound" select="$index/compound[@kind='namespace' and member/@refid=$member-id][1]"/><xsl:variable name="owner" select="$owner-compound/@refid"/>
-            <tr><td><a><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' and $owner"><xsl:value-of select="concat($module, '-free-', $owner, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @id)"/></xsl:otherwise></xsl:choose></xsl:attribute><code><xsl:choose><xsl:when test="@kind='function' and $owner-compound/name"><xsl:value-of select="concat($owner-compound/name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="briefdescription/node()"/></td></tr>
+            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' and $owner"><xsl:value-of select="concat($module, '-free-', $owner, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @id)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function' and $owner-compound/name"><xsl:value-of select="concat($owner-compound/name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="briefdescription/node()"/></td></tr>
           </xsl:for-each>
         </tbody></table>
       </details>
@@ -275,7 +278,7 @@
           <xsl:for-each select="$items">
             <xsl:sort select="name"/>
             <xsl:variable name="detail" select="document(concat(@refid, '.xml'), .)/doxygen/compounddef"/>
-            <tr><td><a><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='class' or @kind='struct' or @kind='union' or @kind='group' or @kind='file' or @kind='namespace' or @kind='dir'"><xsl:value-of select="concat($module, '-', @refid, '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @refid)"/></xsl:otherwise></xsl:choose></xsl:attribute><code><xsl:choose><xsl:when test="@kind='group' and $detail/title"><xsl:value-of select="$detail/title"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
+            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='class' or @kind='struct' or @kind='union' or @kind='group' or @kind='file' or @kind='namespace' or @kind='dir'"><xsl:value-of select="concat($module, '-', @refid, '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @refid)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><xsl:choose><xsl:when test="@kind='group' and $detail/title"><code><xsl:value-of select="$detail/title"/></code></xsl:when><xsl:when test="@kind='class' or @kind='struct' or @kind='union'"><xsl:call-template name="compound-display-name"><xsl:with-param name="name" select="name"/></xsl:call-template></xsl:when><xsl:otherwise><code><xsl:value-of select="name"/></code></xsl:otherwise></xsl:choose></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
           </xsl:for-each>
           </tbody>
         </table>
@@ -298,7 +301,7 @@
             <xsl:variable name="member-ref" select="@refid"/>
             <xsl:variable name="member-compound" select="substring-before($member-ref, concat('_1', substring(substring-after($member-ref, '_1'), 1, 1)))"/>
             <xsl:variable name="detail" select="document(concat($member-compound, '.xml'), .)/doxygen/compounddef//memberdef[@id=$member-ref]"/>
-            <tr><td><a><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat($module, '-free-', ../@refid, '-', substring(@refid, string-length(@refid) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat($module, '-', ../@refid, '.html#', @refid)"/></xsl:otherwise></xsl:choose></xsl:attribute><code><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat(../name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
+            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat($module, '-free-', ../@refid, '-', substring(@refid, string-length(@refid) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat($module, '-', ../@refid, '.html#', @refid)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat(../name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
           </xsl:for-each>
           </tbody>
         </table>
@@ -324,6 +327,77 @@
       <xsl:when test="$kind='enum'"><xsl:text> category-enum</xsl:text></xsl:when>
       <xsl:when test="$kind='define'"><xsl:text> category-macro</xsl:text></xsl:when>
     </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="compound-display-name">
+    <xsl:param name="name"/>
+    <xsl:variable name="normalized" select="normalize-space($name)"/>
+    <xsl:choose>
+      <xsl:when test="contains($normalized, '&lt;') and substring($normalized, string-length($normalized))='&gt;'">
+        <xsl:variable name="arguments-with-close" select="substring-after($normalized, '&lt;')"/>
+        <div class="template-specialization" title="{$normalized}">
+          <div class="template-arguments">
+            <xsl:call-template name="split-template-arguments">
+              <xsl:with-param name="remaining" select="substring($arguments-with-close, 1, string-length($arguments-with-close) - 1)"/>
+            </xsl:call-template>
+          </div>
+          <div class="template-primary"><xsl:value-of select="normalize-space(substring-before($normalized, '&lt;'))"/></div>
+        </div>
+      </xsl:when>
+      <xsl:otherwise><code><xsl:value-of select="$normalized"/></code></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="split-template-arguments">
+    <xsl:param name="remaining"/>
+    <xsl:param name="current" select="''"/>
+    <xsl:param name="angle-depth" select="0"/>
+    <xsl:param name="paren-depth" select="0"/>
+    <xsl:param name="bracket-depth" select="0"/>
+    <xsl:choose>
+      <xsl:when test="not(string-length($remaining))">
+        <xsl:if test="string-length(normalize-space($current))"><div class="template-argument"><xsl:value-of select="normalize-space($current)"/></div></xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="character" select="substring($remaining, 1, 1)"/>
+        <xsl:variable name="rest" select="substring($remaining, 2)"/>
+        <xsl:choose>
+          <xsl:when test="$character=',' and $angle-depth=0 and $paren-depth=0 and $bracket-depth=0">
+            <div class="template-argument"><xsl:value-of select="normalize-space($current)"/></div>
+            <xsl:call-template name="split-template-arguments"><xsl:with-param name="remaining" select="$rest"/></xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:call-template name="split-template-arguments">
+              <xsl:with-param name="remaining" select="$rest"/>
+              <xsl:with-param name="current" select="concat($current, $character)"/>
+              <xsl:with-param name="angle-depth" select="$angle-depth + ($character='&lt;') - ($character='&gt;')"/>
+              <xsl:with-param name="paren-depth" select="$paren-depth + ($character='(') - ($character=')')"/>
+              <xsl:with-param name="bracket-depth" select="$bracket-depth + ($character='[') - ($character=']')"/>
+            </xsl:call-template>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="diagram-asset">
+    <xsl:param name="base"/>
+    <xsl:param name="title"/>
+    <xsl:variable name="original-name" select="concat($base, '_org.svg')"/>
+    <xsl:variable name="regular-name" select="concat($base, '.svg')"/>
+    <xsl:variable name="available" select="document($diagram-manifest)/diagrams/diagram"/>
+    <xsl:variable name="asset-name">
+      <xsl:choose>
+        <xsl:when test="$available[@name=$original-name]"><xsl:value-of select="$original-name"/></xsl:when>
+        <xsl:when test="$available[@name=$regular-name]"><xsl:value-of select="$regular-name"/></xsl:when>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:if test="string-length(string($asset-name))">
+      <details class="diagram-section">
+        <summary><span><xsl:value-of select="$title"/></span></summary>
+        <div class="diagram-frame"><a href="{$diagram-prefix}{string($asset-name)}" target="_blank" title="Open full-size diagram"><img src="{$diagram-prefix}{string($asset-name)}" alt="{$title}" loading="lazy"/></a></div>
+      </details>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template match="compounddef">
@@ -366,6 +440,15 @@
         <xsl:call-template name="declaration-table"/>
       </xsl:if>
       <xsl:apply-templates select="detaileddescription"/>
+
+      <xsl:if test="$page-type='compound'">
+        <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat(@id, '__inherit__graph')"/><xsl:with-param name="title" select="'Inheritance diagram'"/></xsl:call-template>
+        <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat(@id, '__coll__graph')"/><xsl:with-param name="title" select="'Collaboration diagram'"/></xsl:call-template>
+      </xsl:if>
+      <xsl:if test="$page-type='file'">
+        <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat(@id, '__incl')"/><xsl:with-param name="title" select="'Include dependency graph'"/></xsl:call-template>
+        <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat(@id, '__dep__incl')"/><xsl:with-param name="title" select="'Included-by dependency graph'"/></xsl:call-template>
+      </xsl:if>
 
       <xsl:if test="innerclass or innernamespace or innergroup or innerdir or innerfile">
         <details class="inner-compounds" open="open">
@@ -411,7 +494,7 @@
 
   <xsl:template match="memberdef" mode="declaration-row">
     <tr class="access-{@prot}">
-      <td><a class="declaration-name"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' or @kind='signal' or @kind='slot'"><xsl:value-of select="concat($selected-module, '-member-', $selected-compound-key, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @id)"/></xsl:otherwise></xsl:choose></xsl:attribute><xsl:value-of select="name"/></a><div class="declaration-badges"><span><xsl:value-of select="@prot"/></span><xsl:if test="@static='yes'"><span>static</span></xsl:if><xsl:if test="@const='yes'"><span>const</span></xsl:if></div></td>
+      <td><a class="declaration-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' or @kind='signal' or @kind='slot'"><xsl:value-of select="concat($selected-module, '-member-', $selected-compound-key, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @id)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><xsl:value-of select="name"/></a><div class="declaration-badges"><span><xsl:value-of select="@prot"/></span><xsl:if test="@static='yes'"><span>static</span></xsl:if><xsl:if test="@const='yes'"><span>const</span></xsl:if></div></td>
       <td><xsl:if test="templateparamlist/param"><div class="declaration-template"><xsl:call-template name="template-parameters"/></div></xsl:if><code class="declaration-signature"><xsl:call-template name="member-signature"/></code></td>
       <td class="declaration-description"><xsl:apply-templates select="briefdescription/node()"/></td>
     </tr>
@@ -477,6 +560,121 @@
     </article>
   </xsl:template>
 
+  <xsl:template match="memberdef" mode="function-page">
+    <xsl:variable name="template-docs" select="detaileddescription//parameterlist[@kind='templateparam']/parameteritem"/>
+    <xsl:variable name="argument-docs" select="detaileddescription//parameterlist[@kind='param']/parameteritem"/>
+    <xsl:variable name="return-docs" select="detaileddescription//simplesect[@kind='return']"/>
+    <article class="function-reference access-{@prot}" id="{@id}">
+      <section class="function-declaration">
+        <h3>Declaration</h3>
+        <pre class="signature"><xsl:call-template name="member-signature"/></pre>
+        <div class="badges">
+          <span><xsl:value-of select="@prot"/></span>
+          <xsl:if test="@static='yes'"><span>static</span></xsl:if>
+          <xsl:if test="@inline='yes'"><span>inline</span></xsl:if>
+          <xsl:if test="@explicit='yes'"><span>explicit</span></xsl:if>
+          <xsl:if test="@const='yes'"><span>const</span></xsl:if>
+          <xsl:if test="@constexpr='yes'"><span>constexpr</span></xsl:if>
+          <xsl:if test="@consteval='yes'"><span>consteval</span></xsl:if>
+          <xsl:if test="@virt and @virt!='non-virtual'"><span><xsl:value-of select="@virt"/></span></xsl:if>
+        </div>
+        <xsl:if test="initializer"><div class="initializer"><strong>Initializer</strong><code><xsl:apply-templates select="initializer/node()"/></code></div></xsl:if>
+        <xsl:if test="requiresclause"><div class="requires"><strong>Requires</strong><code><xsl:apply-templates select="requiresclause/node()"/></code></div></xsl:if>
+      </section>
+
+      <xsl:call-template name="function-parameter-table">
+        <xsl:with-param name="title" select="'Template parameters'"/>
+        <xsl:with-param name="class" select="'function-template-parameters'"/>
+        <xsl:with-param name="items" select="templateparamlist/param"/>
+        <xsl:with-param name="docs" select="$template-docs"/>
+      </xsl:call-template>
+      <xsl:call-template name="function-parameter-table">
+        <xsl:with-param name="title" select="'Arguments'"/>
+        <xsl:with-param name="class" select="'function-arguments'"/>
+        <xsl:with-param name="items" select="param"/>
+        <xsl:with-param name="docs" select="$argument-docs"/>
+        <xsl:with-param name="split-declaration" select="'yes'"/>
+      </xsl:call-template>
+
+      <xsl:if test="normalize-space(type) or $return-docs">
+        <section class="function-metadata function-return">
+          <h3>Return</h3>
+          <table><tbody><tr>
+            <td><code><xsl:apply-templates select="type/node()"/></code></td>
+            <td><xsl:apply-templates select="$return-docs/node()"/></td>
+          </tr></tbody></table>
+        </section>
+      </xsl:if>
+      <xsl:call-template name="documented-parameter-table">
+        <xsl:with-param name="title" select="'Return values'"/>
+        <xsl:with-param name="class" select="'function-return-values'"/>
+        <xsl:with-param name="items" select="detaileddescription//parameterlist[@kind='retval']/parameteritem"/>
+      </xsl:call-template>
+      <xsl:call-template name="documented-parameter-table">
+        <xsl:with-param name="title" select="'Exceptions'"/>
+        <xsl:with-param name="class" select="'function-exceptions'"/>
+        <xsl:with-param name="items" select="detaileddescription//parameterlist[@kind='exception']/parameteritem"/>
+      </xsl:call-template>
+
+      <section class="function-documentation">
+        <h3>Documentation</h3>
+        <xsl:apply-templates select="briefdescription|detaileddescription|inbodydescription"/>
+      </section>
+      <xsl:variable name="member-graph-base" select="concat(substring(@id, 1, string-length(@id) - 35), '_', substring(@id, string-length(@id) - 32))"/>
+      <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat($member-graph-base, '_cgraph')"/><xsl:with-param name="title" select="'Call graph'"/></xsl:call-template>
+      <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="concat($member-graph-base, '_icgraph')"/><xsl:with-param name="title" select="'Caller graph'"/></xsl:call-template>
+      <xsl:apply-templates select="references|referencedby"/>
+      <xsl:apply-templates select="location"/>
+    </article>
+  </xsl:template>
+
+  <xsl:template name="function-parameter-table">
+    <xsl:param name="title"/>
+    <xsl:param name="class"/>
+    <xsl:param name="items"/>
+    <xsl:param name="docs"/>
+    <xsl:param name="split-declaration" select="'no'"/>
+    <xsl:if test="$items">
+      <section class="function-metadata {$class}">
+        <h3><xsl:value-of select="$title"/></h3>
+        <table><tbody>
+          <xsl:for-each select="$items">
+            <xsl:variable name="position" select="position()"/>
+            <xsl:variable name="parameter-name" select="string((declname|defname)[1])"/>
+            <xsl:variable name="matching-doc" select="$docs[parameternamelist/parametername=$parameter-name][1] | $docs[position()=$position][not($docs[parameternamelist/parametername=$parameter-name])][1]"/>
+            <tr>
+              <xsl:choose>
+                <xsl:when test="$split-declaration='yes'">
+                  <td><code><xsl:choose><xsl:when test="$parameter-name"><xsl:value-of select="$parameter-name"/></xsl:when><xsl:otherwise>—</xsl:otherwise></xsl:choose></code><xsl:if test="$matching-doc/parameternamelist/parametername/@direction"><small class="parameter-direction"><xsl:value-of select="$matching-doc/parameternamelist/parametername/@direction"/></small></xsl:if><xsl:if test="defval"><small class="argument-default">default: <code><xsl:apply-templates select="defval/node()"/></code></small></xsl:if></td>
+                  <td><code><xsl:apply-templates select="type/node()"/><xsl:if test="array"><xsl:value-of select="array"/></xsl:if></code></td>
+                </xsl:when>
+                <xsl:otherwise>
+                  <td><code><xsl:apply-templates select="type/node()"/><xsl:if test="declname or (defname and not(declname))"><xsl:text> </xsl:text><xsl:value-of select="(declname|defname)[1]"/></xsl:if><xsl:if test="array"><xsl:value-of select="array"/></xsl:if><xsl:if test="defval"><xsl:text> = </xsl:text><xsl:apply-templates select="defval/node()"/></xsl:if></code><xsl:if test="$matching-doc/parameternamelist/parametername/@direction"><small class="parameter-direction"><xsl:value-of select="$matching-doc/parameternamelist/parametername/@direction"/></small></xsl:if></td>
+                </xsl:otherwise>
+              </xsl:choose>
+              <td><xsl:apply-templates select="$matching-doc/parameterdescription/node()"/></td>
+            </tr>
+          </xsl:for-each>
+        </tbody></table>
+      </section>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="documented-parameter-table">
+    <xsl:param name="title"/>
+    <xsl:param name="class"/>
+    <xsl:param name="items"/>
+    <xsl:if test="$items">
+      <section class="function-metadata {$class}">
+        <h3><xsl:value-of select="$title"/></h3>
+        <table><tbody><xsl:for-each select="$items"><tr>
+          <td><code><xsl:for-each select="parameternamelist/parametername"><xsl:if test="position()!=1">, </xsl:if><xsl:value-of select="."/></xsl:for-each></code></td>
+          <td><xsl:apply-templates select="parameterdescription/node()"/></td>
+        </tr></xsl:for-each></tbody></table>
+      </section>
+    </xsl:if>
+  </xsl:template>
+
   <xsl:template name="member-signature">
     <xsl:choose>
       <xsl:when test="@kind='function' or @kind='friend' or @kind='signal' or @kind='slot'">
@@ -517,7 +715,14 @@
     <div class="description"><xsl:apply-templates/></div>
   </xsl:template>
 
-  <xsl:template match="para"><p><xsl:apply-templates/></p></xsl:template>
+  <xsl:template match="para">
+    <xsl:choose>
+      <xsl:when test="parameterlist or simplesect or xrefsect or itemizedlist or orderedlist or variablelist or table or programlisting or verbatim or blockquote or sect1 or sect2 or sect3 or sect4 or sect5 or sect6 or image or dot or msc or plantuml">
+        <div class="paragraph"><xsl:apply-templates/></div>
+      </xsl:when>
+      <xsl:otherwise><p><xsl:apply-templates/></p></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
   <xsl:template match="bold"><strong><xsl:apply-templates/></strong></xsl:template>
   <xsl:template match="emphasis"><em><xsl:apply-templates/></em></xsl:template>
   <xsl:template match="computeroutput"><code><xsl:apply-templates/></code></xsl:template>
@@ -545,14 +750,18 @@
   <xsl:template match="listitem[parent::variablelist]"><dd><xsl:apply-templates/></dd></xsl:template>
 
   <xsl:template match="simplesect">
-    <aside class="admonition {@kind}"><strong><xsl:value-of select="@kind"/></strong><xsl:apply-templates/></aside>
+    <xsl:if test="not(($page-type='member' or $page-type='free-member') and @kind='return')">
+      <aside class="admonition {@kind}"><strong><xsl:value-of select="@kind"/></strong><xsl:apply-templates/></aside>
+    </xsl:if>
   </xsl:template>
   <xsl:template match="xrefsect">
     <aside class="admonition xref"><strong><xsl:value-of select="xreftitle"/></strong><xsl:apply-templates select="xrefdescription"/></aside>
   </xsl:template>
 
   <xsl:template match="parameterlist">
-    <section class="parameters"><h5><xsl:value-of select="@kind"/> parameters</h5><dl><xsl:apply-templates/></dl></section>
+    <xsl:if test="not(($page-type='member' or $page-type='free-member') and (@kind='templateparam' or @kind='param' or @kind='retval' or @kind='exception'))">
+      <section class="parameters"><h5><xsl:value-of select="@kind"/> parameters</h5><dl><xsl:apply-templates/></dl></section>
+    </xsl:if>
   </xsl:template>
   <xsl:template match="parameteritem">
     <dt><xsl:for-each select="parameternamelist/parametername"><xsl:if test="position()!=1">, </xsl:if><code><xsl:value-of select="."/></code><xsl:if test="@direction"><small> [<xsl:value-of select="@direction"/>]</small></xsl:if></xsl:for-each></dt>

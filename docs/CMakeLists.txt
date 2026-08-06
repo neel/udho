@@ -160,12 +160,15 @@ if(UDHO_XSLTPROC_EXECUTABLE)
                 "-DUDHO_MODULE_INDEX=${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/xml/index.xml"
                 "-DUDHO_OUTPUT_DIR=${UDHO_XSLT_DIRECTORY}"
                 "-DUDHO_STAMP=${module_stamp}"
+                "-DUDHO_HTML_DIR=${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/html"
+                "-DUDHO_DIAGRAM_PREFIX=../modular/modules/${module}/html/"
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderModule.cmake"
             DEPENDS
                 "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
                 "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderModule.cmake"
                 "${UDHO_XSLT_MANIFEST}"
                 "${UDHO_DOXYGEN_TAG_DIR}/${module}.tag"
+                "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/html/index.html"
             COMMENT "XSLT: rendering ${module} documentation"
             VERBATIM
         )
@@ -234,6 +237,9 @@ endforeach()
 
 add_custom_target(docs-modules)
 add_dependencies(docs-modules ${UDHO_DOXYGEN_MODULE_TARGETS})
+if(TARGET docs-xslt)
+    add_dependencies(docs-xslt docs-modules)
+endif()
 
 # Hand-written pages get their own fast Doxygen invocation.  It sees API
 # symbols only through tags and never parses the public-header tree itself.
