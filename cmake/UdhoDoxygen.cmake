@@ -50,6 +50,7 @@ function(udho_add_doxygen_target target)
             "${UDHO_DOXYGEN_DOXYFILE}"
             "${UDHO_DOXYGEN_DIAGRAM_CONFIG}"
             "${UDHO_DOXYGEN_OVERLAY}"
+            ${UDHO_DOXYGEN_TOOL_DEPENDS}
             ${UDHO_DOXYGEN_DEPENDS}
         VERBATIM
     )

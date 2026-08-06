@@ -44,6 +44,26 @@ set(UDHO_DOXYGEN_MODULAR_ROOT "${CMAKE_CURRENT_BINARY_DIR}/modular")
 set(UDHO_DOXYGEN_TAG_DIR "${UDHO_DOXYGEN_MODULAR_ROOT}/tags")
 set(UDHO_DOXYGEN_ROOT_TAG "${UDHO_DOXYGEN_TAG_DIR}/udho.tag")
 
+set(UDHO_PLANTUML_VERSION "1.2026.6")
+set(UDHO_PLANTUML_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/plantuml")
+set(UDHO_PLANTUML_JAR "${UDHO_PLANTUML_DIRECTORY}/plantuml.jar")
+set(UDHO_PLANTUML_URL "https://github.com/plantuml/plantuml/releases/download/v${UDHO_PLANTUML_VERSION}/plantuml-${UDHO_PLANTUML_VERSION}.jar")
+set(UDHO_DOXYGEN_PLANTUML_JAR_PATH "${UDHO_PLANTUML_DIRECTORY}")
+set(UDHO_DOXYGEN_TOOL_DEPENDS "${UDHO_PLANTUML_JAR}")
+
+add_custom_command(
+    OUTPUT "${UDHO_PLANTUML_JAR}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${UDHO_PLANTUML_DIRECTORY}"
+    COMMAND "${CMAKE_COMMAND}"
+        "-DUDHO_PLANTUML_URL=${UDHO_PLANTUML_URL}"
+        "-DUDHO_PLANTUML_OUTPUT=${UDHO_PLANTUML_JAR}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/DownloadPlantUML.cmake"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/DownloadPlantUML.cmake"
+    COMMENT "Downloading PlantUML ${UDHO_PLANTUML_VERSION}"
+    VERBATIM
+)
+add_custom_target(docs-plantuml DEPENDS "${UDHO_PLANTUML_JAR}")
+
 # The root topic is generated first so module-level groups can attach to it.
 udho_add_doxygen_target(docs-tag-udho
     DOXYFILE "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.root"
