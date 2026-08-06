@@ -1,4 +1,5 @@
 # CMake's first pass creates module XML and tag files without rendering HTML.
+CLANG_ASSISTED_PARSING = YES
 GENERATE_HTML          = NO
 GENERATE_XML           = YES
 TAGFILES               =

@@ -1,5 +1,6 @@
 /**
  * @defgroup DoxyG_activities Activities
+ * @ingroup DoxyG_udho
  * @brief Udho asynchronous activities.
  * @copydoc Activities
  */

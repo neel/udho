@@ -1,5 +1,6 @@
 /**
  * @defgroup DoxyG_logging Logging
+ * @ingroup DoxyG_udho
  * @brief Structured logging, transport, formatting, and administration.
  *
  * @defgroup DoxyG_logging_params Parameters and Schema

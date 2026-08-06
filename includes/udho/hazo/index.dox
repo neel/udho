@@ -1,5 +1,6 @@
 /**
  * @defgroup DoxyG_hazo Hazo
+ * @ingroup DoxyG_udho
  * @brief Udho heterogeneous data storage.
  */
 

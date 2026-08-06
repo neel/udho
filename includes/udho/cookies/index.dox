@@ -1,4 +1,5 @@
 /**
  * @defgroup DoxyG_cookies Cookies
+ * @ingroup DoxyG_udho
  * @brief HTTP cookie creation, parsing, and storage.
  */

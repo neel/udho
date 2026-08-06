@@ -2,10 +2,9 @@
 @INCLUDE = ../Doxyfile
 
 PROJECT_NAME           = udho
-INPUT                  = . ../parts ../index.h ../../README.md
+INPUT                  = . ../parts ../index.dox ../../README.md
 STRIP_FROM_PATH        = ../..
 IMAGE_PATH             = ../images
 USE_MDFILE_AS_MAINPAGE = ../../README.md
 GENERATE_TAGFILE       =
 CLANG_ASSISTED_PARSING = NO
-CLANG_DATABASE_PATH    = ..

@@ -1,5 +1,6 @@
 /**
  * @defgroup DoxyG_www WWW
+ * @ingroup DoxyG_udho
  * @brief WWW subsystem
  * @ingroup DoxyG_manifold
  */

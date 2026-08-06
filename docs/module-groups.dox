@@ -1,0 +1,36 @@
+/** @weakgroup DoxyG_activities Activities
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_cookies Cookies
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_db Database
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_hazo Hazo
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_logging Logging
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_manifold Manifold
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_net Networking
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_pages Pages
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_session Session
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_url URL
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_view Views
+ *  @ingroup DoxyG_udho
+ */
+/** @weakgroup DoxyG_www WWW
+ *  @ingroup DoxyG_udho
+ */

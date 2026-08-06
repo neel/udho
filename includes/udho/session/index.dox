@@ -1,4 +1,5 @@
 /**
  * @defgroup DoxyG_session Session
+ * @ingroup DoxyG_udho
  * @brief Session management and persistence.
  */

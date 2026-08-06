@@ -1,4 +1,5 @@
 /**
  * @defgroup DoxyG_db Database
+ * @ingroup DoxyG_udho
  * @brief udho database functionalities
  */

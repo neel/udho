@@ -1,4 +1,5 @@
 /**
  * @defgroup DoxyG_net Networking
+ * @ingroup DoxyG_udho
  * @brief Asynchronous networking, protocol handling, and response streaming.
  */

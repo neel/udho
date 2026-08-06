@@ -1,0 +1,6 @@
+# Root topic used by module tag generation.
+@INCLUDE = Doxyfile
+
+PROJECT_NAME           = udho
+INPUT                  = index.dox module-groups.dox
+GENERATE_TAGFILE       =

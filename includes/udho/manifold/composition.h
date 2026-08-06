@@ -742,10 +742,6 @@ struct composition<ComponentT>: private wrapper<ComponentT> {
 
 #endif // __DOXYGEN__
 
-/**
- * @}
- */
-
 }
 }
 

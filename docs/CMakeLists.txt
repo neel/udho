@@ -30,7 +30,7 @@ endif()
 set(UDHO_DOXYGEN_TEMPLATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.wrapper.in")
 set(UDHO_DOXYGEN_SHARED_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
-set(UDHO_DOXYGEN_COMPILE_FLAGS "${CMAKE_CURRENT_SOURCE_DIR}/compile_flags.txt")
+set(UDHO_DOXYGEN_CLANG_DATABASE_PATH "${CMAKE_BINARY_DIR}")
 set(UDHO_DOXYGEN_TAG_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.tags")
 set(UDHO_DOXYGEN_HTML_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.html")
 include(UdhoDoxygen)
@@ -42,6 +42,25 @@ file(GLOB_RECURSE UDHO_DOCUMENTATION_IMAGES "${CMAKE_CURRENT_SOURCE_DIR}/images/
 
 set(UDHO_DOXYGEN_MODULAR_ROOT "${CMAKE_CURRENT_BINARY_DIR}/modular")
 set(UDHO_DOXYGEN_TAG_DIR "${UDHO_DOXYGEN_MODULAR_ROOT}/tags")
+set(UDHO_DOXYGEN_ROOT_TAG "${UDHO_DOXYGEN_TAG_DIR}/udho.tag")
+
+# The root topic is generated first so module-level groups can attach to it.
+udho_add_doxygen_target(docs-tag-udho
+    DOXYFILE "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.root"
+    OVERLAY "${UDHO_DOXYGEN_TAG_CONFIG}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/root"
+    STRIP_FROM_PATH "${UDHO_SOURCE_DIR}"
+    TAG_FILE "${UDHO_DOXYGEN_ROOT_TAG}"
+    OUTPUTS
+        "${UDHO_DOXYGEN_MODULAR_ROOT}/root/xml/index.xml"
+        "${UDHO_DOXYGEN_ROOT_TAG}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/index.dox"
+        "${CMAKE_CURRENT_SOURCE_DIR}/module-groups.dox"
+        "${UDHO_DOXYGEN_SHARED_CONFIG}"
+        "${CMAKE_BINARY_DIR}/compile_commands.json"
+)
 
 # Phase one creates tags and per-module XML without rendering HTML or consuming
 # external tags.  These targets depend only on their own headers, which is the
@@ -64,21 +83,25 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         OVERLAY "${UDHO_DOXYGEN_TAG_CONFIG}"
         WORKING_DIRECTORY "${module_source_dir}"
         BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
+        STRIP_FROM_PATH "${UDHO_SOURCE_DIR}/includes"
         TAG_FILE "${tag_file}"
+        TAG_MAPPINGS "${UDHO_DOXYGEN_ROOT_TAG}"
+        ORDER_DEPENDS docs-tag-udho
         OUTPUTS
             "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/xml/index.xml"
             "${tag_file}"
         DEPENDS
             ${module_sources}
             "${UDHO_DOXYGEN_SHARED_CONFIG}"
-            "${UDHO_DOXYGEN_COMPILE_FLAGS}"
+            "${UDHO_DOXYGEN_ROOT_TAG}"
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
     )
     list(APPEND UDHO_DOXYGEN_TAG_TARGETS ${tag_target})
     list(APPEND UDHO_DOXYGEN_TAG_FILES "${tag_file}")
 endforeach()
 
 add_custom_target(docs-tags)
-add_dependencies(docs-tags ${UDHO_DOXYGEN_TAG_TARGETS})
+add_dependencies(docs-tags docs-tag-udho ${UDHO_DOXYGEN_TAG_TARGETS})
 
 # Phase two reparses each module to render HTML with every other module's tag
 # file available. This resolves documentation-only references without a
@@ -86,7 +109,7 @@ add_dependencies(docs-tags ${UDHO_DOXYGEN_TAG_TARGETS})
 # changing one module does not force otherwise unchanged module HTML to run.
 set(UDHO_DOXYGEN_MODULE_TARGETS)
 foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
-    set(tag_mappings)
+    set(tag_mappings "${UDHO_DOXYGEN_ROOT_TAG}=../../../pages/html")
     foreach(other_module IN LISTS UDHO_DOCUMENTATION_MODULES)
         if(NOT other_module STREQUAL module)
             list(APPEND tag_mappings "${UDHO_DOXYGEN_TAG_DIR}/${other_module}.tag=../../${other_module}/html")
@@ -99,13 +122,14 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         OVERLAY "${UDHO_DOXYGEN_HTML_CONFIG}"
         WORKING_DIRECTORY "${UDHO_SOURCE_DIR}/includes/udho/${module}"
         BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}"
+        STRIP_FROM_PATH "${UDHO_SOURCE_DIR}/includes"
         TAG_MAPPINGS ${tag_mappings}
         OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/html/index.html"
         ORDER_DEPENDS ${UDHO_DOXYGEN_TAG_TARGETS}
         DEPENDS
             ${UDHO_DOCUMENTATION_SOURCES_${module}}
             "${UDHO_DOXYGEN_SHARED_CONFIG}"
-            "${UDHO_DOXYGEN_COMPILE_FLAGS}"
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
     )
     list(APPEND UDHO_DOXYGEN_MODULE_TARGETS ${module_target})
 endforeach()
@@ -120,12 +144,14 @@ foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
     list(APPEND page_tag_mappings
         "${UDHO_DOXYGEN_TAG_DIR}/${module}.tag=../../modules/${module}/html")
 endforeach()
+list(APPEND page_tag_mappings "${UDHO_DOXYGEN_ROOT_TAG}")
 
 udho_add_doxygen_target(docs-pages
     DOXYFILE "${CMAKE_CURRENT_SOURCE_DIR}/pages/Doxyfile"
     OVERLAY "${UDHO_DOXYGEN_HTML_CONFIG}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pages"
     BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/pages"
+    STRIP_FROM_PATH "${UDHO_SOURCE_DIR}"
     TAG_MAPPINGS ${page_tag_mappings}
     OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/html/index.html"
     ORDER_DEPENDS ${UDHO_DOXYGEN_MODULE_TARGETS}
@@ -133,9 +159,10 @@ udho_add_doxygen_target(docs-pages
         ${UDHO_DOCUMENTATION_PAGES}
         ${UDHO_DOCUMENTATION_PARTS}
         ${UDHO_DOCUMENTATION_IMAGES}
+        "${UDHO_DOXYGEN_ROOT_TAG}"
         ${UDHO_DOXYGEN_TAG_FILES}
         "${UDHO_DOXYGEN_SHARED_CONFIG}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/index.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/index.dox"
         "${UDHO_SOURCE_DIR}/README.md"
 )
 

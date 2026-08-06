@@ -1,4 +1,5 @@
 /**
  * @defgroup DoxyG_manifold Manifold
+ * @ingroup DoxyG_udho
  * @brief Manifold Subsystem
  */
