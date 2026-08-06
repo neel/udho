@@ -125,6 +125,81 @@ endforeach()
 add_custom_target(docs-tags)
 add_dependencies(docs-tags docs-tag-udho ${UDHO_DOXYGEN_TAG_TARGETS})
 
+# Experimental, fully custom HTML rendering from Doxygen XML. The manifest
+# gives the XSLT processor access to every module index while retaining the
+# existing module-local XML generation and incremental dependencies.
+find_program(UDHO_XSLTPROC_EXECUTABLE xsltproc)
+if(UDHO_XSLTPROC_EXECUTABLE)
+    set(UDHO_XSLT_MODULE_ENTRIES)
+    foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
+        string(APPEND UDHO_XSLT_MODULE_ENTRIES
+            "  <module name=\"${module}\" index=\"../modular/modules/${module}/xml/index.xml\"/>\n")
+    endforeach()
+
+    set(UDHO_XSLT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/xslt")
+    set(UDHO_XSLT_MANIFEST "${UDHO_XSLT_DIRECTORY}/modules.xml")
+    set(UDHO_XSLT_STYLESHEET_OUTPUT "${UDHO_XSLT_DIRECTORY}/udho.css")
+    file(MAKE_DIRECTORY "${UDHO_XSLT_DIRECTORY}")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/xslt/modules.xml.in"
+        "${UDHO_XSLT_MANIFEST}"
+        @ONLY
+    )
+
+    set(UDHO_XSLT_MODULE_OUTPUTS)
+    foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
+        set(module_output "${UDHO_XSLT_DIRECTORY}/${module}.html")
+        set(module_stamp "${UDHO_XSLT_DIRECTORY}/${module}.stamp")
+        add_custom_command(
+            OUTPUT "${module_output}" "${module_stamp}"
+            COMMAND "${CMAKE_COMMAND}"
+                "-DUDHO_XSLTPROC=${UDHO_XSLTPROC_EXECUTABLE}"
+                "-DUDHO_XSLT=${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+                "-DUDHO_MANIFEST=${UDHO_XSLT_MANIFEST}"
+                "-DUDHO_MODULE=${module}"
+                "-DUDHO_MODULE_INDEX=${UDHO_DOXYGEN_MODULAR_ROOT}/modules/${module}/xml/index.xml"
+                "-DUDHO_OUTPUT_DIR=${UDHO_XSLT_DIRECTORY}"
+                "-DUDHO_STAMP=${module_stamp}"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderModule.cmake"
+            DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+                "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderModule.cmake"
+                "${UDHO_XSLT_MANIFEST}"
+                "${UDHO_DOXYGEN_TAG_DIR}/${module}.tag"
+            COMMENT "XSLT: rendering ${module} documentation"
+            VERBATIM
+        )
+        list(APPEND UDHO_XSLT_MODULE_OUTPUTS "${module_output}" "${module_stamp}")
+    endforeach()
+
+    add_custom_command(
+        OUTPUT "${UDHO_XSLT_DIRECTORY}/index.html" "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        COMMAND "${UDHO_XSLTPROC_EXECUTABLE}"
+            --nonet
+            --stringparam index-only yes
+            --output "${UDHO_XSLT_DIRECTORY}/index.html"
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+            "${UDHO_XSLT_MANIFEST}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/udho.css"
+            "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/udho.css"
+            "${UDHO_XSLT_MANIFEST}"
+        COMMENT "XSLT: rendering documentation index"
+        VERBATIM
+    )
+    add_custom_target(docs-xslt DEPENDS
+        "${UDHO_XSLT_DIRECTORY}/index.html"
+        "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        ${UDHO_XSLT_MODULE_OUTPUTS}
+    )
+    add_dependencies(docs-xslt docs-tags)
+else()
+    message(STATUS "xsltproc not found; docs-xslt target is unavailable")
+endif()
+
 # Phase two reparses each module to render HTML with every other module's tag
 # file available. This resolves documentation-only references without a
 # manually maintained module graph. Tag targets are order-only dependencies, so

@@ -1,0 +1,208 @@
+foreach(required IN ITEMS
+    UDHO_XSLTPROC
+    UDHO_XSLT
+    UDHO_MANIFEST
+    UDHO_MODULE
+    UDHO_MODULE_INDEX
+    UDHO_OUTPUT_DIR
+    UDHO_STAMP)
+    if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
+        message(FATAL_ERROR "RenderModule.cmake requires ${required}")
+    endif()
+endforeach()
+
+function(udho_run_xslt output page_type)
+    set(arguments
+        --nonet
+        --stringparam page-type "${page_type}"
+        --stringparam selected-module "${UDHO_MODULE}"
+    )
+    if(ARGC GREATER 2)
+        list(APPEND arguments --stringparam selected-compound "${ARGV2}")
+    endif()
+    if(ARGC GREATER 3 AND NOT "${ARGV3}" STREQUAL "")
+        list(APPEND arguments --stringparam selected-member "${ARGV3}")
+    endif()
+    if(ARGC GREATER 4 AND NOT "${ARGV4}" STREQUAL "")
+        list(APPEND arguments --stringparam selected-compound-key "${ARGV4}")
+    endif()
+    if(ARGC GREATER 5 AND NOT "${ARGV5}" STREQUAL "")
+        list(APPEND arguments --stringparam selected-owner-ref "${ARGV5}")
+    endif()
+    if(ARGC GREATER 6 AND NOT "${ARGV6}" STREQUAL "")
+        list(APPEND arguments --stringparam selected-owner-name "${ARGV6}")
+    endif()
+    list(APPEND arguments
+        --output "${output}"
+        "${UDHO_XSLT}"
+        "${UDHO_MANIFEST}"
+    )
+    execute_process(
+        COMMAND "${UDHO_XSLTPROC}" ${arguments}
+        RESULT_VARIABLE result
+        ERROR_VARIABLE error
+    )
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "xsltproc failed for ${output}:\n${error}")
+    endif()
+endfunction()
+
+file(MAKE_DIRECTORY "${UDHO_OUTPUT_DIR}")
+udho_run_xslt("${UDHO_OUTPUT_DIR}/${UDHO_MODULE}.html" module)
+
+# XSLT 1.0 cannot create multiple result documents. Discover type compounds in
+# the Doxygen index and invoke the same stylesheet once for each standalone
+# class/struct/union page, including template specializations.
+file(READ "${UDHO_MODULE_INDEX}" index_xml)
+get_filename_component(module_xml_dir "${UDHO_MODULE_INDEX}" DIRECTORY)
+
+# Render every Doxygen group, including the module root and nested groups, as
+# an independent page. Parent/child navigation is derived from innergroup
+# references in the XML rather than flattened into the module page.
+string(REGEX MATCHALL
+    "<compound refid=\"[^\"]+\" kind=\"group\""
+    group_compounds
+    "${index_xml}"
+)
+foreach(compound IN LISTS group_compounds)
+    string(REGEX REPLACE ".*refid=\"([^\"]+)\".*" "\\1" refid "${compound}")
+    udho_run_xslt(
+        "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-${refid}.html"
+        group
+        "${refid}"
+    )
+endforeach()
+
+# File compounds get dedicated pages so their complete source listings are
+# available on demand without being embedded in the module overview.
+string(REGEX MATCHALL
+    "<compound refid=\"[^\"]+\" kind=\"file\""
+    file_compounds
+    "${index_xml}"
+)
+foreach(compound IN LISTS file_compounds)
+    string(REGEX REPLACE ".*refid=\"([^\"]+)\".*" "\\1" refid "${compound}")
+    udho_run_xslt(
+        "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-${refid}.html"
+        file
+        "${refid}"
+    )
+endforeach()
+
+string(REGEX MATCHALL
+    "<compound refid=\"[^\"]+\" kind=\"dir\""
+    directory_compounds
+    "${index_xml}"
+)
+foreach(compound IN LISTS directory_compounds)
+    string(REGEX REPLACE ".*refid=\"([^\"]+)\".*" "\\1" refid "${compound}")
+    udho_run_xslt(
+        "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-${refid}.html"
+        directory
+        "${refid}"
+    )
+endforeach()
+
+string(REGEX MATCHALL
+    "<compound refid=\"[^\"]+\" kind=\"(class|struct|union)\""
+    type_compounds
+    "${index_xml}"
+)
+foreach(compound IN LISTS type_compounds)
+    string(REGEX REPLACE ".*refid=\"([^\"]+)\".*" "\\1" refid "${compound}")
+    string(SHA256 compound_hash "${refid}")
+    string(SUBSTRING "${compound_hash}" 0 16 compound_key)
+    udho_run_xslt(
+        "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-${refid}.html"
+        compound
+        "${refid}"
+        ""
+        "${compound_key}"
+    )
+
+    file(READ "${module_xml_dir}/${refid}.xml" compound_xml)
+    string(REGEX MATCHALL
+        "<memberdef kind=\"(function|signal|slot)\" id=\"[^\"]+\""
+        function_members
+        "${compound_xml}"
+    )
+    foreach(member IN LISTS function_members)
+        string(REGEX REPLACE ".*id=\"([^\"]+)\".*" "\\1" member_id "${member}")
+        string(LENGTH "${member_id}" member_id_length)
+        math(EXPR member_suffix_start "${member_id_length} - 33")
+        string(SUBSTRING "${member_id}" ${member_suffix_start} 33 member_suffix)
+        udho_run_xslt(
+            "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-member-${compound_key}-${member_suffix}.html"
+            member
+            "${refid}"
+            "${member_id}"
+            "${compound_key}"
+        )
+    endforeach()
+endforeach()
+
+# Namespace-level functions use their canonical Doxygen member id. A function
+# can also appear in group and file compounds, so namespace compounds are the
+# single source used here and duplicate ids are rendered only once.
+string(REGEX MATCHALL
+    "<compound refid=\"[^\"]+\" kind=\"namespace\""
+    namespace_compounds
+    "${index_xml}"
+)
+set(rendered_free_functions)
+foreach(compound IN LISTS namespace_compounds)
+    string(REGEX REPLACE ".*refid=\"([^\"]+)\".*" "\\1" refid "${compound}")
+    udho_run_xslt(
+        "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-${refid}.html"
+        namespace
+        "${refid}"
+    )
+    file(READ "${module_xml_dir}/${refid}.xml" compound_xml)
+    string(REGEX MATCH "<compoundname>([^<]+)</compoundname>" namespace_name_match "${compound_xml}")
+    set(namespace_name "${CMAKE_MATCH_1}")
+    string(REGEX MATCHALL
+        "<member refid=\"[^\"]+\" kind=\"function\""
+        free_function_members
+        "${compound_xml}"
+    )
+    string(REGEX MATCHALL
+        "<memberdef kind=\"function\" id=\"[^\"]+\""
+        direct_free_function_members
+        "${compound_xml}"
+    )
+    list(APPEND free_function_members ${direct_free_function_members})
+    foreach(member IN LISTS free_function_members)
+        if(member MATCHES "refid=\"([^\"]+)\"")
+            set(member_id "${CMAKE_MATCH_1}")
+        elseif(member MATCHES "id=\"([^\"]+)\"")
+            set(member_id "${CMAKE_MATCH_1}")
+        else()
+            message(FATAL_ERROR "Cannot read free-function id from ${member}")
+        endif()
+        list(FIND rendered_free_functions "${member_id}" already_rendered)
+        if(already_rendered EQUAL -1)
+            list(APPEND rendered_free_functions "${member_id}")
+            string(LENGTH "${member_id}" member_id_length)
+            math(EXPR member_suffix_start "${member_id_length} - 33")
+            string(SUBSTRING "${member_id}" ${member_suffix_start} 33 member_suffix)
+            if(member_id MATCHES "^(.+)_1g[a-f0-9]+$")
+                set(member_compound "${CMAKE_MATCH_1}")
+            elseif(member_id MATCHES "^(.+)_1a[a-f0-9]+$")
+                set(member_compound "${CMAKE_MATCH_1}")
+            else()
+                message(FATAL_ERROR "Cannot determine compound for free function ${member_id}")
+            endif()
+            udho_run_xslt(
+                "${UDHO_OUTPUT_DIR}/${UDHO_MODULE}-free-${refid}-${member_suffix}.html"
+                free-member
+                "${member_compound}"
+                "${member_id}"
+                ""
+                "${refid}"
+                "${namespace_name}"
+            )
+        endif()
+    endforeach()
+endforeach()
+
+file(TOUCH "${UDHO_STAMP}")

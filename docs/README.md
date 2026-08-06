@@ -54,6 +54,29 @@ following targets are available:
 * `docs-tags` builds cross-reference tag files and per-module XML;
 * `docs` builds tags, module API sites, and pages in pass order.
 
+An experimental XSLT renderer is also available when `xsltproc` is installed:
+
+```sh
+cmake --build build --target docs-xslt
+```
+
+It transforms the module Doxygen XML into a separate site at
+`build/docs/xslt/index.html`. The landing page links to one generated HTML file
+per public module. Classes, structs, and unions have standalone declaration
+pages, and each member function links from its declaration row to a standalone
+detail page. Namespace-level free functions likewise link from the module index
+to standalone detail pages. Namespaces have standalone pages that organize
+their nested namespaces, types, and declarations. Every Doxygen group, including nested groups, also
+has a standalone page linked through the group hierarchy. Header files have
+standalone source pages, keeping complete source listings out of module pages.
+Directories also have standalone pages for their direct subdirectories and
+files. A right sidebar exposes recursive group and directory trees. Its
+HTML structure is defined by
+`docs/xslt/doxygen-to-html.xsl`, while `docs/xslt/udho.css` controls only the
+presentation. This renderer is independent of Doxygen's built-in HTML output;
+it depends on the XML-and-tag pass and does not require `docs-modules` or
+`docs-pages`.
+
 Doxygen diagnostics are written to `doxygen-warnings.log` beside each modular
 target's generated `html` and `xml` directories in the build tree.
 

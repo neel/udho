@@ -1263,7 +1263,6 @@ struct basic_router<void>: private detail::basic_router<void>{
 /**
  * @name Router Factory Functions
  * @brief Convenience functions for creating router configurations
- * @relates basic_router
  *
  *
  * These functions automatically select the appropriate router specialization

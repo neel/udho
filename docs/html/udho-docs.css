@@ -1,0 +1,7 @@
+/*
+ * Shared overrides for every CMake-generated udho documentation page.
+ * Doxygen loads this file after its built-in stylesheets.
+ *
+ * Add custom styles here when needed. An empty stylesheet preserves the
+ * standard Doxygen appearance.
+ */
