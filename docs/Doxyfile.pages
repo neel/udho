@@ -1,0 +1,6 @@
+# Hand-written pages need Doxygen's HTML assets and XML for the custom XSLT
+# renderer. This is the only second-pass target that intentionally emits both.
+CLANG_ASSISTED_PARSING = NO
+GENERATE_HTML          = YES
+GENERATE_XML           = YES
+GENERATE_TAGFILE       =

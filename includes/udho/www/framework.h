@@ -61,6 +61,26 @@ struct runtime_generator{
     }
 
     /**
+     * @brief Creates the manifold runtime.
+     *
+     * This overload expects the first parameter to be a const_store, from which it creates
+     * a resources component which is passed to the other overload.
+     * The runtime is created with the routing component, handler component, resources component, and any
+     * additional components supplied by the caller.
+     *
+     * @tparam Bridges... View bridges
+     * @tparam Components... Additional component argument types.
+     * @param cstore const store
+     * @param components... Additional runtime component arguments.
+     * @return Runtime object for the www label extended with the routing component.
+     */
+    template <typename... Bridges, typename... Components>
+    runtime_type runtime(udho::view::resources::const_store<Bridges...>& cstore, Components&&... components) {
+        auto resources = udho::www::components::resources(cstore);
+        return runtime(std::move(resources), std::forward<Components>(components)...);
+    }
+
+    /**
      * @brief Gets the router stored inside the routing component.
      *
      * @return Const reference to the router.

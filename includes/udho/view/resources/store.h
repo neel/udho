@@ -149,6 +149,12 @@ struct store<>{
     using const_store_type          = const_store<>;
     using asset_store_type          = udho::view::resources::asset::store;
 
+
+    /**
+     * @brief number of bridges
+     */
+    static constexpr const std::size_t bridges_count = 0;
+
     /**
      * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
      */
@@ -220,6 +226,11 @@ struct store{
     using tmpl_multi_substore_type  = udho::view::resources::tmpl::store<Bridges...>;
 
     /**
+     * @brief number of bridges
+     */
+    static constexpr const std::size_t bridges_count = sizeof...(Bridges);
+
+    /**
      * @brief construct the resource store with the foreign language bridges required for evaluation for the view templates
      * @param bridges bridge references
      */
@@ -252,6 +263,13 @@ struct store{
      * @return reference to the asset store
      */
     asset_store_type& assets() { return _assets; }
+
+    /**
+     * @brief Checks is the store is already locked or not 
+     */
+    bool locked() const {
+        return _tmpls.locked() && _assets.locked();
+    }
 
     /**
      * @brief lock the storage
@@ -739,6 +757,14 @@ struct const_store<>{
 //
 // };
 
+/**
+ * @brief locks the store and returns a const_store
+ */
+template <typename... Bridges>
+udho::view::resources::const_store<Bridges...> lock(udho::view::resources::store<Bridges...>& store) {
+    store.lock();
+    return udho::view::resources::const_store<Bridges...>{store};
+}
 
 /** @} */
 

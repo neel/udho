@@ -8,31 +8,31 @@ SET(CMAKE_CXX_FLAGS "-ftemplate-backtrace-limit=0 ${CMAKE_CXX_FLAGS}")
 FIND_PACKAGE(Boost COMPONENTS thread REQUIRED) 
 FIND_PACKAGE(Threads REQUIRED)
 
-ADD_EXECUTABLE(udho-example-hello hello.cpp)
-TARGET_LINK_LIBRARIES(udho-example-hello udho)
+# ADD_EXECUTABLE(udho-example-hello hello.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-hello udho)
 
 # ADD_EXECUTABLE(udho-example-simple simple.cpp)
 # TARGET_LINK_LIBRARIES(udho-example-simple udho)
 
-ADD_EXECUTABLE(udho-example-functor functor.cpp)
-TARGET_LINK_LIBRARIES(udho-example-functor udho)
+# ADD_EXECUTABLE(udho-example-functor functor.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-functor udho)
 
-ADD_EXECUTABLE(udho-example-application application.cpp)
-TARGET_LINK_LIBRARIES(udho-example-application udho ${Boost_LIBRARIES})
-# 
-add_definitions(-DWWW_PATH="${CMAKE_CURRENT_SOURCE_DIR}/www")
-add_definitions(-DTMPL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/templates")
+# ADD_EXECUTABLE(udho-example-application application.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-application udho ${Boost_LIBRARIES})
+# #
+# add_definitions(-DWWW_PATH="${CMAKE_CURRENT_SOURCE_DIR}/www")
+# add_definitions(-DTMPL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/templates")
 
-ADD_EXECUTABLE(udho-example-view view.cpp)
-TARGET_LINK_LIBRARIES(udho-example-view udho)
+# ADD_EXECUTABLE(udho-example-view view.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-view udho)
 
-ADD_EXECUTABLE(udho-example-activities activities.cpp)
-TARGET_LINK_LIBRARIES(udho-example-activities udho)
+# ADD_EXECUTABLE(udho-example-activities activities.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-activities udho)
 
-# ADD_EXECUTABLE(udho-example-form form)
-# TARGET_LINK_LIBRARIES(udho-example-form udho)
+# # ADD_EXECUTABLE(udho-example-form form)
+# # TARGET_LINK_LIBRARIES(udho-example-form udho)
 
-ADD_EXECUTABLE(udho-example-pg pg.cpp)
-TARGET_LINK_LIBRARIES(udho-example-pg udho)
+# ADD_EXECUTABLE(udho-example-pg pg.cpp)
+# TARGET_LINK_LIBRARIES(udho-example-pg udho)
 
 add_subdirectory(simple)

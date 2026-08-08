@@ -232,6 +232,9 @@ class listing{
             }
         }
 
+	/** @brief Returns the label. */
+        std::string label() const { return _label; }
+
         /** @brief Returns the listed subject. */
         inline std::string subject() const { return _subject; }
         /** @brief Returns the number of entries. */

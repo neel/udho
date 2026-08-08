@@ -36,7 +36,7 @@ set(UDHO_DOXYGEN_HTML_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.html")
 include(UdhoDoxygen)
 
 get_target_property(UDHO_SOURCE_DIR udho SOURCE_DIR)
-file(GLOB_RECURSE UDHO_DOCUMENTATION_PAGES "${CMAKE_CURRENT_SOURCE_DIR}/pages/*.md")
+file(GLOB_RECURSE UDHO_DOCUMENTATION_PAGES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/pages/*.md")
 file(GLOB_RECURSE UDHO_DOCUMENTATION_PARTS "${CMAKE_CURRENT_SOURCE_DIR}/parts/*.dox")
 file(GLOB_RECURSE UDHO_DOCUMENTATION_IMAGES "${CMAKE_CURRENT_SOURCE_DIR}/images/*")
 
@@ -133,12 +133,13 @@ if(UDHO_XSLTPROC_EXECUTABLE)
     set(UDHO_XSLT_MODULE_ENTRIES)
     foreach(module IN LISTS UDHO_DOCUMENTATION_MODULES)
         string(APPEND UDHO_XSLT_MODULE_ENTRIES
-            "  <module name=\"${module}\" index=\"../modular/modules/${module}/xml/index.xml\"/>\n")
+            "  <module name=\"${module}\" index=\"../modular/modules/${module}/xml/index.xml\" links=\"${module}-links.xml\"/>\n")
     endforeach()
 
     set(UDHO_XSLT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/xslt")
     set(UDHO_XSLT_MANIFEST "${UDHO_XSLT_DIRECTORY}/modules.xml")
     set(UDHO_XSLT_STYLESHEET_OUTPUT "${UDHO_XSLT_DIRECTORY}/udho.css")
+    set(UDHO_XSLT_MASCOT_OUTPUT "${UDHO_XSLT_DIRECTORY}/beral_transp.gif")
     file(MAKE_DIRECTORY "${UDHO_XSLT_DIRECTORY}")
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/xslt/modules.xml.in"
@@ -176,7 +177,7 @@ if(UDHO_XSLTPROC_EXECUTABLE)
     endforeach()
 
     add_custom_command(
-        OUTPUT "${UDHO_XSLT_DIRECTORY}/index.html" "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        OUTPUT "${UDHO_XSLT_DIRECTORY}/index.html" "${UDHO_XSLT_STYLESHEET_OUTPUT}" "${UDHO_XSLT_MASCOT_OUTPUT}"
         COMMAND "${UDHO_XSLTPROC_EXECUTABLE}"
             --nonet
             --stringparam index-only yes
@@ -186,9 +187,13 @@ if(UDHO_XSLTPROC_EXECUTABLE)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "${CMAKE_CURRENT_SOURCE_DIR}/xslt/udho.css"
             "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${PROJECT_SOURCE_DIR}/beral_transp.gif"
+            "${UDHO_XSLT_MASCOT_OUTPUT}"
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
             "${CMAKE_CURRENT_SOURCE_DIR}/xslt/udho.css"
+            "${PROJECT_SOURCE_DIR}/beral_transp.gif"
             "${UDHO_XSLT_MANIFEST}"
         COMMENT "XSLT: rendering documentation index"
         VERBATIM
@@ -196,6 +201,7 @@ if(UDHO_XSLTPROC_EXECUTABLE)
     add_custom_target(docs-xslt DEPENDS
         "${UDHO_XSLT_DIRECTORY}/index.html"
         "${UDHO_XSLT_STYLESHEET_OUTPUT}"
+        "${UDHO_XSLT_MASCOT_OUTPUT}"
         ${UDHO_XSLT_MODULE_OUTPUTS}
     )
     add_dependencies(docs-xslt docs-tags)
@@ -252,13 +258,15 @@ list(APPEND page_tag_mappings "${UDHO_DOXYGEN_ROOT_TAG}")
 
 udho_add_doxygen_target(docs-pages
     DOXYFILE "${CMAKE_CURRENT_SOURCE_DIR}/pages/Doxyfile"
-    OVERLAY "${UDHO_DOXYGEN_HTML_CONFIG}"
+    OVERLAY "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.pages"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/pages"
     BUILD_OUTPUT_DIRECTORY "${UDHO_DOXYGEN_MODULAR_ROOT}/pages"
     STRIP_FROM_PATH "${UDHO_SOURCE_DIR}"
     STRIP_FROM_INC_PATH "${UDHO_SOURCE_DIR}/includes"
     TAG_MAPPINGS ${page_tag_mappings}
-    OUTPUTS "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/html/index.html"
+    OUTPUTS
+        "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/html/index.html"
+        "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/xml/index.xml"
     ORDER_DEPENDS ${UDHO_DOXYGEN_MODULE_TARGETS}
     DEPENDS
         ${UDHO_DOCUMENTATION_PAGES}
@@ -273,3 +281,29 @@ udho_add_doxygen_target(docs-pages
 
 add_custom_target(docs)
 add_dependencies(docs docs-pages)
+if(TARGET docs-xslt)
+    set(UDHO_XSLT_PAGES_STAMP "${UDHO_XSLT_DIRECTORY}/handwritten-pages.stamp")
+    add_custom_command(
+        OUTPUT "${UDHO_XSLT_PAGES_STAMP}"
+        COMMAND "${CMAKE_COMMAND}"
+            "-DUDHO_XSLTPROC=${UDHO_XSLTPROC_EXECUTABLE}"
+            "-DUDHO_XSLT=${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+            "-DUDHO_MANIFEST=${UDHO_XSLT_MANIFEST}"
+            "-DUDHO_PAGE_INDEX=${UDHO_DOXYGEN_MODULAR_ROOT}/pages/xml/index.xml"
+            "-DUDHO_OUTPUT_DIR=${UDHO_XSLT_DIRECTORY}"
+            "-DUDHO_STAMP=${UDHO_XSLT_PAGES_STAMP}"
+            "-DUDHO_PAGE_ASSET_PREFIX=../modular/pages/html/"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderPages.cmake"
+        DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/doxygen-to-html.xsl"
+            "${CMAKE_CURRENT_SOURCE_DIR}/xslt/RenderPages.cmake"
+            "${UDHO_XSLT_MANIFEST}"
+            "${UDHO_DOXYGEN_MODULAR_ROOT}/pages/xml/index.xml"
+            ${UDHO_XSLT_MODULE_OUTPUTS}
+        COMMENT "XSLT: rendering hand-written documentation pages"
+        VERBATIM
+    )
+    add_custom_target(docs-xslt-pages DEPENDS "${UDHO_XSLT_PAGES_STAMP}")
+    add_dependencies(docs-xslt-pages docs-pages)
+    add_dependencies(docs-xslt docs-xslt-pages)
+endif()

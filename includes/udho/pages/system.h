@@ -2,6 +2,7 @@
 #define UDHO_PAGES_SYSTEM_H
 
 #include <udho/pages/data.h>
+#include <udho/pages/repr.h>
 #include <udho/pages/views.h>
 #include <udho/pages/assets.h>
 #include <udho/pages/layouts.h>

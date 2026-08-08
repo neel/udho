@@ -15,6 +15,9 @@
   <xsl:param name="index-only" select="'no'"/>
   <xsl:param name="diagram-manifest" select="''"/>
   <xsl:param name="diagram-prefix" select="''"/>
+  <xsl:param name="link-manifest" select="''"/>
+  <xsl:param name="page-asset-prefix" select="''"/>
+  <xsl:variable name="documentation" select="/documentation"/>
 
   <xsl:template match="/documentation">
     <xsl:variable name="manifest" select="."/>
@@ -27,11 +30,13 @@
       </head>
       <body>
         <header class="site-header">
-          <div>
+          <div class="site-header-copy">
             <p class="eyebrow">C++ API reference</p>
             <h1><xsl:value-of select="@project"/></h1>
             <p>Experimental HTML generated directly from Doxygen XML with XSLT.</p>
           </div>
+          <img class="site-mascot" src="beral_transp.gif" width="371" height="256"
+              alt="The cat from HaJaBaRaLa by Sukumar Ray"/>
         </header>
         <xsl:choose>
           <xsl:when test="$index-only='yes'">
@@ -41,7 +46,7 @@
                 <xsl:for-each select="module">
                   <xsl:variable name="index" select="document(@index)/doxygenindex"/>
                   <a href="{@name}.html">
-                    <strong><xsl:value-of select="@name"/></strong>
+                    <strong><xsl:call-template name="module-title"><xsl:with-param name="name" select="@name"/></xsl:call-template></strong>
                     <span><xsl:value-of select="count($index/compound)"/> documented compounds</span>
                   </a>
                 </xsl:for-each>
@@ -51,15 +56,40 @@
           <xsl:otherwise>
             <div class="site-grid">
               <nav class="sidebar" aria-label="Module navigation">
-                <strong>Modules</strong>
-                <ul>
-                  <xsl:for-each select="module">
-                    <li><a href="{@name}.html"><xsl:value-of select="@name"/></a></li>
-                  </xsl:for-each>
-                </ul>
+                <section class="sidebar-section">
+                  <strong>Modules</strong>
+                  <ul>
+                    <xsl:for-each select="module">
+                      <li><a href="{@name}.html"><xsl:call-template name="module-title"><xsl:with-param name="name" select="@name"/></xsl:call-template></a></li>
+                    </xsl:for-each>
+                  </ul>
+                </section>
+                <xsl:if test="pages/@index">
+                  <xsl:variable name="page-index" select="document(pages/@index)/doxygenindex"/>
+                  <section class="sidebar-section">
+                    <strong>Pages</strong>
+                    <ul>
+                      <xsl:for-each select="$page-index/compound[@kind='page' and @refid!='indexpage']">
+                        <xsl:sort select="document(concat(@refid, '.xml'), .)/doxygen/compounddef/title"/>
+                        <xsl:variable name="page-detail" select="document(concat(@refid, '.xml'), .)/doxygen/compounddef"/>
+                        <li><a href="{@refid}.html"><xsl:if test="$page-type='page' and $selected-compound=@refid"><xsl:attribute name="class">current</xsl:attribute></xsl:if><xsl:value-of select="$page-detail/title"/></a></li>
+                      </xsl:for-each>
+                    </ul>
+                  </section>
+                </xsl:if>
               </nav>
               <main>
-                <xsl:for-each select="module[@name=$selected-module]">
+                <xsl:choose>
+                  <xsl:when test="$page-type='page'">
+                    <xsl:variable name="page-base" select="substring-before(pages/@index, 'index.xml')"/>
+                    <xsl:call-template name="documentation-page">
+                      <xsl:with-param name="page" select="document(concat($page-base, $selected-compound, '.xml'), $manifest)/doxygen/compounddef"/>
+                      <xsl:with-param name="base" select="$page-base"/>
+                      <xsl:with-param name="manifest" select="$manifest"/>
+                    </xsl:call-template>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    <xsl:for-each select="module[@name=$selected-module]">
                   <xsl:variable name="module" select="@name"/>
                   <xsl:variable name="base" select="substring-before(@index, 'index.xml')"/>
                   <xsl:variable name="index" select="document(@index)/doxygenindex"/>
@@ -68,8 +98,8 @@
                       <xsl:variable name="compound" select="document(concat($base, $selected-compound, '.xml'), $manifest)/doxygen/compounddef"/>
                       <article class="member-page">
                         <nav class="breadcrumbs">
-                          <a href="{$module}.html"><xsl:value-of select="$module"/></a><span>/</span>
-                          <a><xsl:attribute name="href"><xsl:choose><xsl:when test="$page-type='free-member'"><xsl:value-of select="concat($module, '-', $selected-owner-ref, '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat($module, '-', $selected-compound, '.html')"/></xsl:otherwise></xsl:choose></xsl:attribute><xsl:choose><xsl:when test="$page-type='free-member'"><xsl:value-of select="$selected-owner-name"/></xsl:when><xsl:otherwise><xsl:value-of select="$compound/compoundname"/></xsl:otherwise></xsl:choose></a><span>/</span>
+                          <a href="{$module}.html"><xsl:call-template name="module-title"><xsl:with-param name="name" select="$module"/></xsl:call-template></a><span>/</span>
+                          <a><xsl:attribute name="href"><xsl:choose><xsl:when test="$selected-owner-ref!=''"><xsl:value-of select="concat($module, '-', $selected-owner-ref, '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat($module, '-', $selected-compound, '.html')"/></xsl:otherwise></xsl:choose></xsl:attribute><xsl:choose><xsl:when test="$page-type='free-member'"><xsl:value-of select="$selected-owner-name"/></xsl:when><xsl:when test="$selected-owner-ref!=''"><xsl:value-of select="document(concat($base, $selected-owner-ref, '.xml'), $manifest)/doxygen/compounddef/compoundname"/></xsl:when><xsl:otherwise><xsl:value-of select="$compound/compoundname"/></xsl:otherwise></xsl:choose></a><span>/</span>
                           <strong><xsl:value-of select="$compound//memberdef[@id=$selected-member]/name"/></strong>
                         </nav>
                         <header class="module-header member-page-header">
@@ -114,7 +144,7 @@
                       <section class="module" id="module-{@name}">
                         <header class="module-header">
                           <p class="eyebrow">Module</p>
-                          <h2><xsl:value-of select="@name"/></h2>
+                          <h2><xsl:call-template name="module-title"><xsl:with-param name="name" select="@name"/></xsl:call-template></h2>
                           <p><xsl:value-of select="count($index/compound)"/> documented compounds</p>
                         </header>
                         <div class="typed-index">
@@ -138,7 +168,9 @@
                       </section>
                     </xsl:otherwise>
                   </xsl:choose>
-                </xsl:for-each>
+                    </xsl:for-each>
+                  </xsl:otherwise>
+                </xsl:choose>
               </main>
               <xsl:for-each select="module[@name=$selected-module]">
                 <xsl:variable name="module" select="@name"/>
@@ -158,13 +190,56 @@
     </html>
   </xsl:template>
 
+  <xsl:template name="documentation-page">
+    <xsl:param name="page"/>
+    <xsl:param name="base"/>
+    <xsl:param name="manifest"/>
+    <article class="documentation-page" id="{$page/@id}">
+      <nav class="breadcrumbs"><strong><xsl:value-of select="$page/title"/></strong></nav>
+      <header class="module-header">
+        <p class="eyebrow">Guide</p>
+        <h2><xsl:value-of select="$page/title"/></h2>
+      </header>
+      <xsl:apply-templates select="$page/briefdescription|$page/detaileddescription"/>
+      <xsl:if test="$page/innerpage">
+        <details class="overview-section" open="open">
+          <summary><span>Related pages</span><small><xsl:value-of select="count($page/innerpage)"/></small></summary>
+          <table class="overview-table"><tbody>
+            <xsl:for-each select="$page/innerpage">
+              <xsl:variable name="child" select="document(concat($base, @refid, '.xml'), $manifest)/doxygen/compounddef"/>
+              <tr><td><a href="{@refid}.html"><xsl:value-of select="$child/title"/></a></td><td><xsl:apply-templates select="$child/briefdescription/node()"/></td></tr>
+            </xsl:for-each>
+          </tbody></table>
+        </details>
+      </xsl:if>
+    </article>
+  </xsl:template>
+
+  <xsl:template name="module-title">
+    <xsl:param name="name"/>
+    <xsl:variable name="module" select="$documentation/module[@name=$name]"/>
+    <xsl:variable name="base" select="substring-before($module/@index, 'index.xml')"/>
+    <xsl:variable name="index" select="document($module/@index)/doxygenindex"/>
+    <xsl:variable name="root-group-ref" select="concat('group__DoxyG__', $name)"/>
+    <xsl:choose>
+      <xsl:when test="$index/compound[@kind='group' and @refid=$root-group-ref]">
+        <xsl:variable name="title" select="document(concat($base, $root-group-ref, '.xml'), $documentation)/doxygen/compounddef/title"/>
+        <xsl:choose>
+          <xsl:when test="normalize-space($title)"><xsl:value-of select="$title"/></xsl:when>
+          <xsl:otherwise><xsl:value-of select="$name"/></xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:otherwise><xsl:value-of select="$name"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <xsl:template name="directory-page">
     <xsl:param name="directory"/>
     <xsl:param name="index"/>
     <xsl:param name="module"/>
     <xsl:param name="base"/>
     <article class="directory-page" id="{$directory/@id}">
-      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:value-of select="$module"/></a><span>/</span><strong><xsl:value-of select="$directory/compoundname"/></strong></nav>
+      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:call-template name="module-title"><xsl:with-param name="name" select="$module"/></xsl:call-template></a><span>/</span><strong><xsl:value-of select="$directory/compoundname"/></strong></nav>
       <header class="module-header"><p class="eyebrow">Directory</p><h2><xsl:value-of select="$directory/compoundname"/></h2></header>
       <xsl:apply-templates select="$directory/briefdescription|$directory/detaileddescription"/>
       <div class="typed-index">
@@ -182,7 +257,7 @@
     <xsl:param name="base"/>
     <xsl:variable name="namespace-index" select="$index/compound[@kind='namespace' and @refid=$namespace/@id]"/>
     <article class="namespace-page" id="{$namespace/@id}">
-      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:value-of select="$module"/></a><span>/</span><strong><xsl:value-of select="$namespace/compoundname"/></strong></nav>
+      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:call-template name="module-title"><xsl:with-param name="name" select="$module"/></xsl:call-template></a><span>/</span><strong><xsl:value-of select="$namespace/compoundname"/></strong></nav>
       <header class="module-header"><p class="eyebrow">Namespace</p><h2><xsl:value-of select="$namespace/compoundname"/></h2></header>
       <xsl:apply-templates select="$namespace/briefdescription|$namespace/detaileddescription"/>
       <div class="typed-index">
@@ -232,7 +307,7 @@
     <xsl:param name="module"/>
     <xsl:param name="base"/>
     <article class="group-page" id="{$group/@id}">
-      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:value-of select="$module"/></a><span>/</span><strong><xsl:value-of select="$group/title"/></strong></nav>
+      <nav class="breadcrumbs"><a href="{$module}.html"><xsl:call-template name="module-title"><xsl:with-param name="name" select="$module"/></xsl:call-template></a><span>/</span><strong><xsl:value-of select="$group/title"/></strong></nav>
       <header class="module-header"><p class="eyebrow">Group</p><h2><xsl:value-of select="$group/title"/></h2></header>
       <xsl:apply-templates select="$group/briefdescription|$group/detaileddescription"/>
       <xsl:call-template name="diagram-asset"><xsl:with-param name="base" select="$group/@id"/><xsl:with-param name="title" select="'Group dependency diagram'"/></xsl:call-template>
@@ -259,7 +334,7 @@
       <details open="open"><xsl:attribute name="class">overview-section<xsl:call-template name="category-class-for-title"><xsl:with-param name="title" select="$title"/></xsl:call-template></xsl:attribute><summary><span><xsl:value-of select="$title"/></span><small><xsl:value-of select="count($items)"/></small></summary>
         <table class="overview-table"><tbody>
           <xsl:for-each select="$items"><xsl:sort select="name"/><xsl:variable name="member-id" select="@id"/><xsl:variable name="owner-compound" select="$index/compound[@kind='namespace' and member/@refid=$member-id][1]"/><xsl:variable name="owner" select="$owner-compound/@refid"/>
-            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' and $owner"><xsl:value-of select="concat($module, '-free-', $owner, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat('#', @id)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function' and $owner-compound/name"><xsl:value-of select="concat($owner-compound/name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="briefdescription/node()"/></td></tr>
+            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function' and $owner"><xsl:value-of select="concat($module, '-free-', $owner, '-', substring(@id, string-length(@id) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@id"/></xsl:call-template></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function' and $owner-compound/name"><xsl:value-of select="concat($owner-compound/name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="briefdescription/node()"/></td></tr>
           </xsl:for-each>
         </tbody></table>
       </details>
@@ -301,7 +376,7 @@
             <xsl:variable name="member-ref" select="@refid"/>
             <xsl:variable name="member-compound" select="substring-before($member-ref, concat('_1', substring(substring-after($member-ref, '_1'), 1, 1)))"/>
             <xsl:variable name="detail" select="document(concat($member-compound, '.xml'), .)/doxygen/compounddef//memberdef[@id=$member-ref]"/>
-            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat($module, '-free-', ../@refid, '-', substring(@refid, string-length(@refid) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:value-of select="concat($module, '-', ../@refid, '.html#', @refid)"/></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat(../name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
+            <tr><td><a class="overview-name item-kind-{@kind}"><xsl:attribute name="href"><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat($module, '-free-', ../@refid, '-', substring(@refid, string-length(@refid) - 32), '.html')"/></xsl:when><xsl:otherwise><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@refid"/></xsl:call-template></xsl:otherwise></xsl:choose></xsl:attribute><span class="item-icon" aria-hidden="true"></span><code><xsl:choose><xsl:when test="@kind='function'"><xsl:value-of select="concat(../name, '::', name)"/></xsl:when><xsl:otherwise><xsl:value-of select="name"/></xsl:otherwise></xsl:choose></code></a></td><td><xsl:apply-templates select="$detail/briefdescription/node()"/></td></tr>
           </xsl:for-each>
           </tbody>
         </table>
@@ -409,7 +484,7 @@
           <span class="access"><xsl:value-of select="@prot"/></span>
           <h3><xsl:choose><xsl:when test="@kind='group' and title"><xsl:value-of select="title"/></xsl:when><xsl:otherwise><xsl:value-of select="compoundname"/></xsl:otherwise></xsl:choose></h3>
         </div>
-        <a class="back" href="{$module}.html">Back to <xsl:value-of select="$module"/></a>
+        <a class="back" href="{$module}.html">Back to <xsl:call-template name="module-title"><xsl:with-param name="name" select="$module"/></xsl:call-template></a>
       </header>
 
       <xsl:if test="templateparamlist/param">
@@ -734,7 +809,24 @@
   <xsl:template match="linebreak"><br/></xsl:template>
   <xsl:template match="nonbreakablespace"><xsl:text>&#160;</xsl:text></xsl:template>
   <xsl:template match="sp"><xsl:text> </xsl:text></xsl:template>
-  <xsl:template match="ref"><a href="#{@refid}"><xsl:apply-templates/></a></xsl:template>
+  <xsl:template name="reference-href">
+    <xsl:param name="refid"/>
+    <xsl:param name="external" select="''"/>
+    <xsl:variable name="target" select="document($link-manifest)/links/target[@refid=$refid][1]"/>
+    <xsl:variable name="external-module" select="$documentation/module[contains($external, concat('/', @name, '.tag'))][1]"/>
+    <xsl:variable name="external-target" select="document($external-module/@links)/links/target[@refid=$refid or concat(@refid, '.html')=$refid][1]"/>
+    <xsl:variable name="page-target" select="document($documentation/pages/@index)/doxygenindex/compound[@kind='page' and @refid=$refid][1]"/>
+    <xsl:choose>
+      <xsl:when test="$external-target"><xsl:value-of select="$external-target/@href"/></xsl:when>
+      <xsl:when test="$target"><xsl:value-of select="$target/@href"/></xsl:when>
+      <xsl:when test="$page-target"><xsl:value-of select="concat($refid, '.html')"/></xsl:when>
+      <xsl:otherwise><xsl:value-of select="concat('#', $refid)"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template match="ref">
+    <a><xsl:attribute name="href"><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@refid"/><xsl:with-param name="external" select="@external"/></xsl:call-template></xsl:attribute><xsl:apply-templates/></a>
+  </xsl:template>
   <xsl:template match="ulink"><a href="{@url}"><xsl:apply-templates/></a></xsl:template>
   <xsl:template match="anchor"><span id="{@id}"></span></xsl:template>
   <xsl:template match="formula"><code class="formula"><xsl:value-of select="."/></code></xsl:template>
@@ -770,8 +862,9 @@
   <xsl:template match="parameterdescription|parameternamelist"/>
 
   <xsl:template match="sect1|sect2|sect3|sect4|sect5|sect6">
+    <xsl:variable name="heading-level"><xsl:choose><xsl:when test="$page-type='page'"><xsl:value-of select="count(ancestor::sect1|ancestor::sect2|ancestor::sect3|ancestor::sect4|ancestor::sect5|ancestor::sect6) + 3"/></xsl:when><xsl:otherwise><xsl:value-of select="count(ancestor::sect1|ancestor::sect2|ancestor::sect3|ancestor::sect4|ancestor::sect5|ancestor::sect6) + 4"/></xsl:otherwise></xsl:choose></xsl:variable>
     <section id="{@id}" class="document-section">
-      <xsl:element name="h{count(ancestor::sect1|ancestor::sect2|ancestor::sect3|ancestor::sect4|ancestor::sect5|ancestor::sect6) + 4}"><xsl:value-of select="title"/></xsl:element>
+      <xsl:element name="h{$heading-level}"><xsl:value-of select="title"/></xsl:element>
       <xsl:apply-templates select="node()[not(self::title)]"/>
     </section>
   </xsl:template>
@@ -786,17 +879,17 @@
   <xsl:template match="codeline"><span class="code-line"><xsl:apply-templates/></span><xsl:text>&#10;</xsl:text></xsl:template>
   <xsl:template match="highlight"><span class="hl-{@class}"><xsl:apply-templates/></span></xsl:template>
 
-  <xsl:template match="image"><figure><img src="{@name}" alt="{@name}"/><xsl:if test="normalize-space(.)"><figcaption><xsl:apply-templates/></figcaption></xsl:if></figure></xsl:template>
+  <xsl:template match="image"><figure><img alt="{@name}"><xsl:attribute name="src"><xsl:choose><xsl:when test="$page-type='page'"><xsl:value-of select="concat($page-asset-prefix, @name)"/></xsl:when><xsl:otherwise><xsl:value-of select="@name"/></xsl:otherwise></xsl:choose></xsl:attribute><xsl:if test="@width"><xsl:attribute name="style">width: <xsl:value-of select="@width"/>;</xsl:attribute></xsl:if></img><xsl:if test="normalize-space(.)"><figcaption><xsl:apply-templates/></figcaption></xsl:if></figure></xsl:template>
   <xsl:template match="dot|msc|plantuml"><pre class="diagram-source"><xsl:value-of select="."/></pre></xsl:template>
   <xsl:template match="dotfile|mscfile|diafile"><p class="diagram-file"><strong><xsl:value-of select="name()"/></strong>: <xsl:value-of select="."/></p></xsl:template>
 
   <xsl:template match="references|referencedby">
-    <p class="reference"><strong><xsl:value-of select="name()"/>:</strong> <a href="#{@refid}"><xsl:value-of select="."/></a></p>
+    <p class="reference"><strong><xsl:value-of select="name()"/>:</strong> <a><xsl:attribute name="href"><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@refid"/></xsl:call-template></xsl:attribute><xsl:value-of select="."/></a></p>
   </xsl:template>
 
   <xsl:template match="listofallmembers">
     <xsl:if test="$page-type!='compound'">
-      <details class="all-members"><summary>All members</summary><ul><xsl:for-each select="member"><li><a href="#{@refid}"><xsl:value-of select="name"/></a><xsl:if test="scope"> — <xsl:value-of select="scope"/></xsl:if></li></xsl:for-each></ul></details>
+      <details class="all-members"><summary>All members</summary><ul><xsl:for-each select="member"><li><a><xsl:attribute name="href"><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@refid"/></xsl:call-template></xsl:attribute><xsl:value-of select="name"/></a><xsl:if test="scope"> — <xsl:value-of select="scope"/></xsl:if></li></xsl:for-each></ul></details>
     </xsl:if>
   </xsl:template>
 
@@ -805,7 +898,7 @@
   </xsl:template>
 
   <xsl:template match="basecompoundref|derivedcompoundref" mode="relation">
-    <a href="#{@refid}"><xsl:value-of select="."/></a><small><xsl:value-of select="@prot"/> <xsl:value-of select="@virt"/></small>
+    <a><xsl:attribute name="href"><xsl:call-template name="reference-href"><xsl:with-param name="refid" select="@refid"/></xsl:call-template></xsl:attribute><xsl:value-of select="."/></a><small><xsl:value-of select="@prot"/> <xsl:value-of select="@virt"/></small>
   </xsl:template>
   <xsl:template match="includes|includedby" mode="comma-list"><xsl:if test="position()!=1">, </xsl:if><code><xsl:value-of select="."/></code></xsl:template>
   <xsl:template match="innerclass|innernamespace|innergroup|innerdir|innerfile" mode="inner"><li><span class="kind"><xsl:value-of select="substring-after(name(), 'inner')"/></span><a href="{$selected-module}-{@refid}.html"><xsl:value-of select="."/></a></li></xsl:template>

@@ -6,6 +6,7 @@
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
+#include <udho/view/tmpl/layout/repr.h>
 #include <udho/www/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
 #include <cassert>
@@ -239,8 +240,12 @@ struct renderer<KeyT, LayoutT, true>: header_renderer<LayoutT>{
 private:
     template <typename ProxyT, typename Data>
     renderer& _render(ProxyT& proxy, const std::string& view_addr, Data&& d){
+        using data_type = std::decay_t<Data>;
+
         using proxy_type = decltype(_layout.document()[_key]);
         static_assert(std::is_same_v<proxy_type, std::decay_t<ProxyT>>);
+
+        static_assert((_store.bridges_count > 0 || udho::view::tmpl::layout::has_repr_v<data_type> || helper::is_streamable_v<data_type>), "Cannot render a view from no-bridge resource store using data neither has udho::view::tmpl::layout::repr<Data> specialization nor streamable");
 
         if constexpr (_store.bridges_count > 0 ) {
             udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
@@ -249,7 +254,19 @@ private:
             const udho::view::data::bridges::view_header& header = _store.header(view_addr);
             header_renderer_type::apply(header);
         } else {
-            assert(0 == 1 && "trying to render a view from non-view resource store");
+            if constexpr (udho::view::tmpl::layout::has_repr_v<data_type>) {
+                udho::view::tmpl::layout::repr<data_type> repr(d);
+                repr.include(_layout.css());
+                repr.include(_layout.js());
+                proxy += repr(_ctx);
+            } else {
+                static_assert(helper::is_streamable_v<data_type>);
+
+                std::stringstream str_stream;
+                str_stream << d;
+
+                proxy += str_stream.str();
+            }
         }
 
         return *this;
@@ -383,8 +400,12 @@ struct renderer<KeyT, LayoutT, false>: private header_renderer<LayoutT>{
 private:
     template <typename ProxyT, typename Data>
     renderer& _render(ProxyT& proxy, const std::string& view_addr, Data&& d){
+        using data_type = std::decay_t<Data>;
+
         using proxy_type = decltype(_layout.document()[_key]);
         static_assert(std::is_same_v<proxy_type, std::decay_t<ProxyT>>);
+
+        static_assert((_store.bridges_count > 0 || udho::view::tmpl::layout::has_repr_v<data_type> || helper::is_streamable_v<data_type>), "Cannot render a view from no-bridge resource store using data neither has udho::view::tmpl::layout::repr<Data> specialization nor streamable");
 
         if constexpr (_store.bridges_count > 0 ) {
             udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
@@ -393,7 +414,19 @@ private:
             const udho::view::data::bridges::view_header& header = _store.header(view_addr);
             header_renderer_type::apply(header);
         } else {
-            assert(0 == 1 && "trying to render a view from non-view resource store");
+            if constexpr (udho::view::tmpl::layout::has_repr_v<data_type>) {
+                udho::view::tmpl::layout::repr<data_type> repr(d);
+                repr.include(_layout.css());
+                repr.include(_layout.js());
+                proxy = repr(_ctx);
+            } else {
+                static_assert(helper::is_streamable_v<data_type>);
+
+                std::stringstream str_stream;
+                str_stream << d;
+
+                proxy = str_stream.str();
+            }
         }
 
         return *this;

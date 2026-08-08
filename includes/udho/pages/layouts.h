@@ -9,6 +9,7 @@
 #include <udho/view/tmpl/layout/presenter.h>
 #include <udho/view/tmpl/layout/layout.h>
 #include <udho/pages/data.h>
+#include <udho/pages/repr.h>
 
 namespace udho{
 namespace pages{

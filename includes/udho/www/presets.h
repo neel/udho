@@ -51,6 +51,9 @@ namespace stateful {
      * @brief Stateful label using memory-backed filesystem session storage in optimistic mode.
      */
     using optimistic_memfs      = www::label<www::tags::stateful<udho::session::storage::fs, udho::session::modes::optimistic>>;
+
+#ifdef WITH_HIREDIS
+
     /**
      * @brief Stateful label using Redis session storage in lazy mode.
      */
@@ -64,6 +67,7 @@ namespace stateful {
      */
     using immediate_redis       = www::label<www::tags::stateful<udho::session::storage::redis, udho::session::modes::immediate>>;
 
+#endif // WITH_HIREDIS
     /**
      * @namespace udho::www::stateful::lua
      * @brief Convenience labels for session-enabled www applications with Lua view support.
@@ -85,6 +89,8 @@ namespace stateful {
          * @brief Stateful Lua label using memory-backed filesystem session storage in optimistic mode.
          */
         using optimistic_memfs  = www::label<www::tags::statefulx<udho::session::storage::fs, udho::session::modes::optimistic, udho::view::data::bridges::lua>>;
+
+#ifdef WITH_HIREDIS
         /**
          * @brief Stateful Lua label using Redis session storage in lazy mode.
          */
@@ -97,6 +103,7 @@ namespace stateful {
          * @brief Stateful Lua label using Redis session storage in immediate mode.
          */
         using immediate_redis   = www::label<www::tags::statefulx<udho::session::storage::redis, udho::session::modes::immediate, udho::view::data::bridges::lua>>;
+#endif // WITH_HIREDIS
     }
 }
 

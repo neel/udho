@@ -1,28 +1,26 @@
+#include "urls.h"
+#include <udho/www/www.h>
 #include <udho/net/listener.h>
-#include <udho/net/connection.h>
-#include <udho/net/protocols/protocols.h>
-#include <udho/net/common.h>
-#include <udho/net/server.h>
-#include <udho/url/url.h>
-#include <boost/asio/io_context.hpp>
-#include "manifest.h"
+#include <udho/view/resources/resources.h>
 
-using socket_type     = udho::net::types::socket;
-using http_protocol   = udho::net::protocols::http<socket_type>;
-using http_connection = udho::net::connection<http_protocol>;
-using http_listener   = udho::net::listener<http_connection>;
+using framework_type = udho::www::framework<udho::www::stateless::rest>;
 
-int main(int, char**){
-    // simple::manifest manifest;
-    // auto router = manifest.router();
-    //
-    // std::cout << router << std::endl;
-    //
-    // boost::asio::io_context io;
-    // auto server = udho::net::server<http_listener>(io, router, 9000);
-    // server.run();
-    //
-    // io.run();
+int main() {
+    boost::asio::io_context io;
+
+    udho::view::resources::store<> store;
+    udho::pages::system::setup(store);
+    store.assets().base("assets");
+
+
+    auto cstore    = udho::view::resources::lock(store);
+    auto framework = framework_type::apply(udho::url::router(simple::urls(), cstore.assets()));
+    auto runtime   = framework.runtime(cstore);
+    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+
+    listener.start();
+
+    io.run();
 
     return 0;
 }

@@ -164,11 +164,16 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
  */
 template <typename... Bridges>
 void setup(udho::view::resources::store<Bridges...>& store){
-    store["udho"] << udho::view::resources::lua{"listing_table",   std::begin(template_listing_table),  std::end(template_listing_table)}
-                  << udho::view::resources::lua{"listing_page",    std::begin(template_listing_page),   std::end(template_listing_page)}
-                  << udho::view::resources::lua{"routes_page",     std::begin(template_routes_page),    std::end(template_routes_page)}
-                  << udho::view::resources::lua{"header",          std::begin(template_listing_header), std::end(template_listing_header)}
-                  << udho::view::resources::lua{"status",          std::begin(template_listing_status), std::end(template_listing_status)};
+    using store_type = udho::view::resources::store<Bridges...>;
+    static constexpr const std::size_t bridges_count = store_type::bridges_count;
+
+    if constexpr (bridges_count > 0) {
+        store["udho"] << udho::view::resources::lua{"listing_table",   std::begin(template_listing_table),  std::end(template_listing_table)}
+                      << udho::view::resources::lua{"listing_page",    std::begin(template_listing_page),   std::end(template_listing_page)}
+                      << udho::view::resources::lua{"routes_page",     std::begin(template_routes_page),    std::end(template_routes_page)}
+                      << udho::view::resources::lua{"header",          std::begin(template_listing_header), std::end(template_listing_header)}
+                      << udho::view::resources::lua{"status",          std::begin(template_listing_status), std::end(template_listing_status)};
+    }
 }
 
 }

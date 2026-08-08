@@ -7,6 +7,7 @@
 #include <udho/view/resources/asset/io.h>
 #include <udho/pages/layouts.h>
 #include <udho/pages/data.h>
+#include <udho/pages/repr.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/url/utils.h>
 #include <udho/url/mimes.h>

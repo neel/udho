@@ -73,6 +73,10 @@ struct store_{
     template <typename XBridgeT>
     auto substore() const { return readonly_substore<XBridgeT>(); }
 
+    bool locked() const {
+        return _substore.locked() && _tail.locked();
+    }
+
     void lock() {
         _substore.lock();
         _tail.lock();
@@ -108,6 +112,10 @@ struct store_<BridgeT, void>{
     const_tmpl_substore_type substore() const { return readonly_substore<XBridgeT>(); }
 
     size_type size() const { return _substore.size(); }
+
+    bool locked() const {
+        return _substore.locked();
+    }
 
     void lock() { _substore.lock(); }
 

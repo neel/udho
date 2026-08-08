@@ -216,6 +216,13 @@ public:
     portal_type& portal() { return _portal; }
 
     /**
+     * @brief Gets the immmutable portal.
+     *
+     * @return Reference to the portal exposed by this context.
+     */
+    const portal_type& portal() const { return _portal; }
+
+    /**
      * @brief Gets the output stream.
      *
      * @return Reference to the context output stream.
