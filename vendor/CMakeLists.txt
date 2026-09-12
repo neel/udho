@@ -10,3 +10,7 @@ SET(tabulate_BUILD_TESTS OFF CACHE INTERNAL "")
 SET(SAMPLES OFF CACHE INTERNAL "")
 add_subdirectory(tabulate)
 add_subdirectory(sol2)
+
+set_target_properties(fmt scn PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
