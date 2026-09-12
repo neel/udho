@@ -106,6 +106,41 @@ struct subtask: udho::activities::subtask<ActivityT, DependenciesT...>{
         return subtask_base::activity()[std::forward<FieldT>(field)];
     }
     
+
+    /**
+     * @brief Set required flag on or off.
+     * If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately.
+     * By default all subtasks are required
+     */
+    self_type& required(bool flag){
+        subtask_base::required(flag);
+        return *this;
+    }
+
+    /**
+     * @brief abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+     */
+    template <typename FunctionT>
+    self_type& if_errored(FunctionT ftor){
+        subtask_base::if_errored(ftor);
+        return *this;
+    }
+
+    /**
+     * @brief abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+     */
+    template <typename FunctionT>
+    self_type& if_failed(FunctionT ftor){
+        subtask_base::if_failed(ftor);
+        return *this;
+    }
+
+    template <typename FunctionT>
+    self_type& if_canceled(FunctionT ftor){
+        subtask_base::if_canceled(ftor);
+        return *this;
+    }
+
     protected:
         using subtask_base::subtask_base;
         template <typename... T, typename... U>
@@ -154,6 +189,42 @@ struct subtask<udho::activities::joined<CallbackT, udho::activities::collector<T
         return self_type(collector_ptr, std::forward<U>(u)...);
     }
     
+
+    /**
+     * @brief Set required flag on or off.
+     * If a required subtask fails then all intermediate subtask that depend on it fails and the final callback is called immediately.
+     * By default all subtasks are required
+     */
+    self_type& required(bool flag){
+        subtask_base::required(flag);
+        return *this;
+    }
+
+    /**
+     * @brief abort if canceled if ftor returns false. f will be called with the success if it has been canceled due to error
+     */
+    template <typename FunctionT>
+    self_type& if_errored(FunctionT ftor){
+        subtask_base::if_errored(ftor);
+        return *this;
+    }
+
+    /**
+     * @brief abort if canceled if ftor returns false. f will be called with the failue data if it has been canceled due to failure
+     */
+    template <typename FunctionT>
+    self_type& if_failed(FunctionT ftor){
+        subtask_base::if_failed(ftor);
+        return *this;
+    }
+
+    template <typename FunctionT>
+    self_type& if_canceled(FunctionT ftor){
+        subtask_base::if_canceled(ftor);
+        return *this;
+    }
+
+
     protected:
         using subtask_base::subtask_base;
         template <typename... X, typename... U>
