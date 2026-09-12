@@ -1,0 +1,19 @@
+<?! vars('d', 'ctx') ?>
+<article class="project">
+  <h1><?= d.title ?></h1>
+  <p><?= d.description ?></p>
+  <h2>Tasks</h2>
+  <ul class="tasks">
+  <? for _, task in ipairs(d.tasks) do ?>
+    <li class="<?= task.completed and 'done' or 'pending' ?>">
+      <?= task.completed and '&#10003;' or '&#9675;' ?> <?= task.title ?>
+    </li>
+  <? end ?>
+  </ul>
+  <form method="post" action="/projects/<?= d.id ?>/tasks">
+    <h2>Add a task</h2>
+    <label>Title <input name="title" required></label>
+    <button type="submit">Add task</button>
+  </form>
+  <p><a href="/projects/<?= d.id ?>">Load this page with Ajax</a></p>
+</article>

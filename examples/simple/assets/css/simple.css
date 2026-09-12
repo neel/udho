@@ -1,0 +1,32 @@
+:root {
+    color-scheme: light dark;
+    font-family: system-ui, sans-serif;
+}
+
+body {
+    max-width: 48rem;
+    margin: 3rem auto;
+    padding: 0 1.25rem;
+    line-height: 1.6;
+}
+
+.masthead {
+    border-bottom: 1px solid currentColor;
+    margin-bottom: 1.5rem;
+}
+
+.greeting {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, CanvasText 8%, Canvas);
+}
+
+.footer {
+    margin-top: 2rem;
+    opacity: 0.7;
+}
+
+button {
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+}

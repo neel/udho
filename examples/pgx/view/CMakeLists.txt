@@ -1,0 +1,5 @@
+add_library(udho-examples-pgx-view SHARED data/project.cpp)
+set_target_properties(udho-examples-pgx-view PROPERTIES PREFIX "")
+target_compile_features(udho-examples-pgx-view PUBLIC cxx_std_17)
+target_include_directories(udho-examples-pgx-view PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(udho-examples-pgx-view PRIVATE udho)

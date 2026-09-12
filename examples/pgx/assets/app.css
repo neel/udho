@@ -1,0 +1,7 @@
+body { margin: 0 auto; max-width: 48rem; padding: 2rem; font: 16px/1.5 system-ui, sans-serif; color: #253047; }
+a { color: #275fbd; }
+.project { border: 1px solid #dce2ec; border-radius: .6rem; padding: 1.5rem; }
+.tasks { padding-left: 1.4rem; }
+.tasks li { margin: .45rem 0; }
+.tasks .done { color: #47705a; text-decoration: line-through; }
+.error { color: #a32323; }

@@ -1,0 +1,8 @@
+<?! vars('d', 'ctx') ?>
+<section>
+    <h2><?= d.heading ?></h2>
+    <p>Hello, <strong><?= d.name ?></strong>!</p>
+    <p><?= d.message ?></p>
+    <p><a href="/">Return home</a></p>
+</section>
+

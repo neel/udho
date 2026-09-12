@@ -1,0 +1,5 @@
+add_library(udho-examples-pgx-controllers SHARED api.cpp ui.cpp)
+set_target_properties(udho-examples-pgx-controllers PROPERTIES PREFIX "")
+target_compile_features(udho-examples-pgx-controllers PUBLIC cxx_std_17)
+target_include_directories(udho-examples-pgx-controllers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(udho-examples-pgx-controllers PRIVATE udho)

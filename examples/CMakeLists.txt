@@ -36,3 +36,5 @@ FIND_PACKAGE(Threads REQUIRED)
 # TARGET_LINK_LIBRARIES(udho-example-pg udho)
 
 add_subdirectory(simple)
+add_subdirectory(luax)
+add_subdirectory(pgx)

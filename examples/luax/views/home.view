@@ -1,0 +1,7 @@
+<?! vars('d', 'ctx') ?>
+<section>
+    <h2><?= d.heading ?></h2>
+    <p><?= d.message ?></p>
+    <p><a href="/hello/Alice">Render a personalized view</a></p>
+</section>
+
