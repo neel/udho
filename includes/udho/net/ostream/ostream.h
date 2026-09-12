@@ -2,6 +2,9 @@
 #define UDHO_NET_OSTREAM_OSTREAM_H
 
 #include <string>
+#include <chrono>
+#include <boost/asio/error.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <udho/utils/string_view.h>
 #include <udho/utils/format.h>
 #include <boost/beast/http/fields.hpp>
@@ -17,6 +20,11 @@
 
 namespace udho{
 namespace net{
+
+template <typename StreamT>
+struct basic_ostream_timeout {
+    inline static constexpr auto value = std::chrono::minutes{1};
+};
 
 /** @addtogroup DoxyG_net
  *  @{
@@ -235,6 +243,8 @@ struct basic_ostream{
     using response_type             = boost::beast::http::response<boost::beast::http::empty_body>;
     using traced_exception_type     = udho::exceptions::captured;
     using opt_traced_exception_type = std::optional<traced_exception_type>;
+    using timer_type                = boost::asio::steady_timer;
+    using time_point_type           = typename timer_type::time_point;
 
     /**
      * @brief Construct composite ostream.
@@ -248,16 +258,14 @@ struct basic_ostream{
      * @note The queued stream starts paused, it is resumed only after switching away from buffering; if never resumed then uses buffered stream only
      */
     basic_ostream(stream_type& stream, completion_callback_type&& callback, exception_callback_type&& ex_callback)
-        : _stream(stream), _strand(stream.get_executor()), _state(ostream_states::buffered), _header_sealed(false), _buffering(true), _finishing(false)
+        : _stream(stream), _strand(stream.get_executor()), _timer(_strand), _prepared(false), _wait_outstanding(false), _state(ostream_states::buffered), _header_sealed(false), _buffering(true), _finishing(false)
         , _header_stream(stream, _strand, _response, std::bind(&ostream_type::on_header_completion, this, std::placeholders::_1, std::placeholders::_2))
-        , _queued_stream(stream, _strand, _encoding,
-                         std::bind(&ostream_type::on_queued_completion,   this, std::placeholders::_1, std::placeholders::_2)
-                         )
+        , _queued_stream(stream, _strand, _encoding, std::bind(&ostream_type::on_queued_completion,   this, std::placeholders::_1, std::placeholders::_2))
         , _buffered_stream(stream, _strand, _encoding,
                            std::bind(&ostream_type::on_buffered_flush,      this, std::placeholders::_1, std::placeholders::_2),
                            std::bind(&ostream_type::on_buffered_completion, this, std::placeholders::_1, std::placeholders::_2)
-                           )
-        , _headers_sent(false), _bytes_written(0), _completion(std::move(callback))
+                        )
+        , _headers_sent(false), _bytes_written(0), _completion(std::move(callback)), _capex_handler(std::move(ex_callback)), _completion_status{{}, 0}
     {
         _queued_stream.pause();
     }
@@ -386,6 +394,7 @@ public:
         boost::asio::post(_strand, [this, value = std::move(value)](){
             if(_finishing) return;
             if(_capex.has_value()) return;
+            _extend();
             if(_buffering) {
                 _buffered_stream.write(std::move(value));
             } else {
@@ -399,6 +408,7 @@ public:
         boost::asio::post(_strand, [this, str = std::move(str)](){
             if(_finishing) return;
             if(_capex.has_value()) return;
+            _extend();
             if(_buffering) {
                 _buffered_stream.write(std::move(str));
             } else {
@@ -412,6 +422,7 @@ public:
         boost::asio::post(_strand, [this, str](){
             if(_finishing) return;
             if(_capex.has_value()) return;
+            _extend();
             if(_buffering) {
                 _buffered_stream.write(str);
             } else {
@@ -438,6 +449,7 @@ public:
             boost::asio::post(_strand, [this, buff = std::move(buffer)]() mutable {
                 if(_finishing) return;
                 if(_capex.has_value()) return;
+                _extend();
                 if(_buffering) {
                     _buffered_stream.write(std::move(buff));
                 } else {
@@ -448,6 +460,7 @@ public:
             boost::asio::post(_strand, [this, data, size](){
                 if(_finishing) return;
                 if(_capex.has_value()) return;
+                _extend();
                 if(_buffering) {
                     _buffered_stream.write(data, size);
                 } else {
@@ -466,10 +479,33 @@ public:
         boost::asio::post(_strand, [this, file = std::move(mmaped_file)](){
             if(_finishing) return;
             if(_capex.has_value()) return;
+            _extend();
             if(_buffering) {
                 _buffered_stream.write(file);
             } else {
                 _queued_stream.write(file);
+            }
+        });
+    }
+
+    /**
+     * @brief Write error-page content while a captured exception is active.
+     *
+     * Unlike @ref write, this function deliberately permits output while the
+     * stream holds a captured exception. It is intended exclusively for the
+     * framework's error renderer, which must be able to finish an error
+     * response after ordinary application writes have been disabled.
+     *
+     * @param str Owned error-page content to write.
+     */
+    void _write(std::string&& str) {
+        boost::asio::post(_strand, [this, str = std::move(str)](){
+            if(_finishing) return;
+            _extend();
+            if(_buffering) {
+                _buffered_stream.write(std::move(str));
+            } else {
+                _queued_stream.write(std::move(str));
             }
         });
     }
@@ -518,13 +554,8 @@ public:
      */
     void exception(traced_exception_type&& traced_exception) {
         assert(!_finishing);
-        boost::asio::post(_strand, [this, ex = std::move(traced_exception)](){
-            if(_capex.has_value()) return;
-            if(!_headers_sent) {
-                status(boost::beast::http::status::internal_server_error);
-            }
-            _capex = std::move(ex);
-            _capex_handler(*this);
+        boost::asio::post(_strand, [this, ex = std::move(traced_exception)]() mutable {
+            _exception(std::move(ex));
         });
     }
 
@@ -543,6 +574,17 @@ public:
         assert(has_exception());
         return _capex.value();
     }
+private:
+    void _exception(traced_exception_type&& traced_exception) {
+        if(_finishing || _capex.has_value()) return;
+
+        if(!_headers_sent) {
+            status(boost::beast::http::status::internal_server_error);
+        }
+        _capex = std::move(traced_exception);
+        _capex_handler(*this);
+    }
+
 public:
 
     /**
@@ -559,7 +601,12 @@ public:
     void finish() {
         _header_sealed = true;
         boost::asio::post(_strand, [this](){
+            assert(_prepared);
+
             _finishing = true;
+
+            stop();
+
             if(_state == ostream_states::buffered_flushing) return;
             if(_state == ostream_states::queued_finishing)   return;
 
@@ -600,6 +647,7 @@ private:
         } else {
             _response.set(boost::beast::http::field::transfer_encoding, "chunked");
         }
+
         _header_stream.flush();
     }
 
@@ -710,9 +758,7 @@ private:
             if(_buffering) {
                 std::cout << "states::completed" << std::endl;
                 _state = ostream_states::completed;
-                if(_completion) {
-                    _completion(ec, _bytes_written);
-                }
+                completion(ec, _bytes_written);
             }
         }
     }
@@ -727,15 +773,24 @@ private:
             assert(_headers_sent);
             std::cout << "states::completed" << std::endl;
             _state = ostream_states::completed;
-            if(_completion) {
-                _completion(ec, _bytes_written);
-            }
+            completion(ec, _bytes_written);
         }
     }
 
     /// @brief Common error path: forward error to user completion callback.
     void on_error(boost::system::error_code ec) {
-        _completion(ec, _bytes_written);
+        stop();
+        completion(ec, _bytes_written);
+    }
+
+    /**
+     * @brief ostream content write completion handler
+     * @param ec
+     * @param bytes_written
+     */
+    void completion(boost::system::error_code ec, std::size_t bytes_written) {
+        _completion_status = std::make_pair(ec, bytes_written);
+        reset(ec);
     }
 
 public:
@@ -758,6 +813,7 @@ public:
         }
 
         _response.clear();
+        _response.result(boost::beast::http::status::ok);
 
         _buffering      = true;
         _headers_sent   = false;
@@ -768,13 +824,137 @@ public:
         _state          = ostream_states::buffered;
 
         _encoding.encoding(udho::net::types::transfer::encoding::plain);
+        _capex.reset();
+
+        _prepared = false;
+        stop();
     }
 
+public:
+    /**
+     * @brief begin idle timer
+     *
+     * The operation is idempotent for the current response. The prepared state is
+     * cleared by reset() after response completion.
+     */
+    void prepare() {
+        boost::asio::post(_strand, [this]() {
+            if(_prepared) return;
+
+            _prepared    = true;
+            _expiry_time = timer_type::clock_type::now() + idle_time_duration;
+
+            if(!_wait_outstanding) {
+                _start();
+            }
+        });
+    }
+private:
+    void _extend() {
+        if(!_prepared || _finishing) return;
+
+        const auto now = timer_type::clock_type::now();
+        if(now >= _expiry_time) return;
+
+        _expiry_time = now + idle_time_duration;
+    }
+
+    void _start() {
+        assert(_prepared);
+        assert(!_finishing);
+        assert(!_wait_outstanding);
+
+        _timer.expires_at(_expiry_time);
+        _wait_outstanding = true;
+        _timer.async_wait([this](boost::system::error_code ec) {
+            timeout(ec);
+        });
+    }
+
+    /**
+     * @brief stops the timer
+     * @param ec content output related error code
+     */
+    void stop() {
+        std::size_t canceled_op_count = _timer.cancel();
+        if(!_prepared && !canceled_op_count && !_wait_outstanding) {
+            boost::asio::post(_strand, [this](){
+                cleanup();
+            });
+        }
+    }
+
+
+    void timeout(boost::system::error_code ec) {
+        assert(_wait_outstanding);
+        _wait_outstanding = false;
+
+        const bool aborted  = (ec == boost::asio::error::operation_aborted);
+        const bool error    = (ec && !aborted); // timer error
+        const auto now      = timer_type::clock_type::now();
+        const bool stopping = (!_prepared || _finishing);
+        const bool early    = (now < _expiry_time);
+
+        if(error) {
+            on_error(ec);
+            return;
+        } else if(early || aborted) {
+            assert(!error);
+            assert(!ec || aborted);
+
+            if(!stopping) {
+                _start();
+                return;
+            }
+            // else cleanup
+        } else if(!stopping) {
+            assert(!error);
+            assert(!early && !aborted);
+
+            // !early && !aborted && !error -> natural timeout called after expiry time
+
+             _exception(udho::exceptions::captured::propagate(udho::http::error(boost::beast::http::status::service_unavailable, "udho::net::ostream timed out waiting for write", udho::http::error::options::close)));
+            return;
+        }
+
+        assert(!error);
+        assert(stopping);
+        assert(!_wait_outstanding);
+        // (early || aborted) may or may not be true;
+
+        cleanup();
+    }
+
+    void cleanup() {
+        assert(!_wait_outstanding);
+        if(!_prepared) {
+            // reset has been called
+            // resets sets _finishing to false
+            assert(!_finishing);
+            _retire();
+        }
+    }
+
+    void _retire() {
+        if(_completion) {
+            boost::system::error_code ec = _completion_status.first;
+            std::size_t bytes_written    = _completion_status.second;
+            _completion_status           = std::make_pair(boost::system::error_code{}, 0);
+
+            _completion(ec, bytes_written);
+        }
+    }
 private:
     stream_type&                 _stream;
     strand_type                  _strand;
     response_type                _response;
     encoding_type                _encoding;
+private:
+    timer_type                   _timer;
+    bool                         _prepared;
+    time_point_type              _expiry_time;
+    bool                         _wait_outstanding;
+    inline static constexpr auto idle_time_duration = basic_ostream_timeout<stream_type>::value;
 private:
     header_writer_type           _header_stream;
     queued_stream_type           _queued_stream;
@@ -787,7 +967,10 @@ private:
     std::size_t                  _bytes_written;
     bool                         _finishing;
 private:
+    using completion_status = std::pair<boost::system::error_code, std::size_t>;
+
     completion_callback_type     _completion;
+    completion_status            _completion_status;
 private:
     opt_traced_exception_type    _capex;
     exception_callback_type      _capex_handler;

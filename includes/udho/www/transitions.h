@@ -174,7 +174,10 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
-                // TODO Error while writing to socket
+                namespace params = udho::logging::params;
+                UDHO_LOG_INFO("www::transition2", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
+
+                flow.abort();
                 return;
             }
 
@@ -205,6 +208,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
 
         handler_type& handler = composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
+        ostream.prepare();
 
         // }
 

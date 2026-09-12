@@ -16,27 +16,29 @@ template <typename ContextT>
 struct client_error{
     client_error(ContextT& context): _context(context) {}
 
-    void operator()(boost::beast::http::status status, const std::string& message){
+    void operator()(const udho::http::error& error){
         auto layout = udho::pages::system::layouts::listing(_context);
 
         namespace places = udho::pages::system::layouts::places;
         namespace placeholders = udho::pages::system::layouts::placeholders;
 
-        _context.ostream().status(status);
+        _context.ostream().status(error.status());
         _context.ostream().set(boost::beast::http::field::content_type, "text/html");
-        _context.ostream().set(boost::beast::http::field::connection, "keep-alive");
+        _context.ostream().set(boost::beast::http::field::connection, error.keep_alive() ? std::string("keep-alive") : std::string("close"));
 
-        layout[placeholders::header]    = udho::pages::system::data::listing_header{status};
-        layout[places::routes]          = _context.portal().routes();
+        layout[placeholders::header]    = udho::pages::system::data::listing_header{error.status()};
         layout[placeholders::footer]    = udho::pages::system::data::status_info{};
-
         layout[places::headline]        = udho::utils::format(R"(
             <div class="headline">
                 <div class="msg">{}</div>
                 <a href="/">docroot</a>
                 <a href="{}">assets</a>
             </div>
-        )", message, _context.portal().resources().assets().base());
+        )", error.what(), _context.portal().resources().assets().base());
+
+        if(error.status() == boost::beast::http::status::not_found) {
+            layout[places::routes]          = _context.portal().routes();
+        }
 
         layout();
     }
@@ -57,7 +59,7 @@ struct server_error{
     server_error(OStreamT& ostream): _ostream(ostream) {}
 
     template <typename ExceptionT, std::enable_if_t<std::is_base_of_v<std::exception, ExceptionT> || std::is_base_of_v<boost::exception, ExceptionT>, bool> = true>
-    void operator()(const ExceptionT& ex, const cpptrace::stacktrace& trace){
+    void operator()(const ExceptionT& ex, const cpptrace::stacktrace& trace, bool keep_alive){
         boost::beast::http::status status = boost::beast::http::status::internal_server_error;
         std::string message = "Internal Server Error";
 
@@ -68,25 +70,27 @@ struct server_error{
             std::stringstream stream;
             stream << status;
             message = stream.str();
+
+            keep_alive = herror.keep_alive();
         } catch (const std::bad_cast&) { }
 
         if(!_ostream.headers_sealed()) {
             _ostream.status(status);
             _ostream.set(boost::beast::http::field::content_type, "text/html");
-            _ostream.set(boost::beast::http::field::connection, "keep-alive");
+            _ostream.set(boost::beast::http::field::connection, keep_alive ? std::string("keep-alive") : std::string("close"));
         }
 
-        _ostream.write(udho::utils::format(header_str_template, static_cast<std::underlying_type_t<boost::beast::http::status>>(status), message));
-        _ostream.write(html(ex, trace));
+        _ostream._write(udho::utils::format(header_str_template, static_cast<std::underlying_type_t<boost::beast::http::status>>(status), message));
+        _ostream._write(html(ex, trace));
         _ostream.finish();
     }
 
     template <typename ErrorCodeT, std::enable_if_t<std::is_same_v<ErrorCodeT, std::error_code> || std::is_same_v<ErrorCodeT, boost::system::error_code>, bool> = true>
-    void operator()(const ErrorCodeT& ec, const cpptrace::stacktrace& trace){
+    void operator()(const ErrorCodeT& ec, const cpptrace::stacktrace& trace, bool keep_alive){
         if(!_ostream.headers_sealed()) {
             _ostream.status(boost::beast::http::status::internal_server_error);
             _ostream.set(boost::beast::http::field::content_type, "text/html");
-            _ostream.set(boost::beast::http::field::connection, "keep-alive");
+            _ostream.set(boost::beast::http::field::connection, keep_alive ? std::string("keep-alive") : std::string("close"));
         }
 
         _ostream.write(udho::utils::format(header_str_template, 500, "Internal Server Error"));

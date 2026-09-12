@@ -69,8 +69,10 @@ struct basic_handler{
          * @tparam FinishCallback Completion callback type.
          * @tparam ExceptionCallback Exception callback type.
          * @param stream Stream associated with the flow.
-         * @param callback Callback invoked on output completion.
+         * @param callback Completion callback invoked after the wrapped ostream has been reset for possible reuse.
          * @param ex_callback Callback invoked on exception handling.
+         * @warning The completion callback must not inspect state belonging to the
+         *          completed response because that state has already been cleared.
          */
         template <typename FinishCallback, typename ExceptionCallback>
         responder(stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
@@ -88,20 +90,31 @@ struct basic_handler{
          * @return Reference to the wrapped output stream.
          */
         ostream_type& ostream() { return _ostream; }
+
+        template <typename FinishCallback>
+        void reset_callbacks(FinishCallback&& callback) {
+            _callback    = std::move(callback);
+        }
+
+        template <typename FinishCallback, typename ExceptionCallback>
+        void reset_callbacks(FinishCallback&& callback, ExceptionCallback&& ex_callback) {
+            _callback    = std::move(callback);
+            _ex_callback = std::move(ex_callback);
+        }
     private:
 
         /**
          * @brief Internal completion hook.
          *
-         * Forwards the completion result to the user callback and then resets the
-         * wrapped output stream.
+         * Resets the wrapped output stream and then forwards the completion result
+         * to the configured callback. No responder state is accessed after invoking
+         * the callback.
          *
          * @param ec Completion status.
          * @param bytes_written Number of bytes reported as written.
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
             _callback(ec, bytes_written);
-            _ostream.reset(ec);
         }
 
         /**
@@ -199,6 +212,28 @@ struct basic_handler{
     bool exists(std::size_t id) const {
         auto responder_it = _responders.find(id);
         return (responder_it != _responders.end());
+    }
+
+    /**
+     * @brief Remove the responder associated with a flow.
+     *
+     * Erases and destroys the responder, its wrapped ostream, and its stored
+     * callbacks.
+     *
+     * @param id Flow identifier.
+     * @return true if a responder was removed; false if no responder existed.
+     *
+     * @warning This operation is synchronous and does not wait for outstanding
+     *          asynchronous operations. The caller must ensure that the responder
+     *          is not executing a callback and that no pending handler can access
+     *          the responder or its ostream.
+     */
+    bool remove(std::size_t id) {
+        auto it = _responders.find(id);
+        if(it == _responders.end()) return false;
+
+        _responders.erase(it);
+        return true;
     }
 
     /**

@@ -183,10 +183,21 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
 
         try{
             capex.rethrow();
+        } catch(const udho::http::error& error) {
+            if(!error.keep_alive()) {
+                auto lambda = [&flow](boost::system::error_code error, std::size_t){
+                    flow.abort();
+                };
+                handler.responder(flow.id()).reset_callbacks(std::move(lambda));
+            }
+
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = capex.trace().resolve();
+            server_error(error, stacktrace, error.keep_alive());
         } catch(const std::exception& exception) {
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
-            server_error(exception, stacktrace);
+            server_error(exception, stacktrace, true);
         }
     }
 
@@ -194,18 +205,18 @@ private:
 
     template <typename... Args>
     void handle_http_error(flow_type& flow, const udho::http::error& error, const trace_type& trace, stream_type& stream, Args&&... args) {
-        ostream_type& ostream = get_ostream(flow, true, stream, std::forward<Args>(args)...);
+        ostream_type& ostream = get_ostream(flow, error.keep_alive(), stream, std::forward<Args>(args)...);
 
         if(error.status_class() == boost::beast::http::status_class::client_error) {
             portal_type portal(_composition, _configs, _journal);
             context_type context(ostream, portal, flow.id());
 
             client_error<context_type> error_page(context);
-            error_page(error.status(), error.what());
+            error_page(error);
         } else if(error.status_class() == boost::beast::http::status_class::server_error) {
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
-            server_error(error, stacktrace);
+            server_error(error, stacktrace, error.keep_alive());
          } else {
             ostream.status(error.status());
             ostream << error.what();
@@ -222,7 +233,7 @@ private:
 
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
-            server_error(error, stacktrace);
+            server_error(error, stacktrace, false);
         }
     }
 
@@ -236,7 +247,7 @@ private:
 
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = trace.resolve();
-            server_error(error, stacktrace);
+            server_error(error, stacktrace, false);
         }
     }
 
@@ -246,7 +257,7 @@ private:
 
         server_error<ostream_type> server_error(ostream);
         cpptrace::stacktrace stacktrace = trace.resolve();
-        server_error(exception, stacktrace);
+        server_error(exception, stacktrace, false);
     }
 
     template <typename... Args>
@@ -255,22 +266,20 @@ private:
 
         server_error<ostream_type> server_error(ostream);
         cpptrace::stacktrace stacktrace = trace.resolve();
-        server_error(exception, stacktrace);
+        server_error(exception, stacktrace, false);
     }
 
 private:
 
     template <typename... Args>
     ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
-        handler_type& handler = _composition.template get<handler_type>().component();
-        if(handler.exists(flow.id())) {
-            return handler.ostream(flow.id());
-        }
-
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
             if(error) {
-                // TODO Error while writing to socket
+                namespace params = udho::logging::params;
+                UDHO_LOG_INFO("www::terminal", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
+
+                flow.abort();
                 return;
             }
 
@@ -290,8 +299,25 @@ private:
             ostream.finish();
         };
 
-        ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
-        return ostream;
+        // Responders are scoped to flows, not individual HTTP requests. A preceding
+        // successful action may therefore have installed its transition callback on
+        // this responder. Reusing that callback for an error response would advance
+        // the old action pipeline when the error page finishes, potentially reentering
+        // a connection whose current error requires it to close. Re-arm the responder
+        // with these terminal callbacks so that this response's restart/abort policy
+        // is applied when its output completes.
+        handler_type& handler = _composition.template get<handler_type>().component();
+        if(handler.exists(flow.id())) {
+            auto& responder = handler.responder(flow.id());
+            responder.reset_callbacks(std::move(lambda), std::move(ex_lambda));
+            ostream_type& ostream = responder.ostream();
+            ostream.prepare();
+            return ostream;
+        } else {
+            ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
+            ostream.prepare();
+            return ostream;
+        }
     }
 
 private:

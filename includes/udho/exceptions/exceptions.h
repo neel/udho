@@ -11,17 +11,30 @@
 namespace udho{
 namespace http{
 
-class error : public std::runtime_error {
+struct error : public std::runtime_error {
+    enum class options{
+        keep_alive,
+        close
+    };
+private:
     boost::beast::http::status _status;
+    bool _keep_alive;
 
 public:
-    explicit error(boost::beast::http::status st, std::string msg = {})
+    inline explicit error(boost::beast::http::status st, const std::string& msg, options opt)
         : std::runtime_error(msg.empty() ? std::string(boost::beast::http::obsolete_reason(st)) : std::move(msg))
-        , _status(st)
+        , _status(st), _keep_alive(opt == options::keep_alive)
     {}
 
-    boost::beast::http::status status() const noexcept { return _status; }
-    boost::beast::http::status_class status_class() const noexcept { return boost::beast::http::to_status_class(_status); }
+    inline explicit error(boost::beast::http::status st, options opt)
+        : std::runtime_error(std::string(boost::beast::http::obsolete_reason(st)))
+        , _status(st), _keep_alive(opt == options::keep_alive)
+    {}
+
+    inline bool keep_alive() const noexcept { return _keep_alive; }
+
+    inline boost::beast::http::status status() const noexcept { return _status; }
+    inline boost::beast::http::status_class status_class() const noexcept { return boost::beast::http::to_status_class(_status); }
 };
 
 }
