@@ -157,6 +157,67 @@ constexpr static char template_listing_status[] = R"TEMPLATE(
 )TEMPLATE";
 
 /**
+ * @brief Checks whether all views required by the system pages are registered.
+ * @tparam Bridges Bridge types supported by the store.
+ * @param store Resource store to inspect.
+ * @return True for stores without bridges, or when every system Lua view is present.
+ * @ingroup DoxyG_pages
+ */
+template <typename... Bridges>
+bool ready(udho::view::resources::store<Bridges...>& store){
+    using store_type = udho::view::resources::store<Bridges...>;
+
+    if constexpr (store_type::bridges_count == 0) {
+        return true;
+    } else {
+        using bridge_type = udho::view::data::bridges::lua;
+        const auto& views = store.template tmpl<bridge_type>();
+        const auto& index = views.by_composite();
+
+        return index.find(boost::make_tuple("udho", "listing_table")) != index.end()
+            && index.find(boost::make_tuple("udho", "listing_page")) != index.end()
+            && index.find(boost::make_tuple("udho", "routes_page")) != index.end()
+            && index.find(boost::make_tuple("udho", "header")) != index.end()
+            && index.find(boost::make_tuple("udho", "status")) != index.end();
+    }
+}
+
+/**
+ * @brief Checks whether all views required by the system pages are registered.
+ * @tparam Bridges Bridge types exposed by the read-only store.
+ * @param store Read-only resource store to inspect.
+ * @return True for stores without bridges, or when every system Lua view is present.
+ * @ingroup DoxyG_pages
+ */
+template <typename... Bridges>
+bool ready(const udho::view::resources::const_store<Bridges...>& store){
+    using store_type = udho::view::resources::const_store<Bridges...>;
+
+    if constexpr (store_type::bridges_count == 0) {
+        return true;
+    } else {
+        using bridge_type = udho::view::data::bridges::lua;
+        const auto views = store.template tmpl<bridge_type>();
+
+        bool listing_table = false;
+        bool listing_page  = false;
+        bool routes_page   = false;
+        bool header        = false;
+        bool status        = false;
+
+        for(auto it = views.begin("udho"); it != views.end("udho"); ++it) {
+            listing_table = listing_table || it->name() == "listing_table";
+            listing_page  = listing_page  || it->name() == "listing_page";
+            routes_page   = routes_page   || it->name() == "routes_page";
+            header        = header        || it->name() == "header";
+            status        = status        || it->name() == "status";
+        }
+
+        return listing_table && listing_page && routes_page && header && status;
+    }
+}
+
+/**
  * @brief Registers system-page Lua views in a resource store.
  * @tparam Bridges Bridge types supported by the store.
  * @param store Resource store to populate.

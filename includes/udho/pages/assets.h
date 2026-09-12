@@ -1028,6 +1028,48 @@ constexpr static char js_tabs[] = R"ASSET(
 )ASSET";
 
 /**
+ * @brief Checks whether all assets required by the system pages are registered.
+ * @tparam Bridges Bridge types supported by the store.
+ * @param store Resource store to inspect.
+ * @return True when every asset installed by setup() is present with the expected type.
+ * @ingroup DoxyG_pages
+ */
+template <typename... Bridges>
+bool ready(udho::view::resources::store<Bridges...>& store){
+    using type = udho::view::resources::asset::type;
+    const auto& assets = store.assets();
+
+    return assets.contains("udho", type::css, "system.css")
+        && assets.contains("udho", type::css, "header.css")
+        && assets.contains("udho", type::css, "listing.css")
+        && assets.contains("udho", type::css, "routes.css")
+        && assets.contains("udho", type::css, "tabs.css")
+        && assets.contains("udho", type::img, "beral.gif")
+        && assets.contains("udho", type::js,  "tabs.js");
+}
+
+/**
+ * @brief Checks whether all assets required by the system pages are registered.
+ * @tparam Bridges Bridge types exposed by the read-only store.
+ * @param store Read-only resource store to inspect.
+ * @return True when every asset installed by setup() is present with the expected type.
+ * @ingroup DoxyG_pages
+ */
+template <typename... Bridges>
+bool ready(const udho::view::resources::const_store<Bridges...>& store){
+    using type = udho::view::resources::asset::type;
+    const auto& assets = store.assets();
+
+    return assets.find(type::css, "udho", "system.css").valid()
+        && assets.find(type::css, "udho", "header.css").valid()
+        && assets.find(type::css, "udho", "listing.css").valid()
+        && assets.find(type::css, "udho", "routes.css").valid()
+        && assets.find(type::css, "udho", "tabs.css").valid()
+        && assets.find(type::img, "udho", "beral.gif").valid()
+        && assets.find(type::js,  "udho", "tabs.js").valid();
+}
+
+/**
  * @brief Registers system-page assets in a resource store.
  * @tparam Bridges Bridge types supported by the store.
  * @param store Resource store to populate.

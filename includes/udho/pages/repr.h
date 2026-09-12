@@ -25,8 +25,8 @@ struct repr<udho::pages::system::data::listing> {
     repr(const data_type& data): _data(data) {}
 
     void include(loader_css& loader) const {
-        loader.add("udho", "system.css");
-        loader.add("udho", "listing.css");
+        if(loader.contains("udho", "system.css"))  loader.add("udho", "system.css");
+        if(loader.contains("udho", "listing.css")) loader.add("udho", "listing.css");
     }
 
     void include(loader_js&) const {}
@@ -114,12 +114,12 @@ struct repr<udho::pages::system::data::listings> {
     repr(const data_type& data): _data(data) {}
 
     void include(loader_css& loader) const {
-        loader.add("udho", "system.css");
-        loader.add("udho", "listing.css");
+        if(loader.contains("udho", "system.css"))  loader.add("udho", "system.css");
+        if(loader.contains("udho", "listing.css")) loader.add("udho", "listing.css");
     }
 
     void include(loader_js& loader) const {
-        loader.add("udho", "tabs.js");
+        if(loader.contains("udho", "tabs.css")) loader.add("udho", "tabs.js");
     }
 
     template<typename ContextT>
@@ -199,8 +199,8 @@ struct repr<udho::url::summary::router> {
     repr(const data_type& data): _data(data) {}
 
     void include(loader_css& loader) const {
-        loader.add("udho", "system.css");
-        loader.add("udho", "routes.css");
+        if(loader.contains("udho", "system.css")) loader.add("udho", "system.css");
+        if(loader.contains("udho", "routes.css")) loader.add("udho", "routes.css");
     }
 
     void include(loader_js&) const {}
@@ -311,18 +311,23 @@ struct repr<udho::pages::system::data::listing_header> {
     repr(const data_type& data): _data(data) {}
 
     void include(loader_css& loader) const {
-        loader.add("udho", "header.css");
+        if(loader.contains("udho", "header.css")) loader.add("udho", "header.css");
     }
 
     void include(loader_js&) const {}
 
     template<typename ContextT>
     std::string operator()(const ContextT& ctx) const {
+        const auto& img_substore = ctx.portal().resources().img();
+        auto it = img_substore.find("udho", "beral.gif");
+
+        std::string beral_url = it.valid() ? it->url() : std::string();
+
         return udho::utils::format(
             html_content,
             _data.code(),
             udho::utils::encode::escape(_data.message()),
-            udho::utils::encode::escape(ctx.portal().resources().img().get("udho", "beral.gif").url())
+            udho::utils::encode::escape(beral_url)
         );
     }
 

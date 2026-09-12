@@ -135,6 +135,11 @@ struct basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>{
     using mapped_view               = std::tuple<std::string, std::string>;
     using basic_layout_pimpl_type   = std::shared_ptr<basic_layout_impl_type>;
     using basic_layout_             = basic_layout<ContextT, basic_document<placeholder_type>, PresenterT>;
+    using portal_type               = typename context_type::portal_type;
+    using composition_type          = typename portal_type::composition_type;
+    using resource_component_type   = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
+
+    static_assert(!std::is_void_v<resource_component_type>, "Context passed to the layout does not include resources component. Please use udho::www::context<udho::www::components::resources<>> or udho::www::context<udho::www::components::resources<Bridges...>>");
 
     template <typename KeyT, typename LayoutT, bool>
     friend struct renderer;
