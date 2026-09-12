@@ -269,6 +269,50 @@ struct store{
     size_type size() const { return _resources.size(); }
 
     /**
+     * @brief Checks whether an asset exists for the exact prefix, type, and name.
+     */
+    bool contains(const std::string& prefix, asset::type type, const std::string& name) const {
+        const auto& index = by_composite();
+        return index.find(boost::make_tuple(prefix, type, name)) != index.end();
+    }
+
+    /**
+     * @brief Returns the number of assets registered under a prefix.
+     */
+    size_type size(const std::string& prefix) const {
+        const auto& index = by_prefix();
+        const auto range = index.equal_range(prefix);
+        return static_cast<size_type>(std::distance(range.first, range.second));
+    }
+
+    /**
+     * @brief Returns the number of assets of a type registered under a prefix.
+     */
+    size_type size(const std::string& prefix, asset::type type) const {
+        const auto& index = by_combined();
+        const auto range = index.equal_range(boost::make_tuple(prefix, type));
+        return static_cast<size_type>(std::distance(range.first, range.second));
+    }
+
+    /**
+     * @brief Returns an asset registered for the exact prefix, type, and name.
+     * @throws std::out_of_range if the asset is not registered.
+     */
+    const asset_registration_info& resource(const std::string& prefix, asset::type type, const std::string& name) const {
+        const auto& index = by_composite();
+        const auto it = index.find(boost::make_tuple(prefix, type, name));
+        if(it == index.end()) {
+            throw std::out_of_range{udho::utils::format(
+                "Asset {}/{}/{} is not registered",
+                prefix,
+                asset::utils::to_string(type),
+                name
+            )};
+        }
+        return *it;
+    }
+
+    /**
      * @brief Checks if the store is locked.
      * @return True if the store is locked, false otherwise.
      */

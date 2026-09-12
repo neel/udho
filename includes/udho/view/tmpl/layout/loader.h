@@ -34,6 +34,15 @@ struct common_asset_loader{
     common_asset_loader(const common_asset_loader&) = delete;
     common_asset_loader(common_asset_loader&& other): _selection(std::move(other._selection)) {}
 
+    std::size_t count(const std::string& prefix) const {
+        return _store.count(prefix);
+    }
+
+    std::size_t contains(const std::string& prefix, const std::string& name) const {
+        composite_const_iterator it = _store.find(prefix, name);
+        return it.valid();
+    }
+
     /**
      * @brief Add an asset to the loader
      * @pre The specified asset must be added to the store already

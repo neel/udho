@@ -931,6 +931,65 @@ namespace asset{
     }
 
     /**
+     * @brief Function to create a text resource with an explicit MIME type.
+     *
+     * @tparam Iterator Type of iterator.
+     * @param name Name of the text resource.
+     * @param begin Iterator to the beginning of the text data.
+     * @param end Iterator to the end of the text data.
+     * @param mime MIME type of the text resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return A unique pointer to the created text resource.
+     */
+    template <typename Iterator>
+    inline auto txt(const std::string& name, Iterator begin, Iterator end, const std::string& mime, bool owned = false) {
+        return resource<asset::type::txt>(name, begin, end, mime, owned);
+    }
+
+    /**
+     * @brief Function to create a text resource from a string.
+     *
+     * @tparam Char Character type.
+     * @param name Name of the text resource.
+     * @param str Text content.
+     * @param mime MIME type of the text resource.
+     * @param owned Boolean flag indicating ownership of the resource.
+     * @return A unique pointer to the created text resource.
+     */
+    template <typename Char>
+    inline auto txt(const std::string& name, const std::basic_string<Char>& str, const std::string& mime, bool owned = false) {
+        return txt(name, str.begin(), str.end(), mime, owned);
+    }
+
+    /**
+     * @brief Function to create a text resource from a null-terminated string.
+     */
+    template <typename Char>
+    inline auto txt(const std::string& name, const Char* str, const std::string& mime, bool owned = false) {
+        return txt(name, str, str + std::char_traits<Char>::length(str), mime, owned);
+    }
+
+    /**
+     * @brief Function to create a text resource from a character array.
+     */
+    template <typename Char, std::size_t N>
+    inline auto txt(const std::string& name, const Char (&str)[N], const std::string& mime, bool owned = false) {
+        return txt(name, str, str + N - 1, mime, owned);
+    }
+
+    /**
+     * @brief Overload for creating a disk-based text resource.
+     *
+     * @param name Name of the text resource.
+     * @param path Filesystem path to the text file.
+     * @param mime MIME type of the text resource.
+     * @return A unique pointer to the created text resource.
+     */
+    inline auto txt(const std::string& name, const boost::filesystem::path& path, const std::string& mime) {
+        return resource<asset::type::txt>(name, path, mime);
+    }
+
+    /**
      * @brief Function to create a CSS resource.
      *
      * This function creates a unique_ptr to an abstract_resource for CSS assets,
@@ -998,14 +1057,7 @@ namespace asset{
      * @return basic_resource<asset::type::css>* A unique pointer to the created CSS resource.
      */
     inline auto css(const std::string& name, const boost::filesystem::path& path){ return resource<asset::type::css>(name, path); }
-    /**
-     * @brief Overload of css function for creating remote CSS resources.
-     *
-     * @param name Name of the CSS resource.
-     * @param url URL of the remote CSS resource.
-     * @return basic_resource<asset::type::css>* A raw pointer to the created resource.
-     */
-    inline auto css(const std::string& name, const std::string& url){ return resource<asset::type::css>(name, url); }
+
 
     /**
      * @brief Function to create a javascript resource.
@@ -1059,14 +1111,6 @@ namespace asset{
      * @return basic_resource<asset::type::js>* A unique pointer to the created JS resource.
      */
     inline auto js(const std::string& name, const boost::filesystem::path& path){ return resource<asset::type::js>(name, path); }
-    /**
-     * @brief Overload of js function for creating remote JS resources.
-     *
-     * @param name Name of the JS resource.
-     * @param url URL of the remote JS resource.
-     * @return basic_resource<asset::type::js>* A unique pointer to the created JS resource.
-     */
-    inline auto js(const std::string& name, const std::string& url){ return resource<asset::type::js>(name, url); }
 
     /**
      * @brief Function to create a image resource.
@@ -1090,14 +1134,37 @@ namespace asset{
      * @return basic_resource<asset::type::img>* A unique pointer to the created image resource.
      */
     inline auto img(const std::string& name, const boost::filesystem::path& path){ return resource<asset::type::img>(name, path); }
-    /**
-     * @brief Overload of img function for creating remote image resources.
-     *
-     * @param name Name of the image resource.
-     * @param url URL of the remote image resource.
-     * @return basic_resource<asset::type::img>* A unique pointer to the created image resource.
-     */
-    inline auto img(const std::string& name, const std::string& url){ return resource<asset::type::img>(name, url); }
+
+
+    namespace remote {
+        /**
+         * @brief Overload of css function for creating remote CSS resources.
+         *
+         * @param name Name of the CSS resource.
+         * @param url URL of the remote CSS resource.
+         * @return basic_resource<asset::type::css>* A raw pointer to the created resource.
+         */
+        inline auto css(const std::string& name, const std::string& url){ return resource<asset::type::css>(name, url); }
+
+        /**
+         * @brief Overload of js function for creating remote JS resources.
+         *
+         * @param name Name of the JS resource.
+         * @param url URL of the remote JS resource.
+         * @return basic_resource<asset::type::js>* A unique pointer to the created JS resource.
+         */
+        inline auto js(const std::string& name, const std::string& url){ return resource<asset::type::js>(name, url); }
+
+
+        /**
+         * @brief Overload of img function for creating remote image resources.
+         *
+         * @param name Name of the image resource.
+         * @param url URL of the remote image resource.
+         * @return basic_resource<asset::type::img>* A unique pointer to the created image resource.
+         */
+        inline auto img(const std::string& name, const std::string& url){ return resource<asset::type::img>(name, url); }
+    }
 
 }
 
