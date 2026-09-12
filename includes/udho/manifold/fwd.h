@@ -233,6 +233,12 @@ struct basic_flow;
 template <typename LabelT, typename StreamT>
 struct basic_terminal;
 
+template <typename LabelT, typename StreamT, std::size_t Stage>
+struct default_transition;
+
+template <typename LabelT, typename StreamT, std::size_t Stage>
+struct transition;
+
 #endif // __DOXYGEN__
 
 /**

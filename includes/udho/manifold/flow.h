@@ -60,6 +60,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     template <typename, typename>
     friend struct basic_terminal;
 
+    template <typename, typename, std::size_t>
+    friend struct default_transition;
+
+    template <typename, typename, std::size_t>
+    friend struct transition;
+
     basic_flow() = delete;
     basic_flow(const basic_flow<LabelT, StreamT>&) = delete;
     basic_flow(basic_flow&&) = delete;
@@ -234,12 +240,13 @@ private:
             }
         }
         if(!reenter) {
+            const auto flow_id = id();
             bool removed = _runtime.remove(*this);
 
             if(!removed) {
-                UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(id()));
+                UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(flow_id));
             } else {
-                UDHO_LOG_TRACE("manifold::flow", "Flow removed", p::flow_id(id()));
+                UDHO_LOG_TRACE("manifold::flow", "Flow removed", p::flow_id(flow_id));
             }
         }
     }
