@@ -164,7 +164,7 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
             s.finish();
         }
     );
-
+    stream.prepare();
     auto context = udho::manifold::basic_context(stream, portal, 0);
 
     // udho::net::ostream_view stream_view = stream.view();

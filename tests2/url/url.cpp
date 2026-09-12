@@ -36,6 +36,10 @@ BOOST_SYMBOL_EXPORT std::string f_nodef(nodef, int a){
 
 struct X{
     mutable std::string _msg;
+    mutable int         _a{};
+    mutable std::string _b;
+    mutable double      _c{};
+    mutable bool        _d{};
 
     BOOST_SYMBOL_EXPORT void f0(){
         _msg ="f0";
@@ -44,16 +48,26 @@ struct X{
 
     BOOST_SYMBOL_EXPORT int f1(int a, const std::string& b, const double& c, bool d){
         _msg ="f1";
+        _a = a;
+        _b = b;
+        _c = c;
+        _d = d;
         return a+b.size()+c+d;
     }
 
     BOOST_SYMBOL_EXPORT std::string f2(int a, const std::string& b){
         _msg ="f2";
+        _a = a;
+        _b = b;
         return std::to_string(a+b.size());
     }
 
     BOOST_SYMBOL_EXPORT int f3(int a, const std::string& b, const double& c, bool d) const{
         _msg ="f3";
+        _a = a;
+        _b = b;
+        _c = c;
+        _d = d;
         return 84;
     }
 };
@@ -350,9 +364,15 @@ TEST_CASE("url common functionalities", "[url][pattern][router]") {
     {
         m2.invoke_at(5, "/x/f2-23/hello");
         CHECK(x._msg == "f2");
+        CHECK(x._a == 23);
+        CHECK(x._b == "hello");
     } {
         m2.invoke_at(6, "/x/f3/42/world/24/1");
         CHECK(x._msg == "f3");
+        CHECK(x._a == 42);
+        CHECK(x._b == "world");
+        CHECK(x._c == Catch::Approx(24.0));
+        CHECK(x._d == true);
     }
 
 
@@ -373,6 +393,23 @@ TEST_CASE("url common functionalities", "[url][pattern][router]") {
     CHECK(root_xf2_index.valid());
     CHECK(root_xf2_index.mountpoint() == 1);
     CHECK(root_xf2_index.action() == 5);
+
+    router.table().invoke_at(root_xf2_index);
+    CHECK(x._msg == "f2");
+    CHECK(x._a == 23);
+    CHECK(x._b == "hello");
+
+    auto mounted_xf1_index = router.index_of(boost::beast::http::verb::get, std::string("/pchain/x/f1/31/mounted/12/0"));
+    REQUIRE(mounted_xf1_index.valid());
+    CHECK(mounted_xf1_index.mountpoint() == 0);
+    CHECK(mounted_xf1_index.action() == 4);
+
+    router.table().invoke_at(mounted_xf1_index);
+    CHECK(x._msg == "f1");
+    CHECK(x._a == 31);
+    CHECK(x._b == "mounted");
+    CHECK(x._c == Catch::Approx(12.0));
+    CHECK(x._d == false);
 
     CHECK(router.find(boost::beast::http::verb::get, std::string("/pchain/"))                 == true);
     CHECK(router.find(boost::beast::http::verb::get, std::string("/pchain"))                  == true);

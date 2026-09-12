@@ -95,7 +95,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     boost::asio::io_context io;
 
     using framework_type = udho::www::framework<udho::www::stateless::lua>;
-    using endpoint_type  = typename framework_type::endpoint_type;
+    // using endpoint_type  = typename framework_type::endpoint_type;
 
     auto resource_store_component  = udho::www::components::resources(cstore);
 

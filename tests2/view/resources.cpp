@@ -149,7 +149,7 @@ Hello World
                    s.finish();
                }
             );
-
+            stream.prepare();
             udho::net::ostream_view stream_view = stream.view();
             asset.write(stream_view);
 
@@ -335,7 +335,7 @@ Hello World
                     s.finish();
                 }
             );
-
+            stream.prepare();
             udho::net::ostream_view stream_view = stream.view();
             asset.write(stream_view);
 

@@ -61,7 +61,7 @@ std::string render_presenter_to_body(const Presenter& presenter){
             s.finish();
         }
     );
-
+    stream.prepare();
     udho::net::ostream_view stream_view = stream.view();
 
     presenter(stream_view);

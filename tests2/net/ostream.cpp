@@ -430,6 +430,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.write(std::string("ABC"));
@@ -458,6 +459,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.write(std::string("ABC"));
@@ -485,6 +487,7 @@ TEST_CASE("udho manifold composite stream no switching", "[manifold][stream][buf
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         ostream.write(std::string("All buffered"));
@@ -506,13 +509,6 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
 
     SECTION("happy path") {
         io.restart();
-        auto guard = boost::asio::make_work_guard(io);
-        boost::thread_group threads;
-        for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread([&io]{
-                io.run();
-            });
-        }
 
         stream_in.connect(stream_out);
         bool is_completed = false;
@@ -527,6 +523,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                s.finish();
            }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         const static std::string static_str = "0123456"; // static embedded assets such as js or images etc..
@@ -536,21 +533,23 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
         ostream.write(std::string("ABC"));         // write while pumping
         ostream.write(std::string("DEFG"));        // write while pumping
 
-        guard.reset();
-        threads.join_all();
+        // Process everything currently ready without waiting for the idle timer.
+        const auto processed = io.poll();
+        REQUIRE(processed > 0);
+        CHECK_FALSE(is_completed);
 
         CHECK(!is_completed);
         // std::cout << "output: " << client.str() << std::endl;
 
-        io.restart();
-        ostream.finish();
-        for(std::size_t i = 0; i < 4; ++i) {
-            threads.create_thread([&io]{
-                io.run();
-            });
-        }
-        threads.join_all();
 
+        // Finish the response and synchronously drain its remaining operations.
+        ostream.finish();
+
+        if(io.stopped()) {
+            io.restart();
+        }
+
+        io.run();
         CHECK(is_completed);
         // std::cout << "output: " << client.str() << std::endl;
     }
@@ -571,6 +570,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                s.finish();
            }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Empty string write
@@ -614,6 +614,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
@@ -644,6 +645,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
@@ -683,7 +685,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
-
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Call disable_buffering multiple times (should be idempotent after first)
@@ -716,6 +718,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         // Write in buffered mode
@@ -751,6 +754,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         // Test all write overloads
@@ -795,6 +799,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                s.finish();
            }
         );
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::plain);
 
         ostream.disable_buffering();
@@ -832,7 +837,7 @@ TEST_CASE("udho manifold composite stream switching", "[manifold][stream][buffer
                 s.finish();
             }
         );
-
+        ostream.prepare();
         ostream.encoding(udho::net::types::transfer::encoding::chunked);
 
         // Mix of operations

@@ -292,7 +292,7 @@ private:
                         flow.restart(stream, std::forward<Args>(args)...);
                     },
                     args_tuple
-                    );
+                );
             } else {
                 flow.abort();
             }
@@ -304,6 +304,7 @@ private:
 
         handler_type& handler = _composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
+        ostream.prepare();
         return ostream;
     }
 
@@ -420,6 +421,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
 
         handler_type& handler = composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
+        ostream.prepare();
         // }
 
         // { create context

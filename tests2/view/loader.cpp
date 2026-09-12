@@ -132,6 +132,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                 s.finish();
             }
         );
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
         loader_js.importmap(stream_view);
 
@@ -197,6 +198,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                 s.finish();
             }
         );
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
 
         // Should still exclude from importmap
@@ -239,6 +241,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                 s.finish();
             }
         );
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
 
         loader_js.write(stream_view, true);
@@ -279,6 +282,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                 s.finish();
             }
         );
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
 
         SECTION("Non-embedded scripts generate correct link tags") {
@@ -352,6 +356,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                 s.finish();
             }
         );
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
 
         SECTION("Linked CSS generates proper link tags") {
@@ -420,7 +425,7 @@ TEST_CASE("View layout asset loader", "[view][asset][layout][loader]") {
                s.finish();
            }
         );
-
+        stream.prepare();
         udho::net::ostream_view stream_view = stream.view();
 
         SECTION("JS async/defer attributes") {

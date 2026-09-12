@@ -13,6 +13,7 @@
 #include <boost/variant.hpp>
 #include <udho/net/ostream.h>
 #include <udho/url/router.h>
+#include <udho/pages/system.h>
 #include <boost/asio/buffer.hpp>
 
 static char buffer_js[]  = "console.log('Hello, world!');";
@@ -24,6 +25,119 @@ static unsigned char buffer_img[] = {
     0x04, 0x00, 0x04, 0x00, 0x00, 0x02, 0x05, 0x44, 0x7c, 0x67, 0xb8, 0x05,
     0x00, 0x3b
 };
+
+TEST_CASE("System page asset readiness", "[view][resource][asset][pages]") {
+    using namespace udho::pages::system;
+
+    SECTION("Empty store is not ready") {
+        udho::view::resources::store<> store;
+        CHECK_FALSE(assets::ready(store));
+    }
+
+    SECTION("Partially populated store is not ready") {
+        udho::view::resources::store<> store;
+        store["udho"] << udho::view::resources::asset::css(
+            "system.css",
+            std::begin(assets::css_system),
+            std::end(assets::css_system)
+        );
+        CHECK_FALSE(assets::ready(store));
+    }
+
+    SECTION("Store populated by setup is ready") {
+        udho::view::resources::store<> store;
+        assets::setup(store);
+        CHECK(assets::ready(store));
+    }
+}
+
+TEST_CASE("System page view and combined readiness", "[view][resource][pages]") {
+    using namespace udho::pages::system;
+
+    SECTION("Store without bridges does not require views") {
+        udho::view::resources::store<> store;
+
+        CHECK(views::ready(store));
+        CHECK_FALSE(ready(store));
+
+        assets::setup(store);
+        CHECK(ready(store));
+    }
+
+    SECTION("Lua store requires every system view") {
+        udho::view::data::bridges::lua lua;
+        lua.init();
+        udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+
+        CHECK_FALSE(views::ready(store));
+
+        store["udho"] << udho::view::resources::lua{
+            "listing_table",
+            std::begin(views::template_listing_table),
+            std::end(views::template_listing_table)
+        };
+        CHECK_FALSE(views::ready(store));
+    }
+
+    SECTION("Store populated by system setup is ready") {
+        udho::view::data::bridges::lua lua;
+        lua.init();
+        udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+
+        setup(store);
+
+        CHECK(views::ready(store));
+        CHECK(assets::ready(store));
+        CHECK(ready(store));
+    }
+}
+
+TEST_CASE("System page readiness through const stores", "[view][resource][pages][const]") {
+    using namespace udho::pages::system;
+
+    SECTION("Empty store without bridges") {
+        udho::view::resources::store<> store;
+        store.lock();
+        udho::view::resources::const_store<> cstore{store};
+
+        CHECK(views::ready(cstore));
+        CHECK_FALSE(assets::ready(cstore));
+        CHECK_FALSE(ready(cstore));
+    }
+
+    SECTION("Partially populated Lua store") {
+        udho::view::data::bridges::lua lua;
+        lua.init();
+        udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+
+        store["udho"] << udho::view::resources::lua{
+            "listing_table",
+            std::begin(views::template_listing_table),
+            std::end(views::template_listing_table)
+        };
+        assets::setup(store);
+        store.lock();
+        udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+
+        CHECK_FALSE(views::ready(cstore));
+        CHECK(assets::ready(cstore));
+        CHECK_FALSE(ready(cstore));
+    }
+
+    SECTION("Fully populated Lua store") {
+        udho::view::data::bridges::lua lua;
+        lua.init();
+        udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
+
+        setup(store);
+        store.lock();
+        udho::view::resources::const_store<udho::view::data::bridges::lua> cstore{store};
+
+        CHECK(views::ready(cstore));
+        CHECK(assets::ready(cstore));
+        CHECK(ready(cstore));
+    }
+}
 
 TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") {
     udho::view::resources::asset::store store;
@@ -52,6 +166,36 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
     store.lock();
 
     udho::view::resources::asset::const_store cstore{store};
+
+    SECTION("Direct asset lookup and counts") {
+        using asset_type = udho::view::resources::asset::type;
+
+        const auto& assets = store;
+
+        CHECK(assets.size("a") == 4);
+        CHECK(assets.size("c/d") == 4);
+        CHECK(assets.size("missing") == 0);
+
+        CHECK(assets.size("a", asset_type::js) == 2);
+        CHECK(assets.size("a", asset_type::css) == 1);
+        CHECK(assets.size("a", asset_type::txt) == 0);
+        CHECK(assets.size("missing", asset_type::js) == 0);
+
+        CHECK(assets.contains("a", asset_type::js, "aworld.js"));
+        CHECK(assets.contains("c/d", asset_type::img, "cdimg.gif"));
+        CHECK_FALSE(assets.contains("a", asset_type::css, "aworld.js"));
+        CHECK_FALSE(assets.contains("a", asset_type::js, "missing.js"));
+        CHECK_FALSE(assets.contains("missing", asset_type::js, "aworld.js"));
+
+        const auto& resource = assets.resource("a", asset_type::js, "aworld.js");
+        CHECK(resource.prefix() == "a");
+        CHECK(resource.type() == asset_type::js);
+        CHECK(resource.name() == "aworld.js");
+
+        CHECK_THROWS_AS(assets.resource("a", asset_type::css, "aworld.js"), std::out_of_range);
+        CHECK_THROWS_AS(assets.resource("a", asset_type::js, "missing.js"), std::out_of_range);
+        CHECK_THROWS_AS(assets.resource("missing", asset_type::js, "aworld.js"), std::out_of_range);
+    }
 
     auto check_type = [&cstore](udho::view::resources::asset::type type, const std::string& extension, std::size_t expected_num_resources){
         auto begin = cstore.begin(type);
@@ -207,6 +351,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                         s.finish();
                     }
                 );
+                stream.prepare();
                 udho::net::ostream_view stream_view = stream.view();
                 cstore.serve(stream_view, url);
 
@@ -256,6 +401,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                        s.finish();
                    }
                 );
+                stream.prepare();
                 udho::net::ostream_view stream_view = stream.view();
                 cstore.serve(stream_view, url);
 
@@ -300,6 +446,7 @@ TEST_CASE("Asset iteration using different indexes", "[view][resource][asset]") 
                         s.finish();
                     }
                 );
+                stream.prepare();
                 udho::net::ostream_view stream_view = stream.view();
                 cstore.serve(stream_view, url);
 
