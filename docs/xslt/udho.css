@@ -50,9 +50,7 @@ code, pre, .template-declaration {
     min-height: 13rem;
     overflow: hidden;
     padding: 1.25rem max(2rem, calc((100vw - 1200px) / 2));
-    /*border-bottom: 3px solid #17233a;*/
-    /*background: linear-gradient(to top, #d9dfe6 0%, var(--canvas) 80%);*/
-    background: linear-gradient(to top, #cbd4e6 0%, var(--canvas) 80%);
+    background: var(--canvas);
     color: #17233a;
 }
 .site-header-copy { max-width: 48rem; }

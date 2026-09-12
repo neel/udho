@@ -8,6 +8,9 @@ udho::www provides the components, features, transitions, and runtime policies r
 It supports both stateless and stateful request processing, integrating asynchronous operations, database connectivity, session management, Lua-based views, resource management, and URL routing into a unified pipeline. 
 It provides multiple extension points to integrate user defined components, features and policies through www as well as through manifold system.
 
+For the distinction between pipeline failures, captured action errors, HTTP
+status exceptions, and error-page rendering, see @ref WWWErrorHandling.
+
 ```cpp
     using framework_type = udho::www::framework<udho::www::stateful::lua::lazy_fs>;
 

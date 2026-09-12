@@ -477,6 +477,7 @@
 
   <xsl:template match="compounddef">
     <xsl:param name="module"/>
+    <xsl:variable name="template-docs" select="detaileddescription//parameterlist[@kind='templateparam']/parameteritem"/>
     <article class="compound page-{$page-type}" id="{@id}">
       <header class="compound-header">
         <div>
@@ -488,7 +489,17 @@
       </header>
 
       <xsl:if test="templateparamlist/param">
-        <div class="template-declaration"><xsl:call-template name="template-parameters"/></div>
+        <xsl:choose>
+          <xsl:when test="$page-type='compound'">
+            <xsl:call-template name="function-parameter-table">
+              <xsl:with-param name="title" select="'Template parameters'"/>
+              <xsl:with-param name="class" select="'function-template-parameters class-template-parameters'"/>
+              <xsl:with-param name="items" select="templateparamlist/param"/>
+              <xsl:with-param name="docs" select="$template-docs"/>
+            </xsl:call-template>
+          </xsl:when>
+          <xsl:otherwise><div class="template-declaration"><xsl:call-template name="template-parameters"/></div></xsl:otherwise>
+        </xsl:choose>
       </xsl:if>
 
       <xsl:if test="basecompoundref or derivedcompoundref">
