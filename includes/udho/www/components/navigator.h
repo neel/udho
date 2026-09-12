@@ -224,8 +224,13 @@ struct accessor<udho::www::components::navigator<Policy>, JournalT>: basic_acces
     using component_type        = udho::www::components::navigator<Policy>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
+    using query_type            = udho::www::feature::identifier::result;
 
     using basic_accessor_type::basic_accessor_type;
+
+    const query_type& query() const {
+        return basic_accessor_type::journal().template at<udho::www::feature::identifier>();
+    }
 
     /** @brief Returns the resource stored in the identifier result. */
     const std::string& resource() const {

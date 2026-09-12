@@ -31,8 +31,8 @@ private:
     router_type _router;
 public:
     using features = udho::manifold::features<
-        udho::www::feature::locator,
-        udho::www::feature::responder
+        udho::www::feature::locator/*,
+        udho::www::feature::responder*/
     >;
 
     using params   = udho::manifold::params<udho::www::params::routing::use_trie>;
@@ -114,7 +114,7 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locato
             std::string route = res.path();
 
             UDHO_LOG_INFO("udho::www::components::routing::facet::locator", "Failed to locate Resource", p::uri(route), p::method(request.method()), p::flow_id(_id));
-            next.fail(udho::http::error(boost::beast::http::status::not_found, udho::utils::format("route not found {}", route)));
+            next.fail(udho::http::error(boost::beast::http::status::not_found, udho::utils::format("route not found {}", route), udho::http::error::options::close));
         }
     }
 
@@ -144,56 +144,56 @@ private:
  * @tparam RouterT URL router type.
  * @ingroup DoxyG_www_components_facets
  */
-template <typename RouterT>
-struct facet<udho::www::components::routing<RouterT>, udho::www::feature::responder> {
-    using component_type = udho::www::components::routing<RouterT>;
-    using facet_type     = facet<component_type, udho::www::feature::locator>;
-    using config_type    = udho::manifold::config<component_type>;
+// template <typename RouterT>
+// struct facet<udho::www::components::routing<RouterT>, udho::www::feature::responder> {
+//     using component_type = udho::www::components::routing<RouterT>;
+//     using facet_type     = facet<component_type, udho::www::feature::locator>;
+//     using config_type    = udho::manifold::config<component_type>;
 
-    /**
-     * @brief Constructs the facet.
-     * @param component Routing component.
-     * @param config Component configuration.
-     * @param id Flow identifier.
-     */
-    facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
+//     /**
+//      * @brief Constructs the facet.
+//      * @param component Routing component.
+//      * @param config Component configuration.
+//      * @param id Flow identifier.
+//      */
+//     facet(component_type& component, const config_type& config, std::size_t id): _component(component), _config(config) {}
 
-    /**
-     * @brief Invokes the route stored in the journal.
-     * @tparam Components Components represented by the journal.
-     * @tparam NextT Continuation type.
-     * @tparam Stream Stream type.
-     * @param journal Current flow journal.
-     * @param next Pipeline continuation.
-     * @param stream Stream passed to the router.
-     */
-    template <typename... Components, typename NextT, typename Stream>
-    void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        udho::url::detail::route_index route_index = journal.template get<facet_type>();
-        bool success = _component.router().invoke_at(route_index, stream);
-        if(success) next.pass();
-        else        next.fail();
-    }
+//     /**
+//      * @brief Invokes the route stored in the journal.
+//      * @tparam Components Components represented by the journal.
+//      * @tparam NextT Continuation type.
+//      * @tparam Stream Stream type.
+//      * @param journal Current flow journal.
+//      * @param next Pipeline continuation.
+//      * @param stream Stream passed to the router.
+//      */
+//     template <typename... Components, typename NextT, typename Stream>
+//     void eval(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+//         udho::url::detail::route_index route_index = journal.template get<facet_type>();
+//         bool success = _component.router().invoke_at(route_index, stream);
+//         if(success) next.pass();
+//         else        next.fail();
+//     }
 
-    /**
-     * @brief Invokes responder evaluation.
-     * @tparam Components Components represented by the journal.
-     * @tparam NextT Continuation type.
-     * @tparam Stream Stream type.
-     * @param journal Current flow journal.
-     * @param next Pipeline continuation.
-     * @param stream Stream passed to the router.
-     */
-    template <typename... Components, typename NextT, typename Stream>
-    void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::responder>::operator()(...)" << std::endl;
-        eval(journal, std::forward<NextT>(next), stream);
-    }
+//     /**
+//      * @brief Invokes responder evaluation.
+//      * @tparam Components Components represented by the journal.
+//      * @tparam NextT Continuation type.
+//      * @tparam Stream Stream type.
+//      * @param journal Current flow journal.
+//      * @param next Pipeline continuation.
+//      * @param stream Stream passed to the router.
+//      */
+//     template <typename... Components, typename NextT, typename Stream>
+//     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
+//         std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::responder>::operator()(...)" << std::endl;
+//         eval(journal, std::forward<NextT>(next), stream);
+//     }
 
-private:
-    component_type& _component;
-    const config_type& _config;
-};
+// private:
+//     component_type& _component;
+//     const config_type& _config;
+// };
 
 /**
  * @brief Portal accessor for the routing component.

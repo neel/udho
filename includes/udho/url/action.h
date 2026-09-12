@@ -265,6 +265,9 @@ struct basic_action<F, udho::hazo::string::str<CharT, C...>, MatchT>: basic_slot
         auto rest = detail::rest<decayed_arguments_type, sizeof...(Args)>();    // rest is an empty tuple filled with default values
         // Given decayed_arguments_type = {T1...Tn} rest only includes types Tk...Tn
         // where k = sizeof...(Args)
+        if(!_match.find(subject, rest)){
+            throw std::invalid_argument("Indexed action invoked with a subject that does not match its route pattern");
+        }
         auto head = std::move(std::forward_as_tuple(std::forward<Args>(args)...));
         decayed_arguments_type tuple = std::move(std::tuple_cat(std::move(head), rest));
         slot_type::operator()(std::move(tuple));

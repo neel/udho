@@ -147,7 +147,9 @@ struct routing_table<udho::url::mountpoints_table<Mountpoints...>>{
             std::size_t expected_depth = (total_depth - depth);
             found = (expected_depth == index.mountpoint());
             if(found){
-                mountpoint.invoke_at(index.action(), index.target(), std::forward<Args>(args)...);
+                const auto& path = mountpoint.path();
+                const auto subject = path == "/" ? index.target() : index.target().substr(path.size());
+                mountpoint.invoke_at(index.action(), subject, std::forward<Args>(args)...);
             }
         });
         return found;
@@ -371,7 +373,9 @@ struct routing_table<udho::url::mount_point<StrT, ActionsT>>{
 
         bool found = (0 == mountpoint_index);
         if(found){
-            _mountpoint.invoke_at(action_index, std::forward<Args>(args)...);
+            const auto& path = _mountpoint.path();
+            const auto subject = path == "/" ? index.target() : index.target().substr(path.size());
+            _mountpoint.invoke_at(action_index, subject, std::forward<Args>(args)...);
         }
 
         return found;

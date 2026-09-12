@@ -106,7 +106,7 @@ struct framework;
 template <typename StreamT, typename Tag, typename... ExtraComponents>
 struct framework<www::basic_label<StreamT, Tag, ExtraComponents...>>  {
     using label_type    = www::basic_label<StreamT, Tag, ExtraComponents...>;
-    using endpoint_type = typename StreamT::endpoint_type;
+    // using endpoint_type = typename StreamT::endpoint_type;
 
     /**
      * @brief Applies a router and returns a runtime generator.

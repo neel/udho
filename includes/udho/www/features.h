@@ -220,7 +220,7 @@ struct body_reader{
          *
          * @return Const reference to parsed form-data.
          */
-        const udho::net::protocols::detail::form_data& form() { return _form; }
+        const udho::net::protocols::detail::form_data& form() const { return _form; }
 
         /**
          * @brief Gets the number of transferred body bytes.

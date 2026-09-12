@@ -10,6 +10,7 @@
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <udho/www/components/params.h>
 #include <udho/logging/macros.h>
+#include <udho/exceptions/exceptions.h>
 
 /** @addtogroup DoxyG_www_components
  *  @{
@@ -289,41 +290,50 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
         const udho::www::feature::header_reader::result& request = journal.template at<udho::www::feature::header_reader>();
         const udho::www::feature::identifier::result& identifier = journal.template at<udho::www::feature::identifier>();
 
-        if(request.method() == boost::beast::http::verb::get) {
-            next.skip();
-            return;
+        using result_type = udho::www::feature::body_reader::result;
+
+        std::size_t timeout_secs   = _config[udho::www::params::protocol::body_time_limit::val].value();     // Mitigate CWE-400 w.r.t. time consumed (slowloris attack)
+        std::size_t memory_limit   = _config[udho::www::params::protocol::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
+        std::size_t field_limit    = _config[udho::www::params::protocol::field_memory_limit::val].value();
+        bool use_contiguous_buffer = _config[udho::www::params::protocol::contiguous_buffer::val].value();   // overridable by user
+
+        std::string content_type   = request.count(boost::beast::http::field::content_type) ? request.at(boost::beast::http::field::content_type) : "application/octet-stream";
+
+        reader_ptr_type reader     = _component.reader(_id);
+
+        udho::net::detail::body_parser_config config;
+        config .total_content_limit(memory_limit)
+               .field_content_limit(field_limit)
+               .total_timeout(std::chrono::seconds(timeout_secs));
+
+        if(use_contiguous_buffer) {
+            reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::flat_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                udho::www::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
+                if(!ec) {
+                    next.pass(std::move(result));
+                } else if (ec == boost::system::errc::value_too_large) {
+                    next.fail(udho::http::error{boost::beast::http::status::payload_too_large, "request body exceeds its configured limit", udho::http::error::options::close});
+                } else if (ec == boost::system::errc::protocol_error || ec == boost::system::errc::invalid_argument) {
+                    next.fail(udho::http::error{boost::beast::http::status::bad_request, "invalid request body", udho::http::error::options::close});
+                } else {
+                    next.fail(ec);
+                }
+            }, config);
         } else {
-            using result_type = udho::www::feature::body_reader::result;
-
-            std::size_t timeout_secs   = _config[udho::www::params::protocol::body_time_limit::val].value();     // Mitigate CWE-400 w.r.t. time consumed (slowloris attack)
-            std::size_t memory_limit   = _config[udho::www::params::protocol::body_memory_limit::val].value();   // Mitigate CWE-400, CWE-770; read until eof not allowed unless eof comes before memort_limit exhausts
-            std::size_t field_limit    = _config[udho::www::params::protocol::field_memory_limit::val].value();
-            bool use_contiguous_buffer = _config[udho::www::params::protocol::contiguous_buffer::val].value();   // overridable by user
-
-            std::string content_type = request.count(boost::beast::http::field::content_type)
-                                           ? request.at(boost::beast::http::field::content_type)
-                                           : "application/octet-stream";
-
-            reader_ptr_type reader = _component.reader(_id);
-
-            udho::net::detail::body_parser_config config;
-            config
-                .total_content_limit(memory_limit)
-                .field_content_limit(field_limit)
-                .total_timeout(std::chrono::seconds(timeout_secs));
-
-            if(use_contiguous_buffer) {
-                reader->upload_to_flat_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::flat_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-                    udho::www::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
-                    next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-                }, config);
-            } else {
-                reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, &content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::multi_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-                    udho::www::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
-                    next(std::move(result), !ec); // The operator() overload on next forwards that call to pass or fail depending on !ec
-                }, config);
-            }
+            reader->upload_to_multi_buffer(request, [this, next{std::move(next)}, content_type, use_contiguous_buffer](udho::net::protocols::body_reader_result<boost::beast::multi_buffer>&& bresult, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+                udho::www::feature::body_reader::result result(content_type, std::move(bresult), ec, bytes_transferred);
+                if(!ec) {
+                    next.pass(std::move(result));
+                } else if (ec == boost::system::errc::value_too_large) {
+                    next.fail(udho::http::error{boost::beast::http::status::payload_too_large, "request body exceeds its configured limit", udho::http::error::options::close});
+                } else if (ec == boost::system::errc::protocol_error || ec == boost::system::errc::invalid_argument) {
+                    next.fail(udho::http::error{boost::beast::http::status::bad_request, "invalid request body", udho::http::error::options::close});
+                } else {
+                    next.fail(ec);
+                }
+            }, config);
         }
+
     }
 
 
