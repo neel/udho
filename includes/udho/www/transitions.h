@@ -172,13 +172,13 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) -> bool {
             if(error) {
                 namespace params = udho::logging::params;
                 UDHO_LOG_INFO("www::transition2", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
                 flow.abort();
-                return;
+                return false;
             }
 
             namespace params = udho::logging::params;
@@ -190,6 +190,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 },
                 args_tuple
             );
+            return true;
         };
 
         auto ex_lambda = [&flow, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){

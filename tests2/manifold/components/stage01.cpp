@@ -280,10 +280,10 @@ private:
     template <typename... Args>
     ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) -> bool {
             if(error) {
-                // TODO Error while writing to socket
-                return;
+                flow.abort();
+                return false;
             }
 
             if(restart) {
@@ -293,8 +293,10 @@ private:
                     },
                     args_tuple
                 );
+                return true;
             } else {
                 flow.abort();
+                return false;
             }
         };
 
@@ -389,10 +391,10 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
 
         // { add finish lambda to handler component
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written){
+        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) -> bool {
             if(error) {
-                // TODO Error while writing to socket
-                return;
+                flow.abort();
+                return false;
             }
 
             std::apply(
@@ -401,6 +403,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
                 },
                 args_tuple
             );
+            return true;
         };
         using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;

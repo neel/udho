@@ -239,6 +239,14 @@ namespace www_test{
         std::size_t active_flows;
     };
 
+    struct lifecycle_response {
+        std::string body;
+        std::size_t active_flows;
+        std::vector<bool> reentry_decisions;
+        std::vector<bool> responder_presence;
+        bool responder_exists_after_run;
+    };
+
     template <typename RouterT>
     response execute_minimal(RouterT&& router, const std::string& request) {
         boost::asio::io_context io;
@@ -283,6 +291,49 @@ namespace www_test{
         io.run();
 
         return {response_stream.str(), runtime.count()};
+    }
+
+    template <typename RouterT>
+    lifecycle_response execute_lifecycle(RouterT&& router, const std::string& request) {
+        boost::asio::io_context io;
+        udho::view::resources::store<> store;
+        udho::pages::system::setup(store);
+        store.lock();
+        udho::view::resources::const_store<> resources{store};
+
+        using label_type     = udho::www::test<udho::www::tags::minimal<>>;
+        using framework_type = udho::www::framework<label_type>;
+        using handler_type   = udho::www::components::basic_handler<typename label_type::stream_type>;
+
+        auto framework = framework_type::apply(std::forward<RouterT>(router));
+        auto runtime   = framework.runtime(resources);
+        auto& handler  = runtime.composition().template get<handler_type>().component();
+
+        boost::beast::test::stream request_stream(io, request);
+        boost::beast::test::stream response_stream(io);
+        request_stream.connect(response_stream);
+        response_stream.close();
+
+        auto& flow = runtime.spawn(std::move(request_stream));
+        const auto flow_id = flow.id();
+        std::vector<bool> reentry_decisions;
+        std::vector<bool> responder_presence;
+
+        flow.then([&](const auto& terminating_flow, bool reenter) {
+            reentry_decisions.push_back(reenter);
+            responder_presence.push_back(handler.exists(terminating_flow.id()));
+        });
+
+        flow.start();
+        io.run();
+
+        return {
+            response_stream.str(),
+            runtime.count(),
+            std::move(reentry_decisions),
+            std::move(responder_presence),
+            handler.exists(flow_id)
+        };
     }
 
     inline std::string get_request(const std::string& target) {
@@ -1050,6 +1101,63 @@ TEST_CASE("udho www framework times out unfinished responses", "[www][test-strea
         www_test::check_statuses(result.body, {200, 503});
         CHECK(result.body.find("Connection: close") != std::string::npos);
         CHECK(result.active_flows == 0);
+    }
+}
+
+TEST_CASE("udho www retires responders with aborted flows", "[www][test-stream][lifecycle]") {
+    SECTION("framework 404 closes the first response") {
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::get_request("/missing")
+        );
+
+        CHECK(result.body.find(www_test::status_marker(404)) != std::string::npos);
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("successful response is followed by end of stream") {
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::get_request("/ok/1")
+        );
+
+        CHECK(result.body.find(www_test::status_marker(200)) != std::string::npos);
+        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
+        CHECK(result.responder_presence == std::vector<bool>{true, true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("successful response is followed by a closing 404") {
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::concatenate_requests({
+                www_test::get_request("/ok/1"),
+                www_test::post_request("/missing", "unread-body")
+            })
+        );
+
+        www_test::check_statuses(result.body, {200, 404});
+        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
+        CHECK(result.responder_presence == std::vector<bool>{true, true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("idle timeout produces a closing 503 response") {
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::timeout_router(),
+            www_test::get_request("/stall")
+        );
+
+        CHECK(result.body.find(www_test::status_marker(503)) != std::string::npos);
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
     }
 }
 

@@ -55,7 +55,7 @@ struct basic_handler{
      */
     struct responder{
         /// Callback invoked when the output operation finishes.
-        using callback_type             = std::function<void (boost::system::error_code, std::size_t)>;
+        using callback_type             = std::function<bool (boost::system::error_code, std::size_t)>;
         /// Callback invoked when the output stream reports an exception path.
         using exception_callback_type   = std::function<void (ostream_type&)>;
 
@@ -75,8 +75,8 @@ struct basic_handler{
          *          completed response because that state has already been cleared.
          */
         template <typename FinishCallback, typename ExceptionCallback>
-        responder(stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
-            : _ostream(stream,
+        responder(basic_handler<StreamT>& handler, std::size_t id, stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
+            : _handler(handler), _id(id), _ostream(stream,
                     std::bind(&responder::on_finish, this, std::placeholders::_1, std::placeholders::_2),
                     std::bind(&responder::on_exception, this, std::placeholders::_1)
                 )
@@ -114,7 +114,9 @@ struct basic_handler{
          * @param bytes_written Number of bytes reported as written.
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
-            _callback(ec, bytes_written);
+            if(!_callback(ec, bytes_written)){
+                _handler.retire(_id);
+            }
         }
 
         /**
@@ -128,6 +130,8 @@ struct basic_handler{
             _ex_callback(ostream);
         }
     private:
+        basic_handler<StreamT>& _handler;
+        std::size_t             _id;
         ostream_type  _ostream;
         callback_type _callback;
         exception_callback_type _ex_callback;
@@ -170,7 +174,7 @@ struct basic_handler{
         bool success = false;
         std::tie(responder_it, success) = _responders.emplace(std::piecewise_construct,
             std::forward_as_tuple(id),
-            std::forward_as_tuple(stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
+            std::forward_as_tuple(*this, id, stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
         );
         assert(success);
         assert(responder_it->first == id);
@@ -234,6 +238,11 @@ struct basic_handler{
 
         _responders.erase(it);
         return true;
+    }
+
+    void retire(std::size_t id) {
+        bool success = remove(id);
+        assert(success);
     }
 
     /**
