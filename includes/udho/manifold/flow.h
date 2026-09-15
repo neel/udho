@@ -49,7 +49,10 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     /// @name Pipeline sompletion callback
     /// @{
-    using callback_type        = std::function<void (const basic_flow<LabelT, StreamT>&, bool)>;
+    using pre_callback_type         = std::function<void (const basic_flow<LabelT, StreamT>&, bool)>;
+    using pre_callbacks_list_type   = std::list<pre_callback_type>;
+    using post_callback_type        = std::function<void (std::size_t)>;
+    using post_callbacks_list_type  = std::list<post_callback_type>;
     /// @}
 
     using journal_type         = typename start_pipeline_type::full_journal_type;
@@ -184,8 +187,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
 
     const start_pipeline_type& root() const { return _root_pipeline; }
 
-    void then(callback_type&& callback){
-        _callback = std::move(callback);
+    void before(pre_callback_type&& callback){
+        _callbacks_pre.emplace_back(std::move(callback));
+    }
+
+    void then(post_callback_type&& callback){
+        _callbacks_post.emplace_back(std::move(callback));
     }
 
     composition_type& composition() { return _root_pipeline.composition(); }
@@ -232,16 +239,32 @@ private:
         namespace p = udho::logging::params;
         UDHO_LOG_INFO("manifold::flow", "Terminated", p::flow_id(id()), p::socket_id(udho::utils::misc::native_handle(_stream)));
 
-        if(_callback){
+
+        if(!_callbacks_pre.empty()){
             try{
-                _callback(*this, reenter);
+                for(pre_callback_type& callback: _callbacks_pre) {
+                    callback(*this, reenter);
+                }
             } catch(const std::exception& ex) {
-                std::cout << "Exception thrown from terminate callback: " << ex.what() << std::endl;
+                std::cout << "Exception thrown from pre terminate callback: " << ex.what() << std::endl;
             }
         }
+
         if(!reenter) {
             const auto flow_id = id();
+            auto callbacks = std::move(_callbacks_post);
+
             bool removed = _runtime.remove(*this);
+
+            if(!callbacks.empty()){
+                try{
+                    for(post_callback_type& callback: callbacks) {
+                        callback(flow_id);
+                    }
+                } catch(const std::exception& ex) {
+                    std::cout << "Exception thrown from post terminate callback: " << ex.what() << std::endl;
+                }
+            }
 
             if(!removed) {
                 UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(flow_id));
@@ -278,7 +301,8 @@ private:
     std::size_t             _id;
     start_pipeline_type     _root_pipeline;
     finish_pipeline_type&   _finish_pipeline;
-    callback_type           _callback;
+    pre_callbacks_list_type  _callbacks_pre;
+    post_callbacks_list_type _callbacks_post;
     terminal_type           _terminal;
     static std::size_t      _counter;
 };

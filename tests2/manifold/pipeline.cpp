@@ -771,7 +771,7 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
             udho::manifold::vis::html::runtime(html, runtime);
         }
 
-        flow.then([](const flow_type& cflow, bool reenter){
+        flow.before([](const flow_type& cflow, bool reenter){
             CHECK(!reenter);
 
             // Verify execution order and content
@@ -836,7 +836,7 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         std::stringstream stream;
         flow_type& flow = runtime.spawn(std::move(stream));
 
-        flow.then([](const flow_type& cflow, bool reenter){
+        flow.before([](const flow_type& cflow, bool reenter){
             CHECK(!reenter);
 
             std::string output = cflow.stream().str();
@@ -881,7 +881,7 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         std::stringstream stream;
         flow_type& flow = runtime.spawn(std::move(stream));
 
-        flow.then([](const flow_type& cflow, bool reenter){
+        flow.before([](const flow_type& cflow, bool reenter){
             CHECK(!reenter);
 
             std::string output = cflow.stream().str();
@@ -938,7 +938,7 @@ TEST_CASE("Pipeline System - Patch Configuration", "[manifold][pipeline][patch]"
         std::stringstream stream;
         flow_type& flow = runtime.spawn(std::move(stream));
 
-        flow.then([](const flow_type& cflow, bool reenter){
+        flow.before([](const flow_type& cflow, bool reenter){
             CHECK(!reenter);
 
             std::string output = cflow.stream().str();
@@ -1000,7 +1000,7 @@ TEST_CASE("Pipeline System - Configuration Disables Components", "[manifold][pip
         std::stringstream stream;
         flow_type& flow = runtime.spawn(std::move(stream));
 
-        flow.then([](const flow_type& cflow, bool reenter){
+        flow.before([](const flow_type& cflow, bool reenter){
             CHECK(!reenter);
 
             std::string output = cflow.stream().str();

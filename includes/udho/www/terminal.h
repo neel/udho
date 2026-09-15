@@ -275,13 +275,13 @@ private:
     template <typename... Args>
     ostream_type& get_ostream(flow_type& flow, bool restart, stream_type& stream, Args&&... args) {
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) -> bool {
+        auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) {
             if(error) {
                 namespace params = udho::logging::params;
                 UDHO_LOG_INFO("www::terminal", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
                 flow.abort();
-                return false;
+                return;
             }
 
             if(restart) {
@@ -291,10 +291,8 @@ private:
                     },
                     args_tuple
                 );
-                return true;
             } else {
                 flow.abort();
-                return false;
             }
         };
 

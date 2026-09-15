@@ -319,7 +319,7 @@ namespace www_test{
         std::vector<bool> reentry_decisions;
         std::vector<bool> responder_presence;
 
-        flow.then([&](const auto& terminating_flow, bool reenter) {
+        flow.before([&](const auto& terminating_flow, bool reenter) {
             reentry_decisions.push_back(reenter);
             responder_presence.push_back(handler.exists(terminating_flow.id()));
         });

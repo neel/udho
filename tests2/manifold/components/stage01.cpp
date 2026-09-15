@@ -496,7 +496,7 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
 
     std::size_t counter = 0;
 
-    flow.then([&counter](const auto& flow, bool reenter) {
+    flow.before([&counter](const auto& flow, bool reenter) {
         std::cout << "finished: " << reenter << std::endl;
         const journal_type& journal = flow.journal();
 

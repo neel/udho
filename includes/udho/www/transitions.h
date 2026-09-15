@@ -159,26 +159,18 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         configs_type& configs         = p.configs();
         // }
 
-        // { patch the configs as per the route
-        const auto& route = journal.template at<udho::www::feature::locator>();
-        assert(route.ready());
-        const udho::url::detail::route_index& route_index = *route;
-        const auto& routing_component = composition.template at<udho::www::feature::locator, 0>().component();
-        const auto& router = routing_component.router();
-        // }
-
         // { add finish lambda to handler component
         using handler_type = udho::www::components::basic_handler<StreamT>;
         using ostream_type = udho::net::basic_ostream<StreamT>;
 
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
-        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) -> bool {
+        auto lambda = [&p, &stream, &flow, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) {
             if(error) {
                 namespace params = udho::logging::params;
                 UDHO_LOG_INFO("www::transition2", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
 
                 flow.abort();
-                return false;
+                return;
             }
 
             namespace params = udho::logging::params;
@@ -190,7 +182,6 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
                 },
                 args_tuple
             );
-            return true;
         };
 
         auto ex_lambda = [&flow, &stream, args_tuple = std::move(args_tuple)](ostream_type& ostream){
@@ -210,7 +201,6 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         handler_type& handler = composition.template get<handler_type>().component();
         ostream_type& ostream = handler.add(flow.id(), stream, std::move(lambda), std::move(ex_lambda));
         ostream.prepare();
-
         // }
 
         // { create context
@@ -221,6 +211,14 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
         // }
 
         udho::www::feature::identifier::result res = journal.template at<udho::www::feature::identifier>();
+
+        // { patch the configs as per the route
+        const auto& route = journal.template at<udho::www::feature::locator>();
+        assert(route.ready());
+        const udho::url::detail::route_index& route_index = *route;
+        const auto& routing_component = composition.template at<udho::www::feature::locator, 0>().component();
+        const auto& router = routing_component.router();
+        // }
 
         namespace params = udho::logging::params;
         UDHO_LOG_INFO("www::transition2", "Invoked", params::flow_id(flow.id()), params::uri(route_index.type() == udho::url::detail::route_index::type::registry ? res.path() : res.resource()), params::socket_id(udho::utils::misc::native_handle(stream)));

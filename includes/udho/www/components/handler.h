@@ -36,7 +36,7 @@ namespace components{
  */
 template <typename StreamT>
 struct basic_handler{
-    using features = udho::manifold::features<>;
+    using features = udho::manifold::features<udho::www::feature::responder>;
     static constexpr const char* name = "handler";
     using params      = udho::manifold::params<>;
 
@@ -55,7 +55,7 @@ struct basic_handler{
      */
     struct responder{
         /// Callback invoked when the output operation finishes.
-        using callback_type             = std::function<bool (boost::system::error_code, std::size_t)>;
+        using callback_type             = std::function<void (boost::system::error_code, std::size_t)>;
         /// Callback invoked when the output stream reports an exception path.
         using exception_callback_type   = std::function<void (ostream_type&)>;
 
@@ -75,8 +75,8 @@ struct basic_handler{
          *          completed response because that state has already been cleared.
          */
         template <typename FinishCallback, typename ExceptionCallback>
-        responder(basic_handler<StreamT>& handler, std::size_t id, stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
-            : _handler(handler), _id(id), _ostream(stream,
+        responder(/*basic_handler<StreamT>& handler, std::size_t id, */stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
+            : /*_handler(handler), _id(id),*/ _ostream(stream,
                     std::bind(&responder::on_finish, this, std::placeholders::_1, std::placeholders::_2),
                     std::bind(&responder::on_exception, this, std::placeholders::_1)
                 )
@@ -106,17 +106,18 @@ struct basic_handler{
         /**
          * @brief Internal completion hook.
          *
-         * Resets the wrapped output stream and then forwards the completion result
-         * to the configured callback. No responder state is accessed after invoking
+         * Forwards the completion result after the wrapped output stream has been
+         * reset for possible reuse. No responder state is accessed after invoking
          * the callback.
          *
          * @param ec Completion status.
          * @param bytes_written Number of bytes reported as written.
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
-            if(!_callback(ec, bytes_written)){
-                _handler.retire(_id);
-            }
+            // if(!_callback(ec, bytes_written)){
+            //     _handler.retire(_id);
+            // }
+            _callback(ec, bytes_written);
         }
 
         /**
@@ -130,8 +131,8 @@ struct basic_handler{
             _ex_callback(ostream);
         }
     private:
-        basic_handler<StreamT>& _handler;
-        std::size_t             _id;
+        // basic_handler<StreamT>& _handler;
+        // std::size_t             _id;
         ostream_type  _ostream;
         callback_type _callback;
         exception_callback_type _ex_callback;
@@ -174,7 +175,7 @@ struct basic_handler{
         bool success = false;
         std::tie(responder_it, success) = _responders.emplace(std::piecewise_construct,
             std::forward_as_tuple(id),
-            std::forward_as_tuple(*this, id, stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
+            std::forward_as_tuple(/**this, id,*/ stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
         );
         assert(success);
         assert(responder_it->first == id);
@@ -240,10 +241,10 @@ struct basic_handler{
         return true;
     }
 
-    void retire(std::size_t id) {
-        bool success = remove(id);
-        assert(success);
-    }
+    // void retire(std::size_t id) {
+    //     bool success = remove(id);
+    //     assert(success);
+    // }
 
     /**
      * @brief Return the router summary associated with this handler.
@@ -260,6 +261,30 @@ private:
 } // www
 
 namespace manifold{
+
+/**
+ * @brief Removes the responder associated with a flow when that flow is destroyed.
+ *
+ * The facet is owned by the flow's stage-2 fabric. It retains the flow id
+ * supplied during fabric construction and uses it to remove the corresponding
+ * responder from the shared handler component during flow destruction.
+ *
+ * @tparam StreamT Stream type associated with the handler component.
+ * @ingroup DoxyG_www_components_facets
+ */
+template <typename StreamT>
+struct facet<udho::www::components::basic_handler<StreamT>, udho::www::feature::responder>{
+    using component_type = udho::www::components::basic_handler<StreamT>;
+    using config_type    = udho::manifold::config<component_type>;
+
+    facet(component_type& component, const config_type&, std::size_t id): _component(component), _id(id) {}
+
+    ~facet() {  _component.remove(_id); }
+
+private:
+    component_type& _component;
+    std::size_t     _id;
+};
 
 /**
  * @brief Portal accessor for handler route summaries.
