@@ -227,11 +227,6 @@ struct basic_handler{
      *
      * @param id Flow identifier.
      * @return true if a responder was removed; false if no responder existed.
-     *
-     * @warning This operation is synchronous and does not wait for outstanding
-     *          asynchronous operations. The caller must ensure that the responder
-     *          is not executing a callback and that no pending handler can access
-     *          the responder or its ostream.
      */
     bool remove(std::size_t id) {
         auto it = _responders.find(id);

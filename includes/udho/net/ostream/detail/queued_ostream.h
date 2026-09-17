@@ -174,13 +174,12 @@ private:
         if(_encoding.encoding() == udho::net::types::transfer::encoding::chunked) {
             boost::asio::async_write(
                 _stream, boost::asio::buffer(_last_chunk, 5),
-                boost::asio::bind_executor(_strand,
-                                           [this](boost::system::error_code ec, std::size_t bytes_written) {
-                                               _bytes_written += bytes_written;
-                                               on_finish_cb(ec, _bytes_written);
-                                           }
-                                           )
-                );
+                boost::asio::bind_executor(_strand, [this](boost::system::error_code ec, std::size_t bytes_written) {
+                        _bytes_written += bytes_written;
+                        on_finish_cb(ec, _bytes_written);
+                    }
+                )
+            );
         } else {
             boost::asio::dispatch(_strand, [this]() {
                 on_finish_cb(boost::system::error_code{}, _bytes_written);
@@ -193,18 +192,17 @@ private:
         _write_ongoing = true;
         boost::asio::async_write(
             _stream, boost::asio::buffer(p.buffer(), p.buffer().size()),
-            boost::asio::bind_executor(_strand,
-                                       [this, p](boost::system::error_code error, std::size_t bytes_written) {
-                                           _bytes_written += bytes_written;
-                                           pop_payload(p.id());
-                                           if (!error) {
-                                               _write_ongoing = false;
-                                               pump();
-                                           } else {
-                                               on_finish_cb(error, _bytes_written);
-                                           }
-                                       }
-                                       )
+            boost::asio::bind_executor(_strand, [this, p](boost::system::error_code error, std::size_t bytes_written) {
+                        _bytes_written += bytes_written;
+                        pop_payload(p.id());
+                        if (!error) {
+                            _write_ongoing = false;
+                            pump();
+                        } else {
+                            on_finish_cb(error, _bytes_written);
+                        }
+                    }
+                )
             );
     }
 
@@ -220,20 +218,19 @@ private:
         _write_ongoing = true;
         boost::asio::async_write(
             _stream, std::move(bufs), // bufs is moved
-            boost::asio::bind_executor( _strand,
-                   [this, p = std::move(p)](boost::system::error_code error, std::size_t bytes_written) {
-                       _bytes_written += bytes_written;
-                       _ongoing_header_buffer.clear();
-                       pop_payload(p.id());
-                       if (!error) {
-                           _write_ongoing = false;
-                           pump();
-                       } else {
-                           on_finish_cb(error, _bytes_written);
-                       }
-                   }
-                )
-            );
+            boost::asio::bind_executor( _strand, [this, p = std::move(p)](boost::system::error_code error, std::size_t bytes_written) {
+                    _bytes_written += bytes_written;
+                    _ongoing_header_buffer.clear();
+                    pop_payload(p.id());
+                    if (!error) {
+                        _write_ongoing = false;
+                        pump();
+                    } else {
+                        on_finish_cb(error, _bytes_written);
+                    }
+                }
+            )
+        );
     }
 
     /**
@@ -298,10 +295,18 @@ public:
      * @param ec error code if reset is called after some error occured
      */
     void reset(boost::system::error_code ec = {}) {
+        if(!ec) {
+            assert(_ongoing_header_buffer.size() == 0);
+            assert(_finished);
+            assert(_eoq);
+        } else {
+            detail::buffer_queue::clear();
+            _ongoing_header_buffer.clear();
+            _finished   = true;
+            _eoq        = true;
+        }
+
         detail::buffer_queue::reset();
-        assert(_ongoing_header_buffer.size() == 0);
-        assert(_finished);
-        assert(_eoq);
 
         _write_ongoing  = false;
         _finished       = false;

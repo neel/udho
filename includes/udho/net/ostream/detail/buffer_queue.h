@@ -253,6 +253,12 @@ protected:
         _count = 0;
     }
 
+    void clear() {
+        _del_queue = {};
+        _ptr_queue = {};
+        _dat_queue = {};
+    }
+
 private:
     borrowed_queue_type     _ptr_queue;
     owned_queue_type        _dat_queue;
