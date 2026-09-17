@@ -8,6 +8,7 @@
 #include <udho/www/pages.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <cpptrace/cpptrace.hpp>
+#include <boost/beast/http/rfc7230.hpp>
 
 namespace udho {
 namespace manifold {
@@ -110,7 +111,18 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      * @note Call originates from basic_flow<LabelT, StreamT>::reenter()
      */
     bool reenter(stream_type& stream) {
-        return true;
+        if(!_journal.template ready<udho::www::feature::header_reader>()) {
+            return false;
+        }
+
+        const udho::www::feature::header_reader::result& request = _journal.template first_of<udho::www::feature::header_reader>();
+        boost::beast::http::token_list connection{request[boost::beast::http::field::connection]};
+
+        if(request.version() < 11) {
+            return connection.exists("keep-alive");
+        }
+
+        return !connection.exists("close");
     }
 
     /**
