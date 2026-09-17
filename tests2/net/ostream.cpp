@@ -6,10 +6,12 @@
 #include <catch2/catch_all.hpp>
 #endif
 #include <udho/net/ostream.h>
+#include <boost/beast/_experimental/test/fail_count.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <udho/utils/encoding.h>
 #include <iostream>
 #include <boost/thread.hpp>
+#include <vector>
 
 namespace cdigits{
 
@@ -307,6 +309,48 @@ TEST_CASE("udho manifold basic_queued_ostream", "[manifold][stream][queued]") {
 
         CHECK(is_completed);
         CHECK(udho::utils::encode::base16(client.str()) == "330d0a4142430d0a340d0a444546470d0a300d0a0d0a");
+    }
+
+    SECTION("queued stream discards pending writes after a write failure") {
+        boost::beast::test::fail_count failures{0};
+        stream_type failing_server(io, failures);
+        stream_type failing_client(io);
+        strand_type failing_strand(failing_server.get_executor());
+
+        failing_server.connect(failing_client);
+
+        udho::net::types::transfer_encoding enc{udho::net::types::transfer::encoding::plain};
+        std::vector<boost::system::error_code> completions;
+        queued_stream* stream_ptr = nullptr;
+        queued_stream failing_stream(failing_server, failing_strand, enc,
+            [&](boost::system::error_code ec, std::size_t) {
+                completions.push_back(ec);
+                stream_ptr->reset(ec);
+            }
+        );
+        stream_ptr = &failing_stream;
+
+        boost::asio::post(failing_strand, [&] {
+            failing_stream.write(std::string("failing"));
+            failing_stream.write(std::string("pending-1"));
+            failing_stream.write(std::string("pending-2"));
+        });
+        io.run();
+
+        REQUIRE(completions.size() == 1);
+        CHECK(completions.front() == boost::beast::test::error::test_failure);
+        CHECK(failing_client.str().empty());
+
+        io.restart();
+        boost::asio::post(failing_strand, [&] {
+            failing_stream.resume();
+            failing_stream.finish();
+        });
+        io.run();
+
+        REQUIRE(completions.size() == 2);
+        CHECK_FALSE(completions.back());
+        CHECK(failing_client.str().empty());
     }
 
     SECTION("queued stream - strict ordering - plain") {

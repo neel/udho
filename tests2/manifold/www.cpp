@@ -336,10 +336,18 @@ namespace www_test{
         };
     }
 
+    inline std::string get_request(const std::string& target, const std::string& version, const std::string& connection = {}) {
+        std::string request =
+            "GET " + target + " HTTP/" + version + "\r\n"
+            "Host: example.com\r\n";
+        if(!connection.empty()) {
+            request += "Connection: " + connection + "\r\n";
+        }
+        return request + "\r\n";
+    }
+
     inline std::string get_request(const std::string& target) {
-        return "GET " + target + " HTTP/1.1\r\n"
-               "Host: example.com\r\n"
-               "\r\n";
+        return get_request(target, "1.1");
     }
 
     inline std::string post_request(const std::string& target, const std::string& body) {
@@ -1156,6 +1164,80 @@ TEST_CASE("udho www retires responders with aborted flows", "[www][test-stream][
         CHECK(result.body.find(www_test::status_marker(503)) != std::string::npos);
         CHECK(result.reentry_decisions == std::vector<bool>{false});
         CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+}
+
+TEST_CASE("udho www applies request persistence semantics", "[www][test-stream][connection][reentry]") {
+    SECTION("HTTP 1.1 re-enters by default") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::concatenate_requests({
+                www_test::get_request("/ok/1", "1.1"),
+                www_test::get_request("/ok/2", "1.1", "close")
+            })
+        );
+
+        REQUIRE(www_test_callbacks::exception_invocations == std::vector<std::string>{"ok:1", "ok:2"});
+        www_test::check_statuses(result.body, {200, 200});
+        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
+        CHECK(result.responder_presence == std::vector<bool>{true, true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("HTTP 1.1 Connection close prevents re-entry") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::concatenate_requests({
+                www_test::get_request("/ok/1", "1.1", "close"),
+                www_test::get_request("/ok/2", "1.1")
+            })
+        );
+
+        REQUIRE(www_test_callbacks::exception_invocations == std::vector<std::string>{"ok:1"});
+        www_test::check_statuses(result.body, {200});
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("HTTP 1.0 closes by default") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::concatenate_requests({
+                www_test::get_request("/ok/1", "1.0"),
+                www_test::get_request("/ok/2", "1.0")
+            })
+        );
+
+        REQUIRE(www_test_callbacks::exception_invocations == std::vector<std::string>{"ok:1"});
+        www_test::check_statuses(result.body, {200});
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("HTTP 1.0 Connection keep-alive permits re-entry") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::concatenate_requests({
+                www_test::get_request("/ok/1", "1.0", "keep-alive"),
+                www_test::get_request("/ok/2", "1.0")
+            })
+        );
+
+        REQUIRE(www_test_callbacks::exception_invocations == std::vector<std::string>{"ok:1", "ok:2"});
+        www_test::check_statuses(result.body, {200, 200});
+        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
+        CHECK(result.responder_presence == std::vector<bool>{true, true});
         CHECK(result.active_flows == 0);
         CHECK_FALSE(result.responder_exists_after_run);
     }
