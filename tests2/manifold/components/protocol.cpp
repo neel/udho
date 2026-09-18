@@ -243,6 +243,37 @@ TEST_CASE("udho manifold protocol", "[manifold][components][http]") {
 
         }
     }
+
+    SECTION("configured header memory limit rejects oversized headers") {
+        io_context.restart();
+        config[udho::www::params::protocol::header_memory_limit::val] = std::uint32_t{64};
+
+        result_type result;
+        std::exception_ptr ex;
+        journal_type journal;
+        std::string request_data =
+            "GET /limited HTTP/1.1\r\n"
+            "Host: example.com\r\n"
+            "X-Oversized: " + std::string(128, 'x') + "\r\n"
+            "\r\n";
+
+        stream_type stream(io_context, request_data);
+        fabric_type fabric{component, config, 0};
+        fabric.eval(journal, next_type{result, ex}, stream);
+
+        io_context.run_for(std::chrono::milliseconds(100));
+
+        REQUIRE(ex);
+        bool exception_caught = false;
+        try {
+            std::rethrow_exception(ex);
+        } catch(const std::system_error& error) {
+            const std::error_code expected = static_cast<std::error_code>(boost::beast::http::make_error_code(boost::beast::http::error::header_limit));
+            CHECK(error.code() == expected);
+            exception_caught = true;
+        }
+        REQUIRE(exception_caught);
+    }
 }
 
 TEST_CASE("udho manifold protocol", "[manifold][components][scgi]") {

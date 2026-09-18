@@ -174,6 +174,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
         using result = udho::www::feature::header_reader::result;
 
         std::size_t timeout_secs = _config[udho::www::params::protocol::header_time_limit::val].value();
+        std::size_t max_bytes    = _config[udho::www::params::protocol::header_memory_limit::val].value();
 
         reader_ptr_type reader = _component.reader(_id, stream);
         reader->start([this, next{std::move(next)}, reader](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
@@ -197,7 +198,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
                 //      Move it to the destructor
                 // _component.remove(_id);
             }
-        }, timeout_secs);
+        }, timeout_secs, max_bytes);
     }
 
     /**

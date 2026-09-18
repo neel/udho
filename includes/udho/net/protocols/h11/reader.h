@@ -79,10 +79,10 @@ public:
      * instance can then be used to read the body via `upload()`.
      */
     template <typename Handler>
-    void start(Handler&& handler, std::size_t seconds){
+    void start(Handler&& handler, std::size_t seconds, std::uint32_t max_bytes){
         _header.start([h = std::move(handler), this](http_request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
             h(std::move(request), ec, bytes_transferred);
-        }, seconds);
+        }, seconds, max_bytes);
     }
 
     /**

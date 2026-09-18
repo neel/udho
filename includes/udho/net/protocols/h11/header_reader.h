@@ -76,12 +76,13 @@ struct header_reader{
      *       be invoked exactly once.
      */
     template <typename Handler>
-    void start(Handler&& handler, std::size_t seconds){
+    void start(Handler&& handler, std::size_t seconds, std::uint32_t max_bytes){
         _parser.emplace();
+        parser().header_limit(max_bytes);
+
         assert(_parser.has_value());
         start_timer(seconds);
-        boost::beast::http::async_read_header(
-            _stream, _buffer, parser(),
+        boost::beast::http::async_read_header(_stream, _buffer, parser(),
             [this, handler = std::move(handler)] (boost::system::error_code ec, std::size_t bytes_transferred) mutable {
                 assert(_parser.has_value());
                 finished(std::move(handler), ec, bytes_transferred);
