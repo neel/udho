@@ -204,7 +204,7 @@ private:
 template <typename RouterT, typename JournalT>
 struct accessor<udho::www::components::routing<RouterT>, JournalT>: basic_accessor<udho::www::components::routing<RouterT>, JournalT>{
     using basic_accessor_type   = basic_accessor<udho::www::components::routing<RouterT>, JournalT>;
-    using component_type        = udho::www::components::routing<udho::www::components::routing<RouterT>>;
+    using component_type        = udho::www::components::routing<RouterT>;
     using config_type           = udho::manifold::config<component_type>;
     using journal_type          = JournalT;
 

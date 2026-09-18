@@ -34,7 +34,7 @@ struct client_error{
                 <a href="/">docroot</a>
                 <a href="{}">assets</a>
             </div>
-        )", error.what(), _context.portal().resources().assets().base());
+        )", udho::utils::encode::escape(error.what()), _context.portal().resources().assets().base());
 
         if(error.status() == boost::beast::http::status::not_found) {
             layout[places::routes]          = _context.portal().routes();
