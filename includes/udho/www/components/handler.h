@@ -2,6 +2,7 @@
 #define UDHO_WWW_COMPONENTS_HANDLER_H
 
 #include <map>
+#include <mutex>
 #include <functional>
 #include <udho/utils/format.h>
 #include <udho/www/features.h>
@@ -166,6 +167,8 @@ struct basic_handler{
      */
     template <typename FinishCallback, typename ExceptionCallback>
     ostream_type& add(std::size_t id, stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback){
+        const std::lock_guard<std::mutex> lock(_mutex);
+
         auto responder_it = _responders.find(id);
         if(responder_it != _responders.end()) {
             assert(responder_it->first == id);
@@ -191,6 +194,8 @@ struct basic_handler{
      * @return Reference to the stored responder.
      */
     responder& responder(std::size_t id) {
+        const std::lock_guard<std::mutex> lock(_mutex);
+
         auto responder_it = _responders.find(id);
         assert(responder_it != _responders.end());
         assert(responder_it->first == id);
@@ -215,6 +220,8 @@ struct basic_handler{
      * @param id Flow identifier.
      */
     bool exists(std::size_t id) const {
+        const std::lock_guard<std::mutex> lock(_mutex);
+
         auto responder_it = _responders.find(id);
         return (responder_it != _responders.end());
     }
@@ -229,6 +236,8 @@ struct basic_handler{
      * @return true if a responder was removed; false if no responder existed.
      */
     bool remove(std::size_t id) {
+        const std::lock_guard<std::mutex> lock(_mutex);
+
         auto it = _responders.find(id);
         if(it == _responders.end()) return false;
 
@@ -250,6 +259,7 @@ struct basic_handler{
 private:
     collection_type _responders;
     udho::url::summary::router _summary;
+    mutable std::mutex _mutex;
 };
 
 } // components

@@ -36,6 +36,7 @@ private:
     variant_type _variant;
 protected:
     basic_hybrid_storage(variant_type&& variant): _variant(std::move(variant)) {}
+    basic_hybrid_storage(value_type& value): _variant(std::in_place_index<0>, std::ref(value)) {}
     basic_hybrid_storage(std::in_place_index_t<1>): _variant(std::in_place_index<1>) {}
 public:
     reference_type component() {
@@ -60,7 +61,7 @@ struct hybrid_storage: basic_hybrid_storage<T>{
     using basic_hybrid_storage_type = basic_hybrid_storage<T>;
     using variant_type   = typename basic_hybrid_storage_type::variant_type;
 
-    explicit hybrid_storage(T& value): basic_hybrid_storage_type(variant_type{std::ref(value)}) {}
+    explicit hybrid_storage(T& value): basic_hybrid_storage_type(value) {}
     explicit hybrid_storage(T&& value): basic_hybrid_storage_type(variant_type{std::move(value)}) {}
     explicit hybrid_storage(): basic_hybrid_storage_type(variant_type{T{}}) {}
     explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(variant_type{T{}}) {}
@@ -71,7 +72,7 @@ struct hybrid_storage<T, true, false>: basic_hybrid_storage<T>{
     using basic_hybrid_storage_type = basic_hybrid_storage<T>;
     using variant_type   = typename basic_hybrid_storage_type::variant_type;
 
-    explicit hybrid_storage(T& value): basic_hybrid_storage_type(variant_type{std::ref(value)}) {}
+    explicit hybrid_storage(T& value): basic_hybrid_storage_type(value) {}
     explicit hybrid_storage(T&& value): basic_hybrid_storage_type(variant_type{std::move(value)}) {}
     explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(variant_type{*dummy}) {
         static_assert(false, "Default construction not available for CompopnentT, expecting lvalue or rvalue reference");
@@ -89,7 +90,7 @@ struct hybrid_storage<T, false, true>: basic_hybrid_storage<T>{
     using basic_hybrid_storage_type = basic_hybrid_storage<T>;
     using variant_type   = typename basic_hybrid_storage_type::variant_type;
 
-    explicit hybrid_storage(T& value): basic_hybrid_storage_type(variant_type{std::ref(value)}) {}
+    explicit hybrid_storage(T& value): basic_hybrid_storage_type(value) {}
     explicit hybrid_storage(): basic_hybrid_storage_type(std::in_place_index<1>) {}
     explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(std::in_place_index<1>) {}
 
@@ -103,7 +104,7 @@ struct hybrid_storage<T, false, false>: basic_hybrid_storage<T>{
     using basic_hybrid_storage_type = basic_hybrid_storage<T>;
     using variant_type   = typename basic_hybrid_storage_type::variant_type;
 
-    explicit hybrid_storage(T& value): basic_hybrid_storage_type(variant_type{std::ref(value)}) {}
+    explicit hybrid_storage(T& value): basic_hybrid_storage_type(value) {}
 
     explicit hybrid_storage(default_constructed&&): basic_hybrid_storage_type(variant_type{*dummy}) {
         static_assert(false, "Default construction not available for CompopnentT, expecting lvalue or rvalue reference");
