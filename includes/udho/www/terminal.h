@@ -152,25 +152,35 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      */
     template <typename... Args>
     void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
-        if(success.has_exception()) {
-            try{
-                success.rethrow();
-            } catch(const udho::http::error& error) {
-                // std::cout << "exception: " << error.what() << std::endl;
-                handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
-            } catch(const std::system_error& error) {
-                std::cout << "std::system_error: " << error.what() << std::endl;
-                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
-            } catch(const boost::system::system_error& error) {
-                std::cout << "boost::system::system_error: " << error.what() << std::endl;
-                handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
-            } catch(const boost::exception& bex) {
-                std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
-                handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
-            } catch(const std::exception& ex) {
-                std::cout << "exception: " << ex.what() << std::endl;
-                handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
-            }
+        if(!success.has_exception()){
+            assert(!success.success());
+            std::runtime_error unknown_error{"Unknown error"};
+            handle_error(flow, unknown_error, success.capex().trace(), stream, std::forward<Args>(args)...);
+            return;
+        }
+
+        assert(success.has_exception());
+
+        try{
+            success.rethrow();
+        } catch(const udho::http::error& error) {
+            // std::cout << "exception: " << error.what() << std::endl;
+            handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(const std::system_error& error) {
+            std::cout << "std::system_error: " << error.what() << std::endl;
+            handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(const boost::system::system_error& error) {
+            std::cout << "boost::system::system_error: " << error.what() << std::endl;
+            handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(const boost::exception& bex) {
+            std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
+            handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(const std::exception& ex) {
+            std::cout << "exception: " << ex.what() << std::endl;
+            handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(...) {
+            std::runtime_error unknown_error{"Unknown error"};
+            handle_error(flow, unknown_error, success.capex().trace(), stream, std::forward<Args>(args)...);
         }
     }
 
@@ -211,6 +221,13 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(exception, stacktrace, true);
+        } catch(const boost::exception& exception) {
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = capex.trace().resolve();
+            server_error(exception, stacktrace, true);
+        } catch(...) {
+            std::runtime_error unknown_error{"Unknown error"};
+            handle_error(flow, unknown_error, capex.trace(), stream, std::forward<Args>(args)...);
         }
     }
 
