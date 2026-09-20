@@ -172,6 +172,7 @@ struct basic_handler{
         auto responder_it = _responders.find(id);
         if(responder_it != _responders.end()) {
             assert(responder_it->first == id);
+            responder_it->second.reset_callbacks(std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback));
             return responder_it->second.ostream();
         }
 

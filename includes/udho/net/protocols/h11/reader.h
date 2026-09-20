@@ -106,8 +106,11 @@ public:
         using body_reader_type = udho::net::protocols::h11::body_reader<Buffer, StreamT>;
 
         auto body = std::make_shared<body_reader_type>(request, _stream, config);
-        body->start([h = std::move(handler), this, &body](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-            auto result = body->release(_header_buffer);
+        body_reader_type& reader = *(body.get());
+
+        // lifetime of body is extended by teh start method while performing any asynchronous operations
+        body->start([h = std::move(handler), this, &reader](boost::system::error_code ec, std::size_t bytes_transferred) mutable {
+            auto result = reader.release(_header_buffer);
             // moving buffer is always legal irrespective of ec
             // std::cout << "ec.message(): " << ec.message() << std::endl;
             // h(std::move(result.release_buffer()), ec, bytes_transferred);
