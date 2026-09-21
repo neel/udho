@@ -77,7 +77,7 @@ struct basic_handler{
          */
         template <typename FinishCallback, typename ExceptionCallback>
         responder(/*basic_handler<StreamT>& handler, std::size_t id, */stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
-            : /*_handler(handler), _id(id),*/ _ostream(stream,
+            : /*_handler(handler), _id(id), */_ostream(stream,
                     std::bind(&responder::on_finish, this, std::placeholders::_1, std::placeholders::_2),
                     std::bind(&responder::on_exception, this, std::placeholders::_1)
                 )
@@ -94,11 +94,13 @@ struct basic_handler{
 
         template <typename FinishCallback>
         void reset_callbacks(FinishCallback&& callback) {
+            const std::lock_guard<std::mutex> lock(_mutex);
             _callback    = std::move(callback);
         }
 
         template <typename FinishCallback, typename ExceptionCallback>
         void reset_callbacks(FinishCallback&& callback, ExceptionCallback&& ex_callback) {
+            const std::lock_guard<std::mutex> lock(_mutex);
             _callback    = std::move(callback);
             _ex_callback = std::move(ex_callback);
         }
@@ -115,10 +117,13 @@ struct basic_handler{
          * @param bytes_written Number of bytes reported as written.
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
-            // if(!_callback(ec, bytes_written)){
-            //     _handler.retire(_id);
-            // }
-            _callback(ec, bytes_written);
+            callback_type callback;
+            {
+                const std::lock_guard<std::mutex> lock(_mutex);
+                callback = _callback;
+            }
+            callback(ec, bytes_written);
+
         }
 
         /**
@@ -129,13 +134,19 @@ struct basic_handler{
          * @param ostream Output stream associated with this responder.
          */
         void on_exception(ostream_type& ostream){
-            _ex_callback(ostream);
+            exception_callback_type callback;
+            {
+                const std::lock_guard<std::mutex> lock(_mutex);
+                callback = _ex_callback;
+            }
+            callback(ostream);
         }
     private:
         // basic_handler<StreamT>& _handler;
         // std::size_t             _id;
-        ostream_type  _ostream;
-        callback_type _callback;
+        std::mutex              _mutex;
+        ostream_type            _ostream;
+        callback_type           _callback;
         exception_callback_type _ex_callback;
     };
 
@@ -179,7 +190,7 @@ struct basic_handler{
         bool success = false;
         std::tie(responder_it, success) = _responders.emplace(std::piecewise_construct,
             std::forward_as_tuple(id),
-            std::forward_as_tuple(/**this, id,*/ stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
+            std::forward_as_tuple(/**this, id, */stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
         );
         assert(success);
         assert(responder_it->first == id);
@@ -245,11 +256,6 @@ struct basic_handler{
         _responders.erase(it);
         return true;
     }
-
-    // void retire(std::size_t id) {
-    //     bool success = remove(id);
-    //     assert(success);
-    // }
 
     /**
      * @brief Return the router summary associated with this handler.
