@@ -256,7 +256,7 @@ private:
 
     template <typename... Args>
     void handle_error(flow_type& flow, const boost::system::error_code& error, const trace_type& trace, stream_type& stream, Args&&... args) {
-        if(error == boost::beast::http::error::end_of_stream) {
+        if(error == boost::beast::http::error::end_of_stream || error == boost::asio::error::eof) {
             flow.abort();
         } else {
             ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);

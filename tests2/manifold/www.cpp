@@ -1112,6 +1112,55 @@ TEST_CASE("udho www framework times out unfinished responses", "[www][test-strea
     }
 }
 
+TEST_CASE("udho www handles EOF while reading request headers", "[www][test-stream][protocol][eof]") {
+    SECTION("EOF before any request bytes aborts without a response") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            std::string{}
+        );
+
+        CHECK(www_test_callbacks::exception_invocations.empty());
+        CHECK(result.body.empty());
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{false});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("EOF after a partial header does not dispatch the request") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            "GET /ok/1 HTTP/1.1\r\n"
+            "Host: example.com\r\n"
+        );
+
+        CHECK(www_test_callbacks::exception_invocations.empty());
+        www_test::check_statuses(result.body, {500});
+        CHECK(result.body.find("Connection: close") != std::string::npos);
+        CHECK(result.reentry_decisions == std::vector<bool>{false});
+        CHECK(result.responder_presence == std::vector<bool>{true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+
+    SECTION("EOF after a complete request occurs on reentry") {
+        www_test_callbacks::clear_exception_state();
+        const auto result = www_test::execute_lifecycle(
+            www_test_callbacks::error_router(),
+            www_test::get_request("/ok/1")
+        );
+
+        REQUIRE(www_test_callbacks::exception_invocations == std::vector<std::string>{"ok:1"});
+        www_test::check_statuses(result.body, {200});
+        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
+        CHECK(result.responder_presence == std::vector<bool>{true, true});
+        CHECK(result.active_flows == 0);
+        CHECK_FALSE(result.responder_exists_after_run);
+    }
+}
+
 TEST_CASE("udho www retires responders with aborted flows", "[www][test-stream][lifecycle]") {
     SECTION("framework 404 closes the first response") {
         const auto result = www_test::execute_lifecycle(
@@ -1122,19 +1171,6 @@ TEST_CASE("udho www retires responders with aborted flows", "[www][test-stream][
         CHECK(result.body.find(www_test::status_marker(404)) != std::string::npos);
         CHECK(result.reentry_decisions == std::vector<bool>{false});
         CHECK(result.responder_presence == std::vector<bool>{true});
-        CHECK(result.active_flows == 0);
-        CHECK_FALSE(result.responder_exists_after_run);
-    }
-
-    SECTION("successful response is followed by end of stream") {
-        const auto result = www_test::execute_lifecycle(
-            www_test_callbacks::error_router(),
-            www_test::get_request("/ok/1")
-        );
-
-        CHECK(result.body.find(www_test::status_marker(200)) != std::string::npos);
-        CHECK(result.reentry_decisions == std::vector<bool>{true, false});
-        CHECK(result.responder_presence == std::vector<bool>{true, true});
         CHECK(result.active_flows == 0);
         CHECK_FALSE(result.responder_exists_after_run);
     }

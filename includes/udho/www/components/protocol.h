@@ -178,7 +178,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
 
         reader_ptr_type reader = _component.reader(_id, stream);
         reader->start([this, next{std::move(next)}, reader](request_type&& request, boost::system::error_code ec, std::size_t bytes_transferred) mutable {
-            if(!ec || ec == boost::asio::error::eof) {
+            if(!ec/* || ec == boost::asio::error::eof*/) { // eof check was added at some point in history but cannot establish a reasoning now. So, moving this check to terminal
                 next.pass(result{std::move(request)});
             } else {
                 // std::cout << "header_reader facet: " << ec.message() << std::endl;
