@@ -127,6 +127,7 @@ using message = schema<
     udho::logging::params::query,
     udho::logging::params::agent,
     udho::logging::params::path,
+    udho::logging::params::name,
     udho::logging::params::exception,
 
     udho::logging::params::status_code,

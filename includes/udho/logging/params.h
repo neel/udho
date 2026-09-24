@@ -109,6 +109,7 @@ UDHO_LOG_PARAM(route,           std::optional<std::string>);
 UDHO_LOG_PARAM(query,           std::optional<std::string>);
 UDHO_LOG_PARAM(agent,           std::optional<std::string>);
 UDHO_LOG_PARAM(path,            std::optional<std::string>);
+UDHO_LOG_PARAM(name,            std::optional<std::string>);
 UDHO_LOG_PARAM(exception,       std::optional<std::string>);
 
 UDHO_LOG_PARAM(status_code,     std::optional<std::uint32_t>);
@@ -156,6 +157,7 @@ inline constexpr char route[]         = "Route";
 inline constexpr char query[]         = "Query";
 inline constexpr char agent[]         = "Agent";
 inline constexpr char path[]          = "Path";
+inline constexpr char name[]          = "Name";
 inline constexpr char exception[]     = "Exception";
 
 inline constexpr char status_code[]   = "Status";

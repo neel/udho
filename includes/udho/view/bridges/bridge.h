@@ -564,11 +564,11 @@ struct bridge{
             try{
                 view_key_str = view_key(name, prefix);
             } catch(const std::exception& e) {
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Failed to compute view key", p::exception(e.what()), p::path(name));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Failed to compute view key", p::exception(e.what()), p::name(name));
                 results.finish(0);
                 return;
             } catch(...) {
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown error while computing view key", p::path(name));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown error while computing view key", p::name(name));
                 results.finish(0);
                 return;
             }
@@ -584,7 +584,7 @@ struct bridge{
                 size = ex_str.size();
                 output = ex_str;
                 // std::cerr << execption_str << e.what() << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Lua exception while executing view", p::exception(e.what()), p::path(view_key_str));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Lua exception while executing view", p::exception(e.what()), p::name(view_key_str));
             } catch(const std::exception& e){
                 std::string execption_str = udho::url::format("C++ Exeption while executing view {}: ", view_key_str);
                 std::string ex_str;
@@ -593,7 +593,7 @@ struct bridge{
                 size = ex_str.size();
                 output = ex_str;
                 // std::cerr << execption_str << e.what() << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "C++ exception while executing view", p::exception(e.what()), p::path(view_key_str));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "C++ exception while executing view", p::exception(e.what()), p::name(view_key_str));
             } catch(...){
                 std::string execption_str = udho::url::format("Unknown Exeption while executing view {}: ", view_key_str);
                 std::string ex_str;
@@ -601,7 +601,7 @@ struct bridge{
                 size = ex_str.size();
                 output = ex_str;
                 // std::cerr << execption_str << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown exception while executing view", p::path(view_key_str));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown exception while executing view", p::name(view_key_str));
             }
             results.finish(size);
         }
@@ -636,7 +636,10 @@ struct bridge{
             _headers.insert(std::make_pair(key, std::move(header)));
 
             std::string name = script.save(key);
-            std::cout << "Generated script at " << name << std::endl;
+            // std::cout << "Generated script at " << name << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_INFO("udho::view::data::bridges::lua", "Generated script", p::path(name));
+
             bool success = true;
             for (std::unique_ptr<state_type>& state: _states){
                 compiler_type compiler{*state};

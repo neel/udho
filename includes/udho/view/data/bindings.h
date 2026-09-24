@@ -36,6 +36,7 @@
 #include <udho/view/data/type.h>
 #include <set>
 #include <cstdint>
+#include <udho/logging/macros.h>
 
 #ifdef WITH_JSON_NLOHMANN
 #include <nlohmann/json.hpp>
@@ -123,7 +124,11 @@ struct binder{
         // if(!udho::view::data::bindings<StateT, ClassT>::exists()){
 
         auto meta = metatype(type);
-        std::cout << "udho::view::data::detail::binder: binding metatype " << meta.name() << std::endl;
+
+        namespace p = udho::logging::params;
+        UDHO_LOG_INFO("udho::view::data::detail::binder", "binding metatype", p::name(meta.name()));
+        // std::cout << "udho::view::data::detail::binder: binding metatype " << meta.name() << std::endl;
+
         foreign_binder_type binder(state, meta.name());
         meta.members().apply_all(binder);
 

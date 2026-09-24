@@ -5,6 +5,7 @@
 #include <thread>
 #include <sol/sol.hpp>
 #include <udho/utils/encoding.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -31,10 +32,14 @@ struct extras{
             try{
                 return std::this_thread::get_id();
             } catch(const std::exception& ex){
-                std::cout << "Exception from lua calling thread.id: " << ex.what() << std::endl;
+                // std::cout << "Exception from lua calling thread.id: " << ex.what() << std::endl;
+                namespace p = udho::logging::params;
+                UDHO_LOG_ERROR("udho::view::data::bridges::detail::lua::extras", "Exception from lua calling thread.id", p::exception(ex.what()));
                 return std::thread::id{};
             }catch (...) {
-                std::cout << "An unknown exception occurred." << std::endl;
+                // std::cout << "An unknown exception occurred." << std::endl;
+                namespace p = udho::logging::params;
+                UDHO_LOG_ERROR("udho::view::data::bridges::detail::lua::extras", "Unknnown exception from lua calling thread.id");
                 return std::thread::id{};
             }
         });

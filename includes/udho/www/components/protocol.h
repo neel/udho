@@ -216,7 +216,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
     }
 
     ~facet() {
-        std::cout << __FUNCTION__ << std::endl;
+        // std::cout << __FUNCTION__ << std::endl;
         _component.remove(_id);
     }
 private:
@@ -348,12 +348,12 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
      */
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
-        std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>::operator()(...)" << std::endl;
+        // std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::body_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 
     ~facet() {
-        std::cout << __FUNCTION__ << std::endl;
+        // std::cout << __FUNCTION__ << std::endl;
         _component.remove(_id);
     }
 private:

@@ -6,6 +6,7 @@
 #include <udho/view/data/type.h>
 #include <udho/view/data/detail/bind.h>
 #include <udho/view/data/bindings.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -34,7 +35,9 @@ struct bind{
             udho::view::data::bindings<state_type, ClassT>::bound_one(_state);
         } else {
             // bindings already exists no need to do it again.
-            std::cout << "udho::view::data::bridges::bind: " << "skipped binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bridges::bind", "skipped binding");
+            // std::cout << "udho::view::data::bridges::bind: " << "skipped binding" << std::endl;
         }
     }
 

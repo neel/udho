@@ -40,6 +40,7 @@
 #include <udho/manifold/context.h>
 #include <udho/www/components/fwd.h>
 #include <udho/www/features.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -82,7 +83,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             // using user_type = sol::usertype<enum_type>;
 
-            std::cout << "udho::view::data::bind<lua, udho::view::resources::asset::type>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, udho::view::resources::asset::type>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::view::resources::asset::type");
 
             state.udho().new_enum<enum_type>("asset_type", {
                     {"js",  enum_type::js},
@@ -102,7 +105,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, url_proxy>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, url_proxy>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::url::summary::mount_point::url_proxy");
 
             user_type type = state.udho().new_usertype<class_type>("url_proxy",
                 "new", sol::no_constructor,
@@ -273,7 +278,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::manifold::portal<Components...>: binding" << std::endl;
+            // std::cout << "udho::manifold::portal<Components...>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::manifold::portal<Components...>");
 
             sol::automagic_enrollments enrollments{false, false, false, false, false, false, false, false, false};
             user_type type = state.udho().new_usertype<class_type>("portal", enrollments);
@@ -292,7 +299,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, udho::view::resources::const_store<...>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, udho::view::resources::const_store<...>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::view::resources::const_store<...>");
 
             // first bind according to the metatype
             typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
@@ -320,7 +329,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, udho::manifold::basic_context<...>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, udho::manifold::basic_context<...>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::manifold::basic_context<...>");
 
             {
                 udho::view::data::bridges::bind<bridges::lua> binder{state};
@@ -359,7 +370,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, detail::proxy_wrapper<bridges::lua, ContextT>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, detail::proxy_wrapper<bridges::lua, ContextT>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding detail::proxy_wrapper<bridges::lua, ContextT>");
 
             // first bind according to the metatype
             typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
@@ -409,7 +422,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, udho::view::resources::tmpl::proxy<bridges::lua>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, udho::view::resources::tmpl::proxy<bridges::lua>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::view::resources::tmpl::proxy<bridges::lua>");
 
             // first bind according to the metatype
             typename binder_type::foreign_binder_type binder = binder_type::apply(state, udho::view::data::type<class_type>{});
@@ -438,7 +453,9 @@ namespace udho::view::data{
         static void apply(state_type& state){
             using user_type = sol::usertype<class_type>;
 
-            std::cout << "udho::view::data::bind<lua, tabulate::Table>>: binding" << std::endl;
+            // std::cout << "udho::view::data::bind<lua, tabulate::Table>>: binding" << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_DEBUG("udho::view::data::bind::lua", "binding udho::view::data::bind<lua, tabulate::Table>");
 
             user_type type = state.udho().new_usertype<class_type>("Tabulate",
                 "new", sol::constructors<class_type()>(),

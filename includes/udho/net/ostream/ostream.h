@@ -690,7 +690,7 @@ private:
     void on_header_completion(boost::system::error_code ec, std::size_t bytes_written) {
         _headers_sent = true;
         _bytes_written += bytes_written;
-        std::cout << "on_header_completion " << ec.message() << std::endl;
+        // std::cout << "on_header_completion " << ec.message() << std::endl;
 
         namespace params = udho::logging::params;
 
@@ -722,13 +722,13 @@ private:
      */
     void on_buffered_flush(boost::system::error_code ec, std::size_t bytes_written) {
         _bytes_written += bytes_written;
-        std::cout << "on_buffered_flush" << std::endl;
+        // std::cout << "on_buffered_flush" << std::endl;
         if(ec) on_error(ec);
         else {
             if(_state == ostream_states::buffered) {
                 assert(_buffering);
                 assert(_finishing);
-                std::cout << "states::buffered_flushing" << std::endl;
+                // std::cout << "states::buffered_flushing" << std::endl;
                 _state = ostream_states::buffered_flushing;
                 if(_finishing){
                     _buffered_stream.finish();
@@ -737,7 +737,7 @@ private:
                 assert(_state == ostream_states::switching);
                 assert(!_buffering);
                 _queued_stream.resume();
-                std::cout << "states::queued" << std::endl;
+                // std::cout << "states::queued" << std::endl;
                 _state = ostream_states::queued;
                 // Any intermediate writes routed to the _queued_stream now gets
                 // pumped out to the socket
@@ -751,12 +751,12 @@ private:
     /// @brief Buffered completion handler (after finish if needed).
     void on_buffered_completion(boost::system::error_code ec, std::size_t bytes_written) {
         _bytes_written += bytes_written;
-        std::cout << "on_buffered_completion" << std::endl;
+        // std::cout << "on_buffered_completion" << std::endl;
         if(ec) on_error(ec);
         else {
             assert(_headers_sent);
             if(_buffering) {
-                std::cout << "states::completed" << std::endl;
+                // std::cout << "states::completed" << std::endl;
                 _state = ostream_states::completed;
                 completion(ec, _bytes_written);
             }
@@ -765,13 +765,13 @@ private:
 
     /// @brief Queued completion handler (called after queued.finish drains and terminal sent if needed).
     void on_queued_completion(boost::system::error_code ec, std::size_t bytes_written) {
-        std::cout << "states::queued_finishing" << std::endl;
+        // std::cout << "states::queued_finishing" << std::endl;
         _state = ostream_states::queued_finishing;
         _bytes_written += bytes_written;
         if(ec) on_error(ec);
         else {
             assert(_headers_sent);
-            std::cout << "states::completed" << std::endl;
+            // std::cout << "states::completed" << std::endl;
             _state = ostream_states::completed;
             completion(ec, _bytes_written);
         }

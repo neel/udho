@@ -306,8 +306,8 @@ private:
         auto args_tuple = std::forward_as_tuple(std::forward<Args>(args)...);
         auto lambda = [&flow, restart, &stream, args_tuple = std::move(args_tuple)](boost::system::error_code error, std::size_t bytes_written) {
             if(error) {
-                namespace params = udho::logging::params;
-                UDHO_LOG_INFO("www::terminal", "Aborted", params::flow_id(flow.id()), params::socket_id(udho::utils::misc::native_handle(stream)));
+                namespace p = udho::logging::params;
+                UDHO_LOG_INFO("www::terminal", "Aborted", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(error.message()));
 
                 flow.abort();
                 return;

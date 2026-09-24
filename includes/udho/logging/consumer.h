@@ -520,6 +520,7 @@ private:
         add_optional_attr(msg, attrs, query::val,           names::query);
         add_optional_attr(msg, attrs, agent::val,           names::agent);
         add_optional_attr(msg, attrs, path::val,            names::path);
+        add_optional_attr(msg, attrs, name::val,            names::name);
         add_optional_attr(msg, attrs, exception::val,       names::exception);
         add_optional_attr(msg, attrs, status_code::val,     names::status_code);
         add_optional_attr(msg, attrs, bytes_sent::val,      names::bytes_sent);

@@ -39,6 +39,7 @@
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/state.h>
 #include <udho/view/bridges/bind.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -364,7 +365,9 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding mutable property: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding mutable property: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding mutable property", p::name(nvp.name()));
 
         auto& w = nvp.value();
         helper::writable_internal_binder<X, result_type>::apply(_type, nvp.name(), w);
@@ -375,7 +378,9 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding immutable property: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding immutable property: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding mutable property", p::name(nvp.name()));
 
         auto& w = nvp.value();
         helper::readonly_internal_binder<X, result_type>::apply(_state._state, _type, nvp.name(), w);
@@ -386,7 +391,9 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<U, V>::result_type;
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding functional property: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding functional property: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding functional property", p::name(nvp.name()));
 
         auto& w = nvp.value();
         _type.set(nvp.name(), sol::property(
@@ -401,7 +408,9 @@ struct binder{
         using class_type  = typename udho::view::data::wrapper<U>::class_type;
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding functional property: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding functional property: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding functional property", p::name(nvp.name()));
 
 
         auto& w = nvp.value();
@@ -417,7 +426,9 @@ struct binder{
         using result_type = typename udho::view::data::wrapper<T>::result_type;
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding function", p::name(nvp.name()));
 
         auto& w = nvp.value();
         _type.set(nvp.name(), *w);
@@ -461,7 +472,9 @@ struct binder{
 
         helper::recurse<std::decay_t<result_type>>::apply(_state);
 
-        std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding function", p::name(nvp.name()));
 
         auto& wrapper = nvp.value();
         // helper::internal_index_binder::apply(_state, _type, wrapper);
@@ -494,7 +507,9 @@ struct binder{
 
         helper::recurse<std::decay_t<value_type>>::apply(_state);
 
-        std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        // std::cout << "\tlua binding function: " << nvp.name() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding function", p::name(nvp.name()));
 
         auto& wrapper = nvp.value();
         helper::internal_iter_binder::apply(_state, _type, wrapper);
