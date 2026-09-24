@@ -10,8 +10,9 @@
 #include <string>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/parse_tree.hpp>
-
+#include <udho/utils/format.h>
 #include <iostream>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -122,8 +123,11 @@ struct ast{
         try{
             _root = pegtl::parse_tree::parse<grammar, selector>(_input);
         } catch (const pegtl::parse_error& e) {
-            const auto p = e.positions().front();
-            std::cerr << e.what() << '\n' << _input.line_at(p) << std::endl;
+            namespace p = udho::logging::params;
+
+            const auto pos = e.positions().front();
+            // std::cerr << e.what() << '\n' << _input.line_at(p) << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::meta::parser", udho::utils::format("Failed to parse view metadata at line {}, column {}", pos.line, pos.column), p::exception(e.what()));
         }
     }
 

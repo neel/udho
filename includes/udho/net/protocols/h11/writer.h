@@ -50,7 +50,7 @@ struct writer_internal: public std::enable_shared_from_this<writer_internal<Hand
     /** @brief Copying an active write operation is disabled. */
     writer_internal(const writer_internal&) = delete;
     /** @brief Destroy the write operation. */
-    ~writer_internal() { std::cout << "~http_writer_internal" << std::endl; }
+    ~writer_internal() { /* std::cout << "~http_writer_internal" << std::endl; */ }
 
     /** @brief Start writing the response headers. */
     void start() {

@@ -47,7 +47,7 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
 
     template <typename Handler>
     void start(Handler&& handler){
-        std::cout << "started reading" << std::endl;
+        // std::cout << "started reading" << std::endl;
         boost::asio::async_read_until(
             _stream, _buffer, "\0,",
             std::bind(&scgi_reader::finished, std::enable_shared_from_this<scgi_reader<StreamT>>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)

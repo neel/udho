@@ -37,6 +37,7 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/view/resources/fwd.h>
 #include <udho/net/ostream.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -247,9 +248,12 @@ namespace asset{
              *         detection fails.
              */
             std::string mime() const {
+                namespace p = udho::logging::params;
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic_load(magic, nullptr) != 0) {
-                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    const char* err = magic_error(magic);
+                    // std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    UDHO_LOG_WARNING("udho::view::resources::asset", "Failed to load libmagic database", p::exception(err));
                     magic_close(magic);
                     return "application/octet-stream"; // Default MIME type if error
                 }
@@ -338,11 +342,15 @@ namespace asset{
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (!magic) {
-                    std::cerr << "Failed to initialize magic" << std::endl;
+                    // std::cerr << "Failed to initialize magic" << std::endl;
+                    UDHO_LOG_WARNING("udho::view::resources::asset", "Failed to initialize libmagic; using application/octet-stream");
                     return "application/octet-stream";
                 }
                 if (magic_load(magic, nullptr) != 0) {
-                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    // std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    namespace p = udho::logging::params;
+                    const char* err = magic_error(magic);
+                    UDHO_LOG_WARNING("udho::view::resources::asset", "Failed to load libmagic database; using application/octet-stream", p::exception(err));
                     magic_close(magic);
                     return "application/octet-stream";
                 }
@@ -448,7 +456,10 @@ namespace asset{
             std::string mime() const {
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic_load(magic, nullptr) != 0) {
-                    std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    // std::cerr << "Failed to load magic database: " << magic_error(magic) << std::endl;
+                    namespace p = udho::logging::params;
+                    const char* err = magic_error(magic);
+                    UDHO_LOG_WARNING("udho::view::resources::asset", "Failed to load libmagic database; using application/octet-stream", p::exception(err));
                     magic_close(magic);
                     return "application/octet-stream"; // Default MIME type if error
                 }

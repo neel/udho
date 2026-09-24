@@ -204,7 +204,7 @@ struct facet<udho::www::components::navigator<Policy>, udho::www::feature::ident
      */
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::navigator<Policy>, udho::www::feature::identifier>::operator()(...)" << std::endl;
+        // std::cout << "-> facet<components::navigator<Policy>, udho::www::feature::identifier>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 private:

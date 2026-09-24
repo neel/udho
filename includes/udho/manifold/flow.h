@@ -246,7 +246,8 @@ private:
                     callback(*this, reenter);
                 }
             } catch(const std::exception& ex) {
-                std::cout << "Exception thrown from pre terminate callback: " << ex.what() << std::endl;
+                // std::cout << "Exception thrown from pre terminate callback: " << ex.what() << std::endl;
+                UDHO_LOG_ERROR("manifold::flow", "Exception thrown from pre terminate callback", p::flow_id(id()), p::socket_id(udho::utils::misc::native_handle(_stream)), p::exception(ex.what()));
             }
         }
 
@@ -262,7 +263,8 @@ private:
                         callback(flow_id);
                     }
                 } catch(const std::exception& ex) {
-                    std::cout << "Exception thrown from post terminate callback: " << ex.what() << std::endl;
+                    // std::cout << "Exception thrown from post terminate callback: " << ex.what() << std::endl;
+                    UDHO_LOG_ERROR("manifold::flow", "Exception thrown from post terminate callback", p::flow_id(flow_id), p::exception(ex.what()));
                 }
             }
 

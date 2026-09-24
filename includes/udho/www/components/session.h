@@ -152,7 +152,7 @@ struct facet<udho::www::components::session<StorageT, Mode>, udho::www::feature:
      */
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) {
-        std::cout << "-> facet<omponents::session<StorageT, Mode>, udho::www::feature::session_load>::operator()(...)" << std::endl;
+        // std::cout << "-> facet<omponents::session<StorageT, Mode>, udho::www::feature::session_load>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next));
     }
 private:

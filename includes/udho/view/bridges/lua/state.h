@@ -38,6 +38,7 @@
 #include <udho/view/bridges/lua/buffer.h>
 #include <udho/view/bridges/lua/extras.h>
 #include <udho/manifold/context.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace view{
@@ -165,20 +166,26 @@ struct state{
         //     }
         //     return 1;  // Return the number of values pushed onto the stack
         // });
+
+        namespace p = udho::logging::params;
+
         try {
             // Execute the script and directly obtain the version string
             auto result = _state.safe_script("return _VERSION", sol::script_pass_on_error);
             if (!result.valid()) {
                 sol::error err = result;
-                std::cerr << "Failed to detect lua version: " << err.what() << std::endl;
+                // std::cerr << "Failed to detect lua version: " << err.what() << std::endl;
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "Failed to detect Lua version", p::exception(err.what()));
                 return;
             }
 
             std::string lua_version_str = result.get<std::string>();
             _lua_version = parse_lua_version(lua_version_str);
-            std::cout << "Detected Lua version: " << _lua_version.first << "." << _lua_version.second << std::endl;
+            // std::cout << "Detected Lua version: " << _lua_version.first << "." << _lua_version.second << std::endl;
+            UDHO_LOG_DEBUG("udho::view::data::bridges::lua::state", "Detected Lua version " + std::to_string(_lua_version.first) + "." + std::to_string(_lua_version.second));
         } catch (const sol::error& e) {
-            std::cerr << "Error while detecting lua version: " << e.what() << std::endl;
+            // std::cerr << "Error while detecting lua version: " << e.what() << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "Error while detecting Lua version", p::exception(e.what()));
             return;
         }
 
@@ -206,9 +213,12 @@ struct state{
      */
     template <typename T, typename Aux>
     std::size_t exec(const std::string& name, const T& data, Aux& aux, std::string& output){
+        namespace p = udho::logging::params;
+
         std::string view_index = name;
         if(!_views.count(view_index)){
-            std::cout << "View not found " << view_index << std::endl;
+            // std::cout << "View not found " << view_index << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::path(view_index));
             return 0;
         }
 
@@ -223,7 +233,8 @@ struct state{
 
         if (!result.valid()) {
             sol::error err = result;
-            std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            // std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view execution failed", p::exception(err.what()), p::path(view_index));
             return 0;
         }
 
@@ -250,9 +261,12 @@ struct state{
      */
     template <typename AuxT>
     std::string exec_lua(const std::string& name, sol::object d, AuxT aux){
+        namespace p = udho::logging::params;
+
         std::string view_index = name;
         if(!_views.count(view_index)){
-            std::cout << "View not found " << view_index << std::endl;
+            // std::cout << "View not found " << view_index << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::path(view_index));
             throw std::runtime_error("View not found: " + view_index);
         }
 
@@ -267,7 +281,8 @@ struct state{
 
         if (!result.valid()) {
             sol::error err = result;
-            std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            // std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view execution failed", p::exception(err.what()), p::path(view_index));
             throw std::runtime_error("Error executing function from " + view_index + ": " + err.what());
         }
 

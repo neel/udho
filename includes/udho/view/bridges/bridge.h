@@ -49,6 +49,7 @@
 #include <udho/view/data/bindings.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/data/type.h>
+#include <udho/logging/macros.h>
 
 // #define UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE 1
 
@@ -557,32 +558,50 @@ struct bridge{
         }
         template <typename T, typename Aux>
         void exec_cs(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output, std::unique_ptr<state_type>& state, udho::view::data::bridges::results& results){
+            namespace p = udho::logging::params;
+
+            std::string view_key_str;
+            try{
+                view_key_str = view_key(name, prefix);
+            } catch(const std::exception& e) {
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Failed to compute view key", p::exception(e.what()), p::path(name));
+                results.finish(0);
+                return;
+            } catch(...) {
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown error while computing view key", p::path(name));
+                results.finish(0);
+                return;
+            }
+
             std::size_t size = 0;
             try {
-                size = state->exec(view_key(name, prefix), std::ref(data), aux, output);
+                size = state->exec(view_key_str, std::ref(data), aux, output);
             } catch(const sol::error& e){
-                std::string execption_str = udho::url::format("Lua Exeption while executing view {}/{}: ", prefix, name);
+                std::string execption_str = udho::url::format("Lua Exeption while executing view {}: ", view_key_str);
                 std::string ex_str;
                 ex_str += execption_str;
                 ex_str += e.what();
                 size = ex_str.size();
                 output = ex_str;
-                std::cerr << execption_str << e.what() << std::endl;
+                // std::cerr << execption_str << e.what() << std::endl;
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Lua exception while executing view", p::exception(e.what()), p::path(view_key_str));
             } catch(const std::exception& e){
-                std::string execption_str = udho::url::format("C++ Exeption while executing view {}/{}: ", prefix, name);
+                std::string execption_str = udho::url::format("C++ Exeption while executing view {}: ", view_key_str);
                 std::string ex_str;
                 ex_str += execption_str;
                 ex_str += e.what();
                 size = ex_str.size();
                 output = ex_str;
-                std::cerr << execption_str << e.what() << std::endl;
+                // std::cerr << execption_str << e.what() << std::endl;
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "C++ exception while executing view", p::exception(e.what()), p::path(view_key_str));
             } catch(...){
-                std::string execption_str = udho::url::format("Unknown Exeption while executing view {}/{}: ", prefix, name);
+                std::string execption_str = udho::url::format("Unknown Exeption while executing view {}: ", view_key_str);
                 std::string ex_str;
                 ex_str += execption_str;
                 size = ex_str.size();
                 output = ex_str;
-                std::cerr << execption_str << std::endl;
+                // std::cerr << execption_str << std::endl;
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown exception while executing view", p::path(view_key_str));
             }
             results.finish(size);
         }

@@ -129,7 +129,7 @@ struct facet<udho::www::components::routing<RouterT>, udho::www::feature::locato
      */
     template <typename... Components, typename NextT, typename Stream>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, Stream& stream) const {
-        std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::locator>::operator()(...)" << std::endl;
+        // std::cout << "-> facet<components::routing<RoutingTableT>, udho::www::feature::locator>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 

@@ -211,7 +211,7 @@ struct facet<udho::www::components::protocol<ProtocolT, StreamT>, udho::www::fea
      */
     template <typename... Components, typename NextT>
     void operator()(const udho::manifold::journal<Components...>& journal, NextT&& next, stream_type& stream) const {
-        std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>::operator()(...)" << std::endl;
+        // std::cout << "-> facet<components::protocol<ProtocolT, StreamT>, udho::www::feature::header_reader>::operator()(...)" << std::endl;
         eval(journal, std::forward<NextT>(next), stream);
     }
 

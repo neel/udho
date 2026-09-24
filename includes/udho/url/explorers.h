@@ -12,6 +12,7 @@
 #include <udho/url/utils.h>
 #include <udho/url/mimes.h>
 #include <udho/net/ostream.h>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace url{
@@ -206,10 +207,14 @@ struct files: public abstract_explorer, public mime_registry {
                 ostream.finish();
                 return true;
             } else {
-                std::cout << "Failed to open file: " << normalized_path << std::endl;
+                // std::cout << "Failed to open file: " << normalized_path << std::endl;
+                namespace p = udho::logging::params;
+                UDHO_LOG_ERROR("udho::url::explorers::files", "Failed to open file", p::path(normalized_path));
             }
         } catch (const std::exception& e) {
-            std::cout << "Error serving file: " << e.what() << std::endl;
+            // std::cout << "Error serving file: " << e.what() << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_ERROR("udho::url::explorers::files", "Failed to serve file", p::exception(e.what()), p::path(normalized_path));
         }
 
         return false;

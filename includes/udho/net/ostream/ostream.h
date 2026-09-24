@@ -664,7 +664,7 @@ private:
      * but will not reach the socket until resume() is called in on_buffered_flush.
      */
     void switch_stream() {
-        std::cout << "states::switching" << std::endl;
+        // std::cout << "states::switching" << std::endl;
         _state = ostream_states::switching;
         // all these calls will happen on the strand and the same strand is used by
         // all write calls, so the order of headers flush, setting buffering, flushing

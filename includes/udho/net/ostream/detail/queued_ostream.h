@@ -146,7 +146,7 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
         boost::asio::dispatch(_strand, [this, state]() {
             if(_paused && !state){
                 // paused before, resumed now
-                std::cout << "resuming" << std::endl;
+                // std::cout << "resuming" << std::endl;
                 _paused = false;
                 pump();
             } else {

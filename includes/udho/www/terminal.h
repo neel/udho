@@ -167,16 +167,16 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             // std::cout << "exception: " << error.what() << std::endl;
             handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const std::system_error& error) {
-            std::cout << "std::system_error: " << error.what() << std::endl;
+            // std::cout << "std::system_error: " << error.what() << std::endl;
             handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const boost::system::system_error& error) {
-            std::cout << "boost::system::system_error: " << error.what() << std::endl;
+            // std::cout << "boost::system::system_error: " << error.what() << std::endl;
             handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const boost::exception& bex) {
-            std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
+            // std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
             handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const std::exception& ex) {
-            std::cout << "exception: " << ex.what() << std::endl;
+            // std::cout << "exception: " << ex.what() << std::endl;
             handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(...) {
             std::runtime_error unknown_error{"Unknown error"};

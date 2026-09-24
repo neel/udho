@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <magic.h>
 #include <iostream>
+#include <udho/logging/macros.h>
 
 namespace udho{
 namespace url{
@@ -38,11 +39,15 @@ inline std::filesystem::path normalize_path(const std::basic_string<Ch>& subject
     try {
         normalized_path = std::filesystem::weakly_canonical(requested_path);
         if (!boost::algorithm::starts_with(normalized_path.string(), root.string())) {
-            std::cout << "Security alert: Attempted access outside of the document root. " << normalized_path << " " << root << std::endl;
+            // std::cout << "Security alert: Attempted access outside of the document root. " << normalized_path << " " << root << std::endl;
+            namespace p = udho::logging::params;
+            UDHO_LOG_WARNING("udho::url::utils::normalize_path", "Rejected filesystem path outside document root", p::path(normalized_path));
             return std::filesystem::path{};
         }
     } catch(const std::filesystem::filesystem_error& e) {
-        std::cout << "Filesystem error: " << e.what() << std::endl;
+        // std::cout << "Filesystem error: " << e.what() << std::endl;
+        namespace p = udho::logging::params;
+        UDHO_LOG_ERROR("udho::url::utils::normalize_path", "Failed to normalize filesystem path: ", p::exception(e.code().message()), p::path(requested_path));
         return std::filesystem::path{};
     }
     return normalized_path;
