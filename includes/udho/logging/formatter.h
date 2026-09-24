@@ -154,6 +154,8 @@ struct formatter{
         append_optional<params::route::value_type::value_type>(record, stream, udho::logging::names::route);
         append_optional<params::query::value_type::value_type>(record, stream, udho::logging::names::query);
         append_optional<params::agent::value_type::value_type>(record, stream, udho::logging::names::agent);
+        append_optional<params::path::value_type::value_type>(record, stream, udho::logging::names::path);
+        append_optional<params::exception::value_type::value_type>(record, stream, udho::logging::names::exception);
         append_optional<params::status_code::value_type::value_type>(record, stream, udho::logging::names::status_code);
         append_optional<params::bytes_sent::value_type::value_type>(record, stream, udho::logging::names::bytes_sent);
         append_optional<params::latency::value_type::value_type>(record, stream, udho::logging::names::latency);
