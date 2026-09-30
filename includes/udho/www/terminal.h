@@ -1,11 +1,14 @@
 #ifndef UDHO_WWW_TERMINAL_H
 #define UDHO_WWW_TERMINAL_H
 
+#include <cstdint>
+#include <system_error>
 #include <udho/manifold/terminal.h>
 #include <udho/www/label.h>
 #include <udho/www/components/handler.h>
 #include <udho/exceptions/exceptions.h>
 #include <udho/www/pages.h>
+#include <udho/logging/macros.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <cpptrace/cpptrace.hpp>
 #include <boost/beast/http/rfc7230.hpp>
@@ -152,8 +155,11 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      */
     template <typename... Args>
     void internal_error(udho::manifold::evaluation_result success, flow_type& flow, stream_type& stream, Args&&... args){
+        namespace p = udho::logging::params;
+
         if(!success.has_exception()){
             assert(!success.success());
+            UDHO_LOG_ERROR("www::terminal", "Pipeline evaluation failed without an exception", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             std::runtime_error unknown_error{"Unknown error"};
             handle_error(flow, unknown_error, success.capex().trace(), stream, std::forward<Args>(args)...);
             return;
@@ -164,21 +170,27 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         try{
             success.rethrow();
         } catch(const udho::http::error& error) {
-            // std::cout << "exception: " << error.what() << std::endl;
+            const auto level = error.status_class() == boost::beast::http::status_class::server_error ? udho::logging::severity::error : udho::logging::severity::warning;
+            UDHO_LOG(level, "www::terminal", "HTTP error while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::status_code(static_cast<std::uint32_t>(error.status())));
             handle_http_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const std::system_error& error) {
-            // std::cout << "std::system_error: " << error.what() << std::endl;
+            const bool canceled = error.code() == std::errc::operation_canceled;
+            const auto level = canceled ? udho::logging::severity::debug : udho::logging::severity::error;
+            UDHO_LOG(level, "www::terminal", canceled ? "Request processing canceled" : "System error while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(error.code().message()));
             handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const boost::system::system_error& error) {
-            // std::cout << "boost::system::system_error: " << error.what() << std::endl;
+            const bool end_of_stream = error.code() == boost::beast::http::error::end_of_stream || error.code() == boost::asio::error::eof;
+            const auto level = end_of_stream ? udho::logging::severity::debug : udho::logging::severity::error;
+            UDHO_LOG(level, "www::terminal", end_of_stream ? "Peer closed connection" : "Boost.System error while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(error.code().message()));
             handle_error(flow, error.code(), success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const boost::exception& bex) {
-            // std::cout << "boost exception: " << boost::diagnostic_information_what(bex) << std::endl;
+            UDHO_LOG_ERROR("www::terminal", "Boost exception while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const std::exception& ex) {
-            // std::cout << "exception: " << ex.what() << std::endl;
+            UDHO_LOG_ERROR("www::terminal", "Exception while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(ex.what()));
             handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(...) {
+            UDHO_LOG_ERROR("www::terminal", "Unknown exception while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             std::runtime_error unknown_error{"Unknown error"};
             handle_error(flow, unknown_error, success.capex().trace(), stream, std::forward<Args>(args)...);
         }
@@ -198,6 +210,8 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
      */
     template <typename... Args>
     void user_error(const udho::exceptions::captured& capex, flow_type& flow, stream_type& stream, Args&&... args){
+        namespace p = udho::logging::params;
+
         handler_type& handler = _composition.template get<handler_type>().component();
         ostream_type& ostream = handler.ostream(flow.id()); // Expect ostream to exist
 
@@ -206,6 +220,8 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         try{
             capex.rethrow();
         } catch(const udho::http::error& error) {
+            const auto level = error.status_class() == boost::beast::http::status_class::server_error ? udho::logging::severity::error : udho::logging::severity::warning;
+            UDHO_LOG(level, "www::terminal", "User handler produced an HTTP error", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::status_code(static_cast<std::uint32_t>(error.status())));
             if(!error.keep_alive()) {
                 auto lambda = [&flow](boost::system::error_code error, std::size_t) -> bool {
                     flow.abort();
@@ -218,14 +234,17 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(error, stacktrace, error.keep_alive());
         } catch(const std::exception& exception) {
+            UDHO_LOG_ERROR("www::terminal", "User handler threw an exception", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(exception.what()));
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(exception, stacktrace, true);
         } catch(const boost::exception& exception) {
+            UDHO_LOG_ERROR("www::terminal", "User handler threw a Boost exception", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(exception, stacktrace, true);
         } catch(...) {
+            UDHO_LOG_ERROR("www::terminal", "User handler threw an unknown exception", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             std::runtime_error unknown_error{"Unknown error"};
             handle_error(flow, unknown_error, capex.trace(), stream, std::forward<Args>(args)...);
         }
