@@ -20,8 +20,7 @@ namespace system{
  */
 template <typename... Bridges>
 bool ready(udho::view::resources::store<Bridges...>& store){
-    return udho::pages::system::views::ready(store)
-        && udho::pages::system::assets::ready(store);
+    return udho::pages::system::views::ready(store) && udho::pages::system::assets::ready(store);
 }
 
 /**
@@ -33,8 +32,7 @@ bool ready(udho::view::resources::store<Bridges...>& store){
  */
 template <typename... Bridges>
 bool ready(const udho::view::resources::const_store<Bridges...>& store){
-    return udho::pages::system::views::ready(store)
-        && udho::pages::system::assets::ready(store);
+    return udho::pages::system::views::ready(store) && udho::pages::system::assets::ready(store);
 }
 
 /**

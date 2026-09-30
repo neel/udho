@@ -17,6 +17,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <udho/utils/string_view.h>
+#include <udho/logging/macros.h>
 #include <boost/asio/basic_waitable_timer.hpp>
 
 namespace udho{
@@ -59,7 +60,7 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
             if(!ec){
                 parse();
             }
-            std::cout << "finished" << std::endl;
+            // std::cout << "finished" << std::endl;
             _handler(ec, bytes_transferred);
         }
         void parse(){
@@ -85,7 +86,8 @@ struct scgi_reader: public std::enable_shared_from_this<scgi_reader<StreamT>>{
                             if(it != _field_map.end()){
                                 _request.insert(it->second, word);
                             }else{
-                                std::cout << "unknown field: " << last_key << " value: " << word << std::endl;
+                                // std::cout << "unknown field: " << last_key << " value: " << word << std::endl;
+                                UDHO_LOG_DEBUG("udho::net::protocols::scgi", "Ignored unsupported SCGI field");
                             }
                         }
                     }else{

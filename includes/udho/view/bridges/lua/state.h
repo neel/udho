@@ -218,7 +218,7 @@ struct state{
         std::string view_index = name;
         if(!_views.count(view_index)){
             // std::cout << "View not found " << view_index << std::endl;
-            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::path(view_index));
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::name(view_index));
             return 0;
         }
 

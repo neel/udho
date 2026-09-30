@@ -115,7 +115,7 @@ struct writer{
     /** @brief Copying a writer is disabled. */
     writer(const writer&) = delete;
     /** @brief Destroy the writer. */
-    ~writer() { std::cout << "~h11:writer" << std::endl; }
+    ~writer() { /* std::cout << "~h11:writer" << std::endl; */ }
 
     /**
      * @brief Schedule an asynchronous response header write.

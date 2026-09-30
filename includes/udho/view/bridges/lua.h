@@ -315,6 +315,12 @@ namespace udho::view::data{
         }
     };
 
+    /**
+     * @brief bind the context to the lua bridge to make it accessible from the lua view
+     * @note Expects the composition_view (obtained from the context's portal) to have a resource component. Because,
+     *       the resource component (supporting feature `udho::www::feature::resources_storage`) is responsible for
+     *       managing the lifetime and access to the underlying view resources.
+     */
     template <typename StreamT, typename... Components>
     struct bind<bridges::lua, udho::manifold::basic_context<StreamT, Components...>>{
         using state_type                = typename bridges::lua::state_type;
@@ -324,6 +330,7 @@ namespace udho::view::data{
         using portal_type               = typename context_type::portal_type;
         using composition_type          = typename portal_type::composition_view_type;
         using resource_component_type   = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
+        static_assert(!std::is_void_v<resource_component_type>); // It doesn't make sense to bind something with lua bridge if a resource component doesn't exist. This is self-contradictory.
         using store_type                = typename resource_component_type::store_type;
 
         static void apply(state_type& state){
