@@ -23,11 +23,11 @@ public:
     ui(boost::asio::io_context& io, database_type& database);
     auto routes() {
         using namespace udho::hazo::string::literals;
-        return udho::url::slot("home"_h, &ui::home, this)                << udho::url::home(udho::url::verb::get)
-             | udho::url::slot("new-project"_h, &ui::new_project, this) << udho::url::fixed(udho::url::verb::get, "/projects/new", "/projects/new")
-             | udho::url::slot("create-project"_h, &ui::create_project, this) << udho::url::fixed(udho::url::verb::post, "/projects", "/projects")
-             | udho::url::slot("create-task"_h, &ui::create_task, this) << udho::url::regx(udho::url::verb::post, "/projects/(\\d+)/tasks", "/projects/{}/tasks")
-             | udho::url::slot("project"_h, &ui::project, this)         << udho::url::regx(udho::url::verb::get, "/projects/(\\d+)", "/projects/{}");
+        return udho::url::slot("home"_h,           &ui::home,           this) << udho::url::home(udho::url::verb::get)
+             | udho::url::slot("new-project"_h,    &ui::new_project,    this) << udho::url::fixed(udho::url::verb::get,  "/projects/new")
+             | udho::url::slot("create-project"_h, &ui::create_project, this) << udho::url::fixed(udho::url::verb::post, "/projects")
+             | udho::url::slot("create-task"_h,    &ui::create_task,    this) << udho::url::regx(udho::url::verb::post,  "/projects/(\\d+)/tasks",  "/projects/{}/tasks")
+             | udho::url::slot("project"_h,        &ui::project,        this) << udho::url::regx(udho::url::verb::get,   "/projects/(\\d+)",        "/projects/{}");
     }
 
     void home(context context);

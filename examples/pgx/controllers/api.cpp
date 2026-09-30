@@ -61,7 +61,7 @@ void pgx::controllers::api::project(context context, int id) {
                     {"counts", {
                                     {"all", data.success<tasks_query>().count()},
                                     {"incomplete", data.success<incomplete_query>().count()}
-                               }
+                                }
                     }
                 }.dump(2);
             }

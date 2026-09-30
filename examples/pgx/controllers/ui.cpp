@@ -18,7 +18,7 @@ pgx::controllers::ui::ui(boost::asio::io_context& io, database_type& database): 
 void pgx::controllers::ui::home(context context) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    layout::standard_layout<decltype(context)> page(context);
+    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Udho PostgreSQL example").doclang("en");
     page.css().add("pgx", "app.css");
 
@@ -39,7 +39,7 @@ void pgx::controllers::ui::home(context context) {
 void pgx::controllers::ui::new_project(context context) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    layout::standard_layout<decltype(context)> page(context);
+    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Create a project").doclang("en");
     page.css().add("pgx", "app.css");
 
@@ -129,7 +129,7 @@ void pgx::controllers::ui::project(context context, int id) {
 void pgx::controllers::ui::project_ajax(context context, int id) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    layout::standard_layout<decltype(context)> page(context);
+    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Project loaded with Ajax").doclang("en");
 
     page.css().add("pgx", "app.css");

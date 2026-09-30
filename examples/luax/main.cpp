@@ -4,34 +4,30 @@
 #include "urls.h"
 
 #include <boost/asio/io_context.hpp>
-#include <boost/filesystem/path.hpp>
 #include <udho/net/listener.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/lua.h>
 #include <udho/view/resources/store.h>
 #include <udho/www/www.h>
 
-using lua_bridge = udho::view::data::bridges::lua;
 using framework_type = udho::www::framework<udho::www::stateless::lua>;
 
 int main() {
     boost::asio::io_context io;
 
-    lua_bridge lua;
-    lua.init();
-    lua.bind(udho::view::data::type<luax::data::page_data>{});
+    udho::view::data::bridges::lua lua;
 
-    udho::view::resources::store<lua_bridge> store{lua};
+    udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
 
     udho::pages::system::setup(store);
 
-    const boost::filesystem::path views = boost::filesystem::path(__FILE__).parent_path() / "views";
-
-    store["luax"] << udho::view::resources::lua{"home", views / "home.view"}
-                  << udho::view::resources::lua{"hello", views / "hello.view"};
+    store["luax"] << udho::view::resources::lua{"home"}
+                  << udho::view::resources::lua{"hello"};
 
     auto cstore     = udho::view::resources::lock(store);
-    auto framework  = framework_type::apply(udho::url::router(luax::urls(), cstore.assets()));
+    auto urls       = luax::urls();
+    auto router     = udho::url::router(std::move(urls), cstore.assets());
+    auto framework  = framework_type::apply(std::move(router));
     auto runtime    = framework.runtime(cstore);
     auto listener   = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
@@ -40,4 +36,3 @@ int main() {
 
     return 0;
 }
-

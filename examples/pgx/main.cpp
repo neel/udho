@@ -13,11 +13,16 @@
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>
 #include <udho/www/www.h>
+#include <udho/logging/setup.h>
 
 using lua_bridge = udho::view::data::bridges::lua;
 using framework_type = udho::www::framework<udho::www::stateless::lua>;
 
 int main() {
+    auto logger = udho::logging::start<udho::logging::rotating_file>();
+
+    assert(logger.running());
+
     boost::asio::io_context io;
     const char* configured = std::getenv("UDHO_PGX_DATABASE_URL");
     const std::string connection_string = configured ? configured : "host=localhost dbname=udho_pgx user=postgres";
@@ -36,11 +41,10 @@ int main() {
     store.assets().base("assets");
 
     const auto root = boost::filesystem::path(__FILE__).parent_path();
-    store["pgx"]
-        << udho::view::resources::lua{"project.view", root / "view" / "tmpl" / "project.view"}
-        << udho::view::resources::asset::css("app.css", root / "assets" / "app.css")
-        << udho::view::resources::asset::js("app.js", root / "assets" / "app.js")
-        << udho::view::resources::asset::txt("project.html", root / "assets" / "project.html", "text/html");
+    store["pgx"]    << udho::view::resources::lua{"project.view", root / "view" / "tmpl" / "project.view"}
+                    << udho::view::resources::asset::css("app.css", root / "assets" / "app.css")
+                    << udho::view::resources::asset::js("app.js", root / "assets" / "app.js")
+                    << udho::view::resources::asset::txt("project.html", root / "assets" / "project.html", "text/html");
 
     auto cstore = udho::view::resources::lock(store);
     auto framework = framework_type::apply(udho::url::router(pgx::urls(api_controller, ui_controller), cstore.assets()));

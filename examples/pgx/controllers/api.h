@@ -17,8 +17,8 @@ public:
     api(boost::asio::io_context& io, database_type& database);
     auto routes() {
         using namespace udho::hazo::string::literals;
-        return udho::url::slot("projects"_h, &api::projects, this)   << udho::url::fixed(udho::url::verb::get, "/projects", "/projects")
-             | udho::url::slot("api-project"_h, &api::project, this) << udho::url::regx(udho::url::verb::get, "/projects/(\\d+)", "/projects/{}");
+        return udho::url::slot("projects"_h,    &api::projects, this) << udho::url::fixed(udho::url::verb::get, "/projects",        "/projects")
+             | udho::url::slot("api-project"_h, &api::project,  this) << udho::url::regx (udho::url::verb::get, "/projects/(\\d+)", "/projects/{}");
     }
 
     void projects(context context);
