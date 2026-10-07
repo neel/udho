@@ -11,6 +11,8 @@
 #include <boost/beast/core/ostream.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/bind_executor.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+
 
 namespace udho{
 namespace net{
@@ -59,7 +61,7 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
      * @brief write ostreamable value (copied into owned queue).
      * @tparam T Value type, must be move-constructible and ostreamable.
      */
-    template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T> && !udho::utils::traits::is_string<T>::value, bool> = true>
+    template <typename T, std::enable_if_t<std::is_move_constructible_v<std::decay_t<T>> && udho::utils::traits::is_ostreamable_v<std::decay_t<T>> && !udho::utils::traits::is_string<std::decay_t<T>>::value, bool> = true>
     void write(T&& value) {
         boost::asio::dispatch(_strand, [this, val = std::move(value)]() {
             if(_eoq) return;
@@ -114,14 +116,14 @@ struct basic_queued_ostream: private detail::buffer_queue, private chunking_help
         });
     }
 
-    // void write(boost::iostreams::mapped_file_source&& mmaped_file) {
-    //     boost::asio::post(_strand, [this, file = std::move(mmaped_file)]() mutable {
-    //         if(_eoq) return;
-    //         push_data(file.data(), file.size());
-    //         file.close();
-    //         pump();
-    //     });
-    // }
+    void write(boost::iostreams::mapped_file_source&& mmaped_file) {
+        boost::asio::dispatch(_strand, [this, file = std::move(mmaped_file)]() mutable {
+            if(_eoq) return;
+            push_data(file.data(), file.size());
+            file.close();
+            pump();
+        });
+    }
 
     /**
      * @brief Signal end-of-stream.

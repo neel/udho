@@ -12,6 +12,8 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
 #include <udho/logging/macros.h>
+#include <boost/iostreams/device/mapped_file.hpp>
+
 
 namespace udho{
 namespace net{
@@ -70,7 +72,7 @@ struct basic_buffered_ostream: private chunking_helper{
      * @note This does not write to the network; it buffers.
      * @warning If a flush is in progress, the write is silently ignored.
      */
-    template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T> && !udho::utils::traits::is_string<T>::value, bool> = true>
+    template <typename T, std::enable_if_t<std::is_move_constructible_v<std::decay_t<T>> && udho::utils::traits::is_ostreamable_v<std::decay_t<T>> && !udho::utils::traits::is_string<std::decay_t<T>>::value, bool> = true>
     void write(T&& value) {
         namespace params = udho::logging::params;
 
@@ -156,18 +158,19 @@ struct basic_buffered_ostream: private chunking_helper{
         });
     }
 
-    // void write(boost::iostreams::mapped_file_source&& mmaped_file) {
-    //     boost::asio::post(_strand, [this, file = std::move(mmaped_file)]() mutable {
-    //         if(_write_ongoing) {
-    //             // error
-    //             return;
-    //         }
-    //         auto mutable_buffer = _multibuff.prepare(file.size());
-    //         boost::asio::buffer_copy(mutable_buffer, boost::asio::buffer(file.data(), file.size()));
-    //         _multibuff.commit(file.size());
-    //         file.close();
-    //     });
-    // }
+    void write(boost::iostreams::mapped_file_source&& mmaped_file) {
+        boost::asio::dispatch(_strand, [this, file = std::move(mmaped_file)]() mutable {
+            if(_flushing) {
+                namespace params = udho::logging::params;
+                UDHO_LOG_WARNING("udho::net::ostream::buffered", "Discarded unexpected write while flushing", params::bytes_sent(_bytes_written));
+                return;
+            }
+            auto mutable_buffer = _multibuff.prepare(file.size());
+            boost::asio::buffer_copy(mutable_buffer, boost::asio::buffer(file.data(), file.size()));
+            _multibuff.commit(file.size());
+            file.close();
+        });
+    }
 
     /**
      * @brief Asynchronously flush currently buffered payload to the stream.

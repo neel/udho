@@ -202,8 +202,9 @@ struct files: public abstract_explorer, public mime_registry {
                 ostream.set(boost::beast::http::field::content_type, mime);
                 ostream.set(boost::beast::http::field::content_length, std::to_string(file.size()));
 
-                ostream.write(file.data(), file.size());
-                file.close();
+                // ostream.write(file.data(), file.size());
+                // file.close();
+                ostream.write(std::move(file));
                 ostream.finish();
                 return true;
             } else {

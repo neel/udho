@@ -48,6 +48,7 @@ private:
     void (*_write_string)(void*, std::string&&) = nullptr;
     void (*_write_sv)(void*, udho::utils::string_view) = nullptr;
     void (*_write_raw)(void*, const char*, std::size_t, bool) = nullptr;
+    void (*_write_mapped_file)(void*, boost::iostreams::mapped_file_source&&) = nullptr;
     void (*_disable_buffering)(void*) = nullptr;
     void (*_finish)(void*) = nullptr;
     void (*_status)(void*, boost::beast::http::status) = nullptr;
@@ -59,6 +60,7 @@ private:
      * @param ws Owned-string writer.
      * @param wsv String-view writer.
      * @param wr Raw byte-range writer.
+     * @param wmf Memory-mapped-file writer.
      * @param db Buffering-control function.
      * @param status Response-status setter.
      * @param fn Response-finishing function.
@@ -69,6 +71,7 @@ private:
         void (*ws)(void*, std::string&&),
         void (*wsv)(void*, udho::utils::string_view),
         void (*wr)(void*, const char*, std::size_t, bool),
+        void (*wmf)(void*, boost::iostreams::mapped_file_source&&),
         void (*db)(void*),
         void (*status)(void*, boost::beast::http::status),
         void (*fn)(void*)
@@ -78,6 +81,7 @@ private:
         , _write_string(ws)
         , _write_sv(wsv)
         , _write_raw(wr)
+        , _write_mapped_file(wmf)
         , _disable_buffering(db)
         , _status(status)
         , _finish(fn)
@@ -99,6 +103,7 @@ public:
             [](void* s, std::string&& x){ static_cast<OstreamT*>(s)->write(std::move(x)); },
             [](void* s, udho::utils::string_view x){ static_cast<OstreamT*>(s)->write(x); },
             [](void* s, const char* p, std::size_t n, bool c){ static_cast<OstreamT*>(s)->write(p, n, c); },
+            [](void* s, boost::iostreams::mapped_file_source&& file){ static_cast<OstreamT*>(s)->write(std::move(file)); },
             [](void* s){ static_cast<OstreamT*>(s)->disable_buffering(); },
             [](void* s, boost::beast::http::status t){ static_cast<OstreamT*>(s)->status(t); },
             [](void* s){ static_cast<OstreamT*>(s)->finish(); }
@@ -138,6 +143,12 @@ public:
      *          asynchronous write completes.
      */
     void write(const char* p, std::size_t n, bool c = true)  { _write_raw(_self, p, n, c); }
+
+    /**
+     * @brief Transfer ownership of a memory-mapped file to the bound stream.
+     * @param file Open mapped file whose lifetime is transferred to the asynchronous write operation.
+     */
+    void write(boost::iostreams::mapped_file_source&& file) { _write_mapped_file(_self, std::move(file)); }
 
     /// @brief Switch the bound stream from buffered output to queued streaming.
     void disable_buffering()                  { _disable_buffering(_self); }
@@ -366,7 +377,7 @@ struct basic_ostream{
      */
     template <std::size_t N>
     friend ostream_type& operator<<(ostream_type& os, const char (&literal)[N]) {
-        os.write(literal, N - 1);
+        os.write(literal, N - 1, false);
         return os;
     }
 
@@ -389,9 +400,9 @@ struct basic_ostream{
 
 public:
     /// @brief Write an ostreamable value to the active output stream.
-    template <typename T, std::enable_if_t<std::is_move_constructible_v<T> && udho::utils::traits::is_ostreamable_v<T> && !udho::utils::traits::is_string<T>::value, bool> = true>
+    template <typename T, std::enable_if_t<std::is_move_constructible_v<std::decay_t<T>> && udho::utils::traits::is_ostreamable_v<std::decay_t<T>> && !udho::utils::traits::is_string<std::decay_t<T>>::value, bool> = true>
     void write(T&& value) {
-        boost::asio::post(_strand, [this, value = std::move(value)](){
+        boost::asio::post(_strand, [this, value = std::forward<T>(value)](){
             if(_finishing) return;
             if(_capex.has_value()) return;
             _extend();
@@ -476,14 +487,14 @@ public:
      * @param mmaped_file Open mapped file whose ownership is transferred to the queued operation.
      */
     void write(boost::iostreams::mapped_file_source&& mmaped_file) {
-        boost::asio::post(_strand, [this, file = std::move(mmaped_file)](){
+        boost::asio::post(_strand, [this, file = std::move(mmaped_file)]() mutable {
             if(_finishing) return;
             if(_capex.has_value()) return;
             _extend();
             if(_buffering) {
-                _buffered_stream.write(file);
+                _buffered_stream.write(std::move(file));
             } else {
-                _queued_stream.write(file);
+                _queued_stream.write(std::move(file));
             }
         });
     }
