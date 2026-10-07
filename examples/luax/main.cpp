@@ -8,6 +8,7 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/lua.h>
 #include <udho/view/resources/store.h>
+#include <udho/view/resources/blobs/setup.h>
 #include <udho/www/www.h>
 
 using framework_type = udho::www::framework<udho::www::stateless::lua>;
@@ -20,9 +21,7 @@ int main() {
     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
 
     udho::pages::system::setup(store);
-
-    store["luax"] << udho::view::resources::lua{"home"}
-                  << udho::view::resources::lua{"hello"};
+    udho::view::resources::blobs::setup(store, "luax");
 
     auto cstore     = udho::view::resources::lock(store);
     auto urls       = luax::urls();

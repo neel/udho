@@ -12,7 +12,9 @@ auto standard_page(ContextT context, const std::string& title) {
     namespace layout = udho::view::tmpl::layout;
     namespace placeholders = layout::placeholders;
 
-    layout::standard_layout<ContextT> page(context);
+    // layout::standard_layout<ContextT> page(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
+
     page.preamble().title(title).doclang("en");
     page.properties(placeholders::header).classes("header");
     page.properties(placeholders::central).classes("content");
@@ -30,6 +32,7 @@ void luax::actions::home(luax::actions::context context) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
     auto page = standard_page(context, "Udho Lua example");
+    page.preamble().title("Udho Lua example");
     page.properties(placeholders::central).view("lua://luax/home");
     page[placeholders::central] = luax::data::home();
 

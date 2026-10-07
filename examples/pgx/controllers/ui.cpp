@@ -18,7 +18,7 @@ pgx::controllers::ui::ui(boost::asio::io_context& io, database_type& database): 
 void pgx::controllers::ui::home(context context) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Udho PostgreSQL example").doclang("en");
     page.css().add("pgx", "app.css");
 
@@ -39,7 +39,7 @@ void pgx::controllers::ui::home(context context) {
 void pgx::controllers::ui::new_project(context context) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Create a project").doclang("en");
     page.css().add("pgx", "app.css");
 
@@ -129,7 +129,7 @@ void pgx::controllers::ui::project(context context, int id) {
 void pgx::controllers::ui::project_ajax(context context, int id) {
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    auto page = udho::view::tmpl::layout::create<udho::view::tmpl::layout::placeholders::standard>(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
     page.preamble().title("Project loaded with Ajax").doclang("en");
 
     page.css().add("pgx", "app.css");
@@ -173,7 +173,8 @@ void pgx::controllers::ui::project_html(context context, int id) {
             pgx::view::data::add_task(value, static_cast<int>(task[schema::tasks::id::val].value()), task[schema::tasks::title::val].value(), task[schema::tasks::completed::val].value());
         }
         context.ostream().set(boost::beast::http::field::content_type, "text/html");
-        layout::standard_layout<decltype(context)> page(context);
+
+        auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
         page.preamble().title(value.title).doclang("en");
         page.css().add("pgx", "app.css");
         page[placeholders::header] = "<h1>Server-rendered project</h1>";

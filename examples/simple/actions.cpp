@@ -9,7 +9,7 @@ void simple::actions::home(udho::www::context<udho::www::components::resources<>
 
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    layout::standard_layout<decltype(context)> page(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
 
     page.preamble().title("Udho simple example").doclang("en");
 
@@ -90,7 +90,7 @@ void simple::actions::hello(udho::www::context<udho::www::components::resources<
 
     context.ostream().set(boost::beast::http::field::content_type, "text/html");
 
-    layout::standard_layout<decltype(context)> page(context);
+    auto page = udho::view::tmpl::layout::attach<udho::view::tmpl::layout::placeholders::standard>(context);
     const auto escaped_name = udho::utils::encode::escape(name);
 
     page.preamble().title("Hello from udho").doclang("en");
