@@ -250,7 +250,7 @@ struct bridge{
     static constexpr auto name() { return state_type::name(); }
     const std::pair<int, int>& version() { return _states.front()->version(); }
 
-    bridge(std::size_t states = 1, bridges::policy policy = bridges::policy::no_policy): _pool_size(states), _semaphore_exec(_pool_size)
+    bridge(std::size_t states = 1, bridges::policy policy = bridges::policy::no_policy): _pool_size(states), _semaphore_exec(_pool_size), _initialized(false)
 #if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
     , _free_lf_q(_pool_size)
 #endif
@@ -287,6 +287,8 @@ struct bridge{
             auto state = std::make_unique<state_type>();
             _states.emplace_back(std::move(state));
         }
+
+        init();
     }
 
     bridges::policy policy() const { return _policy; }
@@ -295,6 +297,8 @@ struct bridge{
      * @brief Initializes the scripting engine state.
      */
     void init(){
+        if(_initialized) return;
+
         std::size_t counter = 0;
         for (std::unique_ptr<state_type>& state: _states){
             state->init();
@@ -306,7 +310,13 @@ struct bridge{
 
             ++counter;
         }
+
+        assert(counter == _pool_size);
+
+        _initialized = true;
     }
+
+    std::size_t pool_size() const { return _pool_size; }
 
     /**
      * @brief Compiles a template (view) from a resource buffer into a script.
@@ -388,8 +398,13 @@ struct bridge{
         udho::view::data::bridges::results exec_nolock(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output){
             udho::view::data::bridges::results results;
             {
-                if(!udho::view::data::bindings<StateT, T>::exists(_states.size())){
-                    bind_nolock(udho::view::data::type<T>{});
+                bool bindings_T_exists    = udho::view::data::bindings<StateT, T>::exists(_states.size());
+                bool bindings_Aux_exists  = udho::view::data::bindings<StateT, Aux>::exists(_states.size());
+                bool bindings_exists_both = bindings_T_exists && bindings_Aux_exists;
+
+                if(!bindings_exists_both) {
+                    if(!bindings_T_exists)   bind_nolock(udho::view::data::type<T>{});
+                    if(!bindings_Aux_exists) bind_nolock(udho::view::data::type<Aux>{});
                 }
             }
             // { Enter CS
@@ -429,13 +444,17 @@ struct bridge{
             udho::view::data::bridges::results results;
             {
                 std::unique_lock<std::recursive_mutex> lock(_mutex_bind, std::defer_lock);
-                if(!udho::view::data::bindings<StateT, T>::exists(_states.size())){
+                bool bindings_T_exists    = udho::view::data::bindings<StateT, T>::exists(_states.size());
+                bool bindings_Aux_exists  = udho::view::data::bindings<StateT, Aux>::exists(_states.size());
+                bool bindings_exists_both = bindings_T_exists && bindings_Aux_exists;
+                if(!bindings_exists_both){
                     // { Enter CS
                     lock.lock();
                     // }
 
                     // { CS
-                    bind_mutex(udho::view::data::type<T>{});
+                    if(!bindings_T_exists)   bind_mutex(udho::view::data::type<T>{});
+                    if(!bindings_Aux_exists) bind_mutex(udho::view::data::type<Aux>{});
                     // }
 
                     // { Exit CS
@@ -501,13 +520,17 @@ struct bridge{
             udho::view::data::bridges::results results;
             {
                 std::unique_lock<std::recursive_mutex> lock(_mutex_bind, std::defer_lock);
-                if(!udho::view::data::bindings<StateT, T>::exists(_states.size())){
+                bool bindings_T_exists    = udho::view::data::bindings<StateT, T>::exists(_states.size());
+                bool bindings_Aux_exists  = udho::view::data::bindings<StateT, Aux>::exists(_states.size());
+                bool bindings_exists_both = bindings_T_exists && bindings_Aux_exists;
+                if(!bindings_exists_both){
                     // { Enter CS
                     lock.lock();
                     // }
 
                     // { CS
-                    bind_pool(udho::view::data::type<T>{});
+                    if(!bindings_T_exists)   bind_pool(udho::view::data::type<T>{});
+                    if(!bindings_Aux_exists) bind_pool(udho::view::data::type<Aux>{});
                     // }
 
                     // { Exit CS
@@ -650,6 +673,7 @@ struct bridge{
 
     private:
         std::size_t                                 _pool_size;
+        bool                                        _initialized;
         std::vector<std::unique_ptr<state_type>>    _states;
         boost::interprocess::interprocess_semaphore _semaphore_exec;
 #if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
