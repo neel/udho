@@ -313,8 +313,10 @@ struct resources_storage{
 };
 
 struct responder{
-    static constexpr const std::size_t stage = 2;
+    static constexpr const std::size_t stage = 0;
     static constexpr const std::string_view name = "responder";
+
+    using result = std::size_t;
 };
 
 }

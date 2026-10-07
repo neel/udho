@@ -3,12 +3,16 @@
 
 #include <map>
 #include <mutex>
+#include <queue>
+#include <exception>
 #include <functional>
+#include <udho/logging/macros.h>
 #include <udho/utils/format.h>
 #include <udho/www/features.h>
 #include <udho/net/ostream.h>
 #include <udho/url/summary.h>
 #include <udho/manifold/portal.h>
+#include <udho/view/tmpl/layout/layout.h>
 
 /** @addtogroup DoxyG_www_components
  *  @{
@@ -59,6 +63,8 @@ struct basic_handler{
         using callback_type             = std::function<void (boost::system::error_code, std::size_t)>;
         /// Callback invoked when the output stream reports an exception path.
         using exception_callback_type   = std::function<void (ostream_type&)>;
+        /// Callback invoked when the current response finishes.
+        using hook_type                 = std::function<void ()>;
 
         /**
          * @brief Construct a responder for a flow stream.
@@ -92,6 +98,18 @@ struct basic_handler{
          */
         ostream_type& ostream() { return _ostream; }
 
+        /**
+         * @brief Add a callback to run when the current response finishes.
+         * @param hook Callback to enqueue.
+         * @pre The current response has not begun completion.
+         */
+        void add_hook(hook_type hook) {
+            if(!hook) return;
+
+            const std::lock_guard<std::mutex> lock(_mutex);
+            _hooks.push(std::move(hook));
+        }
+
         template <typename FinishCallback>
         void reset_callbacks(FinishCallback&& callback) {
             const std::lock_guard<std::mutex> lock(_mutex);
@@ -118,9 +136,23 @@ struct basic_handler{
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
             callback_type callback;
+            std::queue<hook_type> hooks;
             {
                 const std::lock_guard<std::mutex> lock(_mutex);
                 callback = _callback;
+                hooks.swap(_hooks);
+            }
+
+            while(!hooks.empty()) {
+                hook_type hook = std::move(hooks.front());
+                hooks.pop();
+                try {
+                    hook();
+                } catch(const std::exception& ex) {
+                    UDHO_LOG_ERROR("www::components::handler", std::string{"Response finish hook threw an exception: "} + ex.what());
+                } catch(...) {
+                    UDHO_LOG_ERROR("www::components::handler", "Response finish hook threw an unknown exception");
+                }
             }
             callback(ec, bytes_written);
 
@@ -148,6 +180,7 @@ struct basic_handler{
         ostream_type            _ostream;
         callback_type           _callback;
         exception_callback_type _ex_callback;
+        std::queue<hook_type>    _hooks;
     };
 
     /// Container storing responders indexed by flow id.
@@ -291,6 +324,12 @@ struct facet<udho::www::components::basic_handler<StreamT>, udho::www::feature::
 
     facet(component_type& component, const config_type&, std::size_t id): _component(component), _id(id) {}
 
+    template <typename... Facets, typename NextT, typename... Args>
+    void operator()(const udho::manifold::journal<Facets...>&, NextT&& next, Args&&...) const {
+        using result_type = typename udho::www::feature::responder::result;
+        next.pass(result_type{_id});
+    }
+
     ~facet() {  _component.remove(_id); }
 
 private:
@@ -312,6 +351,29 @@ struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_
     using journal_type          = JournalT;
 
     using basic_accessor_type::basic_accessor_type;
+
+    /**
+     * @brief Construct a layout and retain its shared state until response completion.
+     * @tparam PlaceholderT Placeholder container used by the layout document.
+     * @tparam ContextT Rendering context type.
+     * @param context Context passed to the layout factory.
+     * @return Constructed layout.
+     */
+    template <typename PlaceholderT, typename ContextT, typename PresenterT = udho::view::tmpl::layout::default_presenter<udho::view::tmpl::layout::basic_document<PlaceholderT>>>
+    auto layout(ContextT context) {
+        const std::size_t flow_id = basic_accessor_type::journal().template at<udho::www::feature::responder>();
+
+        using placeholder_type  = PlaceholderT;
+        using document_type     = udho::view::tmpl::layout::basic_document<placeholder_type>;
+        using presenter_type    = PresenterT;
+
+        auto page = udho::view::tmpl::layout::create<placeholder_type, ContextT, presenter_type>(context);
+        basic_accessor_type::component().responder(flow_id).add_hook([keepalive = page, flow_id]() {
+            static_cast<void>(keepalive);
+            UDHO_LOG_TRACE("www::components::handler", "Releasing layout retained for response completion", udho::logging::params::flow_id(flow_id));
+        });
+        return page;
+    }
 
     /** @brief Returns the stored router summary. */
     const udho::url::summary::router& routes() const {

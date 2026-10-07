@@ -9,7 +9,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the _name of the <organization> nor the
  *     names of its contributors may be used to endorse or promote products
  *     derived from this software without specific prior written permission.
  *
@@ -36,6 +36,8 @@
 #include <udho/url/detail/format.h>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <udho/view/resources/fwd.h>
+#include <udho/view/resources/blobs/blob.h>
+#include <udho/view/resources/blobs/store.h>
 #include <udho/net/ostream.h>
 #include <udho/logging/macros.h>
 
@@ -150,6 +152,16 @@ namespace tmpl{
          */
         template <typename Iterator>
         inline bridged(const std::string& name, Iterator begin, Iterator end): _res(name, begin, end) {}
+        /**
+         * @brief Construct a bridged template from an embedded resource blob.
+         * @param embedded Embedded resource _name and byte range.
+         */
+        inline bridged(const udho::view::resources::blobs::blob& embedded): _res(embedded.name(), embedded.begin(), embedded.end()) {}
+        /**
+         * @brief Construct a bridged template from a named embedded view.
+         * @param name Name used to look up the embedded view blob.
+         */
+        inline bridged(const std::string& name): bridged(udho::view::resources::blobs::registry().view(name.c_str())) {}
         /**
          * @brief construct a template from an on disk file
          * @param name name of the view
@@ -513,7 +525,7 @@ namespace asset{
                 stream.status(boost::beast::http::status::moved_permanently);
                 stream.set(boost::beast::http::field::location, _location);
                 std::string message = "The resource has been moved permanently to " + _location;
-                stream.write(message.c_str(), message.size());
+                stream.write(message.c_str(), message.size(), true);
                 return message.size();
             }
 
@@ -902,6 +914,25 @@ namespace asset{
     }
 
     /**
+     * @brief Creates an in-memory asset from an embedded resource blob.
+     * @param embedded Embedded resource name and byte range.
+     * @param mime Explicit MIME type.
+     */
+    template <asset::type AssetType>
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const udho::view::resources::blobs::blob& embedded, const std::string& mime) {
+        return resource<AssetType>(embedded.name(), embedded.begin(), embedded.end(), mime, false);
+    }
+
+    /**
+     * @brief Creates an in-memory asset from an embedded resource blob.
+     * @param embedded Embedded resource name and byte range.
+     */
+    template <asset::type AssetType>
+    inline std::unique_ptr<basic_resource<AssetType>> resource(const udho::view::resources::blobs::blob& embedded) {
+        return resource<AssetType>(embedded.name(), embedded.begin(), embedded.end(), false);
+    }
+
+    /**
      * @brief Overload of resource function for creating disk resources.
      *
      * @tparam AssetType Asset type.
@@ -955,6 +986,16 @@ namespace asset{
     template <typename Iterator>
     inline auto txt(const std::string& name, Iterator begin, Iterator end, const std::string& mime, bool owned = false) {
         return resource<asset::type::txt>(name, begin, end, mime, owned);
+    }
+
+    /** @brief Creates a text resource from an embedded blob. */
+    inline auto txt(const udho::view::resources::blobs::blob& embedded, const std::string& mime = "") {
+        return txt(embedded.name(), embedded.begin(), embedded.end(), mime);
+    }
+
+    /** @brief Creates a text resource by looking up an embedded blob by name. */
+    inline auto txt(const std::string& name, const std::string& mime = "") {
+        return txt(udho::view::resources::blobs::registry().txt(name.c_str()), mime);
     }
 
     /**
@@ -1014,6 +1055,12 @@ namespace asset{
      */
     template <typename Iterator>
     inline auto css(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource<asset::type::css>(name, begin, end, owned); }
+
+    /** @brief Creates a CSS resource from an embedded blob. */
+    inline auto css(const udho::view::resources::blobs::blob& embedded) { return css(embedded.name(), embedded.begin(), embedded.end(), false); }
+
+    /** @brief Creates a CSS resource by looking up an embedded blob by name. */
+    inline auto css(const std::string& name) { return css(udho::view::resources::blobs::registry().css(name.c_str())); }
 
 
     /**
@@ -1085,6 +1132,12 @@ namespace asset{
     template <typename Iterator>
     inline auto js(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource<asset::type::js>(name, begin, end, owned); }
 
+    /** @brief Creates a JavaScript resource from an embedded blob. */
+    inline auto js(const udho::view::resources::blobs::blob& embedded) { return js(embedded.name(), embedded.begin(), embedded.end(), false); }
+
+    /** @brief Creates a JavaScript resource by looking up an embedded blob by name. */
+    inline auto js(const std::string& name) { return js(udho::view::resources::blobs::registry().js(name.c_str())); }
+
     /**
      * @brief Function to create a javascript resource.
      *
@@ -1137,6 +1190,12 @@ namespace asset{
      */
     template <typename Iterator>
     inline auto img(const std::string& name, Iterator begin, Iterator end, bool owned = false){ return resource<asset::type::img>(name, begin, end, owned); }
+
+    /** @brief Creates an image resource from an embedded blob. */
+    inline auto img(const udho::view::resources::blobs::blob& embedded) { return img(embedded.name(), embedded.begin(), embedded.end()); }
+
+    /** @brief Creates an image resource by looking up an embedded blob by name. */
+    inline auto img(const std::string& name) { return img(udho::view::resources::blobs::registry().img(name.c_str())); }
     /**
      * @brief Overload of img function for creating disk-based image resources.
      *

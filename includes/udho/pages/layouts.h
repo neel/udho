@@ -88,23 +88,19 @@ struct presenter: l::default_presenter<DocumentT, presenter<DocumentT>>{
 
         stream <<   "<div class='system'>";
         if(_doc[p::header].exists()){
-            std::string value = *_doc[p::header];
-            stream << std::move(value);
+            stream << *_doc[p::header];
         }
 
         if(_doc[places::headline].exists()){
-            std::string value = *_doc[places::headline];
-            stream << std::move(value);
+            stream << *_doc[places::headline];
         }
 
         if(_doc[places::routes].exists()) {
-            std::string value = *_doc[places::routes];
-            stream << std::move(value);
+            stream << *_doc[places::routes];
         }
 
         if(_doc[places::listing].exists()) {
-            std::string value = *_doc[places::listing];
-            stream << std::move(value);
+            stream << *_doc[places::listing];
         }
 
         default_presenter_::present(placeholders::footer, stream);
@@ -140,7 +136,7 @@ sys<ContextT> listing(ContextT context) {
 
     using minimal_presenter = presenter<l::basic_document<minimal>>;
 
-    sys<ContextT> layout = l::create<minimal, ContextT, minimal_presenter>(context);
+    sys<ContextT> layout = l::attach<minimal, ContextT, minimal_presenter>(context);
 
     layout.preamble().title("Udho System");
     layout.preamble().classes("main");

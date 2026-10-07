@@ -49,6 +49,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
     >;
 
     using order_type = udho::manifold::order<
+        udho::www::feature::responder,
         udho::www::feature::header_reader,
         udho::www::feature::identifier,
         udho::www::feature::locator,
@@ -97,7 +98,8 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
         udho::www::feature::locator,
         udho::www::feature::cookie_load,
         udho::www::feature::session_load,
-        udho::www::feature::body_reader
+        udho::www::feature::body_reader,
+        udho::www::feature::responder
     >;
 };
 

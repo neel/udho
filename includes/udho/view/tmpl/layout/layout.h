@@ -330,6 +330,11 @@ basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> create(ContextT
     return basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>(ctx);
 }
 
+template <typename PlaceholderT, typename ContextT, typename PresenterT = default_presenter<basic_document<PlaceholderT>>>
+basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> attach(ContextT ctx){
+    return ctx.portal().template layout<PlaceholderT, ContextT, PresenterT>(ctx);
+}
+
 /** @} */
 
 
