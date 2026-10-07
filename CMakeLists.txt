@@ -109,6 +109,8 @@ file(GLOB_RECURSE UDHO_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/includes/*.h)
 # ADD_EXECUTABLE(sandbox2 sandbox2.cpp)
 # TARGET_LINK_LIBRARIES(sandbox2 udho)
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/udho/UdhoRC.cmake")
+
 if(UDHO_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 endif()
@@ -133,6 +135,8 @@ if(UDHO_ENABLE_STACKTRACE)
         cpptrace
         GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
         GIT_TAG        v1.0.4 # <HASH or TAG>
+        GIT_SHALLOW    TRUE
+        GIT_PROGRESS   TRUE
     )
     FetchContent_MakeAvailable(cpptrace)
     # Restore PACKAGE_VERSION
