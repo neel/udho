@@ -64,7 +64,7 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
      */
     inline explicit script(const std::string& name): base(name), _min_size(0) {}
 
-    inline std::size_t min_size() { return _min_size; }
+    inline std::size_t min_size() const { return _min_size; }
 
     private:
         inline void begin(const base::header_type& header){
@@ -79,12 +79,7 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
         inline void end(){
             --*this;
             *this << "  end\n";  // Close the view function
-            // Use pcall to handle errors in view function
-            *this << "  local success, resultOrError = pcall(view, d, c, stream)\n";
-            *this << "  if not success then\n";
-            *this << "    print('Error executing view " << base::name() << ": '  .. resultOrError)\n";  // Or handle the error as needed
-            *this << "    print(debug.traceback())\n";
-            *this << "  end\n";
+            *this << "  return view(d, c, stream)\n";
             *this << "end";  // Close the anonymous function
         }
         /**
@@ -113,7 +108,11 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
          * @param section The eval section to add, containing Lua code.
          */
         inline void add_eval_section(const udho::view::tmpl::section& section) {
+            *this << "-- " << udho::url::format("type = {} size = {} from = {} to = {}", udho::view::tmpl::section::name(section.type()), section.size(), section.lbegin(), section.lend()) << std::endl;
+            std::size_t lua_begin = base::line();
             base::accept(section);
+            *this << std::endl;
+            base::map(section, lua_begin, base::line());
         }
 
         /**
@@ -126,7 +125,8 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
             const std::string& content = section.content();
             if (size > 0) {
                 *this << std::endl;
-                *this << "do -- " + udho::url::format("{} {}", udho::view::tmpl::section::name(section.type()), size) << std::endl;
+                std::size_t lua_begin = base::line();
+                *this << "do -- " + udho::url::format("type = {} size = {} from = {} to = {}", udho::view::tmpl::section::name(section.type()), size, section.lbegin(), section.lend()) << std::endl;
                 ++*this;
                 if (section.type() == udho::view::tmpl::section::echo) {
                     *this << udho::url::format("local udho_view_str_ = string.format([=====[%s]=====], tostring({}))", content) << std::endl;
@@ -148,6 +148,7 @@ struct script: udho::view::data::bridges::basic_script<detail::lua::script>{
                 *this << "stream:write(udho_view_str_)" << std::endl;
                 --*this;
                 *this << "end" << std::endl;
+                base::map(section, lua_begin, base::line());
             }
         }
 

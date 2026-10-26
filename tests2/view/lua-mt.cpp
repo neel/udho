@@ -32,12 +32,13 @@ TEST_CASE("Lua Concurrent bridge", "[view][lua][mt]") {
     student p;
 
     constexpr const std::size_t nstates = 4;
+    udho::view::resources::tmpl::resource resource("view", buffer, buffer+sizeof(buffer));
 
     udho::view::data::bridges::lua lua{nstates};
     REQUIRE(lua.policy() == udho::view::data::bridges::policy::state_pool);
     lua.init();
 
-    lua.compile(udho::view::resources::tmpl::resource("view", buffer, buffer+sizeof(buffer)), "");
+    lua.compile(resource, "");
 
     SECTION("N+1 the call to exec waits") {
         std::vector<exec_result> view_results;

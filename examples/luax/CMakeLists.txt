@@ -7,6 +7,7 @@ find_package(Threads REQUIRED)
 udho_rc(luax)
 udho_rc_view(luax home views/home.view)
 udho_rc_view(luax hello views/hello.view)
+udho_rc_view(luax planet views/planet.view)
 
 add_executable(udho-examples-luax
     main.cpp

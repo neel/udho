@@ -31,6 +31,7 @@
 #include <string>
 #include <udho/view/bridges/stream.h>
 #include <udho/view/bridges/header.h>
+#include <udho/view/bridges/source_map.h>
 #include <udho/view/tmpl/sections.h>
 #include <udho/view/meta.h>
 #include <boost/filesystem.hpp>
@@ -70,6 +71,10 @@ struct basic_script: stream<char, '\t'>{
      */
     const view_header& header() const{ return _header; }
     /**
+     * @brief Returns the generated-Lua to view-source line mapping.
+     */
+    const bridges::source_map& source_map() const { return _source_map; }
+    /**
      * @brief Processes a given template section into script format.
      * @details Process the meta section inside basic_script as it is same for all template engine. For all other sections delegates the call to the derived class
      * @param section The template section to process.
@@ -102,7 +107,7 @@ struct basic_script: stream<char, '\t'>{
                     // Note: if the section has exactly one white space then keep it
                     const std::string& content = section.content();
                     discard(section);
-                    udho::view::tmpl::section space{udho::view::tmpl::section::text, std::string{content[0]}};
+                    udho::view::tmpl::section space{udho::view::tmpl::section::text, content.begin(), content.begin() + 1, section.lbegin(), section.lend()};
                     self().process(space);
                 } else {
                     self().process(section);
@@ -122,6 +127,14 @@ struct basic_script: stream<char, '\t'>{
          */
         inline void accept(const udho::view::tmpl::section& section){ stream::append(section.begin(), section.end()); }
         /**
+         * @brief Associates a generated half-open line interval with a view section.
+         */
+        inline void map(const udho::view::tmpl::section& section, std::size_t lua_begin, std::size_t lua_end){
+            if(section.lbegin() > 0 && section.lend() >= section.lbegin() && lua_end > lua_begin){
+                _source_map.add(lua_begin, lua_end, {section.lbegin(), section.lend()});
+            }
+        }
+        /**
          * @brief Discards a section from a template. Currently, this function does not perform any operation.
          */
         inline void discard(const udho::view::tmpl::section&){}
@@ -140,6 +153,7 @@ struct basic_script: stream<char, '\t'>{
     private:
         std::string _name;
         view_header _header;
+        bridges::source_map _source_map;
         bool        _meta_processed;
 };
 

@@ -186,6 +186,9 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
         } catch(const boost::exception& bex) {
             UDHO_LOG_ERROR("www::terminal", "Boost exception while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)));
             handle_error(flow, bex, success.capex().trace(), stream, std::forward<Args>(args)...);
+        } catch(const udho::view::data::bridges::rendering_error& error) {
+            UDHO_LOG_ERROR("www::terminal", "View rendering failed while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(error.what()));
+            handle_error(flow, error, success.capex().trace(), stream, std::forward<Args>(args)...);
         } catch(const std::exception& ex) {
             UDHO_LOG_ERROR("www::terminal", "Exception while evaluating request", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(ex.what()));
             handle_error(flow, ex, success.capex().trace(), stream, std::forward<Args>(args)...);
@@ -233,6 +236,11 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
             server_error<ostream_type> server_error(ostream);
             cpptrace::stacktrace stacktrace = capex.trace().resolve();
             server_error(error, stacktrace, error.keep_alive());
+        } catch(const udho::view::data::bridges::rendering_error& exception) {
+            UDHO_LOG_ERROR("www::terminal", "User handler failed while rendering a view", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(exception.what()));
+            server_error<ostream_type> server_error(ostream);
+            cpptrace::stacktrace stacktrace = capex.trace().resolve();
+            server_error(exception, stacktrace, true);
         } catch(const std::exception& exception) {
             UDHO_LOG_ERROR("www::terminal", "User handler threw an exception", p::flow_id(flow.id()), p::socket_id(udho::utils::misc::native_handle(stream)), p::exception(exception.what()));
             server_error<ostream_type> server_error(ostream);
@@ -302,6 +310,15 @@ private:
 
     template <typename... Args>
     void handle_error(flow_type& flow, const boost::exception& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
+        ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
+
+        server_error<ostream_type> server_error(ostream);
+        cpptrace::stacktrace stacktrace = trace.resolve();
+        server_error(exception, stacktrace, false);
+    }
+
+    template <typename... Args>
+    void handle_error(flow_type& flow, const udho::view::data::bridges::rendering_error& exception, const trace_type& trace, stream_type& stream, Args&&... args) {
         ostream_type& ostream = get_ostream(flow, false, stream, std::forward<Args>(args)...);
 
         server_error<ostream_type> server_error(ostream);

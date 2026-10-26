@@ -5,7 +5,10 @@
 #define UDHO_VIEW_RESULTS_H
 
 #include <chrono>
+#include <cassert>
 #include <cstdint>
+#include <exception>
+#include <utility>
 
 namespace udho{
 namespace view{
@@ -24,8 +27,10 @@ struct results{
      * @brief constructs a result object
      * start time is initialized at construction. The caller needs to update the end time, otherwise the results will remain invalid.
      */
-    inline results(): _size(0), _queued(std::chrono::system_clock::now()), _index(-1) {}
+    inline results(): _size(0), _queued(std::chrono::system_clock::now()), _index(-1), _exception(nullptr) {}
     inline bool valid() const { return _end > _start && _start > _queued; }
+    inline bool failed() const noexcept { return static_cast<bool>(_exception); }
+    inline bool succeeded() const noexcept { return !failed(); }
     /**
      * @brief sets the execution start time along with the index of the state
      * @note The bridge first creates an empty results.
@@ -52,6 +57,21 @@ struct results{
         _end  = std::chrono::system_clock::now();
     }
     /**
+     * @brief Stores an exception raised while executing the view.
+     */
+    inline void fail(std::exception_ptr exception) noexcept {
+        _exception = std::move(exception);
+    }
+    /**
+     * @brief Rethrows a stored execution exception, if any.
+     */
+    inline void rethrow_if_failed() const {
+        if(_exception){
+            std::rethrow_exception(_exception);
+        }
+    }
+    inline const std::exception_ptr& exception() const noexcept { return _exception; }
+    /**
      * @brief time duration of waiting before a state was allocated.
      */
     inline std::chrono::nanoseconds wait_time() const { return _start - _queued; }
@@ -65,6 +85,7 @@ struct results{
         time_type   _start;
         time_type   _end;
         std::int32_t _index;
+        std::exception_ptr _exception;
 };
 
 }

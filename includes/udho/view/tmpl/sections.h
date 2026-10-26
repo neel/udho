@@ -3,6 +3,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <cstddef>
 #include <cstdint>
 #include <boost/algorithm/string/trim_all.hpp>
 
@@ -46,14 +47,14 @@ struct section {
      * @brief Constructs a section with a specified type.
      * @param t The type of the section as defined by the types enum.
      */
-    inline explicit section(types t): _type(t) {}
+    inline explicit section(types t): _type(t), _lbegin(0), _lend(0) {}
 
     /**
      * @brief Constructs a section with specified type and content.
      * @param t The type of the section.
      * @param content The content of the section.
      */
-    inline section(types t, const std::string& content): _type(t), _content(content) {
+    inline section(types t, const std::string& content): _type(t), _content(content), _lbegin(0), _lend(0) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
@@ -66,7 +67,23 @@ struct section {
      * @param end Iterator pointing to the end of the content.
      */
     template <typename InputIt>
-    inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end) {
+    inline section(types t, InputIt begin, InputIt end): _type(t), _content(begin, end), _lbegin(0), _lend(0) {
+        if(_type != text && _type != verbatim){
+            boost::algorithm::trim_all(_content);
+        }
+    }
+
+    /**
+     * @brief Constructs a section with specified type, content, and source line range.
+     * @param t The type of the section.
+     * @param begin Iterator pointing to the beginning of the content.
+     * @param end Iterator pointing to the end of the content.
+     * @param lbegin The beginning source line.
+     * @param lend The ending source line.
+     */
+    template <typename InputIt>
+    inline section(types t, InputIt begin, InputIt end, std::size_t lbegin, std::size_t lend)
+        : _type(t), _content(begin, end), _lbegin(lbegin), _lend(lend) {
         if(_type != text && _type != verbatim){
             boost::algorithm::trim_all(_content);
         }
@@ -77,6 +94,16 @@ struct section {
      * @return The type of the section as defined in the types enum.
      */
     inline types type() const { return _type; }
+    /**
+     * @brief Returns the beginning source line.
+     * @return The beginning source line, or zero when unspecified.
+     */
+    inline std::size_t lbegin() const { return _lbegin; }
+    /**
+     * @brief Returns the ending source line.
+     * @return The ending source line, or zero when unspecified.
+     */
+    inline std::size_t lend() const { return _lend; }
     /**
      * @brief Sets the content of the section.
      * @param c The content to set.
@@ -144,6 +171,8 @@ struct section {
     private:
         types _type;
         std::string _content;
+        std::size_t _lbegin;
+        std::size_t _lend;
 };
 
 /** @} */

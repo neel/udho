@@ -98,6 +98,8 @@ struct proxy{
     udho::view::resources::results eval(T&& data, Aux&& aux){
         udho::view::resources::results res(_name);
         udho::view::data::bridges::results results = _bridge.exec(_name, _prefix, std::forward<T>(data), std::forward<Aux>(aux), res.output());
+        results.rethrow_if_failed();
+        res.size(results.size());
         return res;
     }
 
@@ -138,13 +140,17 @@ struct proxy{
 class tmpl_view_registration_info{
     std::string _name;
     std::string _prefix;
+    udho::view::resources::tmpl::resource _resource;
 
     public:
         tmpl_view_registration_info() = delete;
-        tmpl_view_registration_info(const std::string& prefix, const std::string& name): _name(name), _prefix(prefix) {
+        tmpl_view_registration_info(const std::string& prefix, udho::view::resources::tmpl::resource&& resource): _name(resource.name()), _prefix(prefix), _resource(std::move(resource)) {
             assert(prefix.front() != '/' && prefix.back() != '/');
         }
-        tmpl_view_registration_info(const tmpl_view_registration_info&) = default;
+        tmpl_view_registration_info(const tmpl_view_registration_info&) = delete;
+        tmpl_view_registration_info(tmpl_view_registration_info&&) = default;
+        tmpl_view_registration_info& operator=(const tmpl_view_registration_info&) = delete;
+        tmpl_view_registration_info& operator=(tmpl_view_registration_info&&) = default;
     public:
         /**
          * @brief Name of the view
@@ -154,6 +160,10 @@ class tmpl_view_registration_info{
          * @brief The prefix used in resource identification.
          */
         const std::string& prefix() const { return _prefix; }
+        /**
+         * @brief The stored view template resource.
+         */
+        const udho::view::resources::tmpl::resource& resource() const { return _resource; }
 };
 
 /**
@@ -283,8 +293,14 @@ struct substore{
             if(prefix.front() == '/' || prefix.back() == '/') {
                 throw std::runtime_error{udho::url::format("Restriction: Prefix must not contain a leading or trailing slash, violated by prefix `{}`", prefix)};
             }
-            _resources.insert(tmpl_view_registration_info{prefix, res.name()});
-            _bridge.compile(std::forward<view::resources::tmpl::resource>(res), prefix);
+            std::string name = res.name();
+            auto inserted = _resources.insert(tmpl_view_registration_info{prefix, std::move(res)});
+            if(!inserted.second){
+                throw std::runtime_error{udho::url::format("Failed to add view {}/{}. Another view with the same name already exists.", prefix, name)};
+            }
+            if(!_bridge.compile(inserted.first->resource(), prefix)){
+                throw std::runtime_error{udho::url::format("Failed to compile view {}/{}.", prefix, name)};
+            }
         } else {
             throw std::runtime_error{"Trying to add view template after the store is locked is not permitted."};
         }

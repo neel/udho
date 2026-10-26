@@ -3,6 +3,7 @@
 
 #include <udho/pages/layouts.h>
 #include <udho/pages/system.h>
+#include <udho/view/bridges/exceptions.h>
 #include <cpptrace/cpptrace.hpp>
 #include <udho/utils/detail/libiberty_helper.h>
 #include <boost/exception/diagnostic_information.hpp>
@@ -99,6 +100,114 @@ struct server_error{
     }
 
 private:
+    static void append(std::vector<std::string>& frames, const udho::view::data::bridges::rendering_frame& frame, const char* frame_template){
+        static constexpr const char* source_template = R"(
+                <div class="udho-rendering-source">
+                    {}
+                </div>
+        )";
+        static constexpr const char* source_line_template = R"(
+                    <div class="udho-rendering-source-line">
+                        <span class="udho-rendering-source-number">{}</span>
+                        <code class="udho-rendering-source-content">{}</code>
+                    </div>
+        )";
+        static constexpr const char* partial_output_template = R"(
+                <div class="udho-rendering-partial-output">
+                    <span class="udho-rendering-detail-title">Partial output</span>
+                    <pre class="udho-rendering-detail-content">{}</pre>
+                </div>
+        )";
+        static constexpr const char* traceback_template = R"(
+                <div class="udho-rendering-traceback">
+                    <span class="udho-rendering-detail-title">Lua traceback</span>
+                    <pre class="udho-rendering-detail-content">{}</pre>
+                </div>
+        )";
+
+        std::string title = frames.empty() ? "View '" : "Caused by view '";
+        title += frame.view() + "'";
+        if(frame.view_lines().valid()){
+            if(frame.view_lines().begin == frame.view_lines().end){
+                title += " at view line " + std::to_string(frame.view_lines().begin);
+            } else {
+                title += " near view lines " + std::to_string(frame.view_lines().begin) + "-" + std::to_string(frame.view_lines().end);
+            }
+        } else {
+            title += " (view location unavailable)";
+        }
+
+        std::string details;
+        if(!frame.partial_output().empty()){
+            details += udho::utils::format(partial_output_template, udho::utils::encode::escape(frame.partial_output()));
+        }
+        if(!frame.traceback().empty()){
+            details += udho::utils::format(traceback_template, udho::utils::encode::escape(frame.traceback()));
+        }
+
+        std::vector<std::string> source_lines;
+        source_lines.reserve(frame.source_lines().size());
+        for(const auto& line: frame.source_lines()){
+            source_lines.emplace_back(udho::utils::format(source_line_template, line.number, udho::utils::encode::escape(line.content)));
+        }
+        std::string source;
+        if(!source_lines.empty()){
+            source = udho::utils::format(source_template, boost::algorithm::join(source_lines, "\n"));
+        }
+
+        frames.emplace_back(udho::utils::format(frame_template, udho::utils::encode::escape(title), source, details));
+    }
+
+    std::string html(const udho::view::data::bridges::rendering_error& rex, const cpptrace::stacktrace&){
+        static constexpr const char* full_exception_template = R"(
+            <div class="exception udho-rendering-error">
+                <style>
+                    {}
+                </style>
+                <div class="message">View rendering failed</div>
+                <div class="udho-rendering-chain">
+                    {}
+                </div>
+            </div>
+        )";
+        static constexpr const char* frame_template = R"(
+            <section class="udho-rendering-frame">
+                <div class="udho-rendering-frame-title">{}</div>
+                {}
+                {}
+            </section>
+        )";
+        static constexpr const char* details_template = R"(
+                <pre class="udho-rendering-details">{}</pre>
+        )";
+
+        std::vector<std::string> frames;
+        append(frames, rex.frame(), frame_template);
+        for(const auto& frame: rex.trace()){
+            append(frames, frame, frame_template);
+        }
+
+        std::string title;
+        std::string details = rex.diagnostic();
+        if(rex.root_cause()){
+            title = "Caused by C++ exception";
+            try {
+                std::rethrow_exception(rex.root_cause());
+            } catch(const boost::exception& error) {
+                if(details.empty()) details = boost::diagnostic_information_what(error);
+            } catch(const std::exception& error) {
+                if(details.empty()) details = error.what();
+            } catch(...) {
+                if(details.empty()) details = "Unknown exception";
+            }
+        } else {
+            title = "Caused by Lua error";
+        }
+        frames.emplace_back(udho::utils::format(frame_template, udho::utils::encode::escape(title), "", udho::utils::format(details_template, udho::utils::encode::escape(details))));
+
+        return udho::utils::format(full_exception_template, css(), boost::algorithm::join(frames, "\n"));
+    }
+
     template <typename ExceptionT, std::enable_if_t<std::is_base_of_v<std::exception, ExceptionT> || std::is_base_of_v<boost::exception, ExceptionT>, bool> = true>
     std::string html(const ExceptionT& ex, const cpptrace::stacktrace& trace){
         static constexpr const char* trace_line_template    = R"(
@@ -275,6 +384,130 @@ private:
         .name::selection, .file::selection, .address::selection, .line::selection {
             background: #ffe4a3;
             color: #111;
+        }
+
+        .exception.udho-rendering-error {
+            width: 100%;
+            max-width: none;
+            margin: 1rem 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .exception.udho-rendering-error > .message {
+            display: block;
+            margin: 0 1rem 1rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .udho-rendering-chain {
+            margin: 0;
+        }
+
+        .udho-rendering-frame {
+            box-sizing: border-box;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            border-left: 3px solid #c0392b;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .udho-rendering-frame-title {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid #e5e5e5;
+            background: #f6f6f6;
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .udho-rendering-source {
+            overflow: auto;
+            border-bottom: 1px solid #e5e5e5;
+            background: #fff7f6;
+            color: #222;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+
+        .udho-rendering-source-line {
+            display: grid;
+            grid-template-columns: max-content minmax(max-content, 1fr);
+            min-width: max-content;
+        }
+
+        .udho-rendering-source-number {
+            min-width: 3rem;
+            padding: 0.15rem 0.65rem;
+            border-right: 1px solid #e5c9c6;
+            color: #a93226;
+            text-align: right;
+            user-select: none;
+        }
+
+        .udho-rendering-source-content {
+            padding: 0.15rem 0.75rem;
+            color: inherit;
+            font: inherit;
+            white-space: pre;
+        }
+
+        .udho-rendering-partial-output,
+        .udho-rendering-traceback {
+            padding: 0.75rem;
+            overflow: auto;
+            border-bottom: 1px solid #e5e5e5;
+            color: #222;
+        }
+
+        .udho-rendering-partial-output {
+            background: #f2f8fc;
+        }
+
+        .udho-rendering-traceback {
+            background: #f7f4fa;
+        }
+
+        .udho-rendering-detail-title {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-weight: 600;
+        }
+
+        .udho-rendering-detail-content {
+            margin: 0;
+            padding: 0;
+            overflow: visible;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .udho-rendering-details {
+            margin: 0;
+            padding: 0.75rem;
+            overflow: auto;
+            border: 0;
+            border-radius: 0;
+            background: #fff;
+            color: #222;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
         @media (max-width: 900px) {

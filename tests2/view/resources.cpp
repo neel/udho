@@ -42,11 +42,12 @@ Hello World
         {"3profile.png", {"primary", udho::view::resources::asset::type::img, buffer_img}}
     };
 
+    udho::view::resources::tmpl::resource profile{"profile", buffer, buffer+sizeof(buffer)};
     udho::view::data::bridges::lua lua;
     lua.init();
 
     SECTION("Lua template compilation") {
-        bool res = lua.compile(udho::view::resources::tmpl::resource("profile", buffer, buffer+sizeof(buffer)), "user");
+        bool res = lua.compile(profile, "user");
         REQUIRE(res == true);
     }
 
@@ -221,11 +222,12 @@ Hello World
         temp_stream.close();
     }
 
+    udho::view::resources::tmpl::resource profile{"profile", buffer, buffer+sizeof(buffer)};
     udho::view::data::bridges::lua lua;
     lua.init();
 
     SECTION("Lua template compilation") {
-        bool res = lua.compile(udho::view::resources::tmpl::resource("profile", buffer, buffer+sizeof(buffer)), "user");
+        bool res = lua.compile(profile, "user");
         REQUIRE(res == true);
     }
 

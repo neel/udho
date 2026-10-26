@@ -177,15 +177,23 @@ struct parser{
 
         std::uint32_t last_tag = tmpl::section::text;
 
+        std::size_t token_line = 1;
+        std::size_t last_open_line = 1, last_close_line = 1;
+
         auto pos = begin;
         while(pos != end){
             auto tpos = trie.next(pos, end);
+            // token doesn't contain any new line
+            token_line = last_close_line + std::count(last_close, tpos.token_begin, '\n');
+
             // auto token_len = trie[tpos.token_id].size();
             pos = tpos.token_end;
             if(pos == end) {
                 auto scope_begin = (last_tag == tmpl::section::text) ? last_close : last_open;
                 auto scope_end   = (tpos.token_id == 0) ? end : tpos.token_begin;
-                fptr(section{type(last_tag), scope_begin, scope_end});
+
+                auto scope_begin_line = (last_tag == tmpl::section::text) ? last_close_line : last_open_line;
+                fptr(section{type(last_tag), scope_begin, scope_end, scope_begin_line, token_line});
                 break;
             }
 
@@ -194,11 +202,12 @@ struct parser{
                 if(block_open == 0){
                     auto scope_end = tpos.token_begin;
                     if(std::distance(last_close, scope_end) > 0){
-                        fptr(section{section::text, last_close, scope_end});
+                        fptr(section{section::text, last_close, scope_end, last_close_line, token_line});
                     }
                     last_open = pos;
                     last_tag  = id;
                     block_open = 1;
+                    last_open_line = token_line;
                 }
             }
 
@@ -209,9 +218,10 @@ struct parser{
                         (id == tag_close_comment  && last_tag == tmpl::section::comment)  ||
                         (id == tag_close_verbatim && last_tag == tmpl::section::verbatim)
                     ){
-                        fptr(section{type(last_tag), last_open, tpos.token_begin});
+                        fptr(section{type(last_tag), last_open, tpos.token_begin, last_open_line, token_line});
                         last_close = pos;
                         last_tag   = tmpl::section::text;
+                        last_close_line = token_line;
                         block_open = 0;
                     }
                 }

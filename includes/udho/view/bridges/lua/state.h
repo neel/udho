@@ -31,14 +31,22 @@
 #include <map>
 #include <string>
 #include <functional>
+#include <exception>
+#include <sstream>
+#include <utility>
 #include <sol/sol.hpp>
 #include <udho/hazo/string/basic.h>
 #include <udho/url/detail/format.h>
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/buffer.h>
 #include <udho/view/bridges/lua/extras.h>
+#include <udho/view/bridges/exceptions.h>
+#include <udho/view/bridges/source_map.h>
 #include <udho/manifold/context.h>
 #include <udho/logging/macros.h>
+#include <udho/view/bridges/lua/environment.h>
+#include <udho/view/bridges/lua/diagnostic.h>
+#include <udho/view/resources/resource.h>
 
 namespace udho{
 namespace view{
@@ -113,14 +121,22 @@ inline const std::string& dir() {
  * This structure encapsulates the Lua state management using the Sol2 library, providing functionalities for opening libraries, initializing global tables, and executing Lua scripts. It is designed to interact closely with Lua scripts generated from templates, facilitating data binding and script execution within a robust error handling framework.
  */
 struct state{
+    using view_resource_type      = udho::view::resources::tmpl::resource;
+    using view_resource_cref_type = std::reference_wrapper<const view_resource_type>;
+
     inline static std::uint32_t generate_id(){
         static std::uint32_t id = 0;
         return id++;
     }
 
     struct view_info{
+        view_info(std::size_t size, sol::protected_function fn, bridges::source_map map, view_resource_cref_type resource)
+            : min_buffer_size(size), function(std::move(fn)), source_map(std::move(map)), resource(resource) {}
+
         std::size_t min_buffer_size;
         sol::protected_function function;
+        bridges::source_map source_map;
+        view_resource_cref_type resource;
     };
 
     using id_type = std::uint32_t;
@@ -155,27 +171,39 @@ struct state{
      * Creates a 'udho' table in the Lua global environment if it does not exist and binds the buffer class to it. This table acts as a namespace for all operations related to the framework.
      */
     inline void init(){
-        // _state.set_exception_handler([](lua_State* L, sol::optional<const std::exception&> maybe_exception, sol::string_view description) -> int {
-        //     if (maybe_exception) {
-        //         std::string message = "An exception occurred: ";
-        //         message += maybe_exception->what();  // Get the exception message
-        //         sol::stack::push(L, message);  // Push the message onto the Lua stack
-        //     } else {
-        //         // Push the description if no standard exception is caught
-        //         sol::stack::push(L, std::string(description.data(), description.size()));
-        //     }
-        //     return 1;  // Return the number of values pushed onto the stack
-        // });
-
         namespace p = udho::logging::params;
 
+        // { error handling
+        _state.set_exception_handler(&state::exception_handler);
+        sol::protected_function_result handler_result = udho::view::data::bridges::detail::lua::diagnostic::install(_state, "@udho/view/error-handler");
+        if(!handler_result.valid()){
+            sol::error err = handler_result;
+            throw std::runtime_error{"Failed to initialize Lua view error handler: " + std::string(err.what())};
+        }
+        if(handler_result.get_type() != sol::type::table){
+            throw std::runtime_error{"Failed to initialize Lua view error handler: initialization did not return a table"};
+        }
+
+        sol::table error_handler_table = handler_result.get<sol::table>();
+        sol::object diagnostic_handler = error_handler_table["handler"];
+        sol::object diagnostic_factory = error_handler_table["factory"];
+        if(!diagnostic_handler.is<sol::function>() || !diagnostic_factory.is<sol::function>()){
+            throw std::runtime_error{"Failed to initialize Lua view error handler: invalid handler functions"};
+        }
+
+        _diagnostic_handler = diagnostic_handler.as<sol::function>();
+        sol::protected_function::set_default_handler(_diagnostic_handler);
+        _diagnostic_factory = diagnostic_factory.as<sol::protected_function>();
+        // }
+
+        // { version check
         try {
             // Execute the script and directly obtain the version string
             auto result = _state.safe_script("return _VERSION", sol::script_pass_on_error);
             if (!result.valid()) {
-                sol::error err = result;
+                udho::view::data::bridges::detail::lua::diagnostic error(result);
                 // std::cerr << "Failed to detect lua version: " << err.what() << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "Failed to detect Lua version", p::exception(err.what()));
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "Failed to detect Lua version", p::exception(error.message));
                 return;
             }
 
@@ -188,14 +216,22 @@ struct state{
             UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "Error while detecting Lua version", p::exception(e.what()));
             return;
         }
+        // }
 
-        _state.script(scripts::dir());
+        // { auxilary lua functions
+        sol::protected_function_result dir_result = _state.safe_script(scripts::dir(), sol::script_pass_on_error, "@udho/view/dir");
+        if(!dir_result.valid()){
+            udho::view::data::bridges::detail::lua::diagnostic error(dir_result);
+            throw std::runtime_error{"Failed to initialize Lua dir function: " + std::move(error.message)};
+        }
+
         _udho = _state["udho"].get_or_create<sol::table>();
         buffer::apply(_udho);
 
         _utils  = _udho["utils"].get_or_create<sol::table>();
         udho::view::data::bridges::detail::lua::extras extras(_utils);
         extras();
+        // }
     }
 
 
@@ -215,36 +251,16 @@ struct state{
     std::size_t exec(const std::string& name, const T& data, Aux& aux, std::string& output){
         namespace p = udho::logging::params;
 
-        std::string view_index = name;
-        if(!_views.count(view_index)){
-            // std::cout << "View not found " << view_index << std::endl;
-            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::name(view_index));
-            return 0;
+        output.clear();
+        auto found = _views.find(name);
+        if(found == _views.end()){
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::name(name));
+            throw std::runtime_error{"View not found: " + name};
         }
 
-        view_info view = _views[view_index];
-        buffer_type buff{view.min_buffer_size};
-
-        sol::environment env = sol::get_environment(view.function);
-        sol::environment isolated_env(_state, sol::create, _state.globals());
-        sol::set_environment(isolated_env, view.function);
-        sol::protected_function_result result = view.function(std::ref(data), std::ref(aux), buff);
-        sol::set_environment(env, view.function);
-
-        if (!result.valid()) {
-            sol::error err = result;
-            // std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
-            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view execution failed", p::exception(err.what()), p::path(view_index));
-            return 0;
-        }
-
-        std::size_t size = buff.str(output);
-        // If the returned output is null terminated remve the trailing null
-        if(output.back() == '\0'){
-            output.pop_back();
-            --size;
-        }
-        return size;
+        std::string rendered = execute(name, found->second, std::ref(data), std::ref(aux));
+        output = std::move(rendered);
+        return output.size();
     }
 
     /**
@@ -263,36 +279,13 @@ struct state{
     std::string exec_lua(const std::string& name, sol::object d, AuxT aux){
         namespace p = udho::logging::params;
 
-        std::string view_index = name;
-        if(!_views.count(view_index)){
-            // std::cout << "View not found " << view_index << std::endl;
-            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::path(view_index));
-            throw std::runtime_error("View not found: " + view_index);
+        auto found = _views.find(name);
+        if(found == _views.end()){
+            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view not found", p::path(name));
+            throw std::runtime_error{"View not found: " + name};
         }
 
-        view_info view = _views[view_index];
-        buffer_type buff{view.min_buffer_size};
-
-        sol::environment env = sol::get_environment(view.function);
-        sol::environment isolated_env(_state, sol::create, _state.globals());
-        sol::set_environment(isolated_env, view.function);
-        sol::protected_function_result result = view.function(d, aux, buff); // unlike the previous version of the function here d and aux comes from lua itself. Not from C++
-        sol::set_environment(env, view.function);
-
-        if (!result.valid()) {
-            sol::error err = result;
-            // std::cout << "Error executing function from " << view_index << ": " << err.what() << std::endl;
-            UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view execution failed", p::exception(err.what()), p::path(view_index));
-            throw std::runtime_error("Error executing function from " + view_index + ": " + err.what());
-        }
-
-        std::string output;
-        buff.str(output);
-        // If the returned output is null terminated remve the trailing null
-        if(output.back() == '\0'){
-            output.pop_back();
-        }
-        return output;
+        return execute(name, found->second, d, aux);
     }
 
     sol::table& udho() { return _udho; }
@@ -308,6 +301,141 @@ struct state{
         }
     }
     private:
+        struct cpp_exception{
+            std::string message;
+            std::exception_ptr exception;
+
+            std::string to_string() const { return message; }
+        };
+
+        /**
+         * @brief gets called by sol when the lua code in the view calls some C++ function that throws C++ exception.
+         *        pushes that C++ exception to lua stack.
+         * @param state
+         * @param description
+         * @return
+         */
+        static int exception_handler(lua_State* lua, sol::optional<const std::exception&>, sol::string_view description){
+            cpp_exception value{std::string{description.data(), description.size()}, std::current_exception()};
+            return sol::stack::push(lua, std::move(value));
+        }
+
+        /**
+         * @brief returns diagnostic handler lua function for a view identified by the source.
+         *        compiler sets that function as the error handler for the view.
+         * @param source identifying the view
+         * @return
+         */
+        sol::function diagnostic_handler(const std::string& source){
+            sol::protected_function_result result = _diagnostic_factory(source);
+            if(!result.valid()){
+                udho::view::data::bridges::detail::lua::diagnostic error(result);
+                throw std::runtime_error{"Error creating view diagnostic handler: " + std::move(error.message)};
+            }
+            if(result.get_type() != sol::type::function){
+                throw std::runtime_error{"Error creating view diagnostic handler: factory did not return a function"};
+            }
+            return result.get<sol::function>();
+        }
+
+        static bridges::rendering_frame::source_lines_type extract_source_lines(const view_resource_type& resource, const bridges::source_span& span){
+            bridges::rendering_frame::source_lines_type lines;
+            if(!span.valid()){
+                return lines;
+            }
+
+            auto line_begin = resource.begin();
+            std::size_t line_number = 1;
+            for(auto position = resource.begin(); position != resource.end(); ++position){
+                if(*position != '\n'){
+                    continue;
+                }
+
+                if(line_number >= span.begin && line_number <= span.end){
+                    auto line_end = position;
+                    if(line_end != line_begin && *(line_end - 1) == '\r'){
+                        --line_end;
+                    }
+                    lines.push_back({line_number, std::string{line_begin, line_end}});
+                }
+                if(line_number == span.end){
+                    return lines;
+                }
+
+                ++line_number;
+                line_begin = position + 1;
+            }
+
+            if(line_number >= span.begin && line_number <= span.end){
+                lines.push_back({line_number, std::string{line_begin, resource.end()}});
+            }
+            return lines;
+        }
+
+        template <typename... Args>
+        std::string execute(const std::string& name, view_info& view, Args&&... args){
+            namespace p = udho::logging::params;
+
+            buffer_type buff{view.min_buffer_size};
+            sol::protected_function_result result;
+            std::exception_ptr exception;
+            std::string message;
+            try {
+                environment_guard environment{_state, view.function};
+                result = view.function(std::forward<Args>(args)..., buff);
+            } catch(const std::exception& ex) {
+                exception = std::current_exception();
+                message = ex.what();
+            } catch(...) {
+                exception = std::current_exception();
+                message = "A nested render or bound C++ operation failed";
+            }
+
+            std::string output;
+            buff.str(output);
+            if(!output.empty() && output.back() == '\0'){
+                output.pop_back();
+            }
+
+            if(exception){
+                bridges::rendering_frame frame{name, std::move(output)};
+                throw bridges::rendering_error{std::move(frame), std::move(message), std::move(exception)};
+            }
+
+            if(!result.valid()){
+                std::exception_ptr cause;
+                sol::stack_object error_object{result.lua_state(), result.stack_index()};
+                if(error_object.is<sol::table>()){
+                    sol::table error_table = error_object.as<sol::table>();
+                    sol::object error_value = error_table["error"];
+                    if(error_value.is<cpp_exception>()){
+                        cause = error_value.as<cpp_exception&>().exception;
+                    }
+                }
+
+                udho::view::data::bridges::detail::lua::diagnostic error{result};
+                std::optional<bridges::source_span> source = view.source_map.find(error.line);
+                bridges::source_span lines = source ? *source : bridges::source_span{};
+                bridges::rendering_frame::source_lines_type source_lines = extract_source_lines(view.resource.get(), lines);
+
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua::state", "view execution failed", p::exception(error.message), p::path(name));
+
+                bridges::rendering_frame frame{name, std::move(output), error.line, lines, std::move(source_lines), std::move(error.traceback)};
+                if(cause){
+                    try {
+                        std::rethrow_exception(cause);
+                    } catch(const bridges::rendering_error& nested) {
+                        throw bridges::rendering_error{std::move(frame), nested};
+                    } catch(...) {
+                    }
+                }
+
+                throw bridges::rendering_error{std::move(frame), std::move(error.message), std::move(cause)};
+            }
+
+            return output;
+        }
+
         std::pair<int, int> parse_lua_version(const std::string& version_string) {
             std::istringstream iss(version_string);
             std::string token;
@@ -326,6 +454,8 @@ struct state{
         sol::table _udho; ///< A table in the Lua global environment for namespaced operations related to this framework.
         std::map<std::string, view_info> _views;
         sol::table _utils;
+        sol::function _diagnostic_handler;
+        sol::protected_function _diagnostic_factory;
         std::pair<int, int> _lua_version;
         id_type _id;
         mutable std::vector<std::function<void (const state&)>> _unbinders;

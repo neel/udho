@@ -389,32 +389,17 @@ namespace udho::view::data{
 
             type.set_function("render", sol::overload(
                 [&state](const class_type& self) mutable -> std::string {
-                    try {
-                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-                        return state.exec_lua(view_key, sol::nil, self.context());
-                    } catch (const std::exception& e) {
-                        // If there is an error, throw Lua exception with the error message
-                        throw sol::error(e.what());
-                    }
+                    std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                    return state.exec_lua(view_key, sol::nil, self.context());
                 },
                 [&state](const class_type& self, sol::object d) mutable -> std::string {
-                    try {
-                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-                        return state.exec_lua(view_key, d, self.context());
-                    } catch (const std::exception& e) {
-                        // If there is an error, throw Lua exception with the error message
-                        throw sol::error(e.what());
-                    }
+                    std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                    return state.exec_lua(view_key, d, self.context());
                 },
                 [&state](const class_type& self, sol::object d, udho::view::data::bridges::detail::lua::buffer& stream) mutable -> std::size_t {
-                    try {
-                        std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-                        std::string output = state.exec_lua(view_key, d, self.context());
-                        return stream.puts(output);
-                    } catch (const std::exception& e) {
-                        // If there is an error, throw Lua exception with the error message
-                        throw sol::error(e.what());
-                    }
+                    std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                    std::string output = state.exec_lua(view_key, d, self.context());
+                    return stream.puts(output);
                 }
             ));
         }
@@ -440,13 +425,8 @@ namespace udho::view::data{
             user_type& type = binder.type();
 
             type.set_function("render", [&state](const class_type& self, sol::object d, sol::object aux) mutable {
-                try {
-                    std::string view_key = bridges::common::view_key(self.name(), self.prefix());
-                    return state.exec_lua(view_key, d, aux);  // script_name should be replaced with actual script identifier
-                } catch (const std::exception& e) {
-                    // If there is an error, throw Lua exception with the error message
-                    throw sol::error(e.what());
-                }
+                std::string view_key = bridges::common::view_key(self.name(), self.prefix());
+                return state.exec_lua(view_key, d, aux);  // script_name should be replaced with actual script identifier
             });
         }
     };

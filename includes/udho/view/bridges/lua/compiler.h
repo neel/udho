@@ -37,6 +37,7 @@
 #include <udho/view/bridges/lua/fwd.h>
 #include <udho/view/bridges/lua/script.h>
 #include <udho/view/bridges/lua/state.h>
+#include <udho/view/bridges/lua/diagnostic.h>
 
 namespace udho{
 namespace view{
@@ -58,7 +59,8 @@ namespace lua{
  * This structure is responsible for compiling Lua scripts provided as strings and integrating them into a given Lua state managed by `detail::lua::state`. It uses the Sol2 library to load and compile the scripts, handling errors and integrating compiled scripts into the Lua global environment.
  */
 struct compiler{
-    using script_type = lua::script;
+    using script_type   = lua::script;
+    using resource_type = state::view_resource_type;
 
     /**
      * @brief Constructs a compiler linked to a specific Lua state.
@@ -68,13 +70,14 @@ struct compiler{
 
     /**
      * @brief Compiles a Lua script and registers it within the Lua state.
-     * @param script An rvalue reference to a `script_type` object containing the Lua script to compile.
+     * @param script Lua script to compile.
+     * @param resource Source view resource associated with the generated script.
      * @return True if the script was successfully compiled and registered, false otherwise.
      *
      * Attempts to load and compile the script using Sol2's load functionality. If successful, the compiled function is registered in the Lua state under the name provided by the script. If any step fails, a detailed error message is generated and a standard exception is thrown.
      * @details This function performs the actual compilation work by loading the script into the Lua state, checking for syntax errors, and registering the resulting function. Detailed error handling ensures that any issues during loading or function extraction are clearly reported.
      */
-    inline bool operator()(script_type&& script);
+    inline bool operator()(const script_type& script, const resource_type& resource);
     inline void analyze_fn(const sol::protected_function& fn) {
         // TODO future work nice to have bytecode analyser to detect vulnerabilities e.g. accedental SET GLOBAL.
     }
@@ -82,28 +85,32 @@ struct compiler{
         state& _state;
 };
 
-bool compiler::operator()(script_type&& script){
-    sol::load_result load_result = _state._state.load_buffer(script.data(), script.size());
+bool compiler::operator()(const script_type& script, const resource_type& resource){
+    const std::string source     = "@" + script.name();
+    sol::load_result load_result = _state._state.load_buffer(script.data(), script.size(), source);
     if (!load_result.valid()) {
         sol::error err = load_result;
-        throw std::runtime_error("Error loading script: " + std::string(err.what()));
+        throw std::runtime_error{"Error compiling view '" + script.name() + "': " + std::string{err.what()}};
     }
 
-    sol::protected_function view =  load_result.get<sol::protected_function>();
+    sol::protected_function view = load_result.get<sol::protected_function>();
     sol::protected_function_result view_result = view(); // a view is a function returned from a anonymous wrapper function that takes no argument
     if (!view_result.valid()) {
-        sol::error err = view_result;
-        throw std::runtime_error("Error during function extraction: " + std::string(err.what()));
+        udho::view::data::bridges::detail::lua::diagnostic error(view_result);
+        std::string message = "Error extracting generated function for view '" + script.name() + "': " + std::move(error.message);
+        if(!error.traceback.empty()){
+            message += "\n" + std::move(error.traceback);
+        }
+        throw std::runtime_error{std::move(message)};
     }
 
 
     sol::protected_function view_fnc = view_result;     // view_fnc is the actual view function that will be called with a data and a context object
+    view_fnc.set_error_handler(_state.diagnostic_handler(source));
     analyze_fn(view_fnc);
 
-    detail::lua::state::view_info info;
-    info.min_buffer_size = script.min_size();
-    info.function = view_fnc;
-    auto it = _state._views.insert(std::make_pair(script.name(), info));
+    detail::lua::state::view_info info{script.min_size(), std::move(view_fnc), script.source_map(), std::cref(resource)};
+    auto it = _state._views.insert(std::make_pair(script.name(), std::move(info)));
     return it.second;
 }
 

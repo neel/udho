@@ -63,7 +63,7 @@ struct stream{
     /**
      * @brief Constructs a new stream object with default settings.
      */
-    explicit stream(): _indent(0), _empty_newline(true) {
+    explicit stream(): _indent(0), _empty_newline(true), _line(1) {
         std::fill(_indent_str.begin(), _indent_str.end(), indent_char);
     }
 
@@ -143,6 +143,10 @@ struct stream{
      * @return The size of the buffer in characters.
      */
     std::size_t size() const { return _buffer.size(); }
+    /**
+     * @brief Gets the one-based generated source line currently being written.
+     */
+    std::size_t line() const { return _line; }
 
     std::string save(const std::string& name) const {
         std::string sanitized_name = name;
@@ -199,7 +203,10 @@ struct stream{
                 _buffer.insert(_buffer.end(), _indent_str.begin(), _indent_str.begin() + _indent);
                 _empty_newline = false;
             }
+            std::size_t content_begin = _buffer.size();
             _buffer.insert(_buffer.end(), begin, end);
+            std::size_t line_count = std::count(_buffer.begin() + content_begin, _buffer.end(), '\n');
+            _line += line_count;
         }
         /**
          * @brief Appends a newline character to the buffer and resets the line state to empty.
@@ -208,11 +215,13 @@ struct stream{
         void append_newline() {
             _buffer.push_back('\n');
             _empty_newline = true;
+            ++_line;
         }
     private:
         std::vector<char_type> _buffer;  ///< The buffer storing the stream's content.
         std::int8_t _indent;  ///< Current indentation level.
         bool _empty_newline;  ///< Flag indicating whether the current line is empty.
+        std::size_t _line;  ///< One-based generated source line.
         std::array<char_type, std::numeric_limits<std::int8_t>::max()> _indent_str;  ///< Array used for indentation.
 };
 

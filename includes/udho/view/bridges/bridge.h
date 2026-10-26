@@ -37,6 +37,7 @@
 #include <queue>
 #include <mutex>
 #include <iostream>
+#include <exception>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <memory>
 #include <udho/url/detail/format.h>
@@ -245,6 +246,8 @@ struct bridge{
     template <typename X>
     using default_binder_type = udho::view::data::detail::binder<BinderT, X>;
     using self_type = bridge<StateT, CompilerT, ScriptT, BinderT>;
+    using view_header_type   = udho::view::data::bridges::view_header;
+    using view_resource_type = udho::view::resources::tmpl::resource;
 
 
     static constexpr auto name() { return state_type::name(); }
@@ -324,10 +327,16 @@ struct bridge{
      * @param prefix A prefix used in the naming of the script.
      * @return True if compilation was successful, false otherwise.
      */
-    bool compile(udho::view::resources::tmpl::resource&& view, const std::string& prefix){
+    bool compile(const view_resource_type& view, const std::string& prefix){
         std::string key = view_key(view.name(), prefix);
-        return compile(view.begin(), view.end(), key);
+        if(_headers.count(key)){
+            return false;
+        }
+
+        return compile(key, view);
     }
+
+    bool compile(view_resource_type&& view, const std::string& prefix) = delete;
 
     const udho::view::data::bridges::view_header& header(const std::string& key) const {
         return _headers.at(key);
@@ -415,6 +424,7 @@ struct bridge{
             assert(_states.size() == 1);
             std::size_t index = 0;
             std::unique_ptr<state_type>& state = _states[index];
+            results.start(index);
             exec_cs(name, prefix, data, aux, output, state, results);
             // }
 
@@ -583,48 +593,18 @@ struct bridge{
         void exec_cs(const std::string& name, const std::string& prefix, const T& data, Aux& aux, std::string& output, std::unique_ptr<state_type>& state, udho::view::data::bridges::results& results){
             namespace p = udho::logging::params;
 
+            output.clear();
             std::string view_key_str;
+            std::size_t size = 0;
             try{
                 view_key_str = view_key(name, prefix);
-            } catch(const std::exception& e) {
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Failed to compute view key", p::exception(e.what()), p::name(name));
-                results.finish(0);
-                return;
-            } catch(...) {
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown error while computing view key", p::name(name));
-                results.finish(0);
-                return;
-            }
-
-            std::size_t size = 0;
-            try {
                 size = state->exec(view_key_str, std::ref(data), aux, output);
-            } catch(const sol::error& e){
-                std::string execption_str = udho::url::format("Lua Exeption while executing view {}: ", view_key_str);
-                std::string ex_str;
-                ex_str += execption_str;
-                ex_str += e.what();
-                size = ex_str.size();
-                output = ex_str;
-                // std::cerr << execption_str << e.what() << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Lua exception while executing view", p::exception(e.what()), p::name(view_key_str));
             } catch(const std::exception& e){
-                std::string execption_str = udho::url::format("C++ Exeption while executing view {}: ", view_key_str);
-                std::string ex_str;
-                ex_str += execption_str;
-                ex_str += e.what();
-                size = ex_str.size();
-                output = ex_str;
-                // std::cerr << execption_str << e.what() << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "C++ exception while executing view", p::exception(e.what()), p::name(view_key_str));
+                results.fail(std::current_exception());
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Exception while executing view", p::exception(e.what()), p::name(view_key_str.empty() ? name : view_key_str));
             } catch(...){
-                std::string execption_str = udho::url::format("Unknown Exeption while executing view {}: ", view_key_str);
-                std::string ex_str;
-                ex_str += execption_str;
-                size = ex_str.size();
-                output = ex_str;
-                // std::cerr << execption_str << std::endl;
-                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown exception while executing view", p::name(view_key_str));
+                results.fail(std::current_exception());
+                UDHO_LOG_ERROR("udho::view::data::bridges::lua", "Unknown exception while executing view", p::name(view_key_str.empty() ? name : view_key_str));
             }
             results.finish(size);
         }
@@ -640,20 +620,18 @@ struct bridge{
             return bridges::common::view_key(name, prefix);
         }
         /**
-         * @brief Compiles a script from a range of iterators that encapsulate template data.
+         * @brief Compiles a script from the view encapsulate template data.
          * @details This function takes iterators pointing to the beginning and end of a template, generates a script using the specified script handler, and attempts to compile this script using the scripting engine associated with this bridge.
          *          It processes the template data, transforms it into the scripting language using the provided script handler, and manages the compilation through the scripting engine's compiler.
-         * @param begin Iterator to the beginning of the template data.
-         * @param end Iterator to the end of the template data.
          * @param key A unique key or identifier for the compiled script, used to store and reference the script within the scripting engine.
+         * @param view The source view resource.
          * @return True if the compilation was successful, false otherwise.
          * @tparam IteratorT The type of the iterator (e.g., string iterator, file buffer iterator).
          */
-        template <typename IteratorT>
-        bool compile(IteratorT begin, IteratorT end, std::string key){
+        bool compile(const std::string& key, const view_resource_type& view){
             script_type script{key};
             udho::view::tmpl::parser parser;
-            parser.parse(begin, end, script);
+            parser.parse(view.begin(), view.end(), script);
             script.finish();
             const udho::view::data::bridges::view_header& header = script.header();
             _headers.insert(std::make_pair(key, std::move(header)));
@@ -666,25 +644,25 @@ struct bridge{
             bool success = true;
             for (std::unique_ptr<state_type>& state: _states){
                 compiler_type compiler{*state};
-                success = success && compiler(std::move(script));
+                success = success && compiler(script, view);
             }
             return success;
         }
 
     private:
-        std::size_t                                 _pool_size;
-        bool                                        _initialized;
-        std::vector<std::unique_ptr<state_type>>    _states;
-        boost::interprocess::interprocess_semaphore _semaphore_exec;
+        std::size_t                                     _pool_size;
+        bool                                            _initialized;
+        std::vector<std::unique_ptr<state_type>>        _states;
+        boost::interprocess::interprocess_semaphore     _semaphore_exec;
 #if (UDHO_INTERNAL_BRIDGE_USE_LOCKFREE_QUEUE)
-        boost::lockfree::queue<std::size_t>         _free_lf_q;
+        boost::lockfree::queue<std::size_t>             _free_lf_q;
 #else
-        std::queue<std::size_t>                     _freeq;
-        std::mutex                                  _mutex_queue;
+        std::queue<std::size_t>                         _freeq;
+        std::mutex                                      _mutex_queue;
 #endif
-        std::recursive_mutex                        _mutex_bind;
-        bridges::policy                             _policy;
-        std::map<std::string, udho::view::data::bridges::view_header> _headers;
+        std::recursive_mutex                            _mutex_bind;
+        bridges::policy                                 _policy;
+        std::map<std::string, view_header_type>         _headers;
 
 };
 

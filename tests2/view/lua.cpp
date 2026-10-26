@@ -128,6 +128,12 @@ Number of courses: <?= #d.courses ?>
         {"left_out",    buffer_left_out     }
     };
 
+    std::vector<udho::view::resources::tmpl::resource> resources;
+    resources.reserve(views.size());
+    for(const auto& view: views){
+        resources.emplace_back(view.first, view.second, view.second + std::strlen(view.second));
+    }
+
     const std::vector<std::string> expected_outputs = {
         "\nName: X Bose\nAge: 25.0\nDebt: 50.0\nAddress: Good locality (7086)\n",
         "\nName: X Bose, Age: 25, Debt: 50 Address: Good locality\nPhD at JU\nMCA at SMU\nBCA at SMU\n\nResult of add: 51.0\n",
@@ -147,7 +153,7 @@ Number of courses: <?= #d.courses ?>
         std::size_t anything_as_aux;
 
         for (std::size_t i = 0; i < views.size(); ++i) {
-            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            bool res = lua.compile(resources[i], "prefix");
             INFO("Compiling view " << views[i].first);
             REQUIRE(res == true);
         }
@@ -165,7 +171,7 @@ Number of courses: <?= #d.courses ?>
         lua.init();
 
         for (std::size_t i = 0; i < views.size(); ++i) {
-            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            bool res = lua.compile(resources[i], "prefix");
             INFO("Compiling view " << views[i].first);
             REQUIRE(res == true);
         }
@@ -204,7 +210,7 @@ Number of courses: <?= #d.courses ?>
         lua.init();
 
         for (std::size_t i = 0; i < views.size(); ++i) {
-            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            bool res = lua.compile(resources[i], "prefix");
             INFO("Compiling view " << views[i].first);
             REQUIRE(res == true);
         }
@@ -243,7 +249,7 @@ Number of courses: <?= #d.courses ?>
         lua.init();
 
         for (std::size_t i = 0; i < views.size(); ++i) {
-            bool res = lua.compile(udho::view::resources::tmpl::resource(views[i].first, views[i].second, views[i].second + std::strlen(views[i].second)), "prefix");
+            bool res = lua.compile(resources[i], "prefix");
             INFO("Compiling view " << views[i].first);
             REQUIRE(res == true);
         }

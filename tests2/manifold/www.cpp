@@ -10,6 +10,8 @@
 #include <udho/www/www.h>
 #include <udho/net/listener.h>
 #include <udho/manifold/visualize.h>
+#include <udho/view/bridges/exceptions.h>
+#include <udho/view/tmpl/layout/layout.h>
 #include <boost/beast/_experimental/test/stream.hpp>
 #include <initializer_list>
 #include <stdexcept>
@@ -132,6 +134,20 @@ namespace www_test_callbacks{
         context.finish();
     }
 
+    using layout_context_type = udho::www::basic_context<
+        stream_type,
+        udho::www::components::resources<>
+    >;
+
+    static void render_layout(layout_context_type context) {
+        namespace placeholders = udho::view::tmpl::layout::placeholders;
+
+        auto page = context.portal().template layout<placeholders::standard>(context);
+        page.preamble().title("Managed layout title");
+        page[placeholders::central] = "Managed layout body";
+        page();
+    }
+
     using action_context_type = udho::www::basic_context<stream_type>;
 
     static std::vector<std::string> exception_invocations;
@@ -216,6 +232,34 @@ namespace www_test_callbacks{
         record_exception_body(context);
         exception_invocations.push_back("cpp");
         throw std::runtime_error{"ordinary test exception"};
+    }
+
+    static void throw_rendering(action_context_type) {
+        udho::view::data::bridges::rendering_error child{
+            udho::view::data::bridges::rendering_frame{
+                ":views/child",
+                "child <script>output</script>",
+                17,
+                {7, 9},
+                {
+                    {7, "<script>alert('source')</script>"},
+                    {8, "middle & source"},
+                    {9, "closing"}
+                },
+                "child <traceback>"
+            },
+            "attempt to index <child>",
+            std::make_exception_ptr(std::runtime_error{"attempt to index <child>"})
+        };
+
+        throw udho::view::data::bridges::rendering_error{
+            udho::view::data::bridges::rendering_frame{
+                ":views/parent",
+                "parent <style>output</style>",
+                11
+            },
+            child
+        };
     }
 
     static auto error_router() {
@@ -627,6 +671,66 @@ TEST_CASE("udho www framework dispatches through a Beast test stream", "[www][te
     CHECK(response_stream.str().find("HTTP/1.1 200 OK") != std::string::npos);
     CHECK(response_stream.str().find("42") != std::string::npos);
     CHECK(runtime.count() == 0);
+}
+
+TEST_CASE("udho handler accessor retains layouts until response completion", "[www][test-stream][layout][lifetime]") {
+    using namespace udho::hazo::string::literals;
+
+    auto actions =
+        udho::url::slot("layout"_h, &www_test_callbacks::render_layout) <<
+        udho::url::home(udho::url::verb::get)
+    ;
+    auto table = udho::url::mount("root"_h, "/", std::move(actions));
+
+    const auto result = www_test::execute_minimal(
+        udho::url::router(std::move(table)),
+        www_test::get_request("/")
+    );
+
+    CHECK(result.body.find("<title>Managed layout title</title>") != std::string::npos);
+    CHECK(result.body.find("<body>Managed layout body</body>") != std::string::npos);
+    CHECK(result.active_flows == 0);
+}
+
+TEST_CASE("udho terminal renders nested view errors", "[www][test-stream][error][view]") {
+    using namespace udho::hazo::string::literals;
+
+    auto actions =
+        udho::url::slot("rendering-error"_h, &www_test_callbacks::throw_rendering) <<
+        udho::url::home(udho::url::verb::get)
+    ;
+    auto table = udho::url::mount("root"_h, "/", std::move(actions));
+
+    const auto result = www_test::execute_minimal(
+        udho::url::router(std::move(table)),
+        www_test::get_request("/")
+    );
+
+    CHECK(result.body.find(www_test::status_marker(500)) != std::string::npos);
+    const std::size_t parent = result.body.find(":views/parent");
+    const std::size_t child  = result.body.find(":views/child");
+    REQUIRE(parent != std::string::npos);
+    REQUIRE(child != std::string::npos);
+    CHECK(parent < child);
+    CHECK(result.body.find("view location unavailable") != std::string::npos);
+    CHECK(result.body.find("near view lines 7-9") != std::string::npos);
+    CHECK(result.body.find("parent &lt;style&gt;output&lt;/style&gt;") != std::string::npos);
+    CHECK(result.body.find("child &lt;script&gt;output&lt;/script&gt;") != std::string::npos);
+    CHECK(result.body.find("class=\"udho-rendering-source\"") != std::string::npos);
+    CHECK(result.body.find("class=\"udho-rendering-partial-output\"") != std::string::npos);
+    CHECK(result.body.find("class=\"udho-rendering-traceback\"") != std::string::npos);
+    CHECK(result.body.find("&lt;script&gt;alert(&#39;source&#39;)&lt;/script&gt;") != std::string::npos);
+    CHECK(result.body.find("middle &amp; source") != std::string::npos);
+    const std::string diagnostic = "attempt to index &lt;child&gt;";
+    const std::size_t diagnostic_position = result.body.find(diagnostic);
+    REQUIRE(diagnostic_position != std::string::npos);
+    CHECK(result.body.find(diagnostic, diagnostic_position + diagnostic.size()) == std::string::npos);
+    CHECK(result.body.find("Caused by C++ exception") != std::string::npos);
+    CHECK(result.body.find("child &lt;traceback&gt;") != std::string::npos);
+    CHECK(result.body.find("parent <style>output</style>") == std::string::npos);
+    CHECK(result.body.find("child <script>output</script>") == std::string::npos);
+    CHECK(result.body.find("<script>alert('source')</script>") == std::string::npos);
+    CHECK(result.active_flows == 0);
 }
 
 TEST_CASE("udho www framework dispatches mounted extension routes with query parameters", "[www][test-stream][routing]") {
