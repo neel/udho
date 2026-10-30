@@ -66,6 +66,7 @@ set(UDHO_BOOST_COMPONENTS
     iostreams
     log
     log_setup
+    program_options
 )
 set(UDHO_BOOST_MAX_VERSION "1.90.0")
 if(DEFINED BOOST_ROOT AND NOT BOOST_ROOT STREQUAL "")

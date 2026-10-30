@@ -32,7 +32,8 @@ enum class command : std::uint32_t {
     filter_set = 1,
     filter_unset,
     filter_show,
-    temporary_enable
+    temporary_enable,
+    sink_info
 };
 
 /**

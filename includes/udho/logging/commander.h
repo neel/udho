@@ -9,11 +9,11 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 
 #include <udho/logging/protocol.h>
+#include <udho/utils/string_view.h>
 
 namespace udho {
 namespace logging {
@@ -162,7 +162,7 @@ public:
      * @param filter_expression
      * @return command execution result
      */
-    result filter_set(std::string_view filter_expression) { return execute(udho::logging::protocol::command::filter_set, filter_expression); }
+    result filter_set(udho::utils::string_view filter_expression) { return execute(udho::logging::protocol::command::filter_set, filter_expression); }
 
     /**
      * @brief remove filter
@@ -191,6 +191,19 @@ public:
      */
     result temporary_disable(bool flag = true) { return temporary_enable(!flag); }
 
+    /**
+     * @brief List the properties exposed by the current sink description.
+     * @return command execution result containing one dot-separated key per line
+     */
+    result sink() { return execute(udho::logging::protocol::command::sink_info); }
+
+    /**
+     * @brief Read one property from the current sink description.
+     * @param path root-relative dot-separated property path
+     * @return command execution result containing the property value
+     */
+    result sink(udho::utils::string_view path) { return execute(udho::logging::protocol::command::sink_info, path); }
+
 private:
     /**
      * @brief Execute one command with a textual payload.
@@ -198,7 +211,7 @@ private:
      * @param payload string payload
      * @return command execution result
      */
-    result execute(udho::logging::protocol::command cmd, std::string_view payload) { return execute(cmd, payload.data(), payload.size()); }
+    result execute(udho::logging::protocol::command cmd, udho::utils::string_view payload) { return execute(cmd, payload.data(), payload.size()); }
 
     /**
      * @brief Execute one command with no payload.

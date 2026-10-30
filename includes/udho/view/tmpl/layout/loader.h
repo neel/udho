@@ -3,11 +3,10 @@
 
 #include <string>
 #include <udho/url/detail/format.h>
-#include <udho/view/tmpl/layout/property_map.h>
+#include <udho/view/tmpl/layout/html_tag.h>
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/asset/const_substore.h>
-#include <udho/view/tmpl/layout/property_map.h>
 
 namespace udho{
 namespace view{

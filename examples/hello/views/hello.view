@@ -1,0 +1,13 @@
+<?! vars('d', 'ctx') ?>
+<section>
+    <h2><?= d.heading ?></h2>
+    <p>Hello, <strong><?= d.name ?></strong>!</p>
+    <p><?= d.message ?></p>
+    <ul class="planet-grid">
+    <? for _, planet in ipairs(d.planets) do ?>
+        <?= ctx:view("hello", "planet"):render(planet) ?>
+    <? end ?>
+    </ul>
+    <p><a href="/">Return home</a></p>
+</section>
+

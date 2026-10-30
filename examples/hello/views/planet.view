@@ -1,0 +1,9 @@
+<?! vars('planet', 'ctx') ?>
+<li class="planet-card" style="--planet-accent: <?= planet.color ?>;">
+    Hello <strong><?= planet.name ?></strong>
+    <? if planet.distance == 0 then ?>. 
+        I am here.
+    <? else ?> 
+        from <?= planet.distance ?> km away.
+    <? end ?>
+</li>

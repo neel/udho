@@ -1,0 +1,118 @@
+body {
+    margin: 0;
+    background: #f4f7fa;
+    color: #1f2937;
+    font-family: system-ui, sans-serif;
+    line-height: 1.6;
+}
+
+.header,
+.footer {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-width: 64rem;
+    margin-right: auto;
+    margin-left: auto;
+    border-radius: 0.9rem;
+}
+
+.header {
+    margin-top: 2rem;
+    padding: 0 0 0.75rem;
+    border-bottom: 0.15rem solid #2878b8;
+    border-radius: 0;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.footer {
+    margin-bottom: 2rem;
+    padding: 0.85rem 1.25rem;
+    border: 1px solid #dce2e8;
+    background: #fff;
+    color: #64748b;
+    box-shadow: 0 0.2rem 0.7rem rgb(15 23 42 / 6%);
+}
+
+.content {
+    max-width: 64rem;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.hello-home {
+    --page-accent: #2878b8;
+    position: relative;
+    max-width: 42rem;
+    padding: 2rem;
+    border: 0.15rem solid var(--page-accent);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 1rem rgb(15 23 42 / 10%);
+}
+
+.hello-home::after {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--page-accent);
+    content: "";
+}
+
+.hello-home h2 {
+    margin-top: 0;
+}
+
+.hello-home p:last-child {
+    margin: 1.5rem 0 0;
+}
+
+.hello-home a {
+    display: inline-block;
+    padding: 0.65rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--page-accent);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.hello-home a:hover {
+    filter: brightness(0.9);
+}
+
+.planet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.planet-card {
+    --planet-accent: #64748b;
+    position: relative;
+    padding: 1.1rem 2.5rem 1.1rem 1.25rem;
+    border: 0.15rem solid var(--planet-accent);
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 0.8rem rgb(15 23 42 / 8%);
+}
+
+.planet-card::after {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--planet-accent);
+    content: "";
+}

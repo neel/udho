@@ -1,2 +1,0 @@
-<?! vars('planet', 'ctx') ?>
-<li>Hello <?= planet.name ?> from <?= planet.distance ?> km away.</li>

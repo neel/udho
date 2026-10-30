@@ -6,6 +6,7 @@
 #include <boost/log/attributes/attribute_set.hpp>
 #include <boost/log/attributes/value_extraction.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
+#include <algorithm>
 #include <atomic>
 #include <thread>
 #include <unistd.h>
@@ -13,12 +14,15 @@
 #include <type_traits>
 #include <cstring>
 #include <chrono>
+#include <functional>
 #include <vector>
 #include <iterator>
+#include <utility>
 #include <udho/logging/ipc_queue.h>
 #include <udho/logging/message.h>
 #include <udho/utils/string_view.h>
 #include <udho/utils/format.h>
+#include <udho/utils/property_tree.h>
 #include <boost/log/utility/setup/filter_parser.hpp>
 #include <udho/logging/macros.h>
 #include <udho/logging/protocol.h>
@@ -29,6 +33,24 @@
 
 namespace udho {
 namespace logging {
+
+using sink_description = udho::utils::property_tree<std::string, std::string>;
+using sink_description_keys = std::vector<std::string>;
+using sink_description_function = std::function<sink_description()>;
+using sink_description_keys_function = std::function<sink_description_keys()>;
+
+struct sink_description_provider {
+    sink_description_provider() = default;
+    sink_description_provider(sink_description_function describe, sink_description_keys_function keys): _describe(std::move(describe)), _keys(std::move(keys)) {}
+
+    explicit operator bool() const { return static_cast<bool>(_describe) && static_cast<bool>(_keys); }
+    sink_description operator()() const { return _describe(); }
+    sink_description_keys keys() const { return _keys(); }
+
+private:
+    sink_description_function _describe;
+    sink_description_keys_function _keys;
+};
 
 namespace {
 
@@ -77,7 +99,7 @@ struct consumer{
      * The constructor unlinks any stale socket path, binds and listens on the
      * admin socket, and arms the first asynchronous accept operation.
      */
-    consumer(const char* socket_path = 0x0, const char* name = 0x0): _ipc_queue(name), _socket_path(socket_path ? socket_path : default_socket_path), _acceptor(_io), _socket(_io), _out_flags(0), _enabled(true) {
+    consumer(const char* socket_path = 0x0, const char* name = 0x0, sink_description_provider describe_sink = sink_description_provider{}): _ipc_queue(name), _socket_path(socket_path ? socket_path : default_socket_path), _acceptor(_io), _socket(_io), _out_flags(0), _describe_sink(std::move(describe_sink)), _enabled(true) {
         ::unlink(_socket_path.c_str());
 
         typename protocol_type::endpoint ep(_socket_path);
@@ -364,6 +386,9 @@ private:
                 return false;
             }
             delivery_enable(value == 1);
+        } else if(cmd == protocol::command::sink_info){
+            std::string path(_read_buffer + sizeof(protocol::request_header), length);
+            sink_info(path);
         } else {
             std::string error_message;
             try{
@@ -478,6 +503,41 @@ private:
         start_write(true, std::move(message));
     }
 
+    void sink_info(const std::string& path) {
+        if(!_describe_sink) {
+            start_write(false, "Sink information is not available");
+            return;
+        }
+
+        try {
+            sink_description_keys keys = _describe_sink.keys();
+            if(path.empty()) {
+                std::string result;
+                for(sink_description_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+                    if(it != keys.begin()) result += '\n';
+                    result += *it;
+                }
+                start_write(true, std::move(result));
+                return;
+            }
+
+            if(std::find(keys.begin(), keys.end(), path) == keys.end()) {
+                start_write(false, "Unknown sink property: " + path);
+                return;
+            }
+
+            sink_description description = _describe_sink();
+            if(!description.exists(path)) {
+                start_write(false, "Sink property is currently unavailable: " + path);
+                return;
+            }
+
+            start_write(true, description.at(path));
+        } catch(const std::exception& error) {
+            start_write(false, std::string("Unable to describe sink: ") + error.what());
+        }
+    }
+
 private:
 
     /**
@@ -545,6 +605,7 @@ private:
     socket_type                      _socket;
     message_flags                    _out_flags;
     std::optional<std::string>       _filter_text;
+    sink_description_provider        _describe_sink;
     bool                             _enabled;
 };
 

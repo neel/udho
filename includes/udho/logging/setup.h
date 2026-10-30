@@ -2,7 +2,9 @@
 #define UDHO_LOGGING_SETUP_H
 
 #include <string>
+#include <functional>
 #include <unordered_set>
+#include <utility>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/expressions.hpp>
@@ -19,33 +21,81 @@
 namespace udho{
 namespace logging{
 
+namespace detail{
+
+using file_sink_backend = boost::log::sinks::text_file_backend;
+#ifdef BOOST_LOG_NO_THREADS
+using file_sink = boost::log::sinks::unlocked_sink<file_sink_backend>;
+#else
+using file_sink = boost::log::sinks::synchronous_sink<file_sink_backend>;
+#endif
+using file_sink_pointer = boost::shared_ptr<file_sink>;
+
+}
+
 /** @addtogroup DoxyG_logging
  *  @{
  */
 
 struct fixed_file {
-    static auto apply(const std::string& path = "server.log") {
+    struct description {
+        explicit description(detail::file_sink_pointer sink): _sink(std::move(sink)) {}
+
+        sink_description operator()() const {
+            sink_description result("sink");
+            auto backend = _sink->locked_backend();
+            auto file = backend->get_current_file_name();
+            if(!file.empty()) 
+                result.property("file", file.string());
+            return result;
+        }
+
+        sink_description_keys keys() const { return {"file"}; }
+
+    private:
+        detail::file_sink_pointer _sink;
+    };
+
+    static description apply(const std::string& path = "server.log") {
         auto sink = boost::log::add_file_log(
-            boost::log::keywords::file_name  = path,
-            boost::log::keywords::open_mode  = std::ios_base::out | std::ios_base::trunc,
+            boost::log::keywords::file_name = path, 
+            boost::log::keywords::open_mode = std::ios_base::out | std::ios_base::trunc, 
             boost::log::keywords::auto_flush = true
         );
 
         sink->set_formatter(udho::logging::formatter{});
-        return sink;
+        return description(std::move(sink));
     }
 };
 
 struct rotating_file{
-    static auto apply(const std::string& prefix = "server") {
+    struct description {
+        explicit description(detail::file_sink_pointer sink): _sink(std::move(sink)) {}
+
+        sink_description operator()() const {
+            sink_description result("sink");
+            auto backend = _sink->locked_backend();
+            auto file = backend->get_current_file_name();
+            if(!file.empty()) 
+                result.property("file", file.string());
+            return result;
+        }
+
+        sink_description_keys keys() const { return {"file"}; }
+
+    private:
+        detail::file_sink_pointer _sink;
+    };
+
+    static description apply(const std::string& prefix = "server") {
         auto sink = boost::log::add_file_log(
-            boost::log::keywords::file_name           = (prefix+"_%Y-%m-%d_%H-%M-%S.log"),
-            boost::log::keywords::rotation_size       = 10 * 1024 * 1024,
+            boost::log::keywords::file_name = (prefix+"_%Y-%m-%d_%H-%M-%S.log"), 
+            boost::log::keywords::rotation_size = 10 * 1024 * 1024, 
             boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0)
         );
 
         sink->set_formatter(udho::logging::formatter{});
-        return sink;
+        return description(std::move(sink));
     }
 };
 
@@ -210,15 +260,16 @@ private:
      * This function is intended to run only in the logger child process.
      */
     static void run_child(int notify_fd, const char* cmd_socket_path, const char* ipc_mq_name) {
-        struct sigaction sa;
+        struct sigaction sa{0};
         sa.sa_handler = &setup<ConsumerConfigurationT>::callback;
         sigemptyset(&sa.sa_mask);
         sigaction(SIGTERM, &sa, nullptr);
         sigaction(SIGINT,  &sa, nullptr);
 
         assert(!_should_stop);
-        ConsumerConfigurationT::apply();
-        udho::logging::consumer consumer(cmd_socket_path, ipc_mq_name);
+        typename ConsumerConfigurationT::description description = ConsumerConfigurationT::apply();
+        sink_description_provider describe_sink([&description]() { return description(); }, [&description]() { return description.keys(); });
+        udho::logging::consumer consumer(cmd_socket_path, ipc_mq_name, std::move(describe_sink));
 
         char ok = 1;
         if (::write(notify_fd, &ok, 1) != 1) {
@@ -238,6 +289,9 @@ private:
      * stop flag observed by the consumer loop.
      */
     static void callback(int signum) {
+        if (signum == SIGINT) {
+            return;
+        }
         _should_stop = true;
     }
 

@@ -9,7 +9,7 @@
 #include <udho/url/detail/format.h>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/algorithm/string/join.hpp>
-#include <udho/view/tmpl/layout/property_map.h>
+#include <udho/view/tmpl/layout/html_tag.h>
 #include <udho/view/tmpl/layout/fwd.h>
 
 namespace udho{

@@ -5,7 +5,8 @@
 #include <string>
 #include <udho/url/detail/format.h>
 #include <udho/view/tmpl/layout/loader.h>
-#include <udho/view/tmpl/layout/property_map.h>
+#include <udho/utils/property_map.h>
+#include <udho/view/tmpl/layout/html_tag.h>
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/asset/store.h>
@@ -29,8 +30,8 @@ namespace layout{
  * Inherits from property_map<std::string, std::string> to store standard meta tags.
  * Manages both standard meta tags (name/content) and http-equiv meta tags through an enum interface.
  */
-struct meta_tags: property_map<std::string, std::string>{
-    using properties_type = property_map<std::string, std::string>;
+struct meta_tags: udho::utils::property_map<std::string, std::string>{
+    using properties_type = udho::utils::property_map<std::string, std::string>;
 
     /**
      * @enum http_equiv
@@ -131,7 +132,7 @@ struct meta_tags: property_map<std::string, std::string>{
     }
 
     private:
-        property_map<http_equiv, std::string> http_equiv_;
+        udho::utils::property_map<http_equiv, std::string> http_equiv_;
 };
 
 /**

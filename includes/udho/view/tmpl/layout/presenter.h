@@ -3,8 +3,8 @@
 
 #include <string>
 #include <udho/url/detail/format.h>
-#include <udho/view/tmpl/layout/property_map.h>
-#include <udho/view/tmpl/layout/property_tree.h>
+#include <udho/view/tmpl/layout/html_tag.h>
+#include <udho/view/tmpl/layout/menu.h>
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/tmpl/layout/fwd.h>
 

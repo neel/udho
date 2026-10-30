@@ -7,22 +7,19 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
 #include <cstdlib>
-#include <udho/net/listener.h>
+#include <udho/cli/server.h>
 #include <udho/view/bridges/lua.h>
 #include <udho/view/resources/lua.h>
 #include <udho/view/resources/resource.h>
 #include <udho/view/resources/store.h>
 #include <udho/www/www.h>
-#include <udho/logging/setup.h>
 
 using lua_bridge = udho::view::data::bridges::lua;
 using framework_type = udho::www::framework<udho::www::stateless::lua>;
 
-int main() {
-    auto logger = udho::logging::start<udho::logging::rotating_file>();
-
-    assert(logger.running());
-
+int main(int argc, char** argv) {
+    udho::cli::control control(argc, argv);
+    if(control.admin()) return control();
     boost::asio::io_context io;
     const char* configured = std::getenv("UDHO_PGX_DATABASE_URL");
     const std::string connection_string = configured ? configured : "host=localhost dbname=udho_pgx user=postgres";
@@ -46,11 +43,7 @@ int main() {
                     << udho::view::resources::asset::js("app.js", root / "assets" / "app.js")
                     << udho::view::resources::asset::txt("project.html", root / "assets" / "project.html", "text/html");
 
-    auto cstore = udho::view::resources::lock(store);
-    auto framework = framework_type::apply(udho::url::router(pgx::urls(api_controller, ui_controller), cstore.assets()));
-    auto runtime = framework.runtime(cstore, database);
-    auto listener = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9997});
-    listener.start();
-    io.run();
+    auto server = control.prepare<framework_type>(store, pgx::urls(api_controller, ui_controller), database);
+    server.run(io, control.ipv4());
     return 0;
 }

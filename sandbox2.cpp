@@ -2,7 +2,7 @@
 #include <sol/sol.hpp>
 #include <thread>
 #include <iostream>
-#include <udho/view/tmpl/layout/property_tree.h>
+#include <udho/view/tmpl/layout/menu.h>
 #include <udho/view/tmpl/layout/placeholder.h>
 
 int my_exception_handler(lua_State* L, sol::optional<const std::exception&> maybe_exception, sol::string_view description) {
