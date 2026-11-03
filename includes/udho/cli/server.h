@@ -36,7 +36,7 @@ struct router_for<udho::url::mount_point<StrT, ActionsT>>{
 
 }
 
-template <typename FrameworkT, typename StoreT, typename UrlsT>
+template <typename FrameworkT, typename ProfileT, typename StoreT, typename UrlsT>
 class server{
     using cstore_type       = typename StoreT::const_store_type;
     using router_type       = typename detail::router_for<UrlsT>::type;
@@ -44,9 +44,9 @@ class server{
     using stream_type       = typename label_type::stream_type;
     using framework_type    = udho::www::runtime_generator<label_type, stream_type, router_type>;
     using runtime_type      = typename framework_type::runtime_type;
-    using protocol_type     = typename runtime_type::stream_type::protocol_type;
-    using listener_type     = udho::net::basic_listener<protocol_type, runtime_type>;
-    using endpoint_type     = typename listener_type::endpoint_type;
+    using profile_type      = ProfileT;
+    using listener_type     = udho::net::basic_listener<profile_type, runtime_type>;
+    using endpoint_type     = typename profile_type::endpoint_type;
 
 public:
     server(const server&) = delete;
@@ -54,8 +54,9 @@ public:
     server(server&&) = delete;
     server& operator=(server&&) = delete;
 
-    void run(boost::asio::io_context& io, endpoint_type endpoint) {
+    void run(boost::asio::io_context& io) {
         if(_listener) throw std::logic_error("Server is already running");
+        endpoint_type endpoint = _profile.endpoint();
         auto report = [endpoint, &io](const boost::system::error_code& error) {
             if(error) {
                 std::cerr << "Unable to start server on " << endpoint << ": " << error.message() << std::endl;
@@ -64,9 +65,9 @@ public:
             }
             std::cout << " ● " << "Server running on " << endpoint << std::endl;
         };
-        _listener.emplace(io, _runtime, endpoint);
+        _listener.emplace(io, _runtime, _profile);
         _listener->start(std::move(report));
-        termination terminator(io);
+        udho::cli::termination terminator(io);
         terminator.async_wait([this](int) { shutdown(); });
         _control.run(io);
     }
@@ -83,14 +84,16 @@ private:
     }
 
     template <typename... Components>
-    server(control& control, StoreT& store, UrlsT&& urls, Components&&... components)
+    server(control& control, profile_type& profile, StoreT& store, UrlsT&& urls, Components&&... components)
         : _control(control)
+        , _profile(profile)
         , _cstore(udho::view::resources::lock(store))
         , _framework(FrameworkT::apply(udho::url::router(std::forward<UrlsT>(urls), _cstore.assets())))
         , _runtime(_framework.runtime(_cstore, std::forward<Components>(components)...))
     {}
 
     control& _control;
+    profile_type& _profile;
     cstore_type _cstore;
     framework_type _framework;
     runtime_type _runtime;

@@ -92,7 +92,7 @@ public:
     }
 
     /**
-     * @brief Removes a registered reader and terminates its stream.
+     * @brief Removes a registered reader.
      * @param id Flow identifier.
      */
     bool remove(std::size_t id) {
@@ -103,8 +103,6 @@ public:
 
         namespace p = udho::logging::params;
         UDHO_LOG_DEBUG("udho::www::components::protocol", "reader removed", p::flow_id(id), p::request_id("req"), p::socket_id(udho::utils::misc::native_handle(it->second->stream())));
-
-        udho::utils::misc::detail::terminate_stream(it->second->stream());
 
         _readers.erase(it);
         return true;

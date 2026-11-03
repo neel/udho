@@ -54,7 +54,7 @@ protected:
      * @param endpoint Endpoint to which it will be bound.
      * @return Success for the generic protocol implementation.
      */
-    boost::system::error_code prepare(acceptor_type& acceptor, endpoint_type& endpoint) {
+    boost::system::error_code prepare(acceptor_type& acceptor, const endpoint_type& endpoint) {
         (void)acceptor;
         (void)endpoint;
         return boost::system::error_code{};
@@ -113,7 +113,7 @@ struct wire_traits<boost::asio::ip::tcp>: public basic_wire_traits<boost::asio::
      * @param endpoint Endpoint that will subsequently be bound.
      * @return Error reported by `set_option`, if any.
      */
-    boost::system::error_code prepare(acceptor_type& acceptor, endpoint_type& endpoint) {
+    boost::system::error_code prepare(acceptor_type& acceptor, const endpoint_type& endpoint) {
         boost::system::error_code error;
         acceptor.set_option(boost::asio::socket_base::reuse_address(true), error);
         return error;
@@ -138,7 +138,7 @@ struct wire_traits<boost::asio::local::stream_protocol>: public basic_wire_trait
      * @param endpoint Local-stream endpoint whose path is removed.
      * @return Success, or the system error reported by `unlink`.
      */
-    boost::system::error_code prepare(acceptor_type& acceptor, endpoint_type& endpoint) {
+    boost::system::error_code prepare(acceptor_type& acceptor, const endpoint_type& endpoint) {
         (void)acceptor;
         errno = 0;
         if (::unlink(endpoint.path().c_str()) != 0) {

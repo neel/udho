@@ -8,6 +8,7 @@
 #include <udho/net/detail.h>
 #include <udho/logging/macros.h>
 #include <udho/exceptions/exceptions.h>
+#include <udho/utils/misc.h>
 
 namespace udho{
 namespace manifold{
@@ -51,8 +52,7 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
     /// @{
     using pre_callback_type         = std::function<void (const basic_flow<LabelT, StreamT>&, bool)>;
     using pre_callbacks_list_type   = std::list<pre_callback_type>;
-    using post_callback_type        = std::function<void (std::size_t)>;
-    using post_callbacks_list_type  = std::list<post_callback_type>;
+    using post_callback_type        = typename runtime_type::hook_type;
     /// @}
 
     using journal_type         = typename start_pipeline_type::full_journal_type;
@@ -191,8 +191,12 @@ struct basic_flow: public std::enable_shared_from_this<basic_flow<LabelT, Stream
         _callbacks_pre.emplace_back(std::move(callback));
     }
 
+    /**
+     * @brief Registers a runtime callback invoked after this flow is removed.
+     * @note The callback must not retain a reference or pointer to this flow.
+     */
     void then(post_callback_type&& callback){
-        _callbacks_post.emplace_back(std::move(callback));
+        _runtime.then(id(), std::move(callback));
     }
 
     composition_type& composition() { return _root_pipeline.composition(); }
@@ -226,19 +230,18 @@ private:
     /**
      * @brief Finalizes the current request and optionally keeps the flow alive for reentry
      *
-     * Invokes the optional user callback (installed via flow::then) and, if `reenter == false`,
-     * removes the flow from the runtime tracking collection.
+     * Invokes pre-termination callbacks and, if `reenter == false`, asks the runtime to
+     * terminate the stream and dispose of the flow.
      *
      * @param reenter If true, the flow remains tracked and is expected to be restarted
-     *                via the finish pipeline restart path. If false, the flow is removed.
+     *                via the finish pipeline restart path. If false, disposal begins.
      *
      * @note This function does not itself restart the pipeline. Restart is performed by
      *       the finish pipeline (stage Count) or by flow::error() on failure.
      */
     void terminate(bool reenter) {
         namespace p = udho::logging::params;
-        UDHO_LOG_INFO("manifold::flow", "Terminated", p::flow_id(id()), p::socket_id(udho::utils::misc::native_handle(_stream)));
-
+        UDHO_LOG_INFO("manifold::flow", reenter ? "Reentering" : "Terminating", p::flow_id(id()), p::socket_id(udho::utils::misc::native_handle(_stream)));
 
         if(!_callbacks_pre.empty()){
             try{
@@ -251,29 +254,7 @@ private:
             }
         }
 
-        if(!reenter) {
-            const auto flow_id = id();
-            auto callbacks = std::move(_callbacks_post);
-
-            bool removed = _runtime.remove(*this);
-
-            if(!callbacks.empty()){
-                try{
-                    for(post_callback_type& callback: callbacks) {
-                        callback(flow_id);
-                    }
-                } catch(const std::exception& ex) {
-                    // std::cout << "Exception thrown from post terminate callback: " << ex.what() << std::endl;
-                    UDHO_LOG_ERROR("manifold::flow", "Exception thrown from post terminate callback", p::flow_id(flow_id), p::exception(ex.what()));
-                }
-            }
-
-            if(!removed) {
-                UDHO_LOG_ERROR("manifold::flow", "Failed to remove flow", p::flow_id(flow_id));
-            } else {
-                UDHO_LOG_TRACE("manifold::flow", "Flow removed", p::flow_id(flow_id));
-            }
-        }
+        if(!reenter) _runtime.dispose(*this);
     }
 
 public:
@@ -301,10 +282,10 @@ private:
     runtime_type&           _runtime;
     stream_type             _stream;
     std::size_t             _id;
+    // Reader and writer completion paths are not currently serialized by one flow strand.
     start_pipeline_type     _root_pipeline;
     finish_pipeline_type&   _finish_pipeline;
-    pre_callbacks_list_type  _callbacks_pre;
-    post_callbacks_list_type _callbacks_post;
+    pre_callbacks_list_type _callbacks_pre;
     terminal_type           _terminal;
     static std::size_t      _counter;
 };

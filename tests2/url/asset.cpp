@@ -105,7 +105,7 @@ TEST_CASE("Accessing assets through router via HTTP requests", "[router][asset]"
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::portal_type>{});
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::context_type>{});
 
-    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9000});
+    auto listener  = udho::net::plain_listener(io, runtime, {boost::asio::ip::tcp::v4(), 9000});
 
     listener.start([](boost::system::error_code error) {
         if(error) {

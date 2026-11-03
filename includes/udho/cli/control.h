@@ -28,7 +28,7 @@
 namespace udho{
 namespace cli{
 
-template <typename FrameworkT, typename StoreT, typename UrlsT>
+template <typename FrameworkT, typename ProfileT, typename StoreT, typename UrlsT>
 class server;
 
 namespace defaults{
@@ -99,10 +99,10 @@ public:
         parse(argc, argv);
     }
 
-    template <typename FrameworkT, typename StoreT, typename UrlsT, typename... Components>
-    server<FrameworkT, StoreT, std::decay_t<UrlsT>> prepare(StoreT& store, UrlsT&& urls, Components&&... components) & {
-        using server_type = server<FrameworkT, StoreT, std::decay_t<UrlsT>>;
-        return server_type(*this, store, std::forward<UrlsT>(urls), std::forward<Components>(components)...);
+    template <typename FrameworkT, typename ProfileT, typename StoreT, typename UrlsT, typename... Components>
+    server<FrameworkT, ProfileT, StoreT, std::decay_t<UrlsT>> prepare(ProfileT& profile, StoreT& store, UrlsT&& urls, Components&&... components) & {
+        using server_type = server<FrameworkT, ProfileT, StoreT, std::decay_t<UrlsT>>;
+        return server_type(*this, profile, store, std::forward<UrlsT>(urls), std::forward<Components>(components)...);
     }
 
     template <typename T>
@@ -173,7 +173,7 @@ public:
     }
 
 private:
-    template <typename FrameworkT, typename StoreT, typename UrlsT>
+    template <typename FrameworkT, typename ProfileT, typename StoreT, typename UrlsT>
     friend class server;
 
     void run(boost::asio::io_context& io) {

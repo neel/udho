@@ -669,7 +669,7 @@ TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline
     using framework_type = testing::framework<socket_type>;
     using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
     using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
-    using listener_type  = udho::net::basic_listener<boost::asio::ip::tcp, framework_type::runtime_type>;
+    using listener_type  = udho::net::basic_plain_listener<framework_type::runtime_type, socket_type>;
     using endpoint_type  = typename listener_type::endpoint_type;
 
     auto framework  = framework_type(testing::tcp_url(), session, resources);

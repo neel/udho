@@ -228,7 +228,7 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::portal_type>{});
     lua.bind(udho::view::data::type<std::decay_t<decltype(runtime)>::context_type>{});
 
-    auto listener  = udho::net::listener(service, runtime, {boost::asio::ip::tcp::v4(), 9000});
+    auto listener  = udho::net::plain_listener(service, runtime, {boost::asio::ip::tcp::v4(), 9000});
 
     listener.start();
 

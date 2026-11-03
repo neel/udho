@@ -2,8 +2,12 @@
 #define UDHO_UTILS_MISC_H
 
 #include <cstdint>
+#include <sstream>
 #include <type_traits>
+#include <utility>
+#include <boost/asio/post.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/stream.hpp>
 #include <boost/beast/_experimental/test/stream.hpp>
 
 namespace udho{
@@ -44,6 +48,13 @@ struct get_native_handle<boost::beast::test::stream>{
     }
 };
 
+template <typename NextLayerT>
+struct get_native_handle<boost::asio::ssl::stream<NextLayerT>>{
+    static portable_socket_id apply(boost::asio::ssl::stream<NextLayerT>& stream) {
+        return get_native_handle<NextLayerT>::apply(stream.next_layer());
+    }
+};
+
 template <typename CharT>
 struct get_native_handle<std::basic_stringstream<CharT>>{
     static portable_socket_id apply(std::basic_stringstream<CharT>&) {
@@ -63,10 +74,23 @@ namespace detail{
 template <typename StreamT>
 struct stream_termination{
     static boost::system::error_code apply(StreamT& stream) {
+        boost::system::error_code result;
         boost::system::error_code error;
         stream.cancel(error);
+        if(!result && error) result = error;
         stream.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);
-        return error;
+        if(!result && error) result = error;
+        stream.close(error);
+        if(!result && error) result = error;
+        return result;
+    }
+
+    template <typename HandlerT>
+    static void async_apply(StreamT& stream, HandlerT&& handler) {
+        boost::asio::post(stream.get_executor(), [&stream, handler = std::forward<HandlerT>(handler)]() mutable {
+            boost::system::error_code error = stream_termination<StreamT>::apply(stream);
+            handler(error);
+        });
     }
 };
 
@@ -76,6 +100,47 @@ struct stream_termination<boost::beast::test::stream>{
         stream.close();
         stream.close_remote();
         return boost::system::error_code{};
+    }
+
+    template <typename HandlerT>
+    static void async_apply(boost::beast::test::stream& stream, HandlerT&& handler) {
+        boost::asio::post(stream.get_executor(), [&stream, handler = std::forward<HandlerT>(handler)]() mutable {
+            boost::system::error_code error = stream_termination<boost::beast::test::stream>::apply(stream);
+            handler(error);
+        });
+    }
+};
+
+template <typename NextLayerT>
+struct stream_termination<boost::asio::ssl::stream<NextLayerT>>{
+    using stream_type = boost::asio::ssl::stream<NextLayerT>;
+
+    static boost::system::error_code apply(stream_type& stream) {
+        return stream_termination<NextLayerT>::apply(stream.next_layer());
+    }
+
+    template <typename HandlerT>
+    static void async_apply(stream_type& stream, HandlerT&& handler) {
+        stream.async_shutdown([&stream, handler = std::forward<HandlerT>(handler)](boost::system::error_code error) mutable {
+            boost::system::error_code close_error = stream_termination<NextLayerT>::apply(stream.next_layer());
+            if(!error) error = close_error;
+            handler(error);
+        });
+    }
+};
+
+template <typename CharT>
+struct stream_termination<std::basic_stringstream<CharT>>{
+    using stream_type = std::basic_stringstream<CharT>;
+
+    static boost::system::error_code apply(stream_type&) {
+        return boost::system::error_code{};
+    }
+
+    template <typename HandlerT>
+    static void async_apply(stream_type&, HandlerT&& handler) {
+        // Non-I/O manifold streams have no executor and complete inline.
+        std::forward<HandlerT>(handler)(boost::system::error_code{});
     }
 };
 
@@ -95,6 +160,13 @@ template <>
 struct stream_available<boost::beast::test::stream>{
     static std::size_t apply(boost::beast::test::stream& stream) {
         return 256;
+    }
+};
+
+template <typename NextLayerT>
+struct stream_available<boost::asio::ssl::stream<NextLayerT>>{
+    static std::size_t apply(boost::asio::ssl::stream<NextLayerT>&) {
+        return 0;
     }
 };
 

@@ -1560,7 +1560,7 @@ TEST_CASE("udho manifold www pipeline stateless", "[manifold][pipeline][www]") {
 
     auto framework = framework_type::apply(udho::url::router(url()));
     auto runtime   = framework.runtime(resources);
-    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+    auto listener  = udho::net::plain_listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
     listener.start();
 
@@ -1595,7 +1595,7 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
 
     auto framework = framework_type::apply(udho::url::router(url()));
     auto runtime   = framework.runtime(session, resources);
-    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+    auto listener  = udho::net::plain_listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
 
     {
         boost::beast::test::stream stream_in(io);

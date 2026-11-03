@@ -9,6 +9,13 @@
 namespace udho{
 namespace net{
 
+namespace detail{
+
+template <typename DerivedT, typename RuntimeT, typename SocketT, typename StreamT = SocketT>
+struct basic_listener;
+
+}
+
 /** @addtogroup DoxyG_net
  *  @{
  */
@@ -27,8 +34,11 @@ namespace net{
 // template <typename ResourceSubsetT>
 // struct basic_context;
 
-template <typename WireT, typename RuntimeT>
+template <typename ProfileT, typename RuntimeT>
 struct basic_listener;
+
+template <typename RuntimeT, typename SocketT = typename RuntimeT::stream_type>
+struct basic_plain_listener;
 
 /** @} */
 

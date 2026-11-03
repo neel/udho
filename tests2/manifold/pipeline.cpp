@@ -801,9 +801,19 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
             CHECK(output.find("MSC_F22(param=runtime-param)[PASS]") != std::string::npos);
         });
 
+        const std::size_t unknown_flow_id = flow.id() + 1;
+        CHECK_THROWS_WITH(runtime.then(unknown_flow_id, [](std::size_t) {}), udho::utils::format("Cannot register callback for an unknown flow {}", unknown_flow_id));
+
+        bool terminated = false;
+        flow.then([&](std::size_t) {
+            CHECK(runtime.count() == 0);
+            terminated = true;
+        });
+
         CHECK(runtime.count() == 1);
         flow.start();
         CHECK(runtime.count() == 0);
+        CHECK(terminated);
     }
 
     SECTION("Pipeline with early failure in stage 0") {
