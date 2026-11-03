@@ -11,7 +11,11 @@
 #include <string>
 #include <chrono>
 #include <tao/pegtl.hpp>
+#if TAO_PEGTL_VERSION_MAJOR >= 4
+#include <tao/pegtl/extra/parse_tree.hpp>
+#else
 #include <tao/pegtl/contrib/parse_tree.hpp>
+#endif
 #include <udho/view/meta/detail/parser.h>
 #include <udho/view/data/nvp.h>
 #include <udho/view/data/type.h>

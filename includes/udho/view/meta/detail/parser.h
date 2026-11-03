@@ -9,7 +9,11 @@
 #include <map>
 #include <string>
 #include <tao/pegtl.hpp>
+#if TAO_PEGTL_VERSION_MAJOR >= 4
+#include <tao/pegtl/extra/parse_tree.hpp>
+#else
 #include <tao/pegtl/contrib/parse_tree.hpp>
+#endif
 #include <udho/utils/format.h>
 #include <iostream>
 #include <udho/logging/macros.h>
@@ -72,6 +76,26 @@ namespace pegtl = tao::pegtl;
  * @endcode
  */
 struct ast{
+    #if TAO_PEGTL_VERSION_MAJOR >= 4
+        using input_type = pegtl::text_view_input<pegtl::default_eol, char, std::string>;
+
+        // Provide the PEGTL 3.x node interface for the existing visitor code.
+        struct node : pegtl::parse_tree::basic_node<node, input_type::error_position_t> {
+            bool has_content() const noexcept {
+                return this->data.data() != nullptr;
+            }
+
+            std::string_view string_view() const noexcept {
+                assert(has_content());
+                return this->data;
+            }
+        };
+    #else
+        using input_type = pegtl::memory_input<>;
+        using node = pegtl::parse_tree::node;
+    #endif
+    using node_ptr_type = std::unique_ptr<node>;
+
     struct at:              pegtl::plus<pegtl::digit> {};
     struct index_seq:       pegtl::seq<pegtl::one<'['>, at, pegtl::one<']'>> {};
     struct key:             pegtl::seq<pegtl::alpha, pegtl::star<pegtl::sor<pegtl::alnum, pegtl::one<'_'>>>> {};
@@ -117,16 +141,25 @@ struct ast{
             >
         > {};
 
-    using node_ptr_type = std::unique_ptr<tao::pegtl::parse_tree::node>;
-
-    inline ast(const std::string& id_str): _str(std::move(id_str)), _input(_str, "input") {
-        try{
-            _root = pegtl::parse_tree::parse<grammar, selector>(_input);
-        } catch (const pegtl::parse_error& e) {
+    inline ast(const std::string& id_str)
+        : _str(id_str)
+#if TAO_PEGTL_VERSION_MAJOR >= 4
+        , _input("input", _str)
+#else
+        , _input(_str, "input")
+#endif
+    {
+        try {
+            _root = pegtl::parse_tree::parse<grammar, node, selector>(_input);
+        }
+#if TAO_PEGTL_VERSION_MAJOR >= 4
+        catch (const input_type::parse_error_t& e) {
+           const auto& pos = e.position_object();
+#else
+        catch (const pegtl::parse_error& e) {
+            const auto& pos = e.positions().front();
+#endif
             namespace p = udho::logging::params;
-
-            const auto pos = e.positions().front();
-            // std::cerr << e.what() << '\n' << _input.line_at(p) << std::endl;
             UDHO_LOG_ERROR("udho::view::data::meta::parser", udho::utils::format("Failed to parse view metadata at line {}, column {}", pos.line, pos.column), p::exception(e.what()));
         }
     }
@@ -165,7 +198,7 @@ struct ast{
     }
 
     std::string _str;
-    pegtl::memory_input<> _input;
+    input_type _input;
     node_ptr_type _root;
 };
 
