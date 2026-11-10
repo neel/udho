@@ -4,6 +4,7 @@
 #include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include <boost/asio/io_context.hpp>
@@ -36,7 +37,7 @@ struct router_for<udho::url::mount_point<StrT, ActionsT>>{
 
 }
 
-template <typename FrameworkT, typename ProfileT, typename StoreT, typename UrlsT>
+template <typename FrameworkT, typename ChannelT, typename StoreT, typename UrlsT>
 class server{
     using cstore_type       = typename StoreT::const_store_type;
     using router_type       = typename detail::router_for<UrlsT>::type;
@@ -44,9 +45,12 @@ class server{
     using stream_type       = typename label_type::stream_type;
     using framework_type    = udho::www::runtime_generator<label_type, stream_type, router_type>;
     using runtime_type      = typename framework_type::runtime_type;
-    using profile_type      = ProfileT;
-    using listener_type     = udho::net::basic_listener<profile_type, runtime_type>;
-    using endpoint_type     = typename profile_type::endpoint_type;
+    using channel_type      = ChannelT;
+    using transport_type    = typename channel_type::transport_type;
+    using listener_type     = udho::net::basic_listener<transport_type, runtime_type>;
+    using endpoint_type     = typename channel_type::endpoint_type;
+
+    static_assert(std::is_same<stream_type, typename channel_type::stream_type>::value, "Framework label stream must match channel stream");
 
 public:
     server(const server&) = delete;
@@ -56,7 +60,7 @@ public:
 
     void run(boost::asio::io_context& io) {
         if(_listener) throw std::logic_error("Server is already running");
-        endpoint_type endpoint = _profile.endpoint();
+        endpoint_type endpoint = _channel.endpoint();
         auto report = [endpoint, &io](const boost::system::error_code& error) {
             if(error) {
                 std::cerr << "Unable to start server on " << endpoint << ": " << error.message() << std::endl;
@@ -65,7 +69,7 @@ public:
             }
             std::cout << " ● " << "Server running on " << endpoint << std::endl;
         };
-        _listener.emplace(io, _runtime, _profile);
+        _listener.emplace(io, _runtime, _channel);
         _listener->start(std::move(report));
         udho::cli::termination terminator(io);
         terminator.async_wait([this](int) { shutdown(); });
@@ -84,16 +88,16 @@ private:
     }
 
     template <typename... Components>
-    server(control& control, profile_type& profile, StoreT& store, UrlsT&& urls, Components&&... components)
+    server(control& control, channel_type& channel, StoreT& store, UrlsT&& urls, Components&&... components)
         : _control(control)
-        , _profile(profile)
+        , _channel(channel)
         , _cstore(udho::view::resources::lock(store))
         , _framework(FrameworkT::apply(udho::url::router(std::forward<UrlsT>(urls), _cstore.assets())))
         , _runtime(_framework.runtime(_cstore, std::forward<Components>(components)...))
     {}
 
     control& _control;
-    profile_type& _profile;
+    channel_type& _channel;
     cstore_type _cstore;
     framework_type _framework;
     runtime_type _runtime;

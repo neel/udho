@@ -2,41 +2,21 @@
 #define UDHO_WWW_CONTEXT_H
 
 #include <udho/manifold/context.h>
-#include <udho/www/components/handler.h>
-#include <udho/net/detail.h>
+#include <udho/www/components/connection.h>
 
 namespace udho {
 namespace www {
 
 /**
- * @brief www context alias that always includes the stream handler component.
+ * @brief Stream-neutral context passed to WWW actions and layouts.
  *
- * This alias adapts the generic manifold context for www code by prepending the
- * `basic_handler<StreamT>` component to the component list exposed through the
- * context portal.
- *
- * @tparam StreamT Stream type used by the context.
- * @tparam Components Additional www components exposed by the context.
- *
- * @ingroup DoxyG_www
- */
-template <typename StreamT, typename... Components>
-using basic_context = udho::manifold::basic_context<StreamT, udho::www::components::basic_handler<StreamT>, Components...>;
-
-/**
- * @brief TCP www context alias.
- *
- * Uses the default TCP socket type selected by `udho::net::detail::wire_types`
- * and exposes the handler component plus any additional components.
- *
- * @tparam Components Additional www components exposed by the context.
- *
- * @ingroup DoxyG_www
+ * The non-templated connection component is always exposed. Components named by
+ * user code are appended after that default WWW capability.
  */
 template <typename... Components>
-using context = basic_context<udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type, Components...>;
+using context = udho::manifold::basic_context<udho::www::components::connection, Components...>;
 
-}
-}
+} // namespace www
+} // namespace udho
 
 #endif // UDHO_WWW_CONTEXT_H

@@ -1315,9 +1315,9 @@ struct basic_router<void>: private detail::basic_router<void>{
  *     void f0(udho::net::context<udho::view::data::bridges::lua> context){
  *         ..
  *         context << "Hello X::f0";
- *         context << context.route("f0").name();
+ *         context << context.portal().route("f0").name();
  *         context.finish();
- *         std::cout << context.route("f0").name() << std::endl;
+ *         std::cout << context.portal().route("f0").name() << std::endl;
  *     }
  *
  *     int f1(udho::net::stream context, int a, const std::string& b, const double& c){

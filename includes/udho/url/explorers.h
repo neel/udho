@@ -432,7 +432,7 @@ struct registry{
     template <typename ContextT>
     status serve(const std::string& subject, ContextT& context) const {
         if(exists(subject)){
-            udho::net::ostream_view ostream_view = context.ostream().view();
+            udho::net::ostream_view ostream_view = context.ostream();
             if(cat(subject, ostream_view))
                 return status::file;
         } else if(is_subset(subject)){

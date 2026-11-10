@@ -32,6 +32,7 @@
 #include <udho/view/tmpl/layout/renderer.h>
 
 #include <udho/www/components/handler.h>
+#include <udho/www/context.h>
 #include <udho/www/components/resources.h>
 #include <udho/www/components/routing.h>
 
@@ -79,7 +80,7 @@ using namespace udho::manifold;
 using stream_type = boost::beast::test::stream;
 using handler_type = basic_handler<stream_type>;
 
-void unused_route(basic_context<stream_type, handler_type> context) {
+void unused_route(udho::www::context<> context) {
     context << "unused";
     context.finish();
 }
@@ -96,20 +97,13 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
     udho::view::resources::store<udho::view::data::bridges::lua> resource_store{lua};
 
     resource_store["renderer"]
-        << udho::view::resources::lua{
-               "mapped", std::begin(template_mapped), std::end(template_mapped)}
-        << udho::view::resources::lua{
-               "explicit", std::begin(template_explicit), std::end(template_explicit)}
-        << udho::view::resources::lua{
-               "assets", std::begin(template_assets), std::end(template_assets)}
-        << udho::view::resources::asset::js(
-               "external.js", std::begin(external_js), std::end(external_js))
-        << udho::view::resources::asset::js(
-               "embedded.js", std::begin(embedded_js), std::end(embedded_js))
-        << udho::view::resources::asset::css(
-               "external.css", std::begin(external_css), std::end(external_css))
-        << udho::view::resources::asset::css(
-               "embedded.css", std::begin(embedded_css), std::end(embedded_css));
+        << udho::view::resources::lua{"mapped",            std::begin(template_mapped),   std::end(template_mapped)}
+        << udho::view::resources::lua{"explicit",          std::begin(template_explicit), std::end(template_explicit)}
+        << udho::view::resources::lua{"assets",            std::begin(template_assets),   std::end(template_assets)}
+        << udho::view::resources::asset::js("external.js",  std::begin(external_js),      std::end(external_js))
+        << udho::view::resources::asset::js("embedded.js",  std::begin(embedded_js),      std::end(embedded_js))
+        << udho::view::resources::asset::css("external.css", std::begin(external_css),    std::end(external_css))
+        << udho::view::resources::asset::css("embedded.css", std::begin(embedded_css),    std::end(embedded_css));
 
     resource_store.assets().base("assets");
     resource_store.lock();
@@ -125,21 +119,21 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
                 << udho::url::home(udho::url::verb::get)),
         resource_store_proxy.assets());
 
-    auto handler_component =
-        udho::www::components::basic_handler<stream_type>(router.table().summary());
-    auto routing_component = udho::www::components::routing(std::move(router));
-    auto resource_component = udho::www::components::resources(resource_store_proxy);
+    auto connection_component = udho::www::components::connection(router.table().summary());
+    auto handler_component    = udho::www::components::basic_handler<stream_type>(connection_component.responses());
+    auto routing_component    = udho::www::components::routing(std::move(router));
+    auto resource_component   = udho::www::components::resources(resource_store_proxy);
 
     using composition_type = udho::manifold::composition<
         std::decay_t<decltype(handler_component)>,
+        std::decay_t<decltype(connection_component)>,
         std::decay_t<decltype(routing_component)>,
-        std::decay_t<decltype(resource_component)>>;
+        std::decay_t<decltype(resource_component)>
+    >;
     using configs_type = typename composition_type::configs_type;
-    using journal_type = typename udho::manifold::detail::get_journal_for_full_fabric<
-        composition_type>::type;
+    using journal_type = typename udho::manifold::detail::get_journal_for_full_fabric<composition_type>::type;
 
-    auto composition = composition_type::compose(
-        handler_component, routing_component, resource_component);
+    auto composition = composition_type::compose(handler_component, connection_component, routing_component, resource_component);
 
     configs_type configs;
     journal_type journal;

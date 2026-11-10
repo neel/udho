@@ -6,6 +6,7 @@
 #include <udho/manifold/order.h>
 #include <udho/manifold/fwd.h>
 #include <udho/www/components/handler.h>
+#include <udho/www/components/connection.h>
 #include <udho/www/components/pg.h>
 #include <udho/www/components/protocol.h>
 #include <udho/www/components/navigator.h>
@@ -22,9 +23,10 @@ namespace manifold {
  * @brief Manifold sketch for a stateless/minimal www label.
  *
  * Defines the default component composition and evaluation order for a minimal
- * www application. The composition includes the handler, database placeholder,
- * HTTP protocol component, pretty navigator, cookies component, resources
- * component, and any extra components appended to the label.
+ * www application. The composition includes the typed handler, stream-neutral
+ * connection, database placeholder, HTTP protocol component, pretty navigator,
+ * cookies component, resources component, and any extra components appended to
+ * the label.
  *
  * @tparam StreamT Stream type used by the runtime.
  * @tparam Bridges View-data bridge types exposed through the resources component.
@@ -40,6 +42,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
 
     using composition_type = udho::manifold::composition<
         udho::www::components::basic_handler<StreamT>,
+        udho::www::components::connection,
         udho::www::components::db::pg<>,
         udho::www::components::protocols::http<stream_type>,
         udho::www::components::navigators::pretty,
@@ -83,6 +86,7 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
 
     using composition_type = udho::manifold::composition<
         udho::www::components::basic_handler<StreamT>,
+        udho::www::components::connection,
         udho::www::components::db::pg<>,
         udho::www::components::protocols::http<StreamT>,
         udho::www::components::navigators::pretty,

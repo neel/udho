@@ -28,6 +28,7 @@
 #include <udho/session/storage/redis.h>
 #include <udho/manifold/portal.h>
 #include <udho/manifold/context.h>
+#include <udho/www/context.h>
 #include <udho/manifold/runtime.h>
 #include <udho/manifold/composition_view.h>
 #include <udho/manifold/journal_view.h>
@@ -44,33 +45,31 @@ using namespace udho::manifold;
 
 template <typename StreamT>
 struct basic_callbacks{
-    using handler = basic_handler<StreamT>;
-
     struct nodef{
         nodef() = delete;
         nodef(int) {}
     };
 
-    static BOOST_SYMBOL_EXPORT void f0(basic_context<StreamT, handler, cookies> context){
+    static BOOST_SYMBOL_EXPORT void f0(udho::www::context<cookies> context){
         context << "f0";
         context.finish();
         return;
     }
 
-    static BOOST_SYMBOL_EXPORT int f1(basic_context<StreamT, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    static BOOST_SYMBOL_EXPORT int f1(udho::www::context<navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
         context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
-    static BOOST_SYMBOL_EXPORT std::string f2(basic_context<StreamT, handler, cookies> context, int a, const std::string& b){
+    static BOOST_SYMBOL_EXPORT std::string f2(udho::www::context<cookies> context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
-    static BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<StreamT, handler> context, nodef, int a){
+    static BOOST_SYMBOL_EXPORT std::string f_nodef(udho::www::context<> context, nodef, int a){
         context << std::to_string(a);
         context.finish();
         return "hello";
@@ -127,6 +126,7 @@ template <typename StreamT>
 struct basic_www{
     using router_type                = test_case_router_type<StreamT>;
     using handler_component_type     = udho::www::components::basic_handler<StreamT>;
+    using connection_component_type  = udho::www::components::connection;
     using db_component_type          = udho::www::components::db::pg<>;
     using routing_component_type     = udho::www::components::routing<router_type>;
     using stream_type                = StreamT;
@@ -147,6 +147,7 @@ struct udho::manifold::sketch<testing::basic_www<StreamT>>{
 
     using composition_type = udho::manifold::composition<
         typename www_type::handler_component_type,
+        typename www_type::connection_component_type,
         typename www_type::db_component_type,
         typename www_type::protocol_component_type,
         typename www_type::navigator_component_type,
@@ -178,16 +179,18 @@ struct framework{
     using routing_component_type = typename label_type::routing_component_type;
     using router_type            = typename label_type::router_type;
     using handler_component_type = typename label_type::handler_component_type;
+    using connection_component_type = typename label_type::connection_component_type;
 
     static_assert(runtime_type::Count >= 2);
 
     template <typename... Components>
     framework(test_case_router_type<StreamT>&& router, Components&&... components)
-        : _handler(router.summary()), _routing(std::move(router)), _runtime(_routing, _handler, std::forward<Components>(components)...) {}
+        : _connection(router.summary()), _handler(_connection.responses()), _routing(std::move(router)), _runtime(_routing, _handler, _connection, std::forward<Components>(components)...) {}
 
     runtime_type& runtime() { return _runtime; }
 
 private:
+    connection_component_type _connection;
     handler_component_type  _handler;
     routing_component_type  _routing;
     runtime_type            _runtime;
@@ -368,7 +371,7 @@ struct udho::manifold::transition<testing::basic_www<StreamT>, StreamT, action_t
     using pipeline_type          = typename runtime_type::template pipeline_at<action_transition_stage>;
     using configs_type           = typename runtime_type::configs_type;
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
-    using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
+    using context_type           = typename udho::manifold::detail::get_context_for_portal<portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
     using routing_component_type = typename label_type::routing_component_type;
 
@@ -487,9 +490,8 @@ TEST_CASE("udho manifold pipeline stage 0", "[manifold][pipeline]") {
     using flow_type      = framework_type::flow_type;
     using journal_type   = flow_type::journal_type;
 
-
-    using portal_type            = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
-    using context_type           = typename udho::manifold::detail::get_context_for_portal<boost::beast::test::stream, portal_type>::type;
+    using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
+    using context_type   = typename udho::manifold::detail::get_context_for_portal<portal_type>::type;
 
     lua.bind(udho::view::data::type<context_type>{});
 
@@ -668,7 +670,7 @@ TEST_CASE("udho manifold pipeline stage 0 with tcp stream", "[manifold][pipeline
     using socket_type    = udho::net::detail::wire_types<boost::asio::ip::tcp>::socket_type;
     using framework_type = testing::framework<socket_type>;
     using portal_type    = typename udho::manifold::detail::get_portal_type<framework_type::composition_type>::type;
-    using context_type   = typename udho::manifold::detail::get_context_for_portal<socket_type, portal_type>::type;
+    using context_type   = typename udho::manifold::detail::get_context_for_portal<portal_type>::type;
     using listener_type  = udho::net::basic_plain_listener<framework_type::runtime_type, socket_type>;
     using endpoint_type  = typename listener_type::endpoint_type;
 

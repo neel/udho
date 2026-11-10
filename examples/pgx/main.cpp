@@ -15,12 +15,13 @@
 #include <udho/www/www.h>
 
 using lua_bridge = udho::view::data::bridges::lua;
-using framework_type = udho::www::framework<udho::www::stateless::lua>;
+using framework_type = udho::www::framework<udho::www::http::stateless::lua>;
 
 int main(int argc, char** argv) {
     udho::cli::control control(argc, argv);
     if(control.admin()) return control();
     boost::asio::io_context io;
+    udho::www::http::transport transport(control.ipv4());
     const char* configured = std::getenv("UDHO_PGX_DATABASE_URL");
     const std::string connection_string = configured ? configured : "host=localhost dbname=udho_pgx user=postgres";
 
@@ -43,7 +44,7 @@ int main(int argc, char** argv) {
                     << udho::view::resources::asset::js("app.js", root / "assets" / "app.js")
                     << udho::view::resources::asset::txt("project.html", root / "assets" / "project.html", "text/html");
 
-    auto server = control.prepare<framework_type>(store, pgx::urls(api_controller, ui_controller), database);
-    server.run(io, control.ipv4());
+    auto server = control.prepare<framework_type>(transport, store, pgx::urls(api_controller, ui_controller), database);
+    server.run(io);
     return 0;
 }

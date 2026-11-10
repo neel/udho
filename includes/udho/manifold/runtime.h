@@ -54,7 +54,7 @@ struct basic_runtime{
     using collection_type   = std::unordered_map<std::size_t, flow_type>;
     using hooks_assoc_type  = std::unordered_map<std::size_t, hooks_list_type>;
     using portal_type       = typename detail::get_portal_type<composition_type>::type;
-    using context_type      = typename detail::get_context_for_portal<StreamT, portal_type>::type;
+    using context_type      = typename detail::get_context_for_portal<portal_type>::type;
 
     friend struct basic_flow<label_type, stream_type>;
 

@@ -6,12 +6,14 @@
 #include <udho/www/label.h>
 #include <udho/www/sketch.h>
 #include <udho/www/presets.h>
+#include <udho/www/profile.h>
 #include <udho/www/terminal.h>
 #include <udho/www/transitions.h>
 #include <udho/www/framework.h>
 #include <udho/www/features.h>
 #include <udho/www/context.h>
 #include <udho/www/components/params.h>
+#include <udho/www/components/connection.h>
 #include <udho/www/components/cookies.h>
 #include <udho/www/components/handler.h>
 #include <udho/www/components/navigator.h>

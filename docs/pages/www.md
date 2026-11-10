@@ -12,20 +12,21 @@ For the distinction between pipeline failures, captured action errors, HTTP
 status exceptions, and error-page rendering, see @ref WWWErrorHandling.
 
 ```cpp
-    using framework_type = udho::www::framework<udho::www::stateful::lua::lazy_fs>;
+    using framework_type = udho::www::framework<udho::www::http::stateful::lua::lazy_fs>;
 
     auto framework = framework_type::apply(udho::url::router(url()));
     auto runtime   = framework.runtime(session, resources);
 
-    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+    udho::www::http::transport transport({boost::asio::ip::tcp::v4(), 9999});
+    auto listener = udho::net::listener(io, runtime, transport);
 
     listener.start();
 ```
 
-In this example, the preset `udho::www::stateful::lua::lazy_fs` is used to define the shape of the web framework. The preset selects a stateful HTTP pipeline with filesystem-backed lazy session handling and Lua-backed view resources. A router is created with `udho::url::router` by passing the `url()` function, which returns the routing table. The routing table itself is omitted here for brevity.
+In this example, the preset `udho::www::http::stateful::lua::lazy_fs` is used to define the shape of the web framework. The preset selects a stateful HTTP pipeline with filesystem-backed lazy session handling and Lua-backed view resources. A router is created with `udho::url::router` by passing the `url()` function, which returns the routing table. The routing table itself is omitted here for brevity.
 
 ```cpp
-using framework_type = udho::www::framework<udho::www::stateful::lua::lazy_fs>;
+using framework_type = udho::www::framework<udho::www::http::stateful::lua::lazy_fs>;
 ```
 
 The framework is then instantiated with the router. From this framework, a runtime is constructed by passing additional component instances that should participate in the HTTP pipeline. In this example, the session and resources components are supplied to the runtime; their construction and initialization are omitted for brevity.
@@ -35,10 +36,11 @@ auto framework = framework_type::apply(udho::url::router(url()));
 auto runtime   = framework.runtime(session, resources);
 ```
 
-Finally, a listener is created with a Boost.Asio io_context, the runtime, and the listening endpoint. Calling listener.start() starts accepting HTTP connections and dispatching them through the configured www pipeline.
+Finally, an HTTP transport is configured with the listening endpoint and passed to the listener. Calling listener.start() starts accepting HTTP connections and dispatching them through the configured www pipeline.
 
 ```cpp
-auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+udho::www::http::transport transport({boost::asio::ip::tcp::v4(), 9999});
+auto listener = udho::net::listener(io, runtime, transport);
 
 listener.start();
 ```
@@ -53,22 +55,22 @@ Each preset is associated with a predined set of components.
 
 | Preset                                        | Description                                                                                                                                                                                                             |
 |-----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `udho::www::stateless::rest`                  | Stateless HTTP framework preset without session handling or a view bridge. Suitable for REST-style endpoints and simple HTTP APIs.                                                                                      |
-| `udho::www::stateless::lua`                   | Stateless HTTP framework preset with Lua-backed view resources. Suitable for applications that need rendering support without server-side sessions.                                                                     |
-| `udho::www::stateful::lazy_fs`                | Stateful HTTP framework preset using filesystem-backed session storage in lazy mode. Session data is loaded and persisted only when required by the session policy.                                                     |
-| `udho::www::stateful::optimistic_fs`          | Stateful HTTP framework preset using filesystem-backed session storage in optimistic mode. Suitable when session updates are expected to be lightweight and conflict-free.                                              |
-| `udho::www::stateful::lazy_memfs`             | Stateful HTTP framework preset intended for memory-backed filesystem-style session storage in lazy mode. In the current source, this alias maps to `udho::session::storage::fs`.                                        |
-| `udho::www::stateful::optimistic_memfs`       | Stateful HTTP framework preset intended for memory-backed filesystem-style session storage in optimistic mode. In the current source, this alias maps to `udho::session::storage::fs`.                                  |
-| `udho::www::stateful::lazy_redis`             | Stateful HTTP framework preset using Redis-backed session storage in lazy mode. Suitable for deployments where session state should be shared outside the process.                                                      |
-| `udho::www::stateful::optimistic_redis`       | Stateful HTTP framework preset using Redis-backed session storage in optimistic mode. Suitable for Redis-backed session workflows where updates can be committed optimistically.                                        |
-| `udho::www::stateful::immediate_redis`        | Stateful HTTP framework preset using Redis-backed session storage in immediate mode. Suitable when session changes should be written eagerly.                                                                           |
-| `udho::www::stateful::lua::lazy_fs`           | Stateful HTTP framework preset with Lua-backed view resources and filesystem-backed session storage in lazy mode.                                                                                                       |
-| `udho::www::stateful::lua::optimistic_fs`     | Stateful HTTP framework preset with Lua-backed view resources and filesystem-backed session storage in optimistic mode.                                                                                                 |
-| `udho::www::stateful::lua::lazy_memfs`        | Stateful HTTP framework preset with Lua-backed view resources, intended for memory-backed filesystem-style session storage in lazy mode. In the current source, this alias maps to `udho::session::storage::fs`.        |
-| `udho::www::stateful::lua::optimistic_memfs`  | Stateful HTTP framework preset with Lua-backed view resources, intended for memory-backed filesystem-style session storage in optimistic mode. In the current source, this alias maps to `udho::session::storage::fs`.  |
-| `udho::www::stateful::lua::lazy_redis`        | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in lazy mode.                                                                                                            |
-| `udho::www::stateful::lua::optimistic_redis`  | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in optimistic mode.                                                                                                      |
-| `udho::www::stateful::lua::immediate_redis`   | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in immediate mode.                                                                                                       |
+| `udho::www::http::stateless::rest`                  | Stateless HTTP framework preset without session handling or a view bridge. Suitable for REST-style endpoints and simple HTTP APIs.                                                                                      |
+| `udho::www::http::stateless::lua`                   | Stateless HTTP framework preset with Lua-backed view resources. Suitable for applications that need rendering support without server-side sessions.                                                                     |
+| `udho::www::http::stateful::lazy_fs`                | Stateful HTTP framework preset using filesystem-backed session storage in lazy mode. Session data is loaded and persisted only when required by the session policy.                                                     |
+| `udho::www::http::stateful::optimistic_fs`          | Stateful HTTP framework preset using filesystem-backed session storage in optimistic mode. Suitable when session updates are expected to be lightweight and conflict-free.                                              |
+| `udho::www::http::stateful::lazy_memfs`             | Stateful HTTP framework preset intended for memory-backed filesystem-style session storage in lazy mode. In the current source, this alias maps to `udho::session::storage::fs`.                                        |
+| `udho::www::http::stateful::optimistic_memfs`       | Stateful HTTP framework preset intended for memory-backed filesystem-style session storage in optimistic mode. In the current source, this alias maps to `udho::session::storage::fs`.                                  |
+| `udho::www::http::stateful::lazy_redis`             | Stateful HTTP framework preset using Redis-backed session storage in lazy mode. Suitable for deployments where session state should be shared outside the process.                                                      |
+| `udho::www::http::stateful::optimistic_redis`       | Stateful HTTP framework preset using Redis-backed session storage in optimistic mode. Suitable for Redis-backed session workflows where updates can be committed optimistically.                                        |
+| `udho::www::http::stateful::immediate_redis`        | Stateful HTTP framework preset using Redis-backed session storage in immediate mode. Suitable when session changes should be written eagerly.                                                                           |
+| `udho::www::http::stateful::lua::lazy_fs`           | Stateful HTTP framework preset with Lua-backed view resources and filesystem-backed session storage in lazy mode.                                                                                                       |
+| `udho::www::http::stateful::lua::optimistic_fs`     | Stateful HTTP framework preset with Lua-backed view resources and filesystem-backed session storage in optimistic mode.                                                                                                 |
+| `udho::www::http::stateful::lua::lazy_memfs`        | Stateful HTTP framework preset with Lua-backed view resources, intended for memory-backed filesystem-style session storage in lazy mode. In the current source, this alias maps to `udho::session::storage::fs`.        |
+| `udho::www::http::stateful::lua::optimistic_memfs`  | Stateful HTTP framework preset with Lua-backed view resources, intended for memory-backed filesystem-style session storage in optimistic mode. In the current source, this alias maps to `udho::session::storage::fs`.  |
+| `udho::www::http::stateful::lua::lazy_redis`        | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in lazy mode.                                                                                                            |
+| `udho::www::http::stateful::lua::optimistic_redis`  | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in optimistic mode.                                                                                                      |
+| `udho::www::http::stateful::lua::immediate_redis`   | Stateful HTTP framework preset with Lua-backed view resources and Redis-backed session storage in immediate mode.                                                                                                       |
 
 
 ## Sketch
@@ -84,7 +86,7 @@ using lazy_fs = www::label<
 The label itself contains almost no information. 
 It simply identifies the desired framework configuration. 
 The actual component composition and feature ordering are provided by a specialization of `udho::manifold::sketch`.
-For example `udho::manifold::sketch<udho::www::stateless::rest>` provides following typedefs 
+For example `udho::manifold::sketch<udho::www::http::stateless::rest>` provides following typedefs
 
 - composition_type
 - order_type
@@ -134,7 +136,8 @@ The components and their role are mentioned below.
 
 | Component | Description |
 |---|---|
-| `udho::www::components::basic_handler` | Manages active response output streams for flows and coordinates response completion callbacks. |
+| `udho::www::components::basic_handler` | Manages the stream-dependent response output streams for active flows. |
+| `udho::www::components::connection` | Owns stream-neutral response completion hooks and the router summary exposed to every WWW context. |
 | `udho::www::components::db::pg` | PostgreSQL database component included in the default www sketch. |
 | `udho::www::components::protocols::http` | Implements HTTP protocol handling, including request-header and body processing. |
 | `udho::www::components::navigators::pretty` | Provides pretty URL navigation and request-target interpretation for routing. |
@@ -143,7 +146,7 @@ The components and their role are mentioned below.
 | `udho::www::components::resources` | Provides access to application resources and view-data bridges such as Lua. |
 | `udho::www::components::routing` | Wraps the router, resolves matched routes, applies route-specific configuration, and invokes selected route actions. |
 
-Out of these components `udho::www::components::basic_handler`, `udho::www::components::protocols::http`, `udho::www::components::navigators::pretty` and `udho::www::components::routing` are mandatory for processing the HTTP pipeline.
+Out of these components `udho::www::components::basic_handler`, `udho::www::components::connection`, `udho::www::components::protocols::http`, `udho::www::components::navigators::pretty` and `udho::www::components::routing` are mandatory for processing the HTTP pipeline. The typed handler is a runtime implementation detail; the non-templated connection is the corresponding action-facing capability included in every WWW context.
 `udho::www::components::resources` is essential for processing assets as well as views.
 
 ## Features

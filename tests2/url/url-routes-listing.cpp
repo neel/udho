@@ -217,7 +217,7 @@ TEST_CASE("URL routes listing", "[url][routing][listing]") {
         }
     }
 
-    using framework_type = udho::www::framework<udho::www::stateless::lua>;
+    using framework_type = udho::www::framework<udho::www::http::stateless::lua>;
     // using endpoint_type  = typename framework_type::endpoint_type;
 
     auto resource_store_component  = udho::www::components::resources(cstore);

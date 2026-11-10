@@ -10,25 +10,17 @@
 namespace udho{
 namespace manifold{
 
-template <typename StreamT, typename... Components>
+template <typename... Components>
 struct basic_context;
 
 namespace detail{
 
-template <typename StreamT, typename PortalT>
+template <typename PortalT>
 struct get_context_for_portal;
 
-template <typename StreamT, typename... Components>
-struct get_context_for_portal<StreamT, udho::manifold::portal<Components...>>{
-    using type = basic_context<StreamT, Components...>;
-};
-
-template <typename StreamT, typename PortalT>
-struct get_context_for_composition;
-
-template <typename StreamT, typename... Components>
-struct get_context_for_composition<StreamT, udho::manifold::composition<Components...>>{
-    using type = basic_context<StreamT, Components...>;
+template <typename... Components>
+struct get_context_for_portal<udho::manifold::portal<Components...>>{
+    using type = basic_context<Components...>;
 };
 
 // { generic feature set to component set
@@ -144,30 +136,25 @@ struct internal_get_components_storage_for_features<udho::manifold::composition<
  * component code, while also exposing the portal for controlled access to
  * components, configurations, and journal results.
  *
- * @tparam StreamT Underlying stream type used by `basic_ostream`.
  * @tparam Components Component types exposed through the context portal.
  *
  * @see portal
- * @see udho::net::basic_ostream
+ * @see udho::net::ostream_view
  * @ingroup DoxyG_manifold
  */
-template <typename StreamT, typename... Components>
+template <typename... Components>
 struct basic_context {
     /**
-     * @brief Underlying stream type.
+     * @brief Type-erased output stream proxy used by the context.
      */
-    using stream_type               = StreamT;
-    /**
-     * @brief Output stream wrapper used by the context.
-     */
-    using ostream_type              = udho::net::basic_ostream<stream_type>;
+    using ostream_type              = udho::net::ostream_view;
     /**
      * @brief Portal type exposed by the context.
      */
     using portal_type               = udho::manifold::portal<Components...>;
-    using self_type                 = basic_context<StreamT, Components...>;
+    using self_type                 = basic_context<Components...>;
 
-    template <typename, typename...>
+    template <typename...>
     friend struct basic_context;
 
     /**
@@ -188,8 +175,19 @@ public:
      * @param portal Portal exposing component, config, and journal access.
      * @param id Flow identifier associated with this context.
      */
-    basic_context(ostream_type& stream, const portal_type& portal, std::size_t id)
-        : _ostream(stream), _portal(portal), _flow_id(id)
+    basic_context(ostream_type stream, const portal_type& portal, std::size_t id)
+        : _ostream(std::move(stream)), _portal(portal), _flow_id(id)
+    {}
+
+    /**
+     * @brief Constructs a context from a concrete response output stream.
+     *
+     * The concrete stream is erased immediately; it does not become part of the
+     * context type or its stored state.
+     */
+    template <typename StreamT>
+    basic_context(udho::net::basic_ostream<StreamT>& stream, const portal_type& portal, std::size_t id)
+        : basic_context(stream.view(), portal, id)
     {}
 
     /**
@@ -202,11 +200,10 @@ public:
     /**
      * @brief construct subset context from another superset context.
      * @pre The other context must have the same or more Components that this context
-     * @pre Both source and sink contexts must have the same stream
      * @param other
      */
     template <typename... OtherComponents>
-    basic_context(udho::manifold::basic_context<StreamT, OtherComponents...>& other): _ostream(other._ostream), _portal(other._portal), _flow_id(other._flow_id) { }
+    basic_context(udho::manifold::basic_context<OtherComponents...>& other): _ostream(other._ostream), _portal(other._portal), _flow_id(other._flow_id) { }
 
     /**
      * @brief Gets the mutable portal.
@@ -233,7 +230,7 @@ public:
     /**
      * @brief Writes values to the context output stream.
      *
-     * Arguments are forwarded to `basic_ostream::write()`.
+     * Arguments are forwarded to `ostream_view::write()`.
      *
      * @tparam Args Argument types accepted by the output stream.
      * @param args Values to write.
@@ -293,7 +290,7 @@ public:
      * After buffering is disabled, subsequent writes are forwarded according to the
      * stream's immediate-output behavior.
      *
-     * @see basic_ostream<StreamT>::disable_buffering()
+     * @see udho::net::ostream_view::disable_buffering()
      */
     inline void disable_buffering() {
         // sync cookies, session, csrf etc..
@@ -304,10 +301,10 @@ public:
     /**
      * @brief Finalizes the output stream.
      *
-     * This flushes or completes the stream according to `basic_ostream::finish()`.
+     * This flushes or completes the stream according to `ostream_view::finish()`.
      * It should be called when response generation is complete.
      *
-     * @see basic_ostream<StreamT>::finish()
+     * @see udho::net::ostream_view::finish()
      */
     inline void finish() {
         // sync cookies, session, csrf etc.. if not synced already
@@ -319,10 +316,10 @@ public:
      *
      * @param captured Captured exception object to move into the stream.
      *
-     * @see basic_ostream<StreamT>::exception(udho::exceptions::captured&&)
+     * @see udho::net::ostream_view::capture(udho::exceptions::captured&&)
      */
     inline void capture(udho::exceptions::captured&& captured) {
-        _ostream.exception(std::move(captured));
+        _ostream.capture(std::move(captured));
     }
     /**
      * @brief Captures the current exception in the output stream.
@@ -335,8 +332,8 @@ public:
     /**
      * @brief Provides view-data metadata for a context.
      *
-     * Exposes the context, portal metadata, flow id, routes, and resources to the
-     * view-data reflection system.
+     * Exposes the context, portal metadata, and flow id to the view-data
+     * reflection system. Protocol-specific metadata belongs in derived contexts.
      *
      * The unnamed type tag identifies `self_type`.
      * @return View-data metadata association for `self_type`.
@@ -346,9 +343,7 @@ public:
 
         return assoc("context"),
                metatype(udho::view::data::type<portal_type>()),
-               cvar("flow_id",     &self_type::_flow_id),
-               fvar("routes",      &self_type::_url_routes),
-               fvar("resources",   &self_type::_resources_store)
+               cvar("flow_id",     &self_type::_flow_id)
         ;
     }
 
@@ -360,16 +355,7 @@ public:
     std::size_t flow_id() const { return _flow_id; }
 
 private:
-    const auto& _url_routes() const {
-        return _portal.routes();
-    }
-
-    const auto& _resources_store() const {
-        return _portal.resources();
-    }
-
-private:
-    ostream_type&                       _ostream;
+    ostream_type                        _ostream;
     portal_type                         _portal;
     std::size_t                         _flow_id;
 };
@@ -379,13 +365,13 @@ private:
 }
 
 // namespace boost::asio {
-//     template <typename StreamT, typename... Components>
-//     struct is_executor<udho::manifold::basic_context<StreamT, Components...>> : std::false_type {};
+//     template <typename... Components>
+//     struct is_executor<udho::manifold::basic_context<Components...>> : std::false_type {};
 // }
 
 // namespace boost::asio::execution {
-//     template <typename StreamT, typename... Components>
-//     struct is_executor<udho::manifold::basic_context<StreamT, Components...>> : std::false_type {};
+//     template <typename... Components>
+//     struct is_executor<udho::manifold::basic_context<Components...>> : std::false_type {};
 // }
 
 #endif // UDHO_MANIFOLD_CONTEXT_H

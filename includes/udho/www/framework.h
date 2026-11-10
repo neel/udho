@@ -2,6 +2,7 @@
 #define UDHO_WWW_FRAMEWORK_H
 
 #include <udho/www/components/handler.h>
+#include <udho/www/components/connection.h>
 #include <udho/www/components/routing.h>
 #include <udho/www/label.h>
 #include <udho/manifold/runtime.h>
@@ -11,12 +12,13 @@ namespace udho{
 namespace www{
 
 /**
- * @brief Helper object that owns routing and handler components before runtime creation.
+ * @brief Helper object that owns routing, connection, and handler components before runtime creation.
  *
  * `runtime_generator` is returned by `framework::apply(router)`. It stores the
- * routing component built from the router and the handler initialized from the
- * router summary. Calling `runtime()` creates the final manifold runtime with
- * these components plus any user-supplied components.
+ * routing component built from the router, a stream-neutral connection, and a
+ * typed handler borrowing the connection's response registry. Calling
+ * `runtime()` creates the final manifold runtime with these components plus any
+ * user-supplied components.
  *
  * @tparam Label Base www label.
  * @tparam StreamT Stream type used by the runtime.
@@ -26,11 +28,12 @@ namespace www{
  */
 template <typename Label, typename StreamT, typename RouterT>
 struct runtime_generator{
-    using router_type   = RouterT;
-    using handler_type  = udho::www::components::basic_handler<StreamT>;
-    using routing_type  = udho::www::components::routing<router_type>;
-    using rlabel_type   = typename Label::template append<routing_type>;
-    using runtime_type  = udho::manifold::basic_runtime<rlabel_type, StreamT>;
+    using router_type     = RouterT;
+    using connection_type = udho::www::components::connection;
+    using handler_type    = udho::www::components::basic_handler<StreamT>;
+    using routing_type    = udho::www::components::routing<router_type>;
+    using rlabel_type     = typename Label::template append<routing_type>;
+    using runtime_type    = udho::manifold::basic_runtime<rlabel_type, StreamT>;
 
     runtime_generator() = delete;
     runtime_generator(const runtime_generator&) = delete;
@@ -38,18 +41,21 @@ struct runtime_generator{
     /**
      * @brief Constructs a runtime generator from a router.
      *
-     * The router is moved into the routing component. The handler is initialized
-     * from `router.summary()`.
+     * The router is moved into the routing component. The connection owns the
+     * response registry initialized from `router.summary()`, and the typed
+     * handler borrows that registry.
      *
      * @param router Router object to move into the generator.
      */
-    runtime_generator(RouterT&& router): _handler(router.summary()), _routing(std::move(router)) {}
+    runtime_generator(RouterT&& router)
+        : _connection(router.summary()), _handler(_connection.responses()), _routing(std::move(router))
+    {}
 
     /**
      * @brief Creates the manifold runtime.
      *
-     * The runtime is created with the routing component, handler component, and any
-     * additional components supplied by the caller.
+     * The runtime is created with routing, handler, and connection components,
+     * plus any additional components supplied by the caller.
      *
      * @tparam Components Additional component argument types.
      * @param components Additional runtime component arguments.
@@ -57,7 +63,7 @@ struct runtime_generator{
      */
     template <typename... Components>
     runtime_type runtime(Components&&... components) {
-        return runtime_type(_routing, _handler, std::forward<Components>(components)...);
+        return runtime_type(_routing, _handler, _connection, std::forward<Components>(components)...);
     }
 
     /**
@@ -65,8 +71,8 @@ struct runtime_generator{
      *
      * This overload expects the first parameter to be a const_store, from which it creates
      * a resources component which is passed to the other overload.
-     * The runtime is created with the routing component, handler component, resources component, and any
-     * additional components supplied by the caller.
+     * The runtime is created with routing, handler, connection, and resources
+     * components, plus any additional components supplied by the caller.
      *
      * @tparam Bridges... View bridges
      * @tparam Components... Additional component argument types.
@@ -88,6 +94,7 @@ struct runtime_generator{
     const router_type& router() const { return _routing.router(); }
 
 private:
+    connection_type _connection;
     handler_type _handler;
     routing_type _routing;
 };

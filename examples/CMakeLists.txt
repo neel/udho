@@ -37,4 +37,5 @@ FIND_PACKAGE(Threads REQUIRED)
 
 add_subdirectory(simple)
 add_subdirectory(hello)
+add_subdirectory(hello.https)
 add_subdirectory(pgx)

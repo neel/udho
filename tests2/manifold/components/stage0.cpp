@@ -41,26 +41,26 @@ namespace callbacks{
         nodef(int) {}
     };
 
-    BOOST_SYMBOL_EXPORT void f0(basic_context<stream_type, handler, cookies> context){
+    BOOST_SYMBOL_EXPORT void f0(basic_context<handler, cookies> context){
         context << "f0";
         context.finish();
         return;
     }
 
-    BOOST_SYMBOL_EXPORT int f1(basic_context<stream_type, handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
+    BOOST_SYMBOL_EXPORT int f1(basic_context<handler, navigators::pretty, cookies> context, std::string a, const std::string& b, const double& c, int d){
         context << std::to_string(a.size()+b.size()+c+d);
         std::cout << "context.resource(): " << context.portal().resource()  << std::endl;
         context.finish();
         return 42;
     }
 
-    BOOST_SYMBOL_EXPORT std::string f2(basic_context<stream_type, handler, cookies> context, int a, const std::string& b){
+    BOOST_SYMBOL_EXPORT std::string f2(basic_context<handler, cookies> context, int a, const std::string& b){
         context << std::to_string(a+b.size());
         context.finish();
         return "hello";
     }
 
-    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<stream_type, handler> context, nodef, int a){
+    BOOST_SYMBOL_EXPORT std::string f_nodef(basic_context<handler> context, nodef, int a){
         context << std::to_string(a);
         context.finish();
         return "hello";

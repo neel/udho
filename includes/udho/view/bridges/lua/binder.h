@@ -258,23 +258,21 @@ struct readonly_internal_binder<Class, std::map<K, T>>{
  *
  */
 struct internal_iter_binder {
-    template<typename Usertype, typename U>
+    template<typename BoundClass, typename Usertype, typename U>
     static void apply(detail::lua::state& state, Usertype& type, udho::view::data::wrapper<U, U>& wrapper) {
         using wrapper_type  = udho::view::data::wrapper<U, U>;
         using value_type    = typename wrapper_type::value_type;
-        using class_type    = typename wrapper_type::class_type;
-        using iterator_type = typename wrapper_type::iterator_type;
 
         helper::recurse<std::decay_t<value_type>>::apply(state);
 
-        apply_impl(type, wrapper, typename is_pair<value_type>::type{});
+        apply_impl<BoundClass>(type, wrapper, typename is_pair<value_type>::type{});
     }
 
-    template <typename Usertype, typename U>
+    template <typename BoundClass, typename Usertype, typename U>
     static void apply_impl(Usertype& type, udho::view::data::wrapper<U, U>& wrapper, std::false_type){
         using wrapper_type  = udho::view::data::wrapper<U, U>;
         using value_type    = typename wrapper_type::value_type;
-        using class_type    = typename wrapper_type::class_type;
+        using class_type    = BoundClass;
         using iterator_type = typename wrapper_type::iterator_type;
 
         auto lambda = [w = wrapper](class_type& d) mutable {
@@ -305,11 +303,11 @@ struct internal_iter_binder {
         type["__ipairs"] = lambda;
     }
 
-    template <typename Usertype, typename U>
+    template <typename BoundClass, typename Usertype, typename U>
     static void apply_impl(Usertype& type, udho::view::data::wrapper<U, U>& wrapper, std::true_type){
         using wrapper_type  = udho::view::data::wrapper<U, U>;
         using value_type    = typename wrapper_type::value_type;
-        using class_type    = typename wrapper_type::class_type;
+        using class_type    = BoundClass;
         using iterator_type = typename wrapper_type::iterator_type;
 
         auto lambda = [w = wrapper](class_type& d) mutable {
@@ -512,7 +510,7 @@ struct binder{
         UDHO_LOG_DEBUG("udho::view::data::bridges::detail::lua", "binding function", p::name(nvp.name()));
 
         auto& wrapper = nvp.value();
-        helper::internal_iter_binder::apply(_state, _type, wrapper);
+        helper::internal_iter_binder::template apply<X>(_state, _type, wrapper);
         return *this;
     }
 

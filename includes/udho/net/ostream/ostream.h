@@ -2,10 +2,12 @@
 #define UDHO_NET_OSTREAM_OSTREAM_H
 
 #include <string>
+#include <sstream>
 #include <chrono>
 #include <boost/asio/error.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <udho/utils/string_view.h>
+#include <udho/utils/traits.h>
 #include <udho/utils/format.h>
 #include <boost/beast/http/fields.hpp>
 #include <boost/asio/strand.hpp>
@@ -42,6 +44,11 @@ struct basic_ostream_timeout {
  *       through it.
  */
 struct ostream_view{
+public:
+    using encoding_type    = udho::net::types::transfer::encoding;
+    using compression_type = udho::net::types::transfer::compression;
+    using captured_type    = udho::exceptions::captured;
+
 private:
     void* _self = nullptr;
     void (*_set)(void*, const boost::beast::http::field&, udho::utils::string_view) = nullptr;
@@ -52,6 +59,11 @@ private:
     void (*_disable_buffering)(void*) = nullptr;
     void (*_finish)(void*) = nullptr;
     void (*_status)(void*, boost::beast::http::status) = nullptr;
+    encoding_type (*_get_encoding)(const void*) = nullptr;
+    void (*_set_encoding)(void*, encoding_type) = nullptr;
+    compression_type (*_get_compression)(const void*) = nullptr;
+    void (*_set_compression)(void*, compression_type) = nullptr;
+    void (*_capture)(void*, captured_type&&) = nullptr;
 
     /**
      * @brief Construct a view from an erased stream instance and its forwarding functions.
@@ -74,7 +86,12 @@ private:
         void (*wmf)(void*, boost::iostreams::mapped_file_source&&),
         void (*db)(void*),
         void (*status)(void*, boost::beast::http::status),
-        void (*fn)(void*)
+        void (*fn)(void*),
+        encoding_type (*ge)(const void*),
+        void (*se)(void*, encoding_type),
+        compression_type (*gc)(const void*),
+        void (*sc)(void*, compression_type),
+        void (*capture)(void*, captured_type&&)
         )
         : _self(self)
         , _set(st)
@@ -85,6 +102,11 @@ private:
         , _disable_buffering(db)
         , _status(status)
         , _finish(fn)
+        , _get_encoding(ge)
+        , _set_encoding(se)
+        , _get_compression(gc)
+        , _set_compression(sc)
+        , _capture(capture)
     {}
 
 public:
@@ -106,7 +128,12 @@ public:
             [](void* s, boost::iostreams::mapped_file_source&& file){ static_cast<OstreamT*>(s)->write(std::move(file)); },
             [](void* s){ static_cast<OstreamT*>(s)->disable_buffering(); },
             [](void* s, boost::beast::http::status t){ static_cast<OstreamT*>(s)->status(t); },
-            [](void* s){ static_cast<OstreamT*>(s)->finish(); }
+            [](void* s){ static_cast<OstreamT*>(s)->finish(); },
+            [](const void* s){ return static_cast<const OstreamT*>(s)->encoding(); },
+            [](void* s, encoding_type enc){ static_cast<OstreamT*>(s)->encoding(enc); },
+            [](const void* s){ return static_cast<const OstreamT*>(s)->compression(); },
+            [](void* s, compression_type cmp){ static_cast<OstreamT*>(s)->compression(cmp); },
+            [](void* s, captured_type&& captured){ static_cast<OstreamT*>(s)->exception(std::move(captured)); }
         };
     }
 
@@ -150,6 +177,24 @@ public:
      */
     void write(boost::iostreams::mapped_file_source&& file) { _write_mapped_file(_self, std::move(file)); }
 
+    /**
+     * @brief Eagerly format an ostreamable value and submit the resulting owned string.
+     *
+     * Type erasure cannot forward an open-ended set of concrete value types. Values
+     * handled by this overload are therefore formatted on the calling thread before
+     * the owned bytes are passed to the bound response stream.
+     */
+    template <typename T, std::enable_if_t<
+        std::is_move_constructible_v<std::decay_t<T>> &&
+        udho::utils::traits::is_ostreamable_v<std::decay_t<T>> &&
+        !udho::utils::traits::is_string<std::decay_t<T>>::value,
+        bool> = true>
+    void write(T&& value) {
+        std::ostringstream stream;
+        stream << std::forward<T>(value);
+        write(stream.str());
+    }
+
     /// @brief Switch the bound stream from buffered output to queued streaming.
     void disable_buffering()                  { _disable_buffering(_self); }
 
@@ -161,6 +206,27 @@ public:
      * @param t Status to assign to the response.
      */
     void status(boost::beast::http::status t) { _status(_self, t); }
+
+    /// @brief Get the configured transfer encoding.
+    encoding_type encoding() const { return _get_encoding(_self); }
+
+    /// @brief Set the transfer encoding before the response headers are sealed.
+    void encoding(encoding_type enc) { _set_encoding(_self, enc); }
+
+    /// @brief Get the configured transfer compression.
+    compression_type compression() const { return _get_compression(_self); }
+
+    /// @brief Set the transfer compression before the response headers are sealed.
+    void compression(compression_type cmp) { _set_compression(_self, cmp); }
+
+    /// @brief Forward a captured exception to the bound response stream.
+    void capture(captured_type&& captured) { _capture(_self, std::move(captured)); }
+
+    /// @brief Capture and forward the currently handled exception.
+    void capture() { capture(captured_type::propagate()); }
+
+    /// @brief Return another non-owning view of the same bound response stream.
+    ostream_view view() const noexcept { return *this; }
 
     /**
      * @brief Write an owned string through a type-erased stream view.
@@ -196,6 +262,17 @@ public:
     template <std::size_t N>
     friend ostream_view& operator<<(ostream_view& os, const char (&literal)[N]) {
         os.write(literal, N - 1);
+        return os;
+    }
+
+    /** @brief Format and write an arbitrary ostreamable value. */
+    template <typename T, std::enable_if_t<
+        std::is_move_constructible_v<std::decay_t<T>> &&
+        udho::utils::traits::is_ostreamable_v<std::decay_t<T>> &&
+        !udho::utils::traits::is_string<std::decay_t<T>>::value,
+        bool> = true>
+    friend ostream_view& operator<<(ostream_view& os, T&& value) {
+        os.write(std::forward<T>(value));
         return os;
     }
 };

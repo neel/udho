@@ -3,16 +3,12 @@
 
 #include <map>
 #include <mutex>
-#include <queue>
-#include <exception>
 #include <functional>
 #include <udho/logging/macros.h>
-#include <udho/utils/format.h>
 #include <udho/www/features.h>
+#include <udho/www/response_registry.h>
 #include <udho/net/ostream.h>
-#include <udho/url/summary.h>
 #include <udho/manifold/portal.h>
-#include <udho/view/tmpl/layout/layout.h>
 
 /** @addtogroup DoxyG_www_components
  *  @{
@@ -34,7 +30,8 @@ namespace components{
  * - @ref add creates a responder the first time a flow id is seen;
  * - later calls to @ref add with the same flow id return the existing ostream
  *   instead of replacing the responder;
- * - the router summary is stored by value and exposed through @ref summary.
+ * - stream-neutral completion state is borrowed from the runtime's
+ *   @ref connection component.
  *
  * @tparam StreamT Stream type associated with a flow.
  * @ingroup DoxyG_www_components
@@ -63,8 +60,6 @@ struct basic_handler{
         using callback_type             = std::function<void (boost::system::error_code, std::size_t)>;
         /// Callback invoked when the output stream reports an exception path.
         using exception_callback_type   = std::function<void (ostream_type&)>;
-        /// Callback invoked when the current response finishes.
-        using hook_type                 = std::function<void ()>;
 
         /**
          * @brief Construct a responder for a flow stream.
@@ -82,8 +77,8 @@ struct basic_handler{
          *          completed response because that state has already been cleared.
          */
         template <typename FinishCallback, typename ExceptionCallback>
-        responder(/*basic_handler<StreamT>& handler, std::size_t id, */stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
-            : /*_handler(handler), _id(id), */_ostream(stream,
+        responder(udho::www::response_registry& responses, std::size_t id, stream_type& stream, FinishCallback&& callback, ExceptionCallback&& ex_callback)
+            : _responses(responses), _id(id), _ostream(stream,
                     std::bind(&responder::on_finish, this, std::placeholders::_1, std::placeholders::_2),
                     std::bind(&responder::on_exception, this, std::placeholders::_1)
                 )
@@ -97,18 +92,6 @@ struct basic_handler{
          * @return Reference to the wrapped output stream.
          */
         ostream_type& ostream() { return _ostream; }
-
-        /**
-         * @brief Add a callback to run when the current response finishes.
-         * @param hook Callback to enqueue.
-         * @pre The current response has not begun completion.
-         */
-        void add_hook(hook_type hook) {
-            if(!hook) return;
-
-            const std::lock_guard<std::mutex> lock(_mutex);
-            _hooks.push(std::move(hook));
-        }
 
         template <typename FinishCallback>
         void reset_callbacks(FinishCallback&& callback) {
@@ -136,24 +119,12 @@ struct basic_handler{
          */
         void on_finish(boost::system::error_code ec, std::size_t bytes_written) {
             callback_type callback;
-            std::queue<hook_type> hooks;
             {
                 const std::lock_guard<std::mutex> lock(_mutex);
                 callback = _callback;
-                hooks.swap(_hooks);
             }
 
-            while(!hooks.empty()) {
-                hook_type hook = std::move(hooks.front());
-                hooks.pop();
-                try {
-                    hook();
-                } catch(const std::exception& ex) {
-                    UDHO_LOG_ERROR("www::components::handler", std::string{"Response finish hook threw an exception: "} + ex.what());
-                } catch(...) {
-                    UDHO_LOG_ERROR("www::components::handler", "Response finish hook threw an unknown exception");
-                }
-            }
+            _responses.complete(_id);
             callback(ec, bytes_written);
 
         }
@@ -174,29 +145,28 @@ struct basic_handler{
             callback(ostream);
         }
     private:
-        // basic_handler<StreamT>& _handler;
-        // std::size_t             _id;
+        udho::www::response_registry& _responses;
+        std::size_t                    _id;
         std::mutex              _mutex;
         ostream_type            _ostream;
         callback_type           _callback;
         exception_callback_type _ex_callback;
-        std::queue<hook_type>    _hooks;
     };
 
     /// Container storing responders indexed by flow id.
     using collection_type = std::map<std::size_t, responder>;
 
     /**
-     * @brief Construct a handler with router summary information.
-     * @param summary Router summary stored by value.
+     * @brief Construct a typed handler borrowing stream-neutral response state.
+     * @param responses Registry owned by the runtime's connection component.
      */
-    basic_handler(const udho::url::summary::router& summary): _summary(summary) {}
+    explicit basic_handler(udho::www::response_registry& responses): _responses(responses) {}
 
     /**
      * @brief Get or create the responder stream for a flow.
      *
-     * If a responder already exists for the given flow id, the existing output
-     * stream is returned and the newly supplied callbacks are ignored.
+     * If a responder already exists for the given flow id, its callbacks are
+     * refreshed and the existing output stream is returned.
      *
      * Otherwise, a new responder is created for that flow id and bound to the
      * supplied stream and callbacks.
@@ -223,10 +193,16 @@ struct basic_handler{
         bool success = false;
         std::tie(responder_it, success) = _responders.emplace(std::piecewise_construct,
             std::forward_as_tuple(id),
-            std::forward_as_tuple(/**this, id, */stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
+            std::forward_as_tuple(_responses, id, stream, std::forward<FinishCallback>(callback), std::forward<ExceptionCallback>(ex_callback))
         );
         assert(success);
         assert(responder_it->first == id);
+        try {
+            _responses.attach(id);
+        } catch(...) {
+            _responders.erase(responder_it);
+            throw;
+        }
         return responder_it->second.ostream();
     }
 
@@ -281,24 +257,21 @@ struct basic_handler{
      * @return true if a responder was removed; false if no responder existed.
      */
     bool remove(std::size_t id) {
-        const std::lock_guard<std::mutex> lock(_mutex);
+        {
+            const std::lock_guard<std::mutex> lock(_mutex);
 
-        auto it = _responders.find(id);
-        if(it == _responders.end()) return false;
+            auto it = _responders.find(id);
+            if(it == _responders.end()) return false;
 
-        _responders.erase(it);
+            _responders.erase(it);
+        }
+        _responses.detach(id);
         return true;
     }
 
-    /**
-     * @brief Return the router summary associated with this handler.
-     * @return Const reference to the stored router summary.
-     */
-    const udho::url::summary::router& summary() const { return _summary; }
-
 private:
+    udho::www::response_registry& _responses;
     collection_type _responders;
-    udho::url::summary::router _summary;
     mutable std::mutex _mutex;
 };
 
@@ -336,70 +309,6 @@ private:
     component_type& _component;
     std::size_t     _id;
 };
-
-/**
- * @brief Portal accessor for handler route summaries.
- * @tparam StreamT Handler stream type.
- * @tparam JournalT Journal view type.
- * @ingroup DoxyG_www_components_accessors
- */
-template <typename StreamT, typename JournalT>
-struct accessor<udho::www::components::basic_handler<StreamT>, JournalT>: basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>{
-    using basic_accessor_type   = basic_accessor<udho::www::components::basic_handler<StreamT>, JournalT>;
-    using component_type        = udho::www::components::basic_handler<StreamT>;
-    using config_type           = udho::manifold::config<component_type>;
-    using journal_type          = JournalT;
-
-    using basic_accessor_type::basic_accessor_type;
-
-    /**
-     * @brief Construct a layout and retain its shared state until response completion.
-     * @tparam PlaceholderT Placeholder container used by the layout document.
-     * @tparam ContextT Rendering context type.
-     * @param context Context passed to the layout factory.
-     * @return Constructed layout.
-     */
-    template <typename PlaceholderT, typename ContextT, typename PresenterT = udho::view::tmpl::layout::default_presenter<udho::view::tmpl::layout::basic_document<PlaceholderT>>>
-    auto layout(ContextT context) {
-        const std::size_t flow_id = basic_accessor_type::journal().template at<udho::www::feature::responder>();
-
-        using placeholder_type  = PlaceholderT;
-        using document_type     = udho::view::tmpl::layout::basic_document<placeholder_type>;
-        using presenter_type    = PresenterT;
-
-        auto page = udho::view::tmpl::layout::create<placeholder_type, ContextT, presenter_type>(context);
-        basic_accessor_type::component().responder(flow_id).add_hook([keepalive = page, flow_id]() {
-            static_cast<void>(keepalive);
-            UDHO_LOG_TRACE("www::components::handler", "Releasing layout retained for response completion", udho::logging::params::flow_id(flow_id));
-        });
-        return page;
-    }
-
-    /** @brief Returns the stored router summary. */
-    const udho::url::summary::router& routes() const {
-        return basic_accessor_type::component().summary();
-    }
-
-    /**
-     * @brief Returns the named mount-point summary.
-     * @param name Mount-point name.
-     */
-    const udho::url::summary::mount_point& route(const std::string& name) const {
-        return routes()[name];
-    }
-    /**
-     * @brief Returns the mount-point summary named by a compile-time string.
-     * @tparam Char Character type.
-     * @tparam C Characters in the compile-time string.
-     * @param hstr Compile-time mount-point name.
-     */
-    template <typename Char, Char... C>
-    const udho::url::summary::mount_point& route(udho::hazo::string::str<Char, C...>&& hstr) const {
-        return route(hstr.str());
-    }
-
-};
-
 
 } // manifold
 } // udho

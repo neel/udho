@@ -282,7 +282,7 @@ struct sketch;
 template <typename... Components>
 struct portal;
 
-template <typename StreamT, typename... Components>
+template <typename... Components>
 struct basic_context;
 
 #endif // #ifndef __DOXYGEN__

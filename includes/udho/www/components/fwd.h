@@ -9,6 +9,9 @@ namespace udho{
 namespace www{
 namespace components{
 
+/** @brief Stream-neutral WWW connection facilities. */
+class connection;
+
 /**
  * @brief Resource-store component.
  * @tparam Bridges Resource bridge types.

@@ -129,6 +129,66 @@ struct TestType {
     }
 };
 
+struct ostream_view_probe {
+    using encoding_type = udho::net::types::transfer::encoding;
+    using compression_type = udho::net::types::transfer::compression;
+
+    void set(const boost::beast::http::field&, udho::utils::string_view) {}
+    void write(std::string&& value) { writes.emplace_back(std::move(value)); }
+    void write(udho::utils::string_view value) { writes.emplace_back(value); }
+    void write(const char* data, std::size_t size, bool) { writes.emplace_back(data, size); }
+    void write(boost::iostreams::mapped_file_source&&) {}
+    void disable_buffering() { buffering_disabled = true; }
+    void finish() { finished = true; }
+    void status(boost::beast::http::status value) { response_status = value; }
+    encoding_type encoding() const { return response_encoding; }
+    void encoding(encoding_type value) { response_encoding = value; }
+    compression_type compression() const { return response_compression; }
+    void compression(compression_type value) { response_compression = value; }
+    void exception(udho::exceptions::captured&& value) { captured = std::move(value); }
+
+    std::vector<std::string> writes;
+    encoding_type response_encoding = encoding_type::plain;
+    compression_type response_compression = compression_type::none;
+    boost::beast::http::status response_status = boost::beast::http::status::ok;
+    udho::exceptions::captured captured;
+    bool buffering_disabled = false;
+    bool finished = false;
+};
+
+TEST_CASE("ostream_view forwards the complete action-facing API", "[net][ostream][view]") {
+    ostream_view_probe probe;
+    udho::net::ostream_view view = udho::net::ostream_view::bind(probe);
+
+    view.encoding(udho::net::types::transfer::encoding::chunked);
+    view.compression(udho::net::types::transfer::compression::gzip);
+    CHECK(view.encoding() == udho::net::types::transfer::encoding::chunked);
+    CHECK(view.compression() == udho::net::types::transfer::compression::gzip);
+
+    std::string borrowed = "borrowed";
+    view << "literal" << borrowed << std::string{"owned"} << TestType{42};
+    CHECK(probe.writes == std::vector<std::string>{"literal", "borrowed", "owned", "TestType:42"});
+
+    auto copied_view = view.view();
+    copied_view.status(boost::beast::http::status::accepted);
+    copied_view.disable_buffering();
+    copied_view.finish();
+    CHECK(probe.response_status == boost::beast::http::status::accepted);
+    CHECK(probe.buffering_disabled);
+    CHECK(probe.finished);
+
+    view.capture(udho::exceptions::captured::propagate(std::runtime_error{"explicit capture"}));
+    CHECK(probe.captured);
+    CHECK_THROWS_AS(probe.captured.rethrow(), std::runtime_error);
+
+    try {
+        throw std::logic_error{"current capture"};
+    } catch(...) {
+        view.capture();
+    }
+    CHECK_THROWS_AS(probe.captured.rethrow(), std::logic_error);
+}
+
 template <std::size_t N>
 struct multithreaded_io{
     using executor_type = boost::asio::io_context::executor_type;

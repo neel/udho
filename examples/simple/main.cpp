@@ -5,7 +5,7 @@
 #include <boost/filesystem/path.hpp>
 #include "counter.h"
 
-using framework_type = udho::www::framework<udho::www::stateless::rest>;
+using framework_type = udho::www::framework<udho::www::http::stateless::rest>;
 
 int main() {
     boost::asio::io_context io;
@@ -23,9 +23,11 @@ int main() {
 
     simple::actions::counter counter;
 
+    udho::www::http::transport transport({boost::asio::ip::tcp::v4(), 9999});
+
     auto framework = framework_type::apply(udho::url::router(simple::urls(counter), cstore.assets()));
     auto runtime   = framework.runtime(cstore);
-    auto listener  = udho::net::listener(io, runtime, {boost::asio::ip::tcp::v4(), 9999});
+    auto listener  = udho::net::listener(io, runtime, transport);
 
     listener.start();
 

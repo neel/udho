@@ -75,7 +75,7 @@ struct basic_terminal<www::basic_label<StreamT, Tag, ExtraComponents...>, Stream
     using journal_type      = typename flow_type::journal_type;
     using configs_type      = typename runtime_type::configs_type;
     using portal_type       = typename udho::manifold::detail::get_portal_type<composition_type>::type;
-    using context_type      = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
+    using context_type      = typename udho::manifold::detail::get_context_for_portal<portal_type>::type;
     using trace_type        = udho::exceptions::captured::trace_type;
     using pages_type        = error<label_type>;
 

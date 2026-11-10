@@ -69,8 +69,8 @@ namespace callbacks{
 
 namespace test_callbacks{
     using stream_type           = boost::beast::test::stream;
-    using context_type          = udho::www::basic_context<stream_type, udho::www::components::cookies>;
-    using query_context_type    = udho::www::basic_context<stream_type, udho::www::components::navigators::pretty, udho::www::components::cookies>;
+    using context_type          = udho::www::context<udho::www::components::cookies>;
+    using query_context_type    = udho::www::context<udho::www::components::navigators::pretty, udho::www::components::cookies>;
 
     struct invocation {
         int id;
@@ -98,7 +98,7 @@ namespace test_callbacks{
 namespace www_test_callbacks{
     using stream_type       = boost::beast::test::stream;
     using protocol_type     = udho::www::components::protocols::http<stream_type>;
-    using post_context_type = udho::www::basic_context<stream_type, protocol_type>;
+    using post_context_type = udho::www::context<protocol_type>;
 
     struct body_invocation {
         std::string body;
@@ -134,21 +134,22 @@ namespace www_test_callbacks{
         context.finish();
     }
 
-    using layout_context_type = udho::www::basic_context<
-        stream_type,
+    using layout_context_type = udho::www::context<
         udho::www::components::resources<>
     >;
+    static bool finish_hook_invoked = false;
 
     static void render_layout(layout_context_type context) {
         namespace placeholders = udho::view::tmpl::layout::placeholders;
 
-        auto page = context.portal().template layout<placeholders::standard>(context);
+        context.portal().add_hook(context.flow_id(), [] { finish_hook_invoked = true; });
+        auto page = udho::view::tmpl::layout::attach<placeholders::standard>(context);
         page.preamble().title("Managed layout title");
         page[placeholders::central] = "Managed layout body";
         page();
     }
 
-    using action_context_type = udho::www::basic_context<stream_type>;
+    using action_context_type = udho::www::context<>;
 
     static std::vector<std::string> exception_invocations;
     static std::vector<std::string> exception_bodies;
@@ -289,6 +290,7 @@ namespace www_test{
         std::vector<bool> reentry_decisions;
         std::vector<bool> responder_presence;
         bool responder_exists_after_run;
+        bool hook_accepted_after_run;
     };
 
     template <typename RouterT>
@@ -348,10 +350,12 @@ namespace www_test{
         using label_type     = udho::www::test<udho::www::tags::minimal<>>;
         using framework_type = udho::www::framework<label_type>;
         using handler_type   = udho::www::components::basic_handler<typename label_type::stream_type>;
+        using connection_type = udho::www::components::connection;
 
         auto framework = framework_type::apply(std::forward<RouterT>(router));
         auto runtime   = framework.runtime(resources);
         auto& handler  = runtime.composition().template get<handler_type>().component();
+        auto& connection = runtime.composition().template get<connection_type>().component();
 
         boost::beast::test::stream request_stream(io, request);
         boost::beast::test::stream response_stream(io);
@@ -376,7 +380,8 @@ namespace www_test{
             runtime.count(),
             std::move(reentry_decisions),
             std::move(responder_presence),
-            handler.exists(flow_id)
+            handler.exists(flow_id),
+            connection.add_hook(flow_id, [] {})
         };
     }
 
@@ -673,7 +678,7 @@ TEST_CASE("udho www framework dispatches through a Beast test stream", "[www][te
     CHECK(runtime.count() == 0);
 }
 
-TEST_CASE("udho handler accessor retains layouts until response completion", "[www][test-stream][layout][lifetime]") {
+TEST_CASE("udho connection accessor retains layouts until response completion", "[www][test-stream][layout][lifetime]") {
     using namespace udho::hazo::string::literals;
 
     auto actions =
@@ -682,11 +687,13 @@ TEST_CASE("udho handler accessor retains layouts until response completion", "[w
     ;
     auto table = udho::url::mount("root"_h, "/", std::move(actions));
 
+    www_test_callbacks::finish_hook_invoked = false;
     const auto result = www_test::execute_minimal(
         udho::url::router(std::move(table)),
         www_test::get_request("/")
     );
 
+    CHECK(www_test_callbacks::finish_hook_invoked);
     CHECK(result.body.find("<title>Managed layout title</title>") != std::string::npos);
     CHECK(result.body.find("<body>Managed layout body</body>") != std::string::npos);
     CHECK(result.active_flows == 0);
@@ -1262,6 +1269,7 @@ TEST_CASE("udho www handles EOF while reading request headers", "[www][test-stre
         CHECK(result.responder_presence == std::vector<bool>{true, true});
         CHECK(result.active_flows == 0);
         CHECK_FALSE(result.responder_exists_after_run);
+        CHECK_FALSE(result.hook_accepted_after_run);
     }
 }
 
@@ -1277,6 +1285,7 @@ TEST_CASE("udho www retires responders with aborted flows", "[www][test-stream][
         CHECK(result.responder_presence == std::vector<bool>{true});
         CHECK(result.active_flows == 0);
         CHECK_FALSE(result.responder_exists_after_run);
+        CHECK_FALSE(result.hook_accepted_after_run);
     }
 
     SECTION("successful response is followed by a closing 404") {
@@ -1555,7 +1564,7 @@ TEST_CASE("udho manifold www pipeline stateless", "[manifold][pipeline][www]") {
     auto resources  = udho::www::components::resources(cstore);
     // }
 
-    using framework_type = udho::www::framework<udho::www::stateless::rest>;
+    using framework_type = udho::www::framework<udho::www::http::stateless::rest>;
     // using endpoint_type  = typename framework_type::endpoint_type;
 
     auto framework = framework_type::apply(udho::url::router(url()));
@@ -1589,8 +1598,8 @@ TEST_CASE("udho manifold www pipeline stateful", "[manifold][pipeline][www]") {
     auto resources  = udho::www::components::resources(cstore);
     // }
 
-    // using framework_type = udho::www::framework<udho::www::stateful::lua::lazy_fs>;
-    using framework_type = udho::www::framework<udho::www::stateful::lazy_fs>;
+    // using framework_type = udho::www::framework<udho::www::http::stateful::lua::lazy_fs>;
+    using framework_type = udho::www::framework<udho::www::http::stateful::lazy_fs>;
     // using endpoint_type  = typename framework_type::endpoint_type;
 
     auto framework = framework_type::apply(udho::url::router(url()));

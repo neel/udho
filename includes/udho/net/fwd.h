@@ -34,7 +34,13 @@ struct basic_listener;
 // template <typename ResourceSubsetT>
 // struct basic_context;
 
-template <typename ProfileT, typename RuntimeT>
+template <typename WireT, typename StreamT>
+struct basic_transport;
+
+template <typename TransportT>
+struct channel;
+
+template <typename TransportT, typename RuntimeT>
 struct basic_listener;
 
 template <typename RuntimeT, typename SocketT = typename RuntimeT::stream_type>

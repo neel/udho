@@ -30,6 +30,7 @@
 #include <udho/manifold/configs_view.h>
 #include <udho/www/components/routing.h>
 #include <udho/www/components/handler.h>
+#include <udho/www/context.h>
 #include <udho/manifold/context.h>
 
 #include <boost/beast/http/string_body.hpp>
@@ -40,32 +41,30 @@ using namespace udho::www::components;
 using namespace udho::manifold;
 
 using stream_type      = boost::beast::test::stream;
-using handler = basic_handler<stream_type>;
-
 namespace callbacks{
 
-void chunk3(basic_context<stream_type, handler> context){
+void chunk3(udho::www::context<> context){
     context << "Chunk 3 (Final)";
     context.finish();
 }
 
-void chunk2(basic_context<stream_type, handler> context){
+void chunk2(udho::www::context<> context){
     context << "chunk 2";
     chunk3(context);
 }
 
-void chunk(basic_context<stream_type, handler> context){
+void chunk(udho::www::context<> context){
     context.encoding(udho::net::types::transfer::encoding::chunked);
     context << "Chunk 1";
     chunk2(context);
 }
 
-void f0(basic_context<stream_type, handler> context){
+void f0(udho::www::context<> context){
     context << "Hello f0";
     context.finish();
 }
 
-int f1(basic_context<stream_type, handler> context, int a, const std::string& b, const double& c){
+int f1(udho::www::context<> context, int a, const std::string& b, const double& c){
         context << "Hello f1 ";
         context << udho::url::format("a: {}, b: {}, c: {}", a, b, c);
         context.finish();
@@ -131,19 +130,21 @@ TEST_CASE("udho view layout regular functionalities", "[view][layout]") {
         resource_store_proxy.assets()
     );
 
-    auto handler_component  = udho::www::components::basic_handler<stream_type>(router.table().summary());
+    auto connection_component = udho::www::components::connection(router.table().summary());
+    auto handler_component  = udho::www::components::basic_handler<stream_type>(connection_component.responses());
     auto routing_component  = udho::www::components::routing(std::move(router));
     auto resource_component = udho::www::components::resources(resource_store_proxy);
 
     using composition_type  = udho::manifold::composition<
         std::decay_t<decltype(handler_component)>,
+        std::decay_t<decltype(connection_component)>,
         std::decay_t<decltype(routing_component)>,
         std::decay_t<decltype(resource_component)>
     >;
     using configs_type      = typename composition_type::configs_type;
     using journal_type      = typename udho::manifold::detail::get_journal_for_full_fabric<composition_type>::type;
 
-    auto composition = composition_type::compose(handler_component, routing_component, resource_component);
+    auto composition = composition_type::compose(handler_component, connection_component, routing_component, resource_component);
 
     configs_type configs;
     journal_type journal;

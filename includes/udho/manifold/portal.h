@@ -177,7 +177,7 @@ struct portal: detail::portal<typename udho::manifold::detail::get_journal_const
     template <typename... XComponents>
     friend struct portal;
 
-    template <typename StreamT, typename... XComponents>
+    template <typename... XComponents>
     friend struct basic_context;
 
     /**

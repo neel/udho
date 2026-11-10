@@ -173,29 +173,29 @@ private:
 }
 
 /**
- * @brief Asynchronously accepts sockets, opens profile channels, and starts flows.
- * @tparam ProfileT Connection profile type.
+ * @brief Asynchronously accepts sockets, opens transport channels, and starts flows.
+ * @tparam TransportT Connection transport type.
  * @tparam RuntimeT Runtime that owns and creates flows.
  */
-template <typename ProfileT, typename RuntimeT>
-struct basic_listener: detail::basic_listener<basic_listener<ProfileT, RuntimeT>, RuntimeT, typename ProfileT::socket_type, typename ProfileT::stream_type>{
-    using profile_type   = ProfileT;
+template <typename TransportT, typename RuntimeT>
+struct basic_listener: detail::basic_listener<basic_listener<TransportT, RuntimeT>, RuntimeT, typename TransportT::socket_type, typename TransportT::stream_type>{
+    using transport_type = TransportT;
     using runtime_type   = RuntimeT;
-    using socket_type    = typename profile_type::socket_type;
-    using stream_type    = typename profile_type::stream_type;
-    using channel_type   = udho::net::channel<profile_type>;
-    using base_type      = detail::basic_listener<basic_listener<profile_type, runtime_type>, runtime_type, socket_type, stream_type>;
+    using socket_type    = typename transport_type::socket_type;
+    using stream_type    = typename transport_type::stream_type;
+    using channel_type   = udho::net::channel<transport_type>;
+    using base_type      = detail::basic_listener<basic_listener<transport_type, runtime_type>, runtime_type, socket_type, stream_type>;
     using endpoint_type  = typename base_type::endpoint_type;
     using socket_id_type = typename base_type::socket_id_type;
 
 public:
     /**
-     * @brief Construct a listener for a connection profile.
+     * @brief Construct a listener for a configured channel.
      * @param io I/O context used for asynchronous operations.
      * @param runtime Runtime that owns accepted flows.
-     * @param profile Connection profile containing the listening endpoint.
+     * @param channel Channel containing the listening endpoint and opening state.
      */
-    basic_listener(boost::asio::io_context& io, runtime_type& runtime, profile_type& profile): base_type(io, runtime, endpoint_type(profile.endpoint())), _channel(profile) {}
+    basic_listener(boost::asio::io_context& io, runtime_type& runtime, channel_type& channel): base_type(io, runtime, endpoint_type(channel.endpoint())), _channel(channel) {}
 
 private:
     friend base_type;
@@ -227,25 +227,25 @@ private:
     void on_open(boost::system::error_code error, stream_type&& stream, socket_id_type socket_id) {
         if(error) {
             UDHO_LOG_ERROR("udho::net::listener", "Failed to open channel with error " + error.message());
-            channel_type::shutdown(stream);
+            _channel.abort(stream);
             return;
         }
 
         if(!this->running()) {
-            channel_type::shutdown(stream);
+            _channel.abort(stream);
             return;
         }
 
-        this->start_flow(std::move(stream), socket_id);
+        base_type::start_flow(std::move(stream), socket_id);
     }
 
 private:
-    channel_type _channel;
+    channel_type& _channel;
 };
 
 /** @brief Empty specialization for stream-based test runtimes. */
 template <typename RuntimeT>
-struct basic_listener<profiles::test, RuntimeT>{};
+struct basic_listener<transports::testing, RuntimeT>{};
 
 /**
  * @brief Endpoint-based listener that passes accepted sockets directly to a runtime.
@@ -273,20 +273,20 @@ private:
         }
 
         socket_id_type socket_id = udho::utils::misc::native_handle(socket);
-        this->start_flow(std::move(socket), socket_id);
+        base_type::start_flow(std::move(socket), socket_id);
     }
 };
 
 /**
- * @brief Create a listener for a runtime and connection profile.
+ * @brief Create a listener for a runtime and configured channel.
  * @param io I/O context used for asynchronous operations.
  * @param runtime Runtime that owns accepted flows.
- * @param profile Connection profile containing the listening endpoint.
- * @return Listener configured for the supplied connection profile.
+ * @param channel Channel containing the listening endpoint and opening state.
+ * @return Listener configured for the supplied channel.
  */
-template <typename ProfileT, typename RuntimeT>
-basic_listener<ProfileT, RuntimeT> listener(boost::asio::io_context& io, RuntimeT& runtime, ProfileT& profile) {
-    return basic_listener<ProfileT, RuntimeT>(io, runtime, profile);
+template <typename TransportT, typename RuntimeT>
+basic_listener<TransportT, RuntimeT> listener(boost::asio::io_context& io, RuntimeT& runtime, channel<TransportT>& channel) {
+    return basic_listener<TransportT, RuntimeT>(io, runtime, channel);
 }
 
 /**

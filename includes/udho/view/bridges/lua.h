@@ -28,6 +28,9 @@
 #ifndef UDHO_VIEW_BRIDGES_LUA_H
 #define UDHO_VIEW_BRIDGES_LUA_H
 
+#include <type_traits>
+#include <utility>
+
 #include <udho/view/bridges/lua/state.h>
 #include <udho/view/bridges/lua/compiler.h>
 #include <udho/view/bridges/lua/script.h>
@@ -209,11 +212,11 @@ namespace udho::view::data{
         }
     };
 
-    template <typename Router>
-    struct bind_helper_component<udho::www::components::routing<Router>>{
+    template <>
+    struct bind_helper_component<udho::www::components::connection>{
         template <typename ClassT>
         static void apply(sol::usertype<ClassT>& utype) {
-            utype.set("routes", sol::property([](ClassT& portal) {
+            utype.set("routes", sol::property([](const ClassT& portal) {
                 return portal.routes();
             }));
         }
@@ -321,10 +324,10 @@ namespace udho::view::data{
      *       the resource component (supporting feature `udho::www::feature::resources_storage`) is responsible for
      *       managing the lifetime and access to the underlying view resources.
      */
-    template <typename StreamT, typename... Components>
-    struct bind<bridges::lua, udho::manifold::basic_context<StreamT, Components...>>{
+    template <typename... Components>
+    struct bind<bridges::lua, udho::manifold::basic_context<Components...>> {
         using state_type                = typename bridges::lua::state_type;
-        using class_type                = udho::manifold::basic_context<StreamT, Components...>;
+        using class_type                = udho::manifold::basic_context<Components...>;
         using binder_type               = typename bridges::lua::template default_binder_type<class_type>;
         using context_type              = class_type;
         using portal_type               = typename context_type::portal_type;

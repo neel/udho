@@ -133,7 +133,7 @@ struct default_transition<www::basic_label<StreamT, Tag, ExtraComponents...>, St
     using pipeline_type          = typename runtime_type::template pipeline_at<action_transition_stage>;
     using configs_type           = typename runtime_type::configs_type;
     using portal_type            = typename udho::manifold::detail::get_portal_type<composition_type>::type;
-    using context_type           = typename udho::manifold::detail::get_context_for_portal<StreamT, portal_type>::type;
+    using context_type           = typename udho::manifold::detail::get_context_for_portal<portal_type>::type;
     using start_pipeline_type    = typename runtime_type::start_pipeline_type;
 
     /**

@@ -11,12 +11,12 @@
 #include <udho/view/resources/blobs/setup.h>
 #include <udho/www/www.h>
 
-using framework_type = udho::www::framework<udho::www::stateless::lua>;
+using framework_type = udho::www::framework<udho::www::http::stateless::lua>;
 
 int main(int argc, char** argv) {
     udho::cli::control control(argc, argv);
     if(control.admin()) return control();
-    
+
     boost::asio::io_context io;
 
     udho::view::data::bridges::lua lua;
@@ -26,8 +26,9 @@ int main(int argc, char** argv) {
     store.assets().base("assets");
     udho::view::resources::blobs::setup(store, "hello");
 
-    auto server = control.prepare<framework_type>(store, hello::urls());
-    server.run(io, control.ipv4());
+    udho::www::http::transport transport(control.ipv4());
+    auto server = control.prepare<framework_type>(transport, store, hello::urls());
+    server.run(io);
 
     return 0;
 }
