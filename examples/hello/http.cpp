@@ -30,5 +30,5 @@ int main(int argc, char** argv) {
     auto server = control.prepare<framework_type>(transport, store, hello::urls());
     server.run(io);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

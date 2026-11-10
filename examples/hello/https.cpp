@@ -16,12 +16,12 @@
 using framework_type = udho::www::framework<udho::www::https::stateless::lua>;
 
 int main(int argc, char** argv) {
-    std::string tls_certificate;
-    std::string tls_private_key;
+    std::string tls_cert;
+    std::string tls_key;
 
     udho::cli::control control;
-    control.option("tls-certificate", tls_certificate, std::string{"certificates/localhost-cert.pem"}, "PEM certificate chain");
-    control.option("tls-private-key", tls_private_key, std::string{"certificates/localhost-key.pem"}, "PEM private key");
+    control.option("cert", tls_cert, std::string{"localhost-cert.pem"}, "PEM certificate chain");
+    control.option("key",  tls_key,  std::string{"localhost-key.pem"}, "PEM private key");
     control.parse(argc, argv);
     if(control.admin()) return control();
 
@@ -35,9 +35,10 @@ int main(int argc, char** argv) {
     udho::view::resources::blobs::setup(store, "hello");
 
     udho::www::https::transport transport(control.ipv4());
-    boost::system::error_code error = transport.credentials(tls_certificate, tls_private_key);
+    boost::system::error_code error = transport.credentials(tls_cert, tls_key);
     if(error) {
-        std::cerr << "Unable to load HTTPS credentials from " << tls_certificate << " and " << tls_private_key << ": " << error.message() << std::endl;
+        std::cerr << "Unable to load HTTPS credentials from " << tls_cert << " and " << tls_key << ": " << error.message() << std::endl;
+        std::cerr << "Please generate those files using the following command: ./hello-https-gen.sh" << std::endl;
         return EXIT_FAILURE;
     }
 
