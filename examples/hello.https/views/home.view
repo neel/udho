@@ -4,4 +4,3 @@
     <p><?= d.message ?></p>
     <p><a href="/hello/Alice">Render a personalized view</a></p>
 </section>
-
