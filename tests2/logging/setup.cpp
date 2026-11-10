@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include <boost/log/core.hpp>
 #include <boost/log/utility/setup/file.hpp>
@@ -19,19 +20,30 @@
 namespace {
 
 struct setup_test_file_sink {
+    struct description {
+        explicit description(std::string path): _path(std::move(path)) {}
+
+        udho::logging::sink_description operator()() const {
+            udho::logging::sink_description result("sink");
+            result.property("file", _path);
+            return result;
+        }
+
+        udho::logging::sink_description_keys keys() const { return {"file"}; }
+
+    private:
+        std::string _path;
+    };
+
     static std::string& path() {
         static std::string value;
         return value;
     }
 
-    static auto apply() {
-        auto sink = boost::log::add_file_log(
-            boost::log::keywords::file_name  = path(),
-            boost::log::keywords::open_mode  = std::ios_base::out | std::ios_base::trunc,
-            boost::log::keywords::auto_flush = true
-        );
+    static description apply() {
+        auto sink = boost::log::add_file_log(boost::log::keywords::file_name = path(), boost::log::keywords::open_mode = std::ios_base::out | std::ios_base::trunc, boost::log::keywords::auto_flush = true);
         sink->set_formatter(udho::logging::formatter{});
-        return sink;
+        return description(path());
     }
 };
 
@@ -241,6 +253,29 @@ TEST_CASE("Setup initializes and controls the logging subsystem", "[logging][set
     }
 
     SECTION("admin transport via setup-managed child") {
+
+        SECTION("sink command reports the setup-managed sink description") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto log_path    = udho::logging::test_helpers::unique_log_path();
+
+            setup_test_file_sink::path() = log_path;
+            auto pid = test_setup::apply(queue_name.c_str(), socket_path.c_str());
+
+            REQUIRE(pid > 0);
+            REQUIRE(test_setup::running());
+
+            udho::logging::commander commander(socket_path);
+            auto keys = commander.sink();
+            REQUIRE(keys);
+            REQUIRE(keys.message == "file");
+
+            auto file = commander.sink("file");
+            REQUIRE(file);
+            REQUIRE(file.message == log_path.string());
+
+            cleanup(queue_name, socket_path, log_path);
+        }
 
         SECTION("commander can reach the setup-managed consumer and filter commands have effect") {
             auto queue_name  = udho::logging::test_helpers::unique_queue_name();

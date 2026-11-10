@@ -5,6 +5,7 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include <iostream>
 
@@ -284,6 +285,91 @@ TEST_CASE("Commander admin commands and consumer control", "[logging][commander]
             should_stop = true;
             worker.join();
 
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
+        }
+
+    }
+
+    SECTION("sink description command") {
+
+        SECTION("sink lists and queries a fresh dynamic description") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+            std::atomic<int> revision{1};
+
+            udho::logging::sink_description_provider provider([&revision] {
+                udho::logging::sink_description description("sink");
+                description.property("file", "file-" + std::to_string(revision.load()) + ".log");
+                description.property("internal", "hidden");
+                description.add("primary").property("file", "primary.log");
+                return description;
+            }, [] { return udho::logging::sink_description_keys{"file", "primary.file", "delayed"}; });
+
+            std::atomic_bool should_stop{false};
+            udho::logging::consumer consumer(socket_path.c_str(), queue_name.c_str(), std::move(provider));
+            std::thread worker([&] {
+                consumer.consume(should_stop);
+            });
+
+            udho::logging::commander commander(socket_path);
+
+            auto keys = commander.sink();
+            REQUIRE(keys);
+            REQUIRE(keys.message == "file\nprimary.file\ndelayed");
+
+            auto file = commander.sink("file");
+            REQUIRE(file);
+            REQUIRE(file.message == "file-1.log");
+
+            auto primary_file = commander.sink("primary.file");
+            REQUIRE(primary_file);
+            REQUIRE(primary_file.message == "primary.log");
+
+            revision = 2;
+            auto updated_file = commander.sink("file");
+            REQUIRE(updated_file);
+            REQUIRE(updated_file.message == "file-2.log");
+
+            auto missing = commander.sink("secondary.file");
+            REQUIRE_FALSE(missing);
+            REQUIRE(missing.message.find("Unknown sink property") != std::string::npos);
+
+            auto hidden = commander.sink("internal");
+            REQUIRE_FALSE(hidden);
+            REQUIRE(hidden.message.find("Unknown sink property") != std::string::npos);
+
+            auto delayed = commander.sink("delayed");
+            REQUIRE_FALSE(delayed);
+            REQUIRE(delayed.message.find("currently unavailable") != std::string::npos);
+
+            auto malformed = commander.sink("primary..file");
+            REQUIRE_FALSE(malformed);
+            REQUIRE(malformed.message.find("Unknown sink property") != std::string::npos);
+
+            should_stop = true;
+            worker.join();
+            udho::logging::detail::ipc_queue::remove(queue_name.c_str());
+        }
+
+        SECTION("sink reports unavailable information when no provider is configured") {
+            auto queue_name  = udho::logging::test_helpers::unique_queue_name();
+            auto socket_path = udho::logging::test_helpers::unique_socket_path();
+            auto queue       = udho::logging::detail::ipc_queue::create(queue_name.c_str());
+
+            std::atomic_bool should_stop{false};
+            udho::logging::consumer consumer(socket_path.c_str(), queue_name.c_str());
+            std::thread worker([&] {
+                consumer.consume(should_stop);
+            });
+
+            udho::logging::commander commander(socket_path);
+            auto result = commander.sink();
+            REQUIRE_FALSE(result);
+            REQUIRE(result.message.find("not available") != std::string::npos);
+
+            should_stop = true;
+            worker.join();
             udho::logging::detail::ipc_queue::remove(queue_name.c_str());
         }
 
