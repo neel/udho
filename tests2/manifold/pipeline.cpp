@@ -802,7 +802,7 @@ TEST_CASE("Pipeline System - Basic Flow Execution", "[manifold][pipeline][basic]
         });
 
         const std::size_t unknown_flow_id = flow.id() + 1;
-        CHECK_THROWS_WITH(runtime.then(unknown_flow_id, [](std::size_t) {}), udho::utils::format("Cannot register callback for an unknown flow {}", unknown_flow_id));
+        CHECK_THROWS_WITH(runtime.then(unknown_flow_id, [](std::size_t) {}), udho::utils::format("Cannot register callback for a non-existent flow {}", unknown_flow_id));
 
         bool terminated = false;
         flow.then([&](std::size_t) {
