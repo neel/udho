@@ -105,10 +105,10 @@ struct common{
      * @brief given a prefix and a view name construct a key against which the actual compipled view functions will be stored
      * @param name std::string view name
      * @param prefix std::string view prefix
-     * @return returns the view key given the name and the prefix of the view
+     * @return Bridge-local view key in `prefix/name` form.
      */
     static std::string view_key(const std::string& name, const std::string& prefix) {
-        return udho::url::format(":{}/{}", prefix, name);
+        return udho::url::format("{}/{}", prefix, name);
     }
 };
 

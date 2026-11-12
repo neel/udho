@@ -80,7 +80,7 @@ after error
         FAIL("Expected rendering_error");
     } catch(const udho::view::data::bridges::rendering_error& error) {
         const auto& frame = error.frame();
-        CHECK(frame.view() == ":errors/partial");
+        CHECK(frame.view() == "errors/partial");
         CHECK(frame.partial_output().find("before error") != std::string::npos);
         CHECK(frame.partial_output().find("after error") == std::string::npos);
         CHECK(frame.generated_line() > 0);
@@ -146,7 +146,7 @@ TEST_CASE("View compilation failures throw std::runtime_error", "[view][error][c
     } catch(const udho::view::data::bridges::rendering_error&) {
         FAIL("Compilation failure must not be a rendering_error");
     } catch(const std::runtime_error& error) {
-        CHECK(std::string{error.what()}.find(":errors/compile") != std::string::npos);
+        CHECK(std::string{error.what()}.find("errors/compile") != std::string::npos);
     }
 }
 
@@ -205,7 +205,7 @@ before missing view
         result.rethrow_if_failed();
         FAIL("Expected rendering_error");
     } catch(const udho::view::data::bridges::rendering_error& error) {
-        CHECK(error.frame().view() == ":errors/caller");
+        CHECK(error.frame().view() == "errors/caller");
         CHECK(error.frame().partial_output().find("before missing view") != std::string::npos);
         CHECK(error.frame().view_lines().begin == 3);
         REQUIRE(error.frame().source_lines().size() == 1);
@@ -255,7 +255,7 @@ parent before child
         result.rethrow_if_failed();
         FAIL("Expected rendering_error");
     } catch(const udho::view::data::bridges::rendering_error& parent) {
-        CHECK(parent.frame().view() == ":errors/parent");
+        CHECK(parent.frame().view() == "errors/parent");
         CHECK(parent.frame().partial_output().find("parent before child") != std::string::npos);
         CHECK(parent.frame().view_lines().begin == 3);
         REQUIRE(parent.frame().source_lines().size() == 1);
@@ -266,7 +266,7 @@ parent before child
         REQUIRE(parent.trace().size() == 1);
 
         const auto& child_frame = parent.trace().front();
-        CHECK(child_frame.view() == ":errors/child");
+        CHECK(child_frame.view() == "errors/child");
         CHECK(child_frame.partial_output().find("child before error") != std::string::npos);
         CHECK(child_frame.view_lines().begin == 3);
         REQUIRE(child_frame.source_lines().size() == 1);

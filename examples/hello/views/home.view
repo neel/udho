@@ -1,7 +1,7 @@
-<?! vars('d', 'ctx') ?>
-<section class="hello-home">
-    <h2><?= d.heading ?></h2>
-    <p><?= d.message ?></p>
-    <p><a href="/hello/Alice">Render a personalized view</a></p>
+<?! vars('d', 'ctx') include.css('hello', 'hello.css') ?>
+<section class="hello-view hello-home">
+    <h2 class="hello-title"><?= d.heading ?></h2>
+    <p class="hello-message"><?= d.message ?></p>
+    <p class="hello-navigation"><a class="hello-link" href="/hello/Alice">Render a personalized view</a></p>
 </section>
 

@@ -1,0 +1,29 @@
+.planet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.planet-card {
+    --planet-accent: #64748b;
+    position: relative;
+    padding: 1.1rem 2.5rem 1.1rem 1.25rem;
+    border: 0.15rem solid var(--planet-accent);
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 0.8rem rgb(15 23 42 / 8%);
+}
+
+.planet-card::after {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--planet-accent);
+    content: "";
+}

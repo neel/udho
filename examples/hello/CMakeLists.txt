@@ -5,7 +5,9 @@ udho_rc(hello)
 udho_rc_view(hello home views/home.view)
 udho_rc_view(hello hello views/hello.view)
 udho_rc_view(hello planet views/planet.view)
+udho_rc_css(hello common.css assets/common.css)
 udho_rc_css(hello hello.css assets/hello.css)
+udho_rc_css(hello planet.css assets/planet.css)
 
 set(HELLO_COMMON_SOURCES
     actions.cpp

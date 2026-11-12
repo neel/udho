@@ -2,10 +2,13 @@
 #define UDHO_VIEW_TMPL_LAYOUT_RENDERER_H
 
 #include <type_traits>
+#include <list>
+#include <set>
 #include <udho/view/tmpl/layout/placeholder.h>
 #include <udho/view/resources/fwd.h>
 #include <udho/view/resources/store.h>
 #include <udho/view/bridges/header.h>
+#include <udho/view/tracking_context.h>
 #include <udho/view/tmpl/layout/repr.h>
 #include <udho/www/components/resources.h>
 #include <boost/type_traits/has_left_shift.hpp>
@@ -248,11 +251,15 @@ private:
         static_assert((_store.bridges_count > 0 || udho::view::tmpl::layout::has_repr_v<data_type> || helper::is_streamable_v<data_type>), "Cannot render a view from no-bridge resource store using data neither has udho::view::tmpl::layout::repr<Data> specialization nor streamable");
 
         if constexpr (_store.bridges_count > 0 ) {
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+            std::list<std::string> views;
+            udho::view::tracking_context tcontext(_ctx, views);
+            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), tcontext);
             proxy += results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+            const std::set<std::string> unique_views(views.begin(), views.end());
+            for(const auto& address: unique_views){
+                header_renderer_type::apply(_store.header(address));
+            }
         } else {
             if constexpr (udho::view::tmpl::layout::has_repr_v<data_type>) {
                 udho::view::tmpl::layout::repr<data_type> repr(d);
@@ -408,11 +415,15 @@ private:
         static_assert((_store.bridges_count > 0 || udho::view::tmpl::layout::has_repr_v<data_type> || helper::is_streamable_v<data_type>), "Cannot render a view from no-bridge resource store using data neither has udho::view::tmpl::layout::repr<Data> specialization nor streamable");
 
         if constexpr (_store.bridges_count > 0 ) {
-            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), _ctx);
+            std::list<std::string> views;
+            udho::view::tracking_context tcontext(_ctx, views);
+            udho::view::resources::results results = _store.render(view_addr, std::forward<Data>(d), tcontext);
             proxy = results.str();
 
-            const udho::view::data::bridges::view_header& header = _store.header(view_addr);
-            header_renderer_type::apply(header);
+            const std::set<std::string> unique_views(views.begin(), views.end());
+            for(const auto& address: unique_views){
+                header_renderer_type::apply(_store.header(address));
+            }
         } else {
             if constexpr (udho::view::tmpl::layout::has_repr_v<data_type>) {
                 udho::view::tmpl::layout::repr<data_type> repr(d);

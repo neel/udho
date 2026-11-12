@@ -43,6 +43,7 @@
 #include <udho/view/bridges/exceptions.h>
 #include <udho/view/bridges/source_map.h>
 #include <udho/manifold/context.h>
+#include <udho/view/tracking_context.h>
 #include <udho/logging/macros.h>
 #include <udho/view/bridges/lua/environment.h>
 #include <udho/view/bridges/lua/diagnostic.h>
@@ -301,6 +302,19 @@ struct state{
         }
     }
     private:
+        template <typename Aux>
+        static void track_view(Aux&, const std::string&){}
+
+        template <typename... Components>
+        static void track_view(udho::view::tracking_context<Components...>& aux, const std::string& key){
+            aux.views().push_back("lua://" + key);
+        }
+
+        template <typename Aux>
+        static void track_view(std::reference_wrapper<Aux> aux, const std::string& key){
+            track_view(aux.get(), key);
+        }
+
         struct cpp_exception{
             std::string message;
             std::exception_ptr exception;
@@ -372,17 +386,18 @@ struct state{
             return lines;
         }
 
-        template <typename... Args>
-        std::string execute(const std::string& name, view_info& view, Args&&... args){
+        template <typename Data, typename Aux>
+        std::string execute(const std::string& name, view_info& view, Data&& data, Aux&& aux){
             namespace p = udho::logging::params;
 
+            track_view(aux, name);
             buffer_type buff{view.min_buffer_size};
             sol::protected_function_result result;
             std::exception_ptr exception;
             std::string message;
             try {
                 environment_guard environment{_state, view.function};
-                result = view.function(std::forward<Args>(args)..., buff);
+                result = view.function(std::forward<Data>(data), std::forward<Aux>(aux), buff);
             } catch(const std::exception& ex) {
                 exception = std::current_exception();
                 message = ex.what();

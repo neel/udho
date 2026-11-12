@@ -41,6 +41,7 @@
 #include <tabulate/table.hpp>
 #include <udho/view/bridges/lua/binder.h>
 #include <udho/manifold/context.h>
+#include <udho/view/tracking_context.h>
 #include <udho/www/components/fwd.h>
 #include <udho/www/features.h>
 #include <udho/logging/macros.h>
@@ -368,6 +369,40 @@ namespace udho::view::data{
 
             // then add lua specific functionalities
             // user_type& type = binder.type();
+        }
+    };
+
+    /**
+     * @brief Exposes a tracked rendering context with the regular Lua context API.
+     */
+    template <typename... Components>
+    struct bind<bridges::lua, udho::view::tracking_context<Components...>>{
+        using state_type = typename bridges::lua::state_type;
+        using class_type = udho::view::tracking_context<Components...>;
+        using portal_type = typename class_type::portal_type;
+        using composition_type = typename portal_type::composition_view_type;
+        using resource_component_type = typename composition_type::template component_at<udho::www::feature::resources_storage, 0>;
+
+        static_assert(!std::is_void_v<resource_component_type>);
+
+        static void apply(state_type& state){
+            udho::view::data::bridges::bind<bridges::lua> binder{state};
+            binder(udho::view::data::type<udho::view::resources::tmpl::proxy<bridges::lua>>{});
+            binder(udho::view::data::type<udho::view::resources::const_store<bridges::lua>>{});
+            binder(udho::view::data::type<detail::proxy_wrapper<bridges::lua, class_type>>{});
+            binder(udho::view::data::type<portal_type>{});
+
+            sol::automagic_enrollments enrollments{false, false, false, false, false, false, false, false, false};
+            sol::usertype<class_type> type = state.udho().new_usertype<class_type>("tracking_context", enrollments);
+
+            type.set("portal", sol::property([](class_type& context){
+                return context.portal();
+            }));
+
+            type.set_function("view", [](class_type& self, const std::string& prefix, const std::string& name) -> detail::proxy_wrapper<bridges::lua, class_type>{
+                return detail::proxy_wrapper<bridges::lua, class_type>{
+                    self, self.portal().template view<bridges::lua>(prefix, name)};
+            });
         }
     };
 

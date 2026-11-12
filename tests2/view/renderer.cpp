@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <iterator>
+#include <list>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -56,6 +57,39 @@ static char template_assets[] = R"TEMPLATE(
 <span class="asset-view"><?= d.value ?></span>
 )TEMPLATE";
 
+static char template_nested[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+<? for i = 1, 2 do ?>
+<?= ctx:view("renderer", "assets"):render(d) ?>
+<? end ?>
+)TEMPLATE";
+
+static char template_grandparent[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+<?= ctx:view("renderer", "nested"):render(d) ?>
+)TEMPLATE";
+
+static char template_unused[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+<? local unused = ctx:view("renderer", "assets") ?>
+<span class="unused-view"><?= d.value ?></span>
+)TEMPLATE";
+
+static char template_failure[] = R"TEMPLATE(
+<?! vars('d', 'ctx') ?>
+<?= ctx:view("renderer", "assets"):render(d) ?>
+<? error("parent render failed") ?>
+)TEMPLATE";
+
+static char template_recursive[] = R"TEMPLATE(
+<?! vars('d', 'ctx') include.css("renderer", "external.css") ?>
+<? if d.ordinal > 0 then ?>
+<?= ctx:view("renderer", "recursive"):render({value = d.value, ordinal = d.ordinal - 1}) ?>
+<? else ?>
+<span class="recursive-view"><?= d.value ?></span>
+<? end ?>
+)TEMPLATE";
+
 static char external_js[] = "window.rendererExternal = true;";
 static char embedded_js[] = "window.rendererEmbedded = true;";
 static char external_css[] = ".renderer-external { display: block; }";
@@ -100,6 +134,11 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
         << udho::view::resources::lua{"mapped",            std::begin(template_mapped),   std::end(template_mapped)}
         << udho::view::resources::lua{"explicit",          std::begin(template_explicit), std::end(template_explicit)}
         << udho::view::resources::lua{"assets",            std::begin(template_assets),   std::end(template_assets)}
+        << udho::view::resources::lua{"nested",            std::begin(template_nested), std::end(template_nested)}
+        << udho::view::resources::lua{"grandparent",       std::begin(template_grandparent), std::end(template_grandparent)}
+        << udho::view::resources::lua{"unused",            std::begin(template_unused), std::end(template_unused)}
+        << udho::view::resources::lua{"failure",           std::begin(template_failure), std::end(template_failure)}
+        << udho::view::resources::lua{"recursive",         std::begin(template_recursive), std::end(template_recursive)}
         << udho::view::resources::asset::js("external.js",  std::begin(external_js),      std::end(external_js))
         << udho::view::resources::asset::js("embedded.js",  std::begin(embedded_js),      std::end(embedded_js))
         << udho::view::resources::asset::css("external.css", std::begin(external_css),    std::end(external_css))
@@ -116,7 +155,9 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
     auto router = udho::url::router(
         udho::url::root(
             udho::url::slot("unused"_h, &unused_route)
-                << udho::url::home(udho::url::verb::get)),
+                << udho::url::home(udho::url::verb::get)
+            | udho::url::slot("unused_second"_h, &unused_route)
+                << udho::url::fixed(udho::url::verb::get, "/unused")),
         resource_store_proxy.assets());
 
     auto connection_component = udho::www::components::connection(router.table().summary());
@@ -152,6 +193,7 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
             output.finish();
         });
 
+    stream.prepare();
     auto context = udho::manifold::basic_context(stream, portal, 0);
 
     namespace layout = udho::view::tmpl::layout;
@@ -175,6 +217,22 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
         boost::beast::http::response<boost::beast::http::string_body> response =
             parser.release();
         return response.body();
+    };
+
+    auto occurrences = [](const std::string& body, const std::string& text) {
+        std::size_t count = 0;
+        for (std::size_t pos = body.find(text); pos != std::string::npos;
+             pos = body.find(text, pos + text.size())) {
+            ++count;
+        }
+        return count;
+    };
+
+    auto check_child_assets = [&](const std::string& body) {
+        CHECK(occurrences(body, "src=\"/assets/renderer/external.js\"") == 1);
+        CHECK(occurrences(body, "href=\"/assets/renderer/external.css\"") == 1);
+        CHECK(occurrences(body, "window.rendererEmbedded = true;") == 1);
+        CHECK(occurrences(body, ".renderer-embedded { display: inline; }") == 1);
     };
 
     SECTION("Single-valued and multi-valued renderers expose the same render interface") {
@@ -352,5 +410,133 @@ TEST_CASE("View layout renderer", "[view][layout][renderer]") {
               != std::string::npos);
         CHECK(body.find(".renderer-embedded { display: inline; }")
               != std::string::npos);
+    }
+
+    SECTION("Grandchild assets reach a single-valued layout and repeated children are deduplicated") {
+        auto page = layout::create<layout::placeholders::standard>(context);
+        page.properties(placeholders::central).view("lua://renderer/grandparent");
+        page[placeholders::central] = renderer_data{"grandchild", 8};
+
+        page();
+        const std::string body = response_body();
+
+        CHECK(occurrences(body, "<span class=\"asset-view\">grandchild</span>") == 2);
+        check_child_assets(body);
+    }
+
+    SECTION("Nested assets reach a multi-valued layout across separate render calls") {
+        auto page = layout::create<layout::placeholders::standard>(context);
+        page.properties(placeholders::left).view("lua://renderer/nested");
+        page[placeholders::left] += renderer_data{"first-child", 9};
+        page[placeholders::left] += renderer_data{"second-child", 10};
+
+        page();
+        const std::string body = response_body();
+
+        CHECK(occurrences(body, "<span class=\"asset-view\">first-child</span>") == 2);
+        CHECK(occurrences(body, "<span class=\"asset-view\">second-child</span>") == 2);
+        check_child_assets(body);
+    }
+
+    SECTION("Creating a child view proxy without rendering it does not select its assets") {
+        auto page = layout::create<layout::placeholders::standard>(context);
+        page[placeholders::central].render("lua://renderer/unused", renderer_data{"unused", 11});
+
+        page();
+        const std::string body = response_body();
+
+        CHECK(body.find("<span class=\"unused-view\">unused</span>") != std::string::npos);
+        CHECK(body.find("href=\"/assets/renderer/external.css\"") == std::string::npos);
+        CHECK(body.find("src=\"/assets/renderer/external.js\"") == std::string::npos);
+    }
+
+    SECTION("A failed parent render does not add completed child assets to the layout") {
+        auto page = layout::create<layout::placeholders::standard>(context);
+        auto central = page[placeholders::central];
+
+        CHECK_THROWS_AS(
+            central.render("lua://renderer/failure", renderer_data{"discarded", 12}),
+            udho::view::data::bridges::rendering_error);
+        CHECK_FALSE(central.exists());
+
+        central.render("lua://renderer/mapped", renderer_data{"recovered", 13});
+        page();
+        const std::string body = response_body();
+
+        CHECK(body.find("<span class=\"mapped-view\">recovered:13</span>") != std::string::npos);
+        CHECK(body.find("href=\"/assets/renderer/external.css\"") == std::string::npos);
+        CHECK(body.find("window.rendererEmbedded = true;") == std::string::npos);
+    }
+
+    SECTION("Tracked rendering permits finite recursive calls and deduplicates their assets") {
+        auto page = layout::create<layout::placeholders::standard>(context);
+        auto central = page[placeholders::central];
+
+        central.render("lua://renderer/recursive", renderer_data{"recursive", 2});
+
+        page();
+        const std::string body = response_body();
+
+        CHECK(occurrences(body, "<span class=\"recursive-view\">recursive</span>") == 1);
+        CHECK(occurrences(body, "href=\"/assets/renderer/external.css\"") == 1);
+    }
+
+    SECTION("Tracking context copies share the original context and retain every executed view") {
+        std::list<std::string> views;
+        udho::view::tracking_context vc(context, views);
+        auto copied = vc;
+
+        static_assert(std::is_copy_constructible_v<decltype(vc)>);
+        CHECK(&copied.context() == &context);
+        CHECK(&copied.views() == &views);
+
+        auto result = resource_store_proxy.render(
+            "lua://renderer/nested", renderer_data{"copied", 14}, copied);
+        CHECK(occurrences(result.str(), "<span class=\"asset-view\">copied</span>") == 2);
+
+        result = resource_store_proxy.render(
+            "lua://renderer/recursive", renderer_data{"recursive-copy", 2}, vc);
+        CHECK(result.str().find("<span class=\"recursive-view\">recursive-copy</span>") != std::string::npos);
+
+        CHECK((views == std::list<std::string>{
+            "lua://renderer/nested",
+            "lua://renderer/assets",
+            "lua://renderer/assets",
+            "lua://renderer/recursive",
+            "lua://renderer/recursive",
+            "lua://renderer/recursive"
+        }));
+    }
+
+    SECTION("A fresh layout does not inherit assets from a previous use of the Lua state") {
+        auto previous = layout::create<layout::placeholders::standard>(context);
+        previous[placeholders::central].render("lua://renderer/nested", renderer_data{"previous", 15});
+
+        auto page = layout::create<layout::placeholders::standard>(context);
+        page[placeholders::central].render("lua://renderer/mapped", renderer_data{"fresh", 16});
+        page();
+        const std::string body = response_body();
+
+        CHECK(body.find("<span class=\"mapped-view\">fresh:16</span>") != std::string::npos);
+        CHECK(body.find("href=\"/assets/renderer/external.css\"") == std::string::npos);
+        CHECK(body.find("window.rendererEmbedded = true;") == std::string::npos);
+    }
+
+    SECTION("A regular context still renders directly without collecting views") {
+        auto result = resource_store_proxy.render(
+            "lua://renderer/recursive", renderer_data{"regular", 2}, context);
+
+        CHECK(result.str().find("<span class=\"recursive-view\">regular</span>") != std::string::npos);
+
+        auto page = layout::create<layout::placeholders::standard>(context);
+        page[placeholders::central].render("lua://renderer/nested", renderer_data{"tracked", 17});
+
+        // Registering the tracking context must not replace the regular context's Lua binding.
+        result = resource_store_proxy.render(
+            "lua://renderer/recursive", renderer_data{"regular-again", 1}, context);
+        CHECK(result.str().find("<span class=\"recursive-view\">regular-again</span>") != std::string::npos);
+
+        page();
+        check_child_assets(response_body());
     }
 }
