@@ -20,7 +20,7 @@ namespace {
         page.properties(placeholders::central).classes("content");
         page.properties(placeholders::footer).classes("footer");
         page[placeholders::header] = "<h1>Udho Lua example</h1>";
-        page[placeholders::footer] = "<small>The page shell is C++; the central view is Lua.</small>";
+        page[placeholders::footer] = "<small>Hello example made with Udho C++ framework</small>";
         return page;
     }
 
