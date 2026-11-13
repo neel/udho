@@ -1,14 +1,41 @@
 <?! vars('d', 'ctx') include.css('forms', 'forms.css') include.js('forms', 'forms.js') ?>
+<? local validation = d.validation
+   local fields = validation.fields
+   local name = fields.name
+   local age = fields.age
+   local newsletter = fields.newsletter ?>
 <main class="forms-page">
     <h1><?= udho.utils.htmlescape(d.title) ?></h1>
     <p><?= udho.utils.htmlescape(d.message) ?></p>
 
     <section>
         <h2>Submit fields</h2>
+        <? if validation.submitted and not validation.valid then ?>
+            <ul class="form-errors" role="alert">
+                <? for _, error in ipairs(validation.errors) do ?>
+                    <li><?= udho.utils.htmlescape(error) ?></li>
+                <? end ?>
+            </ul>
+        <? end ?>
         <form method="post" action="/submit" enctype="application/x-www-form-urlencoded">
-            <label>Name <input name="name" required></label>
-            <label>Email <input type="email" name="email"></label>
-            <label>Message <textarea name="message" rows="3"></textarea></label>
+            <label>Name (2–60 bytes)
+                <input name="name" value="<?= udho.utils.htmlescape(name and name.value or '') ?>" required<? if name and not name.valid then ?> aria-invalid="true" aria-describedby="name-error"<? end ?>>
+                <? if name and not name.valid then ?>
+                    <span id="name-error" class="field-error"><?= udho.utils.htmlescape(name.message) ?></span>
+                <? end ?>
+            </label>
+            <label>Age (18–120)
+                <input type="text" name="age" inputmode="numeric" value="<?= udho.utils.htmlescape(age and age.value or '') ?>" required<? if age and not age.valid then ?> aria-invalid="true" aria-describedby="age-error"<? end ?>>
+                <? if age and not age.valid then ?>
+                    <span id="age-error" class="field-error"><?= udho.utils.htmlescape(age.message) ?></span>
+                <? end ?>
+            </label>
+            <label>
+                <input type="checkbox" name="newsletter" value="1"<? if d.newsletter then ?> checked<? end ?><? if newsletter and not newsletter.valid then ?> aria-invalid="true" aria-describedby="newsletter-error"<? end ?>> Send me the newsletter
+                <? if newsletter and not newsletter.valid then ?>
+                    <span id="newsletter-error" class="field-error"><?= udho.utils.htmlescape(newsletter.message) ?></span>
+                <? end ?>
+            </label>
             <button type="submit">Show submitted values</button>
         </form>
     </section>

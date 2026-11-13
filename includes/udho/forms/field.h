@@ -433,16 +433,14 @@ struct field<std::chrono::time_point<std::chrono::system_clock, DurationT>, fals
 };
 
 /// @brief Fetch and validate a constrained field from form_data or form_view; allow chaining.
-template <typename FormT, typename ValidatorT, typename FieldT,
-          std::enable_if_t<detail::is_form_v<FormT>, int> = 0>
+template <typename FormT, typename ValidatorT, typename FieldT, std::enable_if_t<detail::is_form_v<FormT>, int> = 0>
 const FormT& operator>>(const FormT& form, detail::constrained_field<ValidatorT, FieldT>& field){
     field(form);
     return form;
 }
 
 /// @brief Fetch an unconstrained field from form_data or form_view; allow chaining.
-template <typename FormT, typename T, bool Required,
-          std::enable_if_t<detail::is_form_v<FormT>, int> = 0>
+template <typename FormT, typename T, bool Required, std::enable_if_t<detail::is_form_v<FormT>, int> = 0>
 const FormT& operator>>(const FormT& form, field<T, Required>& field){
     field.fetch(form);
     return form;

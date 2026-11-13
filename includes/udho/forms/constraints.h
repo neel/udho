@@ -157,8 +157,7 @@ struct in: basic_constrain<in<T>>{
     std::set<T> _values; ///< Distinct allowed choices.
 
     /// @brief Copy choices from [begin, end) and store the supplied failure message.
-    template <typename It, typename = typename std::iterator_traits<It>::iterator_category,
-              std::enable_if_t<std::is_convertible_v<typename std::iterator_traits<It>::value_type, T>, int> = 0>
+    template <typename It, typename = typename std::iterator_traits<It>::iterator_category, std::enable_if_t<std::is_convertible_v<typename std::iterator_traits<It>::value_type, T>, int> = 0>
     in(const std::string& message, It begin, It end): base(message){
         std::copy(begin, end, std::inserter(_values, _values.begin()));
     }

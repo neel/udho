@@ -4,9 +4,12 @@
 #include "data.h"
 #include "helpers.h"
 
+#include <udho/forms/forms.h>
+
 namespace forms::actions {
 
 namespace http = boost::beast::http;
+namespace validation = udho::forms;
 using form_view = udho::net::protocols::detail::form_view;
 
 void home(context context) {
@@ -21,17 +24,40 @@ void submit(context context) {
         return;
     }
 
-    const form_view form(body.form());
-    if(form.count("name") == 0 || !form.field("name").is_string() || form.field("name").string().empty()) {
-        helpers::render(context, "result", {"Missing name", "A name is required."}, http::status::bad_request);
+    auto name = validation::required<std::string>("name")
+        .absent("A name is required.")
+        .unparsable("A name is required.")
+        .constrain<validation::constraints::gte>(2, "Use at least 2 bytes for the name.")
+        .constrain<validation::constraints::lte>(60, "Use at most 60 bytes for the name.");
+
+    auto age = validation::required<int>("age")
+        .absent("An age is required.")
+        .unparsable("Enter age as a whole number.")
+        .constrain<validation::constraints::gte>(18, "Age must be at least 18.")
+        .constrain<validation::constraints::lte>(120, "Age must be at most 120.");
+
+    auto newsletter = validation::optional<bool>("newsletter", false)
+        .unparsable("Choose whether to receive updates.");
+
+    auto result = validation::validate(body.form());
+    result >> name >> age >> newsletter;
+
+    data::page page{"Submitted values", "All fields passed validation."};
+    page.validation = result;
+    page.newsletter = newsletter.valid() && *newsletter;
+    if(!result.valid()) {
+        page.title = "Check your form";
+        page.message = "Please correct the errors and submit again.";
+        helpers::render(context, "home", page, http::status::bad_request);
         return;
     }
 
-    data::page result{"Submitted values"};
-    for(const auto& [name, value] : body.form().fields()) {
-        if(value.is_string()) result.fields.push_back({name, value.string()});
-    }
-    helpers::render(context, "result", result);
+    page.fields = {
+        {"Name", *name},
+        {"Age", std::to_string(*age)},
+        {"Newsletter", *newsletter ? "yes" : "no"}
+    };
+    helpers::render(context, "result", page);
 }
 
 void json(context context) {
