@@ -140,6 +140,7 @@ The components and their role are mentioned below.
 | `udho::www::components::connection` | Owns stream-neutral response completion hooks and the router summary exposed to every WWW context. |
 | `udho::www::components::db::pg` | PostgreSQL database component included in the default www sketch. |
 | `udho::www::components::protocols::http` | Implements HTTP protocol handling, including request-header and body processing. |
+| `udho::www::components::request` | Exposes read-only parsed headers and body without requiring a stream type in the action context. |
 | `udho::www::components::navigators::pretty` | Provides pretty URL navigation and request-target interpretation for routing. |
 | `udho::www::components::cookies` | Loads and exposes request cookies through the www pipeline. |
 | `udho::www::components::session` | Adds server-side session support for stateful presets. |
@@ -148,6 +149,10 @@ The components and their role are mentioned below.
 
 Out of these components `udho::www::components::basic_handler`, `udho::www::components::connection`, `udho::www::components::protocols::http`, `udho::www::components::navigators::pretty` and `udho::www::components::routing` are mandatory for processing the HTTP pipeline. The typed handler is a runtime implementation detail; the non-templated connection is the corresponding action-facing capability included in every WWW context.
 `udho::www::components::resources` is essential for processing assets as well as views.
+
+Actions that read request data use `udho::www::context<udho::www::components::request>`
+and access `context.portal().request()` and `context.portal().body()`. These
+accessors belong to the request component rather than the protocol component.
 
 ## Features
 
@@ -163,8 +168,13 @@ Following table presents the set of featyres defined in `udho::www` to facilitat
 | `udho::www::feature::cookie_load`       | 1 | `udho::www::components::cookies`            | Loads request cookies and exposes them as a cookie jar. |
 | `udho::www::feature::session_load`      | 1 | `udho::www::components::session`            | Loads or initializes the request session note. This component is present in stateful presets. |
 | `udho::www::feature::body_reader`       | 2 | `udho::www::components::protocols::http`    | Reads the HTTP request body and exposes MIME type, body buffer, form data, byte count, error state, string conversion, and JSON parsing helpers. |
+| `udho::www::feature::request_bind`      | 2 | `udho::www::components::request`           | Binds const references to the parsed header and body after `body_reader`, before action invocation. |
 | `udho::www::feature::resources_storage` | 0 | `udho::www::components::resources`          | Marker feature for resource-storage support and view-resource access. |
 | `udho::www::feature::responder`         | 2 | `udho::www::components::basic_handler`      | Marker feature for response handling. The handler also manages response output streams used by the action transition. |
+
+The request-binding result exists only after its facet completes. During partial
+or aborted flows, check `journal.ready<udho::www::feature::request_bind>()` before
+accessing it. Its references are valid until the current request's journal is reset.
 
 ## Extending the Framework
 

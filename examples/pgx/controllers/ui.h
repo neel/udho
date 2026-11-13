@@ -7,7 +7,7 @@
 #include <udho/view/bridges/lua.h>
 #include <udho/www/components/pg.h>
 #include <udho/www/components/navigator.h>
-#include <udho/www/components/protocol.h>
+#include <udho/www/components/request.h>
 #include <udho/www/components/resources.h>
 #include <udho/www/context.h>
 
@@ -17,8 +17,7 @@ class ui {
 public:
     using lua_bridge    = udho::view::data::bridges::lua;
     using database_type = udho::www::components::db::pg<>;
-    using protocol_type = udho::www::components::protocols::http<udho::net::types::socket>;
-    using context       = udho::www::context<protocol_type, udho::www::components::navigators::pretty, udho::www::components::resources<lua_bridge>>;
+    using context       = udho::www::context<udho::www::components::request, udho::www::components::navigators::pretty, udho::www::components::resources<lua_bridge>>;
 
     ui(boost::asio::io_context& io, database_type& database);
     auto routes() {

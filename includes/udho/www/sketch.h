@@ -9,6 +9,7 @@
 #include <udho/www/components/connection.h>
 #include <udho/www/components/pg.h>
 #include <udho/www/components/protocol.h>
+#include <udho/www/components/request.h>
 #include <udho/www/components/navigator.h>
 #include <udho/www/components/cookies.h>
 #include <udho/www/components/resources.h>
@@ -24,7 +25,7 @@ namespace manifold {
  *
  * Defines the default component composition and evaluation order for a minimal
  * www application. The composition includes the typed handler, stream-neutral
- * connection, database placeholder, HTTP protocol component, pretty navigator,
+ * connection, database placeholder, HTTP protocol component, request component, pretty navigator,
  * cookies component, resources component, and any extra components appended to
  * the label.
  *
@@ -45,6 +46,7 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
         udho::www::components::connection,
         udho::www::components::db::pg<>,
         udho::www::components::protocols::http<stream_type>,
+        udho::www::components::request,
         udho::www::components::navigators::pretty,
         udho::www::components::cookies,
         udho::www::components::resources<Bridges...>,
@@ -58,7 +60,8 @@ struct sketch<www::basic_label<StreamT, www::tags::minimal<Bridges...>, ExtraCom
         udho::www::feature::locator,
         udho::www::feature::cookie_load,
         udho::www::feature::session_load,
-        udho::www::feature::body_reader
+        udho::www::feature::body_reader,
+        udho::www::feature::request_bind
     >;
 };
 
@@ -89,6 +92,7 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
         udho::www::components::connection,
         udho::www::components::db::pg<>,
         udho::www::components::protocols::http<StreamT>,
+        udho::www::components::request,
         udho::www::components::navigators::pretty,
         udho::www::components::cookies,
         udho::www::components::session<SessionStorageT, Mode>,
@@ -97,13 +101,14 @@ struct sketch<www::basic_label<StreamT, www::tags::statefulx<SessionStorageT, Mo
     >;
 
     using order_type = udho::manifold::order<
+        udho::www::feature::responder,
         udho::www::feature::header_reader,
         udho::www::feature::identifier,
         udho::www::feature::locator,
         udho::www::feature::cookie_load,
         udho::www::feature::session_load,
         udho::www::feature::body_reader,
-        udho::www::feature::responder
+        udho::www::feature::request_bind
     >;
 };
 

@@ -290,6 +290,21 @@ struct body_reader{
 };
 
 /**
+ * @brief Binds the parsed request header and body for transport-neutral access.
+ * @ingroup DoxyG_www
+ */
+struct request_bind{
+    static constexpr const std::size_t stage = body_reader::stage;
+    static constexpr const std::string_view name = "request_bind";
+
+    /** @brief Read-only references valid for the current request's journal. */
+    struct result{
+        const header_reader::result& header;
+        const body_reader::result& body;
+    };
+};
+
+/**
  * @brief Manifold feature that resolves the selected route.
  *
  * Produces a route index identifying the route registry entry or the absence of

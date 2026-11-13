@@ -62,6 +62,7 @@ Routes configure `body_memory_limit`, `field_memory_limit`, and a 30-second
 so the file itself must be smaller. Uploaded files are temporary and are not
 retained as permanent storage.
 
-The protocol-aware context exposes `context.portal().body()`. The actions read
-URL-encoded and multipart fields through `body().form().fields()` and parse raw
-JSON through `body().json()`.
+The action context includes the transport-neutral `udho::www::components::request`
+component, exposing `context.portal().request()` and `context.portal().body()`.
+The actions read URL-encoded and multipart fields through `body().form().fields()`
+and parse raw JSON through `body().json()`.

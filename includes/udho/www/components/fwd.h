@@ -12,6 +12,9 @@ namespace components{
 /** @brief Stream-neutral WWW connection facilities. */
 class connection;
 
+/** @brief Transport-neutral parsed request access. */
+struct request;
+
 /**
  * @brief Resource-store component.
  * @tparam Bridges Resource bridge types.

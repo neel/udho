@@ -96,9 +96,7 @@ namespace test_callbacks{
 }
 
 namespace www_test_callbacks{
-    using stream_type       = boost::beast::test::stream;
-    using protocol_type     = udho::www::components::protocols::http<stream_type>;
-    using post_context_type = udho::www::context<protocol_type>;
+    using post_context_type = udho::www::context<udho::www::components::request>;
 
     struct body_invocation {
         std::string body;

@@ -19,6 +19,7 @@
 #include <udho/www/components/navigator.h>
 #include <udho/www/components/pg.h>
 #include <udho/www/components/protocol.h>
+#include <udho/www/components/request.h>
 #include <udho/www/components/resources.h>
 #include <udho/www/components/routing.h>
 #include <udho/www/components/session.h>
