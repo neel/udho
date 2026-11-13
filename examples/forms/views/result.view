@@ -1,0 +1,14 @@
+<?! vars('d', 'ctx') include.css('forms', 'forms.css') ?>
+<main class="forms-page">
+    <h1><?= udho.utils.htmlescape(d.title) ?></h1>
+    <p><?= udho.utils.htmlescape(d.message) ?></p>
+    <table>
+        <thead><tr><th>Field</th><th>Value</th></tr></thead>
+        <tbody>
+        <? for _, field in ipairs(d.fields) do ?>
+            <tr><td><?= udho.utils.htmlescape(field.name) ?></td><td><?= udho.utils.htmlescape(field.value) ?></td></tr>
+        <? end ?>
+        </tbody>
+    </table>
+    <p><a href="/">Back to forms</a></p>
+</main>

@@ -2,7 +2,7 @@
 
 #include "data.h"
 
-hello::data::page hello::data::home() {
+planets::data::page planets::data::home() {
     page data;
     data.heading("Lua views with udho")
         .name("visitor")
@@ -10,7 +10,7 @@ hello::data::page hello::data::home() {
     return data;
 }
 
-hello::data::page hello::data::hello(const std::string& name) {
+planets::data::page planets::data::hello(const std::string& name) {
     page data;
     data.heading("A personalized Lua view")
         .name(name)

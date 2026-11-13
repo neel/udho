@@ -1,4 +1,4 @@
-.hello-view {
+.planets-view {
     --page-accent: #2878b8;
     position: relative;
     padding: 2rem;
@@ -8,7 +8,7 @@
     box-shadow: 0 0.3rem 1rem rgb(15 23 42 / 10%);
 }
 
-.hello-view::after {
+.planets-view::after {
     position: absolute;
     top: 1rem;
     right: 1rem;
@@ -19,32 +19,32 @@
     content: "";
 }
 
-.hello-home {
+.planets-home {
     max-width: 42rem;
 }
 
-.hello-title {
+.planets-title {
     margin-top: 0;
 }
 
-.hello-greeting {
+.planets-greeting {
     margin-bottom: 0.5rem;
     font-size: 1.1rem;
 }
 
-.hello-name {
+.planets-name {
     color: var(--page-accent);
 }
 
-.hello-message {
+.planets-message {
     color: #475569;
 }
 
-.hello-navigation {
+.planets-navigation {
     margin: 1.5rem 0 0;
 }
 
-.hello-link {
+.planets-link {
     display: inline-block;
     padding: 0.65rem 1rem;
     border-radius: 0.5rem;
@@ -54,7 +54,7 @@
     text-decoration: none;
 }
 
-.hello-link:hover,
-.hello-link:focus-visible {
+.planets-link:hover,
+.planets-link:focus-visible {
     filter: brightness(0.9);
 }

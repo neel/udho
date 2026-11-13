@@ -11,3 +11,13 @@ layout[placeholders::central] = "Hello";
 
 layout();
 ```
+
+Use `attach` to retain the layout document until the response completes.
+
+```cpp
+namespace layout = udho::view::tmpl::layout;
+
+auto page = layout::attach<layout::placeholders::standard>(context);
+auto custom_page = layout::attach<MyPlaceholders, MyPresenter>(context);
+```
+

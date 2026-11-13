@@ -1,9 +1,9 @@
-<?! vars('planet', 'ctx') include.css('hello', 'planet.css') ?>
+<?! vars('planet', 'ctx') include.css('planets', 'planet.css') ?>
 <li class="planet-card" style="--planet-accent: <?= planet.color ?>;">
     Hello <strong><?= planet.name ?></strong>
-    <? if planet.distance == 0 then ?>. 
+    <? if planet.distance == 0 then ?>.
         I am here!
-    <? else ?> 
+    <? else ?>
         from <?= planet.distance ?> km away.
     <? end ?>
 </li>

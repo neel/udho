@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-#ifndef UDHO_EXAMPLES_HELLO_DATA_H
-#define UDHO_EXAMPLES_HELLO_DATA_H
+#ifndef UDHO_EXAMPLES_PLANETS_DATA_H
+#define UDHO_EXAMPLES_PLANETS_DATA_H
 
 #include <cstdint>
 #include <string>
@@ -10,7 +10,7 @@
 #include <udho/view/data.h>
 #include <udho/view/meta.h>
 
-namespace hello {
+namespace planets {
 namespace data {
 
 class planet {
@@ -47,11 +47,15 @@ public:
     const std::string& heading() const { return _heading; }
     const std::string& name() const { return _name; }
     const std::string& message() const { return _message; }
+    const std::string& home_url() const { return _home_url; }
+    const std::string& hello_url() const { return _hello_url; }
     const std::vector<planet>& planets() const { return _planets; }
 
     page& heading(std::string heading) { _heading = std::move(heading); return *this; }
     page& name(std::string name) { _name = std::move(name); return *this; }
     page& message(std::string message) { _message = std::move(message); return *this; }
+    page& home_url(std::string url) { _home_url = std::move(url); return *this; }
+    page& hello_url(std::string url) { _hello_url = std::move(url); return *this; }
     page& add(planet value) { _planets.push_back(std::move(value)); return *this; }
     page& operator<<(planet value) { return add(std::move(value)); }
 
@@ -62,6 +66,8 @@ public:
                cvar("heading",  &page::_heading),
                cvar("name",     &page::_name),
                cvar("message",  &page::_message),
+               cvar("home_url", &page::_home_url),
+               cvar("hello_url", &page::_hello_url),
                cvar("planets",  &page::_planets);
     }
 
@@ -69,6 +75,8 @@ private:
     std::string _heading;
     std::string _name;
     std::string _message;
+    std::string _home_url;
+    std::string _hello_url;
     std::vector<planet> _planets;
 };
 
@@ -78,5 +86,5 @@ page hello(const std::string& name);
 }
 }
 
-#endif // UDHO_EXAMPLES_HELLO_DATA_H
+#endif // UDHO_EXAMPLES_PLANETS_DATA_H
 

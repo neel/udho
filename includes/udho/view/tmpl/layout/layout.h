@@ -330,7 +330,19 @@ basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> create(ContextT
     return basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT>(ctx);
 }
 
-template <typename PlaceholderT, typename ContextT, typename PresenterT = default_presenter<basic_document<PlaceholderT>>>
+/**
+ * @brief Create a layout and retain its document until response completion.
+ *
+ * @tparam PlaceholderT Placeholder container used by the layout document.
+ * @tparam PresenterT Presenter type, defaulting to the document's default presenter.
+ * @tparam ContextT Rendering context type, deduced from ctx when omitted.
+ * @param ctx Rendering context associated with the layout.
+ * @return Newly attached layout.
+ *
+ * Specify only PlaceholderT for the default presenter, or PlaceholderT and
+ * PresenterT for a custom presenter. Explicit ContextT is the third argument.
+ */
+template <typename PlaceholderT, typename PresenterT = default_presenter<basic_document<PlaceholderT>>, typename ContextT>
 basic_layout<ContextT, basic_document<PlaceholderT>, PresenterT> attach(ContextT ctx){
     return ctx.portal().template layout<PlaceholderT, ContextT, PresenterT>(ctx);
 }

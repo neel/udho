@@ -149,6 +149,55 @@ namespace www_test_callbacks{
         page();
     }
 
+    struct custom_layout_presenter: udho::view::tmpl::layout::default_presenter<
+        udho::view::tmpl::layout::standard_document,
+        custom_layout_presenter
+    > {
+        using base_type = udho::view::tmpl::layout::default_presenter<
+            udho::view::tmpl::layout::standard_document,
+            custom_layout_presenter
+        >;
+
+        inline static std::size_t active_instances = 0;
+
+        explicit custom_layout_presenter(const document_type& document): base_type(document) {
+            ++active_instances;
+        }
+
+        ~custom_layout_presenter() {
+            --active_instances;
+        }
+
+        template <typename Stream>
+        void render(Stream& stream) const {
+            stream << "<main class=\"custom-layout\">";
+            this->present(udho::view::tmpl::layout::placeholders::central, stream);
+            stream << "</main>";
+        }
+    };
+
+    static bool custom_layout_retained_after_scope = false;
+
+    template <bool ExplicitContext>
+    static void render_custom_layout(layout_context_type context) {
+        namespace layout = udho::view::tmpl::layout;
+
+        {
+            auto page = [&] {
+                if constexpr (ExplicitContext) {
+                    return layout::attach<layout::placeholders::standard, custom_layout_presenter, layout_context_type>(context);
+                } else {
+                    return layout::attach<layout::placeholders::standard, custom_layout_presenter>(context);
+                }
+            }();
+            page.preamble().title("Custom layout title");
+            page[layout::placeholders::central] = "Custom layout body";
+            page();
+        }
+
+        custom_layout_retained_after_scope = custom_layout_presenter::active_instances == 1;
+    }
+
     using action_context_type = udho::www::context<>;
 
     static std::vector<std::string> exception_invocations;
@@ -697,6 +746,37 @@ TEST_CASE("udho connection accessor retains layouts until response completion", 
     CHECK(result.body.find("<title>Managed layout title</title>") != std::string::npos);
     CHECK(result.body.find("<body>Managed layout body</body>") != std::string::npos);
     CHECK(result.active_flows == 0);
+}
+
+TEST_CASE("udho layout attach accepts a custom presenter before its context", "[www][test-stream][layout][lifetime]") {
+    using namespace udho::hazo::string::literals;
+
+    auto check_layout = [](auto action) {
+        REQUIRE(www_test_callbacks::custom_layout_presenter::active_instances == 0);
+        www_test_callbacks::custom_layout_retained_after_scope = false;
+
+        auto actions = udho::url::slot("layout"_h, std::move(action)) << udho::url::home(udho::url::verb::get);
+        auto table = udho::url::mount("root"_h, "/", std::move(actions));
+        const auto result = www_test::execute_minimal(
+            udho::url::router(std::move(table)),
+            www_test::get_request("/")
+        );
+
+        CHECK(result.body.find(www_test::status_marker(200)) != std::string::npos);
+        CHECK(result.body.find("<title>Custom layout title</title>") != std::string::npos);
+        CHECK(result.body.find("<body><main class=\"custom-layout\">Custom layout body</main></body>") != std::string::npos);
+        CHECK(www_test_callbacks::custom_layout_retained_after_scope);
+        CHECK(www_test_callbacks::custom_layout_presenter::active_instances == 0);
+        CHECK(result.active_flows == 0);
+    };
+
+    SECTION("context is deduced after the explicit presenter") {
+        check_layout(&www_test_callbacks::render_custom_layout<false>);
+    }
+
+    SECTION("context can be supplied as the third template argument") {
+        check_layout(&www_test_callbacks::render_custom_layout<true>);
+    }
 }
 
 TEST_CASE("udho terminal renders nested view errors", "[www][test-stream][error][view]") {

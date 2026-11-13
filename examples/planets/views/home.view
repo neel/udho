@@ -1,0 +1,13 @@
+<?! vars('d', 'ctx') include.css('planets', 'planets.css') ?>
+<section class="planets-view planets-home">
+    <h2 class="planets-title"><?= d.heading ?></h2>
+    <p class="planets-message"><?= d.message ?></p>
+    <p class="planets-navigation"><a class="planets-link" href="<?= d.hello_url ?>">Render a personalized view</a></p>
+    <? if d.home_url == "/" then ?>
+    <p class="planets-message">The same planet views are also available with a custom C++ layout.</p>
+    <p class="planets-navigation"><a class="planets-link" href="/layout">Explore the custom layout</a></p>
+    <? else ?>
+    <p class="planets-navigation"><a class="planets-link" href="/">Compare with the standard layout</a></p>
+    <? end ?>
+</section>
+

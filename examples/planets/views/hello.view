@@ -1,0 +1,13 @@
+<?! vars('d', 'ctx') include.css('planets', 'planets.css') ?>
+<section class="planets-view">
+    <h2 class="planets-title"><?= d.heading ?></h2>
+    <p class="planets-greeting">Hello, <strong class="planets-name"><?= d.name ?></strong>!</p>
+    <p class="planets-message"><?= d.message ?></p>
+    <ul class="planet-grid">
+    <? for _, planet in ipairs(d.planets) do ?>
+        <?= ctx:view("planets", "planet"):render(planet) ?>
+    <? end ?>
+    </ul>
+    <p class="planets-navigation"><a class="planets-link" href="<?= d.home_url ?>">Return home</a></p>
+</section>
+

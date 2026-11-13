@@ -3,6 +3,7 @@
 #include "data.h"
 #include "urls.h"
 
+#include <cstdlib>
 #include <boost/asio/io_context.hpp>
 #include <udho/cli/server.h>
 #include <udho/view/bridges/lua.h>
@@ -18,16 +19,15 @@ int main(int argc, char** argv) {
     if(control.admin()) return control();
 
     boost::asio::io_context io;
-
     udho::view::data::bridges::lua lua;
     udho::view::resources::store<udho::view::data::bridges::lua> store{lua};
 
     udho::pages::system::setup(store);
     store.assets().base("assets");
-    udho::view::resources::blobs::setup(store, "hello");
+    udho::view::resources::blobs::setup(store, "forms");
 
     udho::www::http::transport transport(control.ipv4());
-    auto server = control.prepare<framework_type>(transport, store, hello::urls());
+    auto server = control.prepare<framework_type>(transport, store, forms::urls());
     server.run(io);
 
     return EXIT_SUCCESS;

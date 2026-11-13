@@ -32,17 +32,17 @@ int main(int argc, char** argv) {
 
     udho::pages::system::setup(store);
     store.assets().base("assets");
-    udho::view::resources::blobs::setup(store, "hello");
+    udho::view::resources::blobs::setup(store, "planets");
 
     udho::www::https::transport transport(control.ipv4());
     boost::system::error_code error = transport.credentials(tls_cert, tls_key);
     if(error) {
         std::cerr << "Unable to load HTTPS credentials from " << tls_cert << " and " << tls_key << ": " << error.message() << std::endl;
-        std::cerr << "Please generate those files using the following command: ./hello-https-gen.sh" << std::endl;
+        std::cerr << "Please generate those files using the following command: ./planets-https-gen.sh" << std::endl;
         return EXIT_FAILURE;
     }
 
-    auto server = control.prepare<framework_type>(transport, store, hello::urls());
+    auto server = control.prepare<framework_type>(transport, store, planets::urls());
     server.run(io);
 
     return EXIT_SUCCESS;

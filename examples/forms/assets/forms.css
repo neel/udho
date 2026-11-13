@@ -1,0 +1,50 @@
+body {
+    margin: 0;
+    color: #1f2937;
+    font: 1rem/1.5 system-ui, sans-serif;
+}
+
+.forms-page {
+    max-width: 42rem;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+section {
+    margin: 2rem 0;
+}
+
+label {
+    display: block;
+    margin: 0.75rem 0;
+}
+
+input,
+textarea,
+button {
+    font: inherit;
+}
+
+textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    text-align: left;
+}
+
+td,
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

@@ -36,5 +36,6 @@ FIND_PACKAGE(Threads REQUIRED)
 # TARGET_LINK_LIBRARIES(udho-example-pg udho)
 
 add_subdirectory(simple)
-add_subdirectory(hello)
+add_subdirectory(planets)
+add_subdirectory(forms)
 add_subdirectory(pgx)

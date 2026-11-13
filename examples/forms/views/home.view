@@ -1,0 +1,34 @@
+<?! vars('d', 'ctx') include.css('forms', 'forms.css') include.js('forms', 'forms.js') ?>
+<main class="forms-page">
+    <h1><?= udho.utils.htmlescape(d.title) ?></h1>
+    <p><?= udho.utils.htmlescape(d.message) ?></p>
+
+    <section>
+        <h2>Submit fields</h2>
+        <form method="post" action="/submit" enctype="application/x-www-form-urlencoded">
+            <label>Name <input name="name" required></label>
+            <label>Email <input type="email" name="email"></label>
+            <label>Message <textarea name="message" rows="3"></textarea></label>
+            <button type="submit">Show submitted values</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Upload a file</h2>
+        <form method="post" action="/upload" enctype="multipart/form-data">
+            <label>File <input type="file" name="file" required></label>
+            <button type="submit">Upload</button>
+        </form>
+        <p>The result shows the temporary file name and size. This demo then removes the upload.</p>
+    </section>
+
+    <section>
+        <h2>Send JSON</h2>
+        <form id="json-form" method="post" action="/json">
+            <label for="json-body">JSON body</label>
+            <textarea id="json-body" name="payload" rows="5">{"name":"Alice","count":2}</textarea>
+            <button type="submit">Send JSON</button>
+        </form>
+        <pre id="json-result" aria-live="polite">The JSON response will appear here.</pre>
+    </section>
+</main>
